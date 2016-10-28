@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
+import org.junit.After;
 import org.junit.Test;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
@@ -29,9 +30,11 @@ public class ClusterPositionSenderTest
     private static final int AERON_SESSION_ID = 1;
     private static final int LIBRARY_ID = 3;
 
-    private static final long POSITION = 1042;
-    private static final long NEXT_POSITION = POSITION + 100;
-    private static final int ALIGNED_LENGTH = 64;
+    private static final int LENGTH = 64;
+    private static long position(final int messageNumber)
+    {
+        return messageNumber * LENGTH;
+    }
 
     private GatewayPublication publication = mock(GatewayPublication.class);
     private ClusterPositionSender positionSender = new ClusterPositionSender(
@@ -44,10 +47,10 @@ public class ClusterPositionSenderTest
     {
         connectLibrary();
         checkConditions();
-        onArchivedPosition(POSITION);
+        onArchivedPosition(position(1), LENGTH);
         checkConditions();
 
-        savedPosition(POSITION);
+        savedPosition(position(1));
     }
 
     @Test
@@ -57,78 +60,82 @@ public class ClusterPositionSenderTest
 
         connectLibrary();
         checkConditions();
-        onArchivedPosition(POSITION);
+        onArchivedPosition(position(1), LENGTH);
+        checkConditions();
         checkConditions();
 
-        savedPosition(POSITION, times(2));
+        savedPosition(position(1), times(2));
     }
 
     @Test
     public void shouldPublishPositionOfOnlyArchivedStreamOutOfOrder()
     {
-        onArchivedPosition(POSITION);
+        onArchivedPosition(position(1), LENGTH);
         checkConditions();
         connectLibrary();
         checkConditions();
 
-        savedPosition(POSITION);
+        savedPosition(position(1));
     }
 
     @Test
-    public void shouldPublishMinimumPositionOfReplicatedAndArchivedStream()
+    public void shouldPublishContiguousPositionOfReplicatedAndArchivedStream()
     {
         connectLibrary();
-        onClusteredPosition(NEXT_POSITION);
-        onArchivedPosition(POSITION);
+        onClusteredPosition(position(2), LENGTH);
+        onArchivedPosition(position(1), LENGTH);
         checkConditions();
 
-        savedPosition(POSITION);
+        savedPosition(position(2));
     }
 
     @Test
-    public void shouldPublishMinimumPositionOfArchivedAndReplicatedStream()
+    public void shouldPublishContiguousPositionOfArchivedAndReplicatedStream()
+    {
+        contiguousStreamUpTo2();
+
+        savedPosition(position(2));
+    }
+
+    private void contiguousStreamUpTo2()
     {
         connectLibrary();
-        onClusteredPosition(POSITION);
-        onArchivedPosition(NEXT_POSITION);
+        onClusteredPosition(position(1), LENGTH);
+        onArchivedPosition(position(2), LENGTH);
         checkConditions();
-
-        savedPosition(POSITION);
     }
 
     @Test
-    public void shouldPublishMinimumPositionOfArchivedAndReplicatedStreamOutOfOrder()
+    public void shouldNotPublishPositionWithGapIn()
     {
-        onClusteredPosition(POSITION);
-        onArchivedPosition(NEXT_POSITION);
+        contiguousStreamUpTo2();
+
+        onArchivedPosition(position(4), LENGTH);
         checkConditions();
 
-        connectLibrary();
-        checkConditions();
-
-        savedPosition(POSITION);
+        savedPosition(position(2));
     }
 
     @Test
-    public void shouldOnlyUpdatePositionWhenArchivedAndReplicatedPositionsHaveReachedIt()
+    public void shouldPublishPositionOnceGapFilled()
     {
-        shouldPublishMinimumPositionOfReplicatedAndArchivedStream();
+        shouldNotPublishPositionWithGapIn();
 
-        onArchivedPosition(NEXT_POSITION);
+        onClusteredPosition(position(3), LENGTH);
         checkConditions();
 
-        savedPosition(NEXT_POSITION);
+        savedPosition(position(4));
     }
 
-    @Test
-    public void shouldNotPublishPositionOfNotArchivedStream()
+    @After
+    public void noMorePublications()
     {
-        connectLibrary();
-        onClusteredPosition(POSITION);
-        checkConditions();
-
-        notSavedPosition();
+        verifyNoMoreInteractions(publication);
     }
+
+    // TODO: multiple gaps filled in
+    // TODO: gaps in archived position
+    // TODO: don't leak memory when libraries disconnect.
 
     private void backPressureSave()
     {
@@ -136,14 +143,8 @@ public class ClusterPositionSenderTest
             .thenReturn(BACK_PRESSURED, 1024L);
     }
 
-    private void notSavedPosition()
-    {
-        verify(publication, never()).saveNewSentPosition(anyInt(), anyLong());
-    }
-
     private void checkConditions()
     {
-        positionSender.checkConditions();
         positionSender.checkConditions();
     }
 
@@ -162,16 +163,13 @@ public class ClusterPositionSenderTest
         positionSender.onLibraryConnect(AERON_SESSION_ID, LIBRARY_ID);
     }
 
-    private void onArchivedPosition(final long position)
+    private void onArchivedPosition(final long position, final int length)
     {
-        positionSender.onArchivedPosition(AERON_SESSION_ID, position, ALIGNED_LENGTH);
+        positionSender.onArchivedPosition(AERON_SESSION_ID, position, length);
     }
 
-    private void onClusteredPosition(final long position)
+    private void onClusteredPosition(final long position, final int length)
     {
-        positionSender.onClusteredLibraryPosition(LIBRARY_ID, position, ALIGNED_LENGTH);
+        positionSender.onClusteredLibraryPosition(LIBRARY_ID, position, length);
     }
-
-    // TODO: sustained non-replicated messages without a replicated message update
-
 }

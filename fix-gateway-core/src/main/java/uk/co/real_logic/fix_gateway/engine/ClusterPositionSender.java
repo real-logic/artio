@@ -20,8 +20,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Int2IntHashMap;
-import org.agrona.collections.IntHashSet;
-import org.agrona.collections.IntIterator;
+import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.Agent;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor;
@@ -29,6 +28,9 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver.ArchivedPositionHandl
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
+
+import java.util.function.IntFunction;
+import java.util.stream.IntStream;
 
 // TODO: identify how to improve liveness in the situation that no messages
 // are replicated for a long term once a stream has been replicated.
@@ -45,16 +47,15 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
     private final ReplicatedMessageDecoder replicatedMessage = new ReplicatedMessageDecoder();
     private final LibraryConnectDecoder libraryConnect = new LibraryConnectDecoder();
 
-    private final Long2LongHashMap libraryIdToClusterPosition = new Long2LongHashMap(MISSING);
-    private final Long2LongHashMap libraryIdToArchivedPosition = new Long2LongHashMap(MISSING);
+    private final Int2ObjectHashMap<LibraryPositions> libraryIdToPosition = new Int2ObjectHashMap<>();
     private final Long2LongHashMap aeronSessionIdToArchivedPosition = new Long2LongHashMap(MISSING);
     private final Int2IntHashMap aeronSessionIdToLibraryId = new Int2IntHashMap(MISSING);
-    private final IntHashSet updatedLibraryIds = new IntHashSet(MISSING);
 
     private final ClusterableSubscription outboundLibrarySubscription;
     private final ControlledFragmentHandler onLibraryFragmentFunc = this::onLibraryFragment;
     private final ClusterableSubscription outboundClusterSubscription;
     private final ControlledFragmentHandler onClusterFragmentFunc = this::onClusterFragment;
+    private final IntFunction<LibraryPositions> newLibraryPositionsFunc = LibraryPositions::new;
     private final GatewayPublication inboundLibraryPublication;
 
     ClusterPositionSender(
@@ -146,35 +147,16 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
 
     int checkConditions()
     {
-        int resendCount = 0;
-        final IntIterator it = updatedLibraryIds.iterator();
-        while (it.hasNext())
+        int sendCount = 0;
+        for (final LibraryPositions positions : libraryIdToPosition.values())
         {
-            final int libraryId = it.nextValue();
-
-            long position = libraryIdToArchivedPosition.get(libraryId);
-            if (position != MISSING)
+            if (positions.sendUpdatedPosition())
             {
-                final long clusterPosition = libraryIdToClusterPosition.get(libraryId);
-                if (clusterPosition != MISSING)
-                {
-                    position = Math.min(position, clusterPosition);
-                }
-
-                if (inboundLibraryPublication.saveNewSentPosition(libraryId, position) >= 0)
-                {
-                    resendCount++;
-                }
-                else
-                {
-                    continue; // don't remove libraryId
-                }
+                sendCount++;
             }
-
-            it.remove();
         }
 
-        return resendCount;
+        return sendCount;
     }
 
     public String roleName()
@@ -189,8 +171,8 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
         final long archivedPosition = aeronSessionIdToArchivedPosition.remove(aeronSessionId);
         if (archivedPosition != MISSING)
         {
-            libraryIdToArchivedPosition.put(libraryId, archivedPosition);
-            updatedLibraryIds.add(libraryId);
+            // TODO: fix the length right
+            getPositions(libraryId).newPosition(archivedPosition, (int) archivedPosition);
         }
     }
 
@@ -198,7 +180,7 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
     {
         final int alignedLength = ArchiveDescriptor.alignTerm(length);
         // System.out.println("Cluster : " + libraryId + ", " + position + ", " + alignedLength);
-        libraryIdToClusterPosition.put(libraryId, position);
+        getPositions(libraryId).newPosition(position, alignedLength);
     }
 
     public void onArchivedPosition(final int aeronSessionId, final long position, final int alignedLength)
@@ -207,13 +189,95 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
         final int libraryId = aeronSessionIdToLibraryId.get(aeronSessionId);
         if (libraryId != MISSING)
         {
-            libraryIdToArchivedPosition.put(libraryId, position);
-            updatedLibraryIds.add(libraryId);
+            getPositions(libraryId).newPosition(position, alignedLength);
         }
         else
         {
             // Backup path in case we haven't yet seen the library connect message
             aeronSessionIdToArchivedPosition.put(aeronSessionId, position);
         }
+    }
+
+    private LibraryPositions getPositions(final int libraryId)
+    {
+        return libraryIdToPosition.computeIfAbsent(libraryId, newLibraryPositionsFunc);
+    }
+
+    private final class LibraryPositions
+    {
+        private static final int INTERVAL_COUNT = 16;
+        private static final int INTERVAL_MOD = INTERVAL_COUNT - 1;
+
+        private final int libraryId;
+        private final Interval[] intervals =
+            IntStream.range(0, INTERVAL_COUNT)
+                .mapToObj(i -> new Interval())
+                .toArray(Interval[]::new);
+
+        private int read;
+        private int write;
+        private long contiguousPosition = 0;
+        private boolean updatedPosition = false;
+
+        private LibraryPositions(final int libraryId)
+        {
+            this.libraryId = libraryId;
+        }
+
+        private void newPosition(long endPosition, final int alignedLength)
+        {
+            final long startPosition = endPosition - alignedLength;
+            final int size = size();
+
+            if (contiguousPosition == 0 || contiguousPosition == startPosition)
+            {
+                final Interval interval = intervals[read];
+                if (size > 0 && endPosition == interval.startPosition)
+                {
+                    endPosition = interval.endPosition;
+                    read = next(read);
+                }
+
+                contiguousPosition = endPosition;
+
+                updatedPosition = true;
+            }
+            else
+            {
+                final Interval interval = intervals[write];
+                interval.startPosition = startPosition;
+                interval.endPosition = endPosition;
+                write = next(write);
+            }
+
+            // TODO: check for when intervals array gets full
+        }
+
+        private int next(final int value)
+        {
+            return (value + 1) & INTERVAL_MOD;
+        }
+
+        private int size()
+        {
+            return write - read;
+        }
+
+        private boolean sendUpdatedPosition()
+        {
+            if (updatedPosition && inboundLibraryPublication.saveNewSentPosition(libraryId, contiguousPosition) >= 0)
+            {
+                updatedPosition = false;
+                return true;
+            }
+
+            return false;
+        }
+    }
+
+    private static class Interval
+    {
+        private long startPosition;
+        private long endPosition;
     }
 }
