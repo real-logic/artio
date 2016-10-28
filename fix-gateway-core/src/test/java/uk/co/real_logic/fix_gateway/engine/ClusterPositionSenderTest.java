@@ -31,6 +31,7 @@ public class ClusterPositionSenderTest
 
     private static final long POSITION = 1042;
     private static final long NEXT_POSITION = POSITION + 100;
+    private static final int ALIGNED_LENGTH = 64;
 
     private GatewayPublication publication = mock(GatewayPublication.class);
     private ClusterPositionSender positionSender = new ClusterPositionSender(
@@ -163,12 +164,12 @@ public class ClusterPositionSenderTest
 
     private void onArchivedPosition(final long position)
     {
-        positionSender.onArchivedPosition(AERON_SESSION_ID, position);
+        positionSender.onArchivedPosition(AERON_SESSION_ID, position, ALIGNED_LENGTH);
     }
 
     private void onClusteredPosition(final long position)
     {
-        positionSender.onClusteredLibraryPosition(LIBRARY_ID, position);
+        positionSender.onClusteredLibraryPosition(LIBRARY_ID, position, ALIGNED_LENGTH);
     }
 
     // TODO: sustained non-replicated messages without a replicated message update

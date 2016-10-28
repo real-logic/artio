@@ -19,7 +19,7 @@ import org.agrona.BitUtil;
 
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 
-final class ArchiveDescriptor
+public final class ArchiveDescriptor
 {
     static int nextTerm(final int termOffset, final int frameLength)
     {
@@ -31,7 +31,7 @@ final class ArchiveDescriptor
         return position + alignTerm(frameLength);
     }
 
-    static int alignTerm(final int frameLength)
+    public static int alignTerm(final int frameLength)
     {
         return BitUtil.align(frameLength, FRAME_ALIGNMENT);
     }
@@ -41,7 +41,7 @@ final class ArchiveDescriptor
         return align(position, FRAME_ALIGNMENT);
     }
 
-    static long align(final long value, final long alignment)
+    private static long align(final long value, final long alignment)
     {
         return (value + (alignment - 1)) & ~(alignment - 1);
     }

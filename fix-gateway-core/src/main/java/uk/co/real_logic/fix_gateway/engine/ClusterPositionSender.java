@@ -24,6 +24,7 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.collections.IntIterator;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.Agent;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver.ArchivedPositionHandler;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
@@ -110,6 +111,8 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
 
             final int version = messageHeader.version();
             final int actingBlockLength = messageHeader.blockLength();
+            // the length of the original message before it was wrapped, aligned to frame boundaries.
+            final int wrappedFrameLength = header.frameLength() - ReplicatedMessageDecoder.BLOCK_LENGTH;
 
             switch (messageHeader.templateId())
             {
@@ -117,7 +120,7 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
                 {
                     disconnect.wrap(buffer, offset, actingBlockLength, version);
                     final int libraryId = disconnect.libraryId();
-                    onClusteredLibraryPosition(libraryId, position);
+                    onClusteredLibraryPosition(libraryId, position, wrappedFrameLength);
                     break;
                 }
 
@@ -125,7 +128,7 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
                 {
                     fixMessage.wrap(buffer, offset, actingBlockLength, version);
                     final int libraryId = fixMessage.libraryId();
-                    onClusteredLibraryPosition(libraryId, position);
+                    onClusteredLibraryPosition(libraryId, position, wrappedFrameLength);
                     break;
                 }
             }
@@ -179,11 +182,11 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
         return "ClusterPositionSender";
     }
 
-    void onLibraryConnect(final int sessionId, final int libraryId)
+    void onLibraryConnect(final int aeronSessionId, final int libraryId)
     {
-        aeronSessionIdToLibraryId.put(sessionId, libraryId);
+        aeronSessionIdToLibraryId.put(aeronSessionId, libraryId);
         // Backup path to avoid missing a position
-        final long archivedPosition = aeronSessionIdToArchivedPosition.remove(sessionId);
+        final long archivedPosition = aeronSessionIdToArchivedPosition.remove(aeronSessionId);
         if (archivedPosition != MISSING)
         {
             libraryIdToArchivedPosition.put(libraryId, archivedPosition);
@@ -191,13 +194,16 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
         }
     }
 
-    void onClusteredLibraryPosition(final int libraryId, final long position)
+    void onClusteredLibraryPosition(final int libraryId, final long position, final int length)
     {
+        final int alignedLength = ArchiveDescriptor.alignTerm(length);
+        // System.out.println("Cluster : " + libraryId + ", " + position + ", " + alignedLength);
         libraryIdToClusterPosition.put(libraryId, position);
     }
 
-    public void onArchivedPosition(final int aeronSessionId, final long position)
+    public void onArchivedPosition(final int aeronSessionId, final long position, final int alignedLength)
     {
+        // System.out.println("Archive : " + aeronSessionId + ", " + position + ", " + alignedLength);
         final int libraryId = aeronSessionIdToLibraryId.get(aeronSessionId);
         if (libraryId != MISSING)
         {

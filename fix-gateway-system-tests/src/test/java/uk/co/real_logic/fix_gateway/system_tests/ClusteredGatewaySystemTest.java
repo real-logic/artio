@@ -49,10 +49,10 @@ import static java.util.stream.Collectors.toList;
 import static org.agrona.CloseHelper.close;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_CLUSTER;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQUEST;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
-import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_CLUSTER;
 import static uk.co.real_logic.fix_gateway.engine.logger.FixMessagePredicates.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
@@ -101,7 +101,7 @@ public class ClusteredGatewaySystemTest
                 .map(FixEngineRunner::libraryChannel)
                 .collect(toList()));
 
-        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(500));
+        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(700));
 
         acceptingLibrary = FixLibrary.connect(configuration);
 
@@ -132,10 +132,14 @@ public class ClusteredGatewaySystemTest
         connectFixSession();
 
         final long begin = System.nanoTime();
-        roundtripAMessage();
+        roundtripAMessage(initiatingSession, acceptingOtfAcceptor);
+        final long position = roundtripAMessage(acceptingSession, initiatingOtfAcceptor);
 
         closeLibrariesAndEngine();
         final long end = System.nanoTime() + 1;
+
+        // TODO: assert position correct
+        // assertThat(acceptingHandler.sentPosition(), greaterThanOrEqualTo(position));
 
         allClusterNodesHaveArchivedTestRequestMessage(begin, end, acceptingSession.id());
 
@@ -148,7 +152,7 @@ public class ClusteredGatewaySystemTest
     {
         connectFixSession();
 
-        roundtripAMessage();
+        roundtripAMessage(acceptingSession, initiatingOtfAcceptor);
 
         final FixEngineRunner oldLeader = leader;
         oldLeader.disable();
@@ -192,7 +196,7 @@ public class ClusteredGatewaySystemTest
 
         connectFixSession();
 
-        roundtripAMessage();
+        roundtripAMessage(acceptingSession, initiatingOtfAcceptor);
     }
 
     private boolean notConnectedTo(final String libraryChannel)
@@ -230,11 +234,13 @@ public class ClusteredGatewaySystemTest
         assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
     }
 
-    private void roundtripAMessage()
+    private long roundtripAMessage(final Session sendingSession, final FakeOtfAcceptor receivingHandler)
     {
-        sendTestRequest(initiatingSession);
+        final long position = sendTestRequest(sendingSession);
 
-        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, receivingHandler);
+
+        return position;
     }
 
     private void allClusterNodesHaveArchivedTestRequestMessage(
