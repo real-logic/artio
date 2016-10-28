@@ -23,6 +23,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.collections.Int2IntHashMap;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.YieldingIdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.TestFixtures;
@@ -37,7 +38,6 @@ import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static org.agrona.BitUtil.SIZE_OF_SHORT;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
@@ -75,7 +75,7 @@ class NodeRunner implements AutoCloseable
         final MediaDriver.Context context = new MediaDriver.Context();
         context
             .threadingMode(SHARED)
-            .sharedIdleStrategy(backoffIdleStrategy())
+            .sharedIdleStrategy(new YieldingIdleStrategy())
             .receiveChannelEndpointSupplier(frameDropper.newReceiveChannelEndpointSupplier())
             .sendChannelEndpointSupplier(frameDropper.newSendChannelEndpointSupplier())
             .dirsDeleteOnStart(true)
@@ -115,7 +115,8 @@ class NodeRunner implements AutoCloseable
             .archiveReader(archiveReader)
             .nodeState(nodeState)
             .nodeStateHandler(new NodeIdStasher())
-            .nodeHandler(stashingNodeHandler);
+            .nodeHandler(stashingNodeHandler)
+            .idleStrategy(new YieldingIdleStrategy());
 
         clusterNode = new ClusterAgent(configuration, System.currentTimeMillis());
         subscription = clusterNode.clusterStreams().subscription(1);
