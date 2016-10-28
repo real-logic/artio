@@ -15,10 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.util;
 
+import uk.co.real_logic.fix_gateway.builder.Decoder;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 
 import java.lang.reflect.Field;
+import java.util.Iterator;
 
 public final class Reflection
 {
@@ -121,6 +123,11 @@ public final class Reflection
     public static Object getEgGroup(final Object stub, final int numberOfElements) throws Exception
     {
         return get(stub, "egGroupGroup", numberOfElements);
+    }
+
+    public static Iterator<?> getEgGroupIterator(final Decoder decoder) throws Exception
+    {
+        return (Iterator<?>) get(decoder, "egGroupGroupIterator");
     }
 
     public static Object getComponentGroup(final Object stub, final int numberOfElements) throws Exception

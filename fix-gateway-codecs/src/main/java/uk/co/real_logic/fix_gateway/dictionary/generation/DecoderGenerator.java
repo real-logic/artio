@@ -457,6 +457,16 @@ public class DecoderGenerator extends Generator
         }
     }
 
+    private String iteratorClassName(final Group group)
+    {
+        return group.name() + "Iterator";
+    }
+
+    private String iteratorFieldName(final Group group)
+    {
+        return formatPropertyName(iteratorClassName(group));
+    }
+
     private String messageType(final String fullType, final int packedType)
     {
         return String.format(
@@ -505,6 +515,45 @@ public class DecoderGenerator extends Generator
             formatPropertyName(group.name()),
             prefix
         ));
+
+        generateGroupIterator(out, group);
+    }
+
+    private void generateGroupIterator(final Writer out, final Group group) throws IOException
+    {
+        out.append(String.format(
+            "    private %1$s %2$s = new %1$s();\n\n" +
+            "    public %1$s %2$s()\n" +
+            "    {\n" +
+            "        %2$s.reset();\n" +
+            "        return %2$s;\n" +
+            "    }\n\n" +
+            "    public class %1$s implements java.util.Iterator<%4$s>\n" +
+            "    {\n" +
+            "        private int remainder;\n" +
+            "        private %4$s current;\n" +
+            "        public boolean hasNext()\n" +
+            "        {\n" +
+            "            return remainder > 0;\n" +
+            "        }\n" +
+            "        public %4$s next()\n" +
+            "        {\n" +
+            "            remainder--;\n" +
+            "            final %4$s value = current;\n" +
+            "            current = current.next();\n" +
+            "            return value;\n" +
+            "        }\n" +
+            "        public void reset()\n" +
+            "        {\n" +
+            "            remainder = %3$s();\n" +
+            "            current = %5$s();\n" +
+            "        }\n" +
+            "    }\n\n",
+            iteratorClassName(group),
+            iteratorFieldName(group),
+            formatPropertyName(group.numberField().name()),
+            decoderClassName(group),
+            formatPropertyName(group.name())));
     }
 
     private String fieldGetter(final Entry entry, final Field field)

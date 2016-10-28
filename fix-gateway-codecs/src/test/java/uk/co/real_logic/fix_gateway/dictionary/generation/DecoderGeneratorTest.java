@@ -28,6 +28,7 @@ import uk.co.real_logic.fix_gateway.util.Reflection;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
@@ -497,7 +498,24 @@ public class DecoderGeneratorTest
         return cls.getField(field).get(null);
     }
 
-    // TODO: should next() return null when you're at the end of the chain.
+    @Test
+    public void shouldGenerateIteratorForRepeatingGroups() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
+
+        final Iterator<?> iterator = getEgGroupIterator(decoder);
+
+        assertTrue(iterator.hasNext());
+        Object group = iterator.next();
+        assertEquals(1, getGroupField(group));
+
+        assertTrue(iterator.hasNext());
+        group = iterator.next();
+        assertEquals(2, getGroupField(group));
+
+        assertFalse(iterator.hasNext());
+    }
+
     // TODO: validation for groups
 
     private void assertHasComponentFieldGetter() throws NoSuchMethodException, ClassNotFoundException
