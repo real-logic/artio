@@ -124,6 +124,7 @@ public class FixEngineRunner
     {
         CloseHelper.close(engine);
         CloseHelper.close(mediaDriver);
+        cleanupDirectory(mediaDriver);
     }
 
     public int nodeId()

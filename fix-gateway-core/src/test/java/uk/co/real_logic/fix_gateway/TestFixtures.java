@@ -65,7 +65,11 @@ public final class TestFixtures
     {
         if (mediaDriver != null)
         {
-            IoUtil.delete(new File(mediaDriver.aeronDirectoryName()), false);
+            final File directory = new File(mediaDriver.aeronDirectoryName());
+            if (directory.exists())
+            {
+                IoUtil.delete(directory, false);
+            }
         }
     }
 
