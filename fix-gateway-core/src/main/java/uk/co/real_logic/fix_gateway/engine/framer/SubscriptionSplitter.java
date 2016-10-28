@@ -79,6 +79,8 @@ class SubscriptionSplitter implements ControlledFragmentHandler
 
     public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
+        final MessageHeaderDecoder messageHeaderDecoder = this.messageHeaderDecoder;
+
         messageHeaderDecoder.wrap(buffer, offset);
 
         final int messageOffset = offset + MessageHeaderDecoder.ENCODED_LENGTH;
@@ -92,6 +94,7 @@ class SubscriptionSplitter implements ControlledFragmentHandler
             {
                 case FixMessageDecoder.TEMPLATE_ID:
                 {
+                    final FixMessageDecoder fixMessage = this.fixMessage;
                     fixMessage.wrap(buffer, messageOffset, actingBlockLength, version);
 
                     final long connection = fixMessage.connection();
@@ -101,6 +104,7 @@ class SubscriptionSplitter implements ControlledFragmentHandler
                 }
                 case DisconnectDecoder.TEMPLATE_ID:
                 {
+                    final DisconnectDecoder disconnect = this.disconnect;
                     disconnect.wrap(buffer, messageOffset, actingBlockLength, version);
 
                     final long connection = disconnect.connection();
@@ -175,6 +179,7 @@ class SubscriptionSplitter implements ControlledFragmentHandler
         final MutableDirectBuffer clusterBuffer = bufferClaim.buffer();
         int clusterOffset = bufferClaim.offset();
 
+        final ReplicatedMessageEncoder replicatedMessage = this.replicatedMessage;
         messageHeaderEncoder
             .wrap(clusterBuffer, clusterOffset)
             .blockLength(replicatedMessage.sbeBlockLength())
