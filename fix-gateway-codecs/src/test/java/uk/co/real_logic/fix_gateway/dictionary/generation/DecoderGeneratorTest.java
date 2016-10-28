@@ -503,6 +503,13 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
 
+        canIterateOverGroup(decoder);
+
+        canIterateOverGroup(decoder);
+    }
+
+    private void canIterateOverGroup(final Decoder decoder) throws Exception
+    {
         final Iterator<?> iterator = getEgGroupIterator(decoder);
 
         assertTrue(iterator.hasNext());
