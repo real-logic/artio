@@ -58,13 +58,19 @@ class ClusterContext extends EngineContext
 
         final Archiver localInboundArchiver =
             archiver(new StreamIdentifier(libraryAeronChannel, INBOUND_LIBRARY_STREAM));
+        localInboundArchiver.subscription(
+            aeron.addSubscription(libraryAeronChannel, INBOUND_LIBRARY_STREAM));
         final Archiver localOutboundArchiver =
             archiver(new StreamIdentifier(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
+        localOutboundArchiver.subscription(
+            aeron.addSubscription(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
 
         final ClusterPositionSender positionSender = new ClusterPositionSender(
             outboundLibrarySubscription(),
             outboundClusterSubscription(),
             inboundLibraryPublication());
+
+        localInboundArchiver.positionHandler(positionSender);
 
         loggingRunner = newRunner(
             new CompositeAgent(
