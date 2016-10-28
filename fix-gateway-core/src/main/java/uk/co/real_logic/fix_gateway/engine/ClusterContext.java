@@ -70,7 +70,7 @@ class ClusterContext extends EngineContext
             outboundClusterSubscription(),
             inboundLibraryPublication());
 
-        localInboundArchiver.positionHandler(positionSender);
+        localOutboundArchiver.positionHandler(positionSender);
 
         loggingRunner = newRunner(
             new CompositeAgent(
