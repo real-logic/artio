@@ -215,10 +215,50 @@ public class ClusterPositionSenderTest
         savedPosition(position(counts * 2 + 1));
     }
 
+    @Test
+    public void shouldRemoveRecordUponTimeout()
+    {
+        libraryAtPosition1();
+
+        onLibraryTimeout();
+
+        onArchivedPosition(position(2), LENGTH);
+        checkConditions();
+    }
+
+    // NB: Framer uses heartbeat's for re-enabling liveness so the this should as well to have a
+    // Consistent view of Library liveness
+    @Test
+    public void shouldMakeLibraryLiveUponHeartbeat()
+    {
+        libraryAtPosition1();
+
+        onLibraryTimeout();
+        positionSender.onApplicationHeartbeat(AERON_SESSION_ID, LIBRARY_ID);
+
+        onArchivedPosition(position(2), LENGTH);
+        checkConditions();
+
+        savedPosition(position(2));
+    }
+
     @After
     public void noMorePublications()
     {
         verifyNoMoreInteractions(publication);
+    }
+
+    private void libraryAtPosition1()
+    {
+        connectLibrary();
+        onArchivedPosition(position(1), LENGTH);
+        checkConditions();
+        savedPosition(position(1));
+    }
+
+    private void onLibraryTimeout()
+    {
+        positionSender.onLibraryTimeout(AERON_SESSION_ID, LIBRARY_ID);
     }
 
     private void filledTwoSlotGap(final int startingAt)
@@ -232,8 +272,6 @@ public class ClusterPositionSenderTest
 
         savedPosition(position(startingAt + 3));
     }
-
-    // TODO: don't leak memory when libraries disconnect.
 
     private void backPressureSave()
     {

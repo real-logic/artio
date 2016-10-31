@@ -48,6 +48,8 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final ReplicatedMessageDecoder replicatedMessage = new ReplicatedMessageDecoder();
     private final LibraryConnectDecoder libraryConnect = new LibraryConnectDecoder();
+    private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
+    private final LibraryTimeoutDecoder libraryTimeout = new LibraryTimeoutDecoder();
 
     private final Int2ObjectHashMap<LibraryPositions> libraryIdToPosition = new Int2ObjectHashMap<>();
     private final Long2LongHashMap aeronSessionIdToArchivedPosition = new Long2LongHashMap(MISSING);
@@ -87,11 +89,32 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
 
         offset += HEADER_LENGTH;
 
-        if (messageHeader.templateId() == LibraryConnectDecoder.TEMPLATE_ID)
+        final int blockLength = messageHeader.blockLength();
+        final int version = messageHeader.version();
+        final int aeronSessionId = header.sessionId();
+
+        switch (messageHeader.templateId())
         {
-            libraryConnect.wrap(
-                buffer, offset, messageHeader.blockLength(), messageHeader.version());
-            onLibraryConnect(header.sessionId(), libraryConnect.libraryId());
+            case LibraryConnectDecoder.TEMPLATE_ID:
+            {
+                libraryConnect.wrap(buffer, offset, blockLength, version);
+                onLibraryConnect(aeronSessionId, libraryConnect.libraryId());
+                break;
+            }
+
+            case ApplicationHeartbeatDecoder.TEMPLATE_ID:
+            {
+                applicationHeartbeat.wrap(buffer, offset, blockLength, version);
+                onApplicationHeartbeat(aeronSessionId, applicationHeartbeat.libraryId());
+                break;
+            }
+
+            case LibraryTimeoutDecoder.TEMPLATE_ID:
+            {
+                libraryTimeout.wrap(buffer, offset, blockLength, version);
+                onLibraryTimeout(aeronSessionId, libraryTimeout.libraryId());
+                break;
+            }
         }
 
         return Action.CONTINUE;
@@ -176,6 +199,17 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
             // TODO: fix the length right
             getPositions(libraryId).newPosition(archivedPosition, (int) archivedPosition);
         }
+    }
+
+    void onApplicationHeartbeat(final int aeronSessionId, final int libraryId)
+    {
+        aeronSessionIdToLibraryId.put(aeronSessionId, libraryId);
+    }
+
+    void onLibraryTimeout(final int aeronSessionId, final int libraryId)
+    {
+        libraryIdToPosition.remove(libraryId);
+        aeronSessionIdToLibraryId.remove(aeronSessionId);
     }
 
     void onClusteredLibraryPosition(final int libraryId, final long position, final int length)
