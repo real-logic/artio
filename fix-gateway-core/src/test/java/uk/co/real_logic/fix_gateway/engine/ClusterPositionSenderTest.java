@@ -16,10 +16,13 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
+
+import java.util.stream.IntStream;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 import static org.mockito.Mockito.*;
@@ -93,16 +96,17 @@ public class ClusterPositionSenderTest
     public void shouldPublishContiguousPositionOfArchivedAndReplicatedStream()
     {
         contiguousStreamUpTo2();
-
-        savedPosition(position(2));
     }
 
     private void contiguousStreamUpTo2()
     {
         connectLibrary();
+
         onClusteredPosition(position(1), LENGTH);
         onArchivedPosition(position(2), LENGTH);
         checkConditions();
+
+        savedPosition(position(2));
     }
 
     @Test
@@ -142,8 +146,47 @@ public class ClusterPositionSenderTest
         onClusteredPosition(position(7), LENGTH);
         checkConditions();
 
-        savedPosition(position(2));
         savedPosition(position(8));
+    }
+
+    @Test
+    public void shouldPublishPositionWithIndividualMessagesFillingInALargeGap()
+    {
+        contiguousStreamUpTo2();
+
+        onArchivedPosition(position(6), LENGTH);
+        onArchivedPosition(position(7), LENGTH);
+        onArchivedPosition(position(8), LENGTH);
+        checkConditions();
+
+        onArchivedPosition(position(3), LENGTH);
+        onArchivedPosition(position(4), LENGTH);
+        onArchivedPosition(position(5), LENGTH);
+        checkConditions();
+
+        savedPosition(position(8));
+    }
+
+    @Ignore
+    @Test
+    public void shouldPublishPositionAfterWrapAround()
+    {
+        connectLibrary();
+
+        IntStream.range(0, 2) //ClusterPositionSender.INTERVAL_COUNT)
+                 .forEach(x -> filledTwoSlotGap(x * 4 + 1));
+    }
+
+    private void filledTwoSlotGap(final int startingAt)
+    {
+        onArchivedPosition(position(startingAt + 1), LENGTH);
+        onArchivedPosition(position(startingAt + 3), LENGTH);
+
+        onClusteredPosition(position(startingAt), LENGTH);
+        onClusteredPosition(position(startingAt + 2), LENGTH);
+        checkConditions();
+
+        savedPosition(position(startingAt + 3));
     }
 
     @After
@@ -152,10 +195,8 @@ public class ClusterPositionSenderTest
         verifyNoMoreInteractions(publication);
     }
 
-    // TODO: multiple gaps filled in
-    // TODO: gaps in archived position
+    // TODO: wrap around the interval ring buffer.
     // TODO: don't leak memory when libraries disconnect.
-    // TODO: ensure message only sent once
 
     private void backPressureSave()
     {

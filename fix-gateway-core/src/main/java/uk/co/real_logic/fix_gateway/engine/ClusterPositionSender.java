@@ -36,6 +36,7 @@ import java.util.stream.IntStream;
 // are replicated for a long term once a stream has been replicated.
 class ClusterPositionSender implements Agent, ArchivedPositionHandler
 {
+    static final int INTERVAL_COUNT = 16;
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
     private static final int LIMIT = 10;
 
@@ -205,7 +206,6 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
 
     private final class LibraryPositions
     {
-        private static final int INTERVAL_COUNT = 16;
         private static final int INTERVAL_MOD = INTERVAL_COUNT - 1;
 
         private final int libraryId;
@@ -227,15 +227,15 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
         private void newPosition(long endPosition, final int alignedLength)
         {
             final long startPosition = endPosition - alignedLength;
-            final int size = size();
-
             if (contiguousPosition == 0 || contiguousPosition == startPosition)
             {
-                final Interval interval = intervals[read];
-                if (size > 0 && endPosition == interval.startPosition)
+                // Scan the list of intervals for contiguous intervals
+                Interval interval = intervals[read];
+                while (size() > 0 && endPosition == interval.startPosition)
                 {
                     endPosition = interval.endPosition;
                     read = next(read);
+                    interval = intervals[read];
                 }
 
                 contiguousPosition = endPosition;
