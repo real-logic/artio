@@ -171,13 +171,58 @@ public class ClusterPositionSenderTest
     {
         connectLibrary();
 
-        IntStream.range(0, ClusterPositionSender.INTERVAL_COUNT)
+        IntStream.range(0, ClusterPositionSender.DEFAULT_INTERVAL_COUNT)
                  .forEach(x -> filledTwoSlotGap(x * 4 + 1));
+    }
+
+    // TODO: read not initially 0
+
+    @Test
+    public void shouldPublishPositionWithArbitraryNumberOfIntervals()
+    {
+        connectLibrary();
+
+        final int counts = ClusterPositionSender.DEFAULT_INTERVAL_COUNT * 4;
+
+        IntStream.rangeClosed(0, counts).forEach(x -> onArchivedPosition(position(x * 2 + 1), LENGTH));
+        IntStream.rangeClosed(1, counts).forEach(x -> onArchivedPosition(position(x * 2), LENGTH));
+
+        checkConditions();
+
+        savedPosition(position(counts * 2 + 1));
+    }
+
+    @Test
+    public void shouldPublishPositionWithArbitraryNumberOfIntervalsAtArbitraryOffset()
+    {
+        connectLibrary();
+
+        // Ensure that the read pointed is > 0 when you copy
+        onArchivedPosition(position(1), LENGTH);
+        onClusteredPosition(position(3), LENGTH);
+        onArchivedPosition(position(2), LENGTH);
+        onClusteredPosition(position(4), LENGTH);
+        checkConditions();
+        savedPosition(position(4));
+
+        final int counts = ClusterPositionSender.DEFAULT_INTERVAL_COUNT * 4;
+
+        IntStream.rangeClosed(2, counts).forEach(x -> onArchivedPosition(position(x * 2 + 1), LENGTH));
+        IntStream.rangeClosed(3, counts).forEach(x -> onArchivedPosition(position(x * 2), LENGTH));
+
+        checkConditions();
+
+        savedPosition(position(counts * 2 + 1));
+    }
+
+    @After
+    public void noMorePublications()
+    {
+        verifyNoMoreInteractions(publication);
     }
 
     private void filledTwoSlotGap(final int startingAt)
     {
-
         onArchivedPosition(position(startingAt + 1), LENGTH);
         onArchivedPosition(position(startingAt + 3), LENGTH);
 
@@ -188,13 +233,6 @@ public class ClusterPositionSenderTest
         savedPosition(position(startingAt + 3));
     }
 
-    @After
-    public void noMorePublications()
-    {
-        verifyNoMoreInteractions(publication);
-    }
-
-    // TODO: expand the interval ring buffer.
     // TODO: don't leak memory when libraries disconnect.
 
     private void backPressureSave()

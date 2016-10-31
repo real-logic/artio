@@ -36,7 +36,8 @@ import java.util.stream.IntStream;
 // are replicated for a long term once a stream has been replicated.
 class ClusterPositionSender implements Agent, ArchivedPositionHandler
 {
-    static final int INTERVAL_COUNT = 4;
+    static final int DEFAULT_INTERVAL_COUNT = 4;
+
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
     private static final int LIMIT = 10;
 
@@ -180,13 +181,11 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
     void onClusteredLibraryPosition(final int libraryId, final long position, final int length)
     {
         final int alignedLength = ArchiveDescriptor.alignTerm(length);
-        // System.out.println("Cluster : " + libraryId + ", " + position + ", " + alignedLength);
         getPositions(libraryId).newPosition(position, alignedLength);
     }
 
     public void onArchivedPosition(final int aeronSessionId, final long position, final int alignedLength)
     {
-        // System.out.println("Archive : " + aeronSessionId + ", " + position + ", " + alignedLength);
         final int libraryId = aeronSessionIdToLibraryId.get(aeronSessionId);
         if (libraryId != MISSING)
         {
@@ -206,11 +205,9 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
 
     private final class LibraryPositions
     {
-        private static final int INTERVAL_MOD = INTERVAL_COUNT - 1;
-
         private final int libraryId;
-        private final Interval[] intervals =
-            IntStream.range(0, INTERVAL_COUNT)
+        private Interval[] intervals =
+            IntStream.range(0, DEFAULT_INTERVAL_COUNT)
                 .mapToObj(i -> new Interval())
                 .toArray(Interval[]::new);
 
@@ -246,6 +243,24 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
             // as the start, in practice always an archived message so this is safe.
             else if (endPosition > contiguousPosition)
             {
+                final int oldEnd = intervals.length - 1;
+                if (size() == oldEnd)
+                {
+                    final int newLength = intervals.length * 2;
+                    final Interval[] newIntervals = new Interval[newLength];
+                    IntStream.range(oldEnd, newLength).forEach(i -> newIntervals[i] = new Interval());
+
+                    for (int i = 0; read != write; i++)
+                    {
+                        newIntervals[i] = intervals[read];
+                        read = next(read);
+                    }
+
+                    intervals = newIntervals;
+                    read = 0;
+                    write = oldEnd;
+                }
+
                 final Interval interval = intervals[write];
                 interval.startPosition = startPosition;
                 interval.endPosition = endPosition;
@@ -257,12 +272,12 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
 
         private int next(final int value)
         {
-            return (value + 1) & INTERVAL_MOD;
+            return (value + 1) & intervals.length - 1;
         }
 
         private int size()
         {
-            return (write - read) & INTERVAL_MOD;
+            return (write - read) & intervals.length - 1;
         }
 
         private boolean sendUpdatedPosition()
