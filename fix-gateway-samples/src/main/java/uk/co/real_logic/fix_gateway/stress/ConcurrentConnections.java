@@ -57,8 +57,6 @@ public final class ConcurrentConnections
         StressUtil.cleanupOldLogFileDir(engineConfiguration);
 
         final Random random = new Random(StressConfiguration.SEED);
-        final String[] messagePool = new String[StressConfiguration.MESSAGE_POOL];
-        StressUtil.constructMessagePool(messagePool, random);
 
         final long startTime = System.currentTimeMillis();
 
@@ -71,11 +69,9 @@ public final class ConcurrentConnections
             {
                 System.out.format("Starting session %d / %d%n", i + 1, NUM_SESSIONS);
 
-                final String targetCompId = StressConfiguration.ACCEPTOR_ID + "-" + i;
-                final String senderCompId = StressConfiguration.INITIATOR_ID + "-" + i;
-
+                final int id = i;
                 threads[i] = new Thread(
-                    () -> runThread(aeronChannel, random, messagePool, barrier, targetCompId, senderCompId));
+                    () -> runThread(aeronChannel, random, barrier, id));
 
                 threads[i].start();
             }
@@ -96,11 +92,13 @@ public final class ConcurrentConnections
     private static void runThread(
         final String aeronChannel,
         final Random random,
-        final String[] messagePool,
         final CyclicBarrier barrier,
-        final String targetCompId,
-        final String senderCompId)
+        final int id)
     {
+        final String targetCompId = StressConfiguration.ACCEPTOR_ID + "-" + id;
+        final String senderCompId = StressConfiguration.INITIATOR_ID + "-" + id;
+        final String[] messagePool = StressUtil.constructMessagePool(String.valueOf(id), random);
+
         final TestReqIdFinder testReqIdFinder = new TestReqIdFinder();
 
         final SessionConfiguration sessionConfiguration = SessionConfiguration.builder()

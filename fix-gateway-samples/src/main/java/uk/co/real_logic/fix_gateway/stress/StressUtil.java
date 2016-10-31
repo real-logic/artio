@@ -33,8 +33,10 @@ import static uk.co.real_logic.fix_gateway.stress.StressConfiguration.MIN_LENGTH
 
 final class StressUtil
 {
-    static void constructMessagePool(final String[] pool, final Random random)
+    static String[] constructMessagePool(final String prefix, final Random random)
     {
+        final String[] pool = new String[StressConfiguration.MESSAGE_POOL];
+
         final byte[] messageContent = new byte[MAX_LENGTH + 1];
         for (int i = 0; i < messageContent.length; i++)
         {
@@ -45,8 +47,10 @@ final class StressUtil
         {
             final int messageLength = MIN_LENGTH + random.nextInt(MAX_LENGTH - MIN_LENGTH + 1);
 
-            pool[i] = String.format("TestReqId-%d-%s", i, new String(messageContent, 0, messageLength));
+            pool[i] = String.format("%sTestReqId-%d-%s", prefix, i, new String(messageContent, 0, messageLength));
         }
+
+        return pool;
     }
 
 

@@ -54,8 +54,7 @@ public final class SerialConnections
         StressUtil.cleanupOldLogFileDir(engineConfiguration);
 
         final Random random = new Random(StressConfiguration.SEED);
-        final String[] messagePool = new String[StressConfiguration.MESSAGE_POOL];
-        StressUtil.constructMessagePool(messagePool, random);
+        final String[] messagePool = StressUtil.constructMessagePool("", random);
 
         final long startTime = System.currentTimeMillis();
 
