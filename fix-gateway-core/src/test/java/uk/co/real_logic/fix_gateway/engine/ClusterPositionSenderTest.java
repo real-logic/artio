@@ -127,6 +127,25 @@ public class ClusterPositionSenderTest
         savedPosition(position(4));
     }
 
+    @Test
+    public void shouldPublishPositionOnceMultipleGapsFilled()
+    {
+        contiguousStreamUpTo2();
+
+        onArchivedPosition(position(4), LENGTH);
+        onArchivedPosition(position(6), LENGTH);
+        onArchivedPosition(position(8), LENGTH);
+        checkConditions();
+
+        onClusteredPosition(position(3), LENGTH);
+        onClusteredPosition(position(5), LENGTH);
+        onClusteredPosition(position(7), LENGTH);
+        checkConditions();
+
+        savedPosition(position(2));
+        savedPosition(position(8));
+    }
+
     @After
     public void noMorePublications()
     {
@@ -136,6 +155,7 @@ public class ClusterPositionSenderTest
     // TODO: multiple gaps filled in
     // TODO: gaps in archived position
     // TODO: don't leak memory when libraries disconnect.
+    // TODO: ensure message only sent once
 
     private void backPressureSave()
     {
