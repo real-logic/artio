@@ -44,7 +44,7 @@ public class Archiver implements Agent, RawBlockHandler
 {
     public interface ArchivedPositionHandler
     {
-        void onArchivedPosition(int aeronSessionId, long position, int length);
+        void onArchivedPosition(int aeronSessionId, long endPosition, int length);
     }
 
     private static final int POLL_LENGTH = TERM_BUFFER_LENGTH_DEFAULT;
@@ -58,7 +58,7 @@ public class Archiver implements Agent, RawBlockHandler
     private final LogDirectoryDescriptor directoryDescriptor;
     private final CRC32 checksum = new CRC32();
 
-    private ArchivedPositionHandler positionHandler = (aeronSessionId, position, length) ->
+    private ArchivedPositionHandler positionHandler = (aeronSessionId, endPosition, length) ->
     {
     };
 
@@ -214,8 +214,8 @@ public class Archiver implements Agent, RawBlockHandler
                 writeChecksumForBlock(termBuffer, termOffset, length);
 
                 final long transferred = fileChannel.transferTo(fileOffset, length, currentLogChannel);
-                final long position = computePosition(termId, termOffset, positionBitsToShift, initialTermId);
-                positionHandler.onArchivedPosition(sessionId, position, length);
+                final long endPosition = computePosition(termId, termOffset + length, positionBitsToShift, initialTermId);
+                positionHandler.onArchivedPosition(sessionId, endPosition, length);
 
                 if (transferred != length)
                 {

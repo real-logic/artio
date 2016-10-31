@@ -47,6 +47,7 @@ import java.util.stream.IntStream;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.agrona.CloseHelper.close;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_CLUSTER;
@@ -138,8 +139,7 @@ public class ClusteredGatewaySystemTest
         closeLibrariesAndEngine();
         final long end = System.nanoTime() + 1;
 
-        // TODO: assert position correct
-        // assertThat(acceptingHandler.sentPosition(), greaterThanOrEqualTo(position));
+        assertThat(acceptingHandler.sentPosition(), greaterThanOrEqualTo(position));
 
         allClusterNodesHaveArchivedTestRequestMessage(begin, end, acceptingSession.id());
 

@@ -23,4 +23,5 @@ public enum LogTag
     FIX_MESSAGE,
     FIX_TEST,
     GATEWAY_MESSAGE,
+    POSITION,
 }

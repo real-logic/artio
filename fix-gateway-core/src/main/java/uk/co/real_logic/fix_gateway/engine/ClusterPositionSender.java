@@ -23,14 +23,18 @@ import org.agrona.collections.Int2IntHashMap;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.Agent;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver.ArchivedPositionHandler;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 
+import java.util.Arrays;
 import java.util.function.IntFunction;
 import java.util.stream.IntStream;
+
+import static uk.co.real_logic.fix_gateway.LogTag.POSITION;
 
 // TODO: identify how to improve liveness in the situation that no messages
 // are replicated for a long term once a stream has been replicated.
@@ -215,20 +219,22 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
     void onClusteredLibraryPosition(final int libraryId, final long position, final int length)
     {
         final int alignedLength = ArchiveDescriptor.alignTerm(length);
+        DebugLogger.log(POSITION, "Clustered Position %d, len = %d\n", position, alignedLength);
         getPositions(libraryId).newPosition(position, alignedLength);
     }
 
-    public void onArchivedPosition(final int aeronSessionId, final long position, final int alignedLength)
+    public void onArchivedPosition(final int aeronSessionId, final long endPosition, final int alignedLength)
     {
+        DebugLogger.log(POSITION, "Archived Position %d, len = %d\n", endPosition, alignedLength);
         final int libraryId = aeronSessionIdToLibraryId.get(aeronSessionId);
         if (libraryId != MISSING)
         {
-            getPositions(libraryId).newPosition(position, alignedLength);
+            getPositions(libraryId).newPosition(endPosition, alignedLength);
         }
         else
         {
             // Backup path in case we haven't yet seen the library connect message
-            aeronSessionIdToArchivedPosition.put(aeronSessionId, position);
+            aeronSessionIdToArchivedPosition.put(aeronSessionId, endPosition);
         }
     }
 
@@ -282,7 +288,7 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
                 {
                     final int newLength = intervals.length * 2;
                     final Interval[] newIntervals = new Interval[newLength];
-                    IntStream.range(oldEnd, newLength).forEach(i -> newIntervals[i] = new Interval());
+                    Arrays.setAll(newIntervals, i -> new Interval());
 
                     for (int i = 0; read != write; i++)
                     {
@@ -300,8 +306,6 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
                 interval.endPosition = endPosition;
                 write = next(write);
             }
-
-            // TODO: check for when intervals array gets full
         }
 
         private int next(final int value)
@@ -324,11 +328,30 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
 
             return false;
         }
+
+        public String toString()
+        {
+            return "LibraryPositions{" +
+                "libraryId=" + libraryId +
+                ", intervals=" + Arrays.toString(intervals) +
+                ", read=" + read +
+                ", write=" + write +
+                ", contiguousPosition=" + contiguousPosition +
+                ", updatedPosition=" + updatedPosition +
+                '}';
+        }
     }
 
     private static class Interval
     {
         private long startPosition;
         private long endPosition;
+
+        public String toString()
+        {
+            return "{" + startPosition +
+                " - " + endPosition +
+                '}';
+        }
     }
 }
