@@ -60,7 +60,8 @@ final class StressUtil
         final IdleStrategy idleStrategy,
         final TestReqIdFinder testReqIdFinder,
         final String[] messagePool,
-        final Random random)
+        final Random random,
+        final String senderCompId)
     {
         final TestRequestEncoder testRequest = new TestRequestEncoder();
 
@@ -86,7 +87,7 @@ final class StressUtil
 
             if (StressConfiguration.PRINT_EXCHANGE)
             {
-                System.out.println(session.id() + " Success, received reply! " + testReqIdFinder.testReqId());
+                System.out.println(senderCompId + " Success, received reply! " + testReqIdFinder.testReqId());
             }
         }
 

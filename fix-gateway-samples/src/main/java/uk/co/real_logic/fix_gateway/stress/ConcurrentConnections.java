@@ -145,7 +145,7 @@ public final class ConcurrentConnections
             }
 
             StressUtil.exchangeMessages(
-                library, session, idleStrategy, testReqIdFinder, messagePool, random);
+                library, session, idleStrategy, testReqIdFinder, messagePool, random, senderCompId);
 
             session.startLogout();
             session.requestDisconnect();

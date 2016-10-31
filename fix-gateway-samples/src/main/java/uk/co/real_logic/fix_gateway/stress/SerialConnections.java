@@ -68,8 +68,8 @@ public final class SerialConnections
 
                 final SessionConfiguration sessionConfiguration = SessionConfiguration.builder()
                     .address("localhost", StressConfiguration.PORT)
-                    .targetCompId(StressConfiguration.ACCEPTOR_ID)
-                    .senderCompId(StressConfiguration.INITIATOR_ID)
+                    .targetCompId(ACCEPTOR_ID)
+                    .senderCompId(INITIATOR_ID)
                     .build();
 
                 final LibraryConfiguration libraryConfiguration = new LibraryConfiguration()
@@ -104,7 +104,8 @@ public final class SerialConnections
                         idleStrategy.idle(library.poll(1));
                     }
 
-                    StressUtil.exchangeMessages(library, session, idleStrategy, testReqIdFinder, messagePool, random);
+                    StressUtil.exchangeMessages(
+                        library, session, idleStrategy, testReqIdFinder, messagePool, random, INITIATOR_ID);
 
                     session.startLogout();
                     session.requestDisconnect();
