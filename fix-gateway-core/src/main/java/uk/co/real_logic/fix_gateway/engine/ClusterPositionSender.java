@@ -36,7 +36,7 @@ import java.util.stream.IntStream;
 // are replicated for a long term once a stream has been replicated.
 class ClusterPositionSender implements Agent, ArchivedPositionHandler
 {
-    static final int INTERVAL_COUNT = 16;
+    static final int INTERVAL_COUNT = 4;
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
     private static final int LIMIT = 10;
 
@@ -262,7 +262,7 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
 
         private int size()
         {
-            return write - read;
+            return (write - read) & INTERVAL_MOD;
         }
 
         private boolean sendUpdatedPosition()

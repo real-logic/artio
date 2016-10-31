@@ -171,7 +171,7 @@ public class ClusterPositionSenderTest
     {
         connectLibrary();
 
-        IntStream.range(0, 2) //ClusterPositionSender.INTERVAL_COUNT)
+        IntStream.range(0, ClusterPositionSender.INTERVAL_COUNT)
                  .forEach(x -> filledTwoSlotGap(x * 4 + 1));
     }
 
