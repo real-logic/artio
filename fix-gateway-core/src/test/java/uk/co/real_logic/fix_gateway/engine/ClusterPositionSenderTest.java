@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
@@ -167,7 +166,6 @@ public class ClusterPositionSenderTest
         savedPosition(position(8));
     }
 
-    @Ignore
     @Test
     public void shouldPublishPositionAfterWrapAround()
     {
@@ -179,6 +177,7 @@ public class ClusterPositionSenderTest
 
     private void filledTwoSlotGap(final int startingAt)
     {
+
         onArchivedPosition(position(startingAt + 1), LENGTH);
         onArchivedPosition(position(startingAt + 3), LENGTH);
 
@@ -195,7 +194,7 @@ public class ClusterPositionSenderTest
         verifyNoMoreInteractions(publication);
     }
 
-    // TODO: wrap around the interval ring buffer.
+    // TODO: expand the interval ring buffer.
     // TODO: don't leak memory when libraries disconnect.
 
     private void backPressureSave()

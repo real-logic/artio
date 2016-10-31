@@ -242,7 +242,9 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
 
                 updatedPosition = true;
             }
-            else
+            // endPosition <= contiguousPosition can happen because we take the first received message
+            // as the start, in practice always an archived message so this is safe.
+            else if (endPosition > contiguousPosition)
             {
                 final Interval interval = intervals[write];
                 interval.startPosition = startPosition;
