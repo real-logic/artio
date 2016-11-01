@@ -83,6 +83,7 @@ final class StressUtil
                 if (StressConfiguration.printFailedSpints(fails))
                 {
                     System.out.println(senderCompId + " Has repeatedly failed for " + msg);
+                    fails = 0;
                 }
 
                 idleStrategy.idle(library.poll(1));
