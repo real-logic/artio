@@ -26,7 +26,7 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.IDLE_STRATEGY;
+import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.MAX_MESSAGES_IN_FLIGHT;
 import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.MESSAGES_EXCHANGED;
 
 public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
@@ -35,8 +35,6 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
     {
         new ThroughputBenchmarkClient().runBenchmark();
     }
-
-    private static final int MAX_MESSAGES_IN_FLIGHT = 12_000;
 
     private final AtomicInteger messagesReceived = new AtomicInteger();
     private final CyclicBarrier barrier = new CyclicBarrier(2, () -> messagesReceived.set(0));
@@ -97,18 +95,22 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
 
             while (true)
             {
+                int senderLimit = senderLimit();
+
                 for (int i = 0; i < MESSAGES_EXCHANGED; i++)
                 {
                     final int length = encode(testRequest, header, seqNo);
                     write(socketChannel, length);
                     seqNo++;
 
-
-                    while (i > senderLimit())
+                    if (i > senderLimit)
                     {
-                        IDLE_STRATEGY.idle();
+                        while (i > (senderLimit = senderLimit()))
+                        {
+                            IDLE_STRATEGY.idle();
+                        }
+                        IDLE_STRATEGY.reset();
                     }
-                    IDLE_STRATEGY.reset();
                 }
 
                 await();

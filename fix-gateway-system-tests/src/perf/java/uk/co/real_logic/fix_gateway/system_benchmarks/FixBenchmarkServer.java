@@ -40,7 +40,7 @@ public final class FixBenchmarkServer
              FixEngine engine = FixEngine.launch(configuration);
              FixLibrary library = FixLibrary.connect(libraryConfiguration()))
         {
-            final IdleStrategy idleStrategy = IDLE_STRATEGY;
+            final IdleStrategy idleStrategy = idleStrategy();
             System.out.printf("Using %s idle strategy\n", idleStrategy.getClass().getSimpleName());
             while (true)
             {
@@ -77,7 +77,7 @@ public final class FixBenchmarkServer
             .logFileDir(acceptorLogs)
             .logInboundMessages(LOG_INBOUND_MESSAGES)
             .logOutboundMessages(LOG_OUTBOUND_MESSAGES)
-            .framerIdleStrategy(IDLE_STRATEGY);
+            .framerIdleStrategy(idleStrategy());
     }
 
     private static LibraryConfiguration libraryConfiguration()

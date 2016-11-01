@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
+import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
@@ -37,6 +38,7 @@ import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 
 public abstract class AbstractBenchmarkClient
 {
+    protected static final IdleStrategy IDLE_STRATEGY = idleStrategy();
     protected static final String HOST = System.getProperty("fix.benchmark.host", "localhost");
     protected static final int BUFFER_SIZE = 16 * 1024;
     protected static final byte NINE = (byte) '9';
