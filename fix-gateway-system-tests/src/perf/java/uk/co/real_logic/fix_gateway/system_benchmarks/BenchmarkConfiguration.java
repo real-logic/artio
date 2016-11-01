@@ -34,7 +34,7 @@ public final class BenchmarkConfiguration
     public static final int WARMUP_MESSAGES = Integer.getInteger("fix.benchmark.warmup", 10_000);
     public static final int MESSAGES_EXCHANGED = Integer.getInteger("fix.benchmark.messages", 100_000);
     public static final boolean REJECT_LOGON = Boolean.getBoolean("fix.benchmark.reject_logon");
-    public static final int MAX_MESSAGES_IN_FLIGHT = Integer.getInteger("fix.benchmark.max_messages_in_flight", 12_000);
+    public static final int MAX_MESSAGES_IN_FLIGHT = Integer.getInteger("fix.benchmark.max_messages_in_flight", 1_000);
 
     static IdleStrategy idleStrategy()
     {
