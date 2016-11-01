@@ -77,7 +77,9 @@ public class ConstantGenerator
         return generateFieldDictionary(fields(), ALL_FIELDS);
     }
 
-    public static String generateFieldDictionary(final Collection<Field> fields, final String name)
+    public static String generateFieldDictionary(
+        final Collection<Field> fields,
+        final String name)
     {
         final String addFields = fields
             .stream()

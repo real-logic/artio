@@ -334,7 +334,8 @@ public class DecoderGeneratorTest
     @Test
     public void shouldGenerateRequiredFieldsDictionary() throws Exception
     {
-        final Object allFieldsField = getStatic(heartbeat, REQUIRED_FIELDS);
+        final Decoder decoder = (Decoder) heartbeat.newInstance();
+        final Object allFieldsField = getRequiredFields(decoder);
         assertThat(allFieldsField, instanceOf(IntHashSet.class));
 
         @SuppressWarnings("unchecked")
@@ -342,6 +343,11 @@ public class DecoderGeneratorTest
         assertThat(allFields, hasItem(116));
         assertThat(allFields, not(hasItem(112)));
         assertThat(allFields, not(hasItem(999)));
+    }
+
+    private Object getRequiredFields(final Decoder decoder) throws IllegalAccessException, NoSuchFieldException
+    {
+        return heartbeat.getField(REQUIRED_FIELDS).get(decoder);
     }
 
     @Test

@@ -26,13 +26,13 @@ import uk.co.real_logic.fix_gateway.fields.*;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.*;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerator.generateFieldDictionary;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerator.sizeHashSet;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.rethrown;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
@@ -126,7 +126,7 @@ public class DecoderGenerator extends Generator
                      .map(comp -> decoderClassName((Aggregate) comp.element()))
                      .collect(toList());
 
-        out.append(classDeclaration(className, interfaces, Decoder.class, type == GROUP));
+        out.append(classDeclaration(className, interfaces, Decoder.class, false));
         validation(out, aggregate, type);
         if (isMessage)
         {
@@ -262,6 +262,33 @@ public class DecoderGenerator extends Generator
             messageValidation,
             enumValidation,
             2 * aggregate.allChildEntries().count()));
+    }
+
+    private String generateFieldDictionary(final Collection<Field> fields, final String name)
+    {
+        final String addFields = fields
+            .stream()
+            .map((field) -> addField(field, name))
+            .collect(joining());
+
+        final int hashMapSize = sizeHashSet(fields);
+        return String.format(
+            "    public final IntHashSet %3$s = new IntHashSet(%1$d, -1);\n\n" +
+            "    {\n" +
+            "%2$s" +
+            "    }\n\n",
+            hashMapSize,
+            addFields,
+            name);
+    }
+
+    private static String addField(final Field field, final String name)
+    {
+        return String.format(
+            "        %1$s.add(%2$d);\n",
+            name,
+            field.number()
+        );
     }
 
     private CharSequence validateEnum(final Entry entry, final Writer out)
@@ -789,20 +816,36 @@ public class DecoderGenerator extends Generator
 
         final String suffix =
             "            default:\n" +
-            "                if (" + CODEC_VALIDATION_ENABLED +
-            " && !TrailerDecoder." + REQUIRED_FIELDS + ".contains(tag)" + groupSuffix + ")\n" +
-            "                {\n" +
-            "                    unknownFields.add(tag);\n" +
-            "                }\n" +
-            "                return position - offset;\n\n" +
-            "            }\n\n" +
-            "            position = endOfField + 1;\n" +
-            "        }\n\n" +
-            (hasCommonCompounds ? "        position += trailer.decode(buffer, position, end - position);\n" : "") +
-            "        return position - offset;\n" +
-            "    }\n\n";
+                "                if (" + CODEC_VALIDATION_ENABLED + isTrailerTag(type) + groupSuffix + ")\n" +
+                "                {\n" +
+                "                    unknownFields.add(tag);\n" +
+                "                }\n" +
+                "                return position - offset;\n\n" +
+                "            }\n\n" +
+                "            position = endOfField + 1;\n" +
+                "        }\n\n" +
+                (hasCommonCompounds ? "        position += trailer.decode(buffer, position, end - position);\n" : "") +
+                "        return position - offset;\n" +
+                "    }\n\n";
 
         return prefix + body + suffix;
+    }
+
+    private String isTrailerTag(final AggregateType type)
+    {
+        if (type == TRAILER)
+        {
+            return " && !" + REQUIRED_FIELDS + ".contains(tag)";
+        }
+        else if (type == HEADER || type == COMPONENT || type == GROUP)
+        {
+            // TODO: figure out a sound way of validating this.
+            return "";
+        }
+        else
+        {
+            return " && !trailer." + REQUIRED_FIELDS + ".contains(tag)";
+        }
     }
 
     private String endGroupCheck(final Aggregate aggregate, final boolean isGroup)
