@@ -27,9 +27,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 
-import static uk.co.real_logic.fix_gateway.stress.StressConfiguration.MAX_LENGTH;
-import static uk.co.real_logic.fix_gateway.stress.StressConfiguration.MESSAGES_EXCHANGED;
-import static uk.co.real_logic.fix_gateway.stress.StressConfiguration.MIN_LENGTH;
+import static uk.co.real_logic.fix_gateway.stress.StressConfiguration.*;
 
 final class StressUtil
 {
@@ -80,14 +78,19 @@ final class StressUtil
                 idleStrategy.idle(library.poll(1));
             }
 
-            while (!msg.equals(testReqIdFinder.testReqId()))
+            for (long fails = 0; !msg.equals(testReqIdFinder.testReqId()); fails++)
             {
+                if (StressConfiguration.printFailedSpints(fails))
+                {
+                    System.out.println(senderCompId + " Has repeatedly failed for " + msg);
+                }
+
                 idleStrategy.idle(library.poll(1));
             }
 
             if (StressConfiguration.PRINT_EXCHANGE)
             {
-                System.out.println(senderCompId + " Success, received reply! " + testReqIdFinder.testReqId());
+                System.out.println(senderCompId + " Success, received reply! " + msg);
             }
         }
 

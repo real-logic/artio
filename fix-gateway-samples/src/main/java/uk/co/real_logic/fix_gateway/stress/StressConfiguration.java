@@ -27,4 +27,12 @@ final class StressConfiguration
     static final int MIN_LENGTH = Integer.getInteger("fix.stress.messages.minLength", 1);
     static final int MAX_LENGTH = Integer.getInteger("fix.stress.messages.maxLength", 20);
     static final int MESSAGE_POOL = Integer.getInteger("fix.stress.messages.pool", MESSAGES_EXCHANGED);
+
+    private static final int DO_NOT_PRINT = -1;
+    private static final long FAILED_SPINS_PRINT = Long.getLong("fix.stress.failedSpinsPrint", DO_NOT_PRINT);
+    static boolean printFailedSpints(final long failCount)
+    {
+        return FAILED_SPINS_PRINT != DO_NOT_PRINT && failCount > FAILED_SPINS_PRINT;
+    }
+
 }
