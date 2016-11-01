@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
-import org.agrona.collections.IntHashSet;
 import org.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
@@ -26,7 +25,6 @@ import static java.lang.Character.isUpperCase;
 import static java.lang.Character.toUpperCase;
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
 
 public class ConstantGenerator
 {
@@ -52,7 +50,6 @@ public class ConstantGenerator
         outputManager.withOutput(CLASS_NAME, out ->
         {
             out.append(fileHeader(builderPackage));
-            out.append(importFor(IntHashSet.class));
             out.append(BODY);
             out.append(generateVersion());
             out.append(generateMessageTypes());
