@@ -15,12 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
+import org.agrona.LangUtil;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
 
 import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.MESSAGES_EXCHANGED;
 
@@ -30,6 +33,8 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
     {
         new ThroughputBenchmarkClient().runBenchmark();
     }
+
+    private final CyclicBarrier barrier = new CyclicBarrier(2);
 
     private final class ReaderThread extends Thread
     {
@@ -65,6 +70,8 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
                 while (messagesReceived < MESSAGES_EXCHANGED);
 
                 printTimes(startTime);
+
+                await();
             }
         }
     }
@@ -93,7 +100,21 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
                     final int length = encode(testRequest, header, seqNo);
                     write(socketChannel, length);
                 }
+
+                await();
             }
+        }
+    }
+
+    private void await()
+    {
+        try
+        {
+            barrier.await();
+        }
+        catch (InterruptedException | BrokenBarrierException e)
+        {
+            LangUtil.rethrowUnchecked(e);
         }
     }
 }
