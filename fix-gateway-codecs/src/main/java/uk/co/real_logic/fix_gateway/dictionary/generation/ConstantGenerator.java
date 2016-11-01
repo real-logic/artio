@@ -33,7 +33,6 @@ public class ConstantGenerator
     public static final String CLASS_NAME = "Constants";
 
     public static final String BODY = "public class " + CLASS_NAME + "\n" + "{\n\n";
-    public static final String ALL_FIELDS = "ALL_FIELDS";
     public static final String VERSION = "VERSION";
 
     private final Dictionary dictionary;
@@ -58,7 +57,6 @@ public class ConstantGenerator
             out.append(generateVersion());
             out.append(generateMessageTypes());
             out.append(generateFieldTags());
-            out.append(generateFieldDictionary());
             out.append("}\n");
         });
     }
@@ -72,44 +70,9 @@ public class ConstantGenerator
             dictionary.minorVersion());
     }
 
-    private String generateFieldDictionary()
-    {
-        return generateFieldDictionary(fields(), ALL_FIELDS);
-    }
-
-    public static String generateFieldDictionary(
-        final Collection<Field> fields,
-        final String name)
-    {
-        final String addFields = fields
-            .stream()
-            .map((field) -> addField(field, name))
-            .collect(joining());
-
-        final int hashMapSize = sizeHashSet(fields);
-        return String.format(
-            "    public static final IntHashSet %3$s = new IntHashSet(%1$d, -1);\n\n" +
-            "    static\n" +
-            "    {\n" +
-            "%2$s" +
-            "    }\n\n",
-            hashMapSize,
-            addFields,
-            name);
-    }
-
     public static int sizeHashSet(final Collection<?> objects)
     {
         return objects.size() * 2;
-    }
-
-    private static String addField(final Field field, final String name)
-    {
-        return String.format(
-            "        %1$s.add(%2$d);\n",
-            name,
-            field.number()
-        );
     }
 
     private String generateMessageTypes()

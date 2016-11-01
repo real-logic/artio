@@ -529,6 +529,21 @@ public class DecoderGeneratorTest
         assertFalse(iterator.hasNext());
     }
 
+    @Test
+    public void shouldEncodeAllFieldsSet() throws Exception
+    {
+        final Decoder decoder = (Decoder) heartbeat.newInstance();
+        final Object allFieldsField = getField(decoder, ALL_FIELDS);
+        assertThat(allFieldsField, instanceOf(IntHashSet.class));
+
+        @SuppressWarnings("unchecked")
+        final Set<Integer> allFields = (Set<Integer>) allFieldsField;
+        assertThat(allFields, hasItem(123));
+        assertThat(allFields, hasItem(124));
+        assertThat(allFields, hasItem(35));
+        assertThat(allFields, not(hasItem(999)));
+    }
+
     // TODO: validation for groups
 
     private void assertHasComponentFieldGetter() throws NoSuchMethodException, ClassNotFoundException

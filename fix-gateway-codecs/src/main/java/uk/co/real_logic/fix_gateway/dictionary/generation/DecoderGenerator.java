@@ -52,6 +52,7 @@ public class DecoderGenerator extends Generator
 
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
     public static final String GROUP_FIELDS = "GROUP_FIELDS";
+    public static final String ALL_FIELDS = "allFields";
 
     public static final int INVALID_TAG_NUMBER =
         RejectReason.INVALID_TAG_NUMBER.representation();
@@ -81,6 +82,8 @@ public class DecoderGenerator extends Generator
 
     private final int initialBufferSize;
 
+    private String allFieldsDictionary;
+
     public DecoderGenerator(
         final Dictionary dictionary,
         final int initialBufferSize,
@@ -90,6 +93,12 @@ public class DecoderGenerator extends Generator
     {
         super(dictionary, builderPackage, outputManager, validationClass);
         this.initialBufferSize = initialBufferSize;
+    }
+
+    public void generate()
+    {
+        allFieldsDictionary = generateFieldDictionary(dictionary.fields().values(), ALL_FIELDS);
+        super.generate();
     }
 
     protected void generateAggregateFile(final Aggregate aggregate, final AggregateType type)
@@ -188,6 +197,7 @@ public class DecoderGenerator extends Generator
     {
         final List<Field> requiredFields = requiredFields(aggregate.entries()).collect(toList());
         out.append(generateFieldDictionary(requiredFields, REQUIRED_FIELDS));
+        out.append(allFieldsDictionary);
 
         if (aggregate.containsGroup())
         {
@@ -207,7 +217,7 @@ public class DecoderGenerator extends Generator
             "        else if (unknownFieldsIterator.hasNext())\n" +
             "        {\n" +
             "            invalidTagId = unknownFieldsIterator.nextValue();\n" +
-            "            rejectReason = Constants.ALL_FIELDS.contains(invalidTagId) ? " +
+            "            rejectReason = allFields.contains(invalidTagId) ? " +
             TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE + " : " + INVALID_TAG_NUMBER + ";\n" +
             "            return false;\n" +
             "        }\n" +

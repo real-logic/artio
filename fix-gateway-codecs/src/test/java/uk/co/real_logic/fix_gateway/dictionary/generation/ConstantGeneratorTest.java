@@ -15,20 +15,15 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
-import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
 import java.util.Map;
-import java.util.Set;
 
 import static org.agrona.generation.CompilerUtil.compileInMemory;
-import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.*;
-import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerator.ALL_FIELDS;
 import static uk.co.real_logic.fix_gateway.util.Reflection.getField;
 
 public class ConstantGeneratorTest
@@ -60,20 +55,6 @@ public class ConstantGeneratorTest
     public void shouldContainNumericConstantsForMessageTypes() throws Exception
     {
         assertEquals(HEARTBEAT_TYPE, getField(constants, "HEARTBEAT"));
-    }
-
-    @Test
-    public void shouldEncodeAllFieldsSet() throws Exception
-    {
-        final Object allFieldsField = getField(constants, ALL_FIELDS);
-        assertThat(allFieldsField, instanceOf(IntHashSet.class));
-
-        @SuppressWarnings("unchecked")
-        final Set<Integer> allFields = (Set<Integer>) allFieldsField;
-        assertThat(allFields, hasItem(123));
-        assertThat(allFields, hasItem(124));
-        assertThat(allFields, hasItem(35));
-        assertThat(allFields, not(hasItem(999)));
     }
 
     @Test
