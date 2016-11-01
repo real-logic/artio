@@ -24,7 +24,9 @@ import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.IDLE_STRATEGY;
 import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.MESSAGES_EXCHANGED;
 
 public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
@@ -34,7 +36,10 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
         new ThroughputBenchmarkClient().runBenchmark();
     }
 
-    private final CyclicBarrier barrier = new CyclicBarrier(2);
+    private static final int MAX_MESSAGES_IN_FLIGHT = 12_000;
+
+    private final AtomicInteger messagesReceived = new AtomicInteger();
+    private final CyclicBarrier barrier = new CyclicBarrier(2, () -> messagesReceived.set(0));
 
     private final class ReaderThread extends Thread
     {
@@ -53,13 +58,14 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
             while (true)
             {
                 final long startTime = System.currentTimeMillis();
-                int messagesReceived = 0;
-                do
+                int lastMessagesReceived = 0;
+                while (lastMessagesReceived < MESSAGES_EXCHANGED)
                 {
                     try
                     {
                         final int length = read(socketChannel);
-                        messagesReceived += scanForReceivesMessages(readFlyweight, length);
+                        lastMessagesReceived = messagesReceived.addAndGet(
+                            scanForReceivesMessages(readFlyweight, length));
                     }
                     catch (final IOException ex)
                     {
@@ -67,7 +73,6 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
                         System.exit(-1);
                     }
                 }
-                while (messagesReceived < MESSAGES_EXCHANGED);
 
                 printTimes(startTime);
 
@@ -89,21 +94,31 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
             readerThread.start();
 
             int seqNo = 2;
-            int max = 2;
 
             while (true)
             {
-                max += MESSAGES_EXCHANGED;
-
-                for (; seqNo < max; seqNo++)
+                for (int i = 0; i < MESSAGES_EXCHANGED; i++)
                 {
                     final int length = encode(testRequest, header, seqNo);
                     write(socketChannel, length);
+                    seqNo++;
+
+
+                    while (i > senderLimit())
+                    {
+                        IDLE_STRATEGY.idle();
+                    }
+                    IDLE_STRATEGY.reset();
                 }
 
                 await();
             }
         }
+    }
+
+    private int senderLimit()
+    {
+        return messagesReceived.get() + MAX_MESSAGES_IN_FLIGHT;
     }
 
     private void await()

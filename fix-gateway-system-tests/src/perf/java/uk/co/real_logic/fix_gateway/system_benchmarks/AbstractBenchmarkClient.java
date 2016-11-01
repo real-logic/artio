@@ -119,10 +119,6 @@ public abstract class AbstractBenchmarkClient
         }
         while (length == 0);
         IDLE_STRATEGY.reset();
-        /*if (length > 0)
-        {
-            System.out.printf("Read Data: %s\n", readFlyweight.getAscii(0, length));
-        }*/
         return length;
     }
 
