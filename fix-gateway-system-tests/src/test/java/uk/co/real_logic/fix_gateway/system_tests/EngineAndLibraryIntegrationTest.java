@@ -81,8 +81,6 @@ public class EngineAndLibraryIntegrationTest
     {
         library = connectLibrary();
 
-        awaitLibraryConnect(library);
-
         assertHasLibraries(
             matchesLibrary(library.libraryId()),
             matchesLibrary(ENGINE_LIBRARY_ID));
@@ -134,10 +132,8 @@ public class EngineAndLibraryIntegrationTest
     private void setupTwoLibraries()
     {
         library = connectLibrary();
-        awaitLibraryConnect(library);
 
         library2 = connectLibrary();
-        awaitLibraryConnect(library2);
     }
 
     @Test
@@ -175,8 +171,12 @@ public class EngineAndLibraryIntegrationTest
     @SafeVarargs
     private final void assertHasLibraries(final Matcher<LibraryInfo>... libraryMatchers)
     {
-        final List<LibraryInfo> libraries = libraries(engine);
-        assertThat(libraries, containsInAnyOrder(libraryMatchers));
+        assertEventuallyTrue("Could not find libraries: " + Arrays.toString(libraryMatchers), () ->
+        {
+            poll(library, library2);
+            final List<LibraryInfo> libraries = libraries(engine);
+            assertThat(libraries, containsInAnyOrder(libraryMatchers));
+        });
     }
 
     private void assertNumActiveLibraries(final int count)
