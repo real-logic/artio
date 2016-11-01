@@ -40,8 +40,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.LockSupport;
 import java.util.stream.IntStream;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -52,6 +50,7 @@ import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_CLUSTER;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
+import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQUEST;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.FixMessagePredicates.*;
@@ -102,11 +101,14 @@ public class ClusteredGatewaySystemTest
                 .map(FixEngineRunner::libraryChannel)
                 .collect(toList()));
 
-        LockSupport.parkNanos(TimeUnit.MILLISECONDS.toNanos(700));
+        assertEventuallyTrue("Cluster failed to elect a leader", () ->
+        {
+            final Optional<FixEngineRunner> maybeLeader = findNewLeader();
+            maybeLeader.ifPresent(leader -> this.leader = leader);
+            return maybeLeader.isPresent();
+        });
 
         acceptingLibrary = FixLibrary.connect(configuration);
-
-        leader = findNewLeader().get();
 
         assertNotNull("Unable to connect to any cluster members", acceptingLibrary);
         initiatingEngine = launchInitiatingGateway(libraryAeronPort);
