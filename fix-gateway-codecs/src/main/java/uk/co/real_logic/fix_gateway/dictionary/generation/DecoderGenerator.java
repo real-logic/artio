@@ -226,9 +226,9 @@ public class DecoderGenerator extends Generator
             : "";
 
         out.append(String.format(
-            "    private IntHashSet alreadyVisitedFields = new IntHashSet(%4$d, -1);\n\n" +
-            "    private IntHashSet missingRequiredFields = new IntHashSet(%1$d, -1);\n\n" +
-            "    private IntHashSet unknownFields = new IntHashSet(10, -1);\n\n" +
+            "    private final IntHashSet alreadyVisitedFields = new IntHashSet(%4$d, -1);\n\n" +
+            "    private final IntHashSet missingRequiredFields = new IntHashSet(%1$d, -1);\n\n" +
+            "    private final IntHashSet unknownFields = new IntHashSet(10, -1);\n\n" +
             "    private int invalidTagId = NO_ERROR;\n\n" +
             "    public int invalidTagId()\n" +
             "    {\n" +
@@ -289,8 +289,7 @@ public class DecoderGenerator extends Generator
                         .collect(joining());
 
                 out.append(String.format(
-                    "    public static final IntHashSet %1$s = new IntHashSet(%3$s, -1);\n" +
-                    "    static \n" +
+                    "    public final IntHashSet %1$s = new IntHashSet(%3$s, -1);\n" +
                     "    {\n" +
                     "%2$s" +
                     "    }\n\n",
@@ -308,7 +307,7 @@ public class DecoderGenerator extends Generator
                         .collect(joining(", "));
 
                 out.append(String.format(
-                    "    public static final CharArraySet %1$s = new CharArraySet(%2$s);\n", valuesField, addValues));
+                    "    public final CharArraySet %1$s = new CharArraySet(%2$s);\n", valuesField, addValues));
             }
             else
             {
