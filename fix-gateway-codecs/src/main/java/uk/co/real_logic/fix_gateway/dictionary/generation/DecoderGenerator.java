@@ -21,7 +21,6 @@ import org.agrona.generation.ResourceConsumer;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
-import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Value;
 import uk.co.real_logic.fix_gateway.fields.*;
 
 import java.io.IOException;
@@ -33,6 +32,7 @@ import java.util.stream.Stream;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.*;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerator.constantValuesOfField;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerator.sizeHashSet;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.rethrown;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
@@ -46,6 +46,8 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 // skip decoding of unread header fields - eg: sender/target comp id.
 // optimise the checksum definition to use an int and be calculated or ignored, have optional validation.
 // evaluate utc parsing, adds about 100 nanos
+// remove the REQUIRED_FIELDS validation when there are no required fields
+
 public class DecoderGenerator extends Generator
 {
     private static final double HASHSET_SIZE_FACTOR = 1.0 / 0.6;
@@ -105,13 +107,19 @@ public class DecoderGenerator extends Generator
     {
         final int hashMapSize = sizeHashSet(dictionary.fields().values());
 
+        return intHashSetCopy(hashMapSize, ALL_FIELDS, "Constants.ALL_FIELDS");
+    }
+
+    private String intHashSetCopy(final int hashMapSize, final String name, final String from)
+    {
         return String.format(
             "    public final IntHashSet %2$s = new IntHashSet(%1$d, -1);\n" +
             "    {\n" +
-            "        %2$s.copy(Constants.ALL_FIELDS);" +
+            "        %2$s.copy(%3$s);\n" +
             "    }\n\n",
             hashMapSize,
-            ALL_FIELDS);
+            name,
+            from);
     }
 
     protected void generateAggregateFile(final Aggregate aggregate, final AggregateType type)
@@ -326,38 +334,18 @@ public class DecoderGenerator extends Generator
 
         final boolean isChar = type == Type.CHAR;
         final boolean isPrimitive = type.isIntBased() || isChar;
+        final String copyFrom = "Constants." + constantValuesOfField(name);
         try
         {
             if (isPrimitive)
             {
-                final String addValues =
-                    field.values()
-                        .stream()
-                        .map(Value::representation)
-                        .map(repr -> isChar ? "'" + repr + "'" : repr)
-                        .map(repr -> String.format("        %1$s.add(%2$s);\n", valuesField, repr))
-                        .collect(joining());
-
-                out.append(String.format(
-                    "    public final IntHashSet %1$s = new IntHashSet(%3$s, -1);\n" +
-                    "    {\n" +
-                    "%2$s" +
-                    "    }\n\n",
-                    valuesField,
-                    addValues,
-                    sizeHashSet(field.values())
-                ));
+                out.append(intHashSetCopy(
+                    sizeHashSet(field.values()), valuesField, copyFrom));
             }
             else if (type.isStringBased())
             {
-                final String addValues =
-                    field.values()
-                        .stream()
-                        .map(value -> "\"" + value.representation() + '"')
-                        .collect(joining(", "));
-
                 out.append(String.format(
-                    "    public final CharArraySet %1$s = new CharArraySet(%2$s);\n", valuesField, addValues));
+                    "    public final CharArraySet %1$s = new CharArraySet(%2$s);\n", valuesField, copyFrom));
             }
             else
             {

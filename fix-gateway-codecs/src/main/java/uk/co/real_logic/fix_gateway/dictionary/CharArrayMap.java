@@ -28,7 +28,7 @@ public final class CharArrayMap<V>
         this.map = buildFrom
             .entrySet()
             .stream()
-            .collect(Collectors.toMap((entry) -> new CharArrayWrapper().wrap(entry.getKey()), Map.Entry::getValue));
+            .collect(Collectors.toMap((entry) -> new CharArrayWrapper(entry.getKey()), Map.Entry::getValue));
     }
 
     public V get(final char[] value, final int length)

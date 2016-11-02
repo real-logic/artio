@@ -23,14 +23,24 @@ final class CharArrayWrapper
     private int length;
     private int hashcode;
 
-    public CharArrayWrapper wrap(final String string)
+    CharArrayWrapper()
+    {
+    }
+
+    CharArrayWrapper(final CharArrayWrapper other)
+    {
+        this.values = other.values;
+        this.length = other.length;
+        this.hashcode = other.hashcode;
+    }
+
+    CharArrayWrapper(final String string)
     {
         final char[] values = string.toCharArray();
         wrap(values, values.length);
-        return this;
     }
 
-    public void wrap(final char[] values, final int length)
+    void wrap(final char[] values, final int length)
     {
         this.values = values;
         this.length = length;
