@@ -162,15 +162,30 @@ public class DecoderGenerator extends Generator
         {
             final Message message = (Message)aggregate;
             out.append(messageType(message.fullType(), message.packedType()));
-            out.append(commonCompoundImports("Decoder"));
+            out.append(commonCompoundImports("Decoder", true));
         }
         groupMethods(out, aggregate);
+        headerMethods(out, aggregate, type);
         getters(out, aggregate.entries());
         out.append(decodeMethod(aggregate.entries(), aggregate, type));
         out.append(completeResetMethod(isMessage, aggregate.entries(), resetValidation()));
         out.append(toString(aggregate, isMessage));
         out.append("}\n");
         currentAggregate = parentAggregate;
+    }
+
+    private void headerMethods(final Writer out, final Aggregate aggregate, final AggregateType type) throws IOException
+    {
+        if (type == HEADER)
+        {
+            // Default constructor so that the header decoder can be used independently to parser headers.
+            out.append(
+                "    public HeaderDecoder()\n" +
+                "    {\n" +
+                "        this(new TrailerDecoder());\n" +
+                "    }\n\n");
+            wrapTrailerInConstructor(out, aggregate);
+        }
     }
 
     private void groupClass(final Group group, final Writer out) throws IOException
@@ -477,6 +492,8 @@ public class DecoderGenerator extends Generator
     {
         if (aggregate instanceof Group)
         {
+            wrapTrailerInConstructor(out, aggregate);
+
             out.append(String.format(
                 "    private %1$s next = null;\n\n" +
                 "    public %1$s next()\n" +
@@ -487,6 +504,17 @@ public class DecoderGenerator extends Generator
                 decoderClassName(aggregate),
                 sizeHashSet(aggregate.entries())));
         }
+    }
+
+    private void wrapTrailerInConstructor(final Writer out, final Aggregate aggregate) throws IOException
+    {
+        out.append(String.format(
+            "    private final TrailerDecoder trailer;\n" +
+            "    public %1$s(final TrailerDecoder trailer)\n" +
+            "    {\n" +
+            "        this.trailer = trailer;\n" +
+            "    }\n\n",
+            decoderClassName(aggregate)));
     }
 
     private String iteratorClassName(final Group group)
@@ -839,11 +867,6 @@ public class DecoderGenerator extends Generator
         {
             return " && !" + REQUIRED_FIELDS + ".contains(tag)";
         }
-        else if (type == HEADER || type == COMPONENT || type == GROUP)
-        {
-            // TODO: figure out a sound way of validating this.
-            return "";
-        }
         else
         {
             return " && !trailer." + REQUIRED_FIELDS + ".contains(tag)";
@@ -860,7 +883,7 @@ public class DecoderGenerator extends Generator
                 "            {\n" +
                 "                if (next == null)\n" +
                 "                {\n" +
-                "                    next = new %1$s();\n" +
+                "                    next = new %1$s(trailer);\n" +
                 "                }\n" +
                 "                return next.decode(buffer, position, end - position);\n" +
                 "            }\n",
@@ -928,7 +951,7 @@ public class DecoderGenerator extends Generator
         final String parseGroup = String.format(
             "                if (%1$s == null)\n" +
             "                {\n" +
-            "                    %1$s = new %2$s();\n" +
+            "                    %1$s = new %2$s(trailer);\n" +
             "                }\n" +
             "                position = %1$s.decode(buffer, endOfField + 1, end - endOfField);\n",
             formatPropertyName(group.name()),

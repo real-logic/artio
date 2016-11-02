@@ -53,19 +53,21 @@ public abstract class Generator
     public static final String EXPAND_INDENT = ".toString().replace(\"\\n\", \"\\n  \")";
     public static final String CODEC_VALIDATION_ENABLED = "CODEC_VALIDATION_ENABLED";
 
-    protected String commonCompoundImports(final String form)
+    protected String commonCompoundImports(final String form, final boolean headerWrapsTrailer)
     {
+        final String headerParameter = headerWrapsTrailer ? "trailer" : "";
         return String.format(
-            "    private Header%s header = new Header%1$s();\n\n" +
-            "    public Header%1$s header() {\n" +
-            "        return header;\n" +
-            "    }\n\n" +
-
             "    private Trailer%1$s trailer = new Trailer%1$s();\n\n" +
             "    public Trailer%1$s trailer() {\n" +
             "        return trailer;\n" +
+            "    }\n\n" +
+
+            "    private Header%1$s header = new Header%1$s(%2$s);\n\n" +
+            "    public Header%1$s header() {\n" +
+            "        return header;\n" +
             "    }\n\n",
-            form);
+            form,
+            headerParameter);
     }
 
     private static final String COMMON_COMPOUND_IMPORTS =
