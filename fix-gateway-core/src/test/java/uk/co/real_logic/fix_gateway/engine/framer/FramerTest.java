@@ -61,8 +61,6 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.notNull;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
@@ -355,7 +353,7 @@ public class FramerTest
 
         givenAGatewayToManage();
 
-        backpressureSaveLogon();
+        backPressureSaveLogon();
 
         assertEquals(ABORT, onLibraryConnect());
 
@@ -563,10 +561,10 @@ public class FramerTest
             anyInt(),
             anyLong()))
             .thenReturn(BACK_PRESSURED, POSITION);
-        backpressureSaveLogon();
+        backPressureSaveLogon();
     }
 
-    private void backpressureSaveLogon()
+    private void backPressureSaveLogon()
     {
         when(inboundPublication.saveLogon(
             eq(LIBRARY_ID), anyLong(), anyLong(),
@@ -670,11 +668,11 @@ public class FramerTest
     private void verifyEndpointsCreated() throws IOException
     {
         verify(mockEndPointFactory).receiverEndPoint(
-            notNull(TcpChannel.class), anyLong(), anyLong(), eq(ENGINE_LIBRARY_ID), eq(framer),
+            notNull(), anyLong(), anyLong(), eq(ENGINE_LIBRARY_ID), eq(framer),
             eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any(), any());
 
         verify(mockEndPointFactory).senderEndPoint(
-            notNull(TcpChannel.class), anyLong(), eq(ENGINE_LIBRARY_ID), eq(framer));
+            notNull(), anyLong(), eq(ENGINE_LIBRARY_ID), eq(framer));
     }
 
     private void verifyLibraryTimeout()

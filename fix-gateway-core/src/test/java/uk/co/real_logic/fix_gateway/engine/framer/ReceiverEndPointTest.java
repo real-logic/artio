@@ -43,7 +43,6 @@ import java.util.function.ToIntFunction;
 import static io.aeron.Publication.BACK_PRESSURED;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.REMOTE_DISCONNECT;
@@ -89,11 +88,12 @@ public class ReceiverEndPointTest
         endPoint.gatewaySession(gatewaySession);
         when(mockSessionIds.onLogon(any())).thenReturn(SESSION_ID);
         when(mockSessionIdStrategy.onLogon(any())).thenReturn(compositeKey);
-        doAnswer(inv ->
-        {
-            ((Continuation) inv.getArguments()[0]).attemptToAction();
-            return null;
-        }).when(framer).schedule(any(Continuation.class));
+        doAnswer(
+            (inv) ->
+            {
+                ((Continuation)inv.getArguments()[0]).attemptToAction();
+                return null;
+            }).when(framer).schedule(any(Continuation.class));
     }
 
     @After
@@ -118,7 +118,7 @@ public class ReceiverEndPointTest
     @Test
     public void shouldFrameValidFixMessageWhenBackpressured()
     {
-        firstSaveAttemptIsBackpressured();
+        firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesACompleteMessage();
         pollsData(MSG_LEN);
@@ -243,7 +243,7 @@ public class ReceiverEndPointTest
     @Test
     public void invalidChecksumMessageRecordedWhenBackpressured() throws IOException
     {
-        firstSaveAttemptIsBackpressured();
+        firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesAMessageWithInvalidChecksum();
 
@@ -270,7 +270,7 @@ public class ReceiverEndPointTest
     @Test
     public void fieldOutOfOrderMessageRecordedWhenBackpressured() throws IOException
     {
-        firstSaveAttemptIsBackpressured();
+        firstSaveAttemptIsBackPressured();
 
         final int length = theEndpointReceivesAnOutOfOrderMessage();
 
@@ -283,7 +283,7 @@ public class ReceiverEndPointTest
     @Test
     public void shouldFrameSplitFixMessageWhenBackpressured()
     {
-        firstSaveAttemptIsBackpressured();
+        firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesAnIncompleteMessage();
         endPoint.pollForData();
@@ -301,7 +301,7 @@ public class ReceiverEndPointTest
     @Test
     public void shouldFrameTwoCompleteFixMessagesInOnePacketWhenBackpressured()
     {
-        firstSaveAttemptIsBackpressured();
+        firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesTwoCompleteMessages();
         endPoint.pollForData();
@@ -316,7 +316,7 @@ public class ReceiverEndPointTest
     @Test
     public void shouldFrameOneCompleteMessageWhenTheSecondMessageIsIncompleteWhenBackpressured()
     {
-        firstSaveAttemptIsBackpressured();
+        firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesACompleteAndAnIncompleteMessage();
         endPoint.pollForData();
@@ -329,7 +329,7 @@ public class ReceiverEndPointTest
     @Test
     public void shouldFrameSecondSplitMessageWhenBackpressured()
     {
-        firstSaveAttemptIsBackpressured();
+        firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesACompleteAndAnIncompleteMessage();
         endPoint.pollForData();
@@ -342,7 +342,7 @@ public class ReceiverEndPointTest
         sessionReceivesTwoMessages();
     }
 
-    private void firstSaveAttemptIsBackpressured()
+    private void firstSaveAttemptIsBackPressured()
     {
         when(libraryPublication
             .saveMessage(anyBuffer(), anyInt(), anyInt(), anyInt(), anyInt(), anyLong(), anyLong(), any()))
@@ -481,8 +481,7 @@ public class ReceiverEndPointTest
     {
         final int length = TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES.length;
 
-        theEndpointReceives(
-            TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES, 0, length);
+        theEndpointReceives(TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES, 0, length);
         endPoint.pollForData();
         return length;
     }
@@ -555,5 +554,4 @@ public class ReceiverEndPointTest
         theEndpointReceivesNothing();
         endPoint.pollForData();
     }
-
 }

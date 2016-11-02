@@ -101,6 +101,7 @@ public class ClusterReplicationTest
 
         while (!foundLeader(followers))
         {
+            Thread.yield();
             poll(followers);
         }
 
@@ -176,11 +177,11 @@ public class ClusterReplicationTest
     {
         final NodeRunner[] followers = followers();
 
-        nodes().forEach(nodeRunner -> nodeRunner.dropFrames(dropInboundFrames, dropOutboundFrames));
+        nodes().forEach((nodeRunner) -> nodeRunner.dropFrames(dropInboundFrames, dropOutboundFrames));
 
         assertBecomesCandidate(followers);
 
-        nodes().forEach(nodeRunner -> nodeRunner.dropFrames(false));
+        nodes().forEach((nodeRunner) -> nodeRunner.dropFrames(false));
 
         assertBecomesFollower(followers);
 
@@ -199,8 +200,7 @@ public class ClusterReplicationTest
 
         sendMessageTo(leader);
 
-        assertTrue("nodes received message when one was supposedly netsplit",
-            noNodesReceivedMessage());
+        assertTrue("nodes received message when one was supposedly netsplit", noNodesReceivedMessage());
 
         follower.dropFrames(false);
 
@@ -217,6 +217,7 @@ public class ClusterReplicationTest
         Int2IntHashMap nodeIdToId;
         do
         {
+            Thread.yield();
             pollAll();
             nodeIdToId = leader.nodeIdToId();
         }
@@ -256,8 +257,10 @@ public class ClusterReplicationTest
         final ClusterAgent[] clusterNodes = getRaftNodes(nodes);
         while (!allMatch(clusterNodes, predicate))
         {
+            Thread.yield();
             poll(toPoll);
         }
+
         assertTrue(allMatch(clusterNodes, predicate));
     }
 
@@ -275,6 +278,7 @@ public class ClusterReplicationTest
     {
         while (!foundLeader(followers))
         {
+            Thread.yield();
             pollAll();
         }
     }
@@ -283,6 +287,7 @@ public class ClusterReplicationTest
     {
         while (noNodesReceivedMessage())
         {
+            Thread.yield();
             pollAll();
         }
     }
@@ -311,6 +316,7 @@ public class ClusterReplicationTest
         while (!(node1.leaderSessionId() == node2.leaderSessionId() &&
             node1.leaderSessionId() == node3.leaderSessionId()))
         {
+            Thread.yield();
             pollAll();
         }
     }
@@ -360,8 +366,6 @@ public class ClusterReplicationTest
         {
             node.poll(fragmentLimit);
         }
-
-        Thread.yield();
     }
 
     private boolean foundLeader()
@@ -379,6 +383,7 @@ public class ClusterReplicationTest
     {
         while (!oneLeaderAndTwoFollowers())
         {
+            Thread.yield();
             pollAll();
         }
     }
@@ -413,7 +418,7 @@ public class ClusterReplicationTest
 
     private NodeRunner[] followers()
     {
-        return nodes().filter(node -> !node.isLeader()).toArray(NodeRunner[]::new);
+        return nodes().filter((node) -> !node.isLeader()).toArray(NodeRunner[]::new);
     }
 
     private Stream<NodeRunner> nodes()

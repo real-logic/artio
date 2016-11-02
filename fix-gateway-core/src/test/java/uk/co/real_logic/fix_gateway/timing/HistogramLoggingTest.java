@@ -26,13 +26,11 @@ import org.mockito.ArgumentCaptor;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
+import java.util.Collections;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 
 public class HistogramLoggingTest
@@ -59,13 +57,27 @@ public class HistogramLoggingTest
         file = File.createTempFile("histogram", "tmp");
         timer = new Timer(NAME, 1);
         writer = new HistogramLogAgent(
-            Arrays.asList(timer),
+            Collections.singletonList(timer),
             file.getAbsolutePath(),
             100,
             errorHandler,
             clock,
             NO_HISTOGRAM_HANDLER);
         reader = new HistogramLogReader(file);
+    }
+
+    @After
+    public void tearDown()
+    {
+        try
+        {
+            writer.onClose();
+            CloseHelper.close(reader);
+        }
+        finally
+        {
+            file.delete();
+        }
     }
 
     @Test
@@ -127,19 +139,5 @@ public class HistogramLoggingTest
     private Histogram histogram()
     {
         return histogramCaptor.getValue();
-    }
-
-    @After
-    public void tearDown()
-    {
-        try
-        {
-            writer.onClose();
-            CloseHelper.close(reader);
-        }
-        finally
-        {
-            file.delete();
-        }
     }
 }

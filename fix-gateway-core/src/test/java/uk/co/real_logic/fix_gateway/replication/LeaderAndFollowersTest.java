@@ -39,8 +39,6 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
@@ -52,12 +50,11 @@ import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
  */
 public class LeaderAndFollowersTest extends AbstractReplicationTest
 {
-
     private static final int VALUE = 42;
     private static final int OFFSET = 42;
-    private static final short LEADER_ID = (short) 1;
-    private static final short FOLLOWER_1_ID = (short) 2;
-    private static final short FOLLOWER_2_ID = (short) 3;
+    private static final short LEADER_ID = (short)1;
+    private static final short FOLLOWER_1_ID = (short)2;
+    private static final short FOLLOWER_2_ID = (short)3;
     private static final int CLUSTER_STREAM_ID = 1;
 
     @Rule
@@ -321,7 +318,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         claim.buffer().putBytes(claim.offset(), buffer, 0, buffer.capacity());
         claim.commit();
 
-        return (int) position;
+        return (int)position;
     }
 
     private void leaderCommitted(int offset, int length)
@@ -349,5 +346,4 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     {
         verify(leaderHandler, never()).onFragment(any(), eq(offset), eq(length), any());
     }
-
 }

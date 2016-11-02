@@ -18,8 +18,6 @@ package uk.co.real_logic.fix_gateway.replication;
 import org.hamcrest.Matcher;
 
 import static org.hamcrest.Matchers.allOf;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyLong;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasFluentProperty;
 
@@ -89,9 +87,8 @@ public final class ReplicationAsserts
         return hasFluentProperty("lastAppliedPosition", lastAppliedPosition);
     }
 
-    public static Matcher<TermState> hasPositions(final long position)
+    public static Matcher<TermState> hasPosition(final long position)
     {
         return allOf(hasConsensusPosition(position), hasLastAppliedPosition(position));
     }
-
 }

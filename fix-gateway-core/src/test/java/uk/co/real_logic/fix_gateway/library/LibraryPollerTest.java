@@ -41,10 +41,6 @@ import static java.util.Arrays.asList;
 import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.anyLong;
-import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -210,11 +206,12 @@ public class LibraryPollerTest
         final String... channels)
     {
         whenPolled()
-            .then(inv ->
-            {
-                library.onNotLeader(libraryId.getAsInt(), connectCorrelationId.getAsLong(), LEADER_CHANNEL);
-                return 1;
-            })
+            .then(
+                (inv) ->
+                {
+                    library.onNotLeader(libraryId.getAsInt(), connectCorrelationId.getAsLong(), LEADER_CHANNEL);
+                    return 1;
+                })
             .then(replyWithApplicationHeartbeat())
             .then(noReply());
 
@@ -226,7 +223,7 @@ public class LibraryPollerTest
         verify(connectHandler).onConnect(fixLibrary);
     }
 
-    private void attemptToConnectTo(final String ... channels)
+    private void attemptToConnectTo(final String... channels)
     {
         final InOrder inOrder = inOrder(transport, outboundPublication);
         for (final String channel : channels)
@@ -258,7 +255,7 @@ public class LibraryPollerTest
 
     private Answer<Integer> replyWithApplicationHeartbeat()
     {
-        return inv ->
+        return (inv) ->
         {
             library.onApplicationHeartbeat(libraryId());
             return 1;
@@ -335,5 +332,4 @@ public class LibraryPollerTest
         when(sessionsDecoder.hasNext()).thenReturn(false);
         return sessionsDecoder;
     }
-
 }

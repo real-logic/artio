@@ -22,13 +22,12 @@ import uk.co.real_logic.fix_gateway.messages.MessageStatus;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 
-import static org.mockito.Matchers.*;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
 public class GapFillerTest extends AbstractLogTest
 {
-
     private GatewayPublication publication = mock(GatewayPublication.class);
     private ClusterableSubscription subscription = mock(ClusterableSubscription.class);
     private GapFiller gapFiller = new GapFiller(subscription, publication);

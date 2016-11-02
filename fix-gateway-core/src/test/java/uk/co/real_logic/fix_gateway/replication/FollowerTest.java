@@ -27,11 +27,6 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 
 import static io.aeron.Publication.BACK_PRESSURED;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
-import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.anyLong;
-import static org.mockito.Mockito.anyShort;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.OK;
@@ -143,7 +138,7 @@ public class FollowerTest
     public void shouldResendAcknowledgeLogEntriesIfBackPressured()
     {
         when(leaderArchiver.poll()).thenReturn(100, 0);
-        backpressureFirstAcknowledgement();
+        backPressureFirstAcknowledgement();
 
         poll();
 
@@ -152,7 +147,7 @@ public class FollowerTest
         acknowledgeLogEntries(times(2));
     }
 
-    private void backpressureFirstAcknowledgement()
+    private void backPressureFirstAcknowledgement()
     {
         when(acknowledgementPublication.saveMessageAcknowledgement(anyLong(), anyShort(), any()))
             .thenReturn(BACK_PRESSURED, 100L);
@@ -173,7 +168,7 @@ public class FollowerTest
     @Test
     public void shouldResendMissingLogEntriesIfFailed()
     {
-        backpressureFirstAcknowledgement();
+        backPressureFirstAcknowledgement();
 
         dataToBeCommitted(POSITION + LENGTH);
 
