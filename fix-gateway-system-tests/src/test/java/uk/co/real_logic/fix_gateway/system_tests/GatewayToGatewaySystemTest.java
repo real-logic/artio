@@ -166,12 +166,15 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             assertConnected(session2);
             sessionLogsOn(library2, acceptingLibrary, session2);
 
-            final long sessionId = acceptingHandler.awaitSessionIdFor(INITIATOR_ID2, ACCEPTOR_ID, () ->
-            {
-                acceptingLibrary.poll(1);
-                library2.poll(1);
-                initiatingLibrary.poll(1);
-            });
+            final long sessionId = acceptingHandler.awaitSessionIdFor(
+                INITIATOR_ID2,
+                ACCEPTOR_ID,
+                () ->
+                {
+                    acceptingLibrary.poll(1);
+                    library2.poll(1);
+                    initiatingLibrary.poll(1);
+                });
 
             final Session acceptingSession2 = acquireSession(acceptingHandler, acceptingLibrary, sessionId);
 
