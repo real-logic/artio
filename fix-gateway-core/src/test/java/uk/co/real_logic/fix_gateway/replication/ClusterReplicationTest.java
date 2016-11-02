@@ -69,6 +69,7 @@ public class ClusterReplicationTest
         node3.close();
     }
 
+    @Ignore
     @Test
     public void shouldEstablishCluster()
     {
