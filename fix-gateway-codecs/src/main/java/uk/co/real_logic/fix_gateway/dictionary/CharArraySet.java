@@ -26,16 +26,24 @@ public final class CharArraySet
     private final CharArrayWrapper wrapper = new CharArrayWrapper();
     private final Set<CharArrayWrapper> values;
 
-    public CharArraySet(String ... values)
+    public CharArraySet(final String ... values)
     {
         this(Arrays.asList(values));
     }
 
-    public CharArraySet(Collection<String> values)
+    public CharArraySet(final Collection<String> values)
     {
         this.values = values
             .stream()
-            .map(str -> new CharArrayWrapper().wrap(str))
+            .map(CharArrayWrapper::new)
+            .collect(toSet());
+    }
+
+    public CharArraySet(final CharArraySet other)
+    {
+        this.values = other.values
+            .stream()
+            .map(CharArrayWrapper::new)
             .collect(toSet());
     }
 
