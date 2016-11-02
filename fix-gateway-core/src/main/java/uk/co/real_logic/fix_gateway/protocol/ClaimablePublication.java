@@ -29,16 +29,15 @@ import static io.aeron.Publication.NOT_CONNECTED;
  */
 class ClaimablePublication implements AutoCloseable
 {
-    public static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
-
-    protected final MessageHeaderEncoder header = new MessageHeaderEncoder();
-
-    protected final BufferClaim bufferClaim;
-    protected final ClusterablePublication dataPublication;
-    protected final IdleStrategy idleStrategy;
+    static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
 
     private final long maxClaimAttempts;
     private final AtomicCounter fails;
+    protected final MessageHeaderEncoder header = new MessageHeaderEncoder();
+    protected final BufferClaim bufferClaim = new BufferClaim();
+    protected final ClusterablePublication dataPublication;
+
+    protected final IdleStrategy idleStrategy;
 
     ClaimablePublication(
         final int maxClaimAttempts,
@@ -49,7 +48,6 @@ class ClaimablePublication implements AutoCloseable
         this.maxClaimAttempts = maxClaimAttempts;
         this.idleStrategy = idleStrategy;
         this.fails = fails;
-        bufferClaim = new BufferClaim();
         this.dataPublication = dataPublication;
     }
 
@@ -60,7 +58,7 @@ class ClaimablePublication implements AutoCloseable
 
     public long claim(final int framedLength, final BufferClaim bufferClaim)
     {
-        long position = 0;
+        long position;
         long i = 0;
         do
         {
@@ -77,7 +75,8 @@ class ClaimablePublication implements AutoCloseable
 
             fails.increment();
             i++;
-        } while (i <= maxClaimAttempts);
+        }
+        while (i <= maxClaimAttempts);
 
         idleStrategy.reset();
 
