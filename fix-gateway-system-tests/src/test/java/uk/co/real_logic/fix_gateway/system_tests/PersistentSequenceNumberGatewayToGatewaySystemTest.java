@@ -40,7 +40,7 @@ import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.REPLICATE
 
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
-    private File backupLocation;
+    private File backupLocation = null;
 
     @Before
     public void setUp() throws IOException
@@ -50,6 +50,15 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         backupLocation = File.createTempFile("backup", "tmp");
 
         launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false, false);
+    }
+
+    @After
+    public void cleanupBackup()
+    {
+        if (null != backupLocation)
+        {
+            assertTrue("Failed to delete: " + backupLocation, backupLocation.delete());
+        }
     }
 
     @Test(timeout = 10_000L)
@@ -171,11 +180,5 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         sendTestRequest(initiatingSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
-    }
-
-    @After
-    public void cleanupBackup()
-    {
-        assertTrue("Failed to delete: " + backupLocation, backupLocation.delete());
     }
 }
