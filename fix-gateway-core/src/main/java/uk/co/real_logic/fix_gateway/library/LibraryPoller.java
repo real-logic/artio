@@ -61,7 +61,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private static final long NO_CORRELATION_ID = 0;
 
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
-    private final List<Session> sessions = new ArrayList<>();
+    private final ArrayList<Session> sessions = new ArrayList<>();
     private final List<Session> unmodifiableSessions = unmodifiableList(sessions);
 
     // Used when checking the consistency of the session ids
@@ -85,7 +85,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final FixLibrary fixLibrary;
     private final Runnable onDisconnectFunc = this::onDisconnect;
 
-    /** Correlation Id is initialised to a random number to reduce the chance of correlation id collision. */
+    /**
+     * Correlation Id is initialised to a random number to reduce the chance of correlation id collision.
+     */
     private long currentCorrelationId = ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE);
 
     private GatewayError errorType;
@@ -309,7 +311,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
             onConnect();
         }
-        catch (Exception e)
+        catch (final Exception ex)
         {
             // We won't be returning an instance of ourselves to callers in the connect,
             // so we must clean up after ourselves
@@ -317,12 +319,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 fixLibrary.close();
             }
-            catch (Exception closeException)
+            catch (final Exception closeException)
             {
-                e.addSuppressed(closeException);
+                ex.addSuppressed(closeException);
             }
 
-            LangUtil.rethrowUnchecked(e);
+            LangUtil.rethrowUnchecked(ex);
         }
     }
 
@@ -355,6 +357,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 throw e;
             }
         }
+
         return false;
     }
 
@@ -380,8 +383,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private LibraryPoller connectError(final String message)
     {
         throw new FixGatewayException(String.format(
-            "Unable to connect to engine: %s", message
-        ));
+            "Unable to connect to engine: %s", message));
     }
 
     private long latestReplyArrivalTime()
@@ -407,6 +409,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 count++;
             }
         }
+
         return count;
     }
 
@@ -426,7 +429,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private int pollSessions(final long timeInMs)
     {
-        final List<Session> sessions = this.sessions;
+        final ArrayList<Session> sessions = this.sessions;
         int total = 0;
 
         for (int i = 0, size = sessions.size(); i < size; i++)
@@ -471,7 +474,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 DebugLogger.log(FIX_MESSAGE, "Init Connect: %d, %d\n", connectionId, libraryId);
                 final boolean isInitiator = correlationIdToReply.get(replyToId) instanceof InitiateSessionReply;
                 final InitiateSessionReply reply =
-                    isInitiator ? (InitiateSessionReply) correlationIdToReply.remove(replyToId) : null;
+                    isInitiator ? (InitiateSessionReply)correlationIdToReply.remove(replyToId) : null;
                 final Session session = initiateSession(
                     connectionId, lastSentSequenceNumber, lastReceivedSequenceNumber, state,
                     isInitiator ? reply.configuration() : null);
@@ -539,8 +542,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 senderLocationId,
                 targetCompId,
                 username,
-                password
-            );
+                password);
         }
 
         return CONTINUE;
@@ -593,9 +595,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     session.close();
                     sessions.remove(session);
                 }
+
                 return action;
             }
         }
+
         return CONTINUE;
     }
 
@@ -638,7 +642,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     public Action onReleaseSessionReply(final int libraryId, final long replyToId, final SessionReplyStatus status)
     {
         final ReleaseToGatewayReply reply =
-            (ReleaseToGatewayReply) correlationIdToReply.remove(replyToId);
+            (ReleaseToGatewayReply)correlationIdToReply.remove(replyToId);
         if (reply != null)
         {
             reply.onComplete(status);
@@ -649,8 +653,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public Action onRequestSessionReply(final int toId, final long replyToId, final SessionReplyStatus status)
     {
-        final RequestSessionReply reply =
-            (RequestSessionReply) correlationIdToReply.remove(replyToId);
+        final RequestSessionReply reply = (RequestSessionReply)correlationIdToReply.remove(replyToId);
         if (reply != null)
         {
             reply.onComplete(status);
@@ -707,14 +710,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         if (libraryId == this.libraryId)
         {
             final LongHashSet sessionIds = this.sessionIds;
-            final List<Session> sessions = this.sessions;
+            final ArrayList<Session> sessions = this.sessions;
 
             // copy session ids.
             sessionIds.clear();
             while (sessionsDecoder.hasNext())
             {
                 sessionsDecoder.next();
-
                 sessionIds.add(sessionsDecoder.sessionId());
             }
 
@@ -832,10 +834,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return 1;
     }
 
-    private Session acceptSession(final long connectionId,
-                                  final String address,
-                                  final SessionState state,
-                                  final int heartbeatIntervalInS)
+    private Session acceptSession(
+        final long connectionId,
+        final String address,
+        final SessionState state,
+        final int heartbeatIntervalInS)
     {
         final GatewayPublication publication = transport.outboundPublication();
         final int split = address.lastIndexOf(':');
@@ -890,7 +893,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private void setLibraryConnected(final boolean libraryConnected)
     {
-        final List<Session> sessions = this.sessions;
+        final ArrayList<Session> sessions = this.sessions;
         for (int i = 0, size = sessions.size(); i < size; i++)
         {
             final Session session = sessions.get(i);
