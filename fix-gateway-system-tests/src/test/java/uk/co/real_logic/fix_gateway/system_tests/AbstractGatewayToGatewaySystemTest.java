@@ -96,6 +96,7 @@ public class AbstractGatewayToGatewaySystemTest
     {
         while (session.lastReceivedMsgSeqNum() < sequenceNumber)
         {
+            Thread.yield();
             library.poll(LIBRARY_LIMIT);
         }
     }
