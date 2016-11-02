@@ -307,6 +307,10 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             {
                 toRead--;
             }
+            else
+            {
+                Thread.yield();
+            }
         }
     }
 
