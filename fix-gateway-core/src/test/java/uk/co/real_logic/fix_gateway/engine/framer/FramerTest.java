@@ -107,7 +107,9 @@ public class FramerTest
     private Session session = mock(Session.class);
     private SoloSubscription outboundSubscription = mock(SoloSubscription.class);
     private ClusterableStreams node = mock(ClusterableStreams.class);
-    private ArgumentCaptor<List> sessionCaptor = ArgumentCaptor.forClass(List.class);
+
+    @SuppressWarnings("unchecked")
+    private ArgumentCaptor<List<SessionInfo>> sessionCaptor = ArgumentCaptor.forClass(List.class);
 
     private EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
@@ -472,7 +474,7 @@ public class FramerTest
         framer.onLibraryConnect(LIBRARY_ID, CORR_ID + 1, AERON_SESSION_ID);
     }
 
-    @SuppressWarnings("unchecked")
+
     private void verifyLibraryControlNotified(final Matcher<? super Collection<?>> sessionMatcher)
     {
         verify(inboundPublication).saveApplicationHeartbeat(LIBRARY_ID);
@@ -482,7 +484,6 @@ public class FramerTest
         assertThat(sessions, sessionMatcher);
     }
 
-    @SuppressWarnings("unchecked")
     private void saveControlNotification(final VerificationMode times)
     {
         verify(inboundPublication, times).saveControlNotification(eq(LIBRARY_ID), sessionCaptor.capture());
@@ -491,17 +492,14 @@ public class FramerTest
     private void verifyClientDisconnected()
     {
         final int bytesToSend = 1;
-        final ByteBuffer buffer = ByteBuffer.allocate(bytesToSend);
-        while (true)
+        final ByteBuffer buffer = ByteBuffer.allocateDirect(bytesToSend);
+        while (buffer.hasRemaining())
         {
             try
             {
-                if (client.write(buffer) < bytesToSend)
-                {
-                    return;
-                }
+                client.write(buffer);
             }
-            catch (IOException e)
+            catch (final IOException ignore)
             {
                 return;
             }
