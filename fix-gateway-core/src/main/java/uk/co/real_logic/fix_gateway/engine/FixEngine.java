@@ -28,7 +28,6 @@ import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.timing.EngineTimers;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.List;
 
 import static org.agrona.concurrent.AgentRunner.startOnThread;
@@ -83,10 +82,7 @@ public final class FixEngine extends GatewayProcess
      * Resets the set of session ids.
      *
      * @param backupLocation the location to backup the current session ids file to.
-     *                       Can be null to indicate that nobackup is required.
-     * @throws IOException thrown in the case that there was an error in backing up,
-     *                     or that there were currently connected sessions.
-     *                     NB: genuinely thrown even though not checked.
+     *                       Can be null to indicate that no backup is required.
      */
     public void resetSessionIds(final File backupLocation, final IdleStrategy idleStrategy)
     {

@@ -61,7 +61,7 @@ public final class Timing
                     runnable.run();
                     return true;
                 }
-                catch (Throwable e)
+                catch (final Throwable ignore)
                 {
                     return false;
                 }
@@ -73,7 +73,7 @@ public final class Timing
         final String message,
         final BooleanSupplier condition,
         final long timeout,
-        final long intervalMs)
+        final long sleepIntervalMs)
     {
         final long startTime = System.currentTimeMillis();
 
@@ -86,7 +86,7 @@ public final class Timing
 
             try
             {
-                Thread.sleep(intervalMs);
+                Thread.sleep(sleepIntervalMs);
             }
             catch (final InterruptedException ex)
             {

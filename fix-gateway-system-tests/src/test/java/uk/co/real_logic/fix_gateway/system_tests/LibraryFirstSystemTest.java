@@ -30,7 +30,6 @@ import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class LibraryFirstSystemTest extends AbstractGatewayToGatewaySystemTest
 {
-
     private final ExecutorService threadPool = Executors.newFixedThreadPool(2);
 
     @Before
@@ -55,7 +54,7 @@ public class LibraryFirstSystemTest extends AbstractGatewayToGatewaySystemTest
 
     private void waitLessThanReplyTimeout() throws InterruptedException
     {
-        Thread.sleep((long) (CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS * 0.75));
+        Thread.sleep((long)(CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS * 0.75));
     }
 
     private Future<FixLibrary> newInitiatingLibrary()
@@ -87,5 +86,4 @@ public class LibraryFirstSystemTest extends AbstractGatewayToGatewaySystemTest
         wireSessions();
         messagesCanBeExchanged();
     }
-
 }

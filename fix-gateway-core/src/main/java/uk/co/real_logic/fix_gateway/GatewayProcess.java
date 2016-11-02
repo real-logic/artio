@@ -58,7 +58,7 @@ public class GatewayProcess implements AutoCloseable
         fixCounters = new FixCounters(monitoringFile.createCountersManager());
         final EpochClock clock = new SystemEpochClock();
         distinctErrorLog = new DistinctErrorLog(monitoringFile.errorBuffer(), clock);
-        errorHandler = throwable ->
+        errorHandler = (throwable) ->
         {
             if (!distinctErrorLog.record(throwable))
             {
@@ -78,13 +78,14 @@ public class GatewayProcess implements AutoCloseable
     {
         final Aeron.Context ctx = configuration.aeronContext();
         ctx.imageMapMode(FileChannel.MapMode.READ_WRITE);
-        ctx.errorHandler(throwable ->
+        ctx.errorHandler((throwable) ->
         {
             if (!(throwable instanceof ClosedByInterruptException))
             {
                 errorHandler.onError(throwable);
             }
         });
+
         return ctx;
     }
 
@@ -117,8 +118,8 @@ public class GatewayProcess implements AutoCloseable
 
         if (!agents.isEmpty())
         {
-            monitoringRunner = new AgentRunner(backoffIdleStrategy(), errorHandler, null,
-                new CompositeAgent(agents));
+            monitoringRunner = new AgentRunner(
+                backoffIdleStrategy(), errorHandler, null, new CompositeAgent(agents));
         }
     }
 

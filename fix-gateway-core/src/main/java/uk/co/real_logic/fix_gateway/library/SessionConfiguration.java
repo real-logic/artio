@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import org.agrona.collections.IntArrayList;
 import uk.co.real_logic.fix_gateway.messages.SequenceNumberType;
 
 import java.util.ArrayList;
@@ -26,11 +27,10 @@ import java.util.Objects;
  */
 public final class SessionConfiguration
 {
-
     public static final int AUTOMATIC_INITIAL_SEQUENCE_NUMBER = -1;
 
     private final List<String> hosts;
-    private final List<Integer> ports;
+    private final IntArrayList ports;
     private final String username;
     private final String password;
     private final String senderCompId;
@@ -47,7 +47,7 @@ public final class SessionConfiguration
 
     private SessionConfiguration(
         final List<String> hosts,
-        final List<Integer> ports,
+        final IntArrayList ports,
         final String username,
         final String password,
         final String senderCompId,
@@ -92,7 +92,7 @@ public final class SessionConfiguration
         return hosts;
     }
 
-    public List<Integer> ports()
+    public IntArrayList ports()
     {
         return ports;
     }
@@ -152,7 +152,7 @@ public final class SessionConfiguration
         private String username;
         private String password;
         private List<String> hosts = new ArrayList<>();
-        private List<Integer> ports = new ArrayList<>();
+        private IntArrayList ports = new IntArrayList();
         private String senderCompId;
         private String targetCompId;
         private String senderSubId = "";
@@ -184,14 +184,14 @@ public final class SessionConfiguration
          * Sets the remote address to connect to. This can be called multiple times and each will be tried
          * and round-robin'd.
          *
-         * @param host the hostname to conenct to.
-         * @param port the port to conenct to.
+         * @param host the hostname to connect to.
+         * @param port the port to connect to.
          * @return this
          */
         public Builder address(final String host, final int port)
         {
             hosts.add(host);
-            ports.add(Integer.valueOf(port));
+            ports.addInt(port);
             return this;
         }
 
@@ -255,7 +255,6 @@ public final class SessionConfiguration
          * @return this builder
          *
          * @see this#initialSequenceNumber(int)
-         * @see LibraryConfiguration#acceptorSequenceNumbersResetUponReconnect(boolean)
          */
         public Builder sequenceNumbersPersistent(final boolean sequenceNumbersPersistent)
         {
@@ -270,7 +269,6 @@ public final class SessionConfiguration
          * @return this builder
          *
          * @see this#sequenceNumbersPersistent(boolean)
-         * @see LibraryConfiguration#acceptorSequenceNumbersResetUponReconnect(boolean)
          */
         public Builder initialSequenceNumber(final int initialSequenceNumber)
         {
@@ -284,5 +282,4 @@ public final class SessionConfiguration
                 senderLocationId, targetCompId, sequenceNumbersPersistent, initialSequenceNumber);
         }
     }
-
 }

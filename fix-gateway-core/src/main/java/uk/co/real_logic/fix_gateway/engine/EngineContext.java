@@ -185,28 +185,23 @@ public abstract class EngineContext implements AutoCloseable
 
     protected Archiver archiver(final StreamIdentifier streamId)
     {
-        final int cacheNumSets = configuration.loggerCacheNumSets();
-        final int cacheSetSize = configuration.loggerCacheSetSize();
         return new Archiver(
             LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
-            cacheNumSets,
-            cacheSetSize,
+            configuration.loggerCacheNumSets(),
+            configuration.loggerCacheSetSize(),
             streamId);
     }
 
     protected Replayer newReplayer(final Publication replayPublication, final ArchiveReader archiveReader)
     {
-        final ReplayQuery replayQuery =
-            newReplayQuery(archiveReader);
-        final Replayer replayer = new Replayer(
-            replayQuery,
+        return new Replayer(
+            newReplayQuery(archiveReader),
             replayPublication,
             new BufferClaim(),
             configuration.loggerIdleStrategy(),
             errorHandler,
             configuration.outboundMaxClaimAttempts(),
             inboundLibraryStreams.subscription());
-        return replayer;
     }
 
     protected void newIndexers(

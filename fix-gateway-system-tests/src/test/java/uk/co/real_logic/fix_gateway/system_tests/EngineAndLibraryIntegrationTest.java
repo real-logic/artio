@@ -62,6 +62,16 @@ public class EngineAndLibraryIntegrationTest
         launchEngine(SHORT_TIMEOUT_IN_MS);
     }
 
+    @After
+    public void close() throws Exception
+    {
+        CloseHelper.close(library);
+        CloseHelper.close(library2);
+        CloseHelper.close(engine);
+        CloseHelper.close(mediaDriver);
+        cleanupDirectory(mediaDriver);
+    }
+
     private void launchEngine(final int replyTimeoutInMs)
     {
         delete(ACCEPTOR_LOGS);
@@ -171,12 +181,13 @@ public class EngineAndLibraryIntegrationTest
     @SafeVarargs
     private final void assertHasLibraries(final Matcher<LibraryInfo>... libraryMatchers)
     {
-        assertEventuallyTrue("Could not find libraries: " + Arrays.toString(libraryMatchers), () ->
-        {
-            poll(library, library2);
-            final List<LibraryInfo> libraries = libraries(engine);
-            assertThat(libraries, containsInAnyOrder(libraryMatchers));
-        });
+        assertEventuallyTrue("Could not find libraries: " + Arrays.toString(libraryMatchers),
+            () ->
+            {
+                poll(library, library2);
+                final List<LibraryInfo> libraries = libraries(engine);
+                assertThat(libraries, containsInAnyOrder(libraryMatchers));
+            });
     }
 
     private void assertNumActiveLibraries(final int count)
@@ -201,15 +212,5 @@ public class EngineAndLibraryIntegrationTest
             .replyTimeoutInMs(TIMEOUT_IN_MS);
 
         return FixLibrary.connect(config);
-    }
-
-    @After
-    public void close() throws Exception
-    {
-        CloseHelper.close(library);
-        CloseHelper.close(library2);
-        CloseHelper.close(engine);
-        CloseHelper.close(mediaDriver);
-        cleanupDirectory(mediaDriver);
     }
 }

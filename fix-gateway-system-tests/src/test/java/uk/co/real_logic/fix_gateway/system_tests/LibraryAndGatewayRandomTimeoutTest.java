@@ -55,8 +55,17 @@ public class LibraryAndGatewayRandomTimeoutTest
         mediaDriver = launchMediaDriver();
     }
 
+    @After
+    public void close() throws Exception
+    {
+        CloseHelper.quietClose(initiatingLibrary);
+        CloseHelper.quietClose(initiatingEngine);
+        CloseHelper.quietClose(mediaDriver);
+        cleanupDirectory(mediaDriver);
+    }
+
     @Test
-    public void libraryShouldRefuseConnectionWhenTheresNoAcceptor()
+    public void libraryShouldRefuseConnectionWhenThereIsNoAcceptor()
     {
         launchEngine();
         launchLibrary();
@@ -102,14 +111,5 @@ public class LibraryAndGatewayRandomTimeoutTest
     private void launchEngine()
     {
         initiatingEngine = launchInitiatingGateway(aeronPort);
-    }
-
-    @After
-    public void close() throws Exception
-    {
-        CloseHelper.quietClose(initiatingLibrary);
-        CloseHelper.quietClose(initiatingEngine);
-        CloseHelper.quietClose(mediaDriver);
-        cleanupDirectory(mediaDriver);
     }
 }
