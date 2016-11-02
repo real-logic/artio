@@ -50,7 +50,6 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 public class DecoderGenerator extends Generator
 {
-    private static final double HASHSET_SIZE_FACTOR = 1.0 / 0.6;
 
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
     public static final String GROUP_FIELDS = "GROUP_FIELDS";
@@ -486,7 +485,7 @@ public class DecoderGenerator extends Generator
                 "    }\n\n" +
                 "    private IntHashSet seenFields = new IntHashSet(%2$d, -1);\n\n",
                 decoderClassName(aggregate),
-                (int)Math.ceil(HASHSET_SIZE_FACTOR * aggregate.entries().size())));
+                sizeHashSet(aggregate.entries())));
         }
     }
 
