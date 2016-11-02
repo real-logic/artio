@@ -58,6 +58,7 @@ public class LogDirectoryDescriptor
         final String logFileName = logFile.getName();
         final int startOfTermId = logFileName.lastIndexOf('-');
         final int endOfTermId = logFileName.length() - EXTENSION_LENGTH;
+
         return Integer.parseInt(logFileName.substring(startOfTermId, endOfTermId));
     }
 }
