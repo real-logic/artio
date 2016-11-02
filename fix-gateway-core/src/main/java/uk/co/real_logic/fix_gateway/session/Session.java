@@ -243,8 +243,8 @@ public class Session implements AutoCloseable
     /**
      * Get the address of the remote host that your session is connected to.
      *
-     * @see Session#connectedPort()
      * @return the address of the remote host that your session is connected to.
+     * @see Session#connectedPort()
      */
     public String connectedHost()
     {
@@ -255,8 +255,8 @@ public class Session implements AutoCloseable
      * Get the id of the connection associated with this session. Sessions always
      * have a connection id.
      *
-     * @see Session#id()
      * @return the id of the connection associated with this session.
+     * @see Session#id()
      */
     public long connectionId()
     {
@@ -267,8 +267,8 @@ public class Session implements AutoCloseable
      * Get the id of this session. If the session hasn't logged in yet, this
      * will return <code>Session.UNKNOWN</code>.
      *
-     * @see Session#UNKNOWN
      * @return the id of the session if known.
+     * @see Session#UNKNOWN
      */
     public long id()
     {
@@ -278,8 +278,8 @@ public class Session implements AutoCloseable
     /**
      * Get the port of the remote host that your session is connected to.
      *
-     * @see Session#connectedHost()
      * @return the port of the remote host that your session is connected to.
+     * @see Session#connectedHost()
      */
     public int connectedPort()
     {
@@ -290,7 +290,6 @@ public class Session implements AutoCloseable
      * Sends a logout message and puts the session into the awaiting logout state.
      *
      * @return the position of the sent message
-     *
      * @see Session#logoutAndDisconnect()
      */
     public long startLogout()
@@ -318,6 +317,7 @@ public class Session implements AutoCloseable
             position = proxy.requestDisconnect(connectionId, reason);
             state(position < 0 ? DISCONNECTING : DISCONNECTED);
         }
+
         return position;
     }
 
@@ -348,6 +348,7 @@ public class Session implements AutoCloseable
                 position = requestDisconnect(reason);
             }
         }
+
         return position;
     }
 
@@ -366,7 +367,7 @@ public class Session implements AutoCloseable
         }
 
         final int sentSeqNum = newSentSeqNum();
-        final HeaderEncoder header = (HeaderEncoder) encoder.header();
+        final HeaderEncoder header = (HeaderEncoder)encoder.header();
         header
             .msgSeqNum(sentSeqNum)
             .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(time()));
@@ -380,6 +381,7 @@ public class Session implements AutoCloseable
         final long position = publication.saveMessage(
             asciiBuffer, 0, length, libraryId, encoder.messageType(), id(), connectionId, OK);
         lastSentMsgSeqNum(sentSeqNum, position);
+
         return position;
     }
 
@@ -417,6 +419,7 @@ public class Session implements AutoCloseable
     {
         final long position = proxy.sequenceReset(lastSentMsgSeqNum, nextSentMessageSequenceNumber);
         lastSentMsgSeqNum(nextSentMessageSequenceNumber - 1, position);
+
         return position;
     }
 
@@ -431,19 +434,19 @@ public class Session implements AutoCloseable
     public long resetSequenceNumbers()
     {
         final int sentSeqNum = 1;
-        final int heartbeatIntervalInS = (int) MILLISECONDS.toSeconds(heartbeatIntervalInMs);
+        final int heartbeatIntervalInS = (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs);
         final long position = proxy.logon(heartbeatIntervalInS, sentSeqNum, username(), password(), true);
         lastSentMsgSeqNum(sentSeqNum, position);
+
         return position;
     }
 
     /**
      * Runs a single iteration of the session's main logic loop. Users of the API don't need to call this method.
      *
-     * @see uk.co.real_logic.fix_gateway.library.FixLibrary#poll(int)
-     *
      * @param time the current time in milliseconds
      * @return the number of actions performed.
+     * @see uk.co.real_logic.fix_gateway.library.FixLibrary#poll(int)
      */
     public int poll(final long time)
     {
@@ -608,6 +611,7 @@ public class Session implements AutoCloseable
                     {
                         logoutAndDisconnect(INVALID_SENDING_TIME);
                     }
+
                     return action;
                 }
             }
@@ -836,6 +840,7 @@ public class Session implements AutoCloseable
         {
             requestDisconnect(reason);
         }
+
         return action;
     }
 
@@ -957,10 +962,11 @@ public class Session implements AutoCloseable
         return CONTINUE;
     }
 
-    Action onReject(final int msgSeqNo,
-                    final long sendingTime,
-                    final long origSendingTime,
-                    final boolean isPossDupOrResend)
+    Action onReject(
+        final int msgSeqNo,
+        final long sendingTime,
+        final long origSendingTime,
+        final boolean isPossDupOrResend)
     {
         return onMessage(msgSeqNo, RejectDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
     }
@@ -985,6 +991,7 @@ public class Session implements AutoCloseable
                     lastSentMsgSeqNum(sentMsgSeqNum);
                 }
             }
+
             requestDisconnect(INCORRECT_BEGIN_STRING);
         }
 
@@ -1004,6 +1011,7 @@ public class Session implements AutoCloseable
         {
             lastSentMsgSeqNum(sentSeqNum);
         }
+
         return position;
     }
 
@@ -1012,12 +1020,13 @@ public class Session implements AutoCloseable
 
     Session heartbeatIntervalInS(final int heartbeatIntervalInS)
     {
-        this.heartbeatIntervalInMs = SECONDS.toMillis((long) heartbeatIntervalInS);
+        this.heartbeatIntervalInMs = SECONDS.toMillis((long)heartbeatIntervalInS);
 
         final long time = time();
         incNextReceivedInboundMessageTime(time);
-        sendingHeartbeatIntervalInMs = (long) (heartbeatIntervalInMs * HEARTBEAT_PAUSE_FACTOR);
+        sendingHeartbeatIntervalInMs = (long)(heartbeatIntervalInMs * HEARTBEAT_PAUSE_FACTOR);
         nextRequiredHeartbeatTimeInMs = time + sendingHeartbeatIntervalInMs;
+
         return this;
     }
 
@@ -1048,6 +1057,7 @@ public class Session implements AutoCloseable
     {
         this.lastReceivedMsgSeqNum = value;
         receivedMsgSeqNo.setOrdered(value);
+
         return this;
     }
 
@@ -1066,6 +1076,7 @@ public class Session implements AutoCloseable
         this.lastSentMsgSeqNum = lastSentMsgSeqNum;
         sentMsgSeqNo.setOrdered(lastSentMsgSeqNum);
         incNextHeartbeatTime();
+
         return lastSentMsgSeqNum;
     }
 
@@ -1079,6 +1090,7 @@ public class Session implements AutoCloseable
     {
         this.connectedHost = connectedHost;
         this.connectedPort = connectedPort;
+
         return this;
     }
 
@@ -1127,6 +1139,7 @@ public class Session implements AutoCloseable
         {
             state(ACTIVE);
         }
+
         return onMessage(msgSeqNum, HeartbeatDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
     }
 
@@ -1164,5 +1177,4 @@ public class Session implements AutoCloseable
     {
         return false;
     }
-
 }
