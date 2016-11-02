@@ -689,8 +689,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
         if (sessionPersistenceStrategy() == null)
         {
-            sessionPersistenceStrategy(
-                isClustered() ? alwaysReplicated() : alwaysLocallyArchive());
+            sessionPersistenceStrategy(isClustered() ? alwaysReplicated() : alwaysLocallyArchive());
         }
 
         return this;
