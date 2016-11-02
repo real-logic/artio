@@ -87,8 +87,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
-        messagesCanBeExchanged(
-            acceptingSession, acceptingLibrary, initiatingLibrary, acceptingOtfAcceptor);
+        messagesCanBeExchanged(acceptingSession, acceptingLibrary, initiatingLibrary, acceptingOtfAcceptor);
     }
 
     @Test
@@ -212,11 +211,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         initiatingEngine.close();
 
-        assertEventuallyTrue("Acceptor Disconnected", () ->
-        {
-            acceptingLibrary.poll(1);
-            return acceptingHandler.hasDisconnected();
-        });
+        assertEventuallyTrue("Acceptor Disconnected",
+            () ->
+            {
+                acceptingLibrary.poll(1);
+                return acceptingHandler.hasDisconnected();
+            });
     }
 
     @Test
@@ -249,8 +249,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertThat(library.sessions(), hasSize(0));
 
         final List<SessionInfo> sessions = gatewayLibraryInfo(engine).sessions();
-        assertThat(sessions,
-            contains(hasConnectionId(connectionId)));
+        assertThat(sessions, contains(hasConnectionId(connectionId)));
     }
 
     @Test
@@ -429,5 +428,4 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         acceptingEngineHasSession();
     }
-
 }
