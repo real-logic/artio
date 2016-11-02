@@ -132,13 +132,14 @@ public class DecoderGenerator extends Generator
 
         final String className = decoderClassName(aggregate);
 
-        outputManager.withOutput(className, out ->
-        {
-            out.append(fileHeader(builderPackage));
+        outputManager.withOutput(className,
+            (out) ->
+            {
+                out.append(fileHeader(builderPackage));
 
-            generateImports("Decoder", type, out);
-            generateAggregateClass(aggregate, type, className, out);
-        });
+                generateImports("Decoder", type, out);
+                generateAggregateClass(aggregate, type, className, out);
+            });
     }
 
     private void generateAggregateClass(
@@ -151,10 +152,10 @@ public class DecoderGenerator extends Generator
         currentAggregate = aggregate;
 
         final boolean isMessage = type == MESSAGE;
-        final List<String> interfaces =
-            aggregate.entriesWith(element -> element instanceof Component)
-                     .map(comp -> decoderClassName((Aggregate) comp.element()))
-                     .collect(toList());
+        final List<String> interfaces = aggregate
+            .entriesWith((element) -> element instanceof Component)
+            .map((comp) -> decoderClassName((Aggregate)comp.element()))
+            .collect(toList());
 
         out.append(classDeclaration(className, interfaces, Decoder.class, false));
         validation(out, aggregate, type);
@@ -227,11 +228,11 @@ public class DecoderGenerator extends Generator
             out.append(groupFieldString);
         }
 
-        final String enumValidation =
-            aggregate.allChildEntries()
-                     .filter(entry -> entry.element().isEnumField())
-                     .map((entry) -> validateEnum(entry, out))
-                     .collect(joining("\n"));
+        final String enumValidation = aggregate
+            .allChildEntries()
+            .filter((entry) -> entry.element().isEnumField())
+            .map((entry) -> validateEnum(entry, out))
+            .collect(joining("\n"));
 
         final boolean isMessage = type == MESSAGE;
         final String messageValidation = isMessage ?
@@ -318,13 +319,12 @@ public class DecoderGenerator extends Generator
         return String.format(
             "        %1$s.add(%2$d);\n",
             name,
-            field.number()
-        );
+            field.number());
     }
 
     private CharSequence validateEnum(final Entry entry, final Writer out)
     {
-        final Field field = (Field) entry.element();
+        final Field field = (Field)entry.element();
         final String name = entry.name();
         final String valuesField = "valuesOf" + entry.name();
         final String optionalCheck = entry.required() ? "" : String.format("has%s && ", name);
@@ -368,8 +368,7 @@ public class DecoderGenerator extends Generator
             valuesField,
             propertyName,
             tagNumber,
-            isPrimitive ? "" : ", " + propertyName + "Length"
-        );
+            isPrimitive ? "" : ", " + propertyName + "Length");
     }
 
     private Stream<Field> requiredFields(final List<Entry> entries)
@@ -385,29 +384,29 @@ public class DecoderGenerator extends Generator
         return entry.match(
             (e, field) -> Stream.of(field),
             (e, group) -> Stream.of((Field) group.numberField().element()),
-            (e, component) -> requiredFields(component.entries())
-        );
+            (e, component) -> requiredFields(component.entries()));
     }
 
     private void componentInterface(final Component component)
     {
         final String className = decoderClassName(component);
-        outputManager.withOutput(className, out ->
-        {
-            out.append(fileHeader(builderPackage));
-
-            generateImports("Decoder", AggregateType.COMPONENT, out);
-            out.append(String.format(
-                "\npublic interface %1$s\n" +
-                "{\n\n",
-                className));
-
-            for (final Entry entry : component.entries())
+        outputManager.withOutput(className,
+            (out) ->
             {
-                interfaceGetter(entry, out);
-            }
-            out.append("\n}\n");
-        });
+                out.append(fileHeader(builderPackage));
+
+                generateImports("Decoder", AggregateType.COMPONENT, out);
+                out.append(String.format(
+                    "\npublic interface %1$s\n" +
+                    "{\n\n",
+                    className));
+
+                for (final Entry entry : component.entries())
+                {
+                    interfaceGetter(entry, out);
+                }
+                out.append("\n}\n");
+            });
     }
 
     private void interfaceGetter(final Entry entry, final Writer out) throws IOException
@@ -425,14 +424,13 @@ public class DecoderGenerator extends Generator
         out.append(String.format(
             "    public %1$s %2$s();\n",
             decoderClassName(group),
-            formatPropertyName(group.name())
-        ));
+            formatPropertyName(group.name())));
     }
 
-    private void componentInterfaceGetter(
-        final Component component, final Writer out) throws IOException
+    private void componentInterfaceGetter(final Component component, final Writer out)
+        throws IOException
     {
-        wrappedForEachEntry(component, out, entry -> interfaceGetter(entry, out));
+        wrappedForEachEntry(component, out, (entry) -> interfaceGetter(entry, out));
     }
 
     private void wrappedForEachEntry(
@@ -465,8 +463,7 @@ public class DecoderGenerator extends Generator
             javaTypeOf(type),
             fieldName,
             optional,
-            length
-        );
+            length);
     }
 
     private void getter(final Entry entry, final Writer out) throws IOException
@@ -489,8 +486,7 @@ public class DecoderGenerator extends Generator
                 "    }\n\n" +
                 "    private IntHashSet seenFields = new IntHashSet(%2$d, -1);\n\n",
                 decoderClassName(aggregate),
-                (int) Math.ceil(HASHSET_SIZE_FACTOR * aggregate.entries().size())
-            ));
+                (int)Math.ceil(HASHSET_SIZE_FACTOR * aggregate.entries().size())));
         }
     }
 
@@ -550,8 +546,7 @@ public class DecoderGenerator extends Generator
             "%3$s",
             decoderClassName(group),
             formatPropertyName(group.name()),
-            prefix
-        ));
+            prefix));
 
         generateGroupIterator(out, group);
     }
@@ -605,8 +600,7 @@ public class DecoderGenerator extends Generator
                 "new String(%1$s, 0, %1$sLength)" :
                 "has%2$s ? new String(%1$s, 0, %1$sLength) : null",
             fieldName,
-            name
-            );
+            name);
 
         final String suffix = type.isStringBased()
             ? String.format(
@@ -622,8 +616,7 @@ public class DecoderGenerator extends Generator
                 "    }\n\n",
                 fieldName,
                 optionalCheck,
-                asStringBody
-            )
+                asStringBody)
             : "";
 
         return String.format(
@@ -642,8 +635,7 @@ public class DecoderGenerator extends Generator
             hasField(entry),
             optionalCheck,
             optionalGetter(entry),
-            suffix
-        );
+            suffix);
     }
 
     private String fieldInitialisation(final Type type)
@@ -873,13 +865,13 @@ public class DecoderGenerator extends Generator
                 "                }\n" +
                 "                return next.decode(buffer, position, end - position);\n" +
                 "            }\n",
-                decoderClassName(aggregate)
-            );
+                decoderClassName(aggregate));
         }
         else
         {
             endGroupCheck = "";
         }
+
         return endGroupCheck;
     }
 
@@ -907,7 +899,7 @@ public class DecoderGenerator extends Generator
     private String decodeEntry(final Entry entry)
     {
         return entry.matchEntry(
-            e -> decodeField(e, ""),
+            (e) -> decodeField(e, ""),
             this::decodeGroup,
             this::decodeComponent);
     }
@@ -932,7 +924,7 @@ public class DecoderGenerator extends Generator
 
     private String decodeGroup(final Entry entry)
     {
-        final Group group = (Group) entry.element();
+        final Group group = (Group)entry.element();
 
         final String parseGroup = String.format(
             "                if (%1$s == null)\n" +
@@ -941,8 +933,8 @@ public class DecoderGenerator extends Generator
             "                }\n" +
             "                position = %1$s.decode(buffer, endOfField + 1, end - endOfField);\n",
             formatPropertyName(group.name()),
-            decoderClassName(group)
-        );
+            decoderClassName(group));
+
         return decodeField(group.numberField(), parseGroup);
     }
 
@@ -971,8 +963,7 @@ public class DecoderGenerator extends Generator
             fieldName,
             decodeMethodFor(field.type(), fieldName),
             optionalStringAssignment(field.type(), fieldName),
-            suffix
-        );
+            suffix);
     }
 
     private String optionalStringAssignment(final Type type, final String fieldName)
@@ -1052,11 +1043,12 @@ public class DecoderGenerator extends Generator
         return entries
             .stream()
             .filter(Entry::isComponent)
-            .map(entry ->
-            {
-                final Component component = (Component) entry.element();
-                return resetEntries(component.entries(), methods);
-            })
+            .map(
+                (entry) ->
+                {
+                    final Component component = (Component) entry.element();
+                    return resetEntries(component.entries(), methods);
+                })
             .collect(joining());
     }
 
