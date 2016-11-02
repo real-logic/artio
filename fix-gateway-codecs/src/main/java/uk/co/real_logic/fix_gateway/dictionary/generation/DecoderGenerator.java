@@ -771,52 +771,52 @@ public class DecoderGenerator extends Generator
 
         final String prefix =
             "    public int decode(final AsciiBuffer buffer, final int offset, final int length)\n" +
-                "    {\n" +
-                "        int seenFieldCount = 0;\n" +
-                "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
-                "        {\n" +
-                "            missingRequiredFields.copy(" + REQUIRED_FIELDS + ");\n" +
-                "            alreadyVisitedFields.clear();\n" +
-                "        }\n" +
-                "        final int end = offset + length;\n" +
-                "        int position = offset;\n" +
-                (hasCommonCompounds ? "        position += header.decode(buffer, position, length);\n" : "") +
-                (isGroup ? "        seenFields.clear();\n" : "") +
-                "        int tag;\n\n" +
-                "        while (position < end)\n" +
-                "        {\n" +
-                "            final int equalsPosition = buffer.scan(position, end, '=');\n" +
-                "            tag = buffer.getInt(position, equalsPosition);\n" +
-                endGroupCheck +
-                "            final int valueOffset = equalsPosition + 1;\n" +
-                "            final int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
-                "            final int valueLength = endOfField - valueOffset;\n" +
-                "            if (" + CODEC_VALIDATION_ENABLED + ")\n" +
-                "            {\n" +
-                "                if (tag <= 0)\n" +
-                "                {\n" +
-                "                    invalidTagId = tag;\n" +
-                "                    rejectReason = " + INVALID_TAG_NUMBER + ";\n" +
-                "                }\n" +
-                "                else if (valueLength == 0)\n" +
-                "                {\n" +
-                "                    invalidTagId = tag;\n" +
-                "                    rejectReason = " + TAG_SPECIFIED_WITHOUT_A_VALUE + ";\n" +
-                "                }\n" +
-                headerValidation(isHeader) +
+            "    {\n" +
+            "        int seenFieldCount = 0;\n" +
+            "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
+            "        {\n" +
+            "            missingRequiredFields.copy(" + REQUIRED_FIELDS + ");\n" +
+            "            alreadyVisitedFields.clear();\n" +
+            "        }\n" +
+            "        final int end = offset + length;\n" +
+            "        int position = offset;\n" +
+            (hasCommonCompounds ? "        position += header.decode(buffer, position, length);\n" : "") +
+            (isGroup ? "        seenFields.clear();\n" : "") +
+            "        int tag;\n\n" +
+            "        while (position < end)\n" +
+            "        {\n" +
+            "            final int equalsPosition = buffer.scan(position, end, '=');\n" +
+            "            tag = buffer.getInt(position, equalsPosition);\n" +
+            endGroupCheck +
+            "            final int valueOffset = equalsPosition + 1;\n" +
+            "            final int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
+            "            final int valueLength = endOfField - valueOffset;\n" +
+            "            if (" + CODEC_VALIDATION_ENABLED + ")\n" +
+            "            {\n" +
+            "                if (tag <= 0)\n" +
+            "                {\n" +
+            "                    invalidTagId = tag;\n" +
+            "                    rejectReason = " + INVALID_TAG_NUMBER + ";\n" +
+            "                }\n" +
+            "                else if (valueLength == 0)\n" +
+            "                {\n" +
+            "                    invalidTagId = tag;\n" +
+            "                    rejectReason = " + TAG_SPECIFIED_WITHOUT_A_VALUE + ";\n" +
+            "                }\n" +
+            headerValidation(isHeader) +
 
-                (isGroup ? "" :
-                "                if (!alreadyVisitedFields.add(tag))\n" +
-                "                {\n" +
-                "                    invalidTagId = tag;\n" +
-                "                    rejectReason = " + TAG_APPEARS_MORE_THAN_ONCE + ";\n" +
-                "                }\n") +
+            (isGroup ? "" :
+            "                if (!alreadyVisitedFields.add(tag))\n" +
+            "                {\n" +
+            "                    invalidTagId = tag;\n" +
+            "                    rejectReason = " + TAG_APPEARS_MORE_THAN_ONCE + ";\n" +
+            "                }\n") +
 
-                "                missingRequiredFields.remove(tag);\n" +
-                "                seenFieldCount++;\n" +
-                "            }\n" +
-                "            switch (tag)\n" +
-                "            {\n\n";
+            "                missingRequiredFields.remove(tag);\n" +
+            "                seenFieldCount++;\n" +
+            "            }\n" +
+            "            switch (tag)\n" +
+            "            {\n\n";
 
         final String body =
             entries.stream()
@@ -865,14 +865,14 @@ public class DecoderGenerator extends Generator
         if (isGroup)
         {
             endGroupCheck = String.format(
-                "        if (!seenFields.add(tag))\n" +
-                "        {\n" +
-                "            if (next == null)\n" +
+                "            if (!seenFields.add(tag))\n" +
                 "            {\n" +
-                "                next = new %1$s();" +
-                "            }\n" +
-                "            return next.decode(buffer, position, end - position);\n" +
-                "        }\n",
+                "                if (next == null)\n" +
+                "                {\n" +
+                "                    next = new %1$s();\n" +
+                "                }\n" +
+                "                return next.decode(buffer, position, end - position);\n" +
+                "            }\n",
                 decoderClassName(aggregate)
             );
         }
