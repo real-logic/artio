@@ -101,12 +101,13 @@ public class ClusteredGatewaySystemTest
                 .map(FixEngineRunner::libraryChannel)
                 .collect(toList()));
 
-        assertEventuallyTrue("Cluster failed to elect a leader", () ->
-        {
-            final Optional<FixEngineRunner> maybeLeader = findNewLeader();
-            maybeLeader.ifPresent(leader -> this.leader = leader);
-            return maybeLeader.isPresent();
-        });
+        assertEventuallyTrue("Cluster failed to elect a leader",
+            () ->
+            {
+                final Optional<FixEngineRunner> maybeLeader = findNewLeader();
+                maybeLeader.ifPresent(leader -> this.leader = leader);
+                return maybeLeader.isPresent();
+            });
 
         acceptingLibrary = FixLibrary.connect(configuration);
 
@@ -226,11 +227,12 @@ public class ClusteredGatewaySystemTest
 
         assertConnected(initiatingSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
-        final long sessionId = acceptingHandler.awaitSessionIdFor(INITIATOR_ID, ACCEPTOR_ID, () ->
-        {
-            acceptingLibrary.poll(1);
-            initiatingLibrary.poll(1);
-        });
+        final long sessionId = acceptingHandler.awaitSessionIdFor(INITIATOR_ID, ACCEPTOR_ID,
+            () ->
+            {
+                acceptingLibrary.poll(1);
+                initiatingLibrary.poll(1);
+            });
         acceptingSession = acquireSession(acceptingHandler, acceptingLibrary, sessionId);
         assertEquals(ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());
         assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
@@ -248,49 +250,51 @@ public class ClusteredGatewaySystemTest
     private void allClusterNodesHaveArchivedTestRequestMessage(
         final long begin, final long end, final long sessionId)
     {
-        cluster.forEach(runner ->
-        {
-            final EngineConfiguration configuration = runner.configuration();
-            final String logFileDir = configuration.logFileDir();
-            final FixArchiveScanner scanner = new FixArchiveScanner(logFileDir);
-            final StreamIdentifier id = new StreamIdentifier(
-                configuration.clusterAeronChannel(), OUTBOUND_LIBRARY_STREAM);
-
-            final TestRequestFinder testRequestFinder = new TestRequestFinder();
-            scanner.forEachMessage(
-                id,
-                filterBy(testRequestFinder,
-                    messageTypeOf(TEST_REQUEST)
-                        .and(sessionOf(INITIATOR_ID, ACCEPTOR_ID))
-                        .and(sessionOf(sessionId))
-                        .and(between(begin, end))),
-                Throwable::printStackTrace);
-
-            if (!testRequestFinder.isPresent)
+        cluster.forEach(
+            (runner) ->
             {
+                final EngineConfiguration configuration = runner.configuration();
+                final String logFileDir = configuration.logFileDir();
+                final FixArchiveScanner scanner = new FixArchiveScanner(logFileDir);
+                final StreamIdentifier id = new StreamIdentifier(
+                    configuration.clusterAeronChannel(), OUTBOUND_LIBRARY_STREAM);
+
+                final TestRequestFinder testRequestFinder = new TestRequestFinder();
                 scanner.forEachMessage(
                     id,
-                    (message, buffer, offset, length, header) -> System.out.println(message.body()),
+                    filterBy(testRequestFinder,
+                        messageTypeOf(TEST_REQUEST)
+                            .and(sessionOf(INITIATOR_ID, ACCEPTOR_ID))
+                            .and(sessionOf(sessionId))
+                            .and(between(begin, end))),
                     Throwable::printStackTrace);
-            }
 
-            assertTrue(configuration.nodeId() + " is missing the test request message from its log",
-                testRequestFinder.isPresent);
-        });
+                if (!testRequestFinder.isPresent)
+                {
+                    scanner.forEachMessage(
+                        id,
+                        (message, buffer, offset, length, header) -> System.out.println(message.body()),
+                        Throwable::printStackTrace);
+                }
+
+                assertTrue(configuration.nodeId() + " is missing the test request message from its log",
+                    testRequestFinder.isPresent);
+            });
     }
 
     private void allClusterNodesHaveSameIndexFiles()
     {
         final FixEngineRunner firstNode = cluster.get(0);
         final String logFileDir = firstNode.configuration().logFileDir();
-        cluster.stream().skip(1).forEach(runner ->
-        {
-            final String otherLogFileDir = runner.configuration().logFileDir();
+        cluster.stream().skip(1).forEach(
+            (runner) ->
+            {
+                final String otherLogFileDir = runner.configuration().logFileDir();
 
-            assertFilesEqual(logFileDir, otherLogFileDir, DEFAULT_SESSION_ID_FILE);
-            assertFilesEqual(logFileDir, otherLogFileDir, DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE);
-            assertFilesEqual(logFileDir, otherLogFileDir, DEFAULT_SEQUENCE_NUMBERS_SENT_FILE);
-        });
+                assertFilesEqual(logFileDir, otherLogFileDir, DEFAULT_SESSION_ID_FILE);
+                assertFilesEqual(logFileDir, otherLogFileDir, DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE);
+                assertFilesEqual(logFileDir, otherLogFileDir, DEFAULT_SEQUENCE_NUMBERS_SENT_FILE);
+            });
     }
 
     private void assertFilesEqual(
@@ -355,5 +359,4 @@ public class ClusteredGatewaySystemTest
         close(initiatingEngine);
         cluster.forEach(FixEngineRunner::close);
     }
-
 }

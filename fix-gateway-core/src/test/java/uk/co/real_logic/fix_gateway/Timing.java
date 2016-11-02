@@ -31,7 +31,7 @@ public final class Timing
 
     public static void assertEventuallyTrue(final String message, final BooleanSupplier condition)
     {
-        assertEventuallyTrue(message, condition, DEFAULT_TIMEOUT, 100);
+        assertEventuallyTrue(message, condition, DEFAULT_TIMEOUT, 10);
     }
 
     public static void assertEventuallyEquals(
@@ -66,7 +66,8 @@ public final class Timing
                     return false;
                 }
             },
-            timeoutMs, 100);
+            timeoutMs,
+            10);
     }
 
     public static void assertEventuallyTrue(
