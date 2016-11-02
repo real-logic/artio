@@ -96,7 +96,7 @@ public class Archiver implements Agent, RawBlockHandler
             return 0;
         }
 
-        return (int) subscription.rawPoll(this, POLL_LENGTH);
+        return (int)subscription.rawPoll(this, POLL_LENGTH);
     }
 
     private SessionArchiver newSessionArchiver(final int sessionId)
@@ -402,7 +402,7 @@ public class Archiver implements Agent, RawBlockHandler
         private void writeChecksum(final DataHeaderFlyweight header)
         {
             final int clusterStreamId = ReservedValue.clusterStreamId(header.reservedValue());
-            final int checksumValue = (int) checksum.getValue();
+            final int checksumValue = (int)checksum.getValue();
             header.reservedValue(ReservedValue.of(clusterStreamId, checksumValue));
         }
 
