@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import org.agrona.collections.IntArrayList;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -46,7 +47,7 @@ class InitiateSessionReply extends LibraryReply<Session>
     private void sendMessage()
     {
         final List<String> hosts = configuration.hosts();
-        final List<Integer> ports = configuration.ports();
+        final IntArrayList ports = configuration.ports();
         final int size = hosts.size();
         if (addressIndex >= size)
         {
@@ -55,7 +56,7 @@ class InitiateSessionReply extends LibraryReply<Session>
         }
 
         final String host = hosts.get(addressIndex);
-        final int port = ports.get(addressIndex);
+        final int port = ports.getInt(addressIndex);
 
         final long position = libraryPoller.saveInitiateConnection(host, port, correlationId, configuration);
 
@@ -78,7 +79,7 @@ class InitiateSessionReply extends LibraryReply<Session>
 
     void onComplete(final Session result)
     {
-        result.address(configuration.hosts().get(addressIndex), configuration.ports().get(addressIndex));
+        result.address(configuration.hosts().get(addressIndex), configuration.ports().getInt(addressIndex));
         super.onComplete(result);
     }
 
