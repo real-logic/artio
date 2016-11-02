@@ -243,6 +243,7 @@ public class AbstractGatewayToGatewaySystemTest
                 assertEquals(ENGINE_LIBRARY_ID, engine.libraryId());
                 break;
             }
+
             ADMIN_IDLE_STRATEGY.idle();
         }
 
