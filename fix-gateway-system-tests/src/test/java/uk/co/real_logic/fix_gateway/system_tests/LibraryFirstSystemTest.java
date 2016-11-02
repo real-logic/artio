@@ -52,23 +52,9 @@ public class LibraryFirstSystemTest extends AbstractGatewayToGatewaySystemTest
         connectSessions();
     }
 
-    private void waitLessThanReplyTimeout() throws InterruptedException
-    {
-        Thread.sleep((long)(CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS * 0.75));
-    }
-
-    private Future<FixLibrary> newInitiatingLibrary()
-    {
-        return threadPool.submit(() -> SystemTestUtil.newInitiatingLibrary(libraryAeronPort, initiatingHandler));
-    }
-
-    private Future<FixLibrary> newAcceptingLibrary()
-    {
-        return threadPool.submit(() -> SystemTestUtil.newAcceptingLibrary(acceptingHandler));
-    }
-
     @Test
-    public void engineAndLibraryPairsShouldBeRestartableOutOfOrder() throws ExecutionException, InterruptedException
+    public void engineAndLibraryPairsShouldBeRestartableOutOfOrder()
+        throws ExecutionException, InterruptedException
     {
         messagesCanBeExchanged();
 
@@ -85,5 +71,20 @@ public class LibraryFirstSystemTest extends AbstractGatewayToGatewaySystemTest
 
         wireSessions();
         messagesCanBeExchanged();
+    }
+
+    private void waitLessThanReplyTimeout() throws InterruptedException
+    {
+        Thread.sleep(CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS / 4);
+    }
+
+    private Future<FixLibrary> newInitiatingLibrary()
+    {
+        return threadPool.submit(() -> SystemTestUtil.newInitiatingLibrary(libraryAeronPort, initiatingHandler));
+    }
+
+    private Future<FixLibrary> newAcceptingLibrary()
+    {
+        return threadPool.submit(() -> SystemTestUtil.newAcceptingLibrary(acceptingHandler));
     }
 }
