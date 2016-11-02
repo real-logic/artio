@@ -44,9 +44,13 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Before
     public void launch()
     {
-        mediaDriver = launchMediaDriver();
+        // TODO: Work out what has not been closed.
+        System.gc();
 
         delete(ACCEPTOR_LOGS);
+
+        mediaDriver = launchMediaDriver();
+
         launchAcceptingEngine();
         initiatingEngine = launchInitiatingGateway(libraryAeronPort);
 
@@ -87,8 +91,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
-        messagesCanBeExchanged(
-            acceptingSession, acceptingLibrary, initiatingLibrary, acceptingOtfAcceptor);
+        messagesCanBeExchanged(acceptingSession, acceptingLibrary, initiatingLibrary, acceptingOtfAcceptor);
     }
 
     @Test
@@ -167,12 +170,15 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             assertConnected(session2);
             sessionLogsOn(library2, acceptingLibrary, session2);
 
-            final long sessionId = acceptingHandler.awaitSessionIdFor(INITIATOR_ID2, ACCEPTOR_ID, () ->
-            {
-                acceptingLibrary.poll(1);
-                library2.poll(1);
-                initiatingLibrary.poll(1);
-            });
+            final long sessionId = acceptingHandler.awaitSessionIdFor(
+                INITIATOR_ID2,
+                ACCEPTOR_ID,
+                () ->
+                {
+                    acceptingLibrary.poll(1);
+                    library2.poll(1);
+                    initiatingLibrary.poll(1);
+                });
 
             final Session acceptingSession2 = acquireSession(acceptingHandler, acceptingLibrary, sessionId);
 
@@ -212,11 +218,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         initiatingEngine.close();
 
-        assertEventuallyTrue("Acceptor Disconnected", () ->
-        {
-            acceptingLibrary.poll(1);
-            return acceptingHandler.hasDisconnected();
-        });
+        assertEventuallyTrue("Acceptor Disconnected",
+            () ->
+            {
+                acceptingLibrary.poll(1);
+                return acceptingHandler.hasDisconnected();
+            });
     }
 
     @Test
@@ -235,24 +242,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         releaseSessionToEngine(acceptingSession, acceptingLibrary, acceptingEngine);
     }
 
-    private void releaseSessionToEngine(
-        final Session session,
-        final FixLibrary library,
-        final FixEngine engine)
-    {
-        final long connectionId = session.connectionId();
-
-        final SessionReplyStatus status = releaseToGateway(library, session);
-
-        assertEquals(SessionReplyStatus.OK, status);
-        assertEquals(SessionState.DISABLED, session.state());
-        assertThat(library.sessions(), hasSize(0));
-
-        final List<SessionInfo> sessions = gatewayLibraryInfo(engine).sessions();
-        assertThat(sessions,
-            contains(hasConnectionId(connectionId)));
-    }
-
     @Test
     public void librariesShouldBeAbleToAcquireReleasedInitiatedSessions()
     {
@@ -267,41 +256,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acquireAcceptingSession();
 
         reacquireReleasedSession(acceptingSession, acceptingLibrary, acceptingEngine);
-    }
-
-    private void reacquireReleasedSession(
-        final Session session, final FixLibrary library, final FixEngine engine)
-    {
-        final long sessionId = session.id();
-
-        releaseToGateway(library, session);
-
-        final SessionReplyStatus status = getSessionStatus(library, sessionId, NO_MESSAGE_REPLAY);
-        assertEquals(SessionReplyStatus.OK, status);
-
-        assertThat(gatewayLibraryInfo(engine).sessions(), hasSize(0));
-
-        engineIsManagingSession(engine, session.connectionId());
-        assertContainsOnlySession(session, library);
-    }
-
-    private void assertContainsOnlySession(final Session session, final FixLibrary library)
-    {
-        final List<Session> sessions = library.sessions();
-        assertThat(sessions, hasSize(1));
-
-        final Session newSession = sessions.get(0);
-        assertTrue(newSession.isConnected());
-        assertEquals(session.connectionId(), newSession.connectionId());
-        assertEquals(session.id(), newSession.id());
-        assertEquals(session.username(), newSession.username());
-        assertEquals(session.password(), newSession.password());
-    }
-
-    private void engineIsManagingSession(final FixEngine engine, final long connectionId)
-    {
-        final List<LibraryInfo> libraries = libraries(engine);
-        assertThat(libraries.get(0).sessions(), contains(hasConnectionId(connectionId)));
     }
 
     @Test
@@ -322,35 +276,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         engineShouldManageSession(
             initiatingSession, initiatingLibrary, initiatingOtfAcceptor,
             acceptingSession, acceptingLibrary, acceptingOtfAcceptor);
-    }
-
-    private void engineShouldManageSession(
-        final Session session,
-        final FixLibrary library,
-        final FakeOtfAcceptor otfAcceptor,
-        final Session otherSession,
-        final FixLibrary otherLibrary,
-        final FakeOtfAcceptor otherAcceptor)
-    {
-        final long sessionId = session.id();
-        final int lastReceivedMsgSeqNum = session.lastReceivedMsgSeqNum();
-        final List<FixMessage> messages = otfAcceptor.messages();
-
-        releaseToGateway(library, session);
-
-        messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
-
-        final SessionReplyStatus status = getSessionStatus(library, sessionId, lastReceivedMsgSeqNum);
-        assertEquals(SessionReplyStatus.OK, status);
-
-        messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
-
-        // Callbacks for the missing messages whilst the gateway managed them
-        final String expectedSeqNum = String.valueOf(lastReceivedMsgSeqNum + 1);
-        assertEquals(1, messages
-            .stream()
-            .filter(msg -> msg.getMsgType().equals("1") && msg.get(MSG_SEQ_NUM).equals(expectedSeqNum))
-            .count());
     }
 
     @Test
@@ -430,4 +355,84 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acceptingEngineHasSession();
     }
 
+    private void releaseSessionToEngine(
+        final Session session,
+        final FixLibrary library,
+        final FixEngine engine)
+    {
+        final long connectionId = session.connectionId();
+
+        final SessionReplyStatus status = releaseToGateway(library, session);
+
+        assertEquals(SessionReplyStatus.OK, status);
+        assertEquals(SessionState.DISABLED, session.state());
+        assertThat(library.sessions(), hasSize(0));
+
+        final List<SessionInfo> sessions = gatewayLibraryInfo(engine).sessions();
+        assertThat(sessions, contains(hasConnectionId(connectionId)));
+    }
+
+    private void reacquireReleasedSession(
+        final Session session, final FixLibrary library, final FixEngine engine)
+    {
+        final long sessionId = session.id();
+
+        releaseToGateway(library, session);
+
+        final SessionReplyStatus status = getSessionStatus(library, sessionId, NO_MESSAGE_REPLAY);
+        assertEquals(SessionReplyStatus.OK, status);
+
+        assertThat(gatewayLibraryInfo(engine).sessions(), hasSize(0));
+
+        engineIsManagingSession(engine, session.connectionId());
+        assertContainsOnlySession(session, library);
+    }
+
+    private void assertContainsOnlySession(final Session session, final FixLibrary library)
+    {
+        final List<Session> sessions = library.sessions();
+        assertThat(sessions, hasSize(1));
+
+        final Session newSession = sessions.get(0);
+        assertTrue(newSession.isConnected());
+        assertEquals(session.connectionId(), newSession.connectionId());
+        assertEquals(session.id(), newSession.id());
+        assertEquals(session.username(), newSession.username());
+        assertEquals(session.password(), newSession.password());
+    }
+
+    private void engineIsManagingSession(final FixEngine engine, final long connectionId)
+    {
+        final List<LibraryInfo> libraries = libraries(engine);
+        assertThat(libraries.get(0).sessions(), contains(hasConnectionId(connectionId)));
+    }
+
+    private void engineShouldManageSession(
+        final Session session,
+        final FixLibrary library,
+        final FakeOtfAcceptor otfAcceptor,
+        final Session otherSession,
+        final FixLibrary otherLibrary,
+        final FakeOtfAcceptor otherAcceptor)
+    {
+        final long sessionId = session.id();
+        final int lastReceivedMsgSeqNum = session.lastReceivedMsgSeqNum();
+        final List<FixMessage> messages = otfAcceptor.messages();
+
+        releaseToGateway(library, session);
+
+        messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
+
+        final SessionReplyStatus status = getSessionStatus(library, sessionId, lastReceivedMsgSeqNum);
+        assertEquals(SessionReplyStatus.OK, status);
+
+        messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
+
+        // Callbacks for the missing messages whilst the gateway managed them
+        final String expectedSeqNum = String.valueOf(lastReceivedMsgSeqNum + 1);
+        assertEquals(1, messages
+            .stream()
+            .filter(msg -> msg.getMsgType().equals("1") && msg.get(MSG_SEQ_NUM).equals(expectedSeqNum))
+            .count());
+    }
 }

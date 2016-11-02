@@ -32,6 +32,8 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.fix_gateway.DebugLogger.logSbeMessage;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_MESSAGE;
+import static uk.co.real_logic.fix_gateway.messages.ErrorDecoder.messageHeaderLength;
+import static uk.co.real_logic.fix_gateway.messages.ErrorEncoder.BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.NotLeaderEncoder.libraryChannelHeaderLength;
 
 /**
@@ -39,10 +41,9 @@ import static uk.co.real_logic.fix_gateway.messages.NotLeaderEncoder.libraryChan
  */
 public class GatewayPublication extends ClaimablePublication
 {
-    private static final byte[] NO_BYTES = {};
-
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
 
+    private static final byte[] NO_BYTES = {};
     private static final int CONNECT_SIZE = ManageConnectionEncoder.BLOCK_LENGTH + ManageConnectionDecoder.addressHeaderLength();
     private static final int HEARTBEAT_LENGTH = HEADER_LENGTH + ApplicationHeartbeatEncoder.BLOCK_LENGTH;
     private static final int LIBRARY_CONNECT_LENGTH = HEADER_LENGTH + LibraryConnectEncoder.BLOCK_LENGTH;
@@ -140,9 +141,10 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveLogon(final int libraryId,
-                          final long connectionId,
-                          final long sessionId)
+    public long saveLogon(
+        final int libraryId,
+        final long connectionId,
+        final long sessionId)
     {
         return saveLogon(
             libraryId, connectionId, sessionId,
@@ -150,18 +152,19 @@ public class GatewayPublication extends ClaimablePublication
             null, null, null, null, null, null, LogonStatus.NEW);
     }
 
-    public long saveLogon(final int libraryId,
-                          final long connectionId,
-                          final long sessionId,
-                          final int lastSentSequenceNumber,
-                          final int lastReceivedSequenceNumber,
-                          final String senderCompId,
-                          final String senderSubId,
-                          final String senderLocationId,
-                          final String targetCompId,
-                          final String username,
-                          final String password,
-                          final LogonStatus status)
+    public long saveLogon(
+        final int libraryId,
+        final long connectionId,
+        final long sessionId,
+        final int lastSentSequenceNumber,
+        final int lastReceivedSequenceNumber,
+        final String senderCompId,
+        final String senderSubId,
+        final String senderLocationId,
+        final String targetCompId,
+        final String username,
+        final String password,
+        final LogonStatus status)
     {
         final byte[] senderCompIdBytes = bytes(senderCompId);
         final byte[] senderSubIdBytes = bytes(senderSubId);
@@ -172,14 +175,14 @@ public class GatewayPublication extends ClaimablePublication
 
         final long position = claim(
             header.encodedLength() +
-            LogonEncoder.BLOCK_LENGTH +
-            LogonEncoder.senderSubIdHeaderLength() * 6 +
-            senderCompIdBytes.length +
-            senderSubIdBytes.length +
-            senderLocationIdBytes.length +
-            targetCompIdBytes.length +
-            usernameBytes.length +
-            passwordBytes.length);
+                LogonEncoder.BLOCK_LENGTH +
+                LogonEncoder.senderSubIdHeaderLength() * 6 +
+                senderCompIdBytes.length +
+                senderSubIdBytes.length +
+                senderLocationIdBytes.length +
+                targetCompIdBytes.length +
+                usernameBytes.length +
+                passwordBytes.length);
 
         if (position < 0)
         {
@@ -455,15 +458,16 @@ public class GatewayPublication extends ClaimablePublication
 
         final long position = claim(
             header.encodedLength() +
-            InitiateConnectionEncoder.BLOCK_LENGTH +
-            InitiateConnectionDecoder.hostHeaderLength() * 7 +
-            hostBytes.length +
-            senderCompIdBytes.length +
-            senderSubIdBytes.length +
-            senderLocationIdBytes.length +
-            targetCompIdBytes.length +
-            usernameBytes.length +
-            passwordBytes.length);
+                InitiateConnectionEncoder.BLOCK_LENGTH +
+                InitiateConnectionDecoder.hostHeaderLength() * 7 +
+                hostBytes.length +
+                senderCompIdBytes.length +
+                senderSubIdBytes.length +
+                senderLocationIdBytes.length +
+                targetCompIdBytes.length +
+                usernameBytes.length +
+                passwordBytes.length);
+
         if (position < 0)
         {
             return position;
@@ -511,8 +515,7 @@ public class GatewayPublication extends ClaimablePublication
         final String message)
     {
         final byte[] messageBytes = bytes(message);
-        final int length = header.encodedLength() + ErrorEncoder.BLOCK_LENGTH + ErrorDecoder.messageHeaderLength() +
-            messageBytes.length;
+        final int length = header.encodedLength() + BLOCK_LENGTH + messageHeaderLength() + messageBytes.length;
         final long position = claim(length);
         if (position < 0)
         {
@@ -576,8 +579,7 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveLibraryConnect(
-        final int libraryId, final long correlationId)
+    public long saveLibraryConnect(final int libraryId, final long correlationId)
     {
         final long position = claim(LIBRARY_CONNECT_LENGTH);
         if (position < 0)
@@ -835,8 +837,7 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveNewSentPosition(
-        final int libraryId, final long sentPosition)
+    public long saveNewSentPosition(final int libraryId, final long sentPosition)
     {
         final long position = claim(NewSentPositionEncoder.BLOCK_LENGTH + HEADER_LENGTH);
         if (position < 0)
@@ -900,15 +901,14 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveControlNotification(
-        final int libraryId, final List<SessionInfo> sessions)
+    public long saveControlNotification(final int libraryId, final List<SessionInfo> sessions)
     {
         final int sessionsCount = sessions.size();
         final long position = claim(
             HEADER_LENGTH +
-            ControlNotificationEncoder.BLOCK_LENGTH +
-            GroupSizeEncodingEncoder.ENCODED_LENGTH +
-            sessionsCount * SessionsEncoder.sbeBlockLength());
+                ControlNotificationEncoder.BLOCK_LENGTH +
+                GroupSizeEncodingEncoder.ENCODED_LENGTH +
+                sessionsCount * SessionsEncoder.sbeBlockLength());
 
         if (position < 0)
         {
@@ -956,6 +956,7 @@ public class GatewayPublication extends ClaimablePublication
         {
             return NO_BYTES;
         }
+
         return host.getBytes(UTF_8);
     }
 }

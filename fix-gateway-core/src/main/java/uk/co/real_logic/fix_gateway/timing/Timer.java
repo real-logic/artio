@@ -25,18 +25,17 @@ public class Timer
     private static final int NUMBER_OF_SIGNIFICANT_VALUE_DIGITS = 3;
 
     // Only written to on recording thread
-    private final SingleWriterRecorder recorder;
+    private final SingleWriterRecorder recorder = new SingleWriterRecorder(NUMBER_OF_SIGNIFICANT_VALUE_DIGITS);
 
-    // Only accesssed upon logging thread
-    private final String name;
     private final int id;
+    private final String name;
+    // Only accessed upon logging thread
     private Histogram histogram;
 
     public Timer(final String name, final int id)
     {
         this.name = name;
         this.id = id;
-        recorder = new SingleWriterRecorder(NUMBER_OF_SIGNIFICANT_VALUE_DIGITS);
     }
 
     public long recordSince(final long timestamp)
@@ -72,5 +71,4 @@ public class Timer
         histogram = recorder.getIntervalHistogram(histogram);
         return histogram;
     }
-
 }

@@ -365,7 +365,8 @@ public final class SystemTestUtil
                 library.poll(5);
                 return library.isConnected();
             },
-            AWAIT_TIMEOUT, 1);
+            AWAIT_TIMEOUT,
+            1);
     }
 
     public static void assertReceivedHeartbeat(final FixLibrary library,
