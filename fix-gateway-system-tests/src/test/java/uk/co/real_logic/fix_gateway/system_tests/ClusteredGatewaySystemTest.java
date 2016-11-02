@@ -88,7 +88,7 @@ public class ClusteredGatewaySystemTest
         mediaDriver = launchMediaDriver();
 
         cluster = ids()
-            .mapToObj(ourId -> new FixEngineRunner(ourId, ids()))
+            .mapToObj((ourId) -> new FixEngineRunner(ourId, ids()))
             .collect(toList());
 
         final LibraryConfiguration configuration = acceptingLibraryConfig(
@@ -105,7 +105,7 @@ public class ClusteredGatewaySystemTest
             () ->
             {
                 final Optional<FixEngineRunner> maybeLeader = findNewLeader();
-                maybeLeader.ifPresent(leader -> this.leader = leader);
+                maybeLeader.ifPresent((leader) -> this.leader = leader);
                 return maybeLeader.isPresent();
             });
 
@@ -120,7 +120,7 @@ public class ClusteredGatewaySystemTest
     {
         return cluster
             .stream()
-            .filter(leader -> leader != this.leader)
+            .filter((leader) -> leader != this.leader)
             .filter(FixEngineRunner::isLeader)
             .findFirst();
     }
@@ -172,8 +172,10 @@ public class ClusteredGatewaySystemTest
                 this.leader = leader.get();
                 break;
             }
+
             ADMIN_IDLE_STRATEGY.idle();
         }
+
         ADMIN_IDLE_STRATEGY.reset();
 
         DebugLogger.log(GATEWAY_CLUSTER, "Elected new leader: (%s)\n", leader.libraryChannel());
@@ -186,6 +188,7 @@ public class ClusteredGatewaySystemTest
 
             ADMIN_IDLE_STRATEGY.idle();
         }
+
         ADMIN_IDLE_STRATEGY.reset();
 
         DebugLogger.log(GATEWAY_CLUSTER, "Library has connected to new leader\n");
