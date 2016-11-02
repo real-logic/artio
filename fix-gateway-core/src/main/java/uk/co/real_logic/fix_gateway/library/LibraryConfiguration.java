@@ -37,7 +37,6 @@ import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
  */
 public final class LibraryConfiguration extends CommonConfiguration
 {
-
     public static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
     public static final GatewayErrorHandler DEFAULT_GATEWAY_ERROR_HANDLER =
         (errorType, libraryId, message) -> CONTINUE;
