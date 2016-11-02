@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.dictionary.generation;
 
+import org.agrona.collections.IntHashSet;
 import org.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Dictionary;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Field;
@@ -24,7 +25,9 @@ import java.util.Collection;
 import static java.lang.Character.isUpperCase;
 import static java.lang.Character.toUpperCase;
 import static java.util.stream.Collectors.joining;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.DecoderGenerator.addField;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
 
 public class ConstantGenerator
 {
@@ -50,12 +53,33 @@ public class ConstantGenerator
         outputManager.withOutput(CLASS_NAME, out ->
         {
             out.append(fileHeader(builderPackage));
+            out.append(importFor(IntHashSet.class));
             out.append(BODY);
             out.append(generateVersion());
             out.append(generateMessageTypes());
             out.append(generateFieldTags());
+            out.append(generateFieldDictionary(dictionary.fields().values(), "ALL_FIELDS"));
             out.append("}\n");
         });
+    }
+
+    private String generateFieldDictionary(final Collection<Field> fields, final String name)
+    {
+        final String addFields = fields
+            .stream()
+            .map((field) -> addField(field, name))
+            .collect(joining());
+
+        final int hashMapSize = sizeHashSet(fields);
+        return String.format(
+            "    public static final IntHashSet %3$s = new IntHashSet(%1$d, -1);\n" +
+            "    static\n" +
+            "    {\n" +
+            "%2$s" +
+            "    }\n\n",
+            hashMapSize,
+            addFields,
+            name);
     }
 
     private String generateVersion()

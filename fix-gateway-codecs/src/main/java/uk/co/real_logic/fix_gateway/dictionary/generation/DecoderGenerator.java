@@ -97,8 +97,21 @@ public class DecoderGenerator extends Generator
 
     public void generate()
     {
-        allFieldsDictionary = generateFieldDictionary(dictionary.fields().values(), ALL_FIELDS);
+        allFieldsDictionary = generateAllFieldsDictionary();
         super.generate();
+    }
+
+    private String generateAllFieldsDictionary()
+    {
+        final int hashMapSize = sizeHashSet(dictionary.fields().values());
+
+        return String.format(
+            "    public final IntHashSet %2$s = new IntHashSet(%1$d, -1);\n" +
+            "    {\n" +
+            "        %2$s.copy(Constants.ALL_FIELDS);" +
+            "    }\n\n",
+            hashMapSize,
+            ALL_FIELDS);
     }
 
     protected void generateAggregateFile(final Aggregate aggregate, final AggregateType type)
@@ -283,7 +296,7 @@ public class DecoderGenerator extends Generator
 
         final int hashMapSize = sizeHashSet(fields);
         return String.format(
-            "    public final IntHashSet %3$s = new IntHashSet(%1$d, -1);\n\n" +
+            "    public final IntHashSet %3$s = new IntHashSet(%1$d, -1);\n" +
             "    {\n" +
             "%2$s" +
             "    }\n\n",
@@ -292,7 +305,7 @@ public class DecoderGenerator extends Generator
             name);
     }
 
-    private static String addField(final Field field, final String name)
+    public static String addField(final Field field, final String name)
     {
         return String.format(
             "        %1$s.add(%2$d);\n",
