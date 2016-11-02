@@ -60,6 +60,9 @@ public class AbstractGatewayToGatewaySystemTest
     @After
     public void close()
     {
+        CloseHelper.close(initiatingSession);
+        CloseHelper.close(acceptingSession);
+
         CloseHelper.close(initiatingLibrary);
         CloseHelper.close(acceptingLibrary);
 
@@ -93,6 +96,7 @@ public class AbstractGatewayToGatewaySystemTest
     {
         while (session.lastReceivedMsgSeqNum() < sequenceNumber)
         {
+            Thread.yield();
             library.poll(LIBRARY_LIMIT);
         }
     }
@@ -102,12 +106,13 @@ public class AbstractGatewayToGatewaySystemTest
         assertSessionDisconnected(initiatingLibrary, acceptingLibrary, initiatingSession);
         assertSessionDisconnected(acceptingLibrary, initiatingLibrary, acceptingSession);
 
-        assertEventuallyTrue("libraries receive disconnect messages", () ->
-        {
-            poll(initiatingLibrary, acceptingLibrary);
-            assertNotSession(acceptingHandler, acceptingSession);
-            assertNotSession(initiatingHandler, initiatingSession);
-        });
+        assertEventuallyTrue("libraries receive disconnect messages",
+            () ->
+            {
+                poll(initiatingLibrary, acceptingLibrary);
+                assertNotSession(acceptingHandler, acceptingSession);
+                assertNotSession(initiatingHandler, initiatingSession);
+            });
     }
 
     protected void assertNotSession(final FakeHandler sessionHandler, final Session session)
@@ -159,19 +164,20 @@ public class AbstractGatewayToGatewaySystemTest
     protected void assertMessageResent()
     {
         assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
-        assertEventuallyTrue("Failed to receive the reply", () ->
-        {
-            acceptingLibrary.poll(LIBRARY_LIMIT);
-            initiatingLibrary.poll(LIBRARY_LIMIT);
+        assertEventuallyTrue("Failed to receive the reply",
+            () ->
+            {
+                acceptingLibrary.poll(LIBRARY_LIMIT);
+                initiatingLibrary.poll(LIBRARY_LIMIT);
 
-            final FixMessage message = acceptingOtfAcceptor.lastMessage();
-            final String messageType = message.getMsgType();
-            assertEquals("1", messageType);
-            assertEquals("Y", message.getPossDup());
-            assertEquals(INITIATOR_ID, acceptingOtfAcceptor.lastSenderCompId());
-            assertNull("Detected Error", acceptingOtfAcceptor.lastError());
-            assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());
-        });
+                final FixMessage message = acceptingOtfAcceptor.lastMessage();
+                final String messageType = message.getMsgType();
+                assertEquals("1", messageType);
+                assertEquals("Y", message.getPossDup());
+                assertEquals(INITIATOR_ID, acceptingOtfAcceptor.lastSenderCompId());
+                assertNull("Detected Error", acceptingOtfAcceptor.lastError());
+                assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());
+            });
     }
 
     protected void sendResendRequest()
@@ -191,12 +197,13 @@ public class AbstractGatewayToGatewaySystemTest
         final long position = messagesCanBeExchanged(
             initiatingSession, initiatingLibrary, acceptingLibrary, initiatingOtfAcceptor);
 
-        assertEventuallyTrue("position never catches up", () ->
-        {
-            initiatingLibrary.poll(LIBRARY_LIMIT);
+        assertEventuallyTrue("position never catches up",
+            () ->
+            {
+                initiatingLibrary.poll(LIBRARY_LIMIT);
 
-            return initiatingHandler.sentPosition() >= position;
-        });
+                return initiatingHandler.sentPosition() >= position;
+            });
     }
 
     protected long messagesCanBeExchanged(

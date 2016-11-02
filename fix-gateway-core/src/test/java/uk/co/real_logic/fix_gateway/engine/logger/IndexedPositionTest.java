@@ -23,7 +23,6 @@ import org.junit.Test;
 import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Matchers.any;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.SECTOR_SIZE;
 import static uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionReader.UNKNOWN_POSITION;
@@ -37,6 +36,12 @@ public class IndexedPositionTest
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[2 * SECTOR_SIZE]);
     private IndexedPositionWriter writer = newWriter();
     private IndexedPositionReader reader = new IndexedPositionReader(buffer);
+
+    @After
+    public void noErrors()
+    {
+        verify(errorHandler, never()).onError(any());
+    }
 
     @Test
     public void shouldReadWrittenPosition()
@@ -130,11 +135,5 @@ public class IndexedPositionTest
     private IndexedPositionWriter newWriter()
     {
         return new IndexedPositionWriter(buffer, errorHandler);
-    }
-
-    @After
-    public void noErrors()
-    {
-        verify(errorHandler, never()).onError(any());
     }
 }

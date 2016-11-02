@@ -65,7 +65,7 @@ public final class SystemTestUtil
     static
     {
         final File parentDirectory = new File(optimalTmpDirName());
-        for (final File directory : parentDirectory.listFiles(file -> file.getName().startsWith("fix-library-")))
+        for (final File directory : parentDirectory.listFiles((file) -> file.getName().startsWith("fix-library-")))
         {
             IoUtil.delete(directory, true);
         }
@@ -76,11 +76,12 @@ public final class SystemTestUtil
         final FixLibrary library2,
         final Session session)
     {
-        assertEventuallyTrue("Session is still connected", () ->
-        {
-            poll(library1, library2);
-            return session.state() == DISCONNECTED;
-        });
+        assertEventuallyTrue("Session is still connected",
+            () ->
+            {
+                poll(library1, library2);
+                return session.state() == DISCONNECTED;
+            });
     }
 
     public static long sendTestRequest(final Session session)
@@ -98,11 +99,12 @@ public final class SystemTestUtil
     public static void assertReceivedTestRequest(
         final FixLibrary library1, final FixLibrary library2, final FakeOtfAcceptor acceptor)
     {
-        assertEventuallyTrue("Failed to receive a test request message", () ->
-        {
-            poll(library1, library2);
-            return acceptor.hasReceivedMessage("1").isPresent();
-        });
+        assertEventuallyTrue("Failed to receive a test request message",
+            () ->
+            {
+                poll(library1, library2);
+                return acceptor.hasReceivedMessage("1").isPresent();
+            });
     }
 
     public static void poll(final FixLibrary library1, final FixLibrary library2)
@@ -173,9 +175,7 @@ public final class SystemTestUtil
         return FixEngine.launch(initiatingConfig);
     }
 
-    public static EngineConfiguration initiatingConfig(
-        final int libraryAeronPort,
-        final String countersSuffix)
+    public static EngineConfiguration initiatingConfig(final int libraryAeronPort, final String countersSuffix)
     {
         return new EngineConfiguration()
             .libraryAeronChannel("aeron:udp?endpoint=localhost:" + libraryAeronPort)
@@ -210,6 +210,7 @@ public final class SystemTestUtil
     {
         final EngineConfiguration configuration = new EngineConfiguration();
         setupAuthentication(acceptorId, initiatorId, configuration);
+
         return configuration
             .bindTo("localhost", port)
             .libraryAeronChannel("aeron:ipc")
@@ -260,6 +261,7 @@ public final class SystemTestUtil
         final FixLibrary library)
     {
         final long sessionId = sessionHandler.awaitSessionId(() -> library.poll(LIBRARY_LIMIT));
+
         return acquireSession(sessionHandler, library, sessionId);
     }
 
@@ -272,6 +274,7 @@ public final class SystemTestUtil
         assertEquals(SessionReplyStatus.OK, reply);
         final Session session = sessionHandler.lastSession();
         sessionHandler.resetSession();
+
         return session;
     }
 
@@ -283,6 +286,7 @@ public final class SystemTestUtil
         final Reply<SessionReplyStatus> reply = library.requestSession(sessionId, lastReceivedMsgSeqNum);
         awaitReply(library, reply);
         assertEquals(reply.state(), COMPLETED);
+
         return reply.resultIfPresent();
     }
 
@@ -290,11 +294,12 @@ public final class SystemTestUtil
         final FixLibrary library2,
         final Session session)
     {
-        assertEventuallyTrue("Session has failed to logon", () ->
-        {
-            poll(library1, library2);
-            assertEquals(ACTIVE, session.state());
-        });
+        assertEventuallyTrue("Session has failed to logon",
+            () ->
+            {
+                poll(library1, library2);
+                assertEquals(ACTIVE, session.state());
+            });
     }
 
     public static FixLibrary newInitiatingLibrary(
@@ -354,7 +359,8 @@ public final class SystemTestUtil
     public static void awaitLibraryConnect(final FixLibrary library)
     {
         assertEventuallyTrue(
-            "Library hasn't seen Engine", () ->
+            "Library hasn't seen Engine",
+            () ->
             {
                 library.poll(5);
                 return library.isConnected();
@@ -366,14 +372,15 @@ public final class SystemTestUtil
         final FixLibrary library2,
         final FakeOtfAcceptor acceptor)
     {
-        assertEventuallyTrue("Failed to received heartbeat", () ->
-        {
-            poll(library, library2);
-            return acceptor
-                .hasReceivedMessage("0")
-                .filter(message -> HI_ID.equals(message.get(Constants.TEST_REQ_ID)))
-                .isPresent();
-        });
+        assertEventuallyTrue("Failed to received heartbeat",
+            () ->
+            {
+                poll(library, library2);
+                return acceptor
+                    .hasReceivedMessage("0")
+                    .filter(message -> HI_ID.equals(message.get(Constants.TEST_REQ_ID)))
+                    .isPresent();
+            });
     }
 
     public static LibraryInfo gatewayLibraryInfo(final FixEngine engine)

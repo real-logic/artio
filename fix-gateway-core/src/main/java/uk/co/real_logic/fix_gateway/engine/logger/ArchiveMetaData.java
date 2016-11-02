@@ -55,10 +55,11 @@ public class ArchiveMetaData implements AutoCloseable
         this.newBufferFactory = newBufferFactory;
     }
 
-    public void write(final StreamIdentifier streamId,
-                      final int sessionId,
-                      final int initialTermId,
-                      final int termBufferLength)
+    public void write(
+        final StreamIdentifier streamId,
+        final int sessionId,
+        final int initialTermId,
+        final int termBufferLength)
     {
         ensureBufferNotMapped();
         final File metaDataFile = directoryDescriptor.metaDataLogFile(streamId, sessionId);
@@ -101,7 +102,7 @@ public class ArchiveMetaData implements AutoCloseable
         final ByteBuffer buffer = metaDataBuffer.byteBuffer();
         if (buffer != null && buffer instanceof MappedByteBuffer)
         {
-            IoUtil.unmap((MappedByteBuffer) buffer);
+            IoUtil.unmap((MappedByteBuffer)buffer);
         }
     }
 
@@ -110,7 +111,6 @@ public class ArchiveMetaData implements AutoCloseable
         return directoryDescriptor;
     }
 
-    @Override
     public void close()
     {
         ensureBufferNotMapped();

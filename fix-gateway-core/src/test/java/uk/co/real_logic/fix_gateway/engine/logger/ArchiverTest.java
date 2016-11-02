@@ -58,8 +58,6 @@ import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static org.agrona.BitUtil.SIZE_OF_INT;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
-import static org.mockito.Matchers.any;
-import static org.mockito.Matchers.anyInt;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;

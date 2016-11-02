@@ -39,7 +39,6 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.*;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
@@ -76,12 +75,13 @@ public abstract class AbstractSessionTest
 
     AbstractSessionTest()
     {
-        doAnswer(inv ->
-        {
-            final HeaderEncoder encoder = (HeaderEncoder) inv.getArguments()[1];
-            encoder.senderCompID("senderCompID").targetCompID("targetCompID");
-            return null;
-        }).when(idStrategy).setupSession(any(), any());
+        doAnswer(
+            (inv) ->
+            {
+                final HeaderEncoder encoder = (HeaderEncoder)inv.getArguments()[1];
+                encoder.senderCompID("senderCompID").targetCompID("targetCompID");
+                return null;
+            }).when(idStrategy).setupSession(any(), any());
 
         when(mockPublication.saveMessage(
             buffer.capture(),
@@ -287,7 +287,7 @@ public abstract class AbstractSessionTest
     {
         when(mockProxy.logout(anyInt())).thenReturn(BACK_PRESSURED, POSITION);
 
-        backpressureDisconnect();
+        backPressureDisconnect();
     }
 
     @Test
@@ -494,7 +494,7 @@ public abstract class AbstractSessionTest
 
         twoHeartBeatIntervalsPass();
 
-        backpressureDisconnect();
+        backPressureDisconnect();
 
         poll();
 
@@ -556,7 +556,7 @@ public abstract class AbstractSessionTest
     public void shouldDisconnectIfBeginStringIsInvalidWhenBackPressured()
     {
         when(mockProxy.incorrectBeginStringLogout(1)).thenReturn(BACK_PRESSURED, POSITION);
-        backpressureDisconnect();
+        backPressureDisconnect();
 
         onBeginString(false);
 
@@ -591,7 +591,7 @@ public abstract class AbstractSessionTest
     @Test
     public void shouldComplyWithLogonBasedSequenceNumberReset()
     {
-        for (SessionState state : SessionState.values())
+        for (final SessionState state : SessionState.values())
         {
             Mockito.reset(mockProxy);
 
@@ -654,7 +654,7 @@ public abstract class AbstractSessionTest
 
     private String getSentMessage()
     {
-        final MutableAsciiBuffer buffer = (MutableAsciiBuffer) this.buffer.getValue();
+        final MutableAsciiBuffer buffer = (MutableAsciiBuffer)this.buffer.getValue();
         return buffer.getAscii(0, length.getValue());
     }
 
@@ -671,7 +671,7 @@ public abstract class AbstractSessionTest
 
     private void verifySetsSentSequenceNumbersToTwo()
     {
-        verify(mockProxy).logon(eq(HEARTBEAT_INTERVAL), eq(1), anyString(), anyString(), eq(true));
+        verify(mockProxy).logon(eq(HEARTBEAT_INTERVAL), eq(1), any(), any(), eq(true));
         assertEquals(1, session().lastSentMsgSeqNum());
         verifyNoFurtherMessages();
     }
@@ -732,7 +732,7 @@ public abstract class AbstractSessionTest
         assertState(DISCONNECTED);
     }
 
-    private void backpressureDisconnect()
+    private void backPressureDisconnect()
     {
         when(mockProxy.requestDisconnect(eq(CONNECTION_ID), any())).thenReturn(BACK_PRESSURED, POSITION);
     }
@@ -839,5 +839,4 @@ public abstract class AbstractSessionTest
     {
         verifyNoMoreInteractions(mockProxy);
     }
-
 }

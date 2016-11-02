@@ -36,7 +36,6 @@ import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
  */
 public class FakeOtfAcceptor implements OtfMessageAcceptor
 {
-
     private final List<FixMessage> messages = new ArrayList<>();
 
     private ValidationError error;
