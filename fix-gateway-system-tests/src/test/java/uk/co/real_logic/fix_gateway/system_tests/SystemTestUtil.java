@@ -121,7 +121,6 @@ public final class SystemTestUtil
         final String acceptorId)
     {
         final Reply<Session> reply = initiate(library, port, initiatorId, acceptorId);
-
         awaitReply(library, reply);
 
         return reply;
@@ -150,6 +149,7 @@ public final class SystemTestUtil
             library.poll(1);
             ADMIN_IDLE_STRATEGY.idle();
         }
+
         ADMIN_IDLE_STRATEGY.reset();
     }
 
@@ -157,6 +157,7 @@ public final class SystemTestUtil
     {
         final Reply<SessionReplyStatus> reply = library.releaseToGateway(session);
         awaitReply(library, reply);
+
         return reply.resultIfPresent();
     }
 
@@ -279,9 +280,8 @@ public final class SystemTestUtil
         return reply.resultIfPresent();
     }
 
-    public static void sessionLogsOn(final FixLibrary library1,
-        final FixLibrary library2,
-        final Session session)
+    public static void sessionLogsOn(
+        final FixLibrary library1, final FixLibrary library2, final Session session)
     {
         assertEventuallyTrue("Session has failed to logon",
             () ->
