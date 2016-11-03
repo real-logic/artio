@@ -72,9 +72,7 @@ public final class SystemTestUtil
     }
 
     public static void assertSessionDisconnected(
-        final FixLibrary library1,
-        final FixLibrary library2,
-        final Session session)
+        final FixLibrary library1, final FixLibrary library2, final Session session)
     {
         assertEventuallyTrue("Session is still connected",
             () ->
@@ -155,8 +153,7 @@ public final class SystemTestUtil
         ADMIN_IDLE_STRATEGY.reset();
     }
 
-    public static SessionReplyStatus releaseToGateway(
-        final FixLibrary library, final Session session)
+    public static SessionReplyStatus releaseToGateway(final FixLibrary library, final Session session)
     {
         final Reply<SessionReplyStatus> reply = library.releaseToGateway(session);
         awaitReply(library, reply);
@@ -242,9 +239,7 @@ public final class SystemTestUtil
     }
 
     static void setupAuthentication(
-        final String acceptorId,
-        final String initiatorId,
-        final CommonConfiguration configuration)
+        final String acceptorId, final String initiatorId, final CommonConfiguration configuration)
     {
         final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(acceptorId)
             .and(MessageValidationStrategy.senderCompId(Arrays.asList(initiatorId, INITIATOR_ID2)));
@@ -256,9 +251,7 @@ public final class SystemTestUtil
             .messageValidationStrategy(validationStrategy);
     }
 
-    public static Session acquireSession(
-        final FakeHandler sessionHandler,
-        final FixLibrary library)
+    public static Session acquireSession(final FakeHandler sessionHandler, final FixLibrary library)
     {
         final long sessionId = sessionHandler.awaitSessionId(() -> library.poll(LIBRARY_LIMIT));
 
@@ -266,9 +259,7 @@ public final class SystemTestUtil
     }
 
     public static Session acquireSession(
-        final FakeHandler sessionHandler,
-        final FixLibrary library,
-        final long sessionId)
+        final FakeHandler sessionHandler, final FixLibrary library, final long sessionId)
     {
         final SessionReplyStatus reply = getSessionStatus(library, sessionId, NO_MESSAGE_REPLAY);
         assertEquals(SessionReplyStatus.OK, reply);
@@ -279,9 +270,7 @@ public final class SystemTestUtil
     }
 
     public static SessionReplyStatus getSessionStatus(
-        final FixLibrary library,
-        final long sessionId,
-        final int lastReceivedMsgSeqNum)
+        final FixLibrary library, final long sessionId, final int lastReceivedMsgSeqNum)
     {
         final Reply<SessionReplyStatus> reply = library.requestSession(sessionId, lastReceivedMsgSeqNum);
         awaitReply(library, reply);
@@ -302,9 +291,7 @@ public final class SystemTestUtil
             });
     }
 
-    public static FixLibrary newInitiatingLibrary(
-        final int libraryAeronPort,
-        final FakeHandler sessionHandler)
+    public static FixLibrary newInitiatingLibrary(final int libraryAeronPort, final FakeHandler sessionHandler)
     {
         final LibraryConfiguration configuration = new LibraryConfiguration()
             .sessionAcquireHandler(sessionHandler)
@@ -369,9 +356,8 @@ public final class SystemTestUtil
             1);
     }
 
-    public static void assertReceivedHeartbeat(final FixLibrary library,
-        final FixLibrary library2,
-        final FakeOtfAcceptor acceptor)
+    public static void assertReceivedHeartbeat(
+        final FixLibrary library, final FixLibrary library2, final FakeOtfAcceptor acceptor)
     {
         assertEventuallyTrue("Failed to received heartbeat",
             () ->
