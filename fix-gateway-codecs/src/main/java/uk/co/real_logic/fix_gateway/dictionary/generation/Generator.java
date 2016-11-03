@@ -112,8 +112,14 @@ public abstract class Generator
             .append(importFor(MutableDirectBuffer.class))
             .append(importStaticFor(CodecUtil.class))
             .append(importStaticFor(StandardFixConstants.class))
-            .append(importFor(topType(MESSAGE)))
-            .append(importFor(topType(GROUP)))
+            .append(importFor(topType(MESSAGE)));
+
+        if (topType(GROUP) != topType(MESSAGE))
+        {
+            out.append(importFor(topType(GROUP)));
+        }
+
+        out
             .append(type == MESSAGE ? String.format(COMMON_COMPOUND_IMPORTS, builderPackage, compoundSuffix) : "")
             .append(importFor(DecimalFloat.class))
             .append(importFor(MutableAsciiBuffer.class))
