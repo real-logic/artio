@@ -17,8 +17,8 @@ package uk.co.real_logic.fix_gateway.protocol;
 
 public class NotConnectedException extends IllegalStateException
 {
-    NotConnectedException()
+    NotConnectedException(final long position)
     {
-        super("Unable to send message, probably a missing an engine or library instance");
+        super("Unable to send message, probably a missing an engine or library instance, error code: " + position);
     }
 }

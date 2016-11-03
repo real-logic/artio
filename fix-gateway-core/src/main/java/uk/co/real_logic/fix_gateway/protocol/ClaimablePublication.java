@@ -82,7 +82,7 @@ class ClaimablePublication implements AutoCloseable
 
         if (position == NOT_CONNECTED || position == CLOSED)
         {
-            throw new NotConnectedException();
+            throw new NotConnectedException(position);
         }
         else
         {
