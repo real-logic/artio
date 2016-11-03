@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import org.agrona.CloseHelper;
+import org.agrona.LangUtil;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 
 import java.io.IOException;
@@ -27,9 +28,8 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
 
-import static java.net.StandardSocketOptions.SO_RCVBUF;
-import static java.net.StandardSocketOptions.SO_SNDBUF;
-import static java.net.StandardSocketOptions.TCP_NODELAY;
+import static java.net.StandardSocketOptions.*;
+import static java.nio.channels.SelectionKey.OP_CONNECT;
 
 /**
  * Mockable class for intercepting network communications
@@ -38,43 +38,38 @@ public class TcpChannelSupplier implements AutoCloseable
 {
     private final boolean hasBindAddress;
     private final EngineConfiguration configuration;
-    private final Selector selector;
-    private final ServerSocketChannel listeningChannel;
+
+    private Selector selector;
+    private ServerSocketChannel listeningChannel;
 
     public TcpChannelSupplier(final EngineConfiguration configuration)
     {
         hasBindAddress = configuration.hasBindAddress();
         this.configuration = configuration;
-
-        if (hasBindAddress)
+        try
         {
-            try
+            selector = Selector.open();
+
+            if (hasBindAddress)
             {
+
                 listeningChannel = ServerSocketChannel.open();
                 listeningChannel.bind(configuration.bindAddress()).configureBlocking(false);
-
-                selector = Selector.open();
                 listeningChannel.register(selector, SelectionKey.OP_ACCEPT);
             }
-            catch (final IOException ex)
+            else
             {
-                throw new IllegalArgumentException(ex);
+                listeningChannel = null;
             }
         }
-        else
+        catch (final IOException ex)
         {
-            listeningChannel = null;
-            selector = null;
+            LangUtil.rethrowUnchecked(ex);
         }
     }
 
-    public int forEachChannel(final long timeInMs, final NewChannelHandler handler) throws IOException
+    public int pollSelector(final long timeInMs, final NewChannelHandler handler) throws IOException
     {
-        if (!hasBindAddress)
-        {
-            return 0;
-        }
-
         selector.selectNow();
         final Set<SelectionKey> selectionKeys = selector.selectedKeys();
         final int unprocessedConnections = selectionKeys.size();
@@ -83,17 +78,39 @@ public class TcpChannelSupplier implements AutoCloseable
             final Iterator<SelectionKey> it = selectionKeys.iterator();
             while (it.hasNext())
             {
-                it.next();
+                final SelectionKey selectionKey = it.next();
 
-                final SocketChannel channel = listeningChannel.accept();
-                if (channel != null)
+                if (selectionKey.isAcceptable())
                 {
-                    configure(channel);
+                    final SocketChannel channel = listeningChannel.accept();
+                    if (channel != null)
+                    {
+                        configure(channel);
+                        channel.configureBlocking(false);
 
-                    handler.onNewChannel(timeInMs, newTcpChannel(channel));
+                        handler.onNewChannel(timeInMs, newTcpChannel(channel));
+                    }
+
+                    it.remove();
                 }
-
-                it.remove();
+                else if (selectionKey.isConnectable())
+                {
+                    final InitiatedChannelHandler channelHandler = (InitiatedChannelHandler) selectionKey.attachment();
+                    final SocketChannel channel = (SocketChannel) selectionKey.channel();
+                    try
+                    {
+                        if (channel.finishConnect())
+                        {
+                            channelHandler.onInitiatedChannel(newTcpChannel(channel), null);
+                            it.remove();
+                        }
+                    }
+                    catch (final IOException e)
+                    {
+                        channelHandler.onInitiatedChannel(null, e);
+                        it.remove();
+                    }
+                }
             }
         }
 
@@ -111,7 +128,6 @@ public class TcpChannelSupplier implements AutoCloseable
         {
             channel.setOption(SO_SNDBUF, configuration.senderSocketBufferSize());
         }
-        channel.configureBlocking(false);
     }
 
     public void close() throws Exception
@@ -120,18 +136,24 @@ public class TcpChannelSupplier implements AutoCloseable
         CloseHelper.close(selector);
     }
 
-    public TcpChannel open(final InetSocketAddress address) throws IOException
+    public void open(final InetSocketAddress address, final InitiatedChannelHandler channelHandler) throws IOException
     {
         final SocketChannel channel = SocketChannel.open();
-        channel.connect(address);
+        channel.configureBlocking(false);
+        channel.register(selector, OP_CONNECT, channelHandler);
         configure(channel);
-
-        return newTcpChannel(channel);
+        channel.connect(address);
     }
 
     protected TcpChannel newTcpChannel(final SocketChannel channel) throws IOException
     {
         return new TcpChannel(channel);
+    }
+
+    @FunctionalInterface
+    public interface InitiatedChannelHandler
+    {
+        void onInitiatedChannel(TcpChannel socketChannel, IOException exception);
     }
 
     @FunctionalInterface

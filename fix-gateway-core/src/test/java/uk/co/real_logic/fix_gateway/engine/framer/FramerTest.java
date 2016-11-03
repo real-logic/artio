@@ -235,8 +235,6 @@ public class FramerTest
     public void shouldConnectToAddress() throws Exception
     {
         initiateConnection();
-
-        assertNotNull("Sender hasn't connected to server", server.accept());
     }
 
     @Test
@@ -255,6 +253,8 @@ public class FramerTest
     {
         initiateConnection();
 
+        framer.doWork();
+
         notifyLibraryOfConnection();
     }
 
@@ -263,7 +263,11 @@ public class FramerTest
     {
         server.close();
 
-        initiateConnection();
+        libraryConnects();
+
+        assertEquals(CONTINUE, onInitiateConnection());
+
+        framer.doWork();
 
         verifyErrorPublished(UNABLE_TO_CONNECT);
     }
@@ -272,6 +276,8 @@ public class FramerTest
     public void shouldIdentifyDuplicateInitiatedSessions() throws Exception
     {
         initiateConnection();
+
+        framer.doWork();
 
         notifyLibraryOfConnection();
 
@@ -315,11 +321,15 @@ public class FramerTest
 
         libraryConnects();
 
-        assertEquals(ABORT, onInitiateConnection());
-
-        assertEquals(ABORT, onInitiateConnection());
-
         assertEquals(CONTINUE, onInitiateConnection());
+
+        framer.doWork();
+
+        framer.doWork();
+
+        framer.doWork();
+
+        framer.doWork();
 
         notifyLibraryOfConnection(times(2));
     }
@@ -606,6 +616,13 @@ public class FramerTest
         libraryConnects();
 
         assertEquals(CONTINUE, onInitiateConnection());
+
+        do
+        {
+            framer.doWork();
+        } while (server.accept() == null);
+
+        assertNotNull("Connection not completed yet", connectionId.getValue());
     }
 
     private Action onInitiateConnection()

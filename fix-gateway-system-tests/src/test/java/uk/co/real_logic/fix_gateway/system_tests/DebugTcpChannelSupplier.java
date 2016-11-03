@@ -65,29 +65,27 @@ public class DebugTcpChannelSupplier extends TcpChannelSupplier
         }
     }
 
-    public int forEachChannel(final long timeInMs, final NewChannelHandler handler) throws IOException
+    public int pollSelector(final long timeInMs, final NewChannelHandler handler) throws IOException
     {
         if (isEnabled)
         {
-            return super.forEachChannel(timeInMs, handler);
+            return super.pollSelector(timeInMs, handler);
         }
         else
         {
-            super.forEachChannel(timeInMs, (ignore, socketChannel) -> socketChannel.close());
-
-            return 0;
+            return super.pollSelector(timeInMs, (ignore, socketChannel) -> socketChannel.close());
         }
     }
 
-    public TcpChannel open(final InetSocketAddress address) throws IOException
+    public void open(final InetSocketAddress address, final InitiatedChannelHandler handler) throws IOException
     {
         if (isEnabled)
         {
-            return super.open(address);
+            super.open(address, handler);
         }
         else
         {
-            throw new IOException("Unable to connect");
+            handler.onInitiatedChannel(null, new IOException("Unable to connect"));
         }
     }
 }

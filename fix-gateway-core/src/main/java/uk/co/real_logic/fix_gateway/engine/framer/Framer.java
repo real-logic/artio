@@ -337,7 +337,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private int pollNewConnections(final long timeInMs) throws IOException
     {
-        return channelSupplier.forEachChannel(timeInMs, onNewConnectionFunc);
+        return channelSupplier.pollSelector(timeInMs, onNewConnectionFunc);
     }
 
     private void onNewConnection(final long timeInMs, final TcpChannel channel) throws IOException
@@ -399,12 +399,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long correlationId,
         final Header header)
     {
-        final Action action = retryManager.retry(correlationId);
-        if (action != null)
-        {
-            return action;
-        }
-
         final LiveLibraryInfo library = idToLibrary.get(libraryId);
         if (library == null)
         {
@@ -415,59 +409,66 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         try
         {
-            final TcpChannel channel;
-            final InetSocketAddress address;
-            try
-            {
-                address = new InetSocketAddress(host, port);
-                channel = channelSupplier.open(address);
-            }
-            catch (final Exception e)
-            {
-                saveError(UNABLE_TO_CONNECT, libraryId, correlationId, e);
+            final InetSocketAddress address = new InetSocketAddress(host, port);
+            channelSupplier.open(address,
+                (channel, ex) ->
+                {
+                    if (ex != null)
+                    {
+                        saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
+                        return;
+                    }
 
-                return CONTINUE;
-            }
+                    try
+                    {
+                        final long connectionId = this.nextConnectionId++;
 
-            final long connectionId = this.nextConnectionId++;
+                        final CompositeKey sessionKey = sessionIdStrategy.onLogon(
+                            senderCompId, senderSubId, senderLocationId, targetCompId);
+                        final long sessionId = sessionIds.onLogon(sessionKey);
+                        if (sessionId == SessionIds.DUPLICATE_SESSION)
+                        {
+                            saveError(DUPLICATE_SESSION, libraryId, correlationId);
+                            return;
+                        }
 
-            final CompositeKey sessionKey = sessionIdStrategy.onLogon(
-                senderCompId, senderSubId, senderLocationId, targetCompId);
-            final long sessionId = sessionIds.onLogon(sessionKey);
-            if (sessionId == SessionIds.DUPLICATE_SESSION)
-            {
-                saveError(DUPLICATE_SESSION, libraryId, correlationId);
+                        final GatewaySession session =
+                            setupConnection(
+                                channel, connectionId, sessionId, sessionKey, libraryId, INITIATOR, sequenceNumberType);
 
-                return CONTINUE;
-            }
+                        library.addSession(session);
 
-            final GatewaySession session =
-                setupConnection(channel, connectionId, sessionId, sessionKey, libraryId, INITIATOR, sequenceNumberType);
+                        sentSequenceNumberIndex.awaitingIndexingUpTo(header, idleStrategy);
 
-            library.addSession(session);
+                        final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+                        final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+                        session.onLogon(sessionId, sessionKey, username, password, heartbeatIntervalInS);
 
-            sentSequenceNumberIndex.awaitingIndexingUpTo(header, idleStrategy);
+                        final UnitOfWork unitOfWork = new UnitOfWork(
+                            () -> inboundPublication.saveManageConnection(
+                                connectionId, sessionId, address.toString(), libraryId, INITIATOR,
+                                lastSentSequenceNumber, lastReceivedSequenceNumber,
+                                CONNECTED, heartbeatIntervalInS, correlationId),
+                            () -> inboundPublication.saveLogon(
+                                libraryId, connectionId, sessionId,
+                                lastSentSequenceNumber, lastReceivedSequenceNumber,
+                                senderCompId, senderSubId, senderLocationId, targetCompId,
+                                username, password, LogonStatus.NEW)
+                        );
 
-            final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-            final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-            session.onLogon(sessionId, sessionKey, username, password, heartbeatIntervalInS);
-
-            final UnitOfWork unitOfWork = new UnitOfWork(
-                () -> inboundPublication.saveManageConnection(
-                    connectionId, sessionId, address.toString(), libraryId, INITIATOR,
-                    lastSentSequenceNumber, lastReceivedSequenceNumber, CONNECTED, heartbeatIntervalInS, correlationId),
-                () -> inboundPublication.saveLogon(
-                    libraryId, connectionId, sessionId,
-                    lastSentSequenceNumber, lastReceivedSequenceNumber,
-                    senderCompId, senderSubId, senderLocationId, targetCompId,
-                    username, password, LogonStatus.NEW)
-            );
-
-            return retryManager.firstAttempt(correlationId, unitOfWork);
+                        retryManager.schedule(unitOfWork);
+                    }
+                    catch (final Exception e)
+                    {
+                        saveError(EXCEPTION, libraryId, correlationId, e);
+                    }
+                });
         }
         catch (final Exception e)
         {
-            saveError(EXCEPTION, libraryId, correlationId, e);
+            saveError(UNABLE_TO_CONNECT, libraryId, correlationId, e);
+
+            return CONTINUE;
         }
 
         return CONTINUE;

@@ -19,6 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 
 import static io.aeron.Publication.ADMIN_ACTION;
 import static io.aeron.Publication.BACK_PRESSURED;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 
 public final class Pressure
 {
@@ -26,10 +27,15 @@ public final class Pressure
     {
         if (isBackPressured(position))
         {
-            return Action.ABORT;
+            return ABORT;
         }
 
         return Action.CONTINUE;
+    }
+
+    public static boolean isNotBackPressured(final Action action)
+    {
+        return action != ABORT;
     }
 
     public static boolean isBackPressured(final long position)
