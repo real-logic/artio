@@ -379,7 +379,7 @@ public final class SystemTestUtil
                 poll(library, library2);
                 return acceptor
                     .hasReceivedMessage("0")
-                    .filter(message -> HI_ID.equals(message.get(Constants.TEST_REQ_ID)))
+                    .filter((message) -> HI_ID.equals(message.get(Constants.TEST_REQ_ID)))
                     .isPresent();
             });
     }
@@ -388,7 +388,7 @@ public final class SystemTestUtil
     {
         return libraries(engine)
             .stream()
-            .filter(libraryInfo -> libraryInfo.libraryId() == ENGINE_LIBRARY_ID)
+            .filter((libraryInfo) -> libraryInfo.libraryId() == ENGINE_LIBRARY_ID)
             .findAny()
             .orElseThrow(IllegalStateException::new);
     }
