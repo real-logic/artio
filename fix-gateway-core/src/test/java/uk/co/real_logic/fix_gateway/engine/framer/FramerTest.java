@@ -29,7 +29,6 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
-import uk.co.real_logic.fix_gateway.Timing;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
@@ -219,11 +218,11 @@ public class FramerTest
         aClientSendsData();
 
         assertEventuallyTrue("Receiver end point never polled",
-                () ->
-                {
-                    doWork();
-                    verify(mockReceiverEndPoint).pollForData();
-                });
+            () ->
+            {
+                doWork();
+                verify(mockReceiverEndPoint).pollForData();
+            });
     }
 
     @Test
