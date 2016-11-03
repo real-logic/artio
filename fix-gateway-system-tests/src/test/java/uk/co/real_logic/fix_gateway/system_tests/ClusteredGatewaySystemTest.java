@@ -95,11 +95,10 @@ public class ClusteredGatewaySystemTest
             acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, null)
             .replyTimeoutInMs(2_000);
 
-        configuration.libraryAeronChannels(
-            cluster
-                .stream()
-                .map(FixEngineRunner::libraryChannel)
-                .collect(toList()));
+        configuration.libraryAeronChannels(cluster
+            .stream()
+            .map(FixEngineRunner::libraryChannel)
+            .collect(toList()));
 
         assertEventuallyTrue("Cluster failed to elect a leader",
             () ->
@@ -114,6 +113,15 @@ public class ClusteredGatewaySystemTest
         assertNotNull("Unable to connect to any cluster members", acceptingLibrary);
         initiatingEngine = launchInitiatingGateway(libraryAeronPort);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+    }
+
+    @After
+    public void tearDown()
+    {
+        closeLibrariesAndEngine();
+
+        close(mediaDriver);
+        cleanupDirectory(mediaDriver);
     }
 
     private Optional<FixEngineRunner> findNewLeader()
@@ -265,7 +273,8 @@ public class ClusteredGatewaySystemTest
                 final TestRequestFinder testRequestFinder = new TestRequestFinder();
                 scanner.forEachMessage(
                     id,
-                    filterBy(testRequestFinder,
+                    filterBy(
+                        testRequestFinder,
                         messageTypeOf(TEST_REQUEST)
                             .and(sessionOf(INITIATOR_ID, ACCEPTOR_ID))
                             .and(sessionOf(sessionId))
@@ -319,9 +328,9 @@ public class ClusteredGatewaySystemTest
 
             assertArrayEquals(bytes, otherBytes);
         }
-        catch (IOException e)
+        catch (final IOException ex)
         {
-            LangUtil.rethrowUnchecked(e);
+            LangUtil.rethrowUnchecked(ex);
         }
     }
 
@@ -345,17 +354,12 @@ public class ClusteredGatewaySystemTest
     // library connect to wrong node in cluster
     // partition TCP but not cluster,
 
-    @After
-    public void tearDown()
-    {
-        closeLibrariesAndEngine();
-
-        close(mediaDriver);
-        cleanupDirectory(mediaDriver);
-    }
 
     private void closeLibrariesAndEngine()
     {
+        close(acceptingSession);
+        close(initiatingSession);
+
         close(acceptingLibrary);
         close(initiatingLibrary);
 

@@ -60,9 +60,6 @@ public class AbstractGatewayToGatewaySystemTest
     @After
     public void close()
     {
-        CloseHelper.close(initiatingSession);
-        CloseHelper.close(acceptingSession);
-
         CloseHelper.close(initiatingLibrary);
         CloseHelper.close(acceptingLibrary);
 
@@ -73,11 +70,11 @@ public class AbstractGatewayToGatewaySystemTest
         cleanupDirectory(mediaDriver);
     }
 
-    protected void assertOriginalLibraryDoesNotReceiveMessages(final int initiator1MessageCount)
+    protected void assertOriginalLibraryDoesNotReceiveMessages(final int initiatorMessageCount)
     {
         initiatingLibrary.poll(LIBRARY_LIMIT);
         assertThat("Messages received by wrong initiator",
-            initiatingOtfAcceptor.messages(), hasSize(initiator1MessageCount));
+            initiatingOtfAcceptor.messages(), hasSize(initiatorMessageCount));
     }
 
     protected void assertSequenceFromInitToAcceptAt(
@@ -152,6 +149,7 @@ public class AbstractGatewayToGatewaySystemTest
             pollLibraries();
             ADMIN_IDLE_STRATEGY.idle();
         }
+
         ADMIN_IDLE_STRATEGY.reset();
     }
 

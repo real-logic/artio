@@ -32,7 +32,8 @@ import java.util.Optional;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertNotEquals;
 
-public class FakeHandler implements SessionHandler, SessionAcquireHandler, SessionExistsHandler, SentPositionHandler
+public class FakeHandler
+    implements SessionHandler, SessionAcquireHandler, SessionExistsHandler, SentPositionHandler
 {
     private final Long2ObjectHashMap<Session> connectionIdToSession = new Long2ObjectHashMap<>();
     private final OtfParser parser;
@@ -159,7 +160,7 @@ public class FakeHandler implements SessionHandler, SessionAcquireHandler, Sessi
 
             final Optional<CompleteSessionId> maybeSession = completeSessionIds
                 .stream()
-                .filter(sid ->
+                .filter((sid) ->
                     sid.initiatorCompId().equals(initiatorId) && sid.acceptorCompId().equals(acceptorId))
                 .findFirst();
 
