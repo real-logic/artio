@@ -30,12 +30,12 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.stream.Collectors.toCollection;
 
 /**
  * Common configuration for both the Fix Engine and Library. Some options are configurable via
@@ -52,13 +52,21 @@ public class CommonConfiguration
     //          Configuration Properties
     // ------------------------------------------------
 
-    /** Property name for length of the memory mapped buffers for the counters file */
+    /**
+     * Property name for length of the memory mapped buffers for the counters file
+     */
     public static final String MONITORING_BUFFERS_LENGTH_PROPERTY = "fix.monitoring.length";
-    /** Property name for directory of the conductor buffers */
+    /**
+     * Property name for directory of the conductor buffers
+     */
     public static final String MONITORING_FILE_PROPERTY = "fix.monitoring.file";
-    /** Property name for the flag to enable or disable debug logging */
+    /**
+     * Property name for the flag to enable or disable debug logging
+     */
     public static final String DEBUG_PRINT_MESSAGES_PROPERTY = "fix.core.debug";
-    /** Property name for the flag to enable or disable flushing of writes */
+    /**
+     * Property name for the flag to enable or disable flushing of writes
+     */
     public static final String FORCE_WRITES_MESSAGES_PROPERTY = "fix.core.flush";
     /**
      * Property name for the flag to set the maximum number of attempts to claim a message
@@ -70,30 +78,39 @@ public class CommonConfiguration
      * slot on the outbound stream.
      */
     public static final String OUTBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY = "fix.core.outbound_max_claims";
-    /** Property name for the flag to enable or disable message timing */
+    /**
+     * Property name for the flag to enable or disable message timing
+     */
     public static final String TIME_MESSAGES_PROPERTY = "fix.core.timing";
-    /** Property name for the file to log debug messages to, default is standard output */
+    /**
+     * Property name for the file to log debug messages to, default is standard output
+     */
     public static final String DEBUG_FILE_PROPERTY = "fix.core.debug.file";
-    /** Property name for the period at which histogram intervals are polled and logged */
+    /**
+     * Property name for the period at which histogram intervals are polled and logged
+     */
     public static final String HISTOGRAM_POLL_PERIOD_IN_MS_PROPERTY = "fix.benchmark.histogram_poll_period";
-    /** Property name for the file to which histogram intervals are logged */
+    /**
+     * Property name for the file to which histogram intervals are logged
+     */
     public static final String HISTOGRAM_LOGGING_FILE_PROPERTY = "fix.benchmark.histogram_file";
 
     public static final int DEFAULT_MONITORING_BUFFER_LENGTH = 64 * 1024 * 1024;
     public static final String DEFAULT_DIRECTORY = optimalTmpDirName() + File.separator + "fix-%s";
-    public static final String DEFAULT_MONITORING_FILE =
-        DEFAULT_DIRECTORY + File.separator + "monitoring";
+    public static final String DEFAULT_MONITORING_FILE = DEFAULT_DIRECTORY + File.separator + "monitoring";
 
-    public static final String DEFAULT_HISTOGRAM_LOGGING_FILE =
-        DEFAULT_DIRECTORY + File.separator + "histograms";
+    public static final String DEFAULT_HISTOGRAM_LOGGING_FILE = DEFAULT_DIRECTORY + File.separator + "histograms";
 
     // ------------------------------------------------
     //          Static Configuration
     // ------------------------------------------------
 
-    /** These are static final fields in order to give the optimiser more scope */
+    /**
+     * These are static final fields in order to give the optimiser more scope
+     */
     public static final boolean DEBUG_PRINT_MESSAGES;
     public static final Set<LogTag> DEBUG_TAGS;
+
     static
     {
         final String property = getProperty(DEBUG_PRINT_MESSAGES_PROPERTY);
@@ -110,14 +127,14 @@ public class CommonConfiguration
             {
                 try
                 {
-                    debugTags =
-                        Stream.of(property.split(","))
-                            .map(LogTag::valueOf)
-                            .collect(Collectors.toCollection(() -> EnumSet.noneOf(LogTag.class)));
+                    debugTags = Stream
+                        .of(property.split(","))
+                        .map(LogTag::valueOf)
+                        .collect(toCollection(() -> EnumSet.noneOf(LogTag.class)));
 
                     debugPrintMessages = !debugTags.isEmpty();
                 }
-                catch (final IllegalArgumentException e)
+                catch (final IllegalArgumentException ignore)
                 {
                     // parse error in valueOf();
                 }
@@ -133,7 +150,7 @@ public class CommonConfiguration
     public static final boolean FORCE_WRITES = Boolean.getBoolean(FORCE_WRITES_MESSAGES_PROPERTY);
 
     public static final int BACKOFF_SPINS = Integer.getInteger("fix.core.spins", 1_000);
-    public static final int BACKOFF_YIELDS = Integer.getInteger("fix.core.yields", 10_000);
+    public static final int BACKOFF_YIELDS = Integer.getInteger("fix.core.yields", 1_000);
 
     // ------------------------------------------------
     //          Configuration Defaults
@@ -216,7 +233,6 @@ public class CommonConfiguration
      *
      * @param sessionIdStrategy the session id strategy.
      * @return this
-     *
      * @see SessionIdStrategy
      */
     public CommonConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
@@ -273,7 +289,6 @@ public class CommonConfiguration
      *
      * @param monitoringBuffersLength the length of the buffer used for monitoring counters.
      * @return this
-     *
      * @see CommonConfiguration#MONITORING_BUFFERS_LENGTH_PROPERTY
      */
     public CommonConfiguration monitoringBuffersLength(final Integer monitoringBuffersLength)
@@ -287,7 +302,6 @@ public class CommonConfiguration
      *
      * @param monitoringFile the location for the monitoring file.
      * @return this
-     *
      * @see CommonConfiguration#MONITORING_FILE_PROPERTY
      */
     public CommonConfiguration monitoringFile(String monitoringFile)
@@ -356,7 +370,6 @@ public class CommonConfiguration
      *
      * @param inboundMaxClaimAttempts the inbound max claim attempts
      * @return this
-     *
      * @see CommonConfiguration#INBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY
      */
     public CommonConfiguration inboundMaxClaimAttempts(final int inboundMaxClaimAttempts)
@@ -370,7 +383,6 @@ public class CommonConfiguration
      *
      * @param outboundMaxClaimAttempts the outbound max claim attempts
      * @return this
-     *
      * @see CommonConfiguration#OUTBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY
      */
     public CommonConfiguration outboundMaxClaimAttempts(final int outboundMaxClaimAttempts)

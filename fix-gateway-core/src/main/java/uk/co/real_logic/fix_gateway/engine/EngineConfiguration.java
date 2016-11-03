@@ -150,9 +150,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         getInteger(SENDER_MAX_BYTES_IN_BUFFER_PROP, DEFAULT_SENDER_MAX_BYTES_IN_BUFFER);
     private int noLogonDisconnectTimeoutInMs =
         getInteger(NO_LOGON_DISCONNECT_TIMEOUT_PROP, DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT);
+
     private String libraryAeronChannel = null;
-    private Function<EngineConfiguration, TcpChannelSupplier> channelSupplierFactory =
-        TcpChannelSupplier::new;
+    private Function<EngineConfiguration, TcpChannelSupplier> channelSupplierFactory = TcpChannelSupplier::new;
     private RoleHandler roleHandler = ClusterNodeConfiguration.DEFAULT_NODE_HANDLER;
     private SessionPersistenceStrategy sessionPersistenceStrategy;
 
@@ -430,10 +430,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      */
     public EngineConfiguration addOtherNodes(final int ... otherNodes)
     {
-        for (int otherNode : otherNodes)
+        for (final int otherNode : otherNodes)
         {
             this.otherNodes.add(otherNode);
         }
+
         return this;
     }
 
@@ -702,9 +703,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     public void close()
     {
-        CloseHelper.close(sentSequenceNumberIndex());
-        CloseHelper.close(receivedSequenceNumberIndex());
-        CloseHelper.close(sessionIdBuffer());
+        CloseHelper.close(sentSequenceNumberIndex);
+        CloseHelper.close(receivedSequenceNumberIndex);
+        CloseHelper.close(sessionIdBuffer);
     }
 
     public String libraryAeronChannel()

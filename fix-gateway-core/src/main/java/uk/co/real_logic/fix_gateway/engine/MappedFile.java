@@ -34,7 +34,6 @@ import static java.nio.file.StandardOpenOption.WRITE;
 public class MappedFile implements AutoCloseable
 {
     private final File file;
-
     private FileChannel fileChannel;
     private AtomicBuffer buffer;
 
@@ -141,5 +140,4 @@ public class MappedFile implements AutoCloseable
             }
         }
     }
-
 }
