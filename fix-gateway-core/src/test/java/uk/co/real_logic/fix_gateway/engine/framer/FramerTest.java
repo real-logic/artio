@@ -19,6 +19,7 @@ import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.ErrorHandler;
+import org.agrona.LangUtil;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.QueuedPipe;
 import org.hamcrest.Matcher;
@@ -28,6 +29,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.fix_gateway.Timing;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
@@ -62,6 +64,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
@@ -214,9 +217,13 @@ public class FramerTest
         framer.doWork();
 
         aClientSendsData();
-        framer.doWork();
 
-        verify(mockReceiverEndPoint).pollForData();
+        assertEventuallyTrue("Receiver end point never polled",
+                () ->
+                {
+                    doWork();
+                    verify(mockReceiverEndPoint).pollForData();
+                });
     }
 
     @Test
@@ -267,9 +274,24 @@ public class FramerTest
 
         assertEquals(CONTINUE, onInitiateConnection());
 
-        framer.doWork();
+        assertEventuallyTrue("Never sends UNABLE_TO_CONNECT message",
+            () ->
+            {
+                doWork();
+                verifyErrorPublished(UNABLE_TO_CONNECT);
+            });
+    }
 
-        verifyErrorPublished(UNABLE_TO_CONNECT);
+    private void doWork()
+    {
+        try
+        {
+            framer.doWork();
+        }
+        catch (Exception e)
+        {
+            LangUtil.rethrowUnchecked(e);
+        }
     }
 
     @Test
