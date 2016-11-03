@@ -33,7 +33,6 @@ public class FixEngineRunner
     private static final String CLUSTER_AERON_CHANNEL = clusteredAeronChannel();
 
     private final int tcpPort;
-    private final int libraryPort;
     private final String libraryChannel;
     private final MediaDriver mediaDriver;
     private final FixEngine engine;
@@ -46,7 +45,7 @@ public class FixEngineRunner
     {
         nodeId = ourId;
         tcpPort = unusedPort();
-        libraryPort = unusedPort();
+        final int libraryPort = unusedPort();
         libraryChannel = "aeron:udp?endpoint=224.0.1.1:" + libraryPort;
         frameDropper = new FrameDropper(ourId);
 
@@ -72,8 +71,8 @@ public class FixEngineRunner
             .monitoringFile(acceptorMonitoringFile("engineCounters" + ourId))
             .logFileDir(acceptorLogs)
             .clusterAeronChannel(CLUSTER_AERON_CHANNEL)
-            .nodeId((short) ourId)
-            .addOtherNodes(ids.filter(id -> id != ourId).toArray());
+            .nodeId((short)ourId)
+            .addOtherNodes(ids.filter((id) -> id != ourId).toArray());
 
         tcpChannelSupplier = new DebugTcpChannelSupplier(configuration);
         configuration.channelSupplierFactory(config -> tcpChannelSupplier);
@@ -105,8 +104,8 @@ public class FixEngineRunner
 
     public void disable()
     {
-        tcpChannelSupplier.disable();
         frameDropper.dropFrames(true);
+        tcpChannelSupplier.disable();
     }
 
     public void enable()
@@ -131,5 +130,4 @@ public class FixEngineRunner
     {
         return nodeId;
     }
-
 }

@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
-import java.util.List;
 
 /**
  * Hook for testing interaction with different networking conditions.
@@ -33,8 +32,7 @@ import java.util.List;
  */
 public class DebugTcpChannelSupplier extends TcpChannelSupplier
 {
-    private final List<TcpChannel> channels = new ArrayList<>();
-
+    private final ArrayList<TcpChannel> channels = new ArrayList<>();
     private boolean isEnabled = true;
 
     public DebugTcpChannelSupplier(final EngineConfiguration configuration)
@@ -92,5 +90,4 @@ public class DebugTcpChannelSupplier extends TcpChannelSupplier
             throw new IOException("Unable to connect");
         }
     }
-
 }
