@@ -178,11 +178,14 @@ public class FramerContext
         {
             try
             {
-                backupLocation.createNewFile();
+                if (!backupLocation.createNewFile())
+                {
+                    throw new IllegalStateException("Could not create: " + backupLocation);
+                }
             }
-            catch (IOException e)
+            catch (final IOException ex)
             {
-                LangUtil.rethrowUnchecked(e);
+                LangUtil.rethrowUnchecked(ex);
             }
         }
 
