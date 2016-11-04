@@ -37,6 +37,7 @@ public class ClusterReplicationTest
 {
     private static final int BUFFER_SIZE = 1337;
     private static final int POSITION_AFTER_MESSAGE = BUFFER_SIZE + HEADER_LENGTH;
+    private static final int TEST_TIMEOUT = 10_000;
 
     private BufferClaim bufferClaim = new BufferClaim();
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[BUFFER_SIZE]);
@@ -45,9 +46,6 @@ public class ClusterReplicationTest
     private final NodeRunner node2 = new NodeRunner(2, 1, 3);
     private final NodeRunner node3 = new NodeRunner(3, 1, 2);
     private final NodeRunner[] allNodes = { node1, node2, node3 };
-
-    @Rule
-    public Timeout timeout = Timeout.seconds(7);
 
     @Before
     public void hasElectedLeader()
@@ -70,7 +68,7 @@ public class ClusterReplicationTest
     }
 
     @Ignore
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldEstablishCluster()
     {
         checkClusterStable();
@@ -78,7 +76,7 @@ public class ClusterReplicationTest
         assertNodeStateReplicated();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldReplicateMessage()
     {
         final NodeRunner leader = leader();
@@ -92,7 +90,7 @@ public class ClusterReplicationTest
         assertMessageReceived();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldReformClusterAfterLeaderPause()
     {
         awaitLeadershipConsensus();
@@ -109,13 +107,13 @@ public class ClusterReplicationTest
         assertBecomesFollower(leader);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldReformClusterAfterLeaderNetsplit()
     {
         leaderNetSplitScenario(true, true);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldReformClusterAfterPartialLeaderNetsplit()
     {
         // NB: under other partial failure, the leader would never stop being a leader
@@ -143,7 +141,7 @@ public class ClusterReplicationTest
         followerNetSplitScenario(true, true);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldRejoinClusterAfterPartialFollowerNetsplit()
     {
         followerNetSplitScenario(true, false);
@@ -162,13 +160,13 @@ public class ClusterReplicationTest
         eventuallyOneLeaderAndTwoFollowers();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldReformClusterAfterFollowerNetsplit()
     {
         clusterNetSplitScenario(true, true);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldReformClusterAfterPartialFollowerNetsplit()
     {
         clusterNetSplitScenario(true, false);
@@ -189,7 +187,7 @@ public class ClusterReplicationTest
         eventuallyOneLeaderAndTwoFollowers();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldNotReplicateMessageUntilClusterReformed()
     {
         final NodeRunner leader = leader();
