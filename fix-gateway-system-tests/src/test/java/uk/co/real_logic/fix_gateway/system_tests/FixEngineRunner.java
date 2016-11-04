@@ -28,7 +28,7 @@ import java.util.stream.IntStream;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
-public class FixEngineRunner
+public class FixEngineRunner implements AutoCloseable
 {
     private static final String CLUSTER_AERON_CHANNEL = clusteredAeronChannel();
 

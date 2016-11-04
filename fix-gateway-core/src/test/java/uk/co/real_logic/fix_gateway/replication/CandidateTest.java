@@ -24,10 +24,10 @@ import org.mockito.verification.VerificationMode;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.fix_gateway.replication.messages.Vote.AGAINST;
-import static uk.co.real_logic.fix_gateway.replication.messages.Vote.FOR;
 import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.neverTransitionsToFollower;
 import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.neverTransitionsToLeader;
+import static uk.co.real_logic.fix_gateway.replication.messages.Vote.AGAINST;
+import static uk.co.real_logic.fix_gateway.replication.messages.Vote.FOR;
 
 public class CandidateTest
 {

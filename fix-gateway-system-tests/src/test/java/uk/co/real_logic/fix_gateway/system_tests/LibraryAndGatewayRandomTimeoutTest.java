@@ -33,9 +33,9 @@ import java.io.File;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.Assert.*;
-import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.Reply.State.ERRORED;
 import static uk.co.real_logic.fix_gateway.Reply.State.TIMED_OUT;
+import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class LibraryAndGatewayRandomTimeoutTest

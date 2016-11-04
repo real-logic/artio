@@ -38,6 +38,7 @@ import java.util.List;
 import static java.util.Arrays.asList;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.suppressingClose;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 public abstract class EngineContext implements AutoCloseable
@@ -102,16 +103,25 @@ public abstract class EngineContext implements AutoCloseable
         this.fixCounters = fixCounters;
         this.aeron = aeron;
 
-        sentSequenceNumberIndex = new SequenceNumberIndexWriter(
-            configuration.sentSequenceNumberBuffer(),
-            configuration.sentSequenceNumberIndex(),
-            errorHandler,
-            OUTBOUND_LIBRARY_STREAM);
-        receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
-            configuration.receivedSequenceNumberBuffer(),
-            configuration.receivedSequenceNumberIndex(),
-            errorHandler,
-            INBOUND_LIBRARY_STREAM);
+        try
+        {
+            sentSequenceNumberIndex = new SequenceNumberIndexWriter(
+                configuration.sentSequenceNumberBuffer(),
+                configuration.sentSequenceNumberIndex(),
+                errorHandler,
+                OUTBOUND_LIBRARY_STREAM);
+            receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
+                configuration.receivedSequenceNumberBuffer(),
+                configuration.receivedSequenceNumberIndex(),
+                errorHandler,
+                INBOUND_LIBRARY_STREAM);
+        }
+        catch (final Exception e)
+        {
+            suppressingClose(this, e);
+
+            throw e;
+        }
     }
 
     protected void newStreams(final ClusterableStreams node)

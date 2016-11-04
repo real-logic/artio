@@ -18,9 +18,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import io.aeron.driver.MediaDriver;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.Timeout;
 import uk.co.real_logic.fix_gateway.Timing;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
@@ -53,9 +51,7 @@ public class SlowConsumerTest
 {
     private static final int MAX_BYTES_IN_BUFFER = 4 * 1024;
     private static final int BUFFER_CAPACITY = 8 * 1024;
-
-    @Rule
-    public Timeout timeout = Timeout.seconds(10);
+    private static final int TEST_TIMEOUT = 10_000;
 
     private int port = unusedPort();
     private MediaDriver mediaDriver;
@@ -73,7 +69,7 @@ public class SlowConsumerTest
     @Before
     public void setUp() throws IOException
     {
-        mediaDriver = launchMediaDriver(128 * 1024 * 1024);
+        mediaDriver = launchMediaDriver(8 * 1024 * 1024);
         delete(ACCEPTOR_LOGS);
         final EngineConfiguration config = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID)
             .framerIdleStrategy(framerIdleStrategy);
@@ -85,7 +81,7 @@ public class SlowConsumerTest
         library = FixLibrary.connect(libraryConfiguration);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldQuarantineThenDisconnectASlowConsumer() throws IOException
     {
         initiateConnection();
@@ -112,7 +108,7 @@ public class SlowConsumerTest
         framerIdleStrategy.stopStepping();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldRestoreConnectionFromQuarantineWhenItCatchesUp() throws IOException
     {
         initiateConnection();

@@ -17,8 +17,8 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.engine.SectorFramer;
-import uk.co.real_logic.fix_gateway.storage.messages.IndexedPositionDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.storage.messages.IndexedPositionDecoder;
 
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.OUT_OF_SPACE;
 import static uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionWriter.*;

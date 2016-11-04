@@ -17,8 +17,8 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.storage.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.storage.messages.LastKnownSequenceNumberDecoder;
 
 import java.io.File;
 

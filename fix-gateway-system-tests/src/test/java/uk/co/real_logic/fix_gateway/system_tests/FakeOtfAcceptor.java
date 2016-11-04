@@ -28,8 +28,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_TYPE;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_TYPE;
 
 /**
  * An otf acceptor used to accumulate/log/check acceptor interactions.

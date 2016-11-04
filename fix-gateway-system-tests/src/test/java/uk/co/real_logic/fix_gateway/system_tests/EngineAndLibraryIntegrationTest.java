@@ -21,6 +21,7 @@ import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
@@ -65,11 +66,14 @@ public class EngineAndLibraryIntegrationTest
     @After
     public void close() throws Exception
     {
-        CloseHelper.close(library);
-        CloseHelper.close(library2);
-        CloseHelper.close(engine);
-        CloseHelper.close(mediaDriver);
-        cleanupDirectory(mediaDriver);
+        try
+        {
+            Exceptions.closeAll(library, library2, engine, mediaDriver);
+        }
+        finally
+        {
+            cleanupDirectory(mediaDriver);
+        }
     }
 
     private void launchEngine(final int replyTimeoutInMs)

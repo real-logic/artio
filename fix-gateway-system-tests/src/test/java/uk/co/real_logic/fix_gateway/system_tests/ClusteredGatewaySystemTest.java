@@ -19,8 +19,10 @@ import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
-import org.junit.*;
-import org.junit.rules.Timeout;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
@@ -38,11 +40,11 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
-import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.agrona.CloseHelper.close;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -52,6 +54,7 @@ import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_CLUSTER;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQUEST;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.closeAll;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.FixMessagePredicates.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
@@ -59,6 +62,7 @@ import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 public class ClusteredGatewaySystemTest
 {
     private static final int CLUSTER_SIZE = 3;
+    private static final int TEST_TIMEOUT = 20_000;
 
     private int libraryAeronPort = unusedPort();
     private List<FixEngineRunner> cluster;
@@ -79,17 +83,15 @@ public class ClusteredGatewaySystemTest
     private Session acceptingSession;
     private FixEngineRunner leader;
 
-    @Rule
-    public Timeout timeout = new Timeout(20, SECONDS);
-
     @Before
     public void setUp()
     {
         mediaDriver = launchMediaDriver();
 
-        cluster = ids()
-            .mapToObj((ourId) -> new FixEngineRunner(ourId, ids()))
-            .collect(toList());
+        cluster = new ArrayList<>();
+        // Put them in the collection one by one, because if there's an error initializing
+        // a latter runner, this ensures that the earlier ones get closed
+        ids().forEach((ourId) -> cluster.add(new FixEngineRunner(ourId, ids())));
 
         final LibraryConfiguration configuration = acceptingLibraryConfig(
             acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, null)
@@ -138,7 +140,7 @@ public class ClusteredGatewaySystemTest
         return IntStream.range(0, CLUSTER_SIZE);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldExchangeMessagesInCluster()
     {
         connectFixSession();
@@ -158,7 +160,7 @@ public class ClusteredGatewaySystemTest
     }
 
     @Ignore
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldExchangeMessagesAfterPartitionHeals()
     {
         connectFixSession();
@@ -354,16 +356,17 @@ public class ClusteredGatewaySystemTest
     // library connect to wrong node in cluster
     // partition TCP but not cluster,
 
-
     private void closeLibrariesAndEngine()
     {
-        close(acceptingSession);
-        close(initiatingSession);
-
-        close(acceptingLibrary);
-        close(initiatingLibrary);
-
-        close(initiatingEngine);
-        cluster.forEach(FixEngineRunner::close);
+        try
+        {
+            closeAll(acceptingLibrary, initiatingLibrary, initiatingEngine);
+            closeAll(cluster);
+        }
+        finally
+        {
+            mediaDriver.close();
+            cleanupDirectory(mediaDriver);
+        }
     }
 }

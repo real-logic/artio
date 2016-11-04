@@ -19,10 +19,10 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.Int2IntHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.engine.ChecksumFramer;
-import uk.co.real_logic.fix_gateway.storage.messages.IndexedPositionDecoder;
-import uk.co.real_logic.fix_gateway.storage.messages.IndexedPositionEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
+import uk.co.real_logic.fix_gateway.storage.messages.IndexedPositionDecoder;
+import uk.co.real_logic.fix_gateway.storage.messages.IndexedPositionEncoder;
 
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.OUT_OF_SPACE;
 

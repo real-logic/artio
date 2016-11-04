@@ -17,12 +17,12 @@ package uk.co.real_logic.fix_gateway.engine;
 
 import io.aeron.Aeron;
 import io.aeron.Publication;
-import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.CompositeAgent;
 import org.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
+import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
@@ -34,6 +34,7 @@ import java.util.List;
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.suppressingClose;
 
 class SoloContext extends EngineContext
 {
@@ -56,16 +57,25 @@ class SoloContext extends EngineContext
         final Aeron aeron)
     {
         super(configuration, errorHandler, fixCounters, aeron);
-        this.replayPublication = replayPublication;
+        try
+        {
+            this.replayPublication = replayPublication;
 
-        final String channel = configuration.libraryAeronChannel();
-        this.inboundStreamId = new StreamIdentifier(channel, INBOUND_LIBRARY_STREAM);
-        this.outboundStreamId = new StreamIdentifier(channel, OUTBOUND_LIBRARY_STREAM);
+            final String channel = configuration.libraryAeronChannel();
+            this.inboundStreamId = new StreamIdentifier(channel, INBOUND_LIBRARY_STREAM);
+            this.outboundStreamId = new StreamIdentifier(channel, OUTBOUND_LIBRARY_STREAM);
 
-        node = initNode();
-        newStreams(node);
-        newArchival();
-        newLoggingRunner();
+            node = initNode();
+            newStreams(node);
+            newArchival();
+            newLoggingRunner();
+        }
+        catch (final Exception e)
+        {
+            suppressingClose(this, e);
+
+            throw e;
+        }
     }
 
     private ClusterableStreams initNode()
@@ -199,9 +209,6 @@ class SoloContext extends EngineContext
             archivers.forEach(Archiver::onClose);
         }
 
-        super.close();
-
-        CloseHelper.close(inboundArchiveReader);
-        CloseHelper.close(outboundArchiveReader);
+        Exceptions.closeAll(super::close, inboundArchiveReader, outboundArchiveReader);
     }
 }

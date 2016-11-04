@@ -17,11 +17,11 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.agrona.IoUtil;
 import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.storage.messages.ArchiveMetaDataDecoder;
-import uk.co.real_logic.fix_gateway.storage.messages.ArchiveMetaDataEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
+import uk.co.real_logic.fix_gateway.storage.messages.ArchiveMetaDataDecoder;
+import uk.co.real_logic.fix_gateway.storage.messages.ArchiveMetaDataEncoder;
 
 import java.io.File;
 import java.nio.ByteBuffer;

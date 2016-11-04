@@ -28,6 +28,8 @@ import uk.co.real_logic.fix_gateway.replication.*;
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.closeAll;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.suppressingClose;
 import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID;
 
 class ClusterContext extends EngineContext
@@ -47,40 +49,54 @@ class ClusterContext extends EngineContext
     {
         super(configuration, errorHandler, fixCounters, aeron);
 
-        final String channel = configuration.clusterAeronChannel();
-        dataStream = new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID);
-        libraryAeronChannel = configuration.libraryAeronChannel();
-        inboundPublication = aeron.addPublication(libraryAeronChannel, INBOUND_LIBRARY_STREAM);
-        node = node(configuration, fixCounters, aeron, channel, engineDescriptorStore);
-        newStreams(node.clusterStreams());
-        newIndexers(inboundArchiveReader(), outboundArchiveReader(), null);
-        final Replayer replayer = newReplayer(replayPublication, outboundArchiveReader());
+        Replayer replayer = null;
+        Archiver localInboundArchiver = null;
+        Archiver localOutboundArchiver = null;
 
-        final Archiver localInboundArchiver =
-            archiver(new StreamIdentifier(libraryAeronChannel, INBOUND_LIBRARY_STREAM));
-        localInboundArchiver.subscription(
-            aeron.addSubscription(libraryAeronChannel, INBOUND_LIBRARY_STREAM));
-        final Archiver localOutboundArchiver =
-            archiver(new StreamIdentifier(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
-        localOutboundArchiver.subscription(
-            aeron.addSubscription(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
+        try
+        {
+            final String channel = configuration.clusterAeronChannel();
+            dataStream = new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID);
+            libraryAeronChannel = configuration.libraryAeronChannel();
+            inboundPublication = aeron.addPublication(libraryAeronChannel, INBOUND_LIBRARY_STREAM);
+            node = node(configuration, fixCounters, aeron, channel, engineDescriptorStore);
+            newStreams(node.clusterStreams());
+            newIndexers(inboundArchiveReader(), outboundArchiveReader(), null);
 
-        final ClusterPositionSender positionSender = new ClusterPositionSender(
-            outboundLibrarySubscription(),
-            outboundClusterSubscription(),
-            inboundLibraryPublication());
+            replayer = newReplayer(replayPublication, outboundArchiveReader());
 
-        localOutboundArchiver.positionHandler(positionSender);
+            localInboundArchiver = archiver(new StreamIdentifier(libraryAeronChannel, INBOUND_LIBRARY_STREAM));
+            localInboundArchiver.subscription(
+                aeron.addSubscription(libraryAeronChannel, INBOUND_LIBRARY_STREAM));
+            localOutboundArchiver = archiver(new StreamIdentifier(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
+            localOutboundArchiver.subscription(
+                aeron.addSubscription(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
 
-        loggingRunner = newRunner(
-            new CompositeAgent(
-                inboundIndexer,
-                outboundIndexer,
-                node,
-                replayer,
-                localInboundArchiver,
-                localOutboundArchiver,
-                positionSender));
+            final ClusterPositionSender positionSender = new ClusterPositionSender(
+                outboundLibrarySubscription(),
+                outboundClusterSubscription(),
+                inboundLibraryPublication());
+
+            localOutboundArchiver.positionHandler(positionSender);
+
+            loggingRunner = newRunner(
+                new CompositeAgent(
+                    inboundIndexer,
+                    outboundIndexer,
+                    node,
+                    replayer,
+                    localInboundArchiver,
+                    localOutboundArchiver,
+                    positionSender));
+        }
+        catch (final Exception e)
+        {
+            closeAll(replayer, localInboundArchiver, localOutboundArchiver);
+
+            suppressingClose(this, e);
+
+            throw e;
+        }
     }
 
     private ClusterAgent node(
@@ -176,7 +192,6 @@ class ClusterContext extends EngineContext
 
     public void close()
     {
-        loggingRunner.close();
-        super.close();
+        closeAll(loggingRunner, super::close);
     }
 }

@@ -29,9 +29,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
+import static uk.co.real_logic.fix_gateway.replication.Follower.NO_ONE;
 import static uk.co.real_logic.fix_gateway.replication.messages.Vote.AGAINST;
 import static uk.co.real_logic.fix_gateway.replication.messages.Vote.FOR;
-import static uk.co.real_logic.fix_gateway.replication.Follower.NO_ONE;
 
 class Candidate implements Role, RaftHandler
 {
