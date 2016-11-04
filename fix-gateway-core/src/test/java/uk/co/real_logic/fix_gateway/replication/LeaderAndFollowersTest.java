@@ -229,7 +229,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     @Test(timeout = TEST_TIMEOUT)
     public void shouldTimeoutLeader()
     {
-        final long afterTimeout = MAX_TO_MIN_TIMEOUT * TEST_TIMEOUT + 1;
+        final long afterTimeout = MAX_TO_MIN_TIMEOUT * TIMEOUT + 1;
         follower1.poll(FRAGMENT_LIMIT, afterTimeout);
         follower2.poll(FRAGMENT_LIMIT, afterTimeout);
 
@@ -244,7 +244,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         follower1.poll(FRAGMENT_LIMIT, HEARTBEAT_INTERVAL);
 
-        follower1.poll(FRAGMENT_LIMIT, TEST_TIMEOUT + 1);
+        follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
 
         ReplicationAsserts.staysFollower(clusterNode2);
     }
@@ -254,7 +254,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     {
         leader.poll(FRAGMENT_LIMIT, HEARTBEAT_INTERVAL + 1);
 
-        follower1.poll(FRAGMENT_LIMIT, TEST_TIMEOUT + 1);
+        follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
 
         ReplicationAsserts.staysFollower(clusterNode2);
     }
