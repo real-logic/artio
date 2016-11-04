@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import io.aeron.CommonContext;
 import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
+import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.replication.FrameDropper;
@@ -50,12 +51,14 @@ public class FixEngineRunner implements AutoCloseable
         frameDropper = new FrameDropper(ourId);
 
         final MediaDriver.Context context =
-            mediaDriverContext(TERM_BUFFER_LENGTH)
+            mediaDriverContext(TestFixtures.TERM_BUFFER_LENGTH)
                 .aeronDirectoryName(aeronDirName(ourId))
                 .termBufferSparseFile(true)
                 .publicationUnblockTimeoutNs(TimeUnit.SECONDS.toNanos(100))
                 .receiveChannelEndpointSupplier(frameDropper.newReceiveChannelEndpointSupplier())
-                .sendChannelEndpointSupplier(frameDropper.newSendChannelEndpointSupplier());
+                .sendChannelEndpointSupplier(frameDropper.newSendChannelEndpointSupplier())
+                .ipcTermBufferLength(TERM_BUFFER_LENGTH)
+                .publicationTermBufferLength(TERM_BUFFER_LENGTH);
 
         mediaDriver = MediaDriver.launch(context);
 
