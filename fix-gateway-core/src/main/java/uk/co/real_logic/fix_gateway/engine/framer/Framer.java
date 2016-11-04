@@ -704,6 +704,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long correlationId,
         final int replayFromSequenceNumber)
     {
+        final Action action = retryManager.retry(correlationId);
+        if (action != null)
+        {
+            return action;
+        }
+
         final LiveLibraryInfo libraryInfo = idToLibrary.get(libraryId);
         if (libraryInfo == null)
         {
@@ -726,12 +732,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return Pressure.apply(
                 inboundPublication.saveRequestSessionReply(
                     libraryId, SESSION_NOT_LOGGED_IN, correlationId));
-        }
-
-        final Action action = retryManager.retry(correlationId);
-        if (action != null)
-        {
-            return action;
         }
 
         final long connectionId = gatewaySession.connectionId();

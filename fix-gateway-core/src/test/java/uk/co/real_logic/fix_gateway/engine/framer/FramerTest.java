@@ -34,10 +34,7 @@ import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
-import uk.co.real_logic.fix_gateway.messages.GatewayError;
-import uk.co.real_logic.fix_gateway.messages.LogonStatus;
-import uk.co.real_logic.fix_gateway.messages.SessionState;
+import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
@@ -442,6 +439,53 @@ public class FramerTest
     }
 
     @Test
+    public void shouldHandoverSessionToLibraryUponRequestWhenBackPressured() throws IOException
+    {
+        when(inboundPublication.saveManageConnection(
+                anyLong(),
+                anyLong(),
+                any(),
+                anyInt(),
+                any(),
+                anyInt(),
+                anyInt(),
+                any(),
+                anyInt(),
+                anyLong()))
+                .thenReturn(BACK_PRESSURED, POSITION);
+
+        aClientConnects();
+
+        sessionIsActive();
+
+        assertEquals(ABORT, onRequestSession());
+
+        assertEquals(CONTINUE, onRequestSession());
+
+        verify(inboundPublication, times(2)).saveManageConnection(
+                anyLong(),
+                anyLong(),
+                any(),
+                eq(LIBRARY_ID),
+                any(),
+                anyInt(),
+                anyInt(),
+                any(),
+                anyInt(),
+                anyLong());
+
+        saveRequestSessionReply();
+
+        neverSavesUnknownSession();
+    }
+
+    private void neverSavesUnknownSession()
+    {
+        verify(inboundPublication, never())
+                .saveRequestSessionReply(LIBRARY_ID, SessionReplyStatus.UNKNOWN_SESSION, CORR_ID);
+    }
+
+    @Test
     public void shouldNotifyLibraryOfControlledSessionsUponDuplicateConnect() throws IOException
     {
         aClientConnects();
@@ -541,14 +585,24 @@ public class FramerTest
     {
         sessionIsActive();
 
-        assertEquals(CONTINUE, framer.onRequestSession(LIBRARY_ID, SESSION_ID, CORR_ID, NO_MESSAGE_REPLAY));
+        assertEquals(CONTINUE, onRequestSession());
 
-        verify(inboundPublication).saveRequestSessionReply(LIBRARY_ID, OK, CORR_ID);
+        saveRequestSessionReply();
+    }
+
+    private long saveRequestSessionReply()
+    {
+        return verify(inboundPublication).saveRequestSessionReply(LIBRARY_ID, OK, CORR_ID);
+    }
+
+    private Action onRequestSession()
+    {
+        return framer.onRequestSession(LIBRARY_ID, SESSION_ID, CORR_ID, NO_MESSAGE_REPLAY);
     }
 
     private void sessionIsActive()
     {
-        when(gatewaySessions.releaseBySessionId(SESSION_ID)).thenReturn(gatewaySession);
+        when(gatewaySessions.releaseBySessionId(SESSION_ID)).thenReturn(gatewaySession, (GatewaySession) null);
         when(gatewaySession.session()).thenReturn(session);
         when(session.isActive()).thenReturn(true);
     }
