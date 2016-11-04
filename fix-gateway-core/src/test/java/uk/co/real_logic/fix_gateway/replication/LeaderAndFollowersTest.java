@@ -24,9 +24,7 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.Timeout;
 import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
@@ -35,7 +33,6 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -50,15 +47,13 @@ import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
  */
 public class LeaderAndFollowersTest extends AbstractReplicationTest
 {
+    private static final int TEST_TIMEOUT = 10_000;
     private static final int VALUE = 42;
     private static final int OFFSET = 42;
     private static final short LEADER_ID = (short)1;
     private static final short FOLLOWER_1_ID = (short)2;
     private static final short FOLLOWER_2_ID = (short)3;
     private static final int CLUSTER_STREAM_ID = 1;
-
-    @Rule
-    public Timeout timeout = new Timeout(10_000, MILLISECONDS);
 
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
 
@@ -135,7 +130,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             controlSubscription());
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldNotProcessDataUntilAcknowledged()
     {
         offerBuffer();
@@ -147,7 +142,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderNeverCommitted();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldProcessDataWhenAcknowledged()
     {
         final int position = roundtripABuffer();
@@ -155,7 +150,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderCommitted(0, position);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldCommitOnFollowers()
     {
         final int position = roundtripABuffer();
@@ -172,7 +167,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         verify(follower1Handler).onFragment(any(), eq(HEADER_LENGTH), eq(position - HEADER_LENGTH), any());
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldProcessSuccessiveChunks()
     {
         final int position1 = roundtripABuffer();
@@ -187,7 +182,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderCommitted(position1, position2 - position1, secondValue);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldRequireContiguousMessages()
     {
         final int position1 = roundtripABuffer();
@@ -200,7 +195,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderNotCommitted(position1, position2 - position1);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldRequireQuorumToProcess()
     {
         offerBuffer();
@@ -212,7 +207,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderNeverCommitted();
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldSupportAcknowledgementLagging()
     {
         final int position = offerBuffer();
@@ -231,10 +226,10 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderCommitted(0, position);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldTimeoutLeader()
     {
-        final long afterTimeout = MAX_TO_MIN_TIMEOUT * TIMEOUT + 1;
+        final long afterTimeout = MAX_TO_MIN_TIMEOUT * TEST_TIMEOUT + 1;
         follower1.poll(FRAGMENT_LIMIT, afterTimeout);
         follower2.poll(FRAGMENT_LIMIT, afterTimeout);
 
@@ -242,29 +237,29 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         ReplicationAsserts.transitionsToCandidate(clusterNode3);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldNotTimeoutLeaderIfMessagesReceived()
     {
         offerBuffer();
 
         follower1.poll(FRAGMENT_LIMIT, HEARTBEAT_INTERVAL);
 
-        follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
+        follower1.poll(FRAGMENT_LIMIT, TEST_TIMEOUT + 1);
 
         ReplicationAsserts.staysFollower(clusterNode2);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldNotTimeoutLeaderUponHeartbeatReceipt()
     {
         leader.poll(FRAGMENT_LIMIT, HEARTBEAT_INTERVAL + 1);
 
-        follower1.poll(FRAGMENT_LIMIT, TIMEOUT + 1);
+        follower1.poll(FRAGMENT_LIMIT, TEST_TIMEOUT + 1);
 
         ReplicationAsserts.staysFollower(clusterNode2);
     }
 
-    @Test
+    @Test(timeout = TEST_TIMEOUT)
     public void shouldNotHeartbeatIfMessageRecentlySent()
     {
         leader.updateNextHeartbeatTime(HEARTBEAT_INTERVAL / 2);
