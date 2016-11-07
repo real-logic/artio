@@ -45,6 +45,8 @@ public class ClusterAgent implements Agent
     private final NodeStateHandler nodeStateHandler;
     private final RoleHandler roleHandler;
     private final String agentNamePrefix;
+    private final ArchiveReader archiveReader;
+    private final Archiver archiver;
 
     private Role currentRole;
 
@@ -57,16 +59,16 @@ public class ClusterAgent implements Agent
         nodeStateHandler = configuration.nodeStateHandler();
         roleHandler = configuration.nodeHandler();
         agentNamePrefix = configuration.agentNamePrefix();
+        archiveReader = configuration.archiveReader();
+        archiver = configuration.archiver();
 
         final Publication dataPublication = transport.leaderPublication();
-        final ArchiveReader archiveReader = configuration.archiveReader();
         final int ourSessionId = dataPublication.sessionId();
         final long timeoutIntervalInMs = configuration.timeoutIntervalInMs();
         final long heartbeatTimeInMs = timeoutIntervalInMs / HEARTBEAT_TO_TIMEOUT_RATIO;
         final IntHashSet otherNodes = configuration.otherNodes();
         final int clusterSize = otherNodes.size() + 1;
         final AcknowledgementStrategy acknowledgementStrategy = configuration.acknowledgementStrategy();
-        final Archiver archiver = configuration.archiver();
         final RaftArchiver raftArchiver = new RaftArchiver(termState.leaderSessionId(), archiver);
         final DirectBuffer nodeState = configuration.nodeState();
 
@@ -311,6 +313,8 @@ public class ClusterAgent implements Agent
         leader.closeStreams();
         follower.closeStreams();
         candidate.closeStreams();
+        archiver.onClose();
+        archiveReader.close();
     }
 
     public String roleName()

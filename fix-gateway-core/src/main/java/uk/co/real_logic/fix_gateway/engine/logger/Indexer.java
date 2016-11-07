@@ -95,6 +95,8 @@ public class Indexer implements Agent, ControlledFragmentHandler
     public void onClose()
     {
         indices.forEach(Index::close);
+        archiveReader.close();
+        subscription.close();
     }
 
     public String roleName()

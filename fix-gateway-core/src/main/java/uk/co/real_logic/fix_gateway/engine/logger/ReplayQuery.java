@@ -78,6 +78,7 @@ public class ReplayQuery implements AutoCloseable
     public void close()
     {
         sessionToIndex.clear();
+        archiveReader.close();
     }
 
     private final class SessionQuery implements AutoCloseable
