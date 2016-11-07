@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Image;
 import io.aeron.Subscription;
-import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -70,7 +69,6 @@ public class ScenariosTest
     private final ArchiveReader archiveReader = mock(ArchiveReader.class);
     private final ArchiveReader.SessionReader sessionReader = mock(ArchiveReader.SessionReader.class);
     private final TermState termState = new TermState();
-    private final ControlledFragmentHandler fragmentHandler = mock(ControlledFragmentHandler.class);
     private final Archiver.SessionArchiver leaderArchiver = mock(Archiver.SessionArchiver.class);
     private final Archiver archiver = mock(Archiver.class);
     private final NodeStateHandler nodeStateHandler = mock(NodeStateHandler.class);
@@ -444,10 +442,7 @@ public class ScenariosTest
         st.raftHandler.onConsensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, SESSION_ID);
     }
 
-    private static Stimulus startElection = namedStimulus(
-        (st) ->
-        {
-        }, "startElection");
+    private static Stimulus startElection = namedStimulus((st) -> {}, "startElection");
 
     private static Stimulus onMajority =
         namedStimulus(
@@ -569,8 +564,5 @@ public class ScenariosTest
         };
     }
 
-    private static State ignored = namedState(
-        (st) ->
-        {
-        }, "");
+    private static State ignored = namedState((st) -> {}, "");
 }

@@ -28,9 +28,7 @@ public final class LivenessDetector
 {
 
     private static final int SEND_INTERVAL_FRACTION = 4;
-    private static final Runnable NONE = () ->
-    {
-    };
+    private static final Runnable NONE = () -> {};
 
     enum LivenessState
     {

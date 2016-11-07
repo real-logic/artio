@@ -43,9 +43,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     public static final int DEFAULT_RECONNECT_ATTEMPTS = 10;
     public static final SentPositionHandler DEFAULT_SENT_POSITION_HANDLER = position -> CONTINUE;
     public static final SessionExistsHandler DEFAULT_SESSION_EXISTS_HANDLER =
-        (library, sessionId, senderCompId, senderSubId, senderLocationId, targetCompId, username, password) ->
-        {
-        };
+        (library, sessionId, senderCompId, senderSubId, senderLocationId, targetCompId, username, password) -> {};
     public static final LibraryConnectHandler DEFAULT_LIBRARY_CONNECT_HANDLER = new LibraryConnectHandler()
     {
         public void onConnect(final FixLibrary library)
