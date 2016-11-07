@@ -21,7 +21,6 @@ import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.Reply;
@@ -159,7 +158,6 @@ public class ClusteredGatewaySystemTest
         allClusterNodesHaveSameIndexFiles();
     }
 
-    @Ignore
     @Test(timeout = TEST_TIMEOUT)
     public void shouldExchangeMessagesAfterPartitionHeals()
     {
@@ -169,11 +167,7 @@ public class ClusteredGatewaySystemTest
 
         final FixEngineRunner oldLeader = leader;
         oldLeader.disable();
-        DebugLogger.log(
-            GATEWAY_CLUSTER,
-            "Disabled old old leader (%s) [%s]\n",
-            oldLeader.libraryChannel(),
-            oldLeader.configuration().agentNamePrefix());
+        logLeader(oldLeader, "Disabled old old leader (%s) [%s]\n");
 
         while (true)
         {
@@ -192,7 +186,7 @@ public class ClusteredGatewaySystemTest
 
         ADMIN_IDLE_STRATEGY.reset();
 
-        DebugLogger.log(GATEWAY_CLUSTER, "Elected new leader: (%s)\n", leader.libraryChannel());
+        logLeader(leader, "Elected new leader: (%s) [%s]\n");
 
         final String libraryChannel = leader.libraryChannel();
         while (notConnectedTo(libraryChannel))
@@ -222,6 +216,15 @@ public class ClusteredGatewaySystemTest
         roundtripAMessage(acceptingSession, initiatingOtfAcceptor);
 
         DebugLogger.log(GATEWAY_CLUSTER, "Message Roundtrip\n");
+    }
+
+    private void logLeader(final FixEngineRunner oldLeader, final String formatString)
+    {
+        DebugLogger.log(
+            GATEWAY_CLUSTER,
+            formatString,
+            oldLeader.libraryChannel(),
+            oldLeader.configuration().agentNamePrefix());
     }
 
     private boolean notConnectedTo(final String libraryChannel)
