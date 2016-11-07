@@ -89,36 +89,36 @@ public class FramerTest
     private ServerSocketChannel server;
 
     private SocketChannel client;
-    private ByteBuffer clientBuffer = ByteBuffer.allocate(1024);
+    private final ByteBuffer clientBuffer = ByteBuffer.allocate(1024);
 
-    private SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
-    private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
-    private EndPointFactory mockEndPointFactory = mock(EndPointFactory.class);
-    private GatewayPublication inboundPublication = mock(GatewayPublication.class);
-    private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
-    private Header header = mock(Header.class);
-    private FakeEpochClock mockClock = new FakeEpochClock();
-    private SequenceNumberIndexReader sentSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
-    private SequenceNumberIndexReader receivedSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
-    private ReplayQuery replayQuery = mock(ReplayQuery.class);
-    private SessionIds sessionIds = mock(SessionIds.class);
-    private GatewaySessions gatewaySessions = mock(GatewaySessions.class);
-    private GatewaySession gatewaySession = mock(GatewaySession.class);
-    private Session session = mock(Session.class);
-    private SoloSubscription outboundSubscription = mock(SoloSubscription.class);
-    private ClusterableStreams node = mock(ClusterableStreams.class);
+    private final SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
+    private final ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
+    private final EndPointFactory mockEndPointFactory = mock(EndPointFactory.class);
+    private final GatewayPublication inboundPublication = mock(GatewayPublication.class);
+    private final SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
+    private final Header header = mock(Header.class);
+    private final FakeEpochClock mockClock = new FakeEpochClock();
+    private final SequenceNumberIndexReader sentSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
+    private final SequenceNumberIndexReader receivedSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
+    private final ReplayQuery replayQuery = mock(ReplayQuery.class);
+    private final SessionIds sessionIds = mock(SessionIds.class);
+    private final GatewaySessions gatewaySessions = mock(GatewaySessions.class);
+    private final GatewaySession gatewaySession = mock(GatewaySession.class);
+    private final Session session = mock(Session.class);
+    private final SoloSubscription outboundSubscription = mock(SoloSubscription.class);
+    private final ClusterableStreams node = mock(ClusterableStreams.class);
 
     @SuppressWarnings("unchecked")
-    private ArgumentCaptor<List<SessionInfo>> sessionCaptor = ArgumentCaptor.forClass(List.class);
+    private final ArgumentCaptor<List<SessionInfo>> sessionCaptor = ArgumentCaptor.forClass(List.class);
 
-    private EngineConfiguration engineConfiguration = new EngineConfiguration()
+    private final EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
         .replyTimeoutInMs(REPLY_TIMEOUT_IN_MS);
 
     private Framer framer;
 
-    private ArgumentCaptor<Long> connectionId = ArgumentCaptor.forClass(Long.class);
-    private ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private final ArgumentCaptor<Long> connectionId = ArgumentCaptor.forClass(Long.class);
+    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
 
     @Before
     @SuppressWarnings("unchecked")
@@ -129,17 +129,17 @@ public class FramerTest
 
         clientBuffer.putInt(10, 5);
 
-        when(mockEndPointFactory
-            .receiverEndPoint(any(), connectionId.capture(), anyLong(), anyInt(), any(),
-                eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any(), any()))
+        when(mockEndPointFactory.receiverEndPoint(
+            any(), connectionId.capture(), anyLong(), anyInt(), any(),
+            eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any(), any()))
             .thenReturn(mockReceiverEndPoint);
 
         when(mockEndPointFactory.senderEndPoint(any(), anyLong(), anyInt(), any()))
             .thenReturn(mockSenderEndPoint);
 
-        when(mockReceiverEndPoint.connectionId()).then(inv -> connectionId.getValue());
+        when(mockReceiverEndPoint.connectionId()).then((inv) -> connectionId.getValue());
 
-        when(mockSenderEndPoint.connectionId()).then(inv -> connectionId.getValue());
+        when(mockSenderEndPoint.connectionId()).then((inv) -> connectionId.getValue());
 
         when(mockReceiverEndPoint.libraryId()).thenReturn(LIBRARY_ID);
 
@@ -364,11 +364,8 @@ public class FramerTest
         assertEquals(CONTINUE, onInitiateConnection());
 
         framer.doWork();
-
         framer.doWork();
-
         framer.doWork();
-
         framer.doWork();
 
         notifyLibraryOfConnection(times(2));
@@ -464,17 +461,17 @@ public class FramerTest
     public void shouldHandoverSessionToLibraryUponRequestWhenBackPressured() throws IOException
     {
         when(inboundPublication.saveManageConnection(
-                anyLong(),
-                anyLong(),
-                any(),
-                anyInt(),
-                any(),
-                anyInt(),
-                anyInt(),
-                any(),
-                anyInt(),
-                anyLong()))
-                .thenReturn(BACK_PRESSURED, POSITION);
+            anyLong(),
+            anyLong(),
+            any(),
+            anyInt(),
+            any(),
+            anyInt(),
+            anyInt(),
+            any(),
+            anyInt(),
+            anyLong()))
+            .thenReturn(BACK_PRESSURED, POSITION);
 
         aClientConnects();
 
@@ -485,16 +482,16 @@ public class FramerTest
         assertEquals(CONTINUE, onRequestSession());
 
         verify(inboundPublication, times(2)).saveManageConnection(
-                anyLong(),
-                anyLong(),
-                any(),
-                eq(LIBRARY_ID),
-                any(),
-                anyInt(),
-                anyInt(),
-                any(),
-                anyInt(),
-                anyLong());
+            anyLong(),
+            anyLong(),
+            any(),
+            eq(LIBRARY_ID),
+            any(),
+            anyInt(),
+            anyInt(),
+            any(),
+            anyInt(),
+            anyLong());
 
         saveRequestSessionReply();
 
@@ -504,7 +501,7 @@ public class FramerTest
     private void neverSavesUnknownSession()
     {
         verify(inboundPublication, never())
-                .saveRequestSessionReply(LIBRARY_ID, SessionReplyStatus.UNKNOWN_SESSION, CORR_ID);
+            .saveRequestSessionReply(LIBRARY_ID, SessionReplyStatus.UNKNOWN_SESSION, CORR_ID);
     }
 
     @Test
@@ -571,7 +568,6 @@ public class FramerTest
         framer.onLibraryConnect(LIBRARY_ID, CORR_ID + 1, AERON_SESSION_ID);
     }
 
-
     private void verifyLibraryControlNotified(final Matcher<? super Collection<?>> sessionMatcher)
     {
         verify(inboundPublication).saveApplicationHeartbeat(LIBRARY_ID);
@@ -624,7 +620,7 @@ public class FramerTest
 
     private void sessionIsActive()
     {
-        when(gatewaySessions.releaseBySessionId(SESSION_ID)).thenReturn(gatewaySession, (GatewaySession) null);
+        when(gatewaySessions.releaseBySessionId(SESSION_ID)).thenReturn(gatewaySession, (GatewaySession)null);
         when(gatewaySession.session()).thenReturn(session);
         when(gatewaySession.heartbeatIntervalInS()).thenReturn(HEARTBEAT_INTERVAL_IN_S);
         when(session.isActive()).thenReturn(true);
@@ -723,7 +719,8 @@ public class FramerTest
         do
         {
             framer.doWork();
-        } while (server.accept() == null);
+        }
+        while (server.accept() == null);
 
         assertNotNull("Connection not completed yet", connectionId.getValue());
     }
