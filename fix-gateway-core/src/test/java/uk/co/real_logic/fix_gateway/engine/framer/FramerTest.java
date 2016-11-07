@@ -324,14 +324,34 @@ public class FramerTest
     @Test
     public void shouldAcquireAcceptedClientsWhenLibraryDisconnects() throws Exception
     {
-        aClientConnects();
+        libraryHasAcceptedClient();
 
         timeoutLibrary();
 
         framer.doWork();
 
-        verifySessionsAcquired(CONNECTED);
+        verifySessionsAcquired(ACTIVE);
         verifyLibraryTimeout();
+    }
+
+    @Test
+    public void shouldAcquireAcceptedClientsWhenLibraryDisconnectsAndIndexerCaughtUp() throws Exception
+    {
+        sentIndexedToPosition(-100L);
+
+        libraryHasAcceptedClient();
+
+        timeoutLibrary();
+
+        framer.doWork();
+
+        verifySessionsAcquired(ACTIVE, never());
+
+        sentIndexedToPosition(100L);
+
+        framer.doWork();
+
+        verifySessionsAcquired(ACTIVE);
     }
 
     @Test
@@ -606,6 +626,7 @@ public class FramerTest
     {
         when(gatewaySessions.releaseBySessionId(SESSION_ID)).thenReturn(gatewaySession, (GatewaySession) null);
         when(gatewaySession.session()).thenReturn(session);
+        when(gatewaySession.heartbeatIntervalInS()).thenReturn(HEARTBEAT_INTERVAL_IN_S);
         when(session.isActive()).thenReturn(true);
     }
 
@@ -661,7 +682,12 @@ public class FramerTest
 
     private void verifySessionsAcquired(final SessionState state)
     {
-        verify(gatewaySessions, times(1)).acquire(
+        verifySessionsAcquired(state, times(1));
+    }
+
+    private void verifySessionsAcquired(final SessionState state, final VerificationMode times)
+    {
+        verify(gatewaySessions, times).acquire(
             any(),
             eq(state),
             eq(HEARTBEAT_INTERVAL_IN_S),
@@ -770,5 +796,18 @@ public class FramerTest
     private void verifyLibraryTimeout()
     {
         verify(inboundPublication).saveLibraryTimeout(LIBRARY_ID, 0);
+    }
+
+    private void libraryHasAcceptedClient() throws IOException
+    {
+        aClientConnects();
+        sessionIsActive();
+        assertEquals(CONTINUE, onRequestSession());
+        when(receivedSequenceNumberIndex.lastKnownSequenceNumber(anyInt())).thenReturn(1);
+    }
+
+    private void sentIndexedToPosition(final long position)
+    {
+        when(sentSequenceNumberIndex.indexedPosition(anyInt())).thenReturn(position);
     }
 }
