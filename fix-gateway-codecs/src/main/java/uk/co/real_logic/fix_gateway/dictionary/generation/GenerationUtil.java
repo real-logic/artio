@@ -23,35 +23,32 @@ import static java.util.stream.Collectors.joining;
 
 public final class GenerationUtil
 {
-
     public static final int MESSAGE_TYPE_BITSHIFT = 8;
+    public static final String PARENT_PACKAGE = System.getProperty("PARENT_PACKAGE", "uk.co.real_logic.fix_gateway");
+
+    public static final String ENCODER_PACKAGE = PARENT_PACKAGE + ".builder";
+    public static final String DECODER_PACKAGE = PARENT_PACKAGE + ".decoder";
+    public static final String INDENT = "    ";
 
     private GenerationUtil()
     {
     }
 
-    public static final String PARENT_PACKAGE = System.getProperty("PARENT_PACKAGE", "uk.co.real_logic.fix_gateway");
-    public static final String ENCODER_PACKAGE = PARENT_PACKAGE + ".builder";
-    public static final String DECODER_PACKAGE = PARENT_PACKAGE + ".decoder";
-
-    public static final String INDENT = "    ";
-
     public static String fileHeader(final String packageName)
     {
         return String.format(
-                "/* Generated Fix Gateway message codec */\n" +
-                "package %s;\n\n",
-                packageName
-        );
+            "/* Generated Fix Gateway message codec */\n" +
+            "package %s;\n\n",
+            packageName);
     }
 
     public static int packMessageType(final String representation)
     {
-        int packed = (byte) representation.charAt(0);
+        int packed = (byte)representation.charAt(0);
 
         if (representation.length() == 2)
         {
-            final int second = (int) representation.charAt(1);
+            final int second = (int)representation.charAt(1);
             packed |= second << MESSAGE_TYPE_BITSHIFT;
         }
 
@@ -85,12 +82,12 @@ public final class GenerationUtil
         }
     }
 
-    public static String constructor(final String name, final Var ... parameters)
+    public static String constructor(final String name, final Var... parameters)
     {
 
         final String binding = Stream.of(parameters)
-                                     .map(var -> String.format("%1$s%1$s this.%2$s = %2$s;", INDENT, var.name))
-                                     .collect(joining("\n"));
+            .map(var -> String.format("%1$s%1$s this.%2$s = %2$s;", INDENT, var.name))
+            .collect(joining("\n"));
 
         return String.format("%s%s(%s)\n%1$s{\n%s\n%1$s}\n\n", INDENT, name, paramDeclaration(parameters), binding);
     }
@@ -98,8 +95,8 @@ public final class GenerationUtil
     public static String paramDeclaration(final Var[] parameters)
     {
         return Stream.of(parameters)
-                .map(Var::declaration)
-                .collect(joining(", "));
+            .map(Var::declaration)
+            .collect(joining(", "));
     }
 
     public static String importFor(final Class<?> cls)
@@ -117,5 +114,4 @@ public final class GenerationUtil
         Verify.notNull(name, "name");
         return String.format("import static %s.%s;\n", cls.getCanonicalName(), name);
     }
-
 }
