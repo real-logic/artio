@@ -64,9 +64,15 @@ class IndexedPositionReader
             }
 
             decoder.wrap(buffer, offset, actingBlockLength, actingVersion);
-            if (decoder.sessionId() == aeronSessionId)
+            final long position = buffer.getLongVolatile(offset + POSITION_OFFSET);
+            if (position == 0)
             {
-                return buffer.getLongVolatile(offset + POSITION_OFFSET);
+                return UNKNOWN_POSITION;
+            }
+            final int aeronSessionIdOfRecord = decoder.sessionId();
+            if (aeronSessionIdOfRecord == aeronSessionId)
+            {
+                return position;
             }
 
             offset += RECORD_LENGTH;
