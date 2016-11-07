@@ -30,6 +30,7 @@ public class HistogramLogAgent implements Agent
     private final HistogramHandler histogramHandler;
     private final long intervalInMs;
     private final EpochClock milliClock;
+    private final String agentNamePrefix;
 
     private long nextWriteTimeInMs = 0;
 
@@ -39,11 +40,13 @@ public class HistogramLogAgent implements Agent
         final long intervalInMs,
         final ErrorHandler errorHandler,
         final EpochClock milliClock,
-        HistogramHandler histogramHandler)
+        HistogramHandler histogramHandler,
+        final String agentNamePrefix)
     {
         this.timers = timers;
         this.intervalInMs = intervalInMs;
         this.milliClock = milliClock;
+        this.agentNamePrefix = agentNamePrefix;
 
         if (histogramHandler == null)
         {
@@ -85,7 +88,7 @@ public class HistogramLogAgent implements Agent
 
     public String roleName()
     {
-        return "HistogramLogger";
+        return agentNamePrefix + "HistogramLogger";
     }
 
     public void onClose()

@@ -20,6 +20,8 @@ import org.agrona.concurrent.errors.ErrorConsumer;
 import org.agrona.concurrent.errors.ErrorLogReader;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
+
 public class ErrorPrinter implements Agent
 {
     public static void main(String[] args)
@@ -27,7 +29,7 @@ public class ErrorPrinter implements Agent
         final EngineConfiguration configuration = new EngineConfiguration();
         configuration.libraryAeronChannel("").conclude();
         final MonitoringFile monitoringFile = new MonitoringFile(false, configuration);
-        final ErrorPrinter printer = new ErrorPrinter(monitoringFile.errorBuffer());
+        final ErrorPrinter printer = new ErrorPrinter(monitoringFile.errorBuffer(), DEFAULT_NAME_PREFIX);
         final IdleStrategy idleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
         final AgentRunner runner = new AgentRunner(idleStrategy, Throwable::printStackTrace, null, printer);
         runner.run();
@@ -40,12 +42,14 @@ public class ErrorPrinter implements Agent
             System.err.println();
         };
     private final AtomicBuffer errorBuffer;
+    private final String agentNamePrefix;
 
     private long lastSeenErrorTime = 0L;
 
-    public ErrorPrinter(final AtomicBuffer errorBuffer)
+    public ErrorPrinter(final AtomicBuffer errorBuffer, final String agentNamePrefix)
     {
         this.errorBuffer = errorBuffer;
+        this.agentNamePrefix = agentNamePrefix;
     }
 
     public int doWork() throws Exception
@@ -66,6 +70,6 @@ public class ErrorPrinter implements Agent
 
     public String roleName()
     {
-        return "Error Printer";
+        return agentNamePrefix + "Error Printer";
     }
 }

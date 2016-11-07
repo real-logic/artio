@@ -125,7 +125,8 @@ public class FramerContext
             streams,
             engineDescriptorStore,
             replicatedConnectionIds,
-            endPointFactory.inboundPublication());
+            endPointFactory.inboundPublication(),
+            configuration.agentNamePrefix());
     }
 
     public Agent framer()

@@ -55,6 +55,7 @@ public class Archiver implements Agent, RawBlockHandler
     private final ArchiveMetaData metaData;
     private final Int2ObjectCache<SessionArchiver> sessionIdToArchive;
     private final StreamIdentifier streamId;
+    private final String agentNamePrefix;
     private final LogDirectoryDescriptor directoryDescriptor;
     private final CRC32 checksum = new CRC32();
 
@@ -69,11 +70,13 @@ public class Archiver implements Agent, RawBlockHandler
         final ArchiveMetaData metaData,
         final int cacheNumSets,
         final int cacheSetSize,
-        final StreamIdentifier streamId)
+        final StreamIdentifier streamId,
+        final String agentNamePrefix)
     {
         this.metaData = metaData;
         this.directoryDescriptor = metaData.directoryDescriptor();
         this.streamId = streamId;
+        this.agentNamePrefix = agentNamePrefix;
         sessionIdToArchive = new Int2ObjectCache<>(cacheNumSets, cacheSetSize, SessionArchiver::close);
     }
 
@@ -115,7 +118,7 @@ public class Archiver implements Agent, RawBlockHandler
 
     public String roleName()
     {
-        return "Archiver";
+        return agentNamePrefix + "Archiver";
     }
 
     public void onBlock(

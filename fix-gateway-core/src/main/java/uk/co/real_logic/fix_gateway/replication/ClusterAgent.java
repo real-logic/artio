@@ -44,6 +44,7 @@ public class ClusterAgent implements Agent
     private final ClusterStreams clusterStreams;
     private final NodeStateHandler nodeStateHandler;
     private final RoleHandler roleHandler;
+    private final String agentNamePrefix;
 
     private Role currentRole;
 
@@ -55,6 +56,7 @@ public class ClusterAgent implements Agent
         transport = configuration.raftTransport();
         nodeStateHandler = configuration.nodeStateHandler();
         roleHandler = configuration.nodeHandler();
+        agentNamePrefix = configuration.agentNamePrefix();
 
         final Publication dataPublication = transport.leaderPublication();
         final ArchiveReader archiveReader = configuration.archiveReader();
@@ -313,6 +315,6 @@ public class ClusterAgent implements Agent
 
     public String roleName()
     {
-        return "Cluster Agent";
+        return agentNamePrefix + "Cluster Agent";
     }
 }

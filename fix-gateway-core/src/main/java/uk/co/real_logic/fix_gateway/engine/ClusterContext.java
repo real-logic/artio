@@ -30,6 +30,7 @@ import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.closeAll;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.suppressingClose;
+import static uk.co.real_logic.fix_gateway.engine.logger.LoggerUtil.newArchiveMetaData;
 import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID;
 
 class ClusterContext extends EngineContext
@@ -75,7 +76,8 @@ class ClusterContext extends EngineContext
             final ClusterPositionSender positionSender = new ClusterPositionSender(
                 outboundLibrarySubscription(),
                 outboundClusterSubscription(),
-                inboundLibraryPublication());
+                inboundLibraryPublication(),
+                configuration.agentNamePrefix());
 
             localOutboundArchiver.positionHandler(positionSender);
 
@@ -112,7 +114,7 @@ class ClusterContext extends EngineContext
 
         final ArchiveReader dataArchiveReader = archiveReader(dataStream);
         final Archiver archiver = new Archiver(
-            LoggerUtil.newArchiveMetaData(logFileDir), cacheNumSets, cacheSetSize, dataStream);
+            newArchiveMetaData(logFileDir), cacheNumSets, cacheSetSize, dataStream, configuration.agentNamePrefix());
 
         final ClusterNodeConfiguration clusterNodeConfiguration = new ClusterNodeConfiguration()
             .nodeId(configuration.nodeId())
@@ -128,7 +130,8 @@ class ClusterContext extends EngineContext
             .aeron(aeron)
             .nodeState(EngineDescriptorFactory.make(configuration.libraryAeronChannel()))
             .nodeStateHandler(engineDescriptorStore)
-            .nodeHandler(configuration.roleHandler());
+            .nodeHandler(configuration.roleHandler())
+            .agentNamePrefix(configuration.agentNamePrefix());
 
         return new ClusterAgent(clusterNodeConfiguration, System.currentTimeMillis());
     }

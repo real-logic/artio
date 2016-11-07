@@ -46,7 +46,9 @@ public class Server implements Agent
             .bindTo("localhost", StressConfiguration.PORT)
             .logFileDir("stress-server-logs")
             .libraryAeronChannel(aeronChannel);
-        configuration.authenticationStrategy(authenticationStrategy);
+        configuration
+            .authenticationStrategy(authenticationStrategy)
+            .agentNamePrefix("server-");
 
         System.out.println("Server Logs at " + configuration.logFileDir());
 
@@ -59,7 +61,9 @@ public class Server implements Agent
         fixEngine = FixEngine.launch(configuration);
 
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
-        libraryConfiguration.authenticationStrategy(authenticationStrategy);
+        libraryConfiguration
+            .authenticationStrategy(authenticationStrategy)
+            .agentNamePrefix("server-");
         fixLibrary = FixLibrary.connect(libraryConfiguration
             .sessionAcquireHandler(StressSessionHandler::new)
             .sessionExistsHandler(new AcquiringSessionExistsHandler())

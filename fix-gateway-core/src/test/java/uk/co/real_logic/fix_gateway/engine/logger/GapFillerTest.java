@@ -25,12 +25,13 @@ import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
 
 public class GapFillerTest extends AbstractLogTest
 {
     private GatewayPublication publication = mock(GatewayPublication.class);
     private ClusterableSubscription subscription = mock(ClusterableSubscription.class);
-    private GapFiller gapFiller = new GapFiller(subscription, publication);
+    private GapFiller gapFiller = new GapFiller(subscription, publication, DEFAULT_NAME_PREFIX);
 
     @Test
     public void shouldGapFillInResponseToResendRequest()

@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.POSS_DUP_FIELD;
 import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
@@ -45,7 +46,14 @@ public class ReplayerTest extends AbstractLogTest
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
 
     private Replayer replayer = new Replayer(
-        replayQuery, publication, claim, idleStrategy, errorHandler, MAX_CLAIM_ATTEMPTS, subscription);
+        replayQuery,
+        publication,
+        claim,
+        idleStrategy,
+        errorHandler,
+        MAX_CLAIM_ATTEMPTS,
+        subscription,
+        DEFAULT_NAME_PREFIX);
 
     @Before
     public void setUp()

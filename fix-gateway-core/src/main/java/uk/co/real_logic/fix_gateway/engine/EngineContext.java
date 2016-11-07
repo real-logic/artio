@@ -199,7 +199,8 @@ public abstract class EngineContext implements AutoCloseable
             LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
             configuration.loggerCacheNumSets(),
             configuration.loggerCacheSetSize(),
-            streamId);
+            streamId,
+            configuration.agentNamePrefix());
     }
 
     protected Replayer newReplayer(final Publication replayPublication, final ArchiveReader archiveReader)
@@ -211,7 +212,8 @@ public abstract class EngineContext implements AutoCloseable
             configuration.loggerIdleStrategy(),
             errorHandler,
             configuration.outboundMaxClaimAttempts(),
-            inboundLibraryStreams.subscription());
+            inboundLibraryStreams.subscription(),
+            configuration.agentNamePrefix());
     }
 
     protected void newIndexers(
@@ -228,7 +230,8 @@ public abstract class EngineContext implements AutoCloseable
                 newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, INBOUND_LIBRARY_STREAM),
                 receivedSequenceNumberIndex),
             inboundArchiveReader,
-            inboundLibraryStreams.subscription());
+            inboundLibraryStreams.subscription(),
+            configuration.agentNamePrefix());
 
         final List<Index> outboundIndices = new ArrayList<>();
         outboundIndices.add(newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, OUTBOUND_LIBRARY_STREAM));
@@ -240,7 +243,8 @@ public abstract class EngineContext implements AutoCloseable
         outboundIndexer = new Indexer(
             outboundIndices,
             outboundArchiveReader,
-            outboundLibraryStreams.subscription());
+            outboundLibraryStreams.subscription(),
+            configuration.agentNamePrefix());
     }
 
     public abstract Streams outboundLibraryStreams();

@@ -25,6 +25,7 @@ import java.util.stream.IntStream;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
 
 public class ClusterPositionSenderTest
 {
@@ -42,7 +43,8 @@ public class ClusterPositionSenderTest
     private ClusterPositionSender positionSender = new ClusterPositionSender(
         mock(ClusterableSubscription.class),
         mock(ClusterableSubscription.class),
-        publication);
+        publication,
+        DEFAULT_NAME_PREFIX);
 
     @Test
     public void shouldPublishPositionOfOnlyArchivedStream()

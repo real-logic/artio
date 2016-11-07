@@ -49,11 +49,16 @@ public class GapFiller implements ProtocolHandler, Agent
     private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
     private final ClusterableSubscription subscription;
     private final GatewayPublication publication;
+    private final String agentNamePrefix;
 
-    public GapFiller(final ClusterableSubscription subscription, final GatewayPublication publication)
+    public GapFiller(
+        final ClusterableSubscription subscription,
+        final GatewayPublication publication,
+        final String agentNamePrefix)
     {
         this.subscription = subscription;
         this.publication = publication;
+        this.agentNamePrefix = agentNamePrefix;
         sequenceResetEncoder.gapFillFlag(true);
     }
 
@@ -124,6 +129,6 @@ public class GapFiller implements ProtocolHandler, Agent
 
     public String roleName()
     {
-        return "GapFiller";
+        return agentNamePrefix + "GapFiller";
     }
 }

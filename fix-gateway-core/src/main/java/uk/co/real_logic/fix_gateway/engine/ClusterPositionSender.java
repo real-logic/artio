@@ -65,15 +65,18 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
     private final ControlledFragmentHandler onClusterFragmentFunc = this::onClusterFragment;
     private final IntFunction<LibraryPositions> newLibraryPositionsFunc = LibraryPositions::new;
     private final GatewayPublication inboundLibraryPublication;
+    private final String agentNamePrefix;
 
     ClusterPositionSender(
         final ClusterableSubscription outboundLibrarySubscription,
         final ClusterableSubscription outboundClusterSubscription,
-        final GatewayPublication inboundLibraryPublication)
+        final GatewayPublication inboundLibraryPublication,
+        final String agentNamePrefix)
     {
         this.outboundLibrarySubscription = outboundLibrarySubscription;
         this.outboundClusterSubscription = outboundClusterSubscription;
         this.inboundLibraryPublication = inboundLibraryPublication;
+        this.agentNamePrefix = agentNamePrefix;
     }
 
     public int doWork() throws Exception
@@ -190,7 +193,7 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
 
     public String roleName()
     {
-        return "ClusterPositionSender";
+        return agentNamePrefix + "ClusterPositionSender";
     }
 
     void onLibraryConnect(final int aeronSessionId, final int libraryId)

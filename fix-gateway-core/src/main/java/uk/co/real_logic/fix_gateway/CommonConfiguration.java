@@ -100,6 +100,7 @@ public class CommonConfiguration
     public static final String DEFAULT_MONITORING_FILE = DEFAULT_DIRECTORY + File.separator + "monitoring";
 
     public static final String DEFAULT_HISTOGRAM_LOGGING_FILE = DEFAULT_DIRECTORY + File.separator + "histograms";
+    public static final String DEFAULT_NAME_PREFIX = "";
 
     // ------------------------------------------------
     //          Static Configuration
@@ -189,6 +190,7 @@ public class CommonConfiguration
         Long.getLong(HISTOGRAM_POLL_PERIOD_IN_MS_PROPERTY, DEFAULT_HISTOGRAM_POLL_PERIOD_IN_MS);
     private String histogramLoggingFile = null;
     private HistogramHandler histogramHandler;
+    private String agentNamePrefix = DEFAULT_NAME_PREFIX;
 
     private final AtomicBoolean isConcluded = new AtomicBoolean(false);
 
@@ -422,6 +424,12 @@ public class CommonConfiguration
         return this;
     }
 
+    public CommonConfiguration agentNamePrefix(final String agentNamePrefix)
+    {
+        this.agentNamePrefix = agentNamePrefix;
+        return this;
+    }
+
     public Aeron.Context aeronContext()
     {
         return aeronContext;
@@ -505,6 +513,11 @@ public class CommonConfiguration
     public HistogramHandler histogramHandler()
     {
         return histogramHandler;
+    }
+
+    public String agentNamePrefix()
+    {
+        return agentNamePrefix;
     }
 
     protected void conclude(final String fixSuffix)

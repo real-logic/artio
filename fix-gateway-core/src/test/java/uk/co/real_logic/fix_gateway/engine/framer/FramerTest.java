@@ -60,6 +60,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
@@ -167,7 +168,8 @@ public class FramerTest
             node,
             mock(EngineDescriptorStore.class),
             new LongHashSet(SessionIds.MISSING),
-            inboundPublication);
+            inboundPublication,
+            DEFAULT_NAME_PREFIX);
 
         when(sessionIds.onLogon(any())).thenReturn(SESSION_ID);
     }

@@ -120,7 +120,8 @@ class SoloContext extends EngineContext
                 );
             final GapFiller gapFiller = new GapFiller(
                 inboundLibraryStreams.subscription(),
-                replayGatewayPublication);
+                replayGatewayPublication,
+                configuration.agentNamePrefix());
             loggingRunner = newRunner(gapFiller);
         }
     }

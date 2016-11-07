@@ -24,6 +24,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 
 public class ClusterNodeConfiguration
@@ -66,6 +67,7 @@ public class ClusterNodeConfiguration
     private DirectBuffer nodeState;
     private NodeStateHandler nodeStateHandler;
     private RoleHandler roleHandler = DEFAULT_NODE_HANDLER;
+    private String agentNamePrefix = DEFAULT_NAME_PREFIX;
 
     /**
      * Sets the control, data and acknowledge streams to all this aeron
@@ -184,6 +186,18 @@ public class ClusterNodeConfiguration
         return this;
     }
 
+    public ClusterNodeConfiguration copyTo(final Publication publication)
+    {
+        copyToPublication = publication;
+        return this;
+    }
+
+    public ClusterNodeConfiguration agentNamePrefix(final String agentNamePrefix)
+    {
+        this.agentNamePrefix = agentNamePrefix;
+        return this;
+    }
+
     public StreamIdentifier controlStream()
     {
         return controlStream;
@@ -282,14 +296,13 @@ public class ClusterNodeConfiguration
         }
     }
 
-    public ClusterNodeConfiguration copyTo(final Publication publication)
-    {
-        copyToPublication = publication;
-        return this;
-    }
-
     public Publication copyToPublication()
     {
         return copyToPublication;
+    }
+
+    public String agentNamePrefix()
+    {
+        return agentNamePrefix;
     }
 }

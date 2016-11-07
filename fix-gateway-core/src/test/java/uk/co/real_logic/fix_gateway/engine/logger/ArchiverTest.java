@@ -59,6 +59,7 @@ import static org.agrona.BitUtil.SIZE_OF_INT;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
@@ -136,7 +137,7 @@ public class ArchiverTest
         filteredArchiveReader = new ArchiveReader(
             metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream, RESERVED_VALUE);
         archiver = new Archiver(
-            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream);
+            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream, DEFAULT_NAME_PREFIX);
 
         publication = aeron.addPublication(CHANNEL, STREAM_ID);
         archiver.subscription(aeron.addSubscription(CHANNEL, STREAM_ID));

@@ -78,6 +78,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     private final ErrorHandler errorHandler;
     private final int maxClaimAttempts;
     private final ClusterableSubscription subscription;
+    private final String agentNamePrefix;
 
     private int currentMessageOffset;
     private int currentMessageLength;
@@ -89,7 +90,8 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         final IdleStrategy idleStrategy,
         final ErrorHandler errorHandler,
         final int maxClaimAttempts,
-        final ClusterableSubscription subscription)
+        final ClusterableSubscription subscription,
+        final String agentNamePrefix)
     {
         this.replayQuery = replayQuery;
         this.publication = publication;
@@ -98,6 +100,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         this.errorHandler = errorHandler;
         this.maxClaimAttempts = maxClaimAttempts;
         this.subscription = subscription;
+        this.agentNamePrefix = agentNamePrefix;
     }
 
     public Action onMessage(
@@ -333,6 +336,6 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
     public String roleName()
     {
-        return "Replayer";
+        return agentNamePrefix + "Replayer";
     }
 }

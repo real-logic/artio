@@ -39,13 +39,18 @@ public class Indexer implements Agent, ControlledFragmentHandler
     private final List<Index> indices;
     private final ArchiveReader archiveReader;
     private final ClusterableSubscription subscription;
+    private final String agentNamePrefix;
 
     public Indexer(
-        final List<Index> indices, final ArchiveReader archiveReader, final ClusterableSubscription subscription)
+        final List<Index> indices,
+        final ArchiveReader archiveReader,
+        final ClusterableSubscription subscription,
+        final String agentNamePrefix)
     {
         this.indices = indices;
         this.archiveReader = archiveReader;
         this.subscription = subscription;
+        this.agentNamePrefix = agentNamePrefix;
         catchIndexUp();
     }
 
@@ -94,6 +99,6 @@ public class Indexer implements Agent, ControlledFragmentHandler
 
     public String roleName()
     {
-        return "Indexer";
+        return agentNamePrefix + "Indexer";
     }
 }

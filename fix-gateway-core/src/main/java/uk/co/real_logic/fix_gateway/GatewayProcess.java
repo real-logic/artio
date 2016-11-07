@@ -108,12 +108,13 @@ public class GatewayProcess implements AutoCloseable
                 configuration.histogramPollPeriodInMs(),
                 errorHandler,
                 new SystemEpochClock(),
-                configuration.histogramHandler()));
+                configuration.histogramHandler(),
+                configuration.agentNamePrefix()));
         }
 
         if (configuration.printErrorMessages())
         {
-            agents.add(new ErrorPrinter(monitoringFile.errorBuffer()));
+            agents.add(new ErrorPrinter(monitoringFile.errorBuffer(), configuration.agentNamePrefix()));
         }
 
         if (!agents.isEmpty())

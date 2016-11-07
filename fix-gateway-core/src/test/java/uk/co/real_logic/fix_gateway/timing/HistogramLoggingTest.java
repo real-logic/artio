@@ -32,6 +32,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
 
 public class HistogramLoggingTest
 {
@@ -62,7 +63,8 @@ public class HistogramLoggingTest
             100,
             errorHandler,
             clock,
-            NO_HISTOGRAM_HANDLER);
+            NO_HISTOGRAM_HANDLER,
+            DEFAULT_NAME_PREFIX);
         reader = new HistogramLogReader(file);
     }
 

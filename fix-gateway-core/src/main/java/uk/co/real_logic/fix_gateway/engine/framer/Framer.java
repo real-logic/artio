@@ -122,6 +122,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Subscription replaySubscription;
     private final GatewayPublication inboundPublication;
     private final ClusterableStreams clusterableStreams;
+    private final String agentNamePrefix;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
     private final QueuedPipe<AdminCommand> adminCommands;
@@ -162,7 +163,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final ClusterableStreams clusterableStreams,
         final EngineDescriptorStore engineDescriptorStore,
         final LongHashSet replicatedConnectionIds,
-        final GatewayPublication inboundPublication)
+        final GatewayPublication inboundPublication,
+        final String agentNamePrefix)
     {
         this.clock = clock;
         this.outboundTimer = outboundTimer;
@@ -179,6 +181,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundPublication = outboundPublication;
         this.inboundPublication = inboundPublication;
         this.clusterableStreams = clusterableStreams;
+        this.agentNamePrefix = agentNamePrefix;
         this.senderEndPoints = new SenderEndPoints();
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
@@ -931,7 +934,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     public String roleName()
     {
-        return "Framer " + configuration.nodeId();
+        return agentNamePrefix + "Framer";
     }
 
     void schedule(final Continuation continuation)
