@@ -44,9 +44,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Before
     public void launch()
     {
-        // TODO: Work out what has not been closed.
-        System.gc();
-
         delete(ACCEPTOR_LOGS);
 
         mediaDriver = launchMediaDriver();
