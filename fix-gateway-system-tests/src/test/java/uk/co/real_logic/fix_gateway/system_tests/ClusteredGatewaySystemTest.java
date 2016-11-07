@@ -169,7 +169,11 @@ public class ClusteredGatewaySystemTest
 
         final FixEngineRunner oldLeader = leader;
         oldLeader.disable();
-        DebugLogger.log(GATEWAY_CLUSTER, "Disabled old old leader (%s)\n", oldLeader.libraryChannel());
+        DebugLogger.log(
+            GATEWAY_CLUSTER,
+            "Disabled old old leader (%s) [%s]\n",
+            oldLeader.libraryChannel(),
+            oldLeader.configuration().agentNamePrefix());
 
         while (true)
         {

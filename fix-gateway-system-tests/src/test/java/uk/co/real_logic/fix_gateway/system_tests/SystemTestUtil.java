@@ -175,10 +175,12 @@ public final class SystemTestUtil
 
     public static EngineConfiguration initiatingConfig(final int libraryAeronPort, final String countersSuffix)
     {
-        return new EngineConfiguration()
+        final EngineConfiguration configuration = new EngineConfiguration()
             .libraryAeronChannel("aeron:udp?endpoint=localhost:" + libraryAeronPort)
             .monitoringFile(optimalTmpDirName() + File.separator + "fix-client" + File.separator + countersSuffix)
             .logFileDir(CLIENT_LOGS);
+        configuration.agentNamePrefix("init-");
+        return configuration;
     }
 
     public static void delete(final String dirPath)

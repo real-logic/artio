@@ -75,7 +75,8 @@ public class FixEngineRunner implements AutoCloseable
             .logFileDir(acceptorLogs)
             .clusterAeronChannel(CLUSTER_AERON_CHANNEL)
             .nodeId((short)ourId)
-            .addOtherNodes(ids.filter((id) -> id != ourId).toArray());
+            .addOtherNodes(ids.filter((id) -> id != ourId).toArray())
+            .agentNamePrefix(nodeId + "-");
 
         tcpChannelSupplier = new DebugTcpChannelSupplier(configuration);
         configuration.channelSupplierFactory(config -> tcpChannelSupplier);
