@@ -33,25 +33,26 @@ public final class Exceptions
 {
     public static <T> Consumer<T> rethrown(final ResourceConsumer<T> consumer)
     {
-        return t ->
-        {
-            try
+        return
+            (t) ->
             {
-                consumer.accept(t);
-            }
-            catch (IOException e)
-            {
-                LangUtil.rethrowUnchecked(e);
-            }
-        };
+                try
+                {
+                    consumer.accept(t);
+                }
+                catch (final IOException ex)
+                {
+                    LangUtil.rethrowUnchecked(ex);
+                }
+            };
     }
 
     /**
-     * Close all closables in closables. If any of them throw then throw that exception.
-     * If multiple closables throw an exception when being closed, then throw an exception that contains
+     * Close all closeables in closeables. If any of them throw then throw that exception.
+     * If multiple closeables throw an exception when being closed, then throw an exception that contains
      * all of them as suppressed exceptions.
      *
-     * @param closeables
+     * @param closeables to be closed.
      */
     public static void closeAll(final List<? extends AutoCloseable> closeables)
     {
@@ -84,7 +85,7 @@ public final class Exceptions
         }
     }
 
-    public static void closeAll(final AutoCloseable ... closeables)
+    public static void closeAll(final AutoCloseable... closeables)
     {
         closeAll(Arrays.asList(closeables));
     }
@@ -92,10 +93,10 @@ public final class Exceptions
     public static void closeAll(final Agent... agents)
     {
         closeAll(Stream
-                .of(agents)
-                .filter(Objects::nonNull)
-                .map(agent -> (AutoCloseable) agent::onClose)
-                .collect(toList()));
+            .of(agents)
+            .filter(Objects::nonNull)
+            .map((agent) -> (AutoCloseable)agent::onClose)
+            .collect(toList()));
     }
 
     public static void suppressingClose(final AutoCloseable closeable, final Exception originalException)
@@ -104,9 +105,9 @@ public final class Exceptions
         {
             closeable.close();
         }
-        catch (final Exception e)
+        catch (final Exception ex)
         {
-            originalException.addSuppressed(e);
+            originalException.addSuppressed(ex);
         }
     }
 }

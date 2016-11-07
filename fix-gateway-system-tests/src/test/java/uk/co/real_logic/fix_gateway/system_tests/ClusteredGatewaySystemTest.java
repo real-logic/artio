@@ -333,8 +333,7 @@ public class ClusteredGatewaySystemTest
         final File otherFile = new File(otherLogFileDir, path);
         assertTrue(otherFile.getAbsolutePath(), otherFile.exists());
 
-        final long length = file.length();
-        assertEquals("lengths differ", length, otherFile.length());
+        assertEquals("lengths differ", file.length(), otherFile.length());
 
         try
         {
