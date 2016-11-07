@@ -87,38 +87,35 @@ public class FramerTest
     private static final long SESSION_ID = 123;
 
     private ServerSocketChannel server;
-
     private SocketChannel client;
-    private ByteBuffer clientBuffer = ByteBuffer.allocate(1024);
+    private final ByteBuffer clientBuffer = ByteBuffer.allocate(1024);
 
-    private SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
-    private ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
-    private EndPointFactory mockEndPointFactory = mock(EndPointFactory.class);
-    private GatewayPublication inboundPublication = mock(GatewayPublication.class);
-    private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
-    private Header header = mock(Header.class);
-    private FakeEpochClock mockClock = new FakeEpochClock();
-    private SequenceNumberIndexReader sentSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
-    private SequenceNumberIndexReader receivedSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
-    private ReplayQuery replayQuery = mock(ReplayQuery.class);
-    private SessionIds sessionIds = mock(SessionIds.class);
-    private GatewaySessions gatewaySessions = mock(GatewaySessions.class);
-    private GatewaySession gatewaySession = mock(GatewaySession.class);
-    private Session session = mock(Session.class);
-    private SoloSubscription outboundSubscription = mock(SoloSubscription.class);
-    private ClusterableStreams node = mock(ClusterableStreams.class);
+    private final SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
+    private final ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
+    private final EndPointFactory mockEndPointFactory = mock(EndPointFactory.class);
+    private final GatewayPublication inboundPublication = mock(GatewayPublication.class);
+    private final SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
+    private final Header header = mock(Header.class);
+    private final FakeEpochClock mockClock = new FakeEpochClock();
+    private final SequenceNumberIndexReader sentSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
+    private final SequenceNumberIndexReader receivedSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
+    private final ReplayQuery replayQuery = mock(ReplayQuery.class);
+    private final SessionIds sessionIds = mock(SessionIds.class);
+    private final GatewaySessions gatewaySessions = mock(GatewaySessions.class);
+    private final GatewaySession gatewaySession = mock(GatewaySession.class);
+    private final Session session = mock(Session.class);
+    private final SoloSubscription outboundSubscription = mock(SoloSubscription.class);
+    private final ClusterableStreams node = mock(ClusterableStreams.class);
 
-    @SuppressWarnings("unchecked")
-    private ArgumentCaptor<List<SessionInfo>> sessionCaptor = ArgumentCaptor.forClass(List.class);
-
-    private EngineConfiguration engineConfiguration = new EngineConfiguration()
+    private final EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
         .replyTimeoutInMs(REPLY_TIMEOUT_IN_MS);
 
     private Framer framer;
 
-    private ArgumentCaptor<Long> connectionId = ArgumentCaptor.forClass(Long.class);
-    private ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private ArgumentCaptor<List<SessionInfo>> sessionCaptor;
+    private final ArgumentCaptor<Long> connectionId = ArgumentCaptor.forClass(Long.class);
+    private final ErrorHandler errorHandler = mock(ErrorHandler.class);
 
     @Before
     @SuppressWarnings("unchecked")
@@ -191,7 +188,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldListenOnSpecifiedPort() throws IOException
+    public void shouldListenOnSpecifiedPort()
+        throws IOException
     {
         aClientConnects();
 
@@ -199,7 +197,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldCreateEndPointWhenClientConnects() throws Exception
+    public void shouldCreateEndPointWhenClientConnects()
+        throws Exception
     {
         aClientConnects();
 
@@ -209,7 +208,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldPassDataToEndPointWhenSent() throws Exception
+    public void shouldPassDataToEndPointWhenSent()
+        throws Exception
     {
         aClientConnects();
         framer.doWork();
@@ -225,7 +225,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldCloseSocketUponDisconnect() throws Exception
+    public void shouldCloseSocketUponDisconnect()
+        throws Exception
     {
         aClientConnects();
         framer.doWork();
@@ -237,13 +238,15 @@ public class FramerTest
     }
 
     @Test
-    public void shouldConnectToAddress() throws Exception
+    public void shouldConnectToAddress()
+        throws Exception
     {
         initiateConnection();
     }
 
     @Test
-    public void shouldNotConnectIfLibraryUnknown() throws Exception
+    public void shouldNotConnectIfLibraryUnknown()
+        throws Exception
     {
         onInitiateConnection();
 
@@ -254,7 +257,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldNotifyLibraryOfInitiatedConnection() throws Exception
+    public void shouldNotifyLibraryOfInitiatedConnection()
+        throws Exception
     {
         initiateConnection();
 
@@ -264,7 +268,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldReplyWithSocketConnectionError() throws Exception
+    public void shouldReplyWithSocketConnectionError()
+        throws Exception
     {
         server.close();
 
@@ -286,14 +291,15 @@ public class FramerTest
         {
             framer.doWork();
         }
-        catch (Exception e)
+        catch (final Exception ex)
         {
-            LangUtil.rethrowUnchecked(e);
+            LangUtil.rethrowUnchecked(ex);
         }
     }
 
     @Test
-    public void shouldIdentifyDuplicateInitiatedSessions() throws Exception
+    public void shouldIdentifyDuplicateInitiatedSessions()
+        throws Exception
     {
         initiateConnection();
 
@@ -309,7 +315,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldAcquireInitiatedClientsWhenLibraryDisconnects() throws Exception
+    public void shouldAcquireInitiatedClientsWhenLibraryDisconnects()
+        throws Exception
     {
         initiateConnection();
 
@@ -322,7 +329,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldAcquireAcceptedClientsWhenLibraryDisconnects() throws Exception
+    public void shouldAcquireAcceptedClientsWhenLibraryDisconnects()
+        throws Exception
     {
         aClientConnects();
 
@@ -335,7 +343,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldRetryNotifyingLibraryOfInitiateWhenBackPressured() throws Exception
+    public void shouldRetryNotifyingLibraryOfInitiateWhenBackPressured()
+        throws Exception
     {
         backPressureFirstSaveAttempts();
 
@@ -355,7 +364,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldManageGatewaySessions() throws Exception
+    public void shouldManageGatewaySessions()
+        throws Exception
     {
         openSocket();
 
@@ -367,7 +377,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldNotifyLibraryOfAuthenticatedGatewaySessions() throws Exception
+    public void shouldNotifyLibraryOfAuthenticatedGatewaySessions()
+        throws Exception
     {
         shouldManageGatewaySessions();
 
@@ -379,7 +390,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldRetryNotifyingLibraryOfAuthenticatedGatewaySessionsWhenBackPressured() throws Exception
+    public void shouldRetryNotifyingLibraryOfAuthenticatedGatewaySessionsWhenBackPressured()
+        throws Exception
     {
         shouldManageGatewaySessions();
 
@@ -395,7 +407,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldAcquireInitiatedClientsUponReleased() throws Exception
+    public void shouldAcquireInitiatedClientsUponReleased()
+        throws Exception
     {
         initiateConnection();
 
@@ -405,7 +418,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldRetryAcquiringInitiatedClientsUponReleasedWhenBackPressured() throws Exception
+    public void shouldRetryAcquiringInitiatedClientsUponReleasedWhenBackPressured()
+        throws Exception
     {
         initiateConnection();
 
@@ -420,7 +434,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldDisconnectConnectionsToFollowers() throws Exception
+    public void shouldDisconnectConnectionsToFollowers()
+        throws Exception
     {
         isLeader(false);
 
@@ -433,7 +448,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldHandoverSessionToLibraryUponRequest() throws IOException
+    public void shouldHandoverSessionToLibraryUponRequest()
+        throws IOException
     {
         aClientConnects();
 
@@ -441,7 +457,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldHandoverSessionToLibraryUponRequestWhenBackPressured() throws IOException
+    public void shouldHandoverSessionToLibraryUponRequestWhenBackPressured()
+        throws IOException
     {
         when(inboundPublication.saveManageConnection(
                 anyLong(),
@@ -488,7 +505,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldNotifyLibraryOfControlledSessionsUponDuplicateConnect() throws IOException
+    public void shouldNotifyLibraryOfControlledSessionsUponDuplicateConnect()
+        throws IOException
     {
         aClientConnects();
 
@@ -500,7 +518,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldNotifyLibraryOnlyOfControlledSessionsUponDuplicateConnect() throws IOException
+    public void shouldNotifyLibraryOnlyOfControlledSessionsUponDuplicateConnect()
+        throws IOException
     {
         aClientConnects();
 
@@ -510,7 +529,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldNotNotifyLibraryOfControlledSessionsUponDuplicateConnectAfterTimeout() throws Exception
+    public void shouldNotNotifyLibraryOfControlledSessionsUponDuplicateConnectAfterTimeout()
+        throws Exception
     {
         aClientConnects();
 
@@ -528,7 +548,8 @@ public class FramerTest
     }
 
     @Test
-    public void shouldNotNotifyLibraryOfControlledSessionsUponHeartbeatAfterTimeout() throws Exception
+    public void shouldNotNotifyLibraryOfControlledSessionsUponHeartbeatAfterTimeout()
+        throws Exception
     {
         // If a library has timed out we should notify it that it has no sessions
         aClientConnects();
@@ -557,12 +578,13 @@ public class FramerTest
         verify(inboundPublication).saveApplicationHeartbeat(LIBRARY_ID);
         saveControlNotification(times(1));
 
-        final List<SessionInfo> sessions = sessionCaptor.getValue();
-        assertThat(sessions, sessionMatcher);
+        assertThat(sessionCaptor.getValue(), sessionMatcher);
     }
 
+    @SuppressWarnings("unchecked")
     private void saveControlNotification(final VerificationMode times)
     {
+        sessionCaptor = ArgumentCaptor.forClass(List.class);
         verify(inboundPublication, times).saveControlNotification(eq(LIBRARY_ID), sessionCaptor.capture());
     }
 
@@ -697,7 +719,8 @@ public class FramerTest
         do
         {
             framer.doWork();
-        } while (server.accept() == null);
+        }
+        while (server.accept() == null);
 
         assertNotNull("Connection not completed yet", connectionId.getValue());
     }
