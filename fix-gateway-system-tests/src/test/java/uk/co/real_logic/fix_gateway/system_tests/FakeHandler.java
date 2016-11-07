@@ -168,6 +168,8 @@ public class FakeHandler
             {
                 return maybeSession.get().sessionId();
             }
+
+            Thread.yield();
         }
     }
 

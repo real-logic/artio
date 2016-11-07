@@ -21,7 +21,6 @@ import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.Reply;
@@ -143,7 +142,7 @@ public class ClusteredGatewaySystemTest
     @Test(timeout = TEST_TIMEOUT)
     public void shouldExchangeMessagesInCluster()
     {
-        connectFixSession();
+        connectFixSession(1);
 
         final long begin = System.nanoTime();
         roundtripAMessage(initiatingSession, acceptingOtfAcceptor);
@@ -159,11 +158,10 @@ public class ClusteredGatewaySystemTest
         allClusterNodesHaveSameIndexFiles();
     }
 
-    @Ignore
     @Test(timeout = TEST_TIMEOUT)
     public void shouldExchangeMessagesAfterPartitionHeals()
     {
-        connectFixSession();
+        connectFixSession(1);
 
         roundtripAMessage(acceptingSession, initiatingOtfAcceptor);
 
@@ -209,10 +207,15 @@ public class ClusteredGatewaySystemTest
         initiatingSession.close();
         acceptingSession.close();
         acceptingHandler.clearSessions();
+        initiatingHandler.clearSessions();
 
-        connectFixSession();
+        connectFixSession(2);
+
+        DebugLogger.log(GATEWAY_CLUSTER, "Connected New Fix Session\n");
 
         roundtripAMessage(acceptingSession, initiatingOtfAcceptor);
+
+        DebugLogger.log(GATEWAY_CLUSTER, "Message Roundtrip\n");
     }
 
     private boolean notConnectedTo(final String libraryChannel)
@@ -221,7 +224,7 @@ public class ClusteredGatewaySystemTest
             || !acceptingLibrary.currentAeronChannel().equals(libraryChannel);
     }
 
-    private void connectFixSession()
+    private void connectFixSession(final int initialSequenceNumber)
     {
         final Builder builder = SessionConfiguration.builder();
         builder.address("localhost", leader.tcpPort());
@@ -230,6 +233,7 @@ public class ClusteredGatewaySystemTest
             .credentials("bob", "Uv1aegoh")
             .senderCompId(INITIATOR_ID)
             .targetCompId(ACCEPTOR_ID)
+            .initialSequenceNumber(initialSequenceNumber)
             .build();
 
         final Reply<Session> reply = initiatingLibrary.initiate(config);
