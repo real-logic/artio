@@ -54,6 +54,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 import static io.aeron.Publication.BACK_PRESSURED;
@@ -100,8 +101,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final RetryManager retryManager = new RetryManager();
     private final List<ResetSequenceNumberCommand> replies = new ArrayList<>();
     private final Int2ObjectHashMap<LiveLibraryInfo> idToLibrary = new Int2ObjectHashMap<>();
+    private final List<LiveLibraryInfo> librariesBeingAcquired = new ArrayList<>();
     private final Consumer<AdminCommand> onAdminCommand = command -> command.execute(this);
     private final NewChannelHandler onNewConnectionFunc = this::onNewConnection;
+    private final Predicate<LiveLibraryInfo> retryAcquireLibrarySessionsFunc = this::retryAcquireLibrarySessions;
 
     private final TcpChannelSupplier channelSupplier;
     private final EpochClock clock;
@@ -279,12 +282,45 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             if (!library.isConnected())
             {
                 iterator.remove();
-                acquireLibrarySessions(library);
+                tryAcquireLibrarySessions(library);
                 saveLibraryTimeout(library);
             }
         }
 
+        total += removeIf(librariesBeingAcquired, retryAcquireLibrarySessionsFunc);
+
         return total;
+    }
+
+    private void tryAcquireLibrarySessions(final LiveLibraryInfo library)
+    {
+        final int librarySessionId = library.aeronSessionId();
+        final long libraryPosition = outboundLibrarySubscription.positionOf(librarySessionId);
+        final boolean indexed = indexedPosition(librarySessionId, libraryPosition);
+        if (indexed)
+        {
+            acquireLibrarySessions(library);
+        }
+        else
+        {
+            library.acquireAtPosition(libraryPosition);
+            librariesBeingAcquired.add(library);
+        }
+    }
+
+    private boolean retryAcquireLibrarySessions(final LiveLibraryInfo library)
+    {
+        final boolean indexed = indexedPosition(library.aeronSessionId(), library.acquireAtPosition());
+        if (indexed)
+        {
+            acquireLibrarySessions(library);
+        }
+        return indexed;
+    }
+
+    private boolean indexedPosition(final int aeronSessionId, final long position)
+    {
+        return sentSequenceNumberIndex.indexedPosition(aeronSessionId) >= position;
     }
 
     private void saveLibraryTimeout(final LibraryInfo library)
@@ -296,11 +332,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void acquireLibrarySessions(final LiveLibraryInfo library)
     {
-        // Ensure latest library message is indexed
-        final int librarySessionId = library.aeronSessionId();
-        final long position = outboundLibrarySubscription.positionOf(librarySessionId);
-        sentSequenceNumberIndex.awaitingIndexingUpTo(librarySessionId, position, idleStrategy);
-
         final List<GatewaySession> sessions = library.gatewaySessions();
         for (int i = 0, size = sessions.size(); i < size; i++)
         {

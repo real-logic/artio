@@ -73,13 +73,6 @@ public class SequenceNumberIndexReader
         final int aeronSessionId = header.sessionId();
         final long requiredPosition = header.position();
 
-        awaitingIndexingUpTo(aeronSessionId, requiredPosition, idleStrategy);
-    }
-
-    public void awaitingIndexingUpTo(final int aeronSessionId,
-                                     final long requiredPosition,
-                                     final IdleStrategy idleStrategy)
-    {
         while (indexedPosition(aeronSessionId) < requiredPosition)
         {
             idleStrategy.idle();
@@ -87,7 +80,7 @@ public class SequenceNumberIndexReader
         idleStrategy.reset();
     }
 
-    long indexedPosition(final int aeronSessionId)
+    public long indexedPosition(final int aeronSessionId)
     {
         return positions.indexedPosition(aeronSessionId);
     }

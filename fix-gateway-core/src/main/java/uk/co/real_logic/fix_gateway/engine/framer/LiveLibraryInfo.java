@@ -30,6 +30,7 @@ final class LiveLibraryInfo implements LibraryInfo
     private final int aeronSessionId;
     private final List<GatewaySession> allSessions = new CopyOnWriteArrayList<>();
     private final List<SessionInfo> unmodifiableAllSessions = unmodifiableList(allSessions);
+    private long acquireAtPosition;
 
     LiveLibraryInfo(final int libraryId,
                     final LivenessDetector livenessDetector,
@@ -96,5 +97,15 @@ final class LiveLibraryInfo implements LibraryInfo
     void onReconnect(final long timeInMs)
     {
         livenessDetector.onReconnect(timeInMs);
+    }
+
+    void acquireAtPosition(final long libraryPosition)
+    {
+        acquireAtPosition = libraryPosition;
+    }
+
+    public long acquireAtPosition()
+    {
+        return acquireAtPosition;
     }
 }
