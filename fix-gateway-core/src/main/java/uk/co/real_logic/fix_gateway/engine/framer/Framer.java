@@ -87,7 +87,6 @@ import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
  */
 class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 {
-
     private static final ByteBuffer CONNECT_ERROR;
     private static final List<SessionInfo> NO_SESSIONS = emptyList();
 
@@ -136,7 +135,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final int outboundLibraryFragmentLimit;
     private final int replayFragmentLimit;
     private final GatewaySessions gatewaySessions;
-    /** Null if inbound messages are not logged */
+    /**
+     * Null if inbound messages are not logged
+     */
     private final ReplayQuery inboundMessages;
     private final ErrorHandler errorHandler;
     private final GatewayPublication outboundPublication;
@@ -219,9 +220,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             channelSupplier = configuration.channelSupplier();
         }
-        catch (IOException e)
+        catch (final IOException ex)
         {
-            throw new IllegalArgumentException(e);
+            throw new IllegalArgumentException(ex);
         }
     }
 
@@ -230,7 +231,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return outboundClusterSubscription != null;
     }
 
-    @Override
     public int doWork() throws Exception
     {
         final long timeInMs = clock.time();
@@ -315,6 +315,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             acquireLibrarySessions(library);
         }
+
         return indexed;
     }
 
@@ -348,8 +349,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 sentSequenceNumber,
                 receivedSequenceNumber,
                 session.username(),
-                session.password()
-            );
+                session.password());
         }
     }
 
@@ -619,9 +619,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
-    public Action onLibraryConnect(final int libraryId,
-                                   final long correlationId,
-                                   final int aeronSessionId)
+    public Action onLibraryConnect(
+        final int libraryId,
+        final long correlationId,
+        final int aeronSessionId)
     {
         final Action action = retryManager.retry(correlationId);
         if (action != null)
@@ -651,8 +652,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySessions
                 .sessions()
                 .stream()
-                .map(gatewaySession ->
-                    (Continuation) () ->
+                .map((gatewaySession) ->
+                    (Continuation)() ->
                         saveLogon(libraryId, gatewaySession, UNK_SESSION, UNK_SESSION, LIBRARY_NOTIFICATION))
                 .collect(Collectors.toList()));
 
@@ -679,8 +680,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 return ABORT;
             }
 
-            return Pressure.apply(
-                inboundPublication.saveControlNotification(libraryId, NO_SESSIONS));
+            return Pressure.apply(inboundPublication.saveControlNotification(libraryId, NO_SESSIONS));
         }
     }
 
@@ -722,7 +722,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySessions.acquire(
                 session,
                 state,
-                (int) MILLISECONDS.toSeconds(heartbeatIntervalInMs),
+                (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs),
                 lastSentSequenceNumber,
                 lastReceivedSequenceNumber,
                 username,
@@ -815,6 +815,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final long connectionId = gatewaySession.connectionId();
             final String username = gatewaySession.username();
             final String password = gatewaySession.password();
+
             return inboundPublication.saveLogon(
                 libraryId,
                 connectionId,
@@ -884,6 +885,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         final long position = inboundPublication.saveRequestSessionReply(
             libraryId, SEQUENCE_NUMBER_TOO_HIGH, correlationId);
+
         if (position > 0)
         {
             errorHandler.onError(new IllegalStateException(String.format(
@@ -975,5 +977,4 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             retryManager.schedule(continuation);
         }
     }
-
 }
