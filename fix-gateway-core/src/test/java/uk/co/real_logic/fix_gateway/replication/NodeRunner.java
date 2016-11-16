@@ -63,12 +63,14 @@ class NodeRunner implements AutoCloseable
 
     NodeRunner(final int nodeId, final int... otherNodes)
     {
-        this.handler = (buffer, offset, length, header) ->
-        {
-            replicatedPosition = offset + length;
-            DebugLogger.log(RAFT, "%d: position %d\n", nodeId, replicatedPosition);
-            return CONTINUE;
-        };
+        this.handler =
+            (buffer, offset, length, header) ->
+            {
+                replicatedPosition = offset + length;
+                DebugLogger.log(RAFT, "%d: position %d\n", nodeId, replicatedPosition);
+                return CONTINUE;
+            };
+
         this.frameDropper = new FrameDropper(nodeId);
 
         final int termBufferLength = 1024 * 1024;
@@ -122,6 +124,13 @@ class NodeRunner implements AutoCloseable
         subscription = clusterNode.clusterStreams().subscription(1);
     }
 
+    public void close()
+    {
+        CloseHelper.close(aeron);
+        CloseHelper.close(mediaDriver);
+        cleanupDirectory(mediaDriver);
+    }
+
     public int poll(final int fragmentLimit)
     {
         final int work = clusterNode.doWork() + subscription.controlledPoll(handler, fragmentLimit);
@@ -129,17 +138,17 @@ class NodeRunner implements AutoCloseable
         return work;
     }
 
-    public void dropFrames(final boolean dropFrames)
+    void dropFrames(final boolean dropFrames)
     {
         frameDropper.dropFrames(dropFrames);
     }
 
-    public void dropFrames(final boolean dropInboundFrames, final boolean dropOutboundFrames)
+    void dropFrames(final boolean dropInboundFrames, final boolean dropOutboundFrames)
     {
         frameDropper.dropFrames(dropInboundFrames, dropOutboundFrames);
     }
 
-    public boolean isLeader()
+    boolean isLeader()
     {
         return clusterNode.isLeader();
     }
@@ -162,31 +171,24 @@ class NodeRunner implements AutoCloseable
         }
     }
 
-    public ClusterAgent raftNode()
-    {
-        return clusterNode;
-    }
-
-    public long replicatedPosition()
-    {
-        return replicatedPosition;
-    }
-
     public int leaderSessionId()
     {
         return raftNode().termState().leaderSessionId().get();
     }
 
-    public Int2IntHashMap nodeIdToId()
+    ClusterAgent raftNode()
     {
-        return nodeIdToId;
+        return clusterNode;
     }
 
-    public void close()
+    long replicatedPosition()
     {
-        CloseHelper.close(aeron);
-        CloseHelper.close(mediaDriver);
-        cleanupDirectory(mediaDriver);
+        return replicatedPosition;
+    }
+
+    Int2IntHashMap nodeIdToId()
+    {
+        return nodeIdToId;
     }
 
     private class NodeIdStasher implements NodeStateHandler

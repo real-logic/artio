@@ -64,9 +64,10 @@ public class ClusterReplicationTest
     @After
     public void shutdown()
     {
-        node1.close();
-        node2.close();
-        node3.close();
+        for (final NodeRunner nodeRunner : allNodes)
+        {
+            nodeRunner.close();
+        }
     }
 
     @Ignore
@@ -314,8 +315,7 @@ public class ClusterReplicationTest
 
     private void awaitLeadershipConsensus()
     {
-        while (!(node1.leaderSessionId() == node2.leaderSessionId() &&
-            node1.leaderSessionId() == node3.leaderSessionId()))
+        while (!(node1.leaderSessionId() == node2.leaderSessionId() && node1.leaderSessionId() == node3.leaderSessionId()))
         {
             Thread.yield();
             pollAll();
@@ -344,9 +344,7 @@ public class ClusterReplicationTest
             position = publication.tryClaim(BUFFER_SIZE, bufferClaim);
             if (position > 0)
             {
-                bufferClaim
-                    .buffer()
-                    .putBytes(bufferClaim.offset(), buffer, 0, BUFFER_SIZE);
+                bufferClaim.buffer().putBytes(bufferClaim.offset(), buffer, 0, BUFFER_SIZE);
                 bufferClaim.commit();
                 return position;
             }
