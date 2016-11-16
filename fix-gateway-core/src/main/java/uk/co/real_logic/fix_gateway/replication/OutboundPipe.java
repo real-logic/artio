@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Publication;
-import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
@@ -26,8 +25,6 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 class OutboundPipe implements ControlledFragmentHandler
 {
-    private final BufferClaim bufferClaim = new BufferClaim();
-
     private final Publication publication;
     private final ClusterStreams streams;
     private final ClusterableSubscription subscription;
@@ -51,15 +48,12 @@ class OutboundPipe implements ControlledFragmentHandler
 
     public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        final long position = publication.tryClaim(length, bufferClaim);
+        final long position = publication.offer(buffer, offset, length);
         if (position < 0)
         {
             return ABORT;
         }
 
-        bufferClaim.buffer().putBytes(bufferClaim.offset(), buffer, offset, length);
-
-        bufferClaim.commit();
         return CONTINUE;
     }
 }
