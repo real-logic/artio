@@ -40,5 +40,5 @@ logs/
 *acceptor-logs*
 acceptor_logs/
 
-*.jar
+
 *.jfr
