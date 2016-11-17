@@ -89,8 +89,7 @@ public class ClusterAgent implements Agent
             archiveReader,
             raftArchiver,
             nodeState,
-            nodeStateHandler
-        );
+            nodeStateHandler);
 
         candidate = new Candidate(
             nodeId,
@@ -111,18 +110,14 @@ public class ClusterAgent implements Agent
             termState,
             raftArchiver,
             nodeState,
-            nodeStateHandler
-        );
+            nodeStateHandler);
 
         transport.initialiseRoles(leader, candidate, follower);
 
         startAsFollower(timeInMs);
 
-        clusterStreams = new ClusterStreams(
-            transport, ourSessionId, termState.leaderSessionId(), dataPublication);
-
-        outboundPipe = new OutboundPipe(
-            configuration.copyToPublication(), clusterStreams());
+        clusterStreams = new ClusterStreams(transport, ourSessionId, termState.leaderSessionId(), dataPublication);
+        outboundPipe = new OutboundPipe(configuration.copyToPublication(), clusterStreams());
     }
 
     private abstract class NodeState
@@ -213,8 +208,7 @@ public class ClusterAgent implements Agent
 
             transport.injectFollowerSubscriptions(follower);
 
-            currentRole = follower.votedFor(votedFor)
-                .follow(timeInMs);
+            currentRole = follower.votedFor(votedFor).follow(timeInMs);
 
             onNoLeader();
             roleHandler.onTransitionToFollower(leadershipTerm);

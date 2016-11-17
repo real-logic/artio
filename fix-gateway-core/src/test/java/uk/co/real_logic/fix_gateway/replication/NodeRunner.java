@@ -31,6 +31,8 @@ import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 import static io.aeron.CommonContext.AERON_DIR_PROP_DEFAULT;
 import static io.aeron.driver.ThreadingMode.SHARED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
@@ -60,6 +62,9 @@ class NodeRunner implements AutoCloseable
     private final ClusterableSubscription subscription;
 
     private long replicatedPosition = -1;
+    private volatile boolean disabled = false;
+    private final AtomicLong enterCounter = new AtomicLong();
+    private final AtomicLong exitCounter = new AtomicLong();
 
     NodeRunner(final int nodeId, final int... otherNodes)
     {
@@ -126,6 +131,14 @@ class NodeRunner implements AutoCloseable
 
     public void close()
     {
+        disabled = true;
+
+        final long enterValue = enterCounter.get();
+        while (exitCounter.get() != enterValue)
+        {
+            Thread.yield();
+        }
+
         CloseHelper.close(aeron);
         CloseHelper.close(mediaDriver);
         cleanupDirectory(mediaDriver);
@@ -133,8 +146,22 @@ class NodeRunner implements AutoCloseable
 
     public int poll(final int fragmentLimit)
     {
-        final int work = clusterNode.doWork() + subscription.controlledPoll(handler, fragmentLimit);
-        validateRole();
+        int work = 0;
+        if (disabled)
+        {
+            return work;
+        }
+
+        enterCounter.incrementAndGet();
+        if (!disabled)
+        {
+            work += clusterNode.doWork();
+            work += subscription.controlledPoll(handler, fragmentLimit);
+
+            validateRole();
+        }
+        exitCounter.incrementAndGet();
+
         return work;
     }
 
