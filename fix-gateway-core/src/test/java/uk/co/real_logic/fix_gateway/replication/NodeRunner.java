@@ -31,7 +31,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.aeron.CommonContext.AERON_DIR_PROP_DEFAULT;
 import static io.aeron.driver.ThreadingMode.SHARED;
@@ -61,10 +61,8 @@ class NodeRunner implements AutoCloseable
     private final ControlledFragmentHandler handler;
     private final ClusterableSubscription subscription;
 
+    private final AtomicBoolean guard = new AtomicBoolean();
     private long replicatedPosition = -1;
-    private volatile boolean disabled = false;
-    private final AtomicLong enterCounter = new AtomicLong();
-    private final AtomicLong exitCounter = new AtomicLong();
 
     NodeRunner(final int nodeId, final int... otherNodes)
     {
@@ -79,8 +77,7 @@ class NodeRunner implements AutoCloseable
         this.frameDropper = new FrameDropper(nodeId);
 
         final int termBufferLength = 1024 * 1024;
-        final MediaDriver.Context context = new MediaDriver.Context();
-        context
+        final MediaDriver.Context context = new MediaDriver.Context()
             .threadingMode(SHARED)
             .sharedIdleStrategy(new YieldingIdleStrategy())
             .receiveChannelEndpointSupplier(frameDropper.newReceiveChannelEndpointSupplier())
@@ -131,10 +128,7 @@ class NodeRunner implements AutoCloseable
 
     public void close()
     {
-        disabled = true;
-
-        final long enterValue = enterCounter.get();
-        while (exitCounter.get() != enterValue)
+        while (!guard.compareAndSet(false, true))
         {
             Thread.yield();
         }
@@ -147,20 +141,21 @@ class NodeRunner implements AutoCloseable
     public int poll(final int fragmentLimit)
     {
         int work = 0;
-        if (disabled)
-        {
-            return work;
-        }
 
-        enterCounter.incrementAndGet();
-        if (!disabled)
+        if (guard.compareAndSet(false, true))
         {
-            work += clusterNode.doWork();
-            work += subscription.controlledPoll(handler, fragmentLimit);
+            try
+            {
+                work += clusterNode.doWork();
+                work += subscription.controlledPoll(handler, fragmentLimit);
 
-            validateRole();
+                validateRole();
+            }
+            finally
+            {
+                guard.set(false);
+            }
         }
-        exitCounter.incrementAndGet();
 
         return work;
     }
