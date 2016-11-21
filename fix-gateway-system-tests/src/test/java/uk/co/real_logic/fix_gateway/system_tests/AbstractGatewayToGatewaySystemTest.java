@@ -146,13 +146,14 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void pollUntilReply(final Reply<?> reply)
     {
-        while (reply.isExecuting())
-        {
-            pollLibraries();
-            ADMIN_IDLE_STRATEGY.idle();
-        }
+        assertEventuallyTrue(
+            "No reply from: " + reply,
+            () ->
+            {
+                pollLibraries();
 
-        ADMIN_IDLE_STRATEGY.reset();
+                return !reply.isExecuting();
+            });
     }
 
     protected void pollLibraries()
