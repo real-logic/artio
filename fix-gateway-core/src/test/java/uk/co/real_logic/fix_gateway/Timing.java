@@ -18,16 +18,14 @@ package uk.co.real_logic.fix_gateway;
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
-import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
 import static org.junit.Assert.fail;
 
 public final class Timing
 {
-    private static final long DEFAULT_TIMEOUT_IN_MS = hasDebuggerAttached() ? Long.MAX_VALUE : 5_000;
+    private static final long DEFAULT_TIMEOUT_IN_MS = hasDebuggerAttached() ? Long.MAX_VALUE : 7_000;
 
     public static <T> T withTimeout(
         final String message,
@@ -56,13 +54,6 @@ public final class Timing
     public static void assertEventuallyTrue(final String message, final BooleanSupplier condition)
     {
         assertEventuallyTrue(message, condition, DEFAULT_TIMEOUT_IN_MS);
-    }
-
-    public static void assertEventuallyEquals(
-        final String message, final int expectedCount, final IntSupplier supplier)
-    {
-        final AtomicInteger count = new AtomicInteger(0);
-        assertEventuallyTrue(message, () -> count.addAndGet(supplier.getAsInt()) >= expectedCount);
     }
 
     public static void assertEventuallyTrue(
