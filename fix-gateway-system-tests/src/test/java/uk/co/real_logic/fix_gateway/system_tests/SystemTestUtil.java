@@ -121,7 +121,7 @@ public final class SystemTestUtil
         final String acceptorId)
     {
         final Reply<Session> reply = initiate(library, port, initiatorId, acceptorId);
-        awaitReply(library, reply);
+        awaitLibraryReply(library, reply);
 
         return reply;
     }
@@ -142,21 +142,27 @@ public final class SystemTestUtil
         return library.initiate(config);
     }
 
-    public static void awaitReply(final FixLibrary library, final Reply<?> reply)
+    public static void awaitLibraryReply(final FixLibrary library, final Reply<?> reply)
     {
-        while (reply.isExecuting())
-        {
-            library.poll(1);
-            ADMIN_IDLE_STRATEGY.idle();
-        }
+        awaitLibraryReply(library, null, reply);
+    }
 
-        ADMIN_IDLE_STRATEGY.reset();
+    static void awaitLibraryReply(final FixLibrary library, final FixLibrary library2, final Reply<?> reply)
+    {
+        assertEventuallyTrue(
+            "No reply from: " + reply,
+            () ->
+            {
+                poll(library, library2);
+
+                return !reply.isExecuting();
+            });
     }
 
     public static SessionReplyStatus releaseToGateway(final FixLibrary library, final Session session)
     {
         final Reply<SessionReplyStatus> reply = library.releaseToGateway(session);
-        awaitReply(library, reply);
+        awaitLibraryReply(library, reply);
 
         return reply.resultIfPresent();
     }
@@ -276,7 +282,7 @@ public final class SystemTestUtil
         final FixLibrary library, final long sessionId, final int lastReceivedMsgSeqNum)
     {
         final Reply<SessionReplyStatus> reply = library.requestSession(sessionId, lastReceivedMsgSeqNum);
-        awaitReply(library, reply);
+        awaitLibraryReply(library, reply);
         assertEquals(reply.state(), COMPLETED);
 
         return reply.resultIfPresent();
@@ -334,11 +340,9 @@ public final class SystemTestUtil
     public static List<LibraryInfo> libraries(final FixEngine engine)
     {
         final Reply<List<LibraryInfo>> reply = engine.libraries();
-        while (reply.isExecuting())
-        {
-            ADMIN_IDLE_STRATEGY.idle();
-        }
-        ADMIN_IDLE_STRATEGY.reset();
+        assertEventuallyTrue(
+            "No reply from: " + reply,
+            () -> !reply.isExecuting());
 
         assertEquals(COMPLETED, reply.state());
 

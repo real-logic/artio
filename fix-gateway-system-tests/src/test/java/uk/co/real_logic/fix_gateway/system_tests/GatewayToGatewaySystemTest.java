@@ -320,12 +320,13 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         clearMessages();
 
-        while (acceptingLibrary.isConnected())
-        {
-            acceptingLibrary.poll(1);
-            ADMIN_IDLE_STRATEGY.idle();
-        }
-        ADMIN_IDLE_STRATEGY.reset();
+        assertEventuallyTrue(
+            "Library failed to disconnect",
+            () ->
+            {
+                acceptingLibrary.poll(1);
+                return !acceptingLibrary.isConnected();
+            });
 
         launchAcceptingEngine();
 

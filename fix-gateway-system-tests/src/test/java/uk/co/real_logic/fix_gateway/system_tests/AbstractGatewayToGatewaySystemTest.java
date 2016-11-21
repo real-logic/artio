@@ -146,20 +146,7 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void pollUntilReply(final Reply<?> reply)
     {
-        assertEventuallyTrue(
-            "No reply from: " + reply,
-            () ->
-            {
-                pollLibraries();
-
-                return !reply.isExecuting();
-            });
-    }
-
-    protected void pollLibraries()
-    {
-        initiatingLibrary.poll(LIBRARY_LIMIT);
-        acceptingLibrary.poll(LIBRARY_LIMIT);
+        awaitLibraryReply(initiatingLibrary, acceptingLibrary, reply);
     }
 
     protected void assertMessageResent()

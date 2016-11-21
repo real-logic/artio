@@ -241,7 +241,7 @@ public class ClusteredGatewaySystemTest
 
         final Reply<Session> reply = initiatingLibrary.initiate(config);
 
-        awaitReply(initiatingLibrary, reply);
+        awaitLibraryReply(initiatingLibrary, reply);
 
         initiatingSession = reply.resultIfPresent();
 

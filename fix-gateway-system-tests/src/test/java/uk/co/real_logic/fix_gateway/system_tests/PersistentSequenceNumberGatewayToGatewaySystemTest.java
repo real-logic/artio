@@ -34,6 +34,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.REPLICATED;
@@ -113,14 +114,14 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             final Reply<?> acceptingReply =
                 acceptingEngine.resetSequenceNumber(acceptingSession.id());
 
-            while (initiatingReply.isExecuting() || acceptingReply.isExecuting())
-            {
-                initiatingLibrary.poll(1);
-                acceptingLibrary.poll(1);
-
-                ADMIN_IDLE_STRATEGY.idle();
-            }
-            ADMIN_IDLE_STRATEGY.reset();
+            assertEventuallyTrue(
+                "Failed to reset sequence numbers",
+                () ->
+                {
+                    initiatingLibrary.poll(LIBRARY_LIMIT);
+                    acceptingLibrary.poll(LIBRARY_LIMIT);
+                    return (!initiatingReply.isExecuting() && !acceptingReply.isExecuting());
+                });
 
             assertEquals(COMPLETED, initiatingReply.state());
             assertEquals(COMPLETED, acceptingReply.state());
@@ -141,7 +142,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             .build();
 
         final Reply<Session> reply = initiatingLibrary.initiate(config);
-        awaitReply(initiatingLibrary, reply);
+        awaitLibraryReply(initiatingLibrary, reply);
         initiatingSession = reply.resultIfPresent();
 
         assertConnected(initiatingSession);
