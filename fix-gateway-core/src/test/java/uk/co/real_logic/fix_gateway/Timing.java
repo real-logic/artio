@@ -25,7 +25,7 @@ import static org.junit.Assert.fail;
 
 public final class Timing
 {
-    private static final long DEFAULT_TIMEOUT_IN_MS = hasDebuggerAttached() ? Long.MAX_VALUE : 7_000;
+    public static final long DEFAULT_TIMEOUT_IN_MS = hasDebuggerAttached() ? Long.MAX_VALUE : 5_000;
 
     public static <T> T withTimeout(
         final String message,

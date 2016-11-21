@@ -43,6 +43,7 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.optimalTmpDirName;
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
+import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
@@ -291,12 +292,22 @@ public final class SystemTestUtil
     public static void sessionLogsOn(
         final FixLibrary library1, final FixLibrary library2, final Session session)
     {
+        sessionLogsOn(library1, library2, session, DEFAULT_TIMEOUT_IN_MS);
+    }
+
+    static void sessionLogsOn(
+        final FixLibrary library1,
+        final FixLibrary library2,
+        final Session session,
+        final long timeoutInMs)
+    {
         assertEventuallyTrue("Session has failed to logon",
             () ->
             {
                 poll(library1, library2);
                 assertEquals(ACTIVE, session.state());
-            });
+            },
+            timeoutInMs);
     }
 
     public static FixLibrary newInitiatingLibrary(final int libraryAeronPort, final FakeHandler sessionHandler)

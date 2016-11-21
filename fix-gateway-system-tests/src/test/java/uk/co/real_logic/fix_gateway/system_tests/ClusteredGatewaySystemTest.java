@@ -21,6 +21,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.Reply;
@@ -156,6 +157,7 @@ public class ClusteredGatewaySystemTest
         allClusterNodesHaveSameIndexFiles();
     }
 
+    @Ignore
     @Test(timeout = TEST_TIMEOUT)
     public void shouldExchangeMessagesAfterPartitionHeals()
     {
@@ -241,12 +243,12 @@ public class ClusteredGatewaySystemTest
 
         final Reply<Session> reply = initiatingLibrary.initiate(config);
 
-        awaitLibraryReply(initiatingLibrary, reply);
-
+        awaitLibraryReply(initiatingLibrary, acceptingLibrary, reply);
+        assertEquals(Reply.State.COMPLETED, reply.state());
         initiatingSession = reply.resultIfPresent();
 
         assertConnected(initiatingSession);
-        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
+        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession, 10_000);
         final long sessionId = acceptingHandler.awaitSessionIdFor(INITIATOR_ID, ACCEPTOR_ID,
             () ->
             {
