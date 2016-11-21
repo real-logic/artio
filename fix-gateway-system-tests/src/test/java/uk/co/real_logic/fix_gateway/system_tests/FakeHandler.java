@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.fix_gateway.Timing;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.library.*;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
@@ -27,7 +28,6 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Deque;
-import java.util.Optional;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertNotEquals;
@@ -149,28 +149,25 @@ public class FakeHandler
         return sentPosition;
     }
 
-    public long awaitSessionIdFor(
+    long awaitSessionIdFor(
         final String initiatorId,
         final String acceptorId,
-        final Runnable poller)
+        final Runnable poller,
+        final int timeoutInMs)
     {
-        while (true)
-        {
-            poller.run();
-
-            final Optional<CompleteSessionId> maybeSession = completeSessionIds
-                .stream()
-                .filter((sid) ->
-                    sid.initiatorCompId().equals(initiatorId) && sid.acceptorCompId().equals(acceptorId))
-                .findFirst();
-
-            if (maybeSession.isPresent())
+        return Timing.withTimeout(
+            "Unable to get session id for: " + initiatorId + " - " + acceptorId,
+            () ->
             {
-                return maybeSession.get().sessionId();
-            }
+                poller.run();
 
-            Thread.yield();
-        }
+                return completeSessionIds
+                    .stream()
+                    .filter((sid) ->
+                        sid.initiatorCompId().equals(initiatorId) && sid.acceptorCompId().equals(acceptorId))
+                    .findFirst();
+            },
+            timeoutInMs).sessionId();
     }
 
     public String lastAcceptorCompId()

@@ -175,7 +175,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
                     acceptingLibrary.poll(1);
                     library2.poll(1);
                     initiatingLibrary.poll(1);
-                });
+                }, 1000);
 
             final Session acceptingSession2 = acquireSession(acceptingHandler, acceptingLibrary, sessionId);
 

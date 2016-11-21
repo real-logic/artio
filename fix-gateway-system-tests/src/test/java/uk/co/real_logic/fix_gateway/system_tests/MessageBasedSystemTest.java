@@ -89,7 +89,7 @@ public class MessageBasedSystemTest
 
                 logon(connection);
 
-                fakeHandler.awaitSessionIdFor(INITIATOR_ID, ACCEPTOR_ID, () -> library.poll(2));
+                fakeHandler.awaitSessionIdFor(INITIATOR_ID, ACCEPTOR_ID, () -> library.poll(2), 1000);
             }
         }
     }

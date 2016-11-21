@@ -19,19 +19,45 @@ import org.agrona.LangUtil;
 
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import java.util.function.IntSupplier;
+import java.util.function.Supplier;
 
 import static org.junit.Assert.fail;
 
 public final class Timing
 {
-    private static final long DEFAULT_TIMEOUT = hasDebuggerAttached() ? Long.MAX_VALUE : 5_000;
+    private static final long DEFAULT_TIMEOUT_IN_MS = hasDebuggerAttached() ? Long.MAX_VALUE : 5_000;
+
+    public static <T> T withTimeout(
+        final String message,
+        final Supplier<Optional<T>> supplier,
+        final long timeoutInMs)
+    {
+        final long endTime = System.currentTimeMillis() + timeoutInMs;
+
+        do
+        {
+            final Optional<T> value = supplier.get();
+            if (value.isPresent())
+            {
+                return value.get();
+            }
+
+            Thread.yield();
+        }
+        while (System.currentTimeMillis() < endTime);
+
+        fail(message);
+        // Never run:
+        throw new Error();
+    }
 
     public static void assertEventuallyTrue(final String message, final BooleanSupplier condition)
     {
-        assertEventuallyTrue(message, condition, DEFAULT_TIMEOUT, 10);
+        assertEventuallyTrue(message, condition, DEFAULT_TIMEOUT_IN_MS, 10);
     }
 
     public static void assertEventuallyEquals(
@@ -45,13 +71,13 @@ public final class Timing
         final String message,
         final Runnable runnable)
     {
-        assertEventuallyTrue(message, runnable, DEFAULT_TIMEOUT);
+        assertEventuallyTrue(message, runnable, DEFAULT_TIMEOUT_IN_MS);
     }
 
     public static void assertEventuallyTrue(
         final String message,
         final Runnable runnable,
-        final long timeoutMs)
+        final long timeoutInMs)
     {
         assertEventuallyTrue(message,
             () ->
@@ -66,7 +92,7 @@ public final class Timing
                     return false;
                 }
             },
-            timeoutMs,
+            timeoutInMs,
             10);
     }
 
@@ -76,9 +102,9 @@ public final class Timing
         final long timeout,
         final long sleepIntervalMs)
     {
-        final long startTime = System.currentTimeMillis();
+        final long endTime = System.currentTimeMillis() + timeout;
 
-        while ((System.currentTimeMillis() - startTime) < timeout)
+        do
         {
             if (condition.getAsBoolean())
             {
@@ -94,6 +120,7 @@ public final class Timing
                 LangUtil.rethrowUnchecked(ex);
             }
         }
+        while (System.currentTimeMillis() < endTime);
 
         fail(message);
     }
