@@ -38,6 +38,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
+import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
 import static uk.co.real_logic.fix_gateway.replication.RandomTimeout.MAX_TO_MIN_TIMEOUT;
@@ -161,10 +162,9 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         follower1.poll(FRAGMENT_LIMIT, 0);
 
-        while (follower1Subscription.controlledPoll(follower1Handler, FRAGMENT_LIMIT) == 0)
-        {
-            Thread.yield();
-        }
+        assertEventuallyTrue(
+            "follower 1 polls a message",
+            () -> follower1Subscription.controlledPoll(follower1Handler, FRAGMENT_LIMIT) > 0);
 
         verify(follower1Handler).onFragment(any(), eq(HEADER_LENGTH), eq(position - HEADER_LENGTH), any());
     }

@@ -20,7 +20,6 @@ import io.aeron.Publication;
 import io.aeron.Subscription;
 import io.aeron.driver.MediaDriver;
 import org.agrona.DirectBuffer;
-import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.NoOpIdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -39,6 +38,7 @@ import static org.agrona.CloseHelper.close;
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
+import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
 
@@ -66,7 +66,6 @@ public class AbstractReplicationTest
 
     protected MediaDriver mediaDriver;
     protected Aeron aeron;
-    protected ErrorHandler errorHandler = mock(ErrorHandler.class);
 
     protected Subscription controlSubscription()
     {
@@ -128,10 +127,9 @@ public class AbstractReplicationTest
 
     protected static void poll1(final Role role)
     {
-        while (role.poll(FRAGMENT_LIMIT, 0) == 0)
-        {
-
-        }
+        assertEventuallyTrue(
+            "Unable to poll 1 message",
+            () -> role.poll(FRAGMENT_LIMIT, 0) > 0);
     }
 
     protected Follower follower(
@@ -174,17 +172,5 @@ public class AbstractReplicationTest
     private static String logFileDir(final short id)
     {
         return IoUtil.tmpDirName() + "/node" + id;
-    }
-
-    protected static void run(final Role node1, final Role node2, final Role node3)
-    {
-        poll1(node1);
-        poll1(node2);
-        poll1(node3);
-
-        //noinspection StatementWithEmptyBody
-        while (poll(node1) + poll(node2) + poll(node3) > 0)
-        {
-        }
     }
 }

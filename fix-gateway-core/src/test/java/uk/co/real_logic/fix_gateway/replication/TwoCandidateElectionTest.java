@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.replication;
 import org.junit.Before;
 import org.junit.Test;
 
+import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.*;
 
 /**
@@ -114,7 +115,13 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
 
     private void runElection()
     {
-        run(node1, node2, node3);
+        poll1(node1);
+        poll1(node2);
+        poll1(node3);
+
+        assertEventuallyTrue(
+            "Timed out awaiting the end of the election",
+            () -> poll(node1) + poll(node2) + poll(node3) == 0);
     }
 
     private Candidate candidate(final short id, final ClusterAgent clusterNode, final TermState termState)

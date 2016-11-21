@@ -24,6 +24,7 @@ import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 
+import java.util.Optional;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -31,6 +32,8 @@ import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
+import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
 
 /**
  * Test simulated cluster.
@@ -52,10 +55,7 @@ public class ClusterReplicationTest
     @Before
     public void hasElectedLeader()
     {
-        while (!foundLeader())
-        {
-            pollAll();
-        }
+        assertEventuallyFindsLeaderIn(allNodes);
 
         final NodeRunner leader = leader();
         DebugLogger.log(RAFT, "Leader elected: %d\n\n", leader.raftNode().nodeId());
@@ -101,11 +101,13 @@ public class ClusterReplicationTest
         final NodeRunner leader = leader();
         final NodeRunner[] followers = followers();
 
-        while (!foundLeader(followers))
-        {
-            Thread.yield();
-            poll(followers);
-        }
+        assertEventuallyTrue(
+            "Failed to find leader",
+            () ->
+            {
+                poll(followers);
+                return foundLeader(followers);
+            });
 
         assertBecomesFollower(leader);
     }
@@ -216,14 +218,14 @@ public class ClusterReplicationTest
         final int[] nodeIds = { 1, 2, 3 };
         final int followerCount = nodeIds.length - 1;
         final NodeRunner leader = leader();
-        Int2IntHashMap nodeIdToId;
-        do
-        {
-            Thread.yield();
-            pollAll();
-            nodeIdToId = leader.nodeIdToId();
-        }
-        while (nodeIdToId.size() < followerCount);
+        final Int2IntHashMap nodeIdToId = leader.nodeIdToId();
+        assertEventuallyTrue(
+            "Never replicates node state",
+            () ->
+            {
+                pollAll();
+                return nodeIdToId.size() >= followerCount;
+            });
 
         final short leaderId = leader.raftNode().nodeId();
 
@@ -257,13 +259,13 @@ public class ClusterReplicationTest
         final NodeRunner... nodes)
     {
         final ClusterAgent[] clusterNodes = getRaftNodes(nodes);
-        while (!allMatch(clusterNodes, predicate))
-        {
-            Thread.yield();
-            poll(toPoll);
-        }
-
-        assertTrue(allMatch(clusterNodes, predicate));
+        assertEventuallyTrue(
+            "Predicate never true",
+            () ->
+            {
+                poll(toPoll);
+                return allMatch(clusterNodes, predicate);
+            });
     }
 
     private ClusterAgent[] getRaftNodes(final NodeRunner[] nodes)
@@ -278,20 +280,18 @@ public class ClusterReplicationTest
 
     private void assertElectsNewLeader(final NodeRunner... followers)
     {
-        while (!foundLeader(followers))
-        {
-            Thread.yield();
-            pollAll();
-        }
+        assertEventuallyFindsLeaderIn(followers);
     }
 
     private void assertMessageReceived()
     {
-        while (noNodesReceivedMessage())
-        {
-            Thread.yield();
-            pollAll();
-        }
+        assertEventuallyTrue(
+            "Message not received",
+            () ->
+            {
+                pollAll();
+                return !noNodesReceivedMessage();
+            });
     }
 
     private boolean noNodesReceivedMessage()
@@ -315,11 +315,15 @@ public class ClusterReplicationTest
 
     private void awaitLeadershipConsensus()
     {
-        while (!(node1.leaderSessionId() == node2.leaderSessionId() && node1.leaderSessionId() == node3.leaderSessionId()))
-        {
-            Thread.yield();
-            pollAll();
-        }
+        assertEventuallyTrue(
+            "Nodes don't agree on the leader",
+            () ->
+            {
+                pollAll();
+                final int leaderOfNode1 = node1.leaderSessionId();
+                return leaderOfNode1 == node2.leaderSessionId()
+                    && leaderOfNode1 == node3.leaderSessionId();
+            });
     }
 
     private void assertAllNodesSeeSameLeader()
@@ -338,19 +342,22 @@ public class ClusterReplicationTest
     {
         final ClusterablePublication publication = leader.raftNode().clusterStreams().publication(1);
 
-        long position;
-        while (true)
-        {
-            position = publication.tryClaim(BUFFER_SIZE, bufferClaim);
-            if (position > 0)
+        return withTimeout(
+            "Failed to send message",
+            () ->
             {
-                bufferClaim.buffer().putBytes(bufferClaim.offset(), buffer, 0, BUFFER_SIZE);
-                bufferClaim.commit();
-                return position;
-            }
+                final long position = publication.tryClaim(BUFFER_SIZE, bufferClaim);
+                if (position > 0)
+                {
+                    bufferClaim.buffer().putBytes(bufferClaim.offset(), buffer, 0, BUFFER_SIZE);
+                    bufferClaim.commit();
+                    return Optional.of(position);
+                }
 
-            pollAll();
-        }
+                pollAll();
+                return Optional.empty();
+            },
+            5_000L);
     }
 
     private void pollAll()
@@ -367,9 +374,15 @@ public class ClusterReplicationTest
         }
     }
 
-    private boolean foundLeader()
+    private void assertEventuallyFindsLeaderIn(final NodeRunner... nodes)
     {
-        return foundLeader(node1, node2, node3);
+        assertEventuallyTrue(
+            "Never finds leader",
+            () ->
+            {
+                pollAll();
+                return foundLeader(nodes);
+            });
     }
 
     private boolean foundLeader(NodeRunner... nodes)
@@ -380,11 +393,13 @@ public class ClusterReplicationTest
 
     private void eventuallyOneLeaderAndTwoFollowers()
     {
-        while (!oneLeaderAndTwoFollowers())
-        {
-            Thread.yield();
-            pollAll();
-        }
+        assertEventuallyTrue(
+            "failed to find one leader with two followers",
+            () ->
+            {
+                pollAll();
+                return oneLeaderAndTwoFollowers();
+            });
     }
 
     private boolean oneLeaderAndTwoFollowers()
