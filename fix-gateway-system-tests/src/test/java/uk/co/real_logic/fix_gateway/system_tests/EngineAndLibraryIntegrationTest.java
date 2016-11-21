@@ -174,8 +174,8 @@ public class EngineAndLibraryIntegrationTest
                 library.poll(5);
                 return !library.isConnected();
             },
-            AWAIT_TIMEOUT,
-            1);
+            AWAIT_TIMEOUT
+        );
     }
 
     private Matcher<LibraryInfo> matchesLibrary(final int libraryId)

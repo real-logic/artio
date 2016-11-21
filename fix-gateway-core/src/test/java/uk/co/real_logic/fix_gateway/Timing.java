@@ -15,8 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import org.agrona.LangUtil;
-
 import java.lang.management.ManagementFactory;
 import java.lang.management.RuntimeMXBean;
 import java.util.Optional;
@@ -57,7 +55,7 @@ public final class Timing
 
     public static void assertEventuallyTrue(final String message, final BooleanSupplier condition)
     {
-        assertEventuallyTrue(message, condition, DEFAULT_TIMEOUT_IN_MS, 10);
+        assertEventuallyTrue(message, condition, DEFAULT_TIMEOUT_IN_MS);
     }
 
     public static void assertEventuallyEquals(
@@ -92,15 +90,14 @@ public final class Timing
                     return false;
                 }
             },
-            timeoutInMs,
-            10);
+            timeoutInMs
+        );
     }
 
     public static void assertEventuallyTrue(
         final String message,
         final BooleanSupplier condition,
-        final long timeout,
-        final long sleepIntervalMs)
+        final long timeout)
     {
         final long endTime = System.currentTimeMillis() + timeout;
 
@@ -111,14 +108,7 @@ public final class Timing
                 return;
             }
 
-            try
-            {
-                Thread.sleep(sleepIntervalMs);
-            }
-            catch (final InterruptedException ex)
-            {
-                LangUtil.rethrowUnchecked(ex);
-            }
+            Thread.yield();
         }
         while (System.currentTimeMillis() < endTime);
 

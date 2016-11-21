@@ -52,6 +52,7 @@ import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREA
 import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_CLUSTER;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQUEST;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.closeAll;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
@@ -101,13 +102,10 @@ public class ClusteredGatewaySystemTest
             .map(FixEngineRunner::libraryChannel)
             .collect(toList()));
 
-        assertEventuallyTrue("Cluster failed to elect a leader",
-            () ->
-            {
-                final Optional<FixEngineRunner> maybeLeader = findNewLeader();
-                maybeLeader.ifPresent((leader) -> this.leader = leader);
-                return maybeLeader.isPresent();
-            });
+        this.leader = withTimeout(
+            "Cluster failed to elect a leader",
+            this::findNewLeader,
+            2000);
 
         acceptingLibrary = FixLibrary.connect(configuration);
 
@@ -169,35 +167,25 @@ public class ClusteredGatewaySystemTest
         oldLeader.disable();
         logLeader(oldLeader, "Disabled old old leader (%s) [%s]\n");
 
-        while (true)
-        {
-            initiatingLibrary.poll(1);
-            acceptingLibrary.poll(1);
-
-            final Optional<FixEngineRunner> leader = findNewLeader();
-            if (leader.isPresent())
+        withTimeout(
+            "Cluster failed to elect a leader",
+            () ->
             {
-                this.leader = leader.get();
-                break;
-            }
-
-            ADMIN_IDLE_STRATEGY.idle();
-        }
-
-        ADMIN_IDLE_STRATEGY.reset();
+                pollLibraries();
+                return findNewLeader();
+            },
+            2000);
 
         logLeader(leader, "Elected new leader: (%s) [%s]\n");
 
         final String libraryChannel = leader.libraryChannel();
-        while (notConnectedTo(libraryChannel))
-        {
-            initiatingLibrary.poll(1);
-            acceptingLibrary.poll(1);
-
-            ADMIN_IDLE_STRATEGY.idle();
-        }
-
-        ADMIN_IDLE_STRATEGY.reset();
+        assertEventuallyTrue(
+            "Library Failed to connect to Engine",
+            () ->
+            {
+                pollLibraries();
+                return notConnectedTo(libraryChannel);
+            });
 
         DebugLogger.log(GATEWAY_CLUSTER, "Library has connected to new leader\n");
 
@@ -216,6 +204,12 @@ public class ClusteredGatewaySystemTest
         roundtripAMessage(acceptingSession, initiatingOtfAcceptor);
 
         DebugLogger.log(GATEWAY_CLUSTER, "Message Roundtrip\n");
+    }
+
+    private void pollLibraries()
+    {
+        initiatingLibrary.poll(1);
+        acceptingLibrary.poll(1);
     }
 
     private void logLeader(final FixEngineRunner oldLeader, final String formatString)

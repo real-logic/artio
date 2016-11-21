@@ -327,8 +327,8 @@ public final class SystemTestUtil
                 }
                 return libraries(engine).size() == count + 1;
             },
-            AWAIT_TIMEOUT,
-            1);
+            AWAIT_TIMEOUT
+        );
     }
 
     public static List<LibraryInfo> libraries(final FixEngine engine)
@@ -354,8 +354,8 @@ public final class SystemTestUtil
                 library.poll(5);
                 return library.isConnected();
             },
-            AWAIT_TIMEOUT,
-            1);
+            AWAIT_TIMEOUT
+        );
     }
 
     public static void assertReceivedHeartbeat(
