@@ -91,11 +91,13 @@ public class AbstractGatewayToGatewaySystemTest
 
     private void awaitMessage(final int sequenceNumber, final Session session, final FixLibrary library)
     {
-        while (session.lastReceivedMsgSeqNum() < sequenceNumber)
-        {
-            Thread.yield();
-            library.poll(LIBRARY_LIMIT);
-        }
+        assertEventuallyTrue(
+            "Library Never reaches " + sequenceNumber,
+            () ->
+            {
+                library.poll(LIBRARY_LIMIT);
+                return session.lastReceivedMsgSeqNum() >= sequenceNumber;
+            });
     }
 
     protected void assertSessionsDisconnected()
