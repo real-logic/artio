@@ -252,7 +252,7 @@ public class ClusteredGatewaySystemTest
             {
                 acceptingLibrary.poll(1);
                 initiatingLibrary.poll(1);
-            }, 5000);
+            }, 10_000);
         acceptingSession = acquireSession(acceptingHandler, acceptingLibrary, sessionId);
         assertEquals(ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());
         assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());

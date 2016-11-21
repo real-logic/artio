@@ -26,6 +26,7 @@ import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
@@ -33,6 +34,7 @@ import static uk.co.real_logic.fix_gateway.FixMatchers.hasConnectionId;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
@@ -228,23 +230,18 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void acceptingEngineHasSession()
     {
-        LibraryInfo engine;
-
-        while (true)
-        {
-            final List<LibraryInfo> libraries = SystemTestUtil.libraries(acceptingEngine);
-            if (libraries.size() == 1)
+        final LibraryInfo engine = withTimeout(
+            "accepting engine has failed to acquire session",
+            () ->
             {
-                engine = libraries.get(0);
-                assertEquals(ENGINE_LIBRARY_ID, engine.libraryId());
-                break;
-            }
+                final List<LibraryInfo> libraries = SystemTestUtil.libraries(acceptingEngine);
+                return libraries.size() == 1
+                     ? Optional.of(libraries.get(0))
+                     : Optional.empty();
+            },
+            5_000);
 
-            ADMIN_IDLE_STRATEGY.idle();
-        }
-
-        ADMIN_IDLE_STRATEGY.reset();
-
+        assertEquals(ENGINE_LIBRARY_ID, engine.libraryId());
         assertThat(engine.sessions(), contains(hasConnectionId(acceptingSession.connectionId())));
     }
 }
