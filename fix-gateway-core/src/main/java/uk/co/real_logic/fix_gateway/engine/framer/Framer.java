@@ -868,13 +868,19 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     expectedNumberOfMessages,
                     lastReceivedSeqNum,
                     replayFromSequenceNumber,
-                    session));
+                    session,
+                    catchupTimeout()));
         }
         else
         {
             continuations.add(() ->
                 CatchupReplayer.sendOk(inboundPublication, correlationId, session, libraryId));
         }
+    }
+
+    private long catchupTimeout()
+    {
+        return configuration.replyTimeoutInMs() / 2;
     }
 
     private long sequenceNumberTooHigh(

@@ -57,6 +57,7 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final int lastReceivedSeqNum;
     private final int replayFromSequenceNumber;
     private final GatewaySession session;
+    private final long catchupEndTimeInMs;
 
     private int replayedMessages = 0;
     private State state = State.REPLAYING;
@@ -70,7 +71,8 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final int expectedNumberOfMessages,
         final int lastReceivedSeqNum,
         final int replayFromSequenceNumber,
-        final GatewaySession session)
+        final GatewaySession session,
+        final long catchupTimeoutInMs)
     {
         this.inboundMessages = inboundMessages;
         this.inboundPublication = inboundPublication;
@@ -81,6 +83,7 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         this.lastReceivedSeqNum = lastReceivedSeqNum;
         this.replayFromSequenceNumber = replayFromSequenceNumber;
         this.session = session;
+        this.catchupEndTimeInMs = System.currentTimeMillis() + catchupTimeoutInMs;
     }
 
     public Action onFragment(
@@ -128,16 +131,15 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
                 // adding 1 to convert to inclusive numbering
                 final int beginSeqNo = replayFromSequenceNumber + 1 + replayedMessages;
-                final int numberOfMessages =
-                    inboundMessages.query(
-                        this,
-                        session.sessionId(),
-                        beginSeqNo,
-                        lastReceivedSeqNum);
+                inboundMessages.query(
+                    this,
+                    session.sessionId(),
+                    beginSeqNo,
+                    lastReceivedSeqNum);
 
                 if (replayedMessages < expectedNumberOfMessages)
                 {
-                    if (numberOfMessages == 0)
+                    if (System.currentTimeMillis() > catchupEndTimeInMs)
                     {
                         state = State.SEND_MISSING;
                         return sendMissingMessages();
