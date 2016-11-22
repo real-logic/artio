@@ -20,6 +20,7 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.CollectionUtil;
 import org.agrona.concurrent.Agent;
+import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.replication.ReservedValue;
 
@@ -40,17 +41,20 @@ public class Indexer implements Agent, ControlledFragmentHandler
     private final ArchiveReader archiveReader;
     private final ClusterableSubscription subscription;
     private final String agentNamePrefix;
+    private final CompletionPosition completionPosition;
 
     public Indexer(
         final List<Index> indices,
         final ArchiveReader archiveReader,
         final ClusterableSubscription subscription,
-        final String agentNamePrefix)
+        final String agentNamePrefix,
+        final CompletionPosition completionPosition)
     {
         this.indices = indices;
         this.archiveReader = archiveReader;
         this.subscription = subscription;
         this.agentNamePrefix = agentNamePrefix;
+        this.completionPosition = completionPosition;
         catchIndexUp();
     }
 
@@ -94,9 +98,37 @@ public class Indexer implements Agent, ControlledFragmentHandler
 
     public void onClose()
     {
+        quiesce();
+
         indices.forEach(Index::close);
         archiveReader.close();
         subscription.close();
+    }
+
+    private void quiesce()
+    {
+        while (!completionPosition.hasCompleted())
+        {
+            Thread.yield();
+        }
+
+        // We know that any remaining data to quiesce at this point must be in the subscription.
+        subscription.controlledPoll(this::quiesceFragment, Integer.MAX_VALUE);
+    }
+
+    private Action quiesceFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    {
+        if (completedPosition(header.sessionId()) <= header.position())
+        {
+            return onFragment(buffer, offset, length, header);
+        }
+
+        return CONTINUE;
+    }
+
+    private long completedPosition(final int aeronSessionId)
+    {
+        return completionPosition.positions().get(aeronSessionId);
     }
 
     public String roleName()

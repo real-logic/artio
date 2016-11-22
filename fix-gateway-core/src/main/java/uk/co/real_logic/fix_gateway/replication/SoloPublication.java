@@ -41,4 +41,9 @@ class SoloPublication extends ClusterablePublication
     {
         return dataPublication.sessionId();
     }
+
+    public long position()
+    {
+        return dataPublication.position();
+    }
 }

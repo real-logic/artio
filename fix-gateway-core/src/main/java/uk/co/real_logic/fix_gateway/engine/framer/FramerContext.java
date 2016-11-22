@@ -126,7 +126,9 @@ public class FramerContext
             engineDescriptorStore,
             replicatedConnectionIds,
             endPointFactory.inboundPublication(),
-            configuration.agentNamePrefix());
+            configuration.agentNamePrefix(),
+            engineContext.inboundCompletionPosition(),
+            engineContext.outboundCompletionPosition());
     }
 
     public Agent framer()

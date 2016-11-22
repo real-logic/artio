@@ -65,6 +65,11 @@ class ClusterPublication extends ClusterablePublication
         return streamId;
     }
 
+    public long position()
+    {
+        return dataPublication.position();
+    }
+
     public void close()
     {
     }

@@ -48,8 +48,11 @@ public abstract class EngineContext implements AutoCloseable
     protected final ErrorHandler errorHandler;
     protected final FixCounters fixCounters;
     protected final Aeron aeron;
-    protected final SequenceNumberIndexWriter sentSequenceNumberIndex;
-    protected final SequenceNumberIndexWriter receivedSequenceNumberIndex;
+
+    private final SequenceNumberIndexWriter sentSequenceNumberIndex;
+    private final SequenceNumberIndexWriter receivedSequenceNumberIndex;
+    private final CompletionPosition inboundcompletionPosition = new CompletionPosition();
+    private final CompletionPosition outboundCompletionPosition = new CompletionPosition();
 
     protected Streams inboundLibraryStreams;
     protected Streams outboundLibraryStreams;
@@ -231,7 +234,8 @@ public abstract class EngineContext implements AutoCloseable
                 receivedSequenceNumberIndex),
             inboundArchiveReader,
             inboundLibraryStreams.subscription(),
-            configuration.agentNamePrefix());
+            configuration.agentNamePrefix(),
+            inboundcompletionPosition);
 
         final List<Index> outboundIndices = new ArrayList<>();
         outboundIndices.add(newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, OUTBOUND_LIBRARY_STREAM));
@@ -244,7 +248,8 @@ public abstract class EngineContext implements AutoCloseable
             outboundIndices,
             outboundArchiveReader,
             outboundLibraryStreams.subscription(),
-            configuration.agentNamePrefix());
+            configuration.agentNamePrefix(),
+            outboundCompletionPosition);
     }
 
     public abstract Streams outboundLibraryStreams();
@@ -263,4 +268,14 @@ public abstract class EngineContext implements AutoCloseable
     public abstract void start();
 
     public abstract GatewayPublication inboundLibraryPublication();
+
+    public CompletionPosition inboundCompletionPosition()
+    {
+        return inboundcompletionPosition;
+    }
+
+    public CompletionPosition outboundCompletionPosition()
+    {
+        return outboundCompletionPosition;
+    }
 }

@@ -951,6 +951,11 @@ public class GatewayPublication extends ClaimablePublication
         return dataPublication.id();
     }
 
+    public long position()
+    {
+        return dataPublication.position();
+    }
+
     private byte[] bytes(final String host)
     {
         if (host == null)

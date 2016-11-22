@@ -38,7 +38,7 @@ class ClusterContext extends EngineContext
     private final String libraryAeronChannel;
     private final Publication inboundPublication;
     private final StreamIdentifier dataStream;
-    private final ClusterAgent node;
+    private final ClusterAgent agent;
 
     ClusterContext(
         final EngineConfiguration configuration,
@@ -60,8 +60,8 @@ class ClusterContext extends EngineContext
             dataStream = new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID);
             libraryAeronChannel = configuration.libraryAeronChannel();
             inboundPublication = aeron.addPublication(libraryAeronChannel, INBOUND_LIBRARY_STREAM);
-            node = node(configuration, fixCounters, aeron, channel, engineDescriptorStore);
-            newStreams(node.clusterStreams());
+            agent = node(configuration, fixCounters, aeron, channel, engineDescriptorStore);
+            newStreams(agent.clusterStreams());
             newIndexers(inboundArchiveReader(), outboundArchiveReader(), null);
 
             replayer = newReplayer(replayPublication, outboundArchiveReader());
@@ -85,7 +85,7 @@ class ClusterContext extends EngineContext
                 new CompositeAgent(
                     inboundIndexer,
                     outboundIndexer,
-                    node,
+                    agent,
                     replayer,
                     localInboundArchiver,
                     localOutboundArchiver,
@@ -153,7 +153,7 @@ class ClusterContext extends EngineContext
 
     public ClusterableStreams streams()
     {
-        return node.clusterStreams();
+        return agent.clusterStreams();
     }
 
     public void start()

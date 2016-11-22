@@ -29,6 +29,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
@@ -169,7 +170,9 @@ public class FramerTest
             mock(EngineDescriptorStore.class),
             new LongHashSet(SessionIds.MISSING),
             inboundPublication,
-            DEFAULT_NAME_PREFIX);
+            DEFAULT_NAME_PREFIX,
+            mock(CompletionPosition.class),
+            mock(CompletionPosition.class));
 
         when(sessionIds.onLogon(any())).thenReturn(SESSION_ID);
     }

@@ -42,4 +42,7 @@ public abstract class ClusterablePublication implements Closeable
     public abstract void close();
 
     public abstract int id();
+
+    public abstract long position();
+
 }
