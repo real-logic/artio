@@ -25,25 +25,30 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 class UnitOfWork implements Continuation
 {
-    private final List<Continuation> continuationList;
+    private List<Continuation> workList;
 
     private int index = 0;
 
-    UnitOfWork(final Continuation... continuations)
+    UnitOfWork(final Continuation... work)
     {
-        this(Arrays.asList(continuations));
+        work(work);
     }
 
-    UnitOfWork(final List<Continuation> continuationList)
+    void work(final Continuation... work)
     {
-        this.continuationList = continuationList;
+        workList = Arrays.asList(work);
+    }
+
+    UnitOfWork(final List<Continuation> workList)
+    {
+        this.workList = workList;
     }
 
     public Action attemptToAction()
     {
-        for (final int size = continuationList.size(); index < size; index++)
+        for (final int size = workList.size(); index < size; index++)
         {
-            final Continuation continuation = continuationList.get(index);
+            final Continuation continuation = workList.get(index);
             final Action action = continuation.attemptToAction();
 
             if (action == ABORT)

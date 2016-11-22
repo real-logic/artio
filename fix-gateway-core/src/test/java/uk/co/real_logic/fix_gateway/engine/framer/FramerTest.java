@@ -363,12 +363,36 @@ public class FramerTest
 
         assertEquals(CONTINUE, onInitiateConnection());
 
+        // Requires 4 steps to complete
         framer.doWork();
         framer.doWork();
         framer.doWork();
         framer.doWork();
 
         notifyLibraryOfConnection(times(2));
+    }
+
+    @Test
+    public void shouldWaitForSequenceNumberIndexingProcessToUpdate() throws Exception
+    {
+        setupHeader();
+
+        sentIndexedToPosition(0, POSITION + 1);
+
+        libraryConnects();
+
+        initiateConnection();
+
+        framer.doWork();
+        framer.doWork();
+
+        notifyLibraryOfConnection(times(1));
+    }
+
+    private void setupHeader()
+    {
+        when(header.sessionId()).thenReturn(AERON_SESSION_ID);
+        when(header.position()).thenReturn(POSITION);
     }
 
     @Test
@@ -803,8 +827,8 @@ public class FramerTest
         when(receivedSequenceNumberIndex.lastKnownSequenceNumber(anyInt())).thenReturn(1);
     }
 
-    private void sentIndexedToPosition(final long position)
+    private void sentIndexedToPosition(final long position, final Long ... positions)
     {
-        when(sentSequenceNumberIndex.indexedPosition(anyInt())).thenReturn(position);
+        when(sentSequenceNumberIndex.indexedPosition(anyInt())).thenReturn(position, positions);
     }
 }

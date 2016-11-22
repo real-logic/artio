@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import io.aeron.Publication;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
@@ -25,7 +26,6 @@ import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.EpochClock;
-import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.LivenessDetector;
@@ -130,7 +130,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final QueuedPipe<AdminCommand> adminCommands;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
-    private final IdleStrategy idleStrategy;
     private final int inboundBytesReceivedLimit;
     private final int outboundLibraryFragmentLimit;
     private final int replayFragmentLimit;
@@ -192,7 +191,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.adminCommands = adminCommands;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
-        this.idleStrategy = configuration.framerIdleStrategy();
 
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
         this.replayFragmentLimit = configuration.replayFragmentLimit();
@@ -453,49 +451,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         return;
                     }
 
-                    try
-                    {
-                        final long connectionId = this.nextConnectionId++;
-
-                        final CompositeKey sessionKey = sessionIdStrategy.onLogon(
-                            senderCompId, senderSubId, senderLocationId, targetCompId);
-                        final long sessionId = sessionIds.onLogon(sessionKey);
-                        if (sessionId == SessionIds.DUPLICATE_SESSION)
-                        {
-                            saveError(DUPLICATE_SESSION, libraryId, correlationId);
-                            return;
-                        }
-
-                        final GatewaySession session =
-                            setupConnection(
-                                channel, connectionId, sessionId, sessionKey, libraryId, INITIATOR, sequenceNumberType);
-
-                        library.addSession(session);
-
-                        sentSequenceNumberIndex.awaitingIndexingUpTo(header, idleStrategy);
-
-                        final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-                        final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-                        session.onLogon(sessionId, sessionKey, username, password, heartbeatIntervalInS);
-
-                        final UnitOfWork unitOfWork = new UnitOfWork(
-                            () -> inboundPublication.saveManageConnection(
-                                connectionId, sessionId, address.toString(), libraryId, INITIATOR,
-                                lastSentSequenceNumber, lastReceivedSequenceNumber,
-                                CONNECTED, heartbeatIntervalInS, correlationId),
-                            () -> inboundPublication.saveLogon(
-                                libraryId, connectionId, sessionId,
-                                lastSentSequenceNumber, lastReceivedSequenceNumber,
-                                senderCompId, senderSubId, senderLocationId, targetCompId,
-                                username, password, LogonStatus.NEW)
-                        );
-
-                        retryManager.schedule(unitOfWork);
-                    }
-                    catch (final Exception e)
-                    {
-                        saveError(EXCEPTION, libraryId, correlationId, e);
-                    }
+                    onConnectionOpen(
+                        libraryId, senderCompId, senderSubId, senderLocationId, targetCompId, sequenceNumberType,
+                        username, password, heartbeatIntervalInS, correlationId, header, library, address, channel);
                 });
         }
         catch (final Exception e)
@@ -506,6 +464,94 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         return CONTINUE;
+    }
+
+    private void onConnectionOpen(
+        final int libraryId,
+        final String senderCompId,
+        final String senderSubId,
+        final String senderLocationId,
+        final String targetCompId,
+        final SequenceNumberType sequenceNumberType,
+        final String username,
+        final String password,
+        final int heartbeatIntervalInS,
+        final long correlationId,
+        final Header header,
+        final LiveLibraryInfo library,
+        final InetSocketAddress address,
+        final TcpChannel channel)
+    {
+        try
+        {
+            final long connectionId = this.nextConnectionId++;
+
+            final CompositeKey sessionKey = sessionIdStrategy.onLogon(
+                senderCompId, senderSubId, senderLocationId, targetCompId);
+            final long sessionId = sessionIds.onLogon(sessionKey);
+            if (sessionId == SessionIds.DUPLICATE_SESSION)
+            {
+                saveError(DUPLICATE_SESSION, libraryId, correlationId);
+                return;
+            }
+
+            final GatewaySession session =
+                setupConnection(
+                    channel, connectionId, sessionId, sessionKey, libraryId, INITIATOR, sequenceNumberType);
+
+            library.addSession(session);
+
+            final class FinishInitiatingConnection extends UnitOfWork
+            {
+
+                private int lastSentSequenceNumber;
+                private int lastReceivedSequenceNumber;
+
+                private FinishInitiatingConnection()
+                {
+                    work(
+                        this::checkLoggerUpToDate,
+                        this::saveManageConnection,
+                        this::saveLogon);
+                }
+
+                private long saveLogon()
+                {
+                    return inboundPublication.saveLogon(
+                        libraryId, connectionId, sessionId,
+                        lastSentSequenceNumber, lastReceivedSequenceNumber,
+                        senderCompId, senderSubId, senderLocationId, targetCompId,
+                        username, password, LogonStatus.NEW);
+                }
+
+                private long saveManageConnection()
+                {
+                    return inboundPublication.saveManageConnection(
+                        connectionId, sessionId, address.toString(), libraryId, INITIATOR,
+                        lastSentSequenceNumber, lastReceivedSequenceNumber,
+                        CONNECTED, heartbeatIntervalInS, correlationId);
+                }
+
+                private long checkLoggerUpToDate()
+                {
+                    if (indexedPosition(header.sessionId(), header.position()))
+                    {
+                        lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+                        lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+                        session.onLogon(sessionId, sessionKey, username, password, heartbeatIntervalInS);
+                        return 0;
+                    }
+
+                    return Publication.BACK_PRESSURED;
+                }
+            }
+
+            retryManager.schedule(new FinishInitiatingConnection());
+        }
+        catch (final Exception e)
+        {
+            saveError(EXCEPTION, libraryId, correlationId, e);
+        }
     }
 
     private void saveError(final GatewayError error, final int libraryId, final long replyToId)
