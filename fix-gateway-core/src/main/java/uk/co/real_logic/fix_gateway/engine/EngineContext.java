@@ -52,7 +52,8 @@ public abstract class EngineContext implements AutoCloseable
     private final SequenceNumberIndexWriter sentSequenceNumberIndex;
     private final SequenceNumberIndexWriter receivedSequenceNumberIndex;
     private final CompletionPosition inboundcompletionPosition = new CompletionPosition();
-    private final CompletionPosition outboundCompletionPosition = new CompletionPosition();
+    private final CompletionPosition outboundLibraryCompletionPosition = new CompletionPosition();
+    private final CompletionPosition outboundClusterCompletionPosition = new CompletionPosition();
 
     protected Streams inboundLibraryStreams;
     protected Streams outboundLibraryStreams;
@@ -249,7 +250,7 @@ public abstract class EngineContext implements AutoCloseable
             outboundArchiveReader,
             outboundLibraryStreams.subscription(),
             configuration.agentNamePrefix(),
-            outboundCompletionPosition);
+            outboundLibraryCompletionPosition);
     }
 
     public abstract Streams outboundLibraryStreams();
@@ -274,8 +275,13 @@ public abstract class EngineContext implements AutoCloseable
         return inboundcompletionPosition;
     }
 
-    public CompletionPosition outboundCompletionPosition()
+    public CompletionPosition outboundLibraryCompletionPosition()
     {
-        return outboundCompletionPosition;
+        return outboundLibraryCompletionPosition;
+    }
+
+    public CompletionPosition outboundClusterCompletionPosition()
+    {
+        return outboundClusterCompletionPosition;
     }
 }

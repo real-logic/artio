@@ -31,10 +31,7 @@ import org.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.Pressure;
-import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
-import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
-import uk.co.real_logic.fix_gateway.engine.SessionInfo;
+import uk.co.real_logic.fix_gateway.engine.*;
 import uk.co.real_logic.fix_gateway.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
@@ -128,7 +125,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ClusterableStreams clusterableStreams;
     private final String agentNamePrefix;
     private final CompletionPosition inboundCompletionPosition;
-    private final CompletionPosition outboundCompletionPosition;
+    private final CompletionPosition outboundLibraryCompletionPosition;
+    private final CompletionPosition outboundClusterCompletionPosition;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionIds sessionIds;
     private final QueuedPipe<AdminCommand> adminCommands;
@@ -173,7 +171,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final GatewayPublication inboundPublication,
         final String agentNamePrefix,
         final CompletionPosition inboundCompletionPosition,
-        final CompletionPosition outboundCompletionPosition)
+        final CompletionPosition outboundLibraryCompletionPosition,
+        final CompletionPosition outboundClusterCompletionPosition)
     {
         this.clock = clock;
         this.outboundTimer = outboundTimer;
@@ -192,7 +191,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.clusterableStreams = clusterableStreams;
         this.agentNamePrefix = agentNamePrefix;
         this.inboundCompletionPosition = inboundCompletionPosition;
-        this.outboundCompletionPosition = outboundCompletionPosition;
+        this.outboundLibraryCompletionPosition = outboundLibraryCompletionPosition;
+        this.outboundClusterCompletionPosition = outboundClusterCompletionPosition;
         this.senderEndPoints = new SenderEndPoints();
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
@@ -1034,16 +1034,21 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         inboundCompletionPosition.complete(inboundPositions);
 
         final Long2LongHashMap outboundPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
-        final ClusterableSubscription positionSubscription =
-            isClustered() ? outboundClusterSubscription : outboundLibrarySubscription;
         idToLibrary.values().forEach(liveLibraryInfo ->
         {
             final int aeronSessionId = liveLibraryInfo.aeronSessionId();
-            final long position = positionSubscription.positionOf(aeronSessionId);
+            final long position = outboundLibrarySubscription.positionOf(aeronSessionId);
             outboundPositions.put(aeronSessionId, position);
         });
+        outboundLibraryCompletionPosition.complete(outboundPositions);
 
-        outboundCompletionPosition.complete(outboundPositions);
+        if (isClustered())
+        {
+            final Long2LongHashMap outboundClusterPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
+            final long position = outboundClusterSubscription.positionOf(OUTBOUND_LIBRARY_STREAM);
+            outboundClusterPositions.put(OUTBOUND_LIBRARY_STREAM, position);
+            outboundClusterCompletionPosition.complete(outboundClusterPositions);
+        }
     }
 
     public String roleName()

@@ -172,6 +172,7 @@ public class FramerTest
             inboundPublication,
             DEFAULT_NAME_PREFIX,
             mock(CompletionPosition.class),
+            mock(CompletionPosition.class),
             mock(CompletionPosition.class));
 
         when(sessionIds.onLogon(any())).thenReturn(SESSION_ID);

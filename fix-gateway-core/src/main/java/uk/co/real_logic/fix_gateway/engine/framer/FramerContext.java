@@ -128,7 +128,8 @@ public class FramerContext
             endPointFactory.inboundPublication(),
             configuration.agentNamePrefix(),
             engineContext.inboundCompletionPosition(),
-            engineContext.outboundCompletionPosition());
+            engineContext.outboundLibraryCompletionPosition(),
+            engineContext.outboundClusterCompletionPosition());
     }
 
     public Agent framer()
