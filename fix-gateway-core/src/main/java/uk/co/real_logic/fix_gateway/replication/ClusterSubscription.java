@@ -259,6 +259,11 @@ class ClusterSubscription extends ClusterableSubscription
         return messageFilter.consensusPosition;
     }
 
+    public long positionOf(final int aeronSessionId)
+    {
+        return currentConsensusPosition();
+    }
+
     int currentLeadershipTermId()
     {
         return currentLeadershipTermId;

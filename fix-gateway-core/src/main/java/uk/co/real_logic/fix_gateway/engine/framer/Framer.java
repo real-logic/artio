@@ -1034,7 +1034,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         inboundCompletionPosition.complete(inboundPositions);
 
         final Long2LongHashMap outboundPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
-        // TODO: calculate the outbound positions
+        final ClusterableSubscription positionSubscription =
+            isClustered() ? outboundClusterSubscription : outboundLibrarySubscription;
+        idToLibrary.values().forEach(liveLibraryInfo ->
+        {
+            final int aeronSessionId = liveLibraryInfo.aeronSessionId();
+            final long position = positionSubscription.positionOf(aeronSessionId);
+            outboundPositions.put(aeronSessionId, position);
+        });
+
         outboundCompletionPosition.complete(outboundPositions);
     }
 
