@@ -38,10 +38,6 @@ public class DecimalFloatDecodingTest
             {"55.3600", 5536L, 2},
             {"0055.36", 5536L, 2},
             {"0055.3600", 5536L, 2},
-            {"  55.36 ", 5536L, 2},
-            {"  55.3600", 5536L, 2},
-            {" 0055.36 ", 5536L, 2},
-            {"  0055.3600 ", 5536L, 2},
             {".995", 995L, 3},
             {"0.9950", 995L, 3},
             {"25", 25L, 0},
@@ -54,7 +50,9 @@ public class DecimalFloatDecodingTest
             {".6", 6L, 1},
             {".06", 6L, 2},
             {"-.6", -6L, 1},
-            {"-.06", -6L, 2}
+            {"-.06", -6L, 2},
+            {"10", 10L, 0},
+            {"-10", -10L, 0},
         });
     }
 
@@ -73,6 +71,19 @@ public class DecimalFloatDecodingTest
     public void canDecodeDecimalFloat()
     {
         final byte[] bytes = input.getBytes(US_ASCII);
+        canDecodeDecimalFloatFromBytes(bytes);
+    }
+
+    @Test
+    public void canDecodeDecimalFloatWithSpacePrefixOrSuffix()
+    {
+        final String paddedInput = "  " + this.input + "  ";
+        final byte[] bytes = paddedInput.getBytes(US_ASCII);
+        canDecodeDecimalFloatFromBytes(bytes);
+    }
+
+    private void canDecodeDecimalFloatFromBytes(final byte[] bytes)
+    {
         final MutableAsciiBuffer string = new MutableAsciiBuffer(new byte[bytes.length + 2]);
         string.putBytes(1, bytes);
         final DecimalFloat price = new DecimalFloat();
