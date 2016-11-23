@@ -26,6 +26,7 @@ import io.aeron.protocol.HeaderFlyweight;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.IoUtil;
+import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
 import org.junit.Before;
@@ -35,6 +36,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
 import uk.co.real_logic.fix_gateway.replication.ReservedValue;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
@@ -99,6 +101,7 @@ public class ArchiverTest
     private final ControlledFragmentHandler fragmentHandler = mock(ControlledFragmentHandler.class);
     private final ArgumentCaptor<DirectBuffer> bufferCaptor = ArgumentCaptor.forClass(DirectBuffer.class);
     private final ArgumentCaptor<Integer> offsetCaptor = ArgumentCaptor.forClass(Integer.class);
+    private final CompletionPosition completionPosition = mock(CompletionPosition.class);
 
     private final int size;
     private final UnsafeBuffer buffer;
@@ -124,6 +127,9 @@ public class ArchiverTest
     @Before
     public void setUp()
     {
+        when(completionPosition.hasCompleted()).thenReturn(true);
+        when(completionPosition.positions()).thenReturn(new Long2LongHashMap(CompletionPosition.MISSING_VALUE));
+
         deleteLogFileDir();
 
         mediaDriver = launchMediaDriver(TERM_LENGTH);
@@ -137,7 +143,8 @@ public class ArchiverTest
         filteredArchiveReader = new ArchiveReader(
             metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream, RESERVED_VALUE);
         archiver = new Archiver(
-            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream, DEFAULT_NAME_PREFIX);
+            metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream, DEFAULT_NAME_PREFIX,
+            completionPosition);
 
         publication = aeron.addPublication(CHANNEL, STREAM_ID);
         archiver.subscription(aeron.addSubscription(CHANNEL, STREAM_ID));

@@ -66,10 +66,14 @@ class ClusterContext extends EngineContext
 
             replayer = newReplayer(replayPublication, outboundArchiveReader());
 
-            localInboundArchiver = archiver(new StreamIdentifier(libraryAeronChannel, INBOUND_LIBRARY_STREAM));
+            localInboundArchiver = archiver(
+                new StreamIdentifier(libraryAeronChannel, INBOUND_LIBRARY_STREAM),
+                inboundCompletionPosition());
             localInboundArchiver.subscription(
                 aeron.addSubscription(libraryAeronChannel, INBOUND_LIBRARY_STREAM));
-            localOutboundArchiver = archiver(new StreamIdentifier(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
+            localOutboundArchiver = archiver(
+                new StreamIdentifier(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM),
+                outboundLibraryCompletionPosition());
             localOutboundArchiver.subscription(
                 aeron.addSubscription(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
 
@@ -114,7 +118,8 @@ class ClusterContext extends EngineContext
 
         final ArchiveReader dataArchiveReader = archiveReader(dataStream);
         final Archiver archiver = new Archiver(
-            newArchiveMetaData(logFileDir), cacheNumSets, cacheSetSize, dataStream, configuration.agentNamePrefix());
+            newArchiveMetaData(logFileDir), cacheNumSets, cacheSetSize, dataStream, configuration.agentNamePrefix(),
+            outboundClusterCompletionPosition());
 
         final ClusterNodeConfiguration clusterNodeConfiguration = new ClusterNodeConfiguration()
             .nodeId(configuration.nodeId())

@@ -130,20 +130,20 @@ class SoloContext extends EngineContext
     {
         if (configuration.logInboundMessages())
         {
-            inboundArchiver = addArchiver(inboundStreamId);
+            inboundArchiver = addArchiver(inboundStreamId, inboundCompletionPosition());
             inboundArchiveReader = archiveReader(inboundStreamId);
         }
 
         if (configuration.logOutboundMessages())
         {
-            outboundArchiver = addArchiver(outboundStreamId);
+            outboundArchiver = addArchiver(outboundStreamId, outboundLibraryCompletionPosition());
             outboundArchiveReader = archiveReader(outboundStreamId);
         }
     }
 
-    private Archiver addArchiver(final StreamIdentifier streamId)
+    private Archiver addArchiver(final StreamIdentifier streamId, final CompletionPosition completionPosition)
     {
-        final Archiver archiver = archiver(streamId);
+        final Archiver archiver = archiver(streamId, completionPosition);
         archivers.add(archiver);
         return archiver;
     }

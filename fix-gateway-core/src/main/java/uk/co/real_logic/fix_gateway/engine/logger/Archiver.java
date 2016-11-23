@@ -23,8 +23,10 @@ import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.agrona.collections.Int2ObjectCache;
+import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
 import uk.co.real_logic.fix_gateway.replication.ReservedValue;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
@@ -56,6 +58,7 @@ public class Archiver implements Agent, RawBlockHandler
     private final Int2ObjectCache<SessionArchiver> sessionIdToArchive;
     private final StreamIdentifier streamId;
     private final String agentNamePrefix;
+    private final CompletionPosition completionPosition;
     private final LogDirectoryDescriptor directoryDescriptor;
     private final CRC32 checksum = new CRC32();
 
@@ -69,12 +72,14 @@ public class Archiver implements Agent, RawBlockHandler
         final int cacheNumSets,
         final int cacheSetSize,
         final StreamIdentifier streamId,
-        final String agentNamePrefix)
+        final String agentNamePrefix,
+        final CompletionPosition completionPosition)
     {
         this.metaData = metaData;
         this.directoryDescriptor = metaData.directoryDescriptor();
         this.streamId = streamId;
         this.agentNamePrefix = agentNamePrefix;
+        this.completionPosition = completionPosition;
         sessionIdToArchive = new Int2ObjectCache<>(cacheNumSets, cacheSetSize, SessionArchiver::close);
     }
 
@@ -160,9 +165,37 @@ public class Archiver implements Agent, RawBlockHandler
 
     public void onClose()
     {
+        quiesce();
+
         CloseHelper.close(subscription);
         sessionIdToArchive.clear();
         metaData.close();
+    }
+
+    private void quiesce()
+    {
+        while (!completionPosition.hasCompleted())
+        {
+            Thread.yield();
+        }
+
+        if (subscription == null)
+        {
+            return;
+        }
+
+        final Long2LongHashMap completedPositions = completionPosition.positions();
+        subscription.forEachImage(image ->
+        {
+            final int aeronSessionId = image.sessionId();
+            final long currentPosition = image.position();
+            final long completedPosition = completedPositions.get(aeronSessionId);
+            int toPoll = (int) (completedPosition - currentPosition);
+            while (toPoll > 0)
+            {
+                toPoll -= image.rawPoll(this, toPoll);
+            }
+        });
     }
 
     public class SessionArchiver implements AutoCloseable, RawBlockHandler

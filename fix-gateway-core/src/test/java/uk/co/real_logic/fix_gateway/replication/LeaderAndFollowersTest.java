@@ -26,6 +26,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
@@ -100,7 +101,8 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
             DEFAULT_LOGGER_CACHE_NUM_SETS,
             DEFAULT_LOGGER_CACHE_SET_SIZE,
             streamId,
-            DEFAULT_NAME_PREFIX)
+            DEFAULT_NAME_PREFIX,
+            mock(CompletionPosition.class))
             .subscription(subscription);
 
         leader = new Leader(

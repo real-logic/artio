@@ -197,14 +197,15 @@ public abstract class EngineContext implements AutoCloseable
         return new AgentRunner(configuration.loggerIdleStrategy(), errorHandler, null, loggingAgent);
     }
 
-    protected Archiver archiver(final StreamIdentifier streamId)
+    protected Archiver archiver(final StreamIdentifier streamId, final CompletionPosition completionPosition)
     {
         return new Archiver(
             LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
             configuration.loggerCacheNumSets(),
             configuration.loggerCacheSetSize(),
             streamId,
-            configuration.agentNamePrefix());
+            configuration.agentNamePrefix(),
+            completionPosition);
     }
 
     protected Replayer newReplayer(final Publication replayPublication, final ArchiveReader archiveReader)

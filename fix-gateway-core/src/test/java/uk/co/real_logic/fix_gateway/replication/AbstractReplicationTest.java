@@ -27,6 +27,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
 import org.junit.Before;
 import uk.co.real_logic.fix_gateway.TestFixtures;
+import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.engine.logger.LogDirectoryDescriptor;
@@ -145,7 +146,8 @@ public class AbstractReplicationTest
             DEFAULT_LOGGER_CACHE_NUM_SETS,
             DEFAULT_LOGGER_CACHE_SET_SIZE,
             streamId,
-            DEFAULT_NAME_PREFIX)
+            DEFAULT_NAME_PREFIX,
+            mock(CompletionPosition.class))
             .subscription(subscription);
 
         return new Follower(
