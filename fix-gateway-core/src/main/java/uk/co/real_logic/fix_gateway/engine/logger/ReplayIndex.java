@@ -61,7 +61,7 @@ public class ReplayIndex implements Index
     private final IndexedPositionWriter positionWriter;
     private final IndexedPositionReader positionReader;
 
-    private final Long2ObjectCache<SessionIndex> sessionToIndex;
+    private final Long2ObjectCache<SessionIndex> fixSessionIdToIndex;
 
     private final String logFileDir;
     private final int requiredStreamId;
@@ -84,7 +84,7 @@ public class ReplayIndex implements Index
         this.indexFileSize = indexFileSize;
         this.bufferFactory = bufferFactory;
         this.positionBuffer = positionBuffer;
-        sessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
+        fixSessionIdToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
         positionWriter = new IndexedPositionWriter(positionBuffer, errorHandler);
         positionReader = new IndexedPositionReader(positionBuffer);
     }
@@ -118,7 +118,7 @@ public class ReplayIndex implements Index
             final int alignedLength = BitUtil.align(srcLength, FrameDescriptor.FRAME_ALIGNMENT);
             final long beginPosition = endPosition - alignedLength;
 
-            sessionToIndex
+            fixSessionIdToIndex
                 .computeIfAbsent(messageFrame.session(), newSessionIndex)
                 .onRecord(streamId, aeronSessionId, beginPosition, endPosition, fixHeader.msgSeqNum());
         }
@@ -126,7 +126,7 @@ public class ReplayIndex implements Index
 
     public void close()
     {
-        sessionToIndex.clear();
+        fixSessionIdToIndex.clear();
         IoUtil.unmap(positionBuffer.byteBuffer());
     }
 
