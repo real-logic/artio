@@ -21,7 +21,6 @@ import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.Reply;
@@ -63,7 +62,6 @@ import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 public class ClusteredGatewaySystemTest
 {
     private static final int CLUSTER_SIZE = 3;
-    private static final int TEST_TIMEOUT = 20_000;
 
     private int libraryAeronPort = unusedPort();
     private List<FixEngineRunner> cluster;
@@ -138,7 +136,7 @@ public class ClusteredGatewaySystemTest
         return IntStream.range(0, CLUSTER_SIZE);
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test(timeout = 20_000)
     public void shouldExchangeMessagesInCluster()
     {
         connectFixSession(1);
@@ -157,8 +155,7 @@ public class ClusteredGatewaySystemTest
         allClusterNodesHaveSameIndexFiles();
     }
 
-    @Ignore
-    @Test(timeout = TEST_TIMEOUT)
+    @Test(timeout = 40_000)
     public void shouldExchangeMessagesAfterPartitionHeals()
     {
         connectFixSession(1);

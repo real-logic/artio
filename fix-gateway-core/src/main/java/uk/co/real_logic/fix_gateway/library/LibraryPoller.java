@@ -253,6 +253,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private void connect(final int reconnectAttempts)
     {
+        DebugLogger.log(LIBRARY_CONNECT, "Attempting to connect to %s", currentAeronChannel);
+
         try
         {
             initStreams();
