@@ -44,6 +44,7 @@ import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 public class Archiver implements Agent, RawBlockHandler
 {
+
     public interface ArchivedPositionHandler
     {
         void onArchivedPosition(int aeronSessionId, long endPosition, int length);
@@ -61,10 +62,11 @@ public class Archiver implements Agent, RawBlockHandler
     private final CompletionPosition completionPosition;
     private final LogDirectoryDescriptor directoryDescriptor;
     private final CRC32 checksum = new CRC32();
+    private final DataHeaderFlyweight header = new DataHeaderFlyweight();
 
     private ArchivedPositionHandler positionHandler = (aeronSessionId, endPosition, length) -> {};
 
-    private DataHeaderFlyweight header = new DataHeaderFlyweight();
+    private boolean isClosed = false;
     private Subscription subscription;
 
     public Archiver(
@@ -165,11 +167,16 @@ public class Archiver implements Agent, RawBlockHandler
 
     public void onClose()
     {
-        quiesce();
+        if (!isClosed)
+        {
+            quiesce();
 
-        CloseHelper.close(subscription);
-        sessionIdToArchive.clear();
-        metaData.close();
+            sessionIdToArchive.clear();
+            metaData.close();
+            CloseHelper.close(subscription);
+
+            isClosed = true;
+        }
     }
 
     private void quiesce()
@@ -194,6 +201,8 @@ public class Archiver implements Agent, RawBlockHandler
             while (toPoll > 0)
             {
                 toPoll -= image.rawPoll(this, toPoll);
+
+                Thread.yield();
             }
         });
     }

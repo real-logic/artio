@@ -102,6 +102,7 @@ public class ArchiverTest
     private final ArgumentCaptor<DirectBuffer> bufferCaptor = ArgumentCaptor.forClass(DirectBuffer.class);
     private final ArgumentCaptor<Integer> offsetCaptor = ArgumentCaptor.forClass(Integer.class);
     private final CompletionPosition completionPosition = mock(CompletionPosition.class);
+    private final Long2LongHashMap completedPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
 
     private final int size;
     private final UnsafeBuffer buffer;
@@ -128,7 +129,7 @@ public class ArchiverTest
     public void setUp()
     {
         when(completionPosition.hasCompleted()).thenReturn(true);
-        when(completionPosition.positions()).thenReturn(new Long2LongHashMap(CompletionPosition.MISSING_VALUE));
+        when(completionPosition.positions()).thenReturn(completedPositions);
 
         deleteLogFileDir();
 
@@ -248,9 +249,14 @@ public class ArchiverTest
         corruptLogFile();
 
         final long readPosition = archiveReader.readUpTo(
-            publication.sessionId(), (long)HEADER_LENGTH, endPosition, fragmentHandler);
+            sessionId(), (long)HEADER_LENGTH, endPosition, fragmentHandler);
 
         assertNothingRead(readPosition, CORRUPT_LOG);
+    }
+
+    private int sessionId()
+    {
+        return publication.sessionId();
     }
 
     private void corruptLogFile() throws IOException
@@ -271,7 +277,7 @@ public class ArchiverTest
 
         try
         {
-            archiveReader.read(publication.sessionId(), (long)HEADER_LENGTH,
+            archiveReader.read(sessionId(), (long)HEADER_LENGTH,
                 (buffer, offset, length, header) ->
                 {
                     throw new RuntimeException();
@@ -342,7 +348,7 @@ public class ArchiverTest
 
         final long begin = HEADER_LENGTH;
         final long end = begin + lengthOfTwoMessages() + offsetIntoNextMessage;
-        final long res = archiveReader.readUpTo(publication.sessionId(), begin, end, fragmentHandler);
+        final long res = archiveReader.readUpTo(sessionId(), begin, end, fragmentHandler);
 
         verify(fragmentHandler, times).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
 
@@ -410,7 +416,7 @@ public class ArchiverTest
         try
         {
             archiveReader.readBlock(
-                publication.sessionId(),
+                sessionId(),
                 (long)HEADER_LENGTH, size,
                 (buffer, offset, length, sessionId, termId) ->
                 {
@@ -573,6 +579,21 @@ public class ArchiverTest
         assertFalse("Patched the future", patchBuffer(TERM_LENGTH, isArray));
     }
 
+    @Test
+    public void shouldArchiveToCompletedPositionWhenClosed()
+    {
+        final long endOfFirstBuffer = writeAndArchiveBuffer(INITIAL_VALUE);
+
+        final long endOfSecondBuffer = writeBuffer(PATCH_VALUE);
+
+        completedPositions.put(sessionId(), endOfSecondBuffer);
+
+        archiver.onClose();
+
+        final long startOfSecondBuffer = endOfFirstBuffer + HEADER_LENGTH;
+        assertReadsValueAt(PATCH_VALUE, startOfSecondBuffer);
+    }
+
     private int lengthOfTwoMessages()
     {
         return alignTerm(size) * 2 + HEADER_LENGTH;
@@ -585,7 +606,7 @@ public class ArchiverTest
 
     private long read(final long position, final ArchiveReader archiveReader)
     {
-        return archiveReader.read(publication.sessionId(), position, fragmentHandler);
+        return archiveReader.read(sessionId(), position, fragmentHandler);
     }
 
     private boolean readBlockTo(final long position)
@@ -595,7 +616,7 @@ public class ArchiverTest
 
     private boolean readBlockTo(final long position, final ArchiveReader archiveReader)
     {
-        return archiveReader.readBlock(publication.sessionId(), position, size, blockHandler);
+        return archiveReader.readBlock(sessionId(), position, size, blockHandler);
     }
 
     private void removeLogFiles()
@@ -625,7 +646,7 @@ public class ArchiverTest
         final int frameLength = HEADER_LENGTH + OFFSET_WITHIN_MESSAGE + SIZE_OF_INT;
         final int dataOffset = HEADER_LENGTH + OFFSET_WITHIN_MESSAGE;
 
-        final int sessionId = publication.sessionId();
+        final int sessionId = sessionId();
         final int streamId = publication.streamId();
         final int positionBitsToShift = numberOfTrailingZeros(publication.termBufferLength());
         final int initialTermId = publication.initialTermId();
@@ -654,7 +675,7 @@ public class ArchiverTest
 
     private void assertPosition(final long endPosition)
     {
-        assertEquals(endPosition, archiver.positionOf(publication.sessionId()));
+        assertEquals(endPosition, archiver.positionOf(sessionId()));
     }
 
     private long archiveBeyondEndOfTerm()
@@ -743,7 +764,7 @@ public class ArchiverTest
         final boolean hasRead = readBlockTo(position, archiveReader);
 
         verify(blockHandler).onBlock(
-            bufferCaptor.capture(), offsetCaptor.capture(), eq(size), eq(publication.sessionId()), anyInt());
+            bufferCaptor.capture(), offsetCaptor.capture(), eq(size), eq(sessionId()), anyInt());
 
         assertReadValue(value, position, hasRead);
     }
