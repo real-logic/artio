@@ -48,6 +48,7 @@ class SenderEndPoint implements AutoCloseable
     private final int maxBytesInBuffer;
 
     private int libraryId;
+    private long sessionId;
 
     SenderEndPoint(
         final long connectionId,
@@ -225,5 +226,15 @@ class SenderEndPoint implements AutoCloseable
     long bytesInBuffer()
     {
         return bytesInBuffer.get();
+    }
+
+    void sessionId(final long sessionId)
+    {
+        this.sessionId = sessionId;
+    }
+
+    public long sessionId()
+    {
+        return sessionId;
     }
 }

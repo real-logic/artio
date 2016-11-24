@@ -110,6 +110,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Timer sendTimer;
 
     private final ControlledFragmentHandler outboundLibrarySubscriber;
+    private final ControlledFragmentHandler outboundReplaySubscriber;
     private final ControlledFragmentHandler outboundClusterSubscriber;
 
     private final ReceiverEndPoints receiverEndPoints = new ReceiverEndPoints();
@@ -222,6 +223,33 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             outboundClusterSubscriber = null;
         }
 
+        // We lookup replayed message by session id, since the connection id may have changed
+        // if it's a persistent session.
+        outboundReplaySubscriber = ProtocolSubscription.of(new ProtocolHandler()
+        {
+            public Action onMessage(
+                final DirectBuffer buffer,
+                final int offset,
+                final int length,
+                final int libraryId,
+                final long connectionId,
+                final long sessionId,
+                final int messageType,
+                final long timestamp,
+                final long position)
+            {
+                senderEndPoints.onReplayMessage(libraryId, sessionId, buffer, offset, length);
+
+                return CONTINUE;
+            }
+
+            public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+            {
+                // Should never be replayed.
+                return Action.CONTINUE;
+            }
+        });
+
         try
         {
             channelSupplier = configuration.channelSupplier();
@@ -258,7 +286,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private int sendReplayMessages()
     {
-        return replaySubscription.controlledPoll(outboundLibrarySubscriber, replayFragmentLimit);
+        return replaySubscription.controlledPoll(outboundReplaySubscriber, replayFragmentLimit);
     }
 
     private int sendOutboundMessages()
