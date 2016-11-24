@@ -97,7 +97,7 @@ public class ReplayQuery implements AutoCloseable
         private int query(final ControlledFragmentHandler handler, final int beginSeqNo, final int endSeqNo)
         {
             messageFrameHeader.wrap(buffer, 0);
-            int index = messageFrameHeader.encodedLength();
+            int index = MessageHeaderDecoder.ENCODED_LENGTH;
             final int actingBlockLength = messageFrameHeader.blockLength();
             final int actingVersion = messageFrameHeader.version();
             final int requiredStreamId = ReplayQuery.this.requiredStreamId;
@@ -136,7 +136,7 @@ public class ReplayQuery implements AutoCloseable
 
                     count++;
                 }
-                index = indexRecord.limit();
+                index += actingBlockLength;
             }
         }
 

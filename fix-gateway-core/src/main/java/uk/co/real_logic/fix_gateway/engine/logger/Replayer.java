@@ -24,6 +24,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
@@ -237,13 +238,20 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     {
         for (int i = 0; i < maxClaimAttempts; i++)
         {
-            if (publication.tryClaim(newLength, claim) > 0)
+            final long position = publication.tryClaim(newLength, claim);
+            if (position > 0)
             {
                 idleStrategy.reset();
                 return true;
             }
-
-            idleStrategy.idle();
+            else if (Pressure.isBackPressured(position))
+            {
+                idleStrategy.idle();
+            }
+            else
+            {
+                return false;
+            }
         }
 
         return false;

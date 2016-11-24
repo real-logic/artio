@@ -17,9 +17,12 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.ErrorHandler;
+import org.agrona.IoUtil;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
@@ -38,27 +41,35 @@ public class ReplayQueryTest extends AbstractLogTest
     private ArchiveReader mockReader = mock(ArchiveReader.class);
     private ArchiveReader.SessionReader mockSessionReader = mock(ArchiveReader.SessionReader.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private ReplayIndex replayIndex = new ReplayIndex(
-        DEFAULT_LOG_FILE_DIR,
-        STREAM_ID,
-        DEFAULT_INDEX_FILE_SIZE,
-        DEFAULT_LOGGER_CACHE_NUM_SETS,
-        DEFAULT_LOGGER_CACHE_SET_SIZE,
-        (name, size) -> indexBuffer,
-        buffer,
-        errorHandler);
+    private ReplayIndex replayIndex;
 
-    private ReplayQuery query = new ReplayQuery(
-        DEFAULT_LOG_FILE_DIR,
-        DEFAULT_LOGGER_CACHE_NUM_SETS,
-        DEFAULT_LOGGER_CACHE_SET_SIZE,
-        mockBufferFactory,
-        mockReader,
-        OUTBOUND_LIBRARY_STREAM);
+    private void newReplayIndex()
+    {
+        replayIndex = new ReplayIndex(
+            DEFAULT_LOG_FILE_DIR,
+            STREAM_ID,
+            DEFAULT_INDEX_FILE_SIZE,
+            DEFAULT_LOGGER_CACHE_NUM_SETS,
+            DEFAULT_LOGGER_CACHE_SET_SIZE,
+            (name, size) -> indexBuffer,
+            buffer,
+            errorHandler);
+    }
+
+    private ReplayQuery query;
 
     @Before
     public void setUp()
     {
+        newReplayIndex();
+        query = new ReplayQuery(
+            DEFAULT_LOG_FILE_DIR,
+            DEFAULT_LOGGER_CACHE_NUM_SETS,
+            DEFAULT_LOGGER_CACHE_SET_SIZE,
+            mockBufferFactory,
+            mockReader,
+            OUTBOUND_LIBRARY_STREAM);
+
         returnBuffer(indexBuffer, SESSION_ID);
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);
 
@@ -78,6 +89,33 @@ public class ReplayQueryTest extends AbstractLogTest
         verifyMappedFile(SESSION_ID, 1);
         verifyMessagesRead(1);
         assertEquals(1, msgCount);
+    }
+
+    @Test
+    public void shouldReadRecordsFromBeforeARestart() throws IOException
+    {
+        // Fake restarting the gateway
+        final File logFile = logFile(DEFAULT_LOG_FILE_DIR, SESSION_ID, STREAM_ID);
+        IoUtil.ensureDirectoryExists(new File(DEFAULT_LOG_FILE_DIR), DEFAULT_LOG_FILE_DIR);
+        logFile.createNewFile();
+        try
+        {
+            newReplayIndex();
+
+            bufferContainsMessage(false, SESSION_ID, SEQUENCE_NUMBER + 1);
+            indexSecondRecord();
+
+            final int msgCount = query.query(mockHandler, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
+
+            verifyMappedFile(SESSION_ID, 1);
+            verifyMessagesRead(1);
+            assertEquals(1, msgCount);
+        }
+        finally
+        {
+            IoUtil.delete(new File(DEFAULT_LOG_FILE_DIR), false);
+        }
+
     }
 
     @Test

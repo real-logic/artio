@@ -144,14 +144,31 @@ public class ReplayIndex implements Index
 
         private SessionIndex(final long sessionId)
         {
-            this.wrappedBuffer = bufferFactory.map(logFile(logFileDir, sessionId, requiredStreamId), indexFileSize);
+            final File logFile = logFile(logFileDir, sessionId, requiredStreamId);
+            final boolean exists = logFile.exists();
+            this.wrappedBuffer = bufferFactory.map(logFile, indexFileSize);
             this.buffer = new UnsafeBuffer(wrappedBuffer);
-            indexHeaderEncoder
-                .wrap(buffer, 0)
-                .blockLength(replayIndexRecord.sbeBlockLength())
-                .templateId(replayIndexRecord.sbeTemplateId())
-                .schemaId(replayIndexRecord.sbeSchemaId())
-                .version(replayIndexRecord.sbeSchemaVersion());
+            if (exists)
+            {
+                findStartOfRecords();
+            }
+            else
+            {
+                indexHeaderEncoder
+                    .wrap(buffer, 0)
+                    .blockLength(replayIndexRecord.sbeBlockLength())
+                    .templateId(replayIndexRecord.sbeTemplateId())
+                    .schemaId(replayIndexRecord.sbeSchemaId())
+                    .version(replayIndexRecord.sbeSchemaVersion());
+            }
+        }
+
+        private void findStartOfRecords()
+        {
+            while (buffer.getByte(offset) > 0)
+            {
+                offset += ReplayIndexRecordEncoder.BLOCK_LENGTH;
+            }
         }
 
         void onRecord(final int streamId,
