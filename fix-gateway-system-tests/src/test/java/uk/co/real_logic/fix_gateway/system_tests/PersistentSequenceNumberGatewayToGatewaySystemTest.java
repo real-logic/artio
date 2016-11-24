@@ -17,8 +17,11 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.Reply;
+import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
+import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -35,12 +38,14 @@ import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
 import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.REPLICATED;
 
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
+    public static final long TEST_TIMEOUT = 10_000L;
     private File backupLocation = null;
 
     @Before
@@ -62,25 +67,64 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         }
     }
 
-    @Test(timeout = 10_000L)
+    @Test(timeout = TEST_TIMEOUT)
     public void sequenceNumbersCanPersistOverRestarts()
     {
         sequenceNumbersCanPersistOverRestarts(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
     }
 
-    @Test(timeout = 10_000L)
+    // TODO: get this test to pass
+    @Ignore
+    @Test(timeout = TEST_TIMEOUT)
+    public void messagesCanBeReplayedOverRestart()
+    {
+        sequenceNumbersCanPersistOverRestarts(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
+
+        final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
+        resendRequest.beginSeqNo(1).endSeqNo(1);
+
+        initiatingOtfAcceptor.messages().clear();
+
+        assertEventuallyTrue(
+            "Unable to send resend request",
+            () ->
+            {
+                pollLibraries();
+                return initiatingSession.send(resendRequest) > 0;
+            });
+
+        final FixMessage message = withTimeout(
+            "Failed to receive reply",
+            () ->
+            {
+                pollLibraries();
+                return initiatingOtfAcceptor.hasReceivedMessage("A");
+            },
+            2_000);
+
+        assertEquals(message.get(Constants.MSG_SEQ_NUM), "1");
+        assertEquals(message.get(Constants.SENDER_COMP_ID), ACCEPTOR_ID);
+        assertEquals(message.get(Constants.TARGET_COMP_ID), INITIATOR_ID);
+    }
+
+    private void pollLibraries()
+    {
+        poll(initiatingLibrary, acceptingLibrary);
+    }
+
+    @Test(timeout = TEST_TIMEOUT)
     public void customInitialSequenceNumbersCanBeSet()
     {
         sequenceNumbersCanPersistOverRestarts(4);
     }
 
-    @Test(timeout = 10_000L)
+    @Test(timeout = TEST_TIMEOUT)
     public void sessionsCanBeReset()
     {
         exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, true, false);
     }
 
-    @Test(timeout = 10_000L)
+    @Test(timeout = TEST_TIMEOUT)
     public void sequenceNumbersCanBeReset()
     {
         exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 2, false, true);
