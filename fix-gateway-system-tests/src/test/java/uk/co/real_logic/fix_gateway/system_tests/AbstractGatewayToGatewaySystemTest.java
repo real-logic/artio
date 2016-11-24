@@ -35,6 +35,7 @@ import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
+import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
@@ -149,7 +150,7 @@ public class AbstractGatewayToGatewaySystemTest
         awaitLibraryReply(initiatingLibrary, acceptingLibrary, reply);
     }
 
-    protected void assertMessageResent()
+    protected void assertMessageResent(final int sequenceNumber)
     {
         assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
         assertEventuallyTrue("Failed to receive the reply",
@@ -162,13 +163,14 @@ public class AbstractGatewayToGatewaySystemTest
                 final String messageType = message.getMsgType();
                 assertEquals("1", messageType);
                 assertEquals("Y", message.getPossDup());
+                assertEquals(String.valueOf(sequenceNumber), message.get(MSG_SEQ_NUM));
                 assertEquals(INITIATOR_ID, acceptingOtfAcceptor.lastSenderCompId());
                 assertNull("Detected Error", acceptingOtfAcceptor.lastError());
                 assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());
             });
     }
 
-    protected void sendResendRequest()
+    protected int sendResendRequest()
     {
         final int seqNum = acceptingSession.lastReceivedMsgSeqNum();
         final ResendRequestEncoder resendRequest = new ResendRequestEncoder()
@@ -178,6 +180,8 @@ public class AbstractGatewayToGatewaySystemTest
         acceptingOtfAcceptor.messages().clear();
 
         acceptingSession.send(resendRequest);
+
+        return seqNum;
     }
 
     protected void messagesCanBeExchanged()

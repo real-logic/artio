@@ -78,9 +78,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         messagesCanBeSentFromInitiatorToAcceptor();
 
-        sendResendRequest();
+        final int sequenceNumber = sendResendRequest();
 
-        assertMessageResent();
+        assertMessageResent(sequenceNumber);
     }
 
     @Test
