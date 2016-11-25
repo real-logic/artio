@@ -194,7 +194,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.inboundCompletionPosition = inboundCompletionPosition;
         this.outboundLibraryCompletionPosition = outboundLibraryCompletionPosition;
         this.outboundClusterCompletionPosition = outboundClusterCompletionPosition;
-        this.senderEndPoints = new SenderEndPoints();
+        this.senderEndPoints = new SenderEndPoints(errorHandler);
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionIds = sessionIds;
         this.adminCommands = adminCommands;
@@ -238,9 +238,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 final long timestamp,
                 final long position)
             {
-                senderEndPoints.onReplayMessage(libraryId, sessionId, buffer, offset, length);
-
-                return CONTINUE;
+                return senderEndPoints.onReplayMessage(sessionId, buffer, offset, length);
             }
 
             public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)

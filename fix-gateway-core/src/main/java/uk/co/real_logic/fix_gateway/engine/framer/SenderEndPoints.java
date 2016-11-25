@@ -18,9 +18,12 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
 {
@@ -29,9 +32,11 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
     private final Long2ObjectHashMap<SenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
+    private final ErrorHandler errorHandler;
 
-    SenderEndPoints()
+    SenderEndPoints(final ErrorHandler errorHandler)
     {
+        this.errorHandler = errorHandler;
     }
 
     public void add(final SenderEndPoint senderEndPoint)
@@ -58,17 +63,23 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         }
     }
 
-    void onReplayMessage(
-        final int libraryId, final long sessionId, final DirectBuffer buffer, final int offset, final int length)
+    Action onReplayMessage(
+        final long sessionId, final DirectBuffer buffer, final int offset, final int length)
     {
         for (final SenderEndPoint endPoint : connectionIdToSenderEndpoint.values())
         {
             if (endPoint.sessionId() == sessionId)
             {
-                endPoint.onNormalFramedMessage(libraryId, buffer, offset, length);
-                break;
+                return endPoint.onReplayFramedMessage(buffer, offset, length);
             }
         }
+
+        errorHandler.onError(new IllegalArgumentException(String.format(
+            "Failed to replay message on %1$d [%2$s]",
+            sessionId,
+            buffer.getStringWithoutLengthUtf8(offset, length))));
+
+        return CONTINUE;
     }
 
     public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
@@ -88,7 +99,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
             }
         }
 
-        return Action.CONTINUE;
+        return CONTINUE;
     }
 
     public void close()

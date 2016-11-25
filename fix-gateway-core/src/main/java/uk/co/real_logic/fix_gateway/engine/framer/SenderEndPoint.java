@@ -97,13 +97,7 @@ class SenderEndPoint implements AutoCloseable
 
         try
         {
-            final int wrapAdjustment = directBuffer.wrapAdjustment();
-            final ByteBuffer buffer = directBuffer.byteBuffer();
-            buffer.limit(wrapAdjustment + offset + length);
-            buffer.position(wrapAdjustment + offset);
-
-            final int written = channel.write(buffer);
-            DebugLogger.log(FIX_MESSAGE, "Written  %s\n", buffer, written);
+            final int written = writeFramedMessage(directBuffer, offset, length);
 
             if (written != length)
             {
@@ -116,7 +110,52 @@ class SenderEndPoint implements AutoCloseable
         }
     }
 
-    private void onError(final IOException ex)
+    Action onReplayFramedMessage(
+        final DirectBuffer directBuffer,
+        final int offset,
+        final int length)
+    {
+        try
+        {
+            final int written = writeFramedMessage(directBuffer, offset, length);
+            if (written == 0)
+            {
+                return ABORT;
+            }
+            else if (written != length)
+            {
+                onError(new IllegalArgumentException(String.format(
+                    "Failed to replay to (%2$d, %2$d) message writing down TCP connection, dropped [%3$s]",
+                    connectionId,
+                    sessionId,
+                    directBuffer.getStringWithoutLengthUtf8(offset + written, length - written))));
+            }
+        }
+        catch (final IOException ex)
+        {
+            onError(ex);
+        }
+
+        return CONTINUE;
+    }
+
+    private int writeFramedMessage(
+        final DirectBuffer directBuffer,
+        final int offset,
+        final int length)
+        throws IOException
+    {
+        final int wrapAdjustment = directBuffer.wrapAdjustment();
+        final ByteBuffer buffer = directBuffer.byteBuffer();
+        buffer.limit(wrapAdjustment + offset + length);
+        buffer.position(wrapAdjustment + offset);
+
+        final int written = channel.write(buffer);
+        DebugLogger.log(FIX_MESSAGE, "Written  %s\n", buffer, written);
+        return written;
+    }
+
+    private void onError(final Exception ex)
     {
         errorHandler.onError(ex);
         removeEndpoint(EXCEPTION);
