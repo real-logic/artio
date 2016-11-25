@@ -21,11 +21,13 @@ import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.fix_gateway.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -47,6 +49,7 @@ import java.util.stream.IntStream;
 import static java.util.stream.Collectors.toList;
 import static org.agrona.CloseHelper.close;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_CLUSTER;
@@ -155,6 +158,7 @@ public class ClusteredGatewaySystemTest
         allClusterNodesHaveSameIndexFiles();
     }
 
+    @Ignore
     @Test(timeout = 40_000)
     public void shouldExchangeMessagesAfterPartitionHeals()
     {
@@ -188,13 +192,21 @@ public class ClusteredGatewaySystemTest
 
         DebugLogger.log(GATEWAY_CLUSTER, "Library has connected to new leader\n");
 
-        // TODO: acceptingLibrary disconnect/timeout
-        // TODO: oldLeader.enable();
-
         initiatingSession.close();
         acceptingSession.close();
         acceptingHandler.clearSessions();
         initiatingHandler.clearSessions();
+
+        assertEventuallyTrue(
+            "Old library state flushed out",
+            () ->
+            {
+                pollLibraries();
+
+                oldSessionDisconnected(initiatingLibrary);
+                oldSessionDisconnected(acceptingLibrary);
+                oldSessionDisconnected(initiatingEngine);
+            });
 
         connectFixSession();
 
@@ -203,6 +215,18 @@ public class ClusteredGatewaySystemTest
         roundtripAMessage(acceptingSession, initiatingOtfAcceptor);
 
         DebugLogger.log(GATEWAY_CLUSTER, "Message Roundtrip\n");
+    }
+
+    private void oldSessionDisconnected(final FixEngine engine)
+    {
+        final List<LibraryInfo> libraries = SystemTestUtil.libraries(engine);
+        libraries.forEach(library ->
+            assertThat("Old session hasn't disconnected yet", library.sessions(), hasSize(0)));
+    }
+
+    private void oldSessionDisconnected(final FixLibrary library)
+    {
+        assertThat("Old session hasn't disconnected yet", library.sessions(), hasSize(0));
     }
 
     private void pollLibraries()
