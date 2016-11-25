@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
@@ -73,8 +72,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         sequenceNumbersCanPersistOverRestarts(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
     }
 
-    // TODO: get this test to pass
-    @Ignore
     @Test(timeout = TEST_TIMEOUT)
     public void messagesCanBeReplayedOverRestart()
     {
