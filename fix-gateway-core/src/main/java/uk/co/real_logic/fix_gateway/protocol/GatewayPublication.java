@@ -32,7 +32,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.fix_gateway.DebugLogger.logSbeMessage;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_MESSAGE;
-import static uk.co.real_logic.fix_gateway.LogTag.HEARTBEAT_MESSAGE;
+import static uk.co.real_logic.fix_gateway.LogTag.APPLICATION_HEARTBEAT;
 import static uk.co.real_logic.fix_gateway.messages.ErrorDecoder.messageHeaderLength;
 import static uk.co.real_logic.fix_gateway.messages.ErrorEncoder.BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.NotLeaderEncoder.libraryChannelHeaderLength;
@@ -575,7 +575,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(HEARTBEAT_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(APPLICATION_HEARTBEAT, buffer, bufferClaim.offset());
 
         return position;
     }
