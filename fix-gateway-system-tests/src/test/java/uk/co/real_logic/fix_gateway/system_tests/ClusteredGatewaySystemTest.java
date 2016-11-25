@@ -139,7 +139,7 @@ public class ClusteredGatewaySystemTest
     @Test(timeout = 20_000)
     public void shouldExchangeMessagesInCluster()
     {
-        connectFixSession(1);
+        connectFixSession();
 
         final long begin = System.nanoTime();
         roundtripAMessage(initiatingSession, acceptingOtfAcceptor);
@@ -158,7 +158,7 @@ public class ClusteredGatewaySystemTest
     @Test(timeout = 40_000)
     public void shouldExchangeMessagesAfterPartitionHeals()
     {
-        connectFixSession(1);
+        connectFixSession();
 
         roundtripAMessage(acceptingSession, initiatingOtfAcceptor);
 
@@ -196,7 +196,7 @@ public class ClusteredGatewaySystemTest
         acceptingHandler.clearSessions();
         initiatingHandler.clearSessions();
 
-        connectFixSession(2);
+        connectFixSession();
 
         DebugLogger.log(GATEWAY_CLUSTER, "Connected New Fix Session\n");
 
@@ -226,7 +226,7 @@ public class ClusteredGatewaySystemTest
             || !acceptingLibrary.currentAeronChannel().equals(libraryChannel);
     }
 
-    private void connectFixSession(final int initialSequenceNumber)
+    private void connectFixSession()
     {
         final Builder builder = SessionConfiguration.builder();
         builder.address("localhost", leader.tcpPort());
@@ -235,7 +235,7 @@ public class ClusteredGatewaySystemTest
             .credentials("bob", "Uv1aegoh")
             .senderCompId(INITIATOR_ID)
             .targetCompId(ACCEPTOR_ID)
-            .initialSequenceNumber(initialSequenceNumber)
+            .sequenceNumbersPersistent(true)
             .build();
 
         final Reply<Session> reply = initiatingLibrary.initiate(config);
