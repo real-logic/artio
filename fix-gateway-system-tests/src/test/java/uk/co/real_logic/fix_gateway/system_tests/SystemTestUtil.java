@@ -380,6 +380,7 @@ public final class SystemTestUtil
             () ->
             {
                 poll(library, library2);
+
                 return acceptor
                     .hasReceivedMessage("0")
                     .filter((message) -> HI_ID.equals(message.get(Constants.TEST_REQ_ID)))

@@ -31,4 +31,9 @@ public final class FixMatchers
     {
         return hasResult("connectionId", SessionInfo::connectionId, equalTo(connectionId));
     }
+
+    public static Matcher<SessionInfo> hasSessionId(final long sessionId)
+    {
+        return hasResult("sessionId", SessionInfo::sessionId, equalTo(sessionId));
+    }
 }

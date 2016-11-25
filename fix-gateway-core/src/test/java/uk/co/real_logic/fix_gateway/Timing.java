@@ -69,21 +69,29 @@ public final class Timing
         final Runnable runnable,
         final long timeoutInMs)
     {
-        assertEventuallyTrue(message,
-            () ->
+        final long endTime = System.currentTimeMillis() + timeoutInMs;
+
+        Throwable lastThrowable;
+
+        do
+        {
+            try
             {
-                try
-                {
-                    runnable.run();
-                    return true;
-                }
-                catch (final Throwable ignore)
-                {
-                    return false;
-                }
-            },
-            timeoutInMs
-        );
+                runnable.run();
+                return;
+            }
+            catch (final Throwable ignore)
+            {
+                lastThrowable = ignore;
+            }
+
+            Thread.yield();
+        }
+        while (System.currentTimeMillis() < endTime);
+
+        final AssertionError error = new AssertionError(message);
+        error.addSuppressed(lastThrowable);
+        throw error;
     }
 
     public static void assertEventuallyTrue(

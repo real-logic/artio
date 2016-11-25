@@ -933,7 +933,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             if (expectedNumberOfMessages < 0)
             {
                 continuations.add(() ->
-                    sequenceNumberTooHigh(libraryId, correlationId, replayFromSequenceNumber, lastReceivedSeqNum));
+                    sequenceNumberTooHigh(libraryId, correlationId));
                 return;
             }
 
@@ -966,24 +966,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return configuration.replyTimeoutInMs() / 2;
     }
 
-    private long sequenceNumberTooHigh(
-        final int libraryId,
-        final long correlationId,
-        final int replayFromSequenceNumber,
-        final int lastReceivedSeqNum)
+    private long sequenceNumberTooHigh(final int libraryId, final long correlationId)
     {
-        final long position = inboundPublication.saveRequestSessionReply(
-            libraryId, SEQUENCE_NUMBER_TOO_HIGH, correlationId);
-
-        if (position > 0)
-        {
-            errorHandler.onError(new IllegalStateException(String.format(
-                "Sequence Number too high for %d, wanted %d, but we've only archived %d",
-                correlationId,
-                replayFromSequenceNumber,
-                lastReceivedSeqNum)));
-        }
-        return position;
+        return inboundPublication.saveRequestSessionReply(libraryId, SEQUENCE_NUMBER_TOO_HIGH, correlationId);
     }
 
     void onQueryLibraries(final QueryLibrariesCommand command)
