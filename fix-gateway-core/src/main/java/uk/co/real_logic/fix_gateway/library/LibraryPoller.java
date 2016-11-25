@@ -884,7 +884,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private void onConnect()
     {
         configuration.libraryConnectHandler().onConnect(fixLibrary);
-        setLibraryConnected(false);
+        setLibraryConnected(true);
     }
 
     private void onDisconnect()
