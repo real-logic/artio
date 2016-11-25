@@ -271,7 +271,7 @@ public final class SystemTestUtil
     public static Session acquireSession(
         final FakeHandler sessionHandler, final FixLibrary library, final long sessionId)
     {
-        final SessionReplyStatus reply = getSessionStatus(library, sessionId, NO_MESSAGE_REPLAY);
+        final SessionReplyStatus reply = requestSession(library, sessionId, NO_MESSAGE_REPLAY);
         assertEquals(SessionReplyStatus.OK, reply);
         final Session session = sessionHandler.lastSession();
         sessionHandler.resetSession();
@@ -279,7 +279,7 @@ public final class SystemTestUtil
         return session;
     }
 
-    public static SessionReplyStatus getSessionStatus(
+    public static SessionReplyStatus requestSession(
         final FixLibrary library, final long sessionId, final int lastReceivedMsgSeqNum)
     {
         final Reply<SessionReplyStatus> reply = library.requestSession(sessionId, lastReceivedMsgSeqNum);

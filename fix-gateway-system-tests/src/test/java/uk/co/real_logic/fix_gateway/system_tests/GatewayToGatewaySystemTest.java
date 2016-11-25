@@ -278,7 +278,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void librariesShouldNotBeAbleToAcquireSessionsThatDontExist()
     {
-        final SessionReplyStatus status = getSessionStatus(initiatingLibrary, 42, NO_MESSAGE_REPLAY);
+        final SessionReplyStatus status = requestSession(initiatingLibrary, 42, NO_MESSAGE_REPLAY);
 
         assertEquals(SessionReplyStatus.UNKNOWN_SESSION, status);
     }
@@ -377,7 +377,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         releaseToGateway(library, session);
 
-        final SessionReplyStatus status = getSessionStatus(library, sessionId, NO_MESSAGE_REPLAY);
+        final SessionReplyStatus status = requestSession(library, sessionId, NO_MESSAGE_REPLAY);
         assertEquals(SessionReplyStatus.OK, status);
 
         assertThat(gatewayLibraryInfo(engine).sessions(), hasSize(0));
@@ -421,7 +421,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
 
-        final SessionReplyStatus status = getSessionStatus(library, sessionId, lastReceivedMsgSeqNum);
+        final SessionReplyStatus status = requestSession(library, sessionId, lastReceivedMsgSeqNum);
         assertEquals(SessionReplyStatus.OK, status);
 
         messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
