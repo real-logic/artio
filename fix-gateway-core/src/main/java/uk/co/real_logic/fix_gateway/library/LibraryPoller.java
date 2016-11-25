@@ -142,7 +142,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private int pollWithoutReconnect(final int fragmentLimit)
     {
-        final long timeInMs = clock.time();
+        final long timeInMs = timeInMs();
         return inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit) +
             pollSessions(timeInMs) +
             livenessDetector.poll(timeInMs) +
@@ -268,21 +268,19 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             }
 
             final String currentAeronChannel = this.currentAeronChannel;
-            final long connectResendTimeout = configuration.replyTimeoutInMs() / 4;
+            final long connectResendTimeout = connectResendTimeout();
             final long latestReplyArrivalTime = latestReplyArrivalTime();
-            long latestConnectResentTime = clock.time() + connectResendTimeout;
+            long latestConnectResentTime = timeInMs() + connectResendTimeout;
             while (!livenessDetector.isConnected() && errorType == null)
             {
                 final int workCount = pollWithoutReconnect(3);
 
-                final long time = clock.time();
+                final long time = timeInMs();
                 if (time > latestReplyArrivalTime)
                 {
                     if (reconnectAttempts == 0)
                     {
-                        throw new IllegalStateException(String.format(
-                            "Failed to receive a reply from the engine within %dms, are you sure its running?",
-                            this.configuration.replyTimeoutInMs()));
+                        throw illegalStateDueToFailingToConnect();
                     }
 
                     attemptNextEngine();
@@ -331,6 +329,18 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
     }
 
+    private IllegalStateException illegalStateDueToFailingToConnect()
+    {
+        return new IllegalStateException(String.format(
+            "Failed to receive a reply from the engine within %dms, are you sure its running?",
+            this.configuration.replyTimeoutInMs()));
+    }
+
+    private long connectResendTimeout()
+    {
+        return configuration.replyTimeoutInMs() / 4;
+    }
+
     private void initStreams()
     {
         if (enginesAreClustered || isFirstConnect())
@@ -345,7 +355,16 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         try
         {
-            sendLibraryConnect();
+            if (sendLibraryConnect())
+            {
+                return false;
+            }
+            else if (enginesAreClustered)
+            {
+                attemptNextEngine();
+                connect(reconnectAttempts - 1);
+                return true;
+            }
         }
         catch (final NotConnectedException e)
         {
@@ -378,11 +397,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return !transport.isReconnect();
     }
 
-    private boolean streamsNotInitialised()
-    {
-        return inboundSubscription == null;
-    }
-
     private LibraryPoller connectError(final String message)
     {
         throw new FixGatewayException(String.format(
@@ -391,7 +405,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private long latestReplyArrivalTime()
     {
-        return clock.time() + configuration.replyTimeoutInMs();
+        return timeInMs() + configuration.replyTimeoutInMs();
+    }
+
+    private long timeInMs()
+    {
+        return clock.time();
     }
 
     private int checkReplies(final long timeInMs)
@@ -416,18 +435,32 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return count;
     }
 
-    private void sendLibraryConnect()
+    // return true if sent, false otherwise
+    private boolean sendLibraryConnect()
     {
         checkClosed();
 
         final long correlationId = ++currentCorrelationId;
-        while (outboundPublication.saveLibraryConnect(libraryId, correlationId) < 0)
+        final long connectResendTimeout = timeInMs() + connectResendTimeout();
+        while (true)
         {
-            idleStrategy.idle();
+            final long position = outboundPublication.saveLibraryConnect(libraryId, correlationId);
+            if (position >= 0)
+            {
+                idleStrategy.reset();
+                this.connectCorrelationId = correlationId;
+                return true;
+            }
+            else if (connectResendTimeout > timeInMs())
+            {
+                idleStrategy.reset();
+                return false;
+            }
+            else
+            {
+                idleStrategy.idle();
+            }
         }
-        idleStrategy.reset();
-        this.connectCorrelationId = correlationId;
-        //System.out.println("SEND connectCorrelationId = " + connectCorrelationId);
     }
 
     private int pollSessions(final long timeInMs)
@@ -633,7 +666,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
-            final long timeInMs = clock.time();
+            final long timeInMs = timeInMs();
             DebugLogger.log(
                 APPLICATION_HEARTBEAT, "%d: Received Heartbeat from engine at timeInMs %d\n", libraryId, timeInMs);
             livenessDetector.onHeartbeat(timeInMs);
