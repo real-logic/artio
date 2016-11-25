@@ -31,7 +31,10 @@ import org.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.Pressure;
-import uk.co.real_logic.fix_gateway.engine.*;
+import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
+import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
+import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
@@ -65,7 +68,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.CloseHelper.close;
 import static org.agrona.collections.CollectionUtil.removeIf;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
-import static uk.co.real_logic.fix_gateway.LogTag.LIBRARY_CONNECT;
+import static uk.co.real_logic.fix_gateway.LogTag.APPLICATION_HEARTBEAT;
 import static uk.co.real_logic.fix_gateway.Pressure.isBackPressured;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNK_SESSION;
@@ -747,7 +750,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             final long timeInMs = clock.time();
             DebugLogger.log(
-                LIBRARY_CONNECT, "Received Heartbeat from library %d at timeInMs %d\n", libraryId, timeInMs);
+                APPLICATION_HEARTBEAT, "Received Heartbeat from library %d at timeInMs %d\n", libraryId, timeInMs);
             library.onHeartbeat(timeInMs);
 
             return CONTINUE;

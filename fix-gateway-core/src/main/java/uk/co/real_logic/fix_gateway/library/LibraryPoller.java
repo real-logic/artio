@@ -50,6 +50,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
+import static uk.co.real_logic.fix_gateway.LogTag.APPLICATION_HEARTBEAT;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.LogTag.LIBRARY_CONNECT;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -634,7 +635,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         {
             final long timeInMs = clock.time();
             DebugLogger.log(
-                LIBRARY_CONNECT, "%d: Received Heartbeat from engine at timeInMs %d\n", libraryId, timeInMs);
+                APPLICATION_HEARTBEAT, "%d: Received Heartbeat from engine at timeInMs %d\n", libraryId, timeInMs);
             livenessDetector.onHeartbeat(timeInMs);
         }
 
@@ -883,12 +884,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private void onConnect()
     {
+        DebugLogger.log(LIBRARY_CONNECT, "Connected to [%s]", currentAeronChannel);
         configuration.libraryConnectHandler().onConnect(fixLibrary);
         setLibraryConnected(true);
     }
 
     private void onDisconnect()
     {
+        DebugLogger.log(LIBRARY_CONNECT, "Disconnected from [%s]", currentAeronChannel);
         configuration.libraryConnectHandler().onDisconnect(fixLibrary);
         setLibraryConnected(false);
     }
