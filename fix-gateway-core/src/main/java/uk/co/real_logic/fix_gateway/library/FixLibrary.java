@@ -198,7 +198,11 @@ public class FixLibrary extends GatewayProcess
      *
      * If this session is being managed by
      * the gateway then your {@link SessionAcquireHandler} will receive a callback
-     * and the reply will be {@link SessionReplyStatus#OK}.
+     * and the reply will be {@link SessionReplyStatus#OK}. You may also receive the reply of
+     * {@link SessionReplyStatus#SEQUENCE_NUMBER_TOO_HIGH} if the sequence number you have passed in
+     * is higher than the current sequence number known by the engine. This may happen to a sequence reset.
+     * In this case you will still get the callback to the {@link SessionAcquireHandler} but won't get a
+     * replay on any messages.
      *
      * If another library has acquired the session then this method will return
      * {@link SessionReplyStatus#OTHER_SESSION_OWNER}. If the connection id refers
