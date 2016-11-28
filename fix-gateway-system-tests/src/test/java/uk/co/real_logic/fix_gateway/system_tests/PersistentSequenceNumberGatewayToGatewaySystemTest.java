@@ -33,6 +33,7 @@ import java.io.IOException;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
@@ -44,7 +45,7 @@ import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.REPLICATE
 
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
-    public static final long TEST_TIMEOUT = 10_000L;
+    private static final long TEST_TIMEOUT = 10_000L;
     private File backupLocation = null;
 
     @Before
@@ -154,6 +155,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
                 initiatingEngine.resetSequenceNumber(initiatingSession.id());
             final Reply<?> acceptingReply =
                 acceptingEngine.resetSequenceNumber(acceptingSession.id());
+
+            assertNotNull(initiatingReply);
+            assertNotNull(acceptingReply);
 
             assertEventuallyTrue(
                 "Failed to reset sequence numbers",
