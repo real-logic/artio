@@ -187,7 +187,7 @@ public class ClusteredGatewaySystemTest
             () ->
             {
                 pollLibraries();
-                return notConnectedTo(libraryChannel);
+                return connectedTo(libraryChannel);
             });
 
         DebugLogger.log(GATEWAY_CLUSTER, "Library has connected to new leader\n");
@@ -244,10 +244,10 @@ public class ClusteredGatewaySystemTest
             oldLeader.configuration().agentNamePrefix());
     }
 
-    private boolean notConnectedTo(final String libraryChannel)
+    private boolean connectedTo(final String libraryChannel)
     {
-        return !acceptingLibrary.isConnected()
-            || !acceptingLibrary.currentAeronChannel().equals(libraryChannel);
+        return acceptingLibrary.isConnected()
+            || acceptingLibrary.currentAeronChannel().equals(libraryChannel);
     }
 
     private void connectFixSession()
