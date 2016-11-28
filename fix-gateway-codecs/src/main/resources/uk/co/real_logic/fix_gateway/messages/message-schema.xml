@@ -25,6 +25,7 @@
     <types>
         <type name="FixSessionId" primitiveType="int64"/>
         <type name="LibraryId" primitiveType="int32"/>
+        <type name="SequenceNumberContext" primitiveType="int32"/>
         <type name="ConnectionId" primitiveType="int64"/>
         <type name="CorrelationId" primitiveType="int64"/>
         <type name="TermId" primitiveType="int32"/>
@@ -310,7 +311,8 @@
         <field name="status" id="5" type="MessageStatus"/>
         <field name="libraryId" id="6" type="LibraryId"/>
         <field name="bytesSent" id="7" type="int32" />
-        <data name="body" id="5" type="varDataEncoding"/>
+        <field name="sequenceNumberContext" id="8" type="SequenceNumberContext" />
+        <data name="body" id="9" type="varDataEncoding"/>
     </sbe:message>
 
     <sbe:message name="ApplicationHeartbeat" id="16"
