@@ -254,7 +254,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private void connect(final int reconnectAttempts)
     {
-        DebugLogger.log(LIBRARY_CONNECT, "Attempting to connect to %s", currentAeronChannel);
+        DebugLogger.log(LIBRARY_CONNECT, "Attempting to connect to %s\n", currentAeronChannel);
 
         try
         {
@@ -917,14 +917,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private void onConnect()
     {
-        DebugLogger.log(LIBRARY_CONNECT, "Connected to [%s]", currentAeronChannel);
+        DebugLogger.log(LIBRARY_CONNECT, "Connected to [%s]\n", currentAeronChannel);
         configuration.libraryConnectHandler().onConnect(fixLibrary);
         setLibraryConnected(true);
     }
 
     private void onDisconnect()
     {
-        DebugLogger.log(LIBRARY_CONNECT, "Disconnected from [%s]", currentAeronChannel);
+        DebugLogger.log(LIBRARY_CONNECT, "Disconnected from [%s]\n", currentAeronChannel);
         configuration.libraryConnectHandler().onDisconnect(fixLibrary);
         setLibraryConnected(false);
     }

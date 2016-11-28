@@ -42,6 +42,7 @@ import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.optimalTmpDirName;
+import static uk.co.real_logic.fix_gateway.FixMatchers.isConnected;
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
@@ -112,6 +113,15 @@ public final class SystemTestUtil
         if (library2 != null)
         {
             library2.poll(LIBRARY_LIMIT);
+        }
+    }
+
+    public static void assertConnected(final FixLibrary library1, final FixLibrary library2)
+    {
+        assertThat(library1, isConnected());
+        if (library2 != null)
+        {
+            assertThat(library2, isConnected());
         }
     }
 
@@ -305,6 +315,7 @@ public final class SystemTestUtil
             () ->
             {
                 poll(library1, library2);
+                assertConnected(library1, library2);
                 assertEquals(ACTIVE, session.state());
             },
             timeoutInMs);

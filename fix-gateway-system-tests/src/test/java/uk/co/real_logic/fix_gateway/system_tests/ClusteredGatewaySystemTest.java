@@ -181,13 +181,12 @@ public class ClusteredGatewaySystemTest
 
         logLeader(leader, "Elected new leader: (%s) [%s]\n");
 
-        final String libraryChannel = leader.libraryChannel();
         assertEventuallyTrue(
             "Library Failed to connect to Engine",
             () ->
             {
                 pollLibraries();
-                return connectedTo(libraryChannel);
+                return connectedToLeader();
             });
 
         DebugLogger.log(GATEWAY_CLUSTER, "Library has connected to new leader\n");
@@ -206,6 +205,8 @@ public class ClusteredGatewaySystemTest
                 oldSessionDisconnected(initiatingLibrary);
                 oldSessionDisconnected(acceptingLibrary);
                 oldSessionDisconnected(initiatingEngine);
+
+                assertConnectedToLeader();
             });
 
         connectFixSession();
@@ -215,6 +216,11 @@ public class ClusteredGatewaySystemTest
         roundtripAMessage(acceptingSession, initiatingOtfAcceptor);
 
         DebugLogger.log(GATEWAY_CLUSTER, "Message Roundtrip\n");
+    }
+
+    private void assertConnectedToLeader()
+    {
+        assertTrue("Disconnected from Leader", connectedToLeader());
     }
 
     private void oldSessionDisconnected(final FixEngine engine)
@@ -244,8 +250,9 @@ public class ClusteredGatewaySystemTest
             oldLeader.configuration().agentNamePrefix());
     }
 
-    private boolean connectedTo(final String libraryChannel)
+    private boolean connectedToLeader()
     {
+        final String libraryChannel = leader.libraryChannel();
         return acceptingLibrary.isConnected()
             || acceptingLibrary.currentAeronChannel().equals(libraryChannel);
     }
@@ -275,6 +282,8 @@ public class ClusteredGatewaySystemTest
             {
                 acceptingLibrary.poll(1);
                 initiatingLibrary.poll(1);
+
+                assertConnectedToLeader();
             }, 10_000);
         acceptingSession = acquireSession(acceptingHandler, acceptingLibrary, sessionId);
         assertEquals(ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());

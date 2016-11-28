@@ -379,13 +379,16 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             "Library failed to disconnect",
             () ->
             {
-                acceptingLibrary.poll(1);
+                poll(acceptingLibrary, initiatingLibrary);
                 return !acceptingLibrary.isConnected();
             });
 
         launchAcceptingEngine();
 
+        acceptingLibrary = newAcceptingLibrary(acceptingHandler);
+
         wireSessions();
+
         messagesCanBeExchanged();
     }
 
