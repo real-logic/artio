@@ -292,7 +292,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acceptingSession = acceptingHandler.lastSession();
         acceptingHandler.resetSession();
 
+        // Send messages both ways to ensure that the session is setup
         messagesCanBeExchanged(acceptingSession, acceptingLibrary, initiatingLibrary, acceptingOtfAcceptor);
+        messagesCanBeExchanged(initiatingSession, initiatingLibrary, acceptingLibrary, initiatingOtfAcceptor);
     }
 
     private void disconnectSessions()

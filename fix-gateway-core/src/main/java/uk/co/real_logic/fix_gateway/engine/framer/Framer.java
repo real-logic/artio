@@ -933,7 +933,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             if (expectedNumberOfMessages < 0)
             {
                 continuations.add(() ->
-                    sequenceNumberTooHigh(libraryId, correlationId));
+                    sequenceNumberTooHigh(libraryId, correlationId, session));
                 return;
             }
 
@@ -966,9 +966,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return configuration.replyTimeoutInMs() / 2;
     }
 
-    private long sequenceNumberTooHigh(final int libraryId, final long correlationId)
+    private long sequenceNumberTooHigh(final int libraryId, final long correlationId, final GatewaySession session)
     {
-        return inboundPublication.saveRequestSessionReply(libraryId, SEQUENCE_NUMBER_TOO_HIGH, correlationId);
+        final long position = inboundPublication.saveRequestSessionReply(
+            libraryId, SEQUENCE_NUMBER_TOO_HIGH, correlationId);
+        if (!Pressure.isBackPressured(position))
+        {
+            session.play();
+        }
+        return position;
     }
 
     void onQueryLibraries(final QueryLibrariesCommand command)
