@@ -53,12 +53,11 @@ import static uk.co.real_logic.fix_gateway.storage.messages.SessionIdEncoder.BLO
  * and aren't allowed to span sectors. Each sector has a CRC32 checksum and each checksum is updated after writing
  * each session id record.
  */
-public class SessionIds
+public class SessionContexts
 {
     public static final long MISSING_SESSION_ID = -2;
 
-    static final SessionContext MISSING = new SessionContext(MISSING_SESSION_ID);
-    static final SessionContext DUPLICATE_SESSION = new SessionContext(-1);
+    static final SessionContext DUPLICATE_SESSION = new SessionContext(-1, -1, null, OUT_OF_SPACE);
     static final long LOWEST_VALID_SESSION_ID = 1L;
 
     private static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
@@ -91,7 +90,7 @@ public class SessionIds
     private int filePosition;
     private long counter = LOWEST_VALID_SESSION_ID;
 
-    public SessionIds(
+    public SessionContexts(
         final MappedFile mappedFile, final SessionIdStrategy idStrategy, final ErrorHandler errorHandler)
     {
         this.mappedFile = mappedFile;
@@ -145,7 +144,7 @@ public class SessionIds
                 return;
             }
 
-            compositeToContext.put(compositeKey, new SessionContext(sessionId, sequenceIndex));
+            compositeToContext.put(compositeKey, new SessionContext(sessionId, sequenceIndex, this, filePosition));
             recordedSessions.add(sessionId);
             counter = Math.max(counter, sessionId + 1);
 
@@ -215,43 +214,53 @@ public class SessionIds
 
     private SessionContext onNewLogon(final CompositeKey compositeKey)
     {
-        final SessionContext sessionContext = new SessionContext(counter++);
-        assignSessionId(compositeKey, sessionContext);
-        return sessionContext;
+        final long sessionId = counter++;
+        return assignSessionId(compositeKey, sessionId, SessionContext.UNKNOWN);
     }
 
-    private void assignSessionId(final CompositeKey compositeKey, final SessionContext sessionContext)
+    private SessionContext assignSessionId(final CompositeKey compositeKey,
+                                           final long sessionId,
+                                           final int sequenceIndex)
     {
+        int keyPosition = OUT_OF_SPACE;
         final int compositeKeyLength = idStrategy.save(compositeKey, compositeKeyBuffer, 0);
         if (compositeKeyLength == INSUFFICIENT_SPACE)
         {
             errorHandler.onError(new IllegalStateException(String.format(
                 "Unable to save record session id %d for %s, because the buffer is too small",
-                sessionContext.sessionId(),
+                sessionId,
                 compositeKey)));
+            return new SessionContext(sessionId, sequenceIndex, this, OUT_OF_SPACE);
         }
-        else if (filePosition != OUT_OF_SPACE)
+        else
         {
-            filePosition = sectorFramer.claim(filePosition, BLOCK_LENGTH + compositeKeyLength);
-            if (filePosition == OUT_OF_SPACE)
+            if (filePosition != OUT_OF_SPACE)
             {
-                errorHandler.onError(new IllegalStateException(
-                    "Run out of space when storing: " + compositeKey));
-                return;
+                filePosition = sectorFramer.claim(filePosition, BLOCK_LENGTH + compositeKeyLength);
+                keyPosition = filePosition;
+                if (filePosition == OUT_OF_SPACE)
+                {
+                    errorHandler.onError(new IllegalStateException(
+                        "Run out of space when storing: " + compositeKey));
+                }
+                else
+                {
+                    sessionIdEncoder
+                        .wrap(buffer, filePosition)
+                        .sessionId(sessionId)
+                        .sequenceIndex(sequenceIndex)
+                        .compositeKeyLength(compositeKeyLength);
+                    filePosition += BLOCK_LENGTH;
+
+                    buffer.putBytes(filePosition, compositeKeyBuffer, 0, compositeKeyLength);
+                    filePosition += compositeKeyLength;
+
+                    updateChecksum(sectorFramer.sectorStart(), sectorFramer.checksumOffset());
+                    mappedFile.force();
+                }
             }
 
-            sessionIdEncoder
-                .wrap(buffer, filePosition)
-                .sessionId(sessionContext.sessionId())
-                .sequenceIndex(sessionContext.sequenceIndex())
-                .compositeKeyLength(compositeKeyLength);
-            filePosition += BLOCK_LENGTH;
-
-            buffer.putBytes(filePosition, compositeKeyBuffer, 0, compositeKeyLength);
-            filePosition += compositeKeyLength;
-
-            updateChecksum(sectorFramer.sectorStart(), sectorFramer.checksumOffset());
-            mappedFile.force();
+            return new SessionContext(sessionId, sequenceIndex, this, keyPosition);
         }
     }
 
@@ -321,8 +330,21 @@ public class SessionIds
             header.senderLocationIDAsString(),
             header.targetCompIDAsString());
 
-        final SessionContext sessionContext = new SessionContext(sessionId, -1); // TODO
-        assignSessionId(compositeKey, sessionContext);
+        final SessionContext sessionContext = assignSessionId(compositeKey, sessionId, -1); // TODO
         compositeToContext.put(compositeKey, sessionContext);
+    }
+
+    void updateSequenceIndex(final int filePosition, final int sequenceIndex)
+    {
+        sessionIdEncoder
+            .wrap(buffer, filePosition)
+            .sequenceIndex(sequenceIndex);
+
+        mappedFile.force();
+
+        final int checksumOffset = sectorFramer.checksumOffset();
+        final int endOfUpdate =
+            filePosition < checksumOffset ? checksumOffset : nextSectorStart(filePosition - SECTOR_SIZE);
+        updateChecksum(sectorFramer.sectorStart(), endOfUpdate);
     }
 }

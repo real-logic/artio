@@ -42,3 +42,6 @@ acceptor_logs/
 
 
 *.jfr
+
+*.jar
+*.pem

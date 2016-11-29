@@ -67,19 +67,19 @@ public class ReceiverEndPointTest
     private GatewayPublication clusterablePublication = mock(GatewayPublication.class);
     private SessionPersistenceStrategy sessionReplicationStrategy = SessionPersistenceStrategy.alwaysLocallyArchive();
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
-    private SessionIds mockSessionIds = mock(SessionIds.class);
+    private SessionContexts mockSessionContexts = mock(SessionContexts.class);
     private AtomicCounter messagesRead = mock(AtomicCounter.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private SequenceNumberIndexReader sentSequenceNumbers = mock(SequenceNumberIndexReader.class);
     private SequenceNumberIndexReader receivedSequenceNumbers = mock(SequenceNumberIndexReader.class);
     private Framer framer = mock(Framer.class);
     private GatewaySession gatewaySession = mock(GatewaySession.class);
-    private final LongHashSet replicatedConnectionIds = new LongHashSet(SessionIds.MISSING_SESSION_ID);
+    private final LongHashSet replicatedConnectionIds = new LongHashSet(SessionContexts.MISSING_SESSION_ID);
 
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(
             mockChannel, BUFFER_SIZE, clusterablePublication, libraryPublication, sessionReplicationStrategy,
-            CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionIds,
+            CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionContexts,
             sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID,
             DETERMINE_AT_LOGON, ConnectionType.ACCEPTOR, replicatedConnectionIds);
 
@@ -87,7 +87,8 @@ public class ReceiverEndPointTest
     public void setUp()
     {
         endPoint.gatewaySession(gatewaySession);
-        when(mockSessionIds.onLogon(any())).thenReturn(new SessionContext(SESSION_ID));
+        when(mockSessionContexts.onLogon(any())).thenReturn(
+            new SessionContext(SESSION_ID, SessionContext.UNKNOWN, mockSessionContexts, 0));
         when(mockSessionIdStrategy.onLogon(any())).thenReturn(compositeKey);
         doAnswer(
             (inv) ->
@@ -213,7 +214,7 @@ public class ReceiverEndPointTest
 
         endPoint.pollForData();
 
-        verify(mockSessionIds).onDisconnect(anyLong());
+        verify(mockSessionContexts).onDisconnect(anyLong());
         assertSavesDisconnect();
     }
 

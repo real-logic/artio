@@ -41,7 +41,7 @@ import java.nio.channels.Selector;
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
-import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.DUPLICATE_SESSION;
+import static uk.co.real_logic.fix_gateway.engine.framer.SessionContexts.DUPLICATE_SESSION;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.*;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.*;
@@ -86,7 +86,7 @@ class ReceiverEndPoint
     private final SessionPersistenceStrategy sessionReplicationStrategy;
     private final long connectionId;
     private final SessionIdStrategy sessionIdStrategy;
-    private final SessionIds sessionIds;
+    private final SessionContexts sessionContexts;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
     private final AtomicCounter messagesRead;
@@ -115,7 +115,7 @@ class ReceiverEndPoint
         final long connectionId,
         final long sessionId,
         final SessionIdStrategy sessionIdStrategy,
-        final SessionIds sessionIds,
+        final SessionContexts sessionContexts,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final AtomicCounter messagesRead,
@@ -133,7 +133,7 @@ class ReceiverEndPoint
         this.connectionId = connectionId;
         this.sessionId = sessionId;
         this.sessionIdStrategy = sessionIdStrategy;
-        this.sessionIds = sessionIds;
+        this.sessionContexts = sessionContexts;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.messagesRead = messagesRead;
@@ -326,7 +326,7 @@ class ReceiverEndPoint
         {
             logon.decode(buffer, offset, length);
             final CompositeKey compositeKey = sessionIdStrategy.onLogon(logon.header());
-            final SessionContext sessionContext = sessionIds.onLogon(compositeKey);
+            final SessionContext sessionContext = sessionContexts.onLogon(compositeKey);
             sessionId = sessionContext.sessionId();
             if (sessionContext == DUPLICATE_SESSION)
             {
@@ -563,7 +563,7 @@ class ReceiverEndPoint
     {
         framer.schedule(() -> libraryPublication.saveDisconnect(libraryId, connectionId, reason));
 
-        sessionIds.onDisconnect(sessionId);
+        sessionContexts.onDisconnect(sessionId);
         if (selectionKey != null)
         {
             selectionKey.cancel();

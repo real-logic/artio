@@ -33,7 +33,7 @@ class EndPointFactory
 {
     private final EngineConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
-    private final SessionIds sessionIds;
+    private final SessionContexts sessionContexts;
     private final Streams inboundStreams;
     private final GatewayPublication inboundLibraryPublication;
     private final IdleStrategy idleStrategy;
@@ -44,7 +44,7 @@ class EndPointFactory
     EndPointFactory(
         final EngineConfiguration configuration,
         final SessionIdStrategy sessionIdStrategy,
-        final SessionIds sessionIds,
+        final SessionContexts sessionContexts,
         final Streams inboundStreams,
         final GatewayPublication inboundLibraryPublication,
         final IdleStrategy idleStrategy,
@@ -54,7 +54,7 @@ class EndPointFactory
     {
         this.configuration = configuration;
         this.sessionIdStrategy = sessionIdStrategy;
-        this.sessionIds = sessionIds;
+        this.sessionContexts = sessionContexts;
         this.inboundStreams = inboundStreams;
         this.inboundLibraryPublication = inboundLibraryPublication;
         this.idleStrategy = idleStrategy;
@@ -83,7 +83,7 @@ class EndPointFactory
             connectionId,
             sessionId,
             sessionIdStrategy,
-            sessionIds,
+            sessionContexts,
             sentSequenceNumberIndex,
             receivedSequenceNumberIndex,
             fixCounters.messagesRead(connectionId, channel.remoteAddress()),

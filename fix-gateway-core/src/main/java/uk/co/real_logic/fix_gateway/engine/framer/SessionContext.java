@@ -23,25 +23,26 @@ class SessionContext
     static final int UNKNOWN = -1;
 
     private final long sessionId;
+    private final SessionContexts sessionContexts;
+    private final int filePosition;
+
     // onSequenceReset() will be called upon the first logon
     private int sequenceIndex = UNKNOWN;
 
-    // New session constructor
-    SessionContext(final long sessionId)
-    {
-        this.sessionId = sessionId;
-    }
-
     // Reload from disk constructor
-    SessionContext(final long sessionId, final int sequenceIndex)
+    SessionContext(
+        final long sessionId, final int sequenceIndex, final SessionContexts sessionContexts, final int filePosition)
     {
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
+        this.sessionContexts = sessionContexts;
+        this.filePosition = filePosition;
     }
 
     void onSequenceReset()
     {
         sequenceIndex++;
+        sessionContexts.updateSequenceIndex(filePosition, sequenceIndex);
     }
 
     int sequenceIndex()

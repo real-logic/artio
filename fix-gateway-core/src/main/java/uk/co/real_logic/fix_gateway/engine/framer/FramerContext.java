@@ -67,18 +67,19 @@ public class FramerContext
     {
         final ClusterableStreams streams = engineContext.streams();
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
-        final SessionIds sessionIds = new SessionIds(configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
+        final SessionContexts sessionContexts = new SessionContexts(
+            configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
         final Streams outboundLibraryStreams = engineContext.outboundLibraryStreams();
         final Streams inboundLibraryStreams = engineContext.inboundLibraryStreams();
 
         final SystemEpochClock clock = new SystemEpochClock();
-        final LongHashSet replicatedConnectionIds = new LongHashSet(SessionIds.MISSING_SESSION_ID);
+        final LongHashSet replicatedConnectionIds = new LongHashSet(SessionContexts.MISSING_SESSION_ID);
 
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,
             sessionIdStrategy,
-            sessionIds,
+            sessionContexts,
             inboundLibraryStreams,
             engineContext.inboundLibraryPublication(),
             idleStrategy,
@@ -114,7 +115,7 @@ public class FramerContext
             replaySubscription,
             adminCommands,
             sessionIdStrategy,
-            sessionIds,
+            sessionContexts,
             sentSequenceNumberIndex,
             receivedSequenceNumberIndex,
             gatewaySessions,

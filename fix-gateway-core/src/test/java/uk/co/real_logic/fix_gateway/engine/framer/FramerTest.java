@@ -102,7 +102,7 @@ public class FramerTest
     private final SequenceNumberIndexReader sentSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
     private final SequenceNumberIndexReader receivedSequenceNumberIndex = mock(SequenceNumberIndexReader.class);
     private final ReplayQuery replayQuery = mock(ReplayQuery.class);
-    private final SessionIds sessionIds = mock(SessionIds.class);
+    private final SessionContexts sessionContexts = mock(SessionContexts.class);
     private final GatewaySessions gatewaySessions = mock(GatewaySessions.class);
     private final GatewaySession gatewaySession = mock(GatewaySession.class);
     private final Session session = mock(Session.class);
@@ -158,7 +158,7 @@ public class FramerTest
             mock(Subscription.class),
             mock(QueuedPipe.class),
             mockSessionIdStrategy,
-            sessionIds,
+            sessionContexts,
             sentSequenceNumberIndex,
             receivedSequenceNumberIndex,
             gatewaySessions,
@@ -168,14 +168,15 @@ public class FramerTest
             mock(GatewayPublication.class),
             node,
             mock(EngineDescriptorStore.class),
-            new LongHashSet(SessionIds.MISSING_SESSION_ID),
+            new LongHashSet(SessionContexts.MISSING_SESSION_ID),
             inboundPublication,
             DEFAULT_NAME_PREFIX,
             mock(CompletionPosition.class),
             mock(CompletionPosition.class),
             mock(CompletionPosition.class));
 
-        when(sessionIds.onLogon(any())).thenReturn(new SessionContext(SESSION_ID));
+        when(sessionContexts.onLogon(any())).thenReturn(
+            new SessionContext(SESSION_ID, SessionContext.UNKNOWN, sessionContexts, 0));
     }
 
     private void isLeader(final boolean value)
@@ -305,7 +306,7 @@ public class FramerTest
 
         notifyLibraryOfConnection();
 
-        when(sessionIds.onLogon(any())).thenReturn(SessionIds.DUPLICATE_SESSION);
+        when(sessionContexts.onLogon(any())).thenReturn(SessionContexts.DUPLICATE_SESSION);
 
         initiateConnection();
 

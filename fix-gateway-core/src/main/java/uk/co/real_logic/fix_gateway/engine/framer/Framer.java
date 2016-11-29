@@ -132,7 +132,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final CompletionPosition outboundLibraryCompletionPosition;
     private final CompletionPosition outboundClusterCompletionPosition;
     private final SessionIdStrategy sessionIdStrategy;
-    private final SessionIds sessionIds;
+    private final SessionContexts sessionContexts;
     private final QueuedPipe<AdminCommand> adminCommands;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
@@ -161,7 +161,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final Subscription replaySubscription,
         final QueuedPipe<AdminCommand> adminCommands,
         final SessionIdStrategy sessionIdStrategy,
-        final SessionIds sessionIds,
+        final SessionContexts sessionContexts,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final GatewaySessions gatewaySessions,
@@ -199,7 +199,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundClusterCompletionPosition = outboundClusterCompletionPosition;
         this.senderEndPoints = new SenderEndPoints(errorHandler);
         this.sessionIdStrategy = sessionIdStrategy;
-        this.sessionIds = sessionIds;
+        this.sessionContexts = sessionContexts;
         this.adminCommands = adminCommands;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
@@ -527,8 +527,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             // Initiating so can never be DETERMINE_AT_LOGON.
             final CompositeKey sessionKey = sessionIdStrategy.onLogon(
                 senderCompId, senderSubId, senderLocationId, targetCompId);
-            final SessionContext sessionContext = sessionIds.onLogon(sessionKey);
-            if (sessionContext == SessionIds.DUPLICATE_SESSION)
+            final SessionContext sessionContext = sessionContexts.onLogon(sessionKey);
+            if (sessionContext == SessionContexts.DUPLICATE_SESSION)
             {
                 saveError(DUPLICATE_SESSION, libraryId, correlationId);
                 return;
@@ -651,7 +651,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         if (!clusterableStreams.isLeader())
         {
-            sessionIds.onSentFollowerMessage(sessionId, sequenceIndex, messageType, buffer, offset, length);
+            sessionContexts.onSentFollowerMessage(sessionId, sequenceIndex, messageType, buffer, offset, length);
         }
 
         senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length);
@@ -1008,7 +1008,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 {
                     try
                     {
-                        sessionIds.reset(backupLocation);
+                        sessionContexts.reset(backupLocation);
                     }
                     catch (final Exception ex)
                     {

@@ -1,0 +1,244 @@
+/*
+ * Copyright 2015-2016 Real Logic Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+package uk.co.real_logic.fix_gateway.engine.framer;
+
+import org.agrona.ErrorHandler;
+import org.agrona.IoUtil;
+import org.agrona.concurrent.AtomicBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
+import org.junit.Test;
+import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
+import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
+import uk.co.real_logic.fix_gateway.engine.MappedFile;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
+import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.junit.Assert.*;
+import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.engine.framer.SessionContexts.LOWEST_VALID_SESSION_ID;
+
+public class SessionContextsTest
+{
+    private static final int BUFFER_SIZE = 8 * 1024;
+    private static final int SEQUENCE_INDEX = 1;
+
+    public static final int FILE_POSITION = 0;
+
+    private ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(BUFFER_SIZE));
+    private MappedFile mappedFile = mock(MappedFile.class);
+    private SessionIdStrategy idStrategy = SessionIdStrategy.senderAndTarget();
+    private SessionContexts sessionContexts = newSessionContexts(buffer);
+
+    private CompositeKey aSession = idStrategy.onLogon("a", null, null, "b");
+    private CompositeKey bSession = idStrategy.onLogon("b", null, null, "a");
+    private CompositeKey cSession = idStrategy.onLogon("c", null, null, "c");
+
+    @Test
+    public void sessionContextsAreUnique()
+    {
+        assertNotEquals(sessionContexts.onLogon(aSession), sessionContexts.onLogon(bSession));
+    }
+
+    @Test
+    public void findsDuplicateSessions()
+    {
+        sessionContexts.onLogon(aSession);
+
+        assertEquals(SessionContexts.DUPLICATE_SESSION, sessionContexts.onLogon(aSession));
+    }
+
+    @Test
+    public void handsOutSameSessionContextAfterDisconnect()
+    {
+        final SessionContext sessionContext = sessionContexts.onLogon(aSession);
+        sessionContexts.onDisconnect(sessionContext.sessionId());
+
+        assertValuesEqual(sessionContext, sessionContexts.onLogon(aSession));
+    }
+
+    @Test
+    public void persistsSessionContextsOverARestart()
+    {
+        final SessionContext bContext = sessionContexts.onLogon(bSession);
+        final SessionContext aContext = sessionContexts.onLogon(aSession);
+
+        bContext.onSequenceReset();
+        aContext.onSequenceReset();
+
+        final SessionContexts sessionContextsAfterRestart = newSessionContexts(buffer);
+        assertValuesEqual(aContext, sessionContextsAfterRestart.onLogon(aSession));
+        assertValuesEqual(bContext, sessionContextsAfterRestart.onLogon(bSession));
+    }
+
+    @Test
+    public void continuesIncrementingSessionContextsAfterRestart()
+    {
+        final SessionContext bContext = sessionContexts.onLogon(bSession);
+        final SessionContext aContext = sessionContexts.onLogon(aSession);
+
+        final SessionContexts sessionContextsAfterRestart = newSessionContexts(buffer);
+
+        final SessionContext cContext = sessionContextsAfterRestart.onLogon(cSession);
+        assertValidSessionId(cContext.sessionId());
+        assertNotEquals("C is a duplicate of A", aContext, cContext);
+        assertNotEquals("C is a duplicate of B", bContext, cContext);
+    }
+
+    @Test(expected = FileSystemCorruptionException.class)
+    public void checksFileCorruption()
+    {
+        sessionContexts.onLogon(bSession);
+        sessionContexts.onLogon(aSession);
+
+        // corrupt buffer
+        buffer.putBytes(8, new byte[1024]);
+
+        newSessionContexts(buffer);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void validateSizeOfBuffer()
+    {
+        final AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(1024));
+        newSessionContexts(buffer);
+    }
+
+    @Test
+    public void wrapsOverSectorBoundaries()
+    {
+        final int requiredNumberOfWritesToSpanSector = 300;
+
+        CompositeKey compositeKey = null;
+        SessionContext context = null;
+
+        for (int i = 0; i < requiredNumberOfWritesToSpanSector; i++)
+        {
+            compositeKey = idStrategy.onLogon("b" + i, null, null, "a" + i);
+            context = sessionContexts.onLogon(compositeKey);
+        }
+
+        final SessionContexts sessionContextsAfterRestart = newSessionContexts(buffer);
+        assertValuesEqual(context, sessionContextsAfterRestart.onLogon(compositeKey));
+    }
+
+    @Test
+    public void resetsSessionContexts()
+    {
+        final SessionContext aContext = sessionContexts.onLogon(aSession);
+        sessionContexts.onDisconnect(aContext.sessionId());
+
+        sessionContexts.reset(null);
+
+        assertSessionContextsReset(aContext, sessionContexts);
+
+        verifyNoBackUp();
+    }
+
+    @Test
+    public void resetsSessionContextsFile()
+    {
+        final SessionContext aContext = sessionContexts.onLogon(aSession);
+        sessionContexts.onDisconnect(aContext.sessionId());
+
+        sessionContexts.reset(null);
+
+        final SessionContexts sessionContextsAfterRestart = newSessionContexts(buffer);
+
+        assertSessionContextsReset(aContext, sessionContextsAfterRestart);
+
+        verifyNoBackUp();
+    }
+
+    @Test
+    public void copiesOldSessionContextFile() throws IOException
+    {
+        final File backupLocation = File.createTempFile("sessionContexts", "tmp");
+        try
+        {
+            final SessionContext aContext = sessionContexts.onLogon(aSession);
+            sessionContexts.onDisconnect(aContext.sessionId());
+
+            final byte[] oldData = new byte[BUFFER_SIZE];
+            buffer.getBytes(0, oldData);
+
+            sessionContexts.reset(backupLocation);
+
+            verify(mappedFile).transferTo(backupLocation);
+        }
+        finally
+        {
+            IoUtil.deleteIfExists(backupLocation);
+        }
+    }
+
+    @Test
+    public void handsOutSameSessionContextAfterTakingOverAsLeader()
+    {
+        final long sessionId = 123;
+        final HeaderDecoder header = mock(HeaderDecoder.class);
+        when(header.senderCompIDAsString()).thenReturn(aSession.senderCompId());
+        when(header.targetCompIDAsString()).thenReturn(aSession.targetCompId());
+
+        sessionContexts.onSentFollowerLogon(header, sessionId, SEQUENCE_INDEX);
+
+        final SessionContext sessionContext = sessionContexts.onLogon(aSession);
+        assertValuesEqual(
+            sessionContext,
+            new SessionContext(sessionId, -1, sessionContexts, FILE_POSITION)); // TODO
+    }
+
+    private void verifyNoBackUp()
+    {
+        verify(mappedFile, never()).transferTo(any());
+    }
+
+    private void assertSessionContextsReset(final SessionContext aContext, final SessionContexts sessionContexts)
+    {
+        final SessionContext bContext = sessionContexts.onLogon(bSession);
+        final SessionContext newAContext = sessionContexts.onLogon(aSession);
+        assertValidSessionId(bContext.sessionId());
+        assertValidSessionId(newAContext.sessionId());
+        assertEquals("Session Contexts haven't been reset", aContext, bContext);
+        assertNotEquals("Session Contexts haven't been reset", aContext, newAContext);
+    }
+
+    private void assertValidSessionId(final long cId)
+    {
+        assertThat(cId, greaterThanOrEqualTo(LOWEST_VALID_SESSION_ID));
+    }
+
+    private SessionContexts newSessionContexts(final AtomicBuffer buffer)
+    {
+        when(mappedFile.buffer()).thenReturn(buffer);
+        return new SessionContexts(mappedFile, idStrategy, errorHandler);
+    }
+
+    private void assertValuesEqual(
+        final SessionContext sessionContext,
+        final SessionContext secondSessionContext)
+    {
+        assertEquals(sessionContext, secondSessionContext);
+        assertEquals(sessionContext.sequenceIndex(), secondSessionContext.sequenceIndex());
+    }
+
+
+}

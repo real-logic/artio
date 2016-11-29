@@ -51,7 +51,7 @@ import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.LogTag.*;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
-import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.MISSING_SESSION_ID;
+import static uk.co.real_logic.fix_gateway.engine.framer.SessionContexts.MISSING_SESSION_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
 
