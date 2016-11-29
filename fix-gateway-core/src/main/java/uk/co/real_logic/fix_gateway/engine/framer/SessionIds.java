@@ -291,9 +291,9 @@ public class SessionIds
         initialiseBuffer();
     }
 
-    // TODO: add sequence index parameter
     void onSentFollowerMessage(
         final long sessionId,
+        final int sequenceIndex,
         final int messageType,
         final DirectBuffer buffer,
         final int offset,
@@ -309,11 +309,11 @@ public class SessionIds
 
             // We use the initiator logon variant as we are reading a sent message.
             final HeaderDecoder header = logonDecoder.header();
-            onSentFollowerLogon(header, sessionId);
+            onSentFollowerLogon(header, sessionId, sequenceIndex);
         }
     }
 
-    void onSentFollowerLogon(final HeaderDecoder header, final long sessionId)
+    void onSentFollowerLogon(final HeaderDecoder header, final long sessionId, final int sequenceIndex)
     {
         final CompositeKey compositeKey = idStrategy.onLogon(
             header.senderCompIDAsString(),
@@ -321,7 +321,7 @@ public class SessionIds
             header.senderLocationIDAsString(),
             header.targetCompIDAsString());
 
-        final SessionContext sessionContext = new SessionContext(sessionId);
+        final SessionContext sessionContext = new SessionContext(sessionId, sequenceIndex);
         assignSessionId(compositeKey, sessionContext);
         compositeToContext.put(compositeKey, sessionContext);
     }

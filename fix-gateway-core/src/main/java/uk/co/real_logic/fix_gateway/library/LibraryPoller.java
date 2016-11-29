@@ -589,6 +589,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int libraryId,
         final long connectionId,
         final long sessionId,
+        final int sequenceIndex,
         final int messageType,
         final long timestamp,
         final long position)

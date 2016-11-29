@@ -28,6 +28,7 @@ public interface ProtocolHandler
         int libraryId,
         long connectionId,
         long sessionId,
+        int sequenceIndex,
         int messageType,
         long timestamp,
         long position);

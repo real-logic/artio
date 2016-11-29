@@ -237,6 +237,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 final int libraryId,
                 final long connectionId,
                 final long sessionId,
+                final int sequenceIndex,
                 final int messageType,
                 final long timestamp,
                 final long position)
@@ -636,6 +637,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int libraryId,
         final long connectionId,
         final long sessionId,
+        final int sequenceIndex,
         final int messageType,
         final long timestamp,
         final long position)
@@ -644,7 +646,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         if (!clusterableStreams.isLeader())
         {
-            sessionIds.onSentFollowerMessage(sessionId, messageType, buffer, offset, length);
+            sessionIds.onSentFollowerMessage(sessionId, sequenceIndex, messageType, buffer, offset, length);
         }
 
         senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length);

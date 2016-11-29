@@ -38,6 +38,7 @@ import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.LOWEST_VALID
 public class SessionIdsTest
 {
     private static final int BUFFER_SIZE = 8 * 1024;
+    private static final int SEQUENCE_INDEX = 1;
 
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(BUFFER_SIZE));
@@ -192,7 +193,7 @@ public class SessionIdsTest
         when(header.senderCompIDAsString()).thenReturn(aSession.senderCompId());
         when(header.targetCompIDAsString()).thenReturn(aSession.targetCompId());
 
-        sessionIds.onSentFollowerLogon(header, sessionId);
+        sessionIds.onSentFollowerLogon(header, sessionId, SEQUENCE_INDEX);
 
         assertEquals(sessionId, sessionIds.onLogon(aSession).sessionId());
     }

@@ -45,6 +45,7 @@ public class AbstractLogTest
     protected static final int LIBRARY_ID = 7;
     protected static final int BEGIN_SEQ_NO = 2;
     protected static final int END_SEQ_NO = 2;
+    protected static final int SEQUENCE_INDEX = 1;
 
     protected MessageHeaderEncoder header = new MessageHeaderEncoder();
     protected FixMessageEncoder messageFrame = new FixMessageEncoder();
