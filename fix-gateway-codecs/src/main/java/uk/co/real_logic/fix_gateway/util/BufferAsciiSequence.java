@@ -51,4 +51,9 @@ public class BufferAsciiSequence implements CharSequence
 
         return new BufferAsciiSequence().wrap(buffer, offset + start, end - start);
     }
+
+    public String toString()
+    {
+        return buffer.getStringWithoutLengthUtf8(offset, length);
+    }
 }
