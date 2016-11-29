@@ -345,8 +345,12 @@ class ReceiverEndPoint
                 final int receivedSequenceNumber = sequenceNumber(receivedSequenceNumberIndex, resetSeqNum, sessionId);
                 final String username = SessionParser.username(logon);
                 final String password = SessionParser.password(logon);
+                if (resetSeqNum)
+                {
+                    sessionContext.onSequenceReset();
+                }
                 gatewaySession.onLogon(sessionId, compositeKey, username, password, logon.heartBtInt());
-                gatewaySession.sequenceNumbers(sentSequenceNumber, receivedSequenceNumber);
+                gatewaySession.acceptorSequenceNumbers(sentSequenceNumber, receivedSequenceNumber);
 
                 choosePublication(persistenceLevel);
 

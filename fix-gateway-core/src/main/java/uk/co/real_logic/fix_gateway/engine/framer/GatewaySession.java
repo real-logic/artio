@@ -190,7 +190,7 @@ class GatewaySession implements SessionInfo
         return heartbeatIntervalInS;
     }
 
-    void sequenceNumbers(final int sentSequenceNumber, final int receivedSequenceNumber)
+    void acceptorSequenceNumbers(final int sentSequenceNumber, final int receivedSequenceNumber)
     {
         if (session != null)
         {

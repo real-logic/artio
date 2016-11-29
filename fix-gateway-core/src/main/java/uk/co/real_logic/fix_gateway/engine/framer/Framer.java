@@ -524,6 +524,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             final long connectionId = this.nextConnectionId++;
 
+            // Initiating so can never be DETERMINE_AT_LOGON.
             final CompositeKey sessionKey = sessionIdStrategy.onLogon(
                 senderCompId, senderSubId, senderLocationId, targetCompId);
             final SessionContext sessionContext = sessionIds.onLogon(sessionKey);
@@ -583,6 +584,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     {
                         lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
                         lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+                        if (lastSentSequenceNumber == 1 && lastReceivedSequenceNumber == 1)
+                        {
+                            sessionContext.onSequenceReset();
+                        }
                         session.onLogon(sessionId, sessionKey, username, password, heartbeatIntervalInS);
                         return 0;
                     }

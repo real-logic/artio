@@ -20,8 +20,11 @@ package uk.co.real_logic.fix_gateway.engine.framer;
  */
 class SessionContext
 {
+    static final int UNKNOWN = -1;
+
     private final long sessionId;
-    private int sequenceIndex;
+    // onSequenceReset() will be called upon the first logon
+    private int sequenceIndex = UNKNOWN;
 
     // New session constructor
     SessionContext(final long sessionId)
@@ -71,5 +74,13 @@ class SessionContext
     public int hashCode()
     {
         return (int) (sessionId ^ (sessionId >>> 32));
+    }
+
+    public String toString()
+    {
+        return "SessionContext{" +
+            "sessionId=" + sessionId +
+            ", sequenceIndex=" + sequenceIndex +
+            '}';
     }
 }

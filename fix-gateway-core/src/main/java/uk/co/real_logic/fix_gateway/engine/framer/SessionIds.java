@@ -321,7 +321,7 @@ public class SessionIds
             header.senderLocationIDAsString(),
             header.targetCompIDAsString());
 
-        final SessionContext sessionContext = new SessionContext(sessionId, sequenceIndex);
+        final SessionContext sessionContext = new SessionContext(sessionId, -1); // TODO
         assignSessionId(compositeKey, sessionContext);
         compositeToContext.put(compositeKey, sessionContext);
     }

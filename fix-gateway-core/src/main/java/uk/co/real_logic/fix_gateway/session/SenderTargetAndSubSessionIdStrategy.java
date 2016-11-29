@@ -53,7 +53,10 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
     }
 
     public CompositeKey onLogon(
-        final String senderCompId, final String senderSubId, final String senderLocationId, final String targetCompId)
+        final String senderCompId,
+        final String senderSubId,
+        final String senderLocationId,
+        final String targetCompId)
     {
         final char[] senderCompIdChars = senderCompId.toCharArray();
         final char[] senderSubIdChars = senderSubId.toCharArray();
