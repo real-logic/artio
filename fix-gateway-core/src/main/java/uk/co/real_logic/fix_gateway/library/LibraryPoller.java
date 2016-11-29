@@ -605,7 +605,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             if (subscriber != null)
             {
                 return subscriber.onMessage(
-                    buffer, offset, length, libraryId, connectionId, sessionId, messageType, timestamp, position);
+                    buffer, offset, length, libraryId, sessionId, sequenceIndex, messageType, timestamp, position);
             }
         }
 

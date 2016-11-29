@@ -162,7 +162,8 @@ public class InitiatorSession extends Session
             state(SessionState.SENT_LOGON);
             final int heartbeatIntervalInS = (int) (heartbeatIntervalInMs() / 1000);
             final int sentSeqNum = newSentSeqNum();
-            final long position = proxy.logon(heartbeatIntervalInS, sentSeqNum, username(), password(), false);
+            final long position = proxy.logon(
+                heartbeatIntervalInS, sentSeqNum, username(), password(), false, sequenceIndex());
             if (position >= 0)
             {
                 lastSentMsgSeqNum(sentSeqNum);

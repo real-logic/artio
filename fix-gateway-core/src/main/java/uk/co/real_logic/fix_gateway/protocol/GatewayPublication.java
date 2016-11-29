@@ -101,6 +101,7 @@ public class GatewayPublication extends ClaimablePublication
         final int libraryId,
         final int messageType,
         final long sessionId,
+        final int sequenceIndex,
         final long connectionId,
         final MessageStatus status)
     {

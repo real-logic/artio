@@ -58,6 +58,7 @@ public abstract class AbstractSessionTest
     static final int HEARTBEAT_INTERVAL = 2;
     static final CompositeKey SESSION_KEY = mock(CompositeKey.class);
     static final int LIBRARY_ID = 4;
+    static final int SEQUENCE_INDEX = 0;
 
     private static final byte[] MSG_TYPE_BYTES = "D".getBytes(US_ASCII);
 
@@ -90,6 +91,7 @@ public abstract class AbstractSessionTest
             anyInt(),
             anyInt(),
             anyLong(),
+            anyInt(),
             anyLong(),
             any()
         )).thenReturn(POSITION);
@@ -102,7 +104,7 @@ public abstract class AbstractSessionTest
         session().lastReceivedMsgSeqNum(2);
 
         onMessage(1);
-        verify(mockProxy).lowSequenceNumberLogout(1, 3, 1);
+        verify(mockProxy).lowSequenceNumberLogout(1, 3, 1, SEQUENCE_INDEX);
         verifyDisconnect(times(1));
     }
 
@@ -126,7 +128,7 @@ public abstract class AbstractSessionTest
 
         final int nextMsgSeqNum = nextMsgSeqNum();
 
-        when(mockProxy.receivedMessageWithoutSequenceNumber(nextMsgSeqNum))
+        when(mockProxy.receivedMessageWithoutSequenceNumber(nextMsgSeqNum, SEQUENCE_INDEX))
             .thenReturn(BACK_PRESSURED, POSITION);
 
         assertEquals(ABORT, onMessage(MISSING_INT));
@@ -144,7 +146,7 @@ public abstract class AbstractSessionTest
 
     private void receivedMessageWithoutSequenceNumber(final int sentMsgSeqNum, final int times)
     {
-        verify(mockProxy, times(times)).receivedMessageWithoutSequenceNumber(sentMsgSeqNum);
+        verify(mockProxy, times(times)).receivedMessageWithoutSequenceNumber(sentMsgSeqNum, SEQUENCE_INDEX);
     }
 
     @Test
@@ -156,7 +158,7 @@ public abstract class AbstractSessionTest
 
         onLogon(heartbeatInterval, 1, false);
 
-        verify(mockProxy).negativeHeartbeatLogout(1);
+        verify(mockProxy).negativeHeartbeatLogout(1, SEQUENCE_INDEX);
     }
 
     @Test
@@ -183,7 +185,7 @@ public abstract class AbstractSessionTest
 
         session().onMessage(2, MSG_TYPE_BYTES, sendingTime(), UNKNOWN, true);
 
-        verify(mockProxy).reject(2, 2, MSG_TYPE_BYTES, MSG_TYPE_BYTES.length, REQUIRED_TAG_MISSING);
+        verify(mockProxy).reject(2, 2, MSG_TYPE_BYTES, MSG_TYPE_BYTES.length, REQUIRED_TAG_MISSING, SEQUENCE_INDEX);
     }
 
     @Test
@@ -197,7 +199,7 @@ public abstract class AbstractSessionTest
 
         session().sendSequenceReset(newSeqNo);
 
-        verify(mockProxy).sequenceReset(anyInt(), eq(newSeqNo));
+        verify(mockProxy).sequenceReset(anyInt(), eq(newSeqNo), eq(SEQUENCE_INDEX));
         assertEquals(newSeqNo - 1, session().lastSentMsgSeqNum());
     }
 
@@ -285,7 +287,7 @@ public abstract class AbstractSessionTest
 
     private void backPressureLogout()
     {
-        when(mockProxy.logout(anyInt())).thenReturn(BACK_PRESSURED, POSITION);
+        when(mockProxy.logout(anyInt(), eq(SEQUENCE_INDEX))).thenReturn(BACK_PRESSURED, POSITION);
 
         backPressureDisconnect();
     }
@@ -310,7 +312,7 @@ public abstract class AbstractSessionTest
 
         session().onTestRequest(1, testReqId, testReqIdLength, sendingTime(), UNKNOWN, false);
 
-        verify(mockProxy).heartbeat(testReqId, testReqIdLength, 1);
+        verify(mockProxy).heartbeat(testReqId, testReqIdLength, 1, SEQUENCE_INDEX);
     }
 
     @Test
@@ -320,7 +322,7 @@ public abstract class AbstractSessionTest
 
         onSequenceReset();
 
-        verify(mockProxy).resendRequest(1, 1, 0);
+        verify(mockProxy).resendRequest(1, 1, 0, SEQUENCE_INDEX);
     }
 
     @Test
@@ -337,7 +339,7 @@ public abstract class AbstractSessionTest
         assertEquals(71, session().lastSentMsgSeqNum());
         assertEquals(3, session().lastReceivedMsgSeqNum());
 
-        verify(mockProxy, times(2)).resendRequest(71, 1, 0);
+        verify(mockProxy, times(2)).resendRequest(71, 1, 0, SEQUENCE_INDEX);
     }
 
     private Action onSequenceReset()
@@ -347,7 +349,7 @@ public abstract class AbstractSessionTest
 
     private void backPressureResendRequest()
     {
-        when(mockProxy.resendRequest(anyInt(), anyInt(), anyInt()))
+        when(mockProxy.resendRequest(anyInt(), anyInt(), anyInt(), eq(SEQUENCE_INDEX)))
             .thenReturn(BACK_PRESSURED, POSITION);
     }
 
@@ -368,7 +370,7 @@ public abstract class AbstractSessionTest
 
         session().onSequenceReset(1, 4, true, false);
 
-        verify(mockProxy).lowSequenceNumberLogout(anyInt(), eq(3), eq(1));
+        verify(mockProxy).lowSequenceNumberLogout(anyInt(), eq(3), eq(1), eq(SEQUENCE_INDEX));
         verifyDisconnect(times(1));
     }
 
@@ -434,7 +436,7 @@ public abstract class AbstractSessionTest
             NEW_SEQ_NO,
             SequenceResetDecoder.MESSAGE_TYPE_BYTES,
             SequenceResetDecoder.MESSAGE_TYPE_BYTES.length,
-            VALUE_IS_INCORRECT);
+            VALUE_IS_INCORRECT, SEQUENCE_INDEX);
     }
 
     @Test
@@ -455,7 +457,7 @@ public abstract class AbstractSessionTest
 
         if (backPressured)
         {
-            when(mockProxy.testRequest(7, TEST_REQ_ID)).thenReturn(BACK_PRESSURED, POSITION);
+            when(mockProxy.testRequest(7, TEST_REQ_ID, SEQUENCE_INDEX)).thenReturn(BACK_PRESSURED, POSITION);
         }
 
         poll();
@@ -465,7 +467,7 @@ public abstract class AbstractSessionTest
             poll();
         }
 
-        verify(mockProxy, retry(backPressured)).testRequest(7, TEST_REQ_ID);
+        verify(mockProxy, retry(backPressured)).testRequest(7, TEST_REQ_ID, SEQUENCE_INDEX);
         assertEquals(AWAITING_RESEND, session().state());
     }
 
@@ -533,7 +535,7 @@ public abstract class AbstractSessionTest
 
         onMessage(3);
 
-        verify(mockProxy).resendRequest(1, 1, 0);
+        verify(mockProxy).resendRequest(1, 1, 0, SEQUENCE_INDEX);
         assertState(AWAITING_RESEND);
     }
 
@@ -555,7 +557,7 @@ public abstract class AbstractSessionTest
     @Test
     public void shouldDisconnectIfBeginStringIsInvalidWhenBackPressured()
     {
-        when(mockProxy.incorrectBeginStringLogout(1)).thenReturn(BACK_PRESSURED, POSITION);
+        when(mockProxy.incorrectBeginStringLogout(1, SEQUENCE_INDEX)).thenReturn(BACK_PRESSURED, POSITION);
         backPressureDisconnect();
 
         onBeginString(false);
@@ -671,7 +673,7 @@ public abstract class AbstractSessionTest
 
     private void verifySetsSentSequenceNumbersToTwo()
     {
-        verify(mockProxy).logon(eq(HEARTBEAT_INTERVAL), eq(1), any(), any(), eq(true));
+        verify(mockProxy).logon(eq(HEARTBEAT_INTERVAL), eq(1), any(), any(), eq(true), eq(SEQUENCE_INDEX));
         assertEquals(1, session().lastSentMsgSeqNum());
         verifyNoFurtherMessages();
     }
@@ -689,7 +691,7 @@ public abstract class AbstractSessionTest
 
     private void incorrectBeginStringLogout(final int times)
     {
-        verify(mockProxy, times(times)).incorrectBeginStringLogout(1);
+        verify(mockProxy, times(times)).incorrectBeginStringLogout(1, SEQUENCE_INDEX);
     }
 
     private void heartbeatSentAfterInterval(
@@ -699,7 +701,7 @@ public abstract class AbstractSessionTest
     {
         if (backPressured)
         {
-            when(mockProxy.heartbeat(anyInt())).thenReturn(BACK_PRESSURED, POSITION);
+            when(mockProxy.heartbeat(anyInt(), eq(SEQUENCE_INDEX))).thenReturn(BACK_PRESSURED, POSITION);
         }
 
         final int sentMsgSeqNo = nextMsgSeqNum();
@@ -717,7 +719,7 @@ public abstract class AbstractSessionTest
             poll();
         }
 
-        verify(mockProxy, retry(backPressured)).heartbeat(sentMsgSeqNo);
+        verify(mockProxy, retry(backPressured)).heartbeat(sentMsgSeqNo, SEQUENCE_INDEX);
         reset(mockProxy);
     }
 
@@ -744,7 +746,7 @@ public abstract class AbstractSessionTest
 
     public void verifyLogout(final int msgSeqNo, final VerificationMode times)
     {
-        verify(mockProxy, times).logout(msgSeqNo);
+        verify(mockProxy, times).logout(msgSeqNo, SEQUENCE_INDEX);
     }
 
     public void assertState(final SessionState state)
@@ -791,7 +793,7 @@ public abstract class AbstractSessionTest
 
     protected void verifySendingTimeProblem()
     {
-        verify(mockProxy).reject(2, 2, MSG_TYPE_BYTES, MSG_TYPE_BYTES.length, SENDINGTIME_ACCURACY_PROBLEM);
+        verify(mockProxy).reject(2, 2, MSG_TYPE_BYTES, MSG_TYPE_BYTES.length, SENDINGTIME_ACCURACY_PROBLEM, SEQUENCE_INDEX);
     }
 
     protected void messageWithWeirdTime(final long sendingTime)
@@ -822,7 +824,7 @@ public abstract class AbstractSessionTest
         final int testReqIdLength = 5;
 
         session().onTestRequest(4, testReqId, testReqIdLength, sendingTime(), UNKNOWN, false);
-        verify(mockProxy).heartbeat(eq(testReqId), eq(testReqIdLength), anyInt());
+        verify(mockProxy).heartbeat(eq(testReqId), eq(testReqIdLength), anyInt(), eq(SEQUENCE_INDEX));
         verifyConnected();
     }
 

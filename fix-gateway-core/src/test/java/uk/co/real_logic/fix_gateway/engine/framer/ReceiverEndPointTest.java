@@ -59,6 +59,7 @@ public class ReceiverEndPointTest
     private static final int LIBRARY_ID = FixEngine.ENGINE_LIBRARY_ID;
     private static final long POSITION = 1024L;
     private static final int BUFFER_SIZE = 16 * 1024;
+    private static final int SEQUENCE_INDEX = 0;
 
     private CompositeKey compositeKey = mock(CompositeKey.class);
     private TcpChannel mockChannel = mock(TcpChannel.class);
@@ -345,7 +346,7 @@ public class ReceiverEndPointTest
     private void firstSaveAttemptIsBackPressured()
     {
         when(libraryPublication
-            .saveMessage(anyBuffer(), anyInt(), anyInt(), anyInt(), anyInt(), anyLong(), anyLong(), any()))
+            .saveMessage(anyBuffer(), anyInt(), anyInt(), anyInt(), anyInt(), anyLong(), anyInt(), anyLong(), any()))
             .thenReturn(BACK_PRESSURED, POSITION);
     }
 
@@ -370,7 +371,7 @@ public class ReceiverEndPointTest
         verify(libraryPublication, mode)
             .saveMessage(
                 anyBuffer(), eq(0), eq(length), eq(LIBRARY_ID),
-                anyInt(), anyLong(), eq(CONNECTION_ID),
+                anyInt(), anyLong(), anyInt(), eq(CONNECTION_ID),
                 eq(INVALID));
     }
 
@@ -402,7 +403,7 @@ public class ReceiverEndPointTest
         verify(libraryPublication, times(numberOfMessages))
             .saveMessage(
                 anyBuffer(), eq(0), eq(msgLen), eq(LIBRARY_ID),
-                eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
+                eq(MESSAGE_TYPE), eq(SESSION_ID), eq(SEQUENCE_INDEX), eq(CONNECTION_ID),
                 eq(status));
     }
 
@@ -411,12 +412,25 @@ public class ReceiverEndPointTest
         final InOrder inOrder = Mockito.inOrder(libraryPublication);
         inOrder.verify(libraryPublication, times(firstMessageSaveAttempts))
             .saveMessage(
-                anyBuffer(), eq(0), eq(MSG_LEN), eq(LIBRARY_ID), eq(MESSAGE_TYPE), eq(SESSION_ID),
-                eq(CONNECTION_ID), eq(OK));
+                anyBuffer(),
+                eq(0),
+                eq(MSG_LEN),
+                eq(LIBRARY_ID),
+                eq(MESSAGE_TYPE),
+                eq(SESSION_ID),
+                eq(SEQUENCE_INDEX),
+                eq(CONNECTION_ID),
+                eq(OK));
         inOrder.verify(libraryPublication, times(1))
             .saveMessage(
-                anyBuffer(), eq(MSG_LEN), eq(MSG_LEN), eq(LIBRARY_ID),
-                eq(MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
+                anyBuffer(),
+                eq(MSG_LEN),
+                eq(MSG_LEN),
+                eq(LIBRARY_ID),
+                eq(MESSAGE_TYPE),
+                eq(SESSION_ID),
+                eq(SEQUENCE_INDEX),
+                eq(CONNECTION_ID),
                 eq(OK));
         inOrder.verifyNoMoreInteractions();
     }
@@ -513,8 +527,14 @@ public class ReceiverEndPointTest
     {
         verify(libraryPublication, mode)
             .saveMessage(
-                anyBuffer(), eq(0), eq(INVALID_CHECKSUM_LEN),
-                eq(LIBRARY_ID), eq(MESSAGE_TYPE), anyLong(), eq(CONNECTION_ID),
+                anyBuffer(),
+                eq(0),
+                eq(INVALID_CHECKSUM_LEN),
+                eq(LIBRARY_ID),
+                eq(MESSAGE_TYPE),
+                anyLong(),
+                anyInt(),
+                eq(CONNECTION_ID),
                 eq(INVALID_CHECKSUM));
     }
 

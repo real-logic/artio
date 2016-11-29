@@ -59,6 +59,7 @@ public class FakeHandler
         final int length,
         final int libraryId,
         final long sessionId,
+        final int sequenceIndex,
         final int messageType,
         final long timestampInNs,
         final long position)

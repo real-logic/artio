@@ -111,7 +111,7 @@ public class GapFiller implements ProtocolHandler, Agent
             final int encodedLength = sequenceResetEncoder.encode(encodeBuffer, 0);
             final long sentPosition = publication.saveMessage(
                 encodeBuffer, 0, encodedLength,
-                libraryId, SequenceResetDecoder.MESSAGE_TYPE, sessionId, connectionId,
+                libraryId, SequenceResetDecoder.MESSAGE_TYPE, sessionId, sequenceIndex, connectionId,
                 MessageStatus.OK);
 
             if (sentPosition == Publication.BACK_PRESSURED)

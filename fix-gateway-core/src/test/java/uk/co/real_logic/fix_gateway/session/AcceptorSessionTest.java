@@ -74,7 +74,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
         verifySessionSetup();
         verifyLogon();
-        verify(mockProxy).resendRequest(2, 1, 0);
+        verify(mockProxy).resendRequest(2, 1, 0, SEQUENCE_INDEX);
         verifyNoFurtherMessages();
         assertState(AWAITING_RESEND);
     }
@@ -101,7 +101,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     @Test
     public void shouldDisconnectIfInvalidSendingTimeAtLogonWhenBackPressured()
     {
-        when(mockProxy.rejectWhilstNotLoggedOn(anyInt(), any())).thenReturn(BACK_PRESSURED, POSITION);
+        when(mockProxy.rejectWhilstNotLoggedOn(anyInt(), any(), eq(SEQUENCE_INDEX))).thenReturn(BACK_PRESSURED, POSITION);
 
         logonWithInvalidSendingTime(ABORT);
 
@@ -112,7 +112,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
     private void verifySendingTimeAccuracyProblem(final int times)
     {
-        verify(mockProxy, times(times)).rejectWhilstNotLoggedOn(1, SENDINGTIME_ACCURACY_PROBLEM);
+        verify(mockProxy, times(times)).rejectWhilstNotLoggedOn(1, SENDINGTIME_ACCURACY_PROBLEM, SEQUENCE_INDEX);
     }
 
     private void logonWithInvalidSendingTime(final Action expectedAction)
@@ -161,7 +161,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
     private void verifyLogon()
     {
-        verify(mockProxy).logon(HEARTBEAT_INTERVAL, 1, null, null, false);
+        verify(mockProxy).logon(HEARTBEAT_INTERVAL, 1, null, null, false, SEQUENCE_INDEX);
     }
 
     private void verifySessionSetup()

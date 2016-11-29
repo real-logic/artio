@@ -129,7 +129,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
     private void verifyLogon()
     {
-        verify(mockProxy, times(1)).logon(HEARTBEAT_INTERVAL, 1, null, null, false);
+        verify(mockProxy, times(1)).logon(HEARTBEAT_INTERVAL, 1, null, null, false, SEQUENCE_INDEX);
     }
 
     protected void readyForLogon()

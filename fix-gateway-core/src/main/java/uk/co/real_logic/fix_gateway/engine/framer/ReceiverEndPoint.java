@@ -61,6 +61,8 @@ import static uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy
  */
 class ReceiverEndPoint
 {
+    public static final char INVALID_MESSAGE_TYPE = '-';
+
     private static final byte BODY_LENGTH_FIELD = 9;
 
     private static final int COMMON_PREFIX_LENGTH = "8=FIX.4.2 ".length();
@@ -74,6 +76,7 @@ class ReceiverEndPoint
     private static final int MIN_CHECKSUM_SIZE = " 10=".length() + 1;
     private static final int SOCKET_DISCONNECTED = -1;
     private static final int UNKNOWN_MESSAGE_TYPE = -1;
+    private static final int UNKNOWN_SEQUENCE_INDEX = -2;
 
     private final LogonDecoder logon = new LogonDecoder();
 
@@ -101,6 +104,7 @@ class ReceiverEndPoint
     private boolean hasDisconnected = false;
     private SelectionKey selectionKey;
     private boolean isPaused = false;
+    private int sequenceIndex = UNKNOWN_SEQUENCE_INDEX;
 
     ReceiverEndPoint(
         final TcpChannel channel,
@@ -349,6 +353,7 @@ class ReceiverEndPoint
                 {
                     sessionContext.onSequenceReset();
                 }
+                sequenceIndex = sessionContext.sequenceIndex();
                 gatewaySession.onLogon(sessionId, compositeKey, username, password, logon.heartBtInt());
                 gatewaySession.acceptorSequenceNumbers(sentSequenceNumber, receivedSequenceNumber);
 
@@ -386,7 +391,7 @@ class ReceiverEndPoint
     private boolean saveMessage(final int offset, final int messageType, final int length)
     {
         final long position = publication.saveMessage(
-            buffer, offset, length, libraryId, messageType, sessionId, connectionId, OK);
+            buffer, offset, length, libraryId, messageType, sessionId, sequenceIndex, connectionId, OK);
         if (Pressure.isBackPressured(position))
         {
             moveRemainingDataToBufferStart(offset);
@@ -470,6 +475,7 @@ class ReceiverEndPoint
             startOfChecksumTag,
             UNKNOWN_MESSAGE_TYPE,
             sessionId,
+            sequenceIndex,
             connectionId,
             INVALID_BODYLENGTH));
     }
@@ -477,7 +483,16 @@ class ReceiverEndPoint
     private boolean saveInvalidMessage(final int offset)
     {
         final boolean backpressured = stashIfBackpressured(offset, libraryPublication.saveMessage(
-            buffer, offset, usedBufferData, libraryId, '-', sessionId, connectionId, INVALID));
+            buffer,
+            offset,
+            usedBufferData,
+            libraryId,
+            INVALID_MESSAGE_TYPE,
+            sessionId,
+            sequenceIndex,
+            connectionId,
+            INVALID));
+
         if (!backpressured)
         {
             clearBuffer();
@@ -493,7 +508,15 @@ class ReceiverEndPoint
     private boolean saveInvalidChecksumMessage(final int offset, final int messageType, final int length)
     {
         return stashIfBackpressured(offset, libraryPublication.saveMessage(
-            buffer, offset, length, libraryId, messageType, sessionId, connectionId, INVALID_CHECKSUM));
+            buffer,
+            offset,
+            length,
+            libraryId,
+            messageType,
+            sessionId,
+            sequenceIndex,
+            connectionId,
+            INVALID_CHECKSUM));
     }
 
     public void close(final DisconnectReason reason)

@@ -44,7 +44,8 @@ public class GapFillerTest extends AbstractLogTest
 
         verify(publication).saveMessage(
             any(), eq(0), anyInt(),
-            eq(LIBRARY_ID), eq(SequenceResetDecoder.MESSAGE_TYPE), eq(SESSION_ID), eq(CONNECTION_ID),
+            eq(LIBRARY_ID), eq(SequenceResetDecoder.MESSAGE_TYPE),
+            eq(SESSION_ID), eq(SEQUENCE_INDEX), eq(CONNECTION_ID),
             eq(MessageStatus.OK));
     }
 }
