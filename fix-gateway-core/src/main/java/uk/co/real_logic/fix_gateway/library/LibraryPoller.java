@@ -27,7 +27,6 @@ import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
-import uk.co.real_logic.fix_gateway.engine.framer.SessionIds;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.fix_gateway.protocol.*;
@@ -50,10 +49,9 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
-import static uk.co.real_logic.fix_gateway.LogTag.APPLICATION_HEARTBEAT;
-import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
-import static uk.co.real_logic.fix_gateway.LogTag.LIBRARY_CONNECT;
+import static uk.co.real_logic.fix_gateway.LogTag.*;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.fix_gateway.engine.framer.SessionIds.MISSING_SESSION_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
 
@@ -66,7 +64,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final List<Session> unmodifiableSessions = unmodifiableList(sessions);
 
     // Used when checking the consistency of the session ids
-    private final LongHashSet sessionIds = new LongHashSet(SessionIds.MISSING);
+    private final LongHashSet sessionIds = new LongHashSet(MISSING_SESSION_ID);
 
     // Uniquely identifies library session
     private final int libraryId;

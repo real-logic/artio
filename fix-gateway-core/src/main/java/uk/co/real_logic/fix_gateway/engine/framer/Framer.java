@@ -525,16 +525,23 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
             final CompositeKey sessionKey = sessionIdStrategy.onLogon(
                 senderCompId, senderSubId, senderLocationId, targetCompId);
-            final long sessionId = sessionIds.onLogon(sessionKey);
-            if (sessionId == SessionIds.DUPLICATE_SESSION)
+            final SessionContext sessionContext = sessionIds.onLogon(sessionKey);
+            if (sessionContext == SessionIds.DUPLICATE_SESSION)
             {
                 saveError(DUPLICATE_SESSION, libraryId, correlationId);
                 return;
             }
 
+            final long sessionId = sessionContext.sessionId();
             final GatewaySession session =
                 setupConnection(
-                    channel, connectionId, sessionId, sessionKey, libraryId, INITIATOR, sequenceNumberType);
+                    channel,
+                    connectionId,
+                    sessionId,
+                    sessionKey,
+                    libraryId,
+                    INITIATOR,
+                    sequenceNumberType);
 
             library.addSession(session);
 

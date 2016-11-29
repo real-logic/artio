@@ -168,14 +168,14 @@ public class FramerTest
             mock(GatewayPublication.class),
             node,
             mock(EngineDescriptorStore.class),
-            new LongHashSet(SessionIds.MISSING),
+            new LongHashSet(SessionIds.MISSING_SESSION_ID),
             inboundPublication,
             DEFAULT_NAME_PREFIX,
             mock(CompletionPosition.class),
             mock(CompletionPosition.class),
             mock(CompletionPosition.class));
 
-        when(sessionIds.onLogon(any())).thenReturn(SESSION_ID);
+        when(sessionIds.onLogon(any())).thenReturn(new SessionContext(SESSION_ID));
     }
 
     private void isLeader(final boolean value)

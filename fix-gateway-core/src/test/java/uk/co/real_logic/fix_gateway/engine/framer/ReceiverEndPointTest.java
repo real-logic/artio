@@ -73,7 +73,7 @@ public class ReceiverEndPointTest
     private SequenceNumberIndexReader receivedSequenceNumbers = mock(SequenceNumberIndexReader.class);
     private Framer framer = mock(Framer.class);
     private GatewaySession gatewaySession = mock(GatewaySession.class);
-    private final LongHashSet replicatedConnectionIds = new LongHashSet(SessionIds.MISSING);
+    private final LongHashSet replicatedConnectionIds = new LongHashSet(SessionIds.MISSING_SESSION_ID);
 
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(
@@ -86,7 +86,7 @@ public class ReceiverEndPointTest
     public void setUp()
     {
         endPoint.gatewaySession(gatewaySession);
-        when(mockSessionIds.onLogon(any())).thenReturn(SESSION_ID);
+        when(mockSessionIds.onLogon(any())).thenReturn(new SessionContext(SESSION_ID));
         when(mockSessionIdStrategy.onLogon(any())).thenReturn(compositeKey);
         doAnswer(
             (inv) ->

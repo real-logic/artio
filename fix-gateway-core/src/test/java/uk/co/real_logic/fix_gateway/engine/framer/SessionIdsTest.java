@@ -66,35 +66,35 @@ public class SessionIdsTest
     @Test
     public void handsOutSameSessionIdAfterDisconnect()
     {
-        final long sessionId = sessionIds.onLogon(aSession);
-        sessionIds.onDisconnect(sessionId);
+        final SessionContext sessionContext = sessionIds.onLogon(aSession);
+        sessionIds.onDisconnect(sessionContext.sessionId());
 
-        assertEquals(sessionId, sessionIds.onLogon(aSession));
+        assertEquals(sessionContext, sessionIds.onLogon(aSession));
     }
 
     @Test
     public void persistsSessionIdsOverARestart()
     {
-        final long bId = sessionIds.onLogon(bSession);
-        final long aId = sessionIds.onLogon(aSession);
+        final SessionContext bContext = sessionIds.onLogon(bSession);
+        final SessionContext aContext = sessionIds.onLogon(aSession);
 
         final SessionIds sessionIdsAfterRestart = newSessionIds(buffer);
-        assertEquals(aId, sessionIdsAfterRestart.onLogon(aSession));
-        assertEquals(bId, sessionIdsAfterRestart.onLogon(bSession));
+        assertEquals(aContext, sessionIdsAfterRestart.onLogon(aSession));
+        assertEquals(bContext, sessionIdsAfterRestart.onLogon(bSession));
     }
 
     @Test
     public void continuesIncrementingSessionIdsAfterRestart()
     {
-        final long bId = sessionIds.onLogon(bSession);
-        final long aId = sessionIds.onLogon(aSession);
+        final SessionContext bContext = sessionIds.onLogon(bSession);
+        final SessionContext aContext = sessionIds.onLogon(aSession);
 
         final SessionIds sessionIdsAfterRestart = newSessionIds(buffer);
 
-        final long cId = sessionIdsAfterRestart.onLogon(cSession);
-        assertValidSessionId(cId);
-        assertNotEquals("C is a duplicate of A", aId, cId);
-        assertNotEquals("C is a duplicate of B", bId, cId);
+        final SessionContext cContext = sessionIdsAfterRestart.onLogon(cSession);
+        assertValidSessionId(cContext.sessionId());
+        assertNotEquals("C is a duplicate of A", aContext, cContext);
+        assertNotEquals("C is a duplicate of B", bContext, cContext);
     }
 
     @Test(expected = FileSystemCorruptionException.class)
@@ -122,7 +122,7 @@ public class SessionIdsTest
         final int requiredNumberOfWritesToSpanSector = 300;
 
         CompositeKey compositeKey = null;
-        long surrogateKey = 0;
+        SessionContext surrogateKey = null;
 
         for (int i = 0; i < requiredNumberOfWritesToSpanSector; i++)
         {
@@ -137,12 +137,12 @@ public class SessionIdsTest
     @Test
     public void resetsSessionIds()
     {
-        final long aId = sessionIds.onLogon(aSession);
-        sessionIds.onDisconnect(aId);
+        final SessionContext aContext = sessionIds.onLogon(aSession);
+        sessionIds.onDisconnect(aContext.sessionId());
 
         sessionIds.reset(null);
 
-        assertSessionIdsReset(aId, sessionIds);
+        assertSessionIdsReset(aContext, sessionIds);
 
         verifyNoBackUp();
     }
@@ -150,14 +150,14 @@ public class SessionIdsTest
     @Test
     public void resetsSessionIdsFile()
     {
-        final long aId = sessionIds.onLogon(aSession);
-        sessionIds.onDisconnect(aId);
+        final SessionContext aContext = sessionIds.onLogon(aSession);
+        sessionIds.onDisconnect(aContext.sessionId());
 
         sessionIds.reset(null);
 
         final SessionIds sessionIdsAfterRestart = newSessionIds(buffer);
 
-        assertSessionIdsReset(aId, sessionIdsAfterRestart);
+        assertSessionIdsReset(aContext, sessionIdsAfterRestart);
 
         verifyNoBackUp();
     }
@@ -168,8 +168,8 @@ public class SessionIdsTest
         final File backupLocation = File.createTempFile("sessionIds", "tmp");
         try
         {
-            final long aId = sessionIds.onLogon(aSession);
-            sessionIds.onDisconnect(aId);
+            final SessionContext aContext = sessionIds.onLogon(aSession);
+            sessionIds.onDisconnect(aContext.sessionId());
 
             final byte[] oldData = new byte[BUFFER_SIZE];
             buffer.getBytes(0, oldData);
@@ -192,9 +192,9 @@ public class SessionIdsTest
         when(header.senderCompIDAsString()).thenReturn(aSession.senderCompId());
         when(header.targetCompIDAsString()).thenReturn(aSession.targetCompId());
 
-        sessionIds.onSentFollowerLogon(sessionId, header);
+        sessionIds.onSentFollowerLogon(header, sessionId);
 
-        assertEquals(sessionId, sessionIds.onLogon(aSession));
+        assertEquals(sessionId, sessionIds.onLogon(aSession).sessionId());
     }
 
     private void verifyNoBackUp()
@@ -202,14 +202,14 @@ public class SessionIdsTest
         verify(mappedFile, never()).transferTo(any());
     }
 
-    private void assertSessionIdsReset(final long aId, final SessionIds sessionIds)
+    private void assertSessionIdsReset(final SessionContext aContext, final SessionIds sessionIds)
     {
-        final long bId = sessionIds.onLogon(bSession);
-        final long newAId = sessionIds.onLogon(aSession);
-        assertValidSessionId(bId);
-        assertValidSessionId(newAId);
-        assertEquals("Session Ids haven't been reset", aId, bId);
-        assertNotEquals("Session Ids haven't been reset", aId, newAId);
+        final SessionContext bContext = sessionIds.onLogon(bSession);
+        final SessionContext newAContext = sessionIds.onLogon(aSession);
+        assertValidSessionId(bContext.sessionId());
+        assertValidSessionId(newAContext.sessionId());
+        assertEquals("Session Ids haven't been reset", aContext, bContext);
+        assertNotEquals("Session Ids haven't been reset", aContext, newAContext);
     }
 
     private void assertValidSessionId(final long cId)

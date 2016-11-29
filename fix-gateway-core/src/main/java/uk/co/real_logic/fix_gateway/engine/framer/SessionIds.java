@@ -55,9 +55,11 @@ import static uk.co.real_logic.fix_gateway.storage.messages.SessionIdEncoder.BLO
  */
 public class SessionIds
 {
-    public static final long MISSING = -2;
-    public static final long DUPLICATE_SESSION = -1;
-    public static final long LOWEST_VALID_SESSION_ID = 1L;
+    public static final long MISSING_SESSION_ID = -2;
+
+    static final SessionContext MISSING = new SessionContext(MISSING_SESSION_ID);
+    static final SessionContext DUPLICATE_SESSION = new SessionContext(-1);
+    static final long LOWEST_VALID_SESSION_ID = 1L;
 
     private static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
 
@@ -72,10 +74,10 @@ public class SessionIds
     private final int actingBlockLength = sessionIdEncoder.sbeBlockLength();
     private final int actingVersion = sessionIdEncoder.sbeSchemaVersion();
 
-    private final Function<CompositeKey, Long> onNewLogonFunc = this::onNewLogon;
-    private final LongHashSet currentlyAuthenticatedSessionIds = new LongHashSet(MISSING);
-    private final LongHashSet recordedSessions = new LongHashSet(MISSING);
-    private final Map<CompositeKey, Long> compositeToSurrogate = new HashMap<>();
+    private final Function<CompositeKey, SessionContext> onNewLogonFunc = this::onNewLogon;
+    private final LongHashSet currentlyAuthenticatedSessionIds = new LongHashSet(MISSING_SESSION_ID);
+    private final LongHashSet recordedSessions = new LongHashSet(MISSING_SESSION_ID);
+    private final Map<CompositeKey, SessionContext> compositeToContext = new HashMap<>();
 
     private final CRC32 crc32 = new CRC32();
     private final SectorFramer sectorFramer;
@@ -133,6 +135,7 @@ public class SessionIds
                     filePosition = nextSectorPeekPosition;
                 }
             }
+            final int sequenceIndex = sessionIdDecoder.sequenceIndex();
 
             final int compositeKeyLength = sessionIdDecoder.compositeKeyLength();
             final CompositeKey compositeKey = idStrategy.load(
@@ -142,7 +145,7 @@ public class SessionIds
                 return;
             }
 
-            compositeToSurrogate.put(compositeKey, sessionId);
+            compositeToContext.put(compositeKey, new SessionContext(sessionId, sequenceIndex));
             recordedSessions.add(sessionId);
             counter = Math.max(counter, sessionId + 1);
 
@@ -198,33 +201,33 @@ public class SessionIds
         return sectorEnd;
     }
 
-    public long onLogon(final CompositeKey compositeKey)
+    public SessionContext onLogon(final CompositeKey compositeKey)
     {
-        final Long sessionId = compositeToSurrogate.computeIfAbsent(compositeKey, onNewLogonFunc);
+        final SessionContext sessionContext = compositeToContext.computeIfAbsent(compositeKey, onNewLogonFunc);
 
-        if (!currentlyAuthenticatedSessionIds.add(sessionId))
+        if (!currentlyAuthenticatedSessionIds.add(sessionContext.sessionId()))
         {
             return DUPLICATE_SESSION;
         }
 
-        return sessionId;
+        return sessionContext;
     }
 
-    private long onNewLogon(final CompositeKey compositeKey)
+    private SessionContext onNewLogon(final CompositeKey compositeKey)
     {
-        final long sessionId = counter++;
-        assignSessionId(compositeKey, sessionId);
-        return sessionId;
+        final SessionContext sessionContext = new SessionContext(counter++);
+        assignSessionId(compositeKey, sessionContext);
+        return sessionContext;
     }
 
-    private void assignSessionId(final CompositeKey compositeKey, final long sessionId)
+    private void assignSessionId(final CompositeKey compositeKey, final SessionContext sessionContext)
     {
         final int compositeKeyLength = idStrategy.save(compositeKey, compositeKeyBuffer, 0);
         if (compositeKeyLength == INSUFFICIENT_SPACE)
         {
             errorHandler.onError(new IllegalStateException(String.format(
                 "Unable to save record session id %d for %s, because the buffer is too small",
-                sessionId,
+                sessionContext.sessionId(),
                 compositeKey)));
         }
         else if (filePosition != OUT_OF_SPACE)
@@ -239,7 +242,8 @@ public class SessionIds
 
             sessionIdEncoder
                 .wrap(buffer, filePosition)
-                .sessionId(sessionId)
+                .sessionId(sessionContext.sessionId())
+                .sequenceIndex(sessionContext.sequenceIndex())
                 .compositeKeyLength(compositeKeyLength);
             filePosition += BLOCK_LENGTH;
 
@@ -276,7 +280,7 @@ public class SessionIds
 
         counter = LOWEST_VALID_SESSION_ID;
         currentlyAuthenticatedSessionIds.clear();
-        compositeToSurrogate.clear();
+        compositeToContext.clear();
 
         if (backupLocation != null)
         {
@@ -287,6 +291,7 @@ public class SessionIds
         initialiseBuffer();
     }
 
+    // TODO: add sequence index parameter
     void onSentFollowerMessage(
         final long sessionId,
         final int messageType,
@@ -304,18 +309,20 @@ public class SessionIds
 
             // We use the initiator logon variant as we are reading a sent message.
             final HeaderDecoder header = logonDecoder.header();
-            onSentFollowerLogon(sessionId, header);
+            onSentFollowerLogon(header, sessionId);
         }
     }
 
-    void onSentFollowerLogon(final long sessionId, final HeaderDecoder header)
+    void onSentFollowerLogon(final HeaderDecoder header, final long sessionId)
     {
         final CompositeKey compositeKey = idStrategy.onLogon(
             header.senderCompIDAsString(),
             header.senderSubIDAsString(),
             header.senderLocationIDAsString(),
             header.targetCompIDAsString());
-        assignSessionId(compositeKey, sessionId);
-        compositeToSurrogate.put(compositeKey, sessionId);
+
+        final SessionContext sessionContext = new SessionContext(sessionId);
+        assignSessionId(compositeKey, sessionContext);
+        compositeToContext.put(compositeKey, sessionContext);
     }
 }

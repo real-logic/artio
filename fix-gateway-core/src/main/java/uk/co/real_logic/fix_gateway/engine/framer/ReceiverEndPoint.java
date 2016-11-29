@@ -322,8 +322,9 @@ class ReceiverEndPoint
         {
             logon.decode(buffer, offset, length);
             final CompositeKey compositeKey = sessionIdStrategy.onLogon(logon.header());
-            sessionId = sessionIds.onLogon(compositeKey);
-            if (sessionId == DUPLICATE_SESSION)
+            final SessionContext sessionContext = sessionIds.onLogon(compositeKey);
+            sessionId = sessionContext.sessionId();
+            if (sessionContext == DUPLICATE_SESSION)
             {
                 final long position = libraryPublication.saveError(GatewayError.DUPLICATE_SESSION, libraryId, 0,
                     connectionId + ": Duplicate Session: " + compositeKey);
