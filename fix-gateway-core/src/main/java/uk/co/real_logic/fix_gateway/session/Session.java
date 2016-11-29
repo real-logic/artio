@@ -1177,4 +1177,9 @@ public class Session implements AutoCloseable
     {
         return false;
     }
+
+    public int sequenceIndex()
+    {
+        return 0; // TODO
+    }
 }

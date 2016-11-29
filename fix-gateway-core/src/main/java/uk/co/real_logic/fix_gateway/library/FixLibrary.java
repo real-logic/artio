@@ -218,11 +218,17 @@ public class FixLibrary extends GatewayProcess
      *                                   to the latest message sequence number.
      *                                   If you don't care about message replay then
      *                                   use {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
+     * @param sequenceIndex the index of the sequence within which the lastReceivedSequenceNumber
+     *                      refers. If you don't care about message replay then use
+     *                      {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
      * @return the reply object representing the result of the request.
      */
-    public Reply<SessionReplyStatus> requestSession(final long sessionId, final int lastReceivedSequenceNumber)
+    public Reply<SessionReplyStatus> requestSession(
+        final long sessionId,
+        final int lastReceivedSequenceNumber,
+        final int sequenceIndex)
     {
-        return poller.requestSession(sessionId, lastReceivedSequenceNumber);
+        return poller.requestSession(sessionId, lastReceivedSequenceNumber, sequenceIndex);
     }
 
     public String currentAeronChannel()

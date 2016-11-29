@@ -37,6 +37,7 @@ import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
+import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISABLED;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
@@ -251,7 +252,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         reacquireSession(
             initiatingSession, initiatingLibrary, initiatingEngine,
-            sessionId, NO_MESSAGE_REPLAY, SessionReplyStatus.OK);
+            sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, SessionReplyStatus.OK);
     }
 
     @Test
@@ -265,7 +266,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         reacquireSession(
             acceptingSession, acceptingLibrary, acceptingEngine,
-            sessionId, NO_MESSAGE_REPLAY, SessionReplyStatus.OK);
+            sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, SessionReplyStatus.OK);
     }
 
     @Test
@@ -280,12 +281,14 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final long sessionId = acceptingSession.id();
         final int lastReceivedMsgSeqNum = acceptingSession.lastReceivedMsgSeqNum();
+        final int sequenceIndex = acceptingSession.sequenceIndex();
 
         connectSessions();
 
         reacquireSession(
             acceptingSession, acceptingLibrary, acceptingEngine,
-            sessionId, lastReceivedMsgSeqNum, SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH);
+            sessionId, lastReceivedMsgSeqNum, sequenceIndex,
+            SEQUENCE_NUMBER_TOO_HIGH);
 
         acceptingSession = acceptingHandler.lastSession();
         acceptingHandler.resetSession();
@@ -333,7 +336,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void librariesShouldNotBeAbleToAcquireSessionsThatDontExist()
     {
-        final SessionReplyStatus status = requestSession(initiatingLibrary, 42, NO_MESSAGE_REPLAY);
+        final SessionReplyStatus status = requestSession(initiatingLibrary, 42, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
 
         assertEquals(SessionReplyStatus.UNKNOWN_SESSION, status);
     }
@@ -434,9 +437,10 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final FixEngine engine,
         final long sessionId,
         final int lastReceivedMsgSeqNum,
+        final int sequenceIndex,
         final SessionReplyStatus expectedStatus)
     {
-        final SessionReplyStatus status = requestSession(library, sessionId, lastReceivedMsgSeqNum);
+        final SessionReplyStatus status = requestSession(library, sessionId, lastReceivedMsgSeqNum, sequenceIndex);
         assertEquals(expectedStatus, status);
 
         assertThat(gatewayLibraryInfo(engine).sessions(), hasSize(0));
@@ -480,13 +484,14 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         final long sessionId = session.id();
         final int lastReceivedMsgSeqNum = session.lastReceivedMsgSeqNum();
+        final int sequenceIndex = session.sequenceIndex();
         final List<FixMessage> messages = otfAcceptor.messages();
 
         releaseToGateway(library, session);
 
         messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
 
-        final SessionReplyStatus status = requestSession(library, sessionId, lastReceivedMsgSeqNum);
+        final SessionReplyStatus status = requestSession(library, sessionId, lastReceivedMsgSeqNum, sequenceIndex);
         assertEquals(SessionReplyStatus.OK, status);
 
         messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);

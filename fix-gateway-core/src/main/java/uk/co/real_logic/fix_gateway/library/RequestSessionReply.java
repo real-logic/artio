@@ -25,6 +25,7 @@ class RequestSessionReply extends LibraryReply<SessionReplyStatus>
 {
     private final long sessionId;
     private final int lastReceivedSequenceNumber;
+    private final int sequenceIndex;
 
     private boolean requiresResend;
 
@@ -32,11 +33,13 @@ class RequestSessionReply extends LibraryReply<SessionReplyStatus>
         final LibraryPoller libraryPoller,
         final long latestReplyArrivalTime,
         final long sessionId,
-        final int lastReceivedSequenceNumber)
+        final int lastReceivedSequenceNumber,
+        final int sequenceIndex)
     {
         super(libraryPoller, latestReplyArrivalTime);
         this.sessionId = sessionId;
         this.lastReceivedSequenceNumber = lastReceivedSequenceNumber;
+        this.sequenceIndex = sequenceIndex;
         sendMessage();
     }
 

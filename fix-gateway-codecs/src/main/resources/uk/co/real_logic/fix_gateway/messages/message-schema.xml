@@ -201,6 +201,7 @@
         <field name="correlationId" id="2" type="CorrelationId"/>
         <field name="sessionId" id="3" type="FixSessionId"/>
         <field name="lastReceivedSequenceNumber" id="4" type="int32"/>
+        <field name="sequenceIndex" id="5" type="SequenceIndex" />
     </sbe:message>
 
     <!-- Messages From Engine To Library -->

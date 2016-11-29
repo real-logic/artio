@@ -187,9 +187,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return new ReleaseToGatewayReply(this, latestReplyArrivalTime(), session);
     }
 
-    Reply<SessionReplyStatus> requestSession(final long sessionId, final int lastReceivedSequenceNumber)
+    Reply<SessionReplyStatus> requestSession(
+        final long sessionId,
+        final int lastReceivedSequenceNumber,
+        final int sequenceIndex)
     {
-        return new RequestSessionReply(this, latestReplyArrivalTime(), sessionId, lastReceivedSequenceNumber);
+        return new RequestSessionReply(
+            this, latestReplyArrivalTime(), sessionId, lastReceivedSequenceNumber, sequenceIndex);
     }
 
     boolean removeSession(final Session session)
