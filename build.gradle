@@ -110,10 +110,17 @@ subprojects {
             }
         }
 
+        beforeTest { desc ->
+            if (System.properties["printTestNames"] != null)
+            {
+                print "Executing test ${desc.name} [${desc.className}]"
+            }
+        }
+
         afterTest { desc, result ->
             if (System.properties["printTestNames"] != null)
             {
-                println "Executing test ${desc.name} [${desc.className}] with result: ${result.resultType}"
+                println " with result: ${result.resultType}"
             }
         }
     }
