@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import uk.co.real_logic.fix_gateway.session.Session;
+
 /**
  * Context information about a FIX session, that persists across restarts.
  */
@@ -83,5 +85,10 @@ class SessionContext
             "sessionId=" + sessionId +
             ", sequenceIndex=" + sequenceIndex +
             '}';
+    }
+
+    void updateFrom(final Session session)
+    {
+        sequenceIndex = session.sequenceIndex();
     }
 }

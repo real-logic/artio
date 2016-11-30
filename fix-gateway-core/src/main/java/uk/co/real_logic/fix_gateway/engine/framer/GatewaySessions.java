@@ -106,7 +106,7 @@ class GatewaySessions
             FixEngine.ENGINE_LIBRARY_ID,
             sessionBufferSize,
             lastSentSequenceNumber + 1,
-            0
+            0 // TODO: correct sequence index
         );
 
         final SessionParser sessionParser = new SessionParser(

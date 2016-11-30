@@ -99,6 +99,7 @@ class GatewaySession implements SessionInfo
         receiverEndPoint.pause();
         senderEndPoint.libraryId(libraryId);
         sessionParser = null;
+        context.updateFrom(session);
         session.close();
         session = null;
     }

@@ -51,7 +51,7 @@ public class SlowConsumerTest
 {
     private static final int MAX_BYTES_IN_BUFFER = 4 * 1024;
     private static final int BUFFER_CAPACITY = 8 * 1024;
-    private static final int TEST_TIMEOUT = 10_000;
+    private static final int TEST_TIMEOUT = 20_000;
 
     private int port = unusedPort();
     private MediaDriver mediaDriver;
