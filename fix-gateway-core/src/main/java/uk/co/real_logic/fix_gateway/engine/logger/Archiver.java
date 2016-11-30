@@ -192,19 +192,22 @@ public class Archiver implements Agent, RawBlockHandler
         }
 
         final Long2LongHashMap completedPositions = completionPosition.positions();
-        subscription.forEachImage(image ->
+        if (!completionPosition.wasStartupComplete())
         {
-            final int aeronSessionId = image.sessionId();
-            final long currentPosition = image.position();
-            final long completedPosition = completedPositions.get(aeronSessionId);
-            int toPoll = (int) (completedPosition - currentPosition);
-            while (toPoll > 0)
+            subscription.forEachImage(image ->
             {
-                toPoll -= image.rawPoll(this, toPoll);
+                final int aeronSessionId = image.sessionId();
+                final long currentPosition = image.position();
+                final long completedPosition = completedPositions.get(aeronSessionId);
+                int toPoll = (int) (completedPosition - currentPosition);
+                while (toPoll > 0)
+                {
+                    toPoll -= image.rawPoll(this, toPoll);
 
-                Thread.yield();
-            }
-        });
+                    Thread.yield();
+                }
+            });
+        }
     }
 
     public class SessionArchiver implements AutoCloseable, RawBlockHandler

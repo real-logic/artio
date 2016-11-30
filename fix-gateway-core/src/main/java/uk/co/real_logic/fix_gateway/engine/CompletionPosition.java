@@ -29,6 +29,11 @@ public class CompletionPosition
         return positions;
     }
 
+    public void completeDuringStartup()
+    {
+        complete = true;
+    }
+
     public void complete(final Long2LongHashMap positions)
     {
         this.positions = positions;
@@ -38,5 +43,10 @@ public class CompletionPosition
     public boolean hasCompleted()
     {
         return complete;
+    }
+
+    public boolean wasStartupComplete()
+    {
+        return positions == null;
     }
 }

@@ -112,6 +112,11 @@ public class Indexer implements Agent, ControlledFragmentHandler
             Thread.yield();
         }
 
+        if (completionPosition.wasStartupComplete())
+        {
+            return;
+        }
+
         // We know that any remaining data to quiesce at this point must be in the subscription.
         subscription.controlledPoll(this::quiesceFragment, Integer.MAX_VALUE);
     }

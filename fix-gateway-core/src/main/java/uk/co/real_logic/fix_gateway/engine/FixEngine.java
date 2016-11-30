@@ -125,6 +125,11 @@ public final class FixEngine extends GatewayProcess
         }
         catch (final Exception e)
         {
+            if (engineContext != null)
+            {
+                engineContext.completeDuringStartup();
+            }
+
             suppressingClose(this, e);
 
             throw e;

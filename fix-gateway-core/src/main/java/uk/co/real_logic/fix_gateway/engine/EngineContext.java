@@ -285,4 +285,11 @@ public abstract class EngineContext implements AutoCloseable
     {
         return outboundClusterCompletionPosition;
     }
+
+    public void completeDuringStartup()
+    {
+        inboundcompletionPosition.completeDuringStartup();
+        outboundLibraryCompletionPosition.completeDuringStartup();
+        outboundClusterCompletionPosition.completeDuringStartup();
+    }
 }
