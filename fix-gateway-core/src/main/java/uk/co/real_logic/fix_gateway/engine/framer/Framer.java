@@ -575,7 +575,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     return inboundPublication.saveManageConnection(
                         connectionId, sessionId, address.toString(), libraryId, INITIATOR,
                         lastSentSequenceNumber, lastReceivedSequenceNumber,
-                        CONNECTED, heartbeatIntervalInS, correlationId);
+                        CONNECTED, heartbeatIntervalInS, correlationId, sessionContext.sequenceIndex());
                 }
 
                 private long checkLoggerUpToDate()
@@ -875,14 +875,16 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final List<Continuation> continuations = new ArrayList<>();
         continuations.add(() -> inboundPublication.saveManageConnection(
             connectionId,
-            sessionId, gatewaySession.address(),
+            sessionId,
+            gatewaySession.address(),
             libraryId,
             gatewaySession.connectionType(),
             lastSentSeqNum,
             lastRecvSeqNum,
             sessionState,
             gatewaySession.heartbeatIntervalInS(),
-            correlationId));
+            correlationId,
+            gatewaySession.sequenceIndex()));
 
         continuations.add(() ->
             saveLogon(libraryId, gatewaySession, lastSentSeqNum, lastRecvSeqNum, LogonStatus.NEW));

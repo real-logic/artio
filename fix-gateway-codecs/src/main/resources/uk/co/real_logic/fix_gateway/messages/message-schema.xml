@@ -226,6 +226,7 @@
         <field name="sessionState" id="6" type="SessionState"/>
         <field name="heartbeatIntervalInS" id="7" type="int32"/>
         <field name="replyToId" id="8" type="CorrelationId"/>
+        <field name="sequenceIndex" id="10" type="SequenceIndex" />
         <data name="address" id="9" type="varDataEncoding"/>
     </sbe:message>
 

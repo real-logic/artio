@@ -36,6 +36,7 @@ public final class AcceptorSession extends Session
         final int libraryId,
         final int sessionBufferSize,
         final int initialSequenceNumber,
+        final int sequenceIndex,
         final SessionState state)
     {
         super(
@@ -51,7 +52,8 @@ public final class AcceptorSession extends Session
             sentMsgSeqNo,
             libraryId,
             sessionBufferSize,
-            initialSequenceNumber);
+            initialSequenceNumber,
+            sequenceIndex);
     }
 
 }

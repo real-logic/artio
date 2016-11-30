@@ -41,6 +41,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
         LIBRARY_ID,
         DEFAULT_SESSION_BUFFER_SIZE,
         1,
+        SEQUENCE_INDEX,
         CONNECTED);
 
     @Test

@@ -47,6 +47,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
             LIBRARY_ID,
             DEFAULT_SESSION_BUFFER_SIZE,
             1,
+            SEQUENCE_INDEX,
             CONNECTED);
     }
 

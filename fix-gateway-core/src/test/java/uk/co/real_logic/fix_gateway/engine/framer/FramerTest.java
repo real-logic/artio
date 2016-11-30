@@ -499,7 +499,8 @@ public class FramerTest
             anyInt(),
             any(),
             anyInt(),
-            anyLong()))
+            anyLong(),
+            anyInt()))
             .thenReturn(BACK_PRESSURED, POSITION);
 
         aClientConnects();
@@ -520,7 +521,8 @@ public class FramerTest
             anyInt(),
             any(),
             anyInt(),
-            anyLong());
+            anyLong(),
+            anyInt());
 
         saveRequestSessionReply();
 
@@ -690,7 +692,8 @@ public class FramerTest
             anyInt(),
             any(),
             anyInt(),
-            anyLong()))
+            anyLong(),
+            anyInt()))
             .thenReturn(BACK_PRESSURED, POSITION);
         backPressureSaveLogon();
     }
@@ -790,7 +793,8 @@ public class FramerTest
             anyInt(),
             any(),
             anyInt(),
-            anyLong());
+            anyLong(),
+            anyInt());
         verifyLogonSaved(times, LogonStatus.NEW);
     }
 

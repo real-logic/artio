@@ -62,6 +62,7 @@ public class LibraryPollerTest
     private static final String FIRST_CHANNEL = "1";
     private static final String LEADER_CHANNEL = "2";
     private static final List<String> CLUSTER_CHANNELS = asList(FIRST_CHANNEL, LEADER_CHANNEL, "3");
+    private static final int SEQUENCE_INDEX = 0;
 
     private ArgumentCaptor<Session> session = ArgumentCaptor.forClass(Session.class);
     private LibraryConnectHandler connectHandler = mock(LibraryConnectHandler.class);
@@ -300,7 +301,8 @@ public class LibraryPollerTest
             addressLength,
             ACTIVE,
             HEARTBEAT_INTERVAL_IN_S,
-            REPLY_TO_ID);
+            REPLY_TO_ID,
+            SEQUENCE_INDEX);
 
         library.onLogon(
             libraryId(),

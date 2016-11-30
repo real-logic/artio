@@ -503,7 +503,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int addressLength,
         final SessionState state,
         final int heartbeatIntervalInS,
-        final long replyToId)
+        final long replyToId,
+        final int sequenceIndex)
     {
         if (libraryId == this.libraryId)
         {
@@ -515,7 +516,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     isInitiator ? (InitiateSessionReply)correlationIdToReply.remove(replyToId) : null;
                 final Session session = initiateSession(
                     connectionId, lastSentSequenceNumber, lastReceivedSequenceNumber, state,
-                    isInitiator ? reply.configuration() : null);
+                    isInitiator ? reply.configuration() : null, sequenceIndex);
                 newSession(connectionId, sessionId, session);
                 if (isInitiator)
                 {
@@ -820,7 +821,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int lastSequenceNumber,
         final int lastReceivedSequenceNumber,
         final SessionState state,
-        final SessionConfiguration sessionConfiguration)
+        final SessionConfiguration sessionConfiguration,
+        final int sequenceIndex)
     {
         final int defaultInterval = configuration.defaultHeartbeatIntervalInS();
         final GatewayPublication publication = transport.outboundPublication();
@@ -847,6 +849,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             libraryId,
             configuration.sessionBufferSize(),
             initiatorInitialSequenceNumber(sessionConfiguration, lastSequenceNumber),
+            sequenceIndex,
             state)
             .lastReceivedMsgSeqNum(
                 initiatorInitialSequenceNumber(sessionConfiguration, lastReceivedSequenceNumber) - 1);
@@ -902,6 +905,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             libraryId,
             sessionBufferSize,
             1,
+            0,
             state)
             .address(host, port);
     }

@@ -34,7 +34,8 @@ public interface LibraryEndPointHandler
         int addressLength,
         SessionState state,
         int heartbeatIntervalInS,
-        long replyToId);
+        long replyToId,
+        int sequenceIndex);
 
     Action onLogon(
         int libraryId,

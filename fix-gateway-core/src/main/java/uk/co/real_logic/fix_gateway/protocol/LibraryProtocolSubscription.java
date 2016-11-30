@@ -263,7 +263,8 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageConnection.addressLength(),
             manageConnection.sessionState(),
             manageConnection.heartbeatIntervalInS(),
-            manageConnection.replyToId());
+            manageConnection.replyToId(),
+            manageConnection.sequenceIndex());
     }
 
     private Action onLogon(

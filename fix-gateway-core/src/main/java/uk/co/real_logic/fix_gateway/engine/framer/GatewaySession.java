@@ -226,4 +226,9 @@ class GatewaySession implements SessionInfo
     {
         session.close();
     }
+
+    int sequenceIndex()
+    {
+        return 0; // TODO
+    }
 }
