@@ -268,7 +268,7 @@ public class SessionContexts
     private void updateChecksum(final int start, final int checksumOffset)
     {
         final int endOfData = checksumOffset;
-        byteBuffer.position(start).limit(endOfData);
+        byteBuffer.clear().position(start).limit(endOfData);
         crc32.reset();
         crc32.update(byteBuffer);
         final int checksumValue = (int) crc32.getValue();

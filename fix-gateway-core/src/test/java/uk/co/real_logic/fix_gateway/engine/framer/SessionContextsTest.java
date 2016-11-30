@@ -125,7 +125,7 @@ public class SessionContextsTest
     @Test
     public void wrapsOverSectorBoundaries()
     {
-        final int requiredNumberOfWritesToSpanSector = 300;
+        final int requiredNumberOfWritesToSpanSector = 299;
 
         CompositeKey compositeKey = null;
         SessionContext context = null;
@@ -134,6 +134,7 @@ public class SessionContextsTest
         {
             compositeKey = idStrategy.onLogon("b" + i, null, null, "a" + i);
             context = sessionContexts.onLogon(compositeKey);
+            context.onSequenceReset();
         }
 
         final SessionContexts sessionContextsAfterRestart = newSessionContexts(buffer);
@@ -239,6 +240,5 @@ public class SessionContextsTest
         assertEquals(sessionContext, secondSessionContext);
         assertEquals(sessionContext.sequenceIndex(), secondSessionContext.sequenceIndex());
     }
-
 
 }
