@@ -124,8 +124,6 @@ class GatewaySessions
         if (sessionKey != null)
         {
             gatewaySession.onLogon(
-                gatewaySession.sessionId(),
-                sessionKey,
                 username,
                 password,
                 heartbeatIntervalInS);

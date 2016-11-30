@@ -589,7 +589,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         {
                             sessionContext.onSequenceReset();
                         }
-                        session.onLogon(sessionId, sessionKey, username, password, heartbeatIntervalInS);
+                        session.onLogon(sessionId, sessionContext, sessionKey, username, password, heartbeatIntervalInS);
                         return 0;
                     }
 

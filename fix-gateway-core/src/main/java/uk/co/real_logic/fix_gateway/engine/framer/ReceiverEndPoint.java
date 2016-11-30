@@ -354,7 +354,7 @@ class ReceiverEndPoint
                     sessionContext.onSequenceReset();
                 }
                 sequenceIndex = sessionContext.sequenceIndex();
-                gatewaySession.onLogon(sessionId, compositeKey, username, password, logon.heartBtInt());
+                gatewaySession.onLogon(sessionId, sessionContext, compositeKey, username, password, logon.heartBtInt());
                 gatewaySession.acceptorSequenceNumbers(sentSequenceNumber, receivedSequenceNumber);
 
                 choosePublication(persistenceLevel);

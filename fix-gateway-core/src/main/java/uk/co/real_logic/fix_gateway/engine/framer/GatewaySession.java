@@ -31,7 +31,7 @@ class GatewaySession implements SessionInfo
     private static final int NO_TIMEOUT = -1;
 
     private final long connectionId;
-    private final SessionContext context;
+    private SessionContext context;
     private final String address;
     private final ConnectionType connectionType;
 
@@ -157,16 +157,11 @@ class GatewaySession implements SessionInfo
         }
     }
 
-    // TODO: setup the session context
-    public void onLogon(
-        final long sessionId,
-        final CompositeKey sessionKey,
+    void onLogon(
         final String username,
         final String password,
         final int heartbeatIntervalInS)
     {
-        this.sessionId = sessionId;
-        this.sessionKey = sessionKey;
         this.username = username;
         this.password = password;
         this.heartbeatIntervalInS = heartbeatIntervalInS;
@@ -176,6 +171,20 @@ class GatewaySession implements SessionInfo
             DebugLogger.log(GATEWAY_MESSAGE, "Setup Session As: %s", sessionKey.senderCompId());
         }
         senderEndPoint.sessionId(sessionId);
+    }
+
+    public void onLogon(
+        final long sessionId,
+        final SessionContext context,
+        final CompositeKey sessionKey,
+        final String username,
+        final String password,
+        final int heartbeatIntervalInS)
+    {
+        this.sessionId = sessionId;
+        this.context = context;
+        this.sessionKey = sessionKey;
+        onLogon(username, password, heartbeatIntervalInS);
     }
 
     public String username()
