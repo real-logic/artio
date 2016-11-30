@@ -39,6 +39,7 @@ import uk.co.real_logic.fix_gateway.engine.framer.TcpChannelSupplier.NewChannelH
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.protocol.*;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
@@ -73,6 +74,7 @@ import static uk.co.real_logic.fix_gateway.Pressure.isBackPressured;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.fix_gateway.engine.framer.Continuation.COMPLETE;
+import static uk.co.real_logic.fix_gateway.engine.framer.SessionContexts.UNKNOWN_SESSION;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
@@ -82,7 +84,6 @@ import static uk.co.real_logic.fix_gateway.messages.SequenceNumberType.DETERMINE
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.*;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.CONNECTED;
-import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
@@ -416,7 +417,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             final long connectionId = this.nextConnectionId++;
             final GatewaySession session = setupConnection(
-                channel, connectionId, UNKNOWN, null, ENGINE_LIBRARY_ID, ACCEPTOR, DETERMINE_AT_LOGON);
+                channel, connectionId, UNKNOWN_SESSION, null, ENGINE_LIBRARY_ID, ACCEPTOR, DETERMINE_AT_LOGON);
 
             session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
 
@@ -539,7 +540,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 setupConnection(
                     channel,
                     connectionId,
-                    sessionId,
+                    sessionContext,
                     sessionKey,
                     libraryId,
                     INITIATOR,
@@ -664,7 +665,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private GatewaySession setupConnection(
         final TcpChannel channel,
         final long connectionId,
-        final long sessionId,
+        final SessionContext context,
         final CompositeKey sessionKey,
         final int libraryId,
         final ConnectionType connectionType,
@@ -672,7 +673,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         throws IOException
     {
         final ReceiverEndPoint receiverEndPoint =
-            endPointFactory.receiverEndPoint(channel, connectionId, sessionId, libraryId, this,
+            endPointFactory.receiverEndPoint(channel, connectionId, context.sessionId(), libraryId, this,
                 sentSequenceNumberIndex, receivedSequenceNumberIndex, sequenceNumberType, connectionType);
         receiverEndPoints.add(receiverEndPoint);
 
@@ -682,7 +683,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         final GatewaySession gatewaySession = new GatewaySession(
             connectionId,
-            sessionId,
+            context,
             channel.remoteAddress(),
             connectionType,
             sessionKey,

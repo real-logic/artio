@@ -31,6 +31,7 @@ class GatewaySession implements SessionInfo
     private static final int NO_TIMEOUT = -1;
 
     private final long connectionId;
+    private final SessionContext context;
     private final String address;
     private final ConnectionType connectionType;
 
@@ -47,7 +48,7 @@ class GatewaySession implements SessionInfo
     private long disconnectTimeout = NO_TIMEOUT;
 
     GatewaySession(final long connectionId,
-                   final long sessionId,
+                   final SessionContext context,
                    final String address,
                    final ConnectionType connectionType,
                    final CompositeKey sessionKey,
@@ -55,7 +56,8 @@ class GatewaySession implements SessionInfo
                    final SenderEndPoint senderEndPoint)
     {
         this.connectionId = connectionId;
-        this.sessionId = sessionId;
+        this.sessionId = context.sessionId();
+        this.context = context;
         this.address = address;
         this.connectionType = connectionType;
         this.sessionKey = sessionKey;
@@ -155,6 +157,7 @@ class GatewaySession implements SessionInfo
         }
     }
 
+    // TODO: setup the session context
     public void onLogon(
         final long sessionId,
         final CompositeKey sessionKey,
@@ -229,6 +232,6 @@ class GatewaySession implements SessionInfo
 
     int sequenceIndex()
     {
-        return 0; // TODO
+        return context.sequenceIndex();
     }
 }

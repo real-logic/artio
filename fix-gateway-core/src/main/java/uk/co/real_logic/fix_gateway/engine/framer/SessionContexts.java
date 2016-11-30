@@ -28,6 +28,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.LoggerUtil;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
+import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.storage.messages.SessionIdDecoder;
 import uk.co.real_logic.fix_gateway.storage.messages.SessionIdEncoder;
@@ -57,7 +58,8 @@ public class SessionContexts
 {
     public static final long MISSING_SESSION_ID = -2;
 
-    static final SessionContext DUPLICATE_SESSION = new SessionContext(-1, -1, null, OUT_OF_SPACE);
+    static final SessionContext DUPLICATE_SESSION = new SessionContext(-3, -3, null, OUT_OF_SPACE);
+    static final SessionContext UNKNOWN_SESSION = new SessionContext(Session.UNKNOWN, (int) Session.UNKNOWN, null, OUT_OF_SPACE);
     static final long LOWEST_VALID_SESSION_ID = 1L;
 
     private static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
