@@ -388,6 +388,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         launchAcceptingEngine();
 
+        acceptingLibrary.close();
+
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);
 
         wireSessions();
