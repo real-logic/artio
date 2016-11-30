@@ -174,6 +174,7 @@ public abstract class AbstractSessionTest
         session().onMessage(2, MSG_TYPE_BYTES, sendingTime, origSendingTime, true);
 
         verifySendingTimeProblem();
+        assertSequenceIndexIs(SEQUENCE_INDEX);
     }
 
     @Test
@@ -199,8 +200,10 @@ public abstract class AbstractSessionTest
 
         session().sendSequenceReset(newSeqNo);
 
-        verify(mockProxy).sequenceReset(anyInt(), eq(newSeqNo), eq(SEQUENCE_INDEX));
+        final int nextSequenceIndex = SEQUENCE_INDEX + 1;
+        verify(mockProxy).sequenceReset(anyInt(), eq(newSeqNo), eq(nextSequenceIndex));
         assertEquals(newSeqNo - 1, session().lastSentMsgSeqNum());
+        assertSequenceIndexIs(nextSequenceIndex);
     }
 
     @Test
@@ -409,6 +412,7 @@ public abstract class AbstractSessionTest
 
         assertEquals(4, session().expectedReceivedSeqNum());
         verifyNoFurtherMessages();
+        assertSequenceIndexIs(SEQUENCE_INDEX);
     }
 
     @Test
@@ -420,6 +424,7 @@ public abstract class AbstractSessionTest
 
         assertEquals(4, session().expectedReceivedSeqNum());
         verifyNoFurtherMessages();
+        assertSequenceIndexIs(SEQUENCE_INDEX);
     }
 
     @Test
@@ -437,6 +442,7 @@ public abstract class AbstractSessionTest
             SequenceResetDecoder.MESSAGE_TYPE_BYTES,
             SequenceResetDecoder.MESSAGE_TYPE_BYTES.length,
             VALUE_IS_INCORRECT, SEQUENCE_INDEX);
+        assertSequenceIndexIs(SEQUENCE_INDEX);
     }
 
     @Test
@@ -578,21 +584,21 @@ public abstract class AbstractSessionTest
 
         session().resetSequenceNumbers();
 
-        verifySetsSentSequenceNumbersToTwo();
+        verifySetsSentSequenceNumbersToTwo(SEQUENCE_INDEX + 1);
     }
 
-    @Test
-    public void shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne()
+    public void shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne(final int sequenceIndex)
     {
         onLogon(HEARTBEAT_INTERVAL, 1, true);
 
         verifySetupSession();
-        verifySetsSequenceNumbersToTwo();
+        verifySetsSequenceNumbersToTwo(sequenceIndex);
     }
 
     @Test
     public void shouldComplyWithLogonBasedSequenceNumberReset()
     {
+        int sequenceIndex = SEQUENCE_INDEX;
         for (final SessionState state : SessionState.values())
         {
             Mockito.reset(mockProxy);
@@ -604,8 +610,10 @@ public abstract class AbstractSessionTest
 
             session().poll(100);
 
+            sequenceIndex++;
             verifySetupSession();
-            verifySetsSequenceNumbersToTwo();
+            verifySetsSequenceNumbersToTwo(sequenceIndex);
+            assertSequenceIndexIs(sequenceIndex);
         }
     }
 
@@ -618,6 +626,7 @@ public abstract class AbstractSessionTest
 
         verifySetupSession();
         verifyNoFurtherMessages();
+        assertSequenceIndexIs(SEQUENCE_INDEX + 1);
     }
 
     @Test
@@ -665,15 +674,15 @@ public abstract class AbstractSessionTest
         verify(mockProxy, atLeastOnce()).setupSession(anyLong(), any());
     }
 
-    private void verifySetsSequenceNumbersToTwo()
+    private void verifySetsSequenceNumbersToTwo(final int sequenceIndex)
     {
-        verifySetsSentSequenceNumbersToTwo();
+        verifySetsSentSequenceNumbersToTwo(sequenceIndex);
         assertEquals(1, session().lastReceivedMsgSeqNum());
     }
 
-    private void verifySetsSentSequenceNumbersToTwo()
+    private void verifySetsSentSequenceNumbersToTwo(final int sequenceIndex)
     {
-        verify(mockProxy).logon(eq(HEARTBEAT_INTERVAL), eq(1), any(), any(), eq(true), eq(SEQUENCE_INDEX));
+        verify(mockProxy).logon(eq(HEARTBEAT_INTERVAL), eq(1), any(), any(), eq(true), eq(sequenceIndex));
         assertEquals(1, session().lastSentMsgSeqNum());
         verifyNoFurtherMessages();
     }
@@ -840,5 +849,10 @@ public abstract class AbstractSessionTest
     void verifyNoFurtherMessages()
     {
         verifyNoMoreInteractions(mockProxy);
+    }
+
+    private void assertSequenceIndexIs(final int sequenceIndex)
+    {
+        assertEquals(sequenceIndex, session().sequenceIndex());
     }
 }

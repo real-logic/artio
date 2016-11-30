@@ -149,6 +149,12 @@ public class AcceptorSessionTest extends AbstractSessionTest
         verifyDisconnect(times(1));
     }
 
+    @Test
+    public void shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne()
+    {
+        shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne(SEQUENCE_INDEX);
+    }
+
     protected void readyForLogon()
     {
         // Deliberately blank

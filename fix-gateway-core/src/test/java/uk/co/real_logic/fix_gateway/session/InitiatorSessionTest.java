@@ -122,6 +122,12 @@ public class InitiatorSessionTest extends AbstractSessionTest
         verifySavesLogonMessage(times(1));
     }
 
+    @Test
+    public void shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne()
+    {
+        shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne(SEQUENCE_INDEX + 1);
+    }
+
     private void verifySavesLogonMessage(final VerificationMode verificationMode)
     {
         verify(mockPublication, verificationMode).saveLogon(LIBRARY_ID, CONNECTION_ID, SESSION_ID);

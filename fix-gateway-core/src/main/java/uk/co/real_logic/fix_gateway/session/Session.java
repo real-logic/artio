@@ -111,6 +111,7 @@ public class Session implements AutoCloseable
     private long id = UNKNOWN;
     private int lastReceivedMsgSeqNum = 0;
     private int lastSentMsgSeqNum;
+    private int sequenceIndex = 0;
 
     private long heartbeatIntervalInMs;
     private long nextRequiredInboundMessageTimeInMs;
@@ -417,10 +418,16 @@ public class Session implements AutoCloseable
      */
     public long sendSequenceReset(final int nextSentMessageSequenceNumber)
     {
+        nextSequenceIndex();
         final long position = proxy.sequenceReset(lastSentMsgSeqNum, nextSentMessageSequenceNumber, sequenceIndex());
         lastSentMsgSeqNum(nextSentMessageSequenceNumber - 1, position);
 
         return position;
+    }
+
+    private void nextSequenceIndex()
+    {
+        sequenceIndex++;
     }
 
     /**
@@ -435,6 +442,7 @@ public class Session implements AutoCloseable
     {
         final int sentSeqNum = 1;
         final int heartbeatIntervalInS = (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs);
+        nextSequenceIndex();
         final long position = proxy.logon(heartbeatIntervalInS, sentSeqNum, username(), password(), true, sequenceIndex());
         lastSentMsgSeqNum(sentSeqNum, position);
 
@@ -759,13 +767,13 @@ public class Session implements AutoCloseable
     {
         if (lastSentMsgSeqNum() == 1)
         {
-            lastReceivedMsgSeqNum(1);
+            lastReceivedMsgSeqNumOnly(1);
             // You've received a reply to a resetSeqNumFlag = Y message
             return CONTINUE;
         }
 
         final int newSeqNum = 1;
-        final long position = proxy.logon(heartbeatInterval, newSeqNum, null, null, true, sequenceIndex());
+        final long position = proxy.logon(heartbeatInterval, newSeqNum, null, null, true, sequenceIndex() + 1);
         if (position < 0)
         {
             return ABORT;
@@ -1053,12 +1061,24 @@ public class Session implements AutoCloseable
         return clock.time();
     }
 
+    // Also checks the sequence index
     public Session lastReceivedMsgSeqNum(final int value)
+    {
+        if (lastReceivedMsgSeqNum > value)
+        {
+            nextSequenceIndex();
+        }
+
+        lastReceivedMsgSeqNumOnly(value);
+
+        return this;
+    }
+
+    // Does not check the sequence index
+    private void lastReceivedMsgSeqNumOnly(final int value)
     {
         this.lastReceivedMsgSeqNum = value;
         receivedMsgSeqNo.setOrdered(value);
-
-        return this;
     }
 
     protected int expectedReceivedSeqNum()
@@ -1180,6 +1200,6 @@ public class Session implements AutoCloseable
 
     public int sequenceIndex()
     {
-        return 0; // TODO
+        return sequenceIndex;
     }
 }
