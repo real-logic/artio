@@ -29,7 +29,10 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.List;
+import java.util.stream.IntStream;
 
+import static java.util.stream.Collectors.toList;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -127,18 +130,24 @@ public class SessionContextsTest
     {
         final int requiredNumberOfWritesToSpanSector = 299;
 
-        CompositeKey compositeKey = null;
-        SessionContext context = null;
+        final List<CompositeKey> keys =
+            IntStream.range(0, requiredNumberOfWritesToSpanSector)
+                     .mapToObj(i -> idStrategy.onLogon("b" + i, null, null, "a" + i))
+                     .collect(toList());
 
-        for (int i = 0; i < requiredNumberOfWritesToSpanSector; i++)
-        {
-            compositeKey = idStrategy.onLogon("b" + i, null, null, "a" + i);
-            context = sessionContexts.onLogon(compositeKey);
-            context.onSequenceReset();
-        }
+        final List<SessionContext> contexts =
+            keys.stream()
+                         .map(sessionContexts::onLogon)
+                         .peek(SessionContext::onSequenceReset)
+                         .collect(toList());
 
-        final SessionContexts sessionContextsAfterRestart = newSessionContexts(buffer);
-        assertValuesEqual(context, sessionContextsAfterRestart.onLogon(compositeKey));
+        // Test an update of something not at the tail of the buffer.
+        final SessionContext firstContext = contexts.get(0);
+        firstContext.onSequenceReset();
+
+        final SessionContexts contextsAfterRestart = newSessionContexts(buffer);
+        IntStream.range(0, requiredNumberOfWritesToSpanSector)
+                 .forEach(i -> assertValuesEqual(contexts.get(i), contextsAfterRestart.onLogon(keys.get(i))));
     }
 
     @Test

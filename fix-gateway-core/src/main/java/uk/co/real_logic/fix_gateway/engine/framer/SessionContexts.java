@@ -340,11 +340,10 @@ public class SessionContexts
             .wrap(buffer, filePosition)
             .sequenceIndex(sequenceIndex);
 
-        mappedFile.force();
+        final int start = nextSectorStart(filePosition) - SECTOR_SIZE;
+        final int checksumOffset = start + SECTOR_DATA_LENGTH;
+        updateChecksum(start, checksumOffset);
 
-        final int checksumOffset = sectorFramer.checksumOffset();
-        final int endOfUpdate =
-            filePosition < checksumOffset ? checksumOffset : nextSectorStart(filePosition - SECTOR_SIZE);
-        updateChecksum(sectorFramer.sectorStart(), endOfUpdate);
+        mappedFile.force();
     }
 }
