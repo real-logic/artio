@@ -107,29 +107,32 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertEquals(message.get(Constants.MSG_SEQ_NUM), "1");
         assertEquals(message.get(Constants.SENDER_COMP_ID), ACCEPTOR_ID);
         assertEquals(message.get(Constants.TARGET_COMP_ID), INITIATOR_ID);
-    }
 
-    private void pollLibraries()
-    {
-        poll(initiatingLibrary, acceptingLibrary);
+        assertSequenceIndicesAre(0);
     }
 
     @Test(timeout = TEST_TIMEOUT)
     public void customInitialSequenceNumbersCanBeSet()
     {
         sequenceNumbersCanPersistOverRestarts(4);
+
+        assertSequenceIndicesAre(0);
     }
 
     @Test(timeout = TEST_TIMEOUT)
     public void sessionsCanBeReset()
     {
         exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, true, false);
+
+        assertSequenceIndicesAre(0);
     }
 
     @Test(timeout = TEST_TIMEOUT)
     public void sequenceNumbersCanBeReset()
     {
         exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 2, false, true);
+
+        assertSequenceIndicesAre(1);
     }
 
     private void launch(final int initialSequenceNumber, final boolean resetAll, final boolean resetSequenceNumbers)
@@ -202,6 +205,11 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     private void sequenceNumbersCanPersistOverRestarts(final int initialSequenceNumber)
     {
         exchangeMessagesAroundARestart(initialSequenceNumber, 4, false, false);
+    }
+
+    private void pollLibraries()
+    {
+        poll(initiatingLibrary, acceptingLibrary);
     }
 
     private void exchangeMessagesAroundARestart(

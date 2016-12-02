@@ -36,6 +36,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
 
     // State to only be accessed on the Framer thread.
     private final GatewaySessions gatewaySessions;
+    private final SessionContexts sessionContexts;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final GatewayPublication inboundPublication;
@@ -54,9 +55,12 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
     }
     private Step step = Step.START;
 
+    // Variables initialised on any thread, but objects only executed on the Framer thread
+    // so they don't all have to be thread safe
     ResetSequenceNumberCommand(
         final long sessionId,
         final GatewaySessions gatewaySessions,
+        final SessionContexts sessionContexts,
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final GatewayPublication inboundPublication,
@@ -64,6 +68,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
     {
         this.sessionId = sessionId;
         this.gatewaySessions = gatewaySessions;
+        this.sessionContexts = sessionContexts;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.inboundPublication = inboundPublication;
@@ -119,6 +124,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
                 }
                 else
                 {
+                    sessionContexts.sequenceReset(sessionId);
                     step = Step.RESET_RECV;
                 }
 

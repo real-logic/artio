@@ -265,6 +265,15 @@ public class SessionContexts
         }
     }
 
+    void sequenceReset(final long sessionId)
+    {
+        compositeToContext
+            .values()
+            .stream()
+            .filter(context -> context.sessionId() == sessionId)
+            .forEach(SessionContext::onSequenceReset);
+    }
+
     // TODO: optimisation, more efficient checksumming, only checksum new data
     private void updateChecksum(final int start, final int checksumOffset)
     {

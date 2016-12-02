@@ -213,7 +213,7 @@ public class SessionContextsTest
         final SessionContext sessionContext = sessionContexts.onLogon(aSession);
         assertValuesEqual(
             sessionContext,
-            new SessionContext(sessionId, -1, sessionContexts, FILE_POSITION)); // TODO
+            new SessionContext(sessionId, SEQUENCE_INDEX, sessionContexts, FILE_POSITION));
     }
 
     private void verifyNoBackUp()

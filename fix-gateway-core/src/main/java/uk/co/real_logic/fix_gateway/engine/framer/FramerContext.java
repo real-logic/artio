@@ -55,6 +55,7 @@ public class FramerContext
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
     private final GatewayPublication outboundPublication;
     private final GatewayPublication inboundLibraryPublication;
+    private final SessionContexts sessionContexts;
 
     public FramerContext(
         final EngineConfiguration configuration,
@@ -67,7 +68,7 @@ public class FramerContext
     {
         final ClusterableStreams streams = engineContext.streams();
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
-        final SessionContexts sessionContexts = new SessionContexts(
+        sessionContexts = new SessionContexts(
             configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
         final Streams outboundLibraryStreams = engineContext.outboundLibraryStreams();
@@ -164,6 +165,7 @@ public class FramerContext
         final ResetSequenceNumberCommand reply = new ResetSequenceNumberCommand(
             sessionId,
             gatewaySessions,
+            sessionContexts,
             receivedSequenceNumberIndex,
             sentSequenceNumberIndex,
             inboundLibraryPublication,
