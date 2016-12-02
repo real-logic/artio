@@ -1116,14 +1116,16 @@ public class Session implements AutoCloseable
         return this;
     }
 
-    public void username(final String username)
+    public Session username(final String username)
     {
         this.username = username;
+        return this;
     }
 
-    public void password(final String password)
+    public Session password(final String password)
     {
         this.password = password;
+        return this;
     }
 
     public Action onInvalidMessage(

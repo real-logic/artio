@@ -207,11 +207,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         exchangeMessagesAroundARestart(initialSequenceNumber, 4, false, false);
     }
 
-    private void pollLibraries()
-    {
-        poll(initiatingLibrary, acceptingLibrary);
-    }
-
     private void exchangeMessagesAroundARestart(
         final int initialSequenceNumber,
         final int sequNumAfter,

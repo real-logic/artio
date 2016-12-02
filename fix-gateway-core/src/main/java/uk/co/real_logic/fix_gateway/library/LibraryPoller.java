@@ -829,15 +829,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final GatewayPublication publication = transport.outboundPublication();
 
         final SessionProxy sessionProxy = sessionProxy(connectionId);
-        if (sessionConfiguration != null)
-        {
-            final CompositeKey key = sessionIdStrategy.onLogon(
-                sessionConfiguration.senderCompId(), sessionConfiguration.senderSubId(),
-                sessionConfiguration.senderLocationId(), sessionConfiguration.targetCompId());
-            sessionProxy.setupSession(-1, key);
-        }
-
-        return new InitiatorSession(
+        final Session session = new InitiatorSession(
             defaultInterval,
             connectionId,
             clock,
@@ -854,6 +846,21 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             state)
             .lastReceivedMsgSeqNum(
                 initiatorInitialSequenceNumber(sessionConfiguration, lastReceivedSequenceNumber) - 1);
+
+
+        if (sessionConfiguration != null)
+        {
+            final CompositeKey key = sessionIdStrategy.onLogon(
+                sessionConfiguration.senderCompId(), sessionConfiguration.senderSubId(),
+                sessionConfiguration.senderLocationId(), sessionConfiguration.targetCompId());
+            sessionProxy.setupSession(-1, key);
+
+            session
+                .username(sessionConfiguration.username())
+                .password(sessionConfiguration.password());
+        }
+
+        return session;
     }
 
     private int initiatorInitialSequenceNumber(

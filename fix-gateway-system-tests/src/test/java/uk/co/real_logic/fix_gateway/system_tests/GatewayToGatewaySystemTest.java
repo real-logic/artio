@@ -297,7 +297,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void librariesShouldBeAbleToAcquireReleasedAcceptedSessionsAfterReconnect()
+    public void librariesShouldBeAbleToAcquireReleasedAcceptedSessionsWithCatchupAfterReconnect()
     {
         acquireAcceptingSession();
 
@@ -471,7 +471,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             "library manages session",
             () ->
             {
-                poll(initiatingLibrary, acceptingLibrary);
+                pollLibraries();
                 assertContainsOnlySession(session, library);
             });
     }

@@ -63,6 +63,8 @@ public final class SystemTestUtil
     public static final long AWAIT_TIMEOUT = 50 * TIMEOUT_IN_MS;
     public static final String HI_ID = "hi";
     public static final int LIBRARY_LIMIT = 2;
+    public static final String USERNAME = "bob";
+    public static final String PASSWORD = "Uv1aegoh";
 
     static
     {
@@ -145,7 +147,7 @@ public final class SystemTestUtil
     {
         final SessionConfiguration config = SessionConfiguration.builder()
             .address("localhost", port)
-            .credentials("bob", "Uv1aegoh")
+            .credentials(USERNAME, PASSWORD)
             .senderCompId(initiatorId)
             .targetCompId(acceptorId)
             .build();

@@ -349,6 +349,7 @@ class ReceiverEndPoint
                 final int receivedSequenceNumber = sequenceNumber(receivedSequenceNumberIndex, resetSeqNum, sessionId);
                 final String username = SessionParser.username(logon);
                 final String password = SessionParser.password(logon);
+
                 sessionContext.onLogon(resetSeqNum);
                 sequenceIndex = sessionContext.sequenceIndex();
                 gatewaySession.onLogon(sessionId, sessionContext, compositeKey, username, password, logon.heartBtInt());
