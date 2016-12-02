@@ -216,7 +216,7 @@ public class SessionContexts
     private SessionContext onNewLogon(final CompositeKey compositeKey)
     {
         final long sessionId = counter++;
-        return assignSessionId(compositeKey, sessionId, SessionContext.UNKNOWN);
+        return assignSessionId(compositeKey, sessionId, SessionContext.UNKNOWN_SEQUENCE_INDEX);
     }
 
     private SessionContext assignSessionId(final CompositeKey compositeKey,
@@ -331,7 +331,7 @@ public class SessionContexts
             header.senderLocationIDAsString(),
             header.targetCompIDAsString());
 
-        final SessionContext sessionContext = assignSessionId(compositeKey, sessionId, -1); // TODO
+        final SessionContext sessionContext = assignSessionId(compositeKey, sessionId, sequenceIndex);
         compositeToContext.put(compositeKey, sessionContext);
     }
 

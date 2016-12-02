@@ -176,7 +176,7 @@ public class FramerTest
             mock(CompletionPosition.class));
 
         when(sessionContexts.onLogon(any())).thenReturn(
-            new SessionContext(SESSION_ID, SessionContext.UNKNOWN, sessionContexts, 0));
+            new SessionContext(SESSION_ID, SessionContext.UNKNOWN_SEQUENCE_INDEX, sessionContexts, 0));
     }
 
     private void isLeader(final boolean value)

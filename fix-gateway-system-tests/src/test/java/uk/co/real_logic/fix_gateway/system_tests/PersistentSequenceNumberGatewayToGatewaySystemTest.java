@@ -56,6 +56,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         backupLocation = File.createTempFile("backup", "tmp");
 
         launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false, false);
+
+        assertSequenceIndicesAre(0);
     }
 
     @After
@@ -71,6 +73,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     public void sequenceNumbersCanPersistOverRestarts()
     {
         sequenceNumbersCanPersistOverRestarts(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
+
+        assertSequenceIndicesAre(0);
     }
 
     @Test(timeout = TEST_TIMEOUT)

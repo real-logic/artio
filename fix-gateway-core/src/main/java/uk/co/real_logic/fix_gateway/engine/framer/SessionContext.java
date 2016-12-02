@@ -22,16 +22,16 @@ import uk.co.real_logic.fix_gateway.session.Session;
  */
 class SessionContext
 {
-    static final int UNKNOWN = -1;
+    static final int UNKNOWN_SEQUENCE_INDEX = -1;
 
     private final long sessionId;
     private final SessionContexts sessionContexts;
     private final int filePosition;
 
-    // onSequenceReset() will be called upon the first logon
-    private int sequenceIndex = UNKNOWN;
+    // onSequenceReset() will be called upon logon or not depending upon whether this is a persistent
+    // session or not.
+    private int sequenceIndex = UNKNOWN_SEQUENCE_INDEX;
 
-    // Reload from disk constructor
     SessionContext(
         final long sessionId, final int sequenceIndex, final SessionContexts sessionContexts, final int filePosition)
     {
@@ -45,6 +45,21 @@ class SessionContext
     {
         sequenceIndex++;
         sessionContexts.updateSequenceIndex(filePosition, sequenceIndex);
+    }
+
+    void updateFrom(final Session session)
+    {
+        sequenceIndex = session.sequenceIndex();
+    }
+
+    void onLogon(final boolean resetSeqNum)
+    {
+        // increment if we're going to reset the sequence number or if it's persistent
+        // sequence numbers and it's the first time we're logging on.
+        if (resetSeqNum || sequenceIndex == SessionContext.UNKNOWN_SEQUENCE_INDEX)
+        {
+            onSequenceReset();
+        }
     }
 
     int sequenceIndex()
@@ -85,10 +100,5 @@ class SessionContext
             "sessionId=" + sessionId +
             ", sequenceIndex=" + sequenceIndex +
             '}';
-    }
-
-    void updateFrom(final Session session)
-    {
-        sequenceIndex = session.sequenceIndex();
     }
 }

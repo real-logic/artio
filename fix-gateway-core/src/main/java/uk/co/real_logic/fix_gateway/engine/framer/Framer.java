@@ -80,6 +80,7 @@ import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.GatewayError.*;
 import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
 import static uk.co.real_logic.fix_gateway.messages.SequenceNumberType.DETERMINE_AT_LOGON;
+import static uk.co.real_logic.fix_gateway.messages.SequenceNumberType.TRANSIENT;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.*;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.CONNECTED;
@@ -524,7 +525,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             final long connectionId = this.nextConnectionId++;
 
-            // Initiating so can never be DETERMINE_AT_LOGON.
             final CompositeKey sessionKey = sessionIdStrategy.onLogon(
                 senderCompId, senderSubId, senderLocationId, targetCompId);
             final SessionContext sessionContext = sessionContexts.onLogon(sessionKey);
@@ -583,7 +583,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     {
                         lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
                         lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-                        sessionContext.onSequenceReset();
+                        sessionContext.onLogon(sequenceNumberType == TRANSIENT);
                         session.onLogon(sessionId, sessionContext, sessionKey, username, password, heartbeatIntervalInS);
                         return 0;
                     }
