@@ -31,6 +31,7 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.FixMatchers.hasConnectionId;
+import static uk.co.real_logic.fix_gateway.FixMatchers.hasSequenceIndex;
 import static uk.co.real_logic.fix_gateway.FixMatchers.hasSessionId;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
@@ -198,8 +199,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             sendTestRequest(acceptingSession2);
             assertReceivedTestRequest(library2, acceptingLibrary, initiatingOtfAcceptor2);
 
+            assertThat(session2, hasSequenceIndex(0));
+
             assertOriginalLibraryDoesNotReceiveMessages(initiator1MessageCount);
         }
+
+        assertInitiatingSequenceIndexIs(0);
     }
 
     @Test
@@ -220,6 +225,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         sendTestRequest(initiatingSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+
+        assertSequenceIndicesAre(1);
     }
 
     @Test
@@ -237,6 +244,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
                 acceptingLibrary.poll(1);
                 return acceptingHandler.hasDisconnected();
             });
+
+        assertSequenceIndicesAre(0);
     }
 
     @Test
@@ -267,6 +276,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         reacquireSession(
             initiatingSession, initiatingLibrary, initiatingEngine,
             sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, SessionReplyStatus.OK);
+
+        assertSequenceIndicesAre(0);
     }
 
     @Test
@@ -281,6 +292,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         reacquireSession(
             acceptingSession, acceptingLibrary, acceptingEngine,
             sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, SessionReplyStatus.OK);
+
+        assertSequenceIndicesAre(0);
     }
 
     @Test
@@ -310,21 +323,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         // Send messages both ways to ensure that the session is setup
         messagesCanBeExchanged(acceptingSession, acceptingLibrary, initiatingLibrary, acceptingOtfAcceptor);
         messagesCanBeExchanged(initiatingSession, initiatingLibrary, acceptingLibrary, initiatingOtfAcceptor);
-    }
 
-    private void disconnectSessions()
-    {
-        logoutAcceptingSession();
-
-        assertSessionsDisconnected();
-
-        acceptingSession.close();
-        initiatingSession.close();
-    }
-
-    private void logoutAcceptingSession()
-    {
-        assertThat(acceptingSession.startLogout(), greaterThan(0L));
+        assertSequenceIndicesAre(1);
     }
 
     @Test
@@ -381,6 +381,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         wireSessions();
         messagesCanBeExchanged();
+
+        assertSequenceIndicesAre(1);
     }
 
     @Test
@@ -409,6 +411,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         wireSessions();
 
         messagesCanBeExchanged();
+
+        assertSequenceIndicesAre(1);
     }
 
     @Test
@@ -518,5 +522,20 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             .stream()
             .filter(msg -> msg.getMsgType().equals("1") && msg.get(MSG_SEQ_NUM).equals(expectedSeqNum))
             .count());
+    }
+
+    private void disconnectSessions()
+    {
+        logoutAcceptingSession();
+
+        assertSessionsDisconnected();
+
+        acceptingSession.close();
+        initiatingSession.close();
+    }
+
+    private void logoutAcceptingSession()
+    {
+        assertThat(acceptingSession.startLogout(), greaterThan(0L));
     }
 }
