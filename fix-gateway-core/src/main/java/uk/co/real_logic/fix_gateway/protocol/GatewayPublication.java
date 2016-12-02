@@ -131,6 +131,7 @@ public class GatewayPublication extends ClaimablePublication
             .libraryId(libraryId)
             .messageType(messageType)
             .session(sessionId)
+            .sequenceIndex(sequenceIndex)
             .connection(connectionId)
             .timestamp(timestamp)
             .status(status)

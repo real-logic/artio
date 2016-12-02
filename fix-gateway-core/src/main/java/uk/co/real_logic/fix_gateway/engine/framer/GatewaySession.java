@@ -171,7 +171,7 @@ class GatewaySession implements SessionInfo
             session.setupSession(sessionId, sessionKey);
             DebugLogger.log(GATEWAY_MESSAGE, "Setup Session As: %s", sessionKey.senderCompId());
         }
-        senderEndPoint.sessionId(sessionId);
+        senderEndPoint.onLogon(sessionId, context);
     }
 
     public void onLogon(

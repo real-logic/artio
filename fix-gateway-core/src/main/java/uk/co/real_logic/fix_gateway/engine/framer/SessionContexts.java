@@ -42,7 +42,6 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.zip.CRC32;
 
-import static uk.co.real_logic.fix_gateway.decoder.Constants.LOGON;
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.*;
 import static uk.co.real_logic.fix_gateway.session.SessionIdStrategy.INSUFFICIENT_SPACE;
 import static uk.co.real_logic.fix_gateway.storage.messages.SessionIdEncoder.BLOCK_LENGTH;
@@ -310,7 +309,7 @@ public class SessionContexts
         final int offset,
         final int length)
     {
-        if (messageType == LOGON && recordedSessions.add(sessionId))
+        if (messageType == LogonDecoder.MESSAGE_TYPE && recordedSessions.add(sessionId))
         {
             // Ensure no future collision if you take over as leader of the cluster.
             counter = sessionId + 1;

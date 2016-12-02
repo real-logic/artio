@@ -39,7 +39,6 @@ import uk.co.real_logic.fix_gateway.engine.framer.TcpChannelSupplier.NewChannelH
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
-import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.protocol.*;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
@@ -655,7 +654,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             sessionContexts.onSentFollowerMessage(sessionId, sequenceIndex, messageType, buffer, offset, length);
         }
 
-        senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length);
+        senderEndPoints.onMessage(libraryId, connectionId, messageType, buffer, offset, length);
 
         sendTimer.recordSince(now);
 
