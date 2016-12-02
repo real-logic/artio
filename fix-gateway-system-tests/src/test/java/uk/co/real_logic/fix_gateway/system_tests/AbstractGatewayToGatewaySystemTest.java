@@ -31,6 +31,7 @@ import java.util.Optional;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.FixMatchers.hasConnectionId;
+import static uk.co.real_logic.fix_gateway.FixMatchers.hasSequenceIndex;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
@@ -237,5 +238,16 @@ public class AbstractGatewayToGatewaySystemTest
 
         assertEquals(ENGINE_LIBRARY_ID, engine.libraryId());
         assertThat(engine.sessions(), contains(hasConnectionId(acceptingSession.connectionId())));
+    }
+
+    protected void assertSequenceIndicesAre(final int sequenceIndex)
+    {
+        assertThat(acceptingSession, hasSequenceIndex(sequenceIndex));
+        assertInitiatingSequenceIndexIs(sequenceIndex);
+    }
+
+    protected void assertInitiatingSequenceIndexIs(final int sequenceIndex)
+    {
+        assertThat(initiatingSession, hasSequenceIndex(sequenceIndex));
     }
 }

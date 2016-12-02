@@ -549,7 +549,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
             final class FinishInitiatingConnection extends UnitOfWork
             {
-
                 private int lastSentSequenceNumber;
                 private int lastReceivedSequenceNumber;
 
@@ -584,10 +583,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     {
                         lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
                         lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-                        if (lastSentSequenceNumber == 1 && lastReceivedSequenceNumber == 1)
-                        {
-                            sessionContext.onSequenceReset();
-                        }
+                        sessionContext.onSequenceReset();
                         session.onLogon(sessionId, sessionContext, sessionKey, username, password, heartbeatIntervalInS);
                         return 0;
                     }

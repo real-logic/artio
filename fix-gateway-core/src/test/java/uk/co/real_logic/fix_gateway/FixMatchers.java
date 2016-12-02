@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway;
 import org.hamcrest.Matcher;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.session.Session;
 
 import static org.hamcrest.Matchers.equalTo;
 import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasResult;
@@ -41,5 +42,10 @@ public final class FixMatchers
     public static Matcher<FixLibrary> isConnected()
     {
         return hasResult("isConnected", FixLibrary::isConnected, equalTo(true));
+    }
+
+    public static Matcher<Session> hasSequenceIndex(final int sequenceIndex)
+    {
+        return hasResult("sequenceIndex", Session::sequenceIndex, equalTo(sequenceIndex));
     }
 }

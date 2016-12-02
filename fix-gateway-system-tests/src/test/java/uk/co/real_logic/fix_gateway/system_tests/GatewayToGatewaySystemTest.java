@@ -63,6 +63,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     public void messagesCanBeSentFromInitiatorToAcceptor()
     {
         messagesCanBeExchanged();
+
+        assertInitiatingSequenceIndexIs(0);
     }
 
     @Test
@@ -71,6 +73,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acquireAcceptingSession();
 
         messagesCanBeExchanged();
+
+        assertSequenceIndicesAre(0);
     }
 
     @Test
@@ -83,6 +87,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final int sequenceNumber = sendResendRequest();
 
         assertMessageResent(sequenceNumber);
+
+        assertSequenceIndicesAre(0);
     }
 
     @Test
@@ -91,6 +97,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acquireAcceptingSession();
 
         messagesCanBeExchanged(acceptingSession, acceptingLibrary, initiatingLibrary, acceptingOtfAcceptor);
+
+        assertSequenceIndicesAre(0);
     }
 
     @Test
@@ -101,6 +109,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         initiatingSession.startLogout();
 
         assertSessionsDisconnected();
+
+        assertSequenceIndicesAre(0);
     }
 
     @Test
@@ -111,10 +121,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         logoutAcceptingSession();
 
         assertSessionsDisconnected();
+
+        assertSequenceIndicesAre(0);
     }
 
     @Test
-    public void twoSessionsCanConnect()
+    public void sessionsCanReconnect()
     {
         acquireAcceptingSession();
 
@@ -127,6 +139,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         wireSessions();
 
         messagesCanBeExchanged();
+
+        assertSequenceIndicesAre(1);
     }
 
     @Test

@@ -1181,6 +1181,7 @@ public class Session implements AutoCloseable
             "connectionId=" + connectionId +
             ", sessionId=" + id +
             ", state=" + state +
+            ", sequenceIndex=" + sequenceIndex +
             '}';
     }
 
@@ -1203,5 +1204,12 @@ public class Session implements AutoCloseable
     public int sequenceIndex()
     {
         return sequenceIndex;
+    }
+
+    // Do not call from out side the gateway
+    // TODO: find a better way to encapsulate this method
+    public void sequenceIndex(final int sequenceIndex)
+    {
+        this.sequenceIndex = sequenceIndex;
     }
 }

@@ -528,7 +528,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 DebugLogger.log(FIX_MESSAGE, "Acct Connect: %d, %d\n", connectionId, libraryId);
                 asciiBuffer.wrap(buffer);
                 final String address = asciiBuffer.getAscii(addressOffset, addressLength);
-                final Session session = acceptSession(connectionId, address, state, heartbeatIntervalInS);
+                final Session session = acceptSession(
+                    connectionId, address, state, heartbeatIntervalInS, sequenceIndex);
                 newSession(connectionId, sessionId, session);
             }
         }
@@ -880,7 +881,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long connectionId,
         final String address,
         final SessionState state,
-        final int heartbeatIntervalInS)
+        final int heartbeatIntervalInS,
+        final int sequenceIndex)
     {
         final GatewayPublication publication = transport.outboundPublication();
         final int split = address.lastIndexOf(':');
@@ -905,7 +907,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             libraryId,
             sessionBufferSize,
             1,
-            0,
+            sequenceIndex,
             state)
             .address(host, port);
     }
