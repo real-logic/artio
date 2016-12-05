@@ -26,6 +26,7 @@ import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.util.List;
+import java.util.function.IntSupplier;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.hamcrest.Matchers.*;
@@ -37,6 +38,7 @@ import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
+import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISABLED;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
@@ -295,7 +297,20 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void librariesShouldBeAbleToAcquireReleasedAcceptedSessionsWithCatchupAfterReconnect()
+    public void shouldReceiveCatchupReplayAfterReconnect()
+    {
+        shouldReceiveCatchupReplay(() -> acceptingSession.sequenceIndex(), OK);
+    }
+
+    @Test
+    public void shouldReceiveCatchupReplayForSequenceNumberTooHigh()
+    {
+        shouldReceiveCatchupReplay(() -> 100, SEQUENCE_NUMBER_TOO_HIGH);
+    }
+
+    private void shouldReceiveCatchupReplay(
+        final IntSupplier sequenceIndexSupplier,
+        final SessionReplyStatus expectedStatus)
     {
         acquireAcceptingSession();
 
@@ -306,14 +321,14 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final long sessionId = acceptingSession.id();
         final int lastReceivedMsgSeqNum = acceptingSession.lastReceivedMsgSeqNum();
-        final int sequenceIndex = acceptingSession.sequenceIndex();
+        final int sequenceIndex = sequenceIndexSupplier.getAsInt();
 
         connectSessions();
 
         reacquireSession(
             acceptingSession, acceptingLibrary, acceptingEngine,
             sessionId, lastReceivedMsgSeqNum, sequenceIndex,
-            OK);
+            expectedStatus);
 
         acceptingSession = acceptingHandler.lastSession();
         acceptingHandler.resetSession();
@@ -324,9 +339,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertSequenceIndicesAre(1);
     }
-
-    // TODO: above scenario with a sequence reset in the middle
-    // TODO: above scenario with a genuine SEQUENCE_NUMBER_TOO_HIGH
 
     @Test
     public void enginesShouldManageAcceptingSession()

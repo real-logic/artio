@@ -22,15 +22,21 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
+import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
+import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.fix_gateway.messages.FixMessageDecoder.bodyHeaderLength;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
 
@@ -39,6 +45,9 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private static final int FRAME_LENGTH =
         MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + FixMessageEncoder.bodyHeaderLength();
 
+    private static final int FIX_MESSAGE_BODY_OFFSET =
+        FixMessageDecoder.BLOCK_LENGTH + bodyHeaderLength() + MessageHeaderDecoder.ENCODED_LENGTH;
+
     private enum State
     {
         REPLAYING,
@@ -46,7 +55,13 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         SEND_OK
     }
 
+    private final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
+    private final FixMessageDecoder messageDecoder = new FixMessageDecoder();
     private final FixMessageEncoder messageEncoder = new FixMessageEncoder();
+
+    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
+    private final HeaderDecoder headerDecoder = new HeaderDecoder();
+
     private final BufferClaim bufferClaim = new BufferClaim();
     private final ReplayQuery inboundMessages;
     private final GatewayPublication inboundPublication;
@@ -55,12 +70,12 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final int libraryId;
     private final int lastReceivedSeqNum;
     private final int currentSequenceIndex;
-    private final int replayFromSequenceNumber;
-    private final int replayFromSequenceIndex;
     private final GatewaySession session;
     private final long catchupEndTimeInMs;
 
-    private int replayedMessages = 0;
+    private int replayFromSequenceNumber;
+    private int replayFromSequenceIndex;
+    private boolean abortedReplay;
     private State state = State.REPLAYING;
 
     CatchupReplayer(
@@ -97,6 +112,18 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
     {
         if (inboundPublication.claim(length, bufferClaim) > 0)
         {
+            messageHeaderDecoder.wrap(srcBuffer, srcOffset);
+
+            messageDecoder.wrap(
+                srcBuffer,
+                srcOffset + MessageHeaderDecoder.ENCODED_LENGTH,
+                messageHeaderDecoder.blockLength(),
+                messageHeaderDecoder.version());
+
+            final int messageLength = length - FIX_MESSAGE_BODY_OFFSET;
+            asciiBuffer.wrap(srcBuffer, srcOffset + FIX_MESSAGE_BODY_OFFSET, messageLength);
+            headerDecoder.decode(asciiBuffer, 0, messageLength);
+
             final MutableDirectBuffer destBuffer = bufferClaim.buffer();
             final int destOffset = bufferClaim.offset();
             destBuffer.putBytes(destOffset, srcBuffer, srcOffset, length);
@@ -110,12 +137,16 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 FIX_MESSAGE, "Resending: %s\n", destBuffer, destOffset + FRAME_LENGTH, length - FRAME_LENGTH);
 
             bufferClaim.commit();
-            replayedMessages++;
+
+            // store the point to continue from if an abort happens.
+            replayFromSequenceNumber = headerDecoder.msgSeqNum();
+            replayFromSequenceIndex = messageDecoder.sequenceIndex();
 
             return CONTINUE;
         }
         else
         {
+            abortedReplay = true;
             return ABORT;
         }
     }
@@ -132,17 +163,18 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
                     return sendMissingMessages();
                 }
 
+                // Know at this point that we've indexed up to the latest message.
                 // adding 1 to convert to inclusive numbering
-                final int beginSeqNo = replayFromSequenceNumber + 1 + replayedMessages;
+                abortedReplay = false;
                 inboundMessages.query(
                     this,
                     session.sessionId(),
-                    beginSeqNo,
+                    replayFromSequenceNumber,
                     replayFromSequenceIndex,
                     lastReceivedSeqNum,
                     currentSequenceIndex);
 
-                if (replayedMessages < 0)
+                if (abortedReplay)
                 {
                     if (System.currentTimeMillis() > catchupEndTimeInMs)
                     {
@@ -212,10 +244,10 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         if (position > 0)
         {
             errorHandler.onError(new IllegalStateException(String.format(
-                "Failed to read correct number of messages for %d, expected %d, read %d",
+                "Failed to read correct number of messages for %d, finished at [%d, %d]",
                 correlationId,
-                0, // TODO
-                replayedMessages)));
+                replayFromSequenceIndex,
+                replayFromSequenceNumber)));
         }
         return position;
     }

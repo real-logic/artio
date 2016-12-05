@@ -142,6 +142,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
                 sequenceIndex,
                 endSeqNo,
                 sequenceIndex);
+
             if (endSeqNo != MOST_RECENT_MESSAGE)
             {
                 final int expectedCount = endSeqNo - beginSeqNo + 1;
