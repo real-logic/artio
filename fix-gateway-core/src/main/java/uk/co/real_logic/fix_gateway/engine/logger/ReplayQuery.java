@@ -98,7 +98,6 @@ public class ReplayQuery implements AutoCloseable
         }
 
         // TODO: potential optimisation of jumping straight to the beginSeqNo offset
-        // Needs thinking about out of order sequence numbers due to duplicates and resends
         private int query(
             final ControlledFragmentHandler handler,
             final int beginSequenceNumber,
@@ -134,9 +133,14 @@ public class ReplayQuery implements AutoCloseable
                     sessionReader = archiveReader.session(aeronSessionId);
                 }
 
+                final int sequenceIndex = indexRecord.sequenceIndex();
                 final int sequenceNumber = indexRecord.sequenceNumber();
-                final boolean endSeqNoOk = upToMostRecentMessage || sequenceNumber <= endSequenceNumber;
-                if (sequenceNumber >= beginSequenceNumber && endSeqNoOk && streamId == requiredStreamId)
+
+                final boolean endOk = upToMostRecentMessage || sequenceIndex < endSequenceIndex ||
+                    (sequenceIndex == endSequenceIndex && sequenceNumber <= endSequenceNumber);
+                final boolean startOk = sequenceIndex > beginSequenceIndex ||
+                    (sequenceIndex == beginSequenceIndex && sequenceNumber >= beginSequenceNumber);
+                if (startOk && endOk && streamId == requiredStreamId)
                 {
                     final long readTo = sessionReader.read(position, handler);
                     if (readTo < 0 || readTo == position)

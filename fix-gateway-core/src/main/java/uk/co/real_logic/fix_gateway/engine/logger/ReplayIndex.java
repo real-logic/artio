@@ -89,12 +89,13 @@ public class ReplayIndex implements Index
         positionReader = new IndexedPositionReader(positionBuffer);
     }
 
-    public void indexRecord(final DirectBuffer srcBuffer,
-                            final int srcOffset,
-                            final int srcLength,
-                            final int streamId,
-                            final int aeronSessionId,
-                            final long endPosition)
+    public void indexRecord(
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int srcLength,
+        final int streamId,
+        final int aeronSessionId,
+        final long endPosition)
     {
         if (streamId != requiredStreamId)
         {
@@ -118,9 +119,11 @@ public class ReplayIndex implements Index
             final int alignedLength = BitUtil.align(srcLength, FrameDescriptor.FRAME_ALIGNMENT);
             final long beginPosition = endPosition - alignedLength;
 
+            final int sequenceNumber = fixHeader.msgSeqNum();
+            final int sequenceIndex = messageFrame.sequenceIndex();
             fixSessionIdToIndex
                 .computeIfAbsent(messageFrame.session(), newSessionIndex)
-                .onRecord(streamId, aeronSessionId, beginPosition, endPosition, fixHeader.msgSeqNum());
+                .onRecord(streamId, aeronSessionId, beginPosition, endPosition, sequenceNumber, sequenceIndex);
         }
     }
 
@@ -175,14 +178,16 @@ public class ReplayIndex implements Index
                       final int aeronSessionId,
                       final long beginPosition,
                       final long endPosition,
-                      final int sequenceNumber)
+                      final int sequenceNumber,
+                      final int sequenceIndex)
         {
             replayIndexRecord
                 .wrap(buffer, this.offset)
                 .streamId(streamId)
                 .aeronSessionId(aeronSessionId)
                 .position(beginPosition)
-                .sequenceNumber(sequenceNumber);
+                .sequenceNumber(sequenceNumber)
+                .sequenceIndex(sequenceIndex);
 
             positionWriter.indexedUpTo(aeronSessionId, endPosition);
             positionWriter.updateChecksums();

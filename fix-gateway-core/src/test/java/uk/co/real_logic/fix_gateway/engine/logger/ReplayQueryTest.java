@@ -74,11 +74,16 @@ public class ReplayQueryTest extends AbstractLogTest
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);
 
         when(mockReader.session(anyInt())).thenReturn(mockSessionReader);
-        when(mockSessionReader.read(anyLong(), any(ControlledFragmentHandler.class)))
-            .thenReturn(100L, (long) UNKNOWN_SESSION);
+        readPositions(100L, (long) UNKNOWN_SESSION);
 
         bufferContainsMessage(true);
         indexRecord();
+    }
+
+    private void readPositions(final Long firstPosition, final Long ... remainingPositions)
+    {
+        when(mockSessionReader.read(anyLong(), any(ControlledFragmentHandler.class)))
+            .thenReturn(firstPosition, remainingPositions);
     }
 
     @Test
@@ -182,13 +187,30 @@ public class ReplayQueryTest extends AbstractLogTest
     }
 
     @Test
-    public void shouldStopWhenHandlerReturnsFalse()
+    public void shouldStopWhenSessionReaderReturnsLowPosition()
     {
         indexSecondRecord();
 
         final int msgCount = query();
 
         assertEquals(1, msgCount);
+        verifyMessagesRead(2);
+    }
+
+    @Test
+    public void shouldQueryOverSequenceIndexBoundaries()
+    {
+        readPositions(100L, 100L);
+
+        final int nextSequenceIndex = SEQUENCE_INDEX + 1;
+        final int endSequenceNumber = 1;
+
+        bufferContainsMessage(true, SESSION_ID, endSequenceNumber, nextSequenceIndex);
+        indexSecondRecord();
+
+        final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, endSequenceNumber, nextSequenceIndex);
+
+        assertEquals(2, msgCount);
         verifyMessagesRead(2);
     }
 

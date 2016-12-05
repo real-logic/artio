@@ -528,6 +528,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final CompositeKey sessionKey = sessionIdStrategy.onLogon(
                 senderCompId, senderSubId, senderLocationId, targetCompId);
             final SessionContext sessionContext = sessionContexts.onLogon(sessionKey);
+            sessionContext.onLogon(sequenceNumberType == TRANSIENT);
             if (sessionContext == SessionContexts.DUPLICATE_SESSION)
             {
                 saveError(DUPLICATE_SESSION, libraryId, correlationId);
@@ -583,7 +584,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     {
                         lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
                         lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-                        sessionContext.onLogon(sequenceNumberType == TRANSIENT);
                         session.onLogon(sessionId, sessionContext, sessionKey, username, password, heartbeatIntervalInS);
                         return 0;
                     }
@@ -668,7 +668,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         throws IOException
     {
         final ReceiverEndPoint receiverEndPoint =
-            endPointFactory.receiverEndPoint(channel, connectionId, context.sessionId(), libraryId, this,
+            endPointFactory.receiverEndPoint(channel, connectionId, context.sessionId(), context.sequenceIndex(),
+                libraryId, this,
                 sentSequenceNumberIndex, receivedSequenceNumberIndex, sequenceNumberType, connectionType);
         receiverEndPoints.add(receiverEndPoint);
 

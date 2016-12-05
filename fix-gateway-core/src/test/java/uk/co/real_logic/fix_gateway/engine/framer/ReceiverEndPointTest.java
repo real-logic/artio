@@ -79,7 +79,7 @@ public class ReceiverEndPointTest
     private ReceiverEndPoint endPoint =
         new ReceiverEndPoint(
             mockChannel, BUFFER_SIZE, clusterablePublication, libraryPublication, sessionReplicationStrategy,
-            CONNECTION_ID, UNKNOWN, mockSessionIdStrategy, mockSessionContexts,
+            CONNECTION_ID, UNKNOWN, SEQUENCE_INDEX, mockSessionIdStrategy, mockSessionContexts,
             sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID,
             DETERMINE_AT_LOGON, ConnectionType.ACCEPTOR, replicatedConnectionIds);
 

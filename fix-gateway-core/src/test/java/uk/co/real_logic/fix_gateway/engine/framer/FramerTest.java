@@ -131,7 +131,7 @@ public class FramerTest
         clientBuffer.putInt(10, 5);
 
         when(mockEndPointFactory.receiverEndPoint(
-            any(), connectionId.capture(), anyLong(), anyInt(), any(),
+            any(), connectionId.capture(), anyLong(), anyInt(), anyInt(), any(),
             eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any(), any()))
             .thenReturn(mockReceiverEndPoint);
 
@@ -816,7 +816,7 @@ public class FramerTest
     private void verifyEndpointsCreated() throws IOException
     {
         verify(mockEndPointFactory).receiverEndPoint(
-            notNull(), anyLong(), anyLong(), eq(ENGINE_LIBRARY_ID), eq(framer),
+            notNull(), anyLong(), anyLong(), anyInt(), eq(ENGINE_LIBRARY_ID), eq(framer),
             eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any(), any());
 
         verify(mockEndPointFactory).senderEndPoint(

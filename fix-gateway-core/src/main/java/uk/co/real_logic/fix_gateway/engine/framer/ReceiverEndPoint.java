@@ -76,7 +76,6 @@ class ReceiverEndPoint
     private static final int MIN_CHECKSUM_SIZE = " 10=".length() + 1;
     private static final int SOCKET_DISCONNECTED = -1;
     private static final int UNKNOWN_MESSAGE_TYPE = -1;
-    private static final int UNKNOWN_SEQUENCE_INDEX = -2;
 
     private final LogonDecoder logon = new LogonDecoder();
 
@@ -100,11 +99,11 @@ class ReceiverEndPoint
     private int libraryId;
     private GatewaySession gatewaySession;
     private long sessionId;
+    private int sequenceIndex;
     private int usedBufferData = 0;
     private boolean hasDisconnected = false;
     private SelectionKey selectionKey;
     private boolean isPaused = false;
-    private int sequenceIndex = UNKNOWN_SEQUENCE_INDEX;
 
     ReceiverEndPoint(
         final TcpChannel channel,
@@ -114,6 +113,7 @@ class ReceiverEndPoint
         final SessionPersistenceStrategy sessionReplicationStrategy,
         final long connectionId,
         final long sessionId,
+        final int sequenceIndex,
         final SessionIdStrategy sessionIdStrategy,
         final SessionContexts sessionContexts,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
@@ -132,6 +132,7 @@ class ReceiverEndPoint
         this.sessionReplicationStrategy = sessionReplicationStrategy;
         this.connectionId = connectionId;
         this.sessionId = sessionId;
+        this.sequenceIndex = sequenceIndex;
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionContexts = sessionContexts;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
