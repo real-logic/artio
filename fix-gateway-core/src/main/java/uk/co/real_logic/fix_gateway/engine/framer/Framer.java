@@ -829,7 +829,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int libraryId,
         final long sessionId,
         final long correlationId,
-        final int replayFromSequenceNumber)
+        final int replayFromSequenceNumber,
+        final int replayFromSequenceIndex)
     {
         final Action action = retryManager.retry(correlationId);
         if (action != null)
@@ -891,6 +892,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             connectionId,
             correlationId,
             replayFromSequenceNumber,
+            replayFromSequenceIndex,
             gatewaySession,
             lastRecvSeqNum);
 
@@ -935,14 +937,16 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long connectionId,
         final long correlationId,
         final int replayFromSequenceNumber,
+        final int replayFromSequenceIndex,
         final GatewaySession session,
         final int lastReceivedSeqNum)
     {
         if (replayFromSequenceNumber != NO_MESSAGE_REPLAY)
         {
             final long sessionId = session.sessionId();
-            final int expectedNumberOfMessages = lastReceivedSeqNum - replayFromSequenceNumber;
-            if (expectedNumberOfMessages < 0)
+            final int sequenceIndex = session.sequenceIndex();
+            if (replayFromSequenceIndex > sequenceIndex ||
+                (replayFromSequenceIndex == sequenceIndex && replayFromSequenceNumber > lastReceivedSeqNum))
             {
                 continuations.add(() ->
                     sequenceNumberTooHigh(libraryId, correlationId, session));
@@ -950,7 +954,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }
 
             continuations.add(() ->
-                inboundPublication.saveCatchup(libraryId, connectionId, expectedNumberOfMessages));
+                inboundPublication.saveStartCatchup(libraryId, connectionId));
             continuations.add(() ->
                 receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId) < lastReceivedSeqNum ? BACK_PRESSURED : COMPLETE);
             continuations.add(
@@ -960,11 +964,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     errorHandler,
                     correlationId,
                     libraryId,
-                    expectedNumberOfMessages,
                     lastReceivedSeqNum,
                     replayFromSequenceNumber,
                     session,
-                    catchupTimeout()));
+                    clock.time() + catchupTimeout()));
         }
         else
         {

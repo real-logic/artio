@@ -53,7 +53,6 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final ErrorHandler errorHandler;
     private final long correlationId;
     private final int libraryId;
-    private final int expectedNumberOfMessages;
     private final int lastReceivedSeqNum;
     private final int replayFromSequenceNumber;
     private final GatewaySession session;
@@ -68,22 +67,20 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final ErrorHandler errorHandler,
         final long correlationId,
         final int libraryId,
-        final int expectedNumberOfMessages,
         final int lastReceivedSeqNum,
         final int replayFromSequenceNumber,
         final GatewaySession session,
-        final long catchupTimeoutInMs)
+        final long catchupEndTimeInMs)
     {
         this.inboundMessages = inboundMessages;
         this.inboundPublication = inboundPublication;
         this.errorHandler = errorHandler;
         this.correlationId = correlationId;
         this.libraryId = libraryId;
-        this.expectedNumberOfMessages = expectedNumberOfMessages;
         this.lastReceivedSeqNum = lastReceivedSeqNum;
         this.replayFromSequenceNumber = replayFromSequenceNumber;
         this.session = session;
-        this.catchupEndTimeInMs = System.currentTimeMillis() + catchupTimeoutInMs;
+        this.catchupEndTimeInMs = catchupEndTimeInMs;
     }
 
     public Action onFragment(
@@ -137,7 +134,7 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
                     beginSeqNo,
                     lastReceivedSeqNum);
 
-                if (replayedMessages < expectedNumberOfMessages)
+                if (replayedMessages < 0)
                 {
                     if (System.currentTimeMillis() > catchupEndTimeInMs)
                     {
@@ -209,7 +206,7 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
             errorHandler.onError(new IllegalStateException(String.format(
                 "Failed to read correct number of messages for %d, expected %d, read %d",
                 correlationId,
-                expectedNumberOfMessages,
+                0, // TODO
                 replayedMessages)));
         }
         return position;

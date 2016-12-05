@@ -30,15 +30,13 @@ import java.util.List;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
-import static uk.co.real_logic.fix_gateway.FixMatchers.hasConnectionId;
-import static uk.co.real_logic.fix_gateway.FixMatchers.hasSequenceIndex;
-import static uk.co.real_logic.fix_gateway.FixMatchers.hasSessionId;
+import static uk.co.real_logic.fix_gateway.FixMatchers.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
-import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
+import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISABLED;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
@@ -275,7 +273,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         reacquireSession(
             initiatingSession, initiatingLibrary, initiatingEngine,
-            sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, SessionReplyStatus.OK);
+            sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, OK);
 
         assertSequenceIndicesAre(0);
     }
@@ -291,7 +289,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         reacquireSession(
             acceptingSession, acceptingLibrary, acceptingEngine,
-            sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, SessionReplyStatus.OK);
+            sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, OK);
 
         assertSequenceIndicesAre(0);
     }
@@ -315,7 +313,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         reacquireSession(
             acceptingSession, acceptingLibrary, acceptingEngine,
             sessionId, lastReceivedMsgSeqNum, sequenceIndex,
-            SEQUENCE_NUMBER_TOO_HIGH);
+            OK);
 
         acceptingSession = acceptingHandler.lastSession();
         acceptingHandler.resetSession();
@@ -326,6 +324,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertSequenceIndicesAre(1);
     }
+
+    // TODO: above scenario with a sequence reset in the middle
+    // TODO: above scenario with a genuine SEQUENCE_NUMBER_TOO_HIGH
 
     @Test
     public void enginesShouldManageAcceptingSession()
@@ -443,7 +444,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final SessionReplyStatus status = releaseToGateway(library, session);
 
-        assertEquals(SessionReplyStatus.OK, status);
+        assertEquals(OK, status);
         assertEquals(SessionState.DISABLED, session.state());
         assertThat(library.sessions(), hasSize(0));
 
@@ -512,7 +513,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
 
         final SessionReplyStatus status = requestSession(library, sessionId, lastReceivedMsgSeqNum, sequenceIndex);
-        assertEquals(SessionReplyStatus.OK, status);
+        assertEquals(OK, status);
 
         messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
 

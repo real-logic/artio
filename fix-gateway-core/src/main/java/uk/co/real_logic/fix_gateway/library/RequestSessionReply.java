@@ -45,9 +45,16 @@ class RequestSessionReply extends LibraryReply<SessionReplyStatus>
 
     private void sendMessage()
     {
-        final long position = libraryPoller.saveRequestSession(sessionId, correlationId, lastReceivedSequenceNumber);
+        final long position = libraryPoller.saveRequestSession(
+            sessionId, correlationId, lastReceivedSequenceNumber, sequenceIndex);
 
         requiresResend = position < 0;
+    }
+
+    void onComplete(final SessionReplyStatus result)
+    {
+        libraryPoller.catchupComplete(sessionId);
+        super.onComplete(result);
     }
 
     void onError(final GatewayError errorType, final String errorMessage)

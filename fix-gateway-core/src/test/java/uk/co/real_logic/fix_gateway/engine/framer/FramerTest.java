@@ -646,7 +646,7 @@ public class FramerTest
 
     private Action onRequestSession()
     {
-        return framer.onRequestSession(LIBRARY_ID, SESSION_ID, CORR_ID, NO_MESSAGE_REPLAY);
+        return framer.onRequestSession(LIBRARY_ID, SESSION_ID, CORR_ID, NO_MESSAGE_REPLAY,  NO_MESSAGE_REPLAY);
     }
 
     private void sessionIsActive()

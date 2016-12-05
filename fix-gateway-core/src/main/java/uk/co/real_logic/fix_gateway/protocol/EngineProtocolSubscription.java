@@ -160,7 +160,8 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             libraryId,
             requestSession.sessionId(),
             requestSession.correlationId(),
-            requestSession.lastReceivedSequenceNumber());
+            requestSession.lastReceivedSequenceNumber(),
+            requestSession.sequenceIndex());
     }
 
     private Action onInitiateConnection(

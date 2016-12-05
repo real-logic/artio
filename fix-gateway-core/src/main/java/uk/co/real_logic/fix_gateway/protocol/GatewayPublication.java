@@ -703,7 +703,8 @@ public class GatewayPublication extends ClaimablePublication
         final int libraryId,
         final long sessionId,
         final long correlationId,
-        final int lastReceivedSequenceNumber)
+        final int lastReceivedSequenceNumber,
+        final int sequenceIndex)
     {
         final long position = claim(REQUEST_SESSION_LENGTH);
         if (position < 0)
@@ -728,7 +729,8 @@ public class GatewayPublication extends ClaimablePublication
             .libraryId(libraryId)
             .sessionId(sessionId)
             .correlationId(correlationId)
-            .lastReceivedSequenceNumber(lastReceivedSequenceNumber);
+            .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
+            .sequenceIndex(sequenceIndex);
 
         bufferClaim.commit();
 
@@ -769,8 +771,8 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveCatchup(
-        final int libraryId, final long connectionId, final int messageCount)
+    public long saveStartCatchup(
+        final int libraryId, final long connectionId)
     {
         final long position = claim(CatchupEncoder.BLOCK_LENGTH + HEADER_LENGTH);
         if (position < 0)
@@ -793,8 +795,7 @@ public class GatewayPublication extends ClaimablePublication
         catchup
             .wrap(buffer, offset)
             .libraryId(libraryId)
-            .connection(connectionId)
-            .messageCount(messageCount);
+            .connection(connectionId);
 
         bufferClaim.commit();
 

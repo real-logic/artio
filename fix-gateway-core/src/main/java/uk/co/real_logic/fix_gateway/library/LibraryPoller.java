@@ -241,12 +241,16 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             correlationId);
     }
 
-    long saveRequestSession(final long sessionId, final long correlationId, final int lastReceivedSequenceNumber)
+    long saveRequestSession(
+        final long sessionId,
+        final long correlationId,
+        final int lastReceivedSequenceNumber,
+        final int sequenceIndex)
     {
         checkClosed();
 
         return outboundPublication.saveRequestSession(
-            libraryId, sessionId, correlationId, lastReceivedSequenceNumber);
+            libraryId, sessionId, correlationId, lastReceivedSequenceNumber, sequenceIndex);
     }
 
     void connect()
@@ -703,18 +707,30 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    public Action onCatchup(final int libraryId, final long connectionId, final int messageCount)
+    public Action onStartCatchup(final int libraryId, final long connectionId)
     {
         if (this.libraryId == libraryId)
         {
             final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
             if (subscriber != null)
             {
-                subscriber.startCatchup(messageCount);
+                subscriber.startCatchup();
             }
         }
 
         return CONTINUE;
+    }
+
+    void catchupComplete(final long sessionId)
+    {
+        for (SessionSubscriber subscriber : connectionIdToSession.values())
+        {
+            if (subscriber.session().id() == sessionId)
+            {
+                subscriber.catchupComplete();
+                return;
+            }
+        }
     }
 
     public Action onNewSentPosition(final int libraryId, final long position)

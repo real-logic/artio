@@ -32,7 +32,7 @@ class SessionSubscriber implements AutoCloseable
     private final Session session;
     private final Timer receiveTimer;
     private final Timer sessionTimer;
-    private int remainingCatchupCount;
+    private boolean inCatchupMode = false;
 
     private SessionHandler handler;
 
@@ -63,7 +63,12 @@ class SessionSubscriber implements AutoCloseable
 
         try
         {
-            if (remainingCatchupCount == 0)
+            if (inCatchupMode)
+            {
+                return handler.onMessage(
+                    buffer, offset, length, libraryId, sessionId, sequenceIndex, messageType, timestamp, position);
+            }
+            else
             {
                 final Action action = parser.onMessage(buffer, offset, length, messageType, sessionId);
                 if (action == BREAK)
@@ -78,12 +83,6 @@ class SessionSubscriber implements AutoCloseable
                 }
 
                 return action;
-            }
-            else
-            {
-                remainingCatchupCount--;
-                return handler.onMessage(
-                    buffer, offset, length, libraryId, sessionId, sequenceIndex, messageType, timestamp, position);
             }
         }
         finally
@@ -151,9 +150,13 @@ class SessionSubscriber implements AutoCloseable
         return session;
     }
 
-    void startCatchup(final int messageCount)
+    void startCatchup()
     {
-        remainingCatchupCount = messageCount;
+        inCatchupMode = true;
     }
 
+    void catchupComplete()
+    {
+        inCatchupMode = false;
+    }
 }

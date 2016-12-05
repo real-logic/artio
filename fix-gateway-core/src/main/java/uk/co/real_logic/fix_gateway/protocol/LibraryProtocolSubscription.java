@@ -157,11 +157,9 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         {
             return action;
         }
-        return handler.onCatchup(
+        return handler.onStartCatchup(
             libraryId,
-            catchup.connection(),
-            catchup.messageCount()
-        );
+            catchup.connection());
     }
 
     private Action onApplicationHeartbeat(

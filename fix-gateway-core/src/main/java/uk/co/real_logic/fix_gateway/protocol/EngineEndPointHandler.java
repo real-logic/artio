@@ -61,5 +61,6 @@ public interface EngineEndPointHandler
         int libraryId,
         long sessionId,
         long correlationId,
-        int lastReceivedSequenceNumber);
+        int lastReceivedSequenceNumber,
+        int sequenceIndex);
 }
