@@ -186,6 +186,12 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
                         return BACK_PRESSURED;
                     }
                 }
+                else if (replayFromSequenceIndex < currentSequenceIndex
+                      || replayFromSequenceNumber < lastReceivedSeqNum)
+                {
+                    state = State.SEND_MISSING;
+                    return sendMissingMessages();
+                }
                 else
                 {
                     state = State.SEND_OK;
