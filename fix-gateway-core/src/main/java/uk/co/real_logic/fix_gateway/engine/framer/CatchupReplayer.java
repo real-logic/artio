@@ -54,7 +54,9 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final long correlationId;
     private final int libraryId;
     private final int lastReceivedSeqNum;
+    private final int currentSequenceIndex;
     private final int replayFromSequenceNumber;
+    private final int replayFromSequenceIndex;
     private final GatewaySession session;
     private final long catchupEndTimeInMs;
 
@@ -68,7 +70,9 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final long correlationId,
         final int libraryId,
         final int lastReceivedSeqNum,
+        final int currentSequenceIndex,
         final int replayFromSequenceNumber,
+        final int replayFromSequenceIndex,
         final GatewaySession session,
         final long catchupEndTimeInMs)
     {
@@ -78,7 +82,9 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         this.correlationId = correlationId;
         this.libraryId = libraryId;
         this.lastReceivedSeqNum = lastReceivedSeqNum;
+        this.currentSequenceIndex = currentSequenceIndex;
         this.replayFromSequenceNumber = replayFromSequenceNumber;
+        this.replayFromSequenceIndex = replayFromSequenceIndex;
         this.session = session;
         this.catchupEndTimeInMs = catchupEndTimeInMs;
     }
@@ -132,7 +138,9 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
                     this,
                     session.sessionId(),
                     beginSeqNo,
-                    lastReceivedSeqNum);
+                    replayFromSequenceIndex,
+                    lastReceivedSeqNum,
+                    currentSequenceIndex);
 
                 if (replayedMessages < 0)
                 {

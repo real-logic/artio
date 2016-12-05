@@ -61,10 +61,11 @@ public class AbstractLogTest
 
     protected void bufferContainsMessage(final boolean hasPossDupFlag)
     {
-        bufferContainsMessage(hasPossDupFlag, SESSION_ID, SEQUENCE_NUMBER);
+        bufferContainsMessage(hasPossDupFlag, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX);
     }
 
-    protected void bufferContainsMessage(final boolean hasPossDupFlag, final long sessionId, int sequenceNumber)
+    protected void bufferContainsMessage(
+        final boolean hasPossDupFlag, final long sessionId, final int sequenceNumber, final int sequenceIndex)
     {
         final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
         timestampEncoder.encode(System.currentTimeMillis());
@@ -103,6 +104,7 @@ public class AbstractLogTest
             .messageType(TestRequestDecoder.MESSAGE_TYPE)
             .session(sessionId)
             .connection(CONNECTION_ID)
+            .sequenceIndex(sequenceIndex)
             .putBody(asciiBuffer, 0, logEntryLength);
 
         offset += messageFrame.sbeBlockLength() + SIZE_OF_LENGTH_FIELD;

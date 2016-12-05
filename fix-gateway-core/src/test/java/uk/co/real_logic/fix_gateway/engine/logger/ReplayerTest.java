@@ -59,7 +59,7 @@ public class ReplayerTest extends AbstractLogTest
     public void setUp()
     {
         when(publication.tryClaim(anyInt(), any())).thenReturn(1L);
-        when(replayQuery.query(eq(replayer), anyLong(), anyInt(), anyInt())).thenReturn(1);
+        when(replayQuery.query(eq(replayer), anyLong(), anyInt(), anyInt(), anyInt(), anyInt())).thenReturn(1);
     }
 
     @Test
@@ -142,7 +142,7 @@ public class ReplayerTest extends AbstractLogTest
 
     private void verifyQueriedService(final int endSeqNo)
     {
-        verify(replayQuery).query(replayer, SESSION_ID, BEGIN_SEQ_NO, endSeqNo);
+        verify(replayQuery).query(replayer, SESSION_ID, BEGIN_SEQ_NO, SEQUENCE_INDEX, endSeqNo, SEQUENCE_INDEX);
     }
 
     private void assertHasSetPossDupFlag()

@@ -965,7 +965,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     correlationId,
                     libraryId,
                     lastReceivedSeqNum,
+                    sequenceIndex,
                     replayFromSequenceNumber,
+                    replayFromSequenceIndex,
                     session,
                     clock.time() + catchupTimeout()));
         }

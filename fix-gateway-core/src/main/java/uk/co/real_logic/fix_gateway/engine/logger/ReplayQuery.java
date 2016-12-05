@@ -63,16 +63,21 @@ public class ReplayQuery implements AutoCloseable
      *
      * @param handler the handler to pass the messages to
      * @param sessionId the FIX session id of the stream to replay.
-     * @param beginSeqNo sequence number to begin replay at (inclusive).
-     * @param endSeqNo sequence number to end replay at (inclusive).
+     * @param beginSequenceNumber sequence number to begin replay at (inclusive).
+     * @param endSequenceNumber sequence number to end replay at (inclusive).
      * @return number of messages replayed
      */
     public int query(
-        final ControlledFragmentHandler handler, final long sessionId, final int beginSeqNo, final int endSeqNo)
+        final ControlledFragmentHandler handler,
+        final long sessionId,
+        final int beginSequenceNumber,
+        final int beginSequenceIndex,
+        final int endSequenceNumber,
+        final int endSequenceIndex)
     {
         return sessionToIndex
             .computeIfAbsent(sessionId, newSessionQuery)
-            .query(handler, beginSeqNo, endSeqNo);
+            .query(handler, beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex);
     }
 
     public void close()
@@ -94,14 +99,19 @@ public class ReplayQuery implements AutoCloseable
 
         // TODO: potential optimisation of jumping straight to the beginSeqNo offset
         // Needs thinking about out of order sequence numbers due to duplicates and resends
-        private int query(final ControlledFragmentHandler handler, final int beginSeqNo, final int endSeqNo)
+        private int query(
+            final ControlledFragmentHandler handler,
+            final int beginSequenceNumber,
+            final int beginSequenceIndex,
+            final int endSequenceNumber,
+            final int endSequenceIndex)
         {
             messageFrameHeader.wrap(buffer, 0);
             int index = MessageHeaderDecoder.ENCODED_LENGTH;
             final int actingBlockLength = messageFrameHeader.blockLength();
             final int actingVersion = messageFrameHeader.version();
             final int requiredStreamId = ReplayQuery.this.requiredStreamId;
-            final boolean upToMostRecentMessage = endSeqNo == MOST_RECENT_MESSAGE;
+            final boolean upToMostRecentMessage = endSequenceNumber == MOST_RECENT_MESSAGE;
 
             int count = 0;
             int lastAeronSessionId = 0;
@@ -125,8 +135,8 @@ public class ReplayQuery implements AutoCloseable
                 }
 
                 final int sequenceNumber = indexRecord.sequenceNumber();
-                final boolean endSeqNoOk = upToMostRecentMessage || sequenceNumber <= endSeqNo;
-                if (sequenceNumber >= beginSeqNo && endSeqNoOk && streamId == requiredStreamId)
+                final boolean endSeqNoOk = upToMostRecentMessage || sequenceNumber <= endSequenceNumber;
+                if (sequenceNumber >= beginSequenceNumber && endSeqNoOk && streamId == requiredStreamId)
                 {
                     final long readTo = sessionReader.read(position, handler);
                     if (readTo < 0 || readTo == position)

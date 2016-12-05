@@ -84,11 +84,35 @@ public class ReplayQueryTest extends AbstractLogTest
     @Test
     public void shouldReturnLogEntriesMatchingQuery()
     {
-        final int msgCount = query.query(mockHandler, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
+        final int msgCount = query();
 
         verifyMappedFile(SESSION_ID, 1);
         verifyMessagesRead(1);
         assertEquals(1, msgCount);
+    }
+
+    private int query()
+    {
+        return query(SEQUENCE_NUMBER, SEQUENCE_INDEX, SEQUENCE_NUMBER, SEQUENCE_INDEX);
+    }
+
+    private int query(
+        final int beginSequenceNumber,
+        final int beginSequenceIndex,
+        final int endSequenceNumber,
+        final int endSequenceIndex)
+    {
+        return query(SESSION_ID, beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex);
+    }
+
+    private int query(
+        final long sessionId,
+        final int beginSequenceNumber,
+        final int beginSequenceIndex,
+        final int endSequenceNumber,
+        final int endSequenceIndex)
+    {
+        return query.query(mockHandler, sessionId, beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex);
     }
 
     @Test
@@ -102,10 +126,10 @@ public class ReplayQueryTest extends AbstractLogTest
         {
             newReplayIndex();
 
-            bufferContainsMessage(false, SESSION_ID, SEQUENCE_NUMBER + 1);
+            bufferContainsMessage(false, SESSION_ID, SEQUENCE_NUMBER + 1, SEQUENCE_INDEX);
             indexSecondRecord();
 
-            final int msgCount = query.query(mockHandler, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
+            final int msgCount = query();
 
             verifyMappedFile(SESSION_ID, 1);
             verifyMessagesRead(1);
@@ -121,7 +145,17 @@ public class ReplayQueryTest extends AbstractLogTest
     @Test
     public void shouldReturnAllLogEntriesWhenMostResentMessageRequested()
     {
-        final int msgCount = query.query(mockHandler, SESSION_ID, SEQUENCE_NUMBER, MOST_RECENT_MESSAGE);
+        final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, MOST_RECENT_MESSAGE, SEQUENCE_INDEX);
+
+        verifyMappedFile(SESSION_ID, 1);
+        verifyMessagesRead(1);
+        assertEquals(1, msgCount);
+    }
+
+    @Test
+    public void shouldReturnLogEntriesWhenMostResentMessageRequested()
+    {
+        final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, MOST_RECENT_MESSAGE, SEQUENCE_INDEX);
 
         verifyMappedFile(SESSION_ID, 1);
         verifyMessagesRead(1);
@@ -131,7 +165,7 @@ public class ReplayQueryTest extends AbstractLogTest
     @Test
     public void shouldNotReturnLogEntriesWithWrongSessionId()
     {
-        final int msgCount = query.query(mockHandler, SESSION_ID_2, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
+        final int msgCount = query(SESSION_ID_2, SEQUENCE_NUMBER, SEQUENCE_INDEX, SEQUENCE_NUMBER, SEQUENCE_INDEX);
 
         assertEquals(0, msgCount);
         verifyMappedFile(SESSION_ID_2, 1);
@@ -141,7 +175,7 @@ public class ReplayQueryTest extends AbstractLogTest
     @Test
     public void shouldNotReturnLogEntriesWithOutOfRangeSequenceNumbers()
     {
-        final int msgCount = query.query(mockHandler, SESSION_ID, 1001, 1002);
+        final int msgCount = query(SESSION_ID, 1001, SEQUENCE_INDEX, 1002, SEQUENCE_INDEX);
 
         assertEquals(0, msgCount);
         verifyNoMessageRead();
@@ -152,7 +186,7 @@ public class ReplayQueryTest extends AbstractLogTest
     {
         indexSecondRecord();
 
-        final int msgCount = query.query(mockHandler, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_NUMBER);
+        final int msgCount = query();
 
         assertEquals(1, msgCount);
         verifyMessagesRead(2);
