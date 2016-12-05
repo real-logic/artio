@@ -528,13 +528,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final CompositeKey sessionKey = sessionIdStrategy.onLogon(
                 senderCompId, senderSubId, senderLocationId, targetCompId);
             final SessionContext sessionContext = sessionContexts.onLogon(sessionKey);
-            sessionContext.onLogon(sequenceNumberType == TRANSIENT);
             if (sessionContext == SessionContexts.DUPLICATE_SESSION)
             {
                 saveError(DUPLICATE_SESSION, libraryId, correlationId);
                 return;
             }
 
+            sessionContext.onLogon(sequenceNumberType == TRANSIENT);
             final long sessionId = sessionContext.sessionId();
             final GatewaySession session =
                 setupConnection(
