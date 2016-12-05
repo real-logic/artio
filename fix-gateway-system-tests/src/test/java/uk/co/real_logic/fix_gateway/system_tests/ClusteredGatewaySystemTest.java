@@ -311,18 +311,18 @@ public class ClusteredGatewaySystemTest
                 final StreamIdentifier id = new StreamIdentifier(
                     configuration.clusterAeronChannel(), OUTBOUND_LIBRARY_STREAM);
 
-                final TestRequestFinder testRequestFinder = new TestRequestFinder();
+                final MessageCounter messageCounter = new MessageCounter();
                 scanner.forEachMessage(
                     id,
                     filterBy(
-                        testRequestFinder,
+                        messageCounter,
                         messageTypeOf(TEST_REQUEST)
                             .and(sessionOf(INITIATOR_ID, ACCEPTOR_ID))
                             .and(sessionOf(sessionId))
                             .and(between(begin, end))),
                     Throwable::printStackTrace);
 
-                if (!testRequestFinder.isPresent)
+                if (messageCounter.messageCount() != 1)
                 {
                     scanner.forEachMessage(
                         id,
@@ -330,8 +330,9 @@ public class ClusteredGatewaySystemTest
                         Throwable::printStackTrace);
                 }
 
-                assertTrue(configuration.nodeId() + " is missing the test request message from its log",
-                    testRequestFinder.isPresent);
+                assertEquals(configuration.nodeId() + " is missing the test request message from its log",
+                    1,
+                    messageCounter.messageCount());
             });
     }
 
@@ -374,9 +375,9 @@ public class ClusteredGatewaySystemTest
         }
     }
 
-    private class TestRequestFinder implements FixMessageConsumer
+    private class MessageCounter implements FixMessageConsumer
     {
-        private boolean isPresent = false;
+        private int messageCount = 0;
 
         public void onMessage(
             final FixMessageDecoder fixMessage,
@@ -385,7 +386,12 @@ public class ClusteredGatewaySystemTest
             final int length,
             final Header header)
         {
-            isPresent = true;
+            messageCount++;
+        }
+
+        public int messageCount()
+        {
+            return messageCount;
         }
     }
 
