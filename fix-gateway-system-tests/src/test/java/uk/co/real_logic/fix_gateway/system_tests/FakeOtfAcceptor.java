@@ -151,7 +151,7 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
 
     void allMessagesHaveSequenceIndex(final int sequenceIndex)
     {
-        messages.forEach(message -> assertThat(message, hasSequenceIndex(sequenceIndex)));
+        messages.forEach(message -> assertThat(message.toString(), message, hasSequenceIndex(sequenceIndex)));
     }
 
     private Matcher<FixMessage> hasSequenceIndex(final int sequenceIndex)

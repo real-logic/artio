@@ -22,6 +22,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
+import uk.co.real_logic.fix_gateway.engine.PossDupEnabler;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
@@ -31,7 +32,6 @@ import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MOST_RECENT_MESSAGE;
-import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.POSS_DUP_FIELD;
 import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 
 public class ReplayerTest extends AbstractLogTest
@@ -103,7 +103,7 @@ public class ReplayerTest extends AbstractLogTest
 
         replayer.onFragment(buffer, START, srcLength, null);
 
-        verifyClaim(SIZE_OF_FRAME + srcLength + POSS_DUP_FIELD.length);
+        verifyClaim(SIZE_OF_FRAME + srcLength + PossDupEnabler.POSS_DUP_FIELD.length);
         assertHasSetPossDupFlag();
         verifyCommit();
     }
