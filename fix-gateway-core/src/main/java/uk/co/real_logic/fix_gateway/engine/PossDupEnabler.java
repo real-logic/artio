@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine;
 import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
@@ -45,19 +46,22 @@ public class PossDupEnabler
 
     private final BufferClaim bufferClaim;
     private final IntPredicate claimer;
+    private final Runnable onPreCommit;
     private final Consumer<String> onIllegalStateFunc;
-    private final Consumer<Exception> onExceptionFunc;
+    private final ErrorHandler errorHandler;
 
     public PossDupEnabler(
         final BufferClaim bufferClaim,
         final IntPredicate claimer,
+        final Runnable onPreCommit,
         final Consumer<String> onIllegalStateFunc,
-        final Consumer<Exception> onExceptionFunc)
+        final ErrorHandler errorHandler)
     {
         this.bufferClaim = bufferClaim;
         this.claimer = claimer;
+        this.onPreCommit = onPreCommit;
         this.onIllegalStateFunc = onIllegalStateFunc;
-        this.onExceptionFunc = onExceptionFunc;
+        this.errorHandler = errorHandler;
     }
 
     public Action enablePossDupFlag(
@@ -82,7 +86,7 @@ public class PossDupEnabler
                 if (addPossDupField(
                     srcBuffer, srcOffset, fullLength, messageOffset, messageLength, claimedBuffer(), claimOffset()))
                 {
-                    bufferClaim.commit();
+                    commit();
                 }
                 else
                 {
@@ -93,7 +97,7 @@ public class PossDupEnabler
             catch (final Exception e)
             {
                 bufferClaim.abort();
-                onExceptionFunc.accept(e);
+                errorHandler.onError(e);
             }
         }
         else
@@ -110,16 +114,22 @@ public class PossDupEnabler
                 claimedBuffer.putBytes(claimOffset, srcBuffer, srcOffset, messageLength);
                 setPossDupFlag(srcOffset, possDupSrcOffset, claimedBuffer, claimOffset);
 
-                bufferClaim.commit();
+                commit();
             }
             catch (Exception e)
             {
                 bufferClaim.abort();
-                onExceptionFunc.accept(e);
+                errorHandler.onError(e);
             }
         }
 
         return CONTINUE;
+    }
+
+    private void commit()
+    {
+        onPreCommit.run();
+        bufferClaim.commit();
     }
 
     private MutableDirectBuffer claimedBuffer()

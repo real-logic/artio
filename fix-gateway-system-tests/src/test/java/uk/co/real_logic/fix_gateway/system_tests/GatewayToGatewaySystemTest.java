@@ -276,7 +276,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         releaseToGateway(initiatingLibrary, initiatingSession);
 
         reacquireSession(
-            initiatingSession, initiatingLibrary, initiatingEngine,
+            initiatingSession, initiatingLibrary, initiatingEngine,  initiatingOtfAcceptor,
             sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, OK);
 
         assertSequenceIndicesAre(0);
@@ -292,7 +292,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         releaseToGateway(acceptingLibrary, acceptingSession);
 
         reacquireSession(
-            acceptingSession, acceptingLibrary, acceptingEngine,
+            acceptingSession, acceptingLibrary, acceptingEngine, acceptingOtfAcceptor,
             sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, OK);
 
         assertSequenceIndicesAre(0);
@@ -331,7 +331,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         connectSessions();
 
         reacquireSession(
-            acceptingSession, acceptingLibrary, acceptingEngine,
+            acceptingSession, acceptingLibrary, acceptingEngine, acceptingOtfAcceptor,
             sessionId, lastReceivedMsgSeqNum, sequenceIndex,
             expectedStatus);
 
@@ -475,6 +475,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final Session session,
         final FixLibrary library,
         final FixEngine engine,
+        final FakeOtfAcceptor otfAcceptor,
         final long sessionId,
         final int lastReceivedMsgSeqNum,
         final int sequenceIndex,
@@ -494,6 +495,13 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
                 pollLibraries();
                 assertContainsOnlySession(session, library);
             });
+
+        if (lastReceivedMsgSeqNum != NO_MESSAGE_REPLAY && status == OK)
+        {
+            final FixMessage message = otfAcceptor.messages().get(0);
+            assertEquals(1, message.sequenceIndex());
+            assertEquals("Y", message.getPossDup());
+        }
     }
 
     private void assertContainsOnlySession(final Session session, final FixLibrary library)

@@ -35,9 +35,6 @@ import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
-import java.util.function.Consumer;
-import java.util.function.IntPredicate;
-
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 /**
@@ -60,9 +57,6 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     // Used in onMessage
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
-    private final IntPredicate claimBufferFunc = this::claimBuffer;
-    private final Consumer<Exception> onExceptionFunc = this::onException;
-    private final Consumer<String> onIllegalStateFunc = this::onIllegalState;
     private final BufferClaim bufferClaim;
     private final PossDupEnabler possDupEnabler;
     private final ProtocolSubscription protocolSubscription = ProtocolSubscription.of(this);
@@ -97,7 +91,12 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         this.subscription = subscription;
         this.agentNamePrefix = agentNamePrefix;
 
-        possDupEnabler = new PossDupEnabler(bufferClaim, claimBufferFunc, onIllegalStateFunc, onExceptionFunc);
+        possDupEnabler = new PossDupEnabler(
+            bufferClaim, this::claimBuffer, this::nothing, this::onIllegalState, this::onException);
+    }
+
+    private void nothing()
+    {
     }
 
     public Action onMessage(
@@ -168,7 +167,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         return CONTINUE;
     }
 
-    private void onException(final Exception e)
+    private void onException(final Throwable e)
     {
         final String message = String.format("[%s] Error replying to message", message());
         errorHandler.onError(new IllegalArgumentException(message, e));

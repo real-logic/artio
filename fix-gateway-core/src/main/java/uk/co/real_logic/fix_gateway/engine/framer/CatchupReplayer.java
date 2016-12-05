@@ -20,9 +20,9 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
-import org.agrona.MutableDirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
+import uk.co.real_logic.fix_gateway.engine.PossDupEnabler;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
@@ -36,7 +36,6 @@ import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
-import static uk.co.real_logic.fix_gateway.messages.FixMessageDecoder.bodyHeaderLength;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
 
@@ -44,9 +43,6 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
 {
     private static final int FRAME_LENGTH =
         MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + FixMessageEncoder.bodyHeaderLength();
-
-    private static final int FIX_MESSAGE_BODY_OFFSET =
-        FixMessageDecoder.BLOCK_LENGTH + bodyHeaderLength() + MessageHeaderDecoder.ENCODED_LENGTH;
 
     private enum State
     {
@@ -61,8 +57,9 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final HeaderDecoder headerDecoder = new HeaderDecoder();
-
     private final BufferClaim bufferClaim = new BufferClaim();
+
+    private final PossDupEnabler possDupEnabler;
     private final ReplayQuery inboundMessages;
     private final GatewayPublication inboundPublication;
     private final ErrorHandler errorHandler;
@@ -102,6 +99,27 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         this.replayFromSequenceIndex = replayFromSequenceIndex;
         this.session = session;
         this.catchupEndTimeInMs = catchupEndTimeInMs;
+
+        possDupEnabler = new PossDupEnabler(
+            bufferClaim, this::claimBuffer, this::onPreCommit, this::onIllegalState, errorHandler);
+    }
+
+    private void onPreCommit()
+    {
+        final int frameOffset = bufferClaim.offset() + MessageHeaderEncoder.ENCODED_LENGTH;
+        messageEncoder
+            .wrap(bufferClaim.buffer(), frameOffset)
+            .libraryId(libraryId);
+    }
+
+    private void onIllegalState(final String msg)
+    {
+        errorHandler.onError(new IllegalStateException(msg));
+    }
+
+    private boolean claimBuffer(final int length)
+    {
+        return inboundPublication.claim(length, bufferClaim) > 0;
     }
 
     public Action onFragment(
@@ -110,8 +128,19 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final int length,
         final Header header)
     {
-        if (inboundPublication.claim(length, bufferClaim) > 0)
+        final int messageLength = length - FRAME_LENGTH;
+        final int messageOffset = srcOffset + FRAME_LENGTH;
+
+        final Action action = possDupEnabler.enablePossDupFlag(srcBuffer, messageOffset, messageLength, srcOffset);
+        if (action == CONTINUE)
         {
+            DebugLogger.log(
+                FIX_MESSAGE,
+                "Resending: %s\n",
+                bufferClaim.buffer(),
+                bufferClaim.offset() + FRAME_LENGTH,
+                messageLength);
+
             messageHeaderDecoder.wrap(srcBuffer, srcOffset);
 
             messageDecoder.wrap(
@@ -120,23 +149,8 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 messageHeaderDecoder.blockLength(),
                 messageHeaderDecoder.version());
 
-            final int messageLength = length - FIX_MESSAGE_BODY_OFFSET;
-            asciiBuffer.wrap(srcBuffer, srcOffset + FIX_MESSAGE_BODY_OFFSET, messageLength);
+            asciiBuffer.wrap(srcBuffer, messageOffset, messageLength);
             headerDecoder.decode(asciiBuffer, 0, messageLength);
-
-            final MutableDirectBuffer destBuffer = bufferClaim.buffer();
-            final int destOffset = bufferClaim.offset();
-            destBuffer.putBytes(destOffset, srcBuffer, srcOffset, length);
-
-            final int frameOffset = destOffset + MessageHeaderEncoder.ENCODED_LENGTH;
-            messageEncoder
-                .wrap(destBuffer, frameOffset)
-                .libraryId(libraryId);
-
-            DebugLogger.log(
-                FIX_MESSAGE, "Resending: %s\n", destBuffer, destOffset + FRAME_LENGTH, length - FRAME_LENGTH);
-
-            bufferClaim.commit();
 
             // store the point to continue from if an abort happens.
             replayFromSequenceNumber = headerDecoder.msgSeqNum();
