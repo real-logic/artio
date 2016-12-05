@@ -172,7 +172,7 @@ class GatewaySession implements SessionInfo
             session.sequenceIndex(context.sequenceIndex());
             DebugLogger.log(GATEWAY_MESSAGE, "Setup Session As: %s", sessionKey.senderCompId());
         }
-        senderEndPoint.onLogon(sessionId, context);
+        senderEndPoint.onLogon(sessionId);
     }
 
     public void onLogon(

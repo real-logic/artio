@@ -650,7 +650,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             sessionContexts.onSentFollowerMessage(sessionId, sequenceIndex, messageType, buffer, offset, length);
         }
 
-        senderEndPoints.onMessage(libraryId, connectionId, messageType, buffer, offset, length);
+        senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length);
 
         sendTimer.recordSince(now);
 

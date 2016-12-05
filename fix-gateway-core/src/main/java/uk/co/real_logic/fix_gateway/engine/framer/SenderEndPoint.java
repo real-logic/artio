@@ -21,7 +21,6 @@ import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
@@ -50,7 +49,6 @@ class SenderEndPoint implements AutoCloseable
 
     private int libraryId;
     private long sessionId;
-    private SessionContext context;
 
     SenderEndPoint(
         final long connectionId,
@@ -74,7 +72,6 @@ class SenderEndPoint implements AutoCloseable
 
     void onNormalFramedMessage(
         final int libraryId,
-        final int messageType,
         final DirectBuffer directBuffer,
         final int offset,
         final int length)
@@ -96,11 +93,6 @@ class SenderEndPoint implements AutoCloseable
             this.bytesInBuffer.setOrdered(bytesInBuffer);
 
             return;
-        }
-
-        if (messageType == SequenceResetDecoder.MESSAGE_TYPE)
-        {
-            context.onSequenceReset();
         }
 
         try
@@ -275,10 +267,9 @@ class SenderEndPoint implements AutoCloseable
         return bytesInBuffer.get();
     }
 
-    void onLogon(final long sessionId, final SessionContext context)
+    void onLogon(final long sessionId)
     {
         this.sessionId = sessionId;
-        this.context = context;
     }
 
     public long onLogon()
