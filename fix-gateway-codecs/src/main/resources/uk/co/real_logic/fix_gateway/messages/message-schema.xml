@@ -272,7 +272,6 @@
     <sbe:message name="Catchup" id="34" description="A notice that the following messages will be catchups">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="connection" id="2" type="ConnectionId"/>
-        <field name="messageCount" id="3" type="int32"/>
     </sbe:message>
 
     <sbe:message name="NewSentPosition" id="35" description="A notice of the owned position of the stream is">
