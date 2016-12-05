@@ -223,6 +223,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         initiatingSession.startLogout();
         assertSessionsDisconnected();
 
+        assertInitiatingSequenceIndexIs(0);
+        clearMessages();
         close();
 
         launch(initialSequenceNumber, resetAll, resetSequenceNumbers);
