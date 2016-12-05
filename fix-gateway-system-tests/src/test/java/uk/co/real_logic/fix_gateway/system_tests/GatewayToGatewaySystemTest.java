@@ -134,8 +134,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acceptingSession.startLogout();
         assertSessionsDisconnected();
 
-        acceptingOtfAcceptor.messages().clear();
-        initiatingOtfAcceptor.messages().clear();
+        assertAllMessagesHaveSequenceIndex(0);
+        clearMessages();
 
         wireSessions();
 
@@ -217,6 +217,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         initiatingSession.startLogout();
 
+        assertSequenceIndicesAre(0);
+        clearMessages();
         assertSessionsDisconnected();
 
         wireSessions();
@@ -323,6 +325,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final int lastReceivedMsgSeqNum = acceptingSession.lastReceivedMsgSeqNum();
         final int sequenceIndex = sequenceIndexSupplier.getAsInt();
 
+        assertSequenceIndicesAre(0);
+        clearMessages();
+
         connectSessions();
 
         reacquireSession(
@@ -387,6 +392,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         acceptingLibrary.close();
         acceptingEngine.close();
+        assertSequenceIndicesAre(0);
         clearMessages();
 
         launchAcceptingEngine();
@@ -405,6 +411,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         acceptingEngine.close();
 
+        assertAllMessagesHaveSequenceIndex(0);
         clearMessages();
 
         assertEventuallyTrue(

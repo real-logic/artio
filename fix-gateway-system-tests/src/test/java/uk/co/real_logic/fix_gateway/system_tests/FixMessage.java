@@ -26,6 +26,7 @@ public class FixMessage extends Int2ObjectHashMap<String>
 {
 
     private Session session;
+    private int sequenceIndex;
 
     public FixMessage()
     {
@@ -49,5 +50,15 @@ public class FixMessage extends Int2ObjectHashMap<String>
     public void session(final Session session)
     {
         this.session = session;
+    }
+
+    void sequenceIndex(final int sequenceIndex)
+    {
+        this.sequenceIndex = sequenceIndex;
+    }
+
+    public int sequenceIndex()
+    {
+        return sequenceIndex;
     }
 }

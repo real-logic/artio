@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
+import org.hamcrest.Matcher;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.decoder.Constants;
@@ -28,8 +29,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_TEST;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_TYPE;
+import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasResult;
 
 /**
  * An otf acceptor used to accumulate/log/check acceptor interactions.
@@ -143,5 +147,15 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
               .stream()
               .filter(fixMessage -> fixMessage.get(MSG_TYPE).equals(messageType))
               .findFirst();
+    }
+
+    void allMessagesHaveSequenceIndex(final int sequenceIndex)
+    {
+        messages.forEach(message -> assertThat(message, hasSequenceIndex(sequenceIndex)));
+    }
+
+    private Matcher<FixMessage> hasSequenceIndex(final int sequenceIndex)
+    {
+        return hasResult("sequenceIndex", FixMessage::sequenceIndex, equalTo(sequenceIndex));
     }
 }

@@ -244,17 +244,28 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void assertSequenceIndicesAre(final int sequenceIndex)
     {
-        assertThat(acceptingSession, hasSequenceIndex(sequenceIndex));
+        if (acceptingSession != null)
+        {
+            assertThat(acceptingSession, hasSequenceIndex(sequenceIndex));
+        }
         assertInitiatingSequenceIndexIs(sequenceIndex);
+        assertAllMessagesHaveSequenceIndex(sequenceIndex);
     }
 
     protected void assertInitiatingSequenceIndexIs(final int sequenceIndex)
     {
         assertThat(initiatingSession, hasSequenceIndex(sequenceIndex));
+
     }
 
     protected void pollLibraries()
     {
         poll(initiatingLibrary, acceptingLibrary);
+    }
+
+    protected void assertAllMessagesHaveSequenceIndex(final int sequenceIndex)
+    {
+        acceptingOtfAcceptor.allMessagesHaveSequenceIndex(sequenceIndex);
+        initiatingOtfAcceptor.allMessagesHaveSequenceIndex(sequenceIndex);
     }
 }
