@@ -15,11 +15,9 @@
  */
 import org.gradle.plugins.ide.eclipse.model.Classpath
 
-buildscript {
-    dependencies {
-        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
-        classpath 'net.researchgate:gradle-release:2.4.1'
-    }
+plugins {
+    id "com.github.johnrengelman.shadow" version "1.2.4"
+    id 'net.researchgate.release' version '2.4.1'
 }
 
 apply plugin: 'maven'
@@ -82,17 +80,17 @@ subprojects {
     }
 
     dependencies {
-        checkstyle 'com.puppycrawl.tools:checkstyle:7.2'
-        checkstyle "com.github.sevntu.checkstyle:sevntu-checks:1.21.1"
+        checkstyle 'com.puppycrawl.tools:checkstyle:7.3'
+        checkstyle "com.github.sevntu.checkstyle:sevntu-checks:1.22.0"
 
         testCompile 'org.hamcrest:hamcrest-all:1.3',
                 'junit:junit:4.12',
-                'org.mockito:mockito-core:2.2.26'
+                'org.mockito:mockito-core:2.2.28'
     }
 
     checkstyle {
         configFile = new File(rootDir, 'config/checkstyle/checkstyle.xml')
-        toolVersion = "7.2"
+        toolVersion = "7.3"
     }
 
     test {
@@ -368,5 +366,6 @@ uploadArchives {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '3.2'
+    gradleVersion = '3.2.1'
+    distributionType = 'ALL'
 }
