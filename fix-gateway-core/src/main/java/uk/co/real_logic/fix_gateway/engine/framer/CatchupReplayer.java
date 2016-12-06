@@ -21,13 +21,15 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
+import uk.co.real_logic.fix_gateway.builder.SequenceResetEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
+import uk.co.real_logic.fix_gateway.decoder.HeartbeatDecoder;
+import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import uk.co.real_logic.fix_gateway.engine.PossDupEnabler;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
-import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
-import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
+import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
+import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
@@ -41,6 +43,8 @@ import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
 
 class CatchupReplayer implements ControlledFragmentHandler, Continuation
 {
+    private static final int ENCODE_BUFFER_SIZE = 8 * 1024;
+
     private static final int FRAME_LENGTH =
         MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + FixMessageEncoder.bodyHeaderLength();
 
@@ -50,6 +54,8 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         SEND_MISSING,
         SEND_OK
     }
+
+    private static final int OUT_OF_RANGE = -1;
 
     private final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
     private final FixMessageDecoder messageDecoder = new FixMessageDecoder();
@@ -74,6 +80,12 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private int replayFromSequenceIndex;
     private boolean abortedReplay;
     private State state = State.REPLAYING;
+
+    private SequenceResetEncoder sequenceResetEncoder;
+    private UtcTimestampEncoder timestampEncoder;
+    private MutableAsciiBuffer encodeBuffer;
+
+    private int heartbeatRangeSequenceNumberStart = OUT_OF_RANGE;
 
     CatchupReplayer(
         final ReplayQuery inboundMessages,
@@ -131,7 +143,102 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final int messageLength = srcLength - FRAME_LENGTH;
         final int messageOffset = srcOffset + FRAME_LENGTH;
 
-        final Action action = possDupEnabler.enablePossDupFlag(srcBuffer, messageOffset, messageLength, srcOffset, srcLength);
+        messageHeaderDecoder.wrap(srcBuffer, srcOffset);
+
+        messageDecoder.wrap(
+            srcBuffer,
+            srcOffset + MessageHeaderDecoder.ENCODED_LENGTH,
+            messageHeaderDecoder.blockLength(),
+            messageHeaderDecoder.version());
+
+        asciiBuffer.wrap(srcBuffer, messageOffset, messageLength);
+        headerDecoder.decode(asciiBuffer, 0, messageLength);
+
+        if (messageDecoder.messageType() == HeartbeatDecoder.MESSAGE_TYPE)
+        {
+            if (heartbeatRangeSequenceNumberStart == OUT_OF_RANGE)
+            {
+                heartbeatRangeSequenceNumberStart = headerDecoder.msgSeqNum();
+            }
+
+            return CONTINUE;
+        }
+        else
+        {
+            if (heartbeatRangeSequenceNumberStart != OUT_OF_RANGE)
+            {
+                if (!sendGapFill())
+                {
+                    return ABORT;
+                }
+            }
+
+            return processNormalMessage(srcBuffer, srcOffset, srcLength, messageLength, messageOffset);
+        }
+    }
+
+    private boolean sendGapFill()
+    {
+        if (sequenceResetEncoder == null)
+        {
+            sequenceResetEncoder = new SequenceResetEncoder();
+            timestampEncoder = new UtcTimestampEncoder();
+            encodeBuffer = new MutableAsciiBuffer(new byte[ENCODE_BUFFER_SIZE]);
+
+            final HeaderEncoder header = sequenceResetEncoder.header();
+
+            header.senderCompID(headerDecoder.senderCompID());
+            if (headerDecoder.hasSenderSubID())
+            {
+                header.senderSubID(headerDecoder.senderSubID());
+            }
+            if (headerDecoder.hasSenderLocationID())
+            {
+                header.senderLocationID(headerDecoder.senderLocationID());
+            }
+
+            header.targetCompID(headerDecoder.targetCompID());
+            if (headerDecoder.hasTargetSubID())
+            {
+                header.targetSubID(headerDecoder.targetSubID());
+            }
+            if (headerDecoder.hasTargetLocationID())
+            {
+                header.targetLocationID(headerDecoder.targetLocationID());
+            }
+        }
+
+        final int heartbeatRangeSequenceNumberEnd = headerDecoder.msgSeqNum();
+
+        sequenceResetEncoder.header().msgSeqNum(heartbeatRangeSequenceNumberStart);
+        sequenceResetEncoder.newSeqNo(heartbeatRangeSequenceNumberEnd);
+        sequenceResetEncoder.header().sendingTime(
+            timestampEncoder.buffer(), timestampEncoder.encode(System.currentTimeMillis()));
+
+        final int encodedLength = sequenceResetEncoder.encode(encodeBuffer, 0);
+        final boolean sent = inboundPublication.saveMessage(
+            encodeBuffer, 0, encodedLength,
+            libraryId, SequenceResetDecoder.MESSAGE_TYPE,
+            messageDecoder.session(), replayFromSequenceIndex, libraryId,
+            MessageStatus.OK) > 0;
+
+        if (sent)
+        {
+            heartbeatRangeSequenceNumberStart = OUT_OF_RANGE;
+        }
+
+        return sent;
+    }
+
+    private Action processNormalMessage(
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int srcLength,
+        final int messageLength,
+        final int messageOffset)
+    {
+        final Action action = possDupEnabler.enablePossDupFlag(
+            srcBuffer, messageOffset, messageLength, srcOffset, srcLength);
         if (action == CONTINUE)
         {
             DebugLogger.log(
@@ -140,17 +247,6 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 bufferClaim.buffer(),
                 bufferClaim.offset() + FRAME_LENGTH,
                 messageLength);
-
-            messageHeaderDecoder.wrap(srcBuffer, srcOffset);
-
-            messageDecoder.wrap(
-                srcBuffer,
-                srcOffset + MessageHeaderDecoder.ENCODED_LENGTH,
-                messageHeaderDecoder.blockLength(),
-                messageHeaderDecoder.version());
-
-            asciiBuffer.wrap(srcBuffer, messageOffset, messageLength);
-            headerDecoder.decode(asciiBuffer, 0, messageLength);
 
             // store the point to continue from if an abort happens.
             replayFromSequenceNumber = headerDecoder.msgSeqNum() + 1;

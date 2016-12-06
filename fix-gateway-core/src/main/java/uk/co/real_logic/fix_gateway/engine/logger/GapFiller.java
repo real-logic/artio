@@ -15,10 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import io.aeron.Publication;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.Agent;
+import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.SequenceResetEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
@@ -114,7 +114,7 @@ public class GapFiller implements ProtocolHandler, Agent
                 libraryId, SequenceResetDecoder.MESSAGE_TYPE, sessionId, sequenceIndex, connectionId,
                 MessageStatus.OK);
 
-            if (sentPosition == Publication.BACK_PRESSURED)
+            if (Pressure.isBackPressured(sentPosition))
             {
                 return Action.ABORT;
             }
