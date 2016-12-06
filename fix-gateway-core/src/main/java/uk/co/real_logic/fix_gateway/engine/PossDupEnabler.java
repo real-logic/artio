@@ -78,8 +78,7 @@ public class PossDupEnabler
             final int newLength = srcLength + POSS_DUP_FIELD.length;
             if (!claimer.test(newLength))
             {
-                onIllegalStateFunc.accept("[%s] unable to resend");
-                return CONTINUE;
+                return ABORT;
             }
 
             try
