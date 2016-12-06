@@ -153,7 +153,7 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
             headerDecoder.decode(asciiBuffer, 0, messageLength);
 
             // store the point to continue from if an abort happens.
-            replayFromSequenceNumber = headerDecoder.msgSeqNum();
+            replayFromSequenceNumber = headerDecoder.msgSeqNum() + 1;
             replayFromSequenceIndex = messageDecoder.sequenceIndex();
 
             return CONTINUE;
@@ -180,15 +180,24 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 // Know at this point that we've indexed up to the latest message.
                 // adding 1 to convert to inclusive numbering
                 abortedReplay = false;
-                inboundMessages.query(
-                    this,
-                    session.sessionId(),
-                    replayFromSequenceNumber,
-                    replayFromSequenceIndex,
-                    lastReceivedSeqNum,
-                    currentSequenceIndex);
+                // System.out.println("QUERY");
+                try
+                {
+                    inboundMessages.query(
+                        this,
+                        session.sessionId(),
+                        replayFromSequenceNumber,
+                        replayFromSequenceIndex,
+                        lastReceivedSeqNum,
+                        currentSequenceIndex);
+                }
+                catch (final IllegalStateException e)
+                {
+                    // Missing file, just retry the next time round.
+                    abortedReplay = true;
+                }
 
-                if (abortedReplay)
+                if (abortedReplay || replayIncomplete())
                 {
                     if (System.currentTimeMillis() > catchupEndTimeInMs)
                     {
@@ -199,12 +208,6 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
                     {
                         return BACK_PRESSURED;
                     }
-                }
-                else if (replayFromSequenceIndex < currentSequenceIndex
-                      || replayFromSequenceNumber < lastReceivedSeqNum)
-                {
-                    state = State.SEND_MISSING;
-                    return sendMissingMessages();
                 }
                 else
                 {
@@ -229,6 +232,12 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 return 1;
             }
         }
+    }
+
+    private boolean replayIncomplete()
+    {
+        return replayFromSequenceIndex < currentSequenceIndex
+              || replayFromSequenceNumber <= lastReceivedSeqNum;
     }
 
     private boolean notLoggingInboundMessages()

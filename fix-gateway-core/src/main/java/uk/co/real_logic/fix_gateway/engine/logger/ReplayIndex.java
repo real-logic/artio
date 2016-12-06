@@ -121,8 +121,10 @@ public class ReplayIndex implements Index
 
             final int sequenceNumber = fixHeader.msgSeqNum();
             final int sequenceIndex = messageFrame.sequenceIndex();
+            final long fixSessionId = messageFrame.session();
+
             fixSessionIdToIndex
-                .computeIfAbsent(messageFrame.session(), newSessionIndex)
+                .computeIfAbsent(fixSessionId, newSessionIndex)
                 .onRecord(streamId, aeronSessionId, beginPosition, endPosition, sequenceNumber, sequenceIndex);
         }
     }
@@ -145,9 +147,9 @@ public class ReplayIndex implements Index
 
         private int offset = indexHeaderEncoder.encodedLength();
 
-        private SessionIndex(final long sessionId)
+        private SessionIndex(final long fixSessionId)
         {
-            final File logFile = logFile(logFileDir, sessionId, requiredStreamId);
+            final File logFile = logFile(logFileDir, fixSessionId, requiredStreamId);
             final boolean exists = logFile.exists();
             this.wrappedBuffer = bufferFactory.map(logFile, indexFileSize);
             this.buffer = new UnsafeBuffer(wrappedBuffer);

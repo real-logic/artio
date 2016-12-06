@@ -52,7 +52,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         mediaDriver = launchMediaDriver();
 
         launchAcceptingEngine();
-        initiatingEngine = launchInitiatingGateway(libraryAeronPort);
+        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
@@ -546,7 +546,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         // Callbacks for the missing messages whilst the gateway managed them
         final String expectedSeqNum = String.valueOf(lastReceivedMsgSeqNum + 1);
-        assertEquals(1, messages
+        assertEquals(messages.toString(), 1, messages
             .stream()
             .filter(msg -> msg.getMsgType().equals("1") && msg.get(MSG_SEQ_NUM).equals(expectedSeqNum))
             .count());

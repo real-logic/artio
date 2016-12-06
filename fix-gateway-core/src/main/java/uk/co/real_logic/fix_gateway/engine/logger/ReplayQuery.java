@@ -38,7 +38,7 @@ public class ReplayQuery implements AutoCloseable
     private final ReplayIndexRecordDecoder indexRecord = new ReplayIndexRecordDecoder();
 
     private final LongFunction<SessionQuery> newSessionQuery = SessionQuery::new;
-    private final Long2ObjectCache<SessionQuery> sessionToIndex;
+    private final Long2ObjectCache<SessionQuery> fixSessionToIndex;
     private final String logFileDir;
     private final ExistingBufferFactory indexBufferFactory;
     private final ArchiveReader archiveReader;
@@ -56,7 +56,7 @@ public class ReplayQuery implements AutoCloseable
         this.indexBufferFactory = indexBufferFactory;
         this.archiveReader = archiveReader;
         this.requiredStreamId = requiredStreamId;
-        sessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionQuery::close);
+        fixSessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionQuery::close);
     }
 
     /**
@@ -75,14 +75,14 @@ public class ReplayQuery implements AutoCloseable
         final int endSequenceNumber,
         final int endSequenceIndex)
     {
-        return sessionToIndex
+        return fixSessionToIndex
             .computeIfAbsent(sessionId, newSessionQuery)
             .query(handler, beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex);
     }
 
     public void close()
     {
-        sessionToIndex.clear();
+        fixSessionToIndex.clear();
         archiveReader.close();
     }
 

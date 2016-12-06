@@ -180,7 +180,7 @@ public final class SystemTestUtil
         return reply.resultIfPresent();
     }
 
-    public static FixEngine launchInitiatingGateway(final int libraryAeronPort)
+    public static FixEngine launchInitiatingEngine(final int libraryAeronPort)
     {
         delete(CLIENT_LOGS);
         return launchInitiatingGatewayWithSameLogs(libraryAeronPort);
@@ -299,7 +299,7 @@ public final class SystemTestUtil
     {
         final Reply<SessionReplyStatus> reply = library.requestSession(sessionId, lastReceivedMsgSeqNum, sequenceIndex);
         awaitLibraryReply(library, reply);
-        assertEquals(reply.state(), COMPLETED);
+        assertEquals(COMPLETED, reply.state());
 
         return reply.resultIfPresent();
     }

@@ -44,7 +44,7 @@ public class LibraryFirstSystemTest extends AbstractGatewayToGatewaySystemTest
         waitLessThanReplyTimeout();
 
         launchAcceptingEngine();
-        initiatingEngine = launchInitiatingGateway(libraryAeronPort);
+        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 
         acceptingLibrary = acceptingLibraryFuture.get();
         initiatingLibrary = initiatingLibraryFuture.get();

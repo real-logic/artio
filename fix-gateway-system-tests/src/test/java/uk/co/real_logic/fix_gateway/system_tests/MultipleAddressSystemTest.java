@@ -37,7 +37,7 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
         final int libraryAeronPort = unusedPort();
 
         mediaDriver = launchMediaDriver();
-        initiatingEngine = launchInitiatingGateway(libraryAeronPort);
+        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
         delete(ACCEPTOR_LOGS);
         acceptingEngine = FixEngine.launch(acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID));
 

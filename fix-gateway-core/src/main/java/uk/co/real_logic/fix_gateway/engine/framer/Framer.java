@@ -944,7 +944,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         if (replayFromSequenceNumber != NO_MESSAGE_REPLAY)
         {
-            final long sessionId = session.sessionId();
             final int sequenceIndex = session.sequenceIndex();
             if (replayFromSequenceIndex > sequenceIndex ||
                 (replayFromSequenceIndex == sequenceIndex && replayFromSequenceNumber > lastReceivedSeqNum))
@@ -956,8 +955,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
             continuations.add(() ->
                 inboundPublication.saveStartCatchup(libraryId, connectionId));
-            continuations.add(() ->
-                receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId) < lastReceivedSeqNum ? BACK_PRESSURED : COMPLETE);
             continuations.add(
                 new CatchupReplayer(
                     inboundMessages,

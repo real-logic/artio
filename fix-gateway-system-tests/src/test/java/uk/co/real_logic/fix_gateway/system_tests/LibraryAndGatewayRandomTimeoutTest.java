@@ -110,6 +110,6 @@ public class LibraryAndGatewayRandomTimeoutTest
 
     private void launchEngine()
     {
-        initiatingEngine = launchInitiatingGateway(aeronPort);
+        initiatingEngine = launchInitiatingEngine(aeronPort);
     }
 }
