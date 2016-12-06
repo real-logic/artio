@@ -67,14 +67,15 @@ public class PossDupEnabler
     public Action enablePossDupFlag(
         final DirectBuffer srcBuffer,
         final int messageOffset,
-        final int messageLength, final int srcOffset)
+        final int messageLength,
+        final int srcOffset,
+        final int srcLength)
     {
         parser.onMessage(srcBuffer, messageOffset, messageLength);
         final int possDupSrcOffset = possDupFinder.possDupOffset();
         if (possDupSrcOffset == NO_ENTRY)
         {
-            final int fullLength = (messageOffset - srcOffset) + messageLength;
-            final int newLength = fullLength + POSS_DUP_FIELD.length;
+            final int newLength = srcLength + POSS_DUP_FIELD.length;
             if (!claimer.test(newLength))
             {
                 onIllegalStateFunc.accept("[%s] unable to resend");
@@ -84,7 +85,7 @@ public class PossDupEnabler
             try
             {
                 if (addPossDupField(
-                    srcBuffer, srcOffset, fullLength, messageOffset, messageLength, claimedBuffer(), claimOffset()))
+                    srcBuffer, srcOffset, srcLength, messageOffset, messageLength, claimedBuffer(), claimOffset()))
                 {
                     commit();
                 }
@@ -102,7 +103,7 @@ public class PossDupEnabler
         }
         else
         {
-            if (!claimer.test(messageLength))
+            if (!claimer.test(srcLength))
             {
                 return ABORT;
             }
@@ -111,8 +112,8 @@ public class PossDupEnabler
             {
                 final MutableDirectBuffer claimedBuffer = claimedBuffer();
                 final int claimOffset = claimOffset();
-                claimedBuffer.putBytes(claimOffset, srcBuffer, srcOffset, messageLength);
-                setPossDupFlag(srcOffset, possDupSrcOffset, claimedBuffer, claimOffset);
+                claimedBuffer.putBytes(claimOffset, srcBuffer, messageOffset, messageLength);
+                setPossDupFlag(possDupSrcOffset, srcOffset, claimOffset, claimedBuffer);
 
                 commit();
             }
@@ -201,10 +202,10 @@ public class PossDupEnabler
     }
 
     private void setPossDupFlag(
-        final int srcOffset,
         final int possDupSrcOffset,
-        final MutableDirectBuffer claimBuffer,
-        final int claimOffset)
+        final int srcOffset,
+        final int claimOffset,
+        final MutableDirectBuffer claimBuffer)
     {
         final int possDupClaimOffset = srcToClaim(possDupSrcOffset, srcOffset, claimOffset);
         mutableAsciiFlyweight.wrap(claimBuffer);

@@ -101,7 +101,7 @@ public class ReplayerTest extends AbstractLogTest
         bufferContainsMessage(false);
         final int srcLength = setupMessage();
 
-        replayer.onFragment(buffer, START, srcLength, null);
+        replayer.onFragment(buffer, START, SIZE_OF_FRAME + srcLength, null);
 
         verifyClaim(SIZE_OF_FRAME + srcLength + PossDupEnabler.POSS_DUP_FIELD.length);
         assertHasSetPossDupFlag();

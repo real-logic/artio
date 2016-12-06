@@ -154,12 +154,12 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     }
 
     public Action onFragment(
-        final DirectBuffer srcBuffer, final int srcOffset, final int length, final Header header)
+        final DirectBuffer srcBuffer, final int srcOffset, final int srcLength, final Header header)
     {
         final int messageOffset = srcOffset + MESSAGE_FRAME_BLOCK_LENGTH;
-        final int messageLength = length - MESSAGE_FRAME_BLOCK_LENGTH;
+        final int messageLength = srcLength - MESSAGE_FRAME_BLOCK_LENGTH;
 
-        return possDupEnabler.enablePossDupFlag(srcBuffer, messageOffset, messageLength, srcOffset);
+        return possDupEnabler.enablePossDupFlag(srcBuffer, messageOffset, messageLength, srcOffset, srcLength);
     }
 
     public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)

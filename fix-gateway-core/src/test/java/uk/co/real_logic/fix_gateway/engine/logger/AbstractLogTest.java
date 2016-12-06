@@ -30,7 +30,6 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
-import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.SIZE_OF_LENGTH_FIELD;
 
 public class AbstractLogTest
@@ -159,7 +158,7 @@ public class AbstractLogTest
 
     protected void verifyClaim(final int srcLength)
     {
-        verify(publication).tryClaim(srcLength - MESSAGE_FRAME_BLOCK_LENGTH, claim);
+        verify(publication).tryClaim(srcLength, claim);
     }
 
     protected void verifyCommit()

@@ -125,13 +125,13 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
     public Action onFragment(
         final DirectBuffer srcBuffer,
         final int srcOffset,
-        final int length,
+        final int srcLength,
         final Header header)
     {
-        final int messageLength = length - FRAME_LENGTH;
+        final int messageLength = srcLength - FRAME_LENGTH;
         final int messageOffset = srcOffset + FRAME_LENGTH;
 
-        final Action action = possDupEnabler.enablePossDupFlag(srcBuffer, messageOffset, messageLength, srcOffset);
+        final Action action = possDupEnabler.enablePossDupFlag(srcBuffer, messageOffset, messageLength, srcOffset, srcLength);
         if (action == CONTINUE)
         {
             DebugLogger.log(
@@ -264,10 +264,12 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         if (position > 0)
         {
             errorHandler.onError(new IllegalStateException(String.format(
-                "Failed to read correct number of messages for %d, finished at [%d, %d]",
+                "Failed to read correct number of messages for %d, finished at [%d, %d] instead of [%d, %d]",
                 correlationId,
                 replayFromSequenceIndex,
-                replayFromSequenceNumber)));
+                replayFromSequenceNumber,
+                currentSequenceIndex,
+                lastReceivedSeqNum)));
         }
         return position;
     }

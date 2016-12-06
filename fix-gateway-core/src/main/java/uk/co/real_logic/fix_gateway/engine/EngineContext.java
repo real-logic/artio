@@ -208,10 +208,10 @@ public abstract class EngineContext implements AutoCloseable
             completionPosition);
     }
 
-    protected Replayer newReplayer(final Publication replayPublication, final ArchiveReader archiveReader)
+    protected Replayer newReplayer(final Publication replayPublication, final ArchiveReader outboundArchiveReader)
     {
         return new Replayer(
-            newReplayQuery(archiveReader),
+            newReplayQuery(outboundArchiveReader),
             replayPublication,
             new BufferClaim(),
             configuration.loggerIdleStrategy(),
