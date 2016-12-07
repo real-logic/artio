@@ -42,7 +42,6 @@ import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -57,6 +56,21 @@ import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICA
 
 final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, AutoCloseable
 {
+    private enum State
+    {
+        /** Has connected to an engine instance */
+        CONNECTED,
+
+        /** Currently connecting to an engine instance */
+        CONNECTING,
+
+        /** Failed a connect or reconnect attempt with a hard timeout */
+        DISABLED,
+
+        /** Was explicitly closed */
+        CLOSED
+    };
+
     private static final long NO_CORRELATION_ID = 0;
 
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
@@ -92,15 +106,18 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private GatewayError errorType;
     private String errorMessage;
 
+    private State state;
+
     // State changed upon connect/reconnect
     private LivenessDetector livenessDetector;
     private ClusterableSubscription inboundSubscription;
     private GatewayPublication outboundPublication;
     private String currentAeronChannel;
+    private long nextAttemptTime;
+    private long completeFailureTime;
 
     // Combined with Library Id, uniquely identifies library connection
     private long connectCorrelationId = NO_CORRELATION_ID;
-    private boolean closed = false;
 
     LibraryPoller(
         final LibraryConfiguration configuration,
@@ -115,7 +132,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         this.transport = transport;
         this.fixLibrary = fixLibrary;
 
-        currentAeronChannel = configuration.libraryAeronChannels().get(0);
         sessionTimer = timers.sessionTimer();
         receiveTimer = timers.receiveTimer();
 
@@ -126,25 +142,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         sentPositionHandler = configuration.sentPositionHandler();
         this.clock = clock;
         enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
-    }
-
-    int poll(final int fragmentLimit)
-    {
-        if (enginesAreClustered && livenessDetector.hasDisconnected())
-        {
-            connect();
-        }
-
-        return pollWithoutReconnect(fragmentLimit);
-    }
-
-    private int pollWithoutReconnect(final int fragmentLimit)
-    {
-        final long timeInMs = timeInMs();
-        return inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit) +
-            pollSessions(timeInMs) +
-            livenessDetector.poll(timeInMs) +
-            checkReplies(timeInMs);
     }
 
     boolean isConnected()
@@ -165,12 +162,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     List<Session> sessions()
     {
         return unmodifiableSessions;
-    }
-
-    public void close()
-    {
-        connectionIdToSession.values().forEach(subscriber -> subscriber.session().disable());
-        closed = true;
     }
 
     Reply<Session> initiate(final SessionConfiguration configuration)
@@ -204,7 +195,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     long saveReleaseSession(final Session session, final long correlationId)
     {
-        checkClosed();
+        checkState();
 
         return outboundPublication.saveReleaseSession(
             libraryId,
@@ -224,7 +215,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long correlationId,
         final SessionConfiguration configuration)
     {
-        checkClosed();
+        checkState();
 
         return outboundPublication.saveInitiateConnection(
             libraryId,
@@ -248,76 +239,69 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int lastReceivedSequenceNumber,
         final int sequenceIndex)
     {
-        checkClosed();
+        checkState();
 
         return outboundPublication.saveRequestSession(
             libraryId, sessionId, correlationId, lastReceivedSequenceNumber, sequenceIndex);
     }
 
-    void connect()
+    int poll(final int fragmentLimit)
     {
-        connect(configuration.reconnectAttempts());
+        final long timeInMs = timeInMs();
+        switch (state)
+        {
+            case CONNECTING:
+                nextConnectingStep(timeInMs);
+
+                return pollWithoutReconnect(timeInMs, fragmentLimit);
+
+            case CONNECTED:
+                if (livenessDetector.hasDisconnected())
+                {
+                    connect(timeInMs);
+                }
+
+                return pollWithoutReconnect(timeInMs, fragmentLimit);
+
+            case CLOSED:
+            case DISABLED:
+            default:
+                return 0;
+        }
     }
 
-    private void connect(final int reconnectAttempts)
+    private int pollWithoutReconnect(final long timeInMs, final int fragmentLimit)
     {
-        DebugLogger.log(LIBRARY_CONNECT, "Attempting to connect to %s\n", currentAeronChannel);
+        return inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit) +
+            pollSessions(timeInMs) +
+            livenessDetector.poll(timeInMs) +
+            checkReplies(timeInMs);
+    }
 
+    // -----------------------------------------------------------------------
+    //                     BEGIN CONNECTION LOGIC
+    // -----------------------------------------------------------------------
+
+    void connect()
+    {
+        connect(timeInMs());
+    }
+
+    // Called when you first connect or try to start a reconnect attempt
+    private void connect(final long timeInMs)
+    {
         try
         {
-            initStreams();
+            state = State.CONNECTING;
+            currentAeronChannel = configuration.libraryAeronChannels().get(0);
+            DebugLogger.log(LIBRARY_CONNECT, "Attempting to connect to %s\n", currentAeronChannel);
 
+            initStreams();
             newLivenessDetector();
 
-            if (sendLibraryConnectOrRetry(reconnectAttempts))
-            {
-                return;
-            }
+            completeFailureTime = configuration.replyTimeoutInMs() + timeInMs;
 
-            final String currentAeronChannel = this.currentAeronChannel;
-            final long connectResendTimeout = connectResendTimeout();
-            final long latestReplyArrivalTime = timeInMs() + configuration.replyTimeoutInMs();
-            long latestConnectResentTime = timeInMs() + connectResendTimeout;
-            while (!livenessDetector.isConnected() && errorType == null)
-            {
-                final int workCount = pollWithoutReconnect(3);
-
-                final long time = timeInMs();
-                if (time > latestReplyArrivalTime)
-                {
-                    if (reconnectAttempts == 0)
-                    {
-                        throw illegalStateDueToFailingToConnect();
-                    }
-
-                    attemptNextEngine();
-                    connect(reconnectAttempts - 1);
-                    return;
-                }
-
-                if (time > latestConnectResentTime)
-                {
-                    sendLibraryConnect();
-
-                    latestConnectResentTime = time + connectResendTimeout;
-                }
-
-                if (!Objects.equals(currentAeronChannel, this.currentAeronChannel))
-                {
-                    connect(reconnectAttempts - 1);
-                    return;
-                }
-
-                idleStrategy.idle(workCount);
-            }
-            idleStrategy.reset();
-
-            if (errorType != null)
-            {
-                connectError(errorType.toString());
-            }
-
-            onConnect();
+            sendLibraryConnect(timeInMs);
         }
         catch (final Exception ex)
         {
@@ -336,16 +320,47 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
     }
 
+    // NB: not a reconnect, an nth attempt at a connect
+    private void nextConnectingStep(final long timeInMs)
+    {
+        if (livenessDetector.isConnected())
+        {
+            state = State.CONNECTED;
+            onConnect();
+        }
+        else if (timeInMs > completeFailureTime)
+        {
+            state = State.DISABLED;
+            throw illegalStateDueToFailingToConnect();
+        }
+        else if (timeInMs > nextAttemptTime)
+        {
+            attemptNextEngine();
+
+            connectToNewEngine(timeInMs);
+        }
+    }
+
+    private void connectToNewEngine(final long timeInMs)
+    {
+        initStreams();
+
+        sendLibraryConnect(timeInMs);
+    }
+
+    private void attemptNextEngine()
+    {
+        final List<String> aeronChannels = configuration.libraryAeronChannels();
+        final int nextIndex = (aeronChannels.indexOf(currentAeronChannel) + 1) % aeronChannels.size();
+        currentAeronChannel = aeronChannels.get(nextIndex);
+        DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to next engine (%s) in round-robin\n", currentAeronChannel);
+    }
+
     private IllegalStateException illegalStateDueToFailingToConnect()
     {
         return new IllegalStateException(String.format(
             "Failed to receive a reply from the engine within %dms, are you sure its running?",
             this.configuration.replyTimeoutInMs()));
-    }
-
-    private long connectResendTimeout()
-    {
-        return configuration.replyTimeoutInMs() / 4;
     }
 
     private void initStreams()
@@ -356,38 +371,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             inboundSubscription = transport.inboundSubscription();
             outboundPublication = transport.outboundPublication();
         }
-    }
-
-    private boolean sendLibraryConnectOrRetry(final int reconnectAttempts)
-    {
-        try
-        {
-            if (sendLibraryConnect())
-            {
-                return false;
-            }
-            else if (enginesAreClustered)
-            {
-                attemptNextEngine();
-                connect(reconnectAttempts - 1);
-                return true;
-            }
-        }
-        catch (final NotConnectedException e)
-        {
-            if (enginesAreClustered)
-            {
-                attemptNextEngine();
-                connect(reconnectAttempts - 1);
-                return true;
-            }
-            else
-            {
-                throw e;
-            }
-        }
-
-        return false;
     }
 
     private void newLivenessDetector()
@@ -404,10 +387,93 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return !transport.isReconnect();
     }
 
-    private LibraryPoller connectError(final String message)
+    // return true if sent, false otherwise
+    private void sendLibraryConnect(final long timeInMs)
     {
-        throw new FixGatewayException(String.format(
-            "Unable to connect to engine: %s", message));
+        checkState();
+
+        try
+        {
+            errorType = null;
+            final long correlationId = ++currentCorrelationId;
+            final int maxClaimAttempts = configuration.outboundMaxClaimAttempts();
+            long position = Long.MIN_VALUE;
+            for (int i = 0; i < maxClaimAttempts && position < 0; i++)
+            {
+                position = outboundPublication.saveLibraryConnect(libraryId, correlationId);
+                if (position >= 0)
+                {
+                    break;
+                }
+
+                idleStrategy.idle();
+            }
+            idleStrategy.reset();
+
+            if (position > 0)
+            {
+                this.connectCorrelationId = correlationId;
+                final int reconnectAttempts = configuration.reconnectAttempts();
+                nextAttemptTime = (configuration.replyTimeoutInMs() / reconnectAttempts) + timeInMs;
+            }
+            else
+            {
+                nextAttemptTime = timeInMs;
+            }
+        }
+        catch (final NotConnectedException e)
+        {
+            nextAttemptTime = timeInMs;
+        }
+    }
+
+    private void onConnect()
+    {
+        DebugLogger.log(LIBRARY_CONNECT, "Connected to [%s]\n", currentAeronChannel);
+        configuration.libraryConnectHandler().onConnect(fixLibrary);
+        setLibraryConnected(true);
+    }
+
+    private void onDisconnect()
+    {
+        DebugLogger.log(LIBRARY_CONNECT, "Disconnected from [%s]\n", currentAeronChannel);
+        configuration.libraryConnectHandler().onDisconnect(fixLibrary);
+        setLibraryConnected(false);
+
+        connect();
+    }
+
+    private void setLibraryConnected(final boolean libraryConnected)
+    {
+        final ArrayList<Session> sessions = this.sessions;
+        for (int i = 0, size = sessions.size(); i < size; i++)
+        {
+            final Session session = sessions.get(i);
+            session.libraryConnected(libraryConnected);
+        }
+    }
+
+    String currentAeronChannel()
+    {
+        return currentAeronChannel;
+    }
+
+    // -----------------------------------------------------------------------
+    //                     END CONNECTION LOGIC
+    // -----------------------------------------------------------------------
+
+    private int pollSessions(final long timeInMs)
+    {
+        final ArrayList<Session> sessions = this.sessions;
+        int total = 0;
+
+        for (int i = 0, size = sessions.size(); i < size; i++)
+        {
+            final Session session = sessions.get(i);
+            total += session.poll(timeInMs);
+        }
+
+        return total;
     }
 
     private long timeInMs()
@@ -437,54 +503,16 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return count;
     }
 
-    // return true if sent, false otherwise
-    private boolean sendLibraryConnect()
-    {
-        checkClosed();
-
-        final long correlationId = ++currentCorrelationId;
-        final long connectResendTimeout = timeInMs() + connectResendTimeout();
-        while (true)
-        {
-            final long position = outboundPublication.saveLibraryConnect(libraryId, correlationId);
-            if (position >= 0)
-            {
-                idleStrategy.reset();
-                this.connectCorrelationId = correlationId;
-                return true;
-            }
-            else if (connectResendTimeout > timeInMs())
-            {
-                idleStrategy.reset();
-                return false;
-            }
-            else
-            {
-                idleStrategy.idle();
-            }
-        }
-    }
-
-    private int pollSessions(final long timeInMs)
-    {
-        final ArrayList<Session> sessions = this.sessions;
-        int total = 0;
-
-        for (int i = 0, size = sessions.size(); i < size; i++)
-        {
-            final Session session = sessions.get(i);
-            total += session.poll(timeInMs);
-        }
-
-        return total;
-    }
-
     long register(final LibraryReply<?> reply)
     {
         final long correlationId = ++currentCorrelationId;
         correlationIdToReply.put(correlationId, reply);
         return correlationId;
     }
+
+    // -----------------------------------------------------------------------
+    //                     BEGIN EVENT HANDLERS
+    // -----------------------------------------------------------------------
 
     private final ControlledFragmentHandler outboundSubscription =
         ProtocolSubscription.of(this, new LibraryProtocolSubscription(this));
@@ -669,6 +697,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             }
             else
             {
+                // case of a connect error
                 this.errorType = errorType;
                 this.errorMessage = message;
             }
@@ -736,6 +765,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 currentAeronChannel = libraryChannel;
                 DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to (%s) claimed leader\n", currentAeronChannel);
             }
+
+            connectToNewEngine(timeInMs());
         }
 
         return CONTINUE;
@@ -791,15 +822,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    private void attemptNextEngine()
-    {
-        idleStrategy.reset();
-
-        final List<String> aeronChannels = configuration.libraryAeronChannels();
-        final int nextIndex = (aeronChannels.indexOf(currentAeronChannel) + 1) % aeronChannels.size();
-        currentAeronChannel = aeronChannels.get(nextIndex);
-        DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to next engine (%s) in round-robin\n", currentAeronChannel);
-    }
+    // -----------------------------------------------------------------------
+    //                     END EVENT HANDLERS
+    // -----------------------------------------------------------------------
 
     private void newSession(final long connectionId, final long sessionId, final Session session)
     {
@@ -927,40 +952,18 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             libraryId);
     }
 
-    private void onConnect()
+    private void checkState()
     {
-        DebugLogger.log(LIBRARY_CONNECT, "Connected to [%s]\n", currentAeronChannel);
-        configuration.libraryConnectHandler().onConnect(fixLibrary);
-        setLibraryConnected(true);
-    }
-
-    private void onDisconnect()
-    {
-        DebugLogger.log(LIBRARY_CONNECT, "Disconnected from [%s]\n", currentAeronChannel);
-        configuration.libraryConnectHandler().onDisconnect(fixLibrary);
-        setLibraryConnected(false);
-    }
-
-    private void setLibraryConnected(final boolean libraryConnected)
-    {
-        final ArrayList<Session> sessions = this.sessions;
-        for (int i = 0, size = sessions.size(); i < size; i++)
-        {
-            final Session session = sessions.get(i);
-            session.libraryConnected(libraryConnected);
-        }
-    }
-
-    String currentAeronChannel()
-    {
-        return currentAeronChannel;
-    }
-
-    private void checkClosed()
-    {
-        if (closed)
+        // TODO: ban connecting from everything but library connect
+        if (state == State.CLOSED || state == State.DISABLED)
         {
             throw new IllegalStateException("Library has been closed");
         }
+    }
+
+    public void close()
+    {
+        connectionIdToSession.values().forEach(subscriber -> subscriber.session().disable());
+        state = State.CLOSED;
     }
 }

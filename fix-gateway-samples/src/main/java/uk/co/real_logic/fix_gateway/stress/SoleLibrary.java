@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.stress;
 
+import uk.co.real_logic.fix_gateway.SampleUtil;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 
@@ -33,7 +34,7 @@ public final class SoleLibrary
 
             libraryConfiguration.replyTimeoutInMs(1000);
 
-            try (FixLibrary library = FixLibrary.connect(libraryConfiguration))
+            try (FixLibrary library = SampleUtil.blockingConnect(libraryConfiguration))
             {
 
                 while (library.isConnected())

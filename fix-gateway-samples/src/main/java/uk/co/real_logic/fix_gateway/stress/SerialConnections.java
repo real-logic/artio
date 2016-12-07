@@ -18,7 +18,8 @@ package uk.co.real_logic.fix_gateway.stress;
 import io.aeron.driver.MediaDriver;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.SleepingIdleStrategy;
-import uk.co.real_logic.client.TestReqIdFinder;
+import uk.co.real_logic.fix_gateway.SampleUtil;
+import uk.co.real_logic.fix_gateway.client.TestReqIdFinder;
 import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
@@ -76,7 +77,7 @@ public final class SerialConnections
                     .sessionAcquireHandler(session -> testReqIdFinder)
                     .libraryAeronChannels(singletonList(aeronChannel));
 
-                try (FixLibrary library = FixLibrary.connect(libraryConfiguration))
+                try (FixLibrary library = SampleUtil.blockingConnect(libraryConfiguration))
                 {
                     final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
                     final Reply<Session> reply = library.initiate(sessionConfiguration);

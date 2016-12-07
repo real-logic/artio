@@ -109,7 +109,7 @@ public class ClusteredGatewaySystemTest
             this::findNewLeader,
             2000);
 
-        acceptingLibrary = FixLibrary.connect(configuration);
+        acceptingLibrary = connect(configuration);
 
         assertNotNull("Unable to connect to any cluster members", acceptingLibrary);
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);

@@ -162,12 +162,6 @@ public class LibraryPollerTest
         shouldReplyToOnNotLeaderWith(() -> ENGINE_LIBRARY_ID, this::connectCorrelationId, FIRST_CHANNEL);
     }
 
-    @Test
-    public void shouldNotAttemptAnotherEngineWithDifferentConnectCorrelation()
-    {
-        shouldReplyToOnNotLeaderWith(this::libraryId, () -> 0, FIRST_CHANNEL);
-    }
-
     private void disconnectDueToTimeout()
     {
         advanceBeyondReplyTimeout();
@@ -220,6 +214,12 @@ public class LibraryPollerTest
 
         library.connect();
 
+        library.poll(1);
+
+        library.poll(1);
+
+        library.poll(1);
+
         attemptToConnectTo(channels);
         verify(connectHandler).onConnect(fixLibrary);
     }
@@ -245,6 +245,10 @@ public class LibraryPollerTest
         newLibraryPoller(singletonList(IPC_CHANNEL));
 
         library.connect();
+
+        library.poll(1);
+
+        assertTrue("Failed to connect", library.isConnected());
     }
 
     private void receiveOneApplicationHeartbeat()

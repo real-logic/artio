@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 
 import static io.aeron.driver.ThreadingMode.SHARED;
 import static java.util.Collections.singletonList;
+import static uk.co.real_logic.fix_gateway.SampleUtil.blockingConnect;
 
 public class Server implements Agent
 {
@@ -64,7 +65,7 @@ public class Server implements Agent
         libraryConfiguration
             .authenticationStrategy(authenticationStrategy)
             .agentNamePrefix("server-");
-        fixLibrary = FixLibrary.connect(libraryConfiguration
+        fixLibrary = blockingConnect(libraryConfiguration
             .sessionAcquireHandler(StressSessionHandler::new)
             .sessionExistsHandler(new AcquiringSessionExistsHandler())
             .libraryAeronChannels(singletonList(aeronChannel)));

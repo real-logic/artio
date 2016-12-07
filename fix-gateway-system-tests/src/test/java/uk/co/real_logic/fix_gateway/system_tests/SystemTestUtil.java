@@ -335,13 +335,27 @@ public final class SystemTestUtil
             .sentPositionHandler(sessionHandler)
             .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort));
 
-        return FixLibrary.connect(configuration);
+        return connect(configuration);
+    }
+
+    public static FixLibrary connect(final LibraryConfiguration configuration)
+    {
+        final FixLibrary library = FixLibrary.connect(configuration);
+        assertEventuallyTrue(
+            "Unable to connect to engine",
+            () ->
+            {
+                library.poll(LIBRARY_LIMIT);
+
+                return library.isConnected();
+            });
+
+        return library;
     }
 
     public static FixLibrary newAcceptingLibrary(final FakeHandler sessionHandler)
     {
-        return FixLibrary.connect(
-            acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL));
+        return connect(acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL));
     }
 
     public static void assertConnected(final Session session)

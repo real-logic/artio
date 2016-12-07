@@ -216,6 +216,6 @@ public class EngineAndLibraryIntegrationTest
             .messageValidationStrategy(validationStrategy)
             .replyTimeoutInMs(TIMEOUT_IN_MS);
 
-        return FixLibrary.connect(config);
+        return connect(config);
     }
 }

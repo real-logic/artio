@@ -97,6 +97,8 @@ class ClusterContext extends EngineContext
         }
         catch (final Exception e)
         {
+            completeDuringStartup();
+
             closeAll(replayer, localInboundArchiver, localOutboundArchiver);
 
             suppressingClose(this, e);

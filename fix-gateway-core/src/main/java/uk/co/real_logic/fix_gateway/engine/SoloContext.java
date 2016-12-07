@@ -72,6 +72,8 @@ class SoloContext extends EngineContext
         }
         catch (final Exception e)
         {
+            completeDuringStartup();
+
             suppressingClose(this, e);
 
             throw e;

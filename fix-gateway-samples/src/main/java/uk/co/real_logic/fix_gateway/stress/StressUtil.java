@@ -17,8 +17,8 @@ package uk.co.real_logic.fix_gateway.stress;
 
 import org.agrona.IoUtil;
 import org.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.client.TestReqIdFinder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
+import uk.co.real_logic.fix_gateway.client.TestReqIdFinder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -118,4 +118,5 @@ final class StressUtil
             e.printStackTrace();
         }
     }
+
 }

@@ -13,9 +13,10 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.message_examples;
+package uk.co.real_logic.fix_gateway.message_examples;
 
 import uk.co.real_logic.fix_gateway.Reply;
+import uk.co.real_logic.fix_gateway.SampleUtil;
 import uk.co.real_logic.fix_gateway.builder.OrderSingleEncoder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
@@ -64,7 +65,7 @@ public final class MessageApiExamples
                 .messageValidationStrategy(validationStrategy)
                 .authenticationStrategy(authenticationStrategy);
 
-            try (FixLibrary library = FixLibrary.connect(libraryConfiguration))
+            try (FixLibrary library = SampleUtil.blockingConnect(libraryConfiguration))
             {
                 // Each outbound session with an Exchange or broker is represented by
                 // a Session object. Each session object can be configured with connection

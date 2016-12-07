@@ -78,7 +78,7 @@ public class MessageBasedSystemTest
 
         final FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
         final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
-        try (FixLibrary library = FixLibrary.connect(
+        try (FixLibrary library = connect(
             acceptingLibraryConfig(fakeHandler, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL)))
         {
             try (FixConnection connection = new FixConnection(port))

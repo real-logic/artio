@@ -13,10 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.client;
+package uk.co.real_logic.fix_gateway.client;
 
 import org.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.fix_gateway.Reply;
+import uk.co.real_logic.fix_gateway.SampleUtil;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
@@ -28,7 +29,7 @@ import uk.co.real_logic.fix_gateway.session.Session;
 
 import static java.util.Collections.singletonList;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
-import static uk.co.real_logic.server.SampleServer.*;
+import static uk.co.real_logic.fix_gateway.server.SampleServer.*;
 
 public final class SampleClient
 {
@@ -55,7 +56,7 @@ public final class SampleClient
                 .senderCompId(INITIATOR_COMP_ID)
                 .build();
 
-            try (FixLibrary library = FixLibrary.connect(new LibraryConfiguration()
+            try (FixLibrary library = SampleUtil.blockingConnect(new LibraryConfiguration()
                     .sessionAcquireHandler(SampleClient::onConnect)
                     .libraryAeronChannels(singletonList(aeronChannel))))
             {

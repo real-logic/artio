@@ -23,7 +23,6 @@ import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
-import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -32,9 +31,7 @@ import java.io.File;
 import java.io.IOException;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
@@ -147,7 +144,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         final LibraryConfiguration acceptingLibraryConfig =
             acceptingLibraryConfig(acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL);
-        acceptingLibrary = FixLibrary.connect(acceptingLibraryConfig);
+        acceptingLibrary = connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
 
         if (resetAll)

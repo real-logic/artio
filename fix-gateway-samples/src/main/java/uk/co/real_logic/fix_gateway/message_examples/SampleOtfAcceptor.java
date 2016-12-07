@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.message_examples;
+package uk.co.real_logic.fix_gateway.message_examples;
 
 import uk.co.real_logic.fix_gateway.ValidationError;
 import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;

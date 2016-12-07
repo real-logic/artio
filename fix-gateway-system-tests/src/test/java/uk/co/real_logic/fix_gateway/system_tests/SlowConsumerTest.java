@@ -78,7 +78,7 @@ public class SlowConsumerTest
         final LibraryConfiguration libraryConfiguration =
             acceptingLibraryConfig(handler, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL);
         libraryConfiguration.outboundMaxClaimAttempts(1);
-        library = FixLibrary.connect(libraryConfiguration);
+        library = connect(libraryConfiguration);
     }
 
     @Test(timeout = TEST_TIMEOUT)

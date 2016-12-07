@@ -13,12 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.server;
+package uk.co.real_logic.fix_gateway.server;
 
 import io.aeron.driver.MediaDriver;
 import io.aeron.driver.MediaDriver.Context;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.SigInt;
+import uk.co.real_logic.fix_gateway.SampleUtil;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.AcquiringSessionExistsHandler;
@@ -76,7 +77,7 @@ public final class SampleServer
                 .sessionExistsHandler(new AcquiringSessionExistsHandler())
                 .libraryAeronChannels(singletonList(aeronChannel));
 
-            try (FixLibrary library = FixLibrary.connect(libraryConfiguration))
+            try (FixLibrary library = SampleUtil.blockingConnect(libraryConfiguration))
             {
                 final AtomicBoolean running = new AtomicBoolean(true);
                 SigInt.register(() -> running.set(false));

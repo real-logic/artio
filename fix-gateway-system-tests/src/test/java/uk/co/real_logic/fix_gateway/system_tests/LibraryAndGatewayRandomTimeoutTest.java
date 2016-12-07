@@ -101,7 +101,7 @@ public class LibraryAndGatewayRandomTimeoutTest
 
     private void launchLibrary()
     {
-        initiatingLibrary = FixLibrary.connect(
+        initiatingLibrary = connect(
             new LibraryConfiguration()
                 .sessionAcquireHandler(initiatingSessionHandler)
                 .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + aeronPort))
