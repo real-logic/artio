@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 
@@ -46,7 +47,11 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
                                 final String username,
                                 final String password)
     {
-        final Reply<SessionReplyStatus> reply = library.requestSession(sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
+        final Reply<SessionReplyStatus> reply = library.requestSession(
+            sessionId,
+            NO_MESSAGE_REPLAY,
+            NO_MESSAGE_REPLAY,
+            CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS);
         requests.add(new RequestInfo(
             sessionId, reply, acceptorCompId, acceptorSubId, acceptorLocationId, initiatorCompId, username, password));
     }

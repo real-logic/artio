@@ -177,23 +177,24 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         requireNonNull(configuration, "configuration");
 
-        return new InitiateSessionReply(this, latestReplyArrivalTime(), configuration);
+        return new InitiateSessionReply(this, timeInMs() + configuration.timeoutInMs(), configuration);
     }
 
-    Reply<SessionReplyStatus> releaseToGateway(final Session session)
+    Reply<SessionReplyStatus> releaseToGateway(final Session session, final long timeoutInMs)
     {
         requireNonNull(session, "session");
 
-        return new ReleaseToGatewayReply(this, latestReplyArrivalTime(), session);
+        return new ReleaseToGatewayReply(this, timeInMs() + timeoutInMs, session);
     }
 
     Reply<SessionReplyStatus> requestSession(
         final long sessionId,
         final int lastReceivedSequenceNumber,
-        final int sequenceIndex)
+        final int sequenceIndex,
+        final long timeoutInMs)
     {
         return new RequestSessionReply(
-            this, latestReplyArrivalTime(), sessionId, lastReceivedSequenceNumber, sequenceIndex);
+            this, timeInMs() + timeoutInMs, sessionId, lastReceivedSequenceNumber, sequenceIndex);
     }
 
     boolean removeSession(final Session session)
@@ -275,7 +276,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
             final String currentAeronChannel = this.currentAeronChannel;
             final long connectResendTimeout = connectResendTimeout();
-            final long latestReplyArrivalTime = latestReplyArrivalTime();
+            final long latestReplyArrivalTime = timeInMs() + configuration.replyTimeoutInMs();
             long latestConnectResentTime = timeInMs() + connectResendTimeout;
             while (!livenessDetector.isConnected() && errorType == null)
             {
@@ -407,11 +408,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         throw new FixGatewayException(String.format(
             "Unable to connect to engine: %s", message));
-    }
-
-    private long latestReplyArrivalTime()
-    {
-        return timeInMs() + configuration.replyTimeoutInMs();
     }
 
     private long timeInMs()

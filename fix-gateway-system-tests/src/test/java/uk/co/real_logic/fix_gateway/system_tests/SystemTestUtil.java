@@ -41,6 +41,7 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.optimalTmpDirName;
 import static uk.co.real_logic.fix_gateway.FixMatchers.isConnected;
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
@@ -174,7 +175,7 @@ public final class SystemTestUtil
 
     public static SessionReplyStatus releaseToGateway(final FixLibrary library, final Session session)
     {
-        final Reply<SessionReplyStatus> reply = library.releaseToGateway(session);
+        final Reply<SessionReplyStatus> reply = library.releaseToGateway(session, DEFAULT_REPLY_TIMEOUT_IN_MS);
         awaitLibraryReply(library, reply);
 
         return reply.resultIfPresent();
@@ -297,7 +298,8 @@ public final class SystemTestUtil
         final int lastReceivedMsgSeqNum,
         final int sequenceIndex)
     {
-        final Reply<SessionReplyStatus> reply = library.requestSession(sessionId, lastReceivedMsgSeqNum, sequenceIndex);
+        final Reply<SessionReplyStatus> reply = library.requestSession(
+            sessionId, lastReceivedMsgSeqNum, sequenceIndex, DEFAULT_REPLY_TIMEOUT_IN_MS);
         awaitLibraryReply(library, reply);
         assertEquals(COMPLETED, reply.state());
 

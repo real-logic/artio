@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.library;
 import org.agrona.CloseHelper;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.SystemEpochClock;
+import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.Reply;
@@ -186,11 +187,13 @@ public class FixLibrary extends GatewayProcess
      * returns a reply object that indicates what has happened to its result.
      *
      * @param session the session to release
+     * @param timeoutInMs the timeout for this operation
      * @return the result of this operation.
      */
-    public Reply<SessionReplyStatus> releaseToGateway(final Session session)
+    public Reply<SessionReplyStatus> releaseToGateway(final Session session, final long timeoutInMs)
     {
-        return poller.releaseToGateway(session);
+        CommonConfiguration.validateTimeout(timeoutInMs);
+        return poller.releaseToGateway(session, timeoutInMs);
     }
 
     /**
@@ -221,14 +224,17 @@ public class FixLibrary extends GatewayProcess
      * @param sequenceIndex the index of the sequence within which the lastReceivedSequenceNumber
      *                      refers. If you don't care about message replay then use
      *                      {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
+     * @param timeoutInMs the timeout for this operation
      * @return the reply object representing the result of the request.
      */
     public Reply<SessionReplyStatus> requestSession(
         final long sessionId,
         final int lastReceivedSequenceNumber,
-        final int sequenceIndex)
+        final int sequenceIndex,
+        final long timeoutInMs)
     {
-        return poller.requestSession(sessionId, lastReceivedSequenceNumber, sequenceIndex);
+        CommonConfiguration.validateTimeout(timeoutInMs);
+        return poller.requestSession(sessionId, lastReceivedSequenceNumber, sequenceIndex, timeoutInMs);
     }
 
     public String currentAeronChannel()

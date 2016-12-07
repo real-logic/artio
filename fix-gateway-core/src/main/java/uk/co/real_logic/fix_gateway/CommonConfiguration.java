@@ -102,6 +102,16 @@ public class CommonConfiguration
     public static final String DEFAULT_HISTOGRAM_LOGGING_FILE = DEFAULT_DIRECTORY + File.separator + "histograms";
     public static final String DEFAULT_NAME_PREFIX = "";
 
+    public static void validateTimeout(final long timeoutInMs)
+    {
+        if (timeoutInMs <= 0)
+        {
+            throw new IllegalArgumentException(String.format(
+                "Timeout must be > 0, but was configured as %d",
+                timeoutInMs));
+        }
+    }
+
     // ------------------------------------------------
     //          Static Configuration
     // ------------------------------------------------

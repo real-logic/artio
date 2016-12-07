@@ -16,11 +16,14 @@
 package uk.co.real_logic.fix_gateway.library;
 
 import org.agrona.collections.IntArrayList;
+import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.messages.SequenceNumberType;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS;
 
 /**
  * Immutable Configuration class for a single initiated session.
@@ -39,6 +42,7 @@ public final class SessionConfiguration
     private final String senderLocationId;
     private final boolean sequenceNumbersPersistent;
     private final int initialSequenceNumber;
+    private final long timeoutInMs;
 
     public static Builder builder()
     {
@@ -55,8 +59,10 @@ public final class SessionConfiguration
         final String senderLocationId,
         final String targetCompId,
         final boolean sequenceNumbersPersistent,
-        final int initialSequenceNumber)
+        final int initialSequenceNumber,
+        final long timeoutInMs)
     {
+        this.timeoutInMs = timeoutInMs;
         Objects.requireNonNull(hosts);
         Objects.requireNonNull(ports);
         Objects.requireNonNull(senderCompId);
@@ -147,6 +153,11 @@ public final class SessionConfiguration
         return initialSequenceNumber != AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
     }
 
+    public long timeoutInMs()
+    {
+        return timeoutInMs;
+    }
+
     public static final class Builder
     {
         private String username;
@@ -159,6 +170,7 @@ public final class SessionConfiguration
         private String senderLocationId = "";
         private boolean sequenceNumbersPersistent = false;
         private int initialSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+        private long timeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
 
         private Builder()
         {
@@ -276,10 +288,25 @@ public final class SessionConfiguration
             return this;
         }
 
+        /**
+         * Sets the timeout for this operation in milliseconds. Note that this includes both the time to
+         * communicate with the engine and also to perform the initiation of the TCP connection and logon
+         * to the external system.
+         *
+         * @param timeoutInMs the timeout for this operation
+         * @return this builder
+         */
+        public Builder timeoutInMs(final long timeoutInMs)
+        {
+            CommonConfiguration.validateTimeout(timeoutInMs);
+            this.timeoutInMs = timeoutInMs;
+            return this;
+        }
+
         public SessionConfiguration build()
         {
             return new SessionConfiguration(hosts, ports, username, password, senderCompId, senderSubId,
-                senderLocationId, targetCompId, sequenceNumbersPersistent, initialSequenceNumber);
+                senderLocationId, targetCompId, sequenceNumbersPersistent, initialSequenceNumber, timeoutInMs);
         }
     }
 }
