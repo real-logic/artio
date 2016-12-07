@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway;
 
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
+import uk.co.real_logic.fix_gateway.protocol.NotConnectedException;
 
 import static uk.co.real_logic.fix_gateway.LivenessDetector.LivenessState.*;
 
@@ -102,8 +103,7 @@ public final class LivenessDetector
             case CONNECTED:
                 if (timeInMs > latestNextReceiveTimeInMs)
                 {
-                    state = DISCONNECTED;
-                    onDisconnect.run();
+                    disconnect();
                     return 1;
                 }
 
@@ -115,6 +115,12 @@ public final class LivenessDetector
         }
 
         return 0;
+    }
+
+    private void disconnect()
+    {
+        state = DISCONNECTED;
+        onDisconnect.run();
     }
 
     public void onHeartbeat(final long timeInMs)
@@ -129,10 +135,17 @@ public final class LivenessDetector
 
     private boolean heartbeat(final long timeInMs)
     {
-        if (publication.saveApplicationHeartbeat(libraryId) >= 0)
+        try
         {
-            nextSendTimeInMs = timeInMs + sendIntervalInMs;
-            return true;
+            if (publication.saveApplicationHeartbeat(libraryId) >= 0)
+            {
+                nextSendTimeInMs = timeInMs + sendIntervalInMs;
+                return true;
+            }
+        }
+        catch (NotConnectedException e)
+        {
+            disconnect();
         }
 
         return false;

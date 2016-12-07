@@ -254,7 +254,7 @@ public class ClusteredGatewaySystemTest
     {
         final String libraryChannel = leader.libraryChannel();
         return acceptingLibrary.isConnected()
-            || acceptingLibrary.currentAeronChannel().equals(libraryChannel);
+            && acceptingLibrary.currentAeronChannel().equals(libraryChannel);
     }
 
     private void connectFixSession()
