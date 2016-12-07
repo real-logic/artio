@@ -184,28 +184,29 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
             sequenceResetEncoder = new SequenceResetEncoder();
             timestampEncoder = new UtcTimestampEncoder();
             encodeBuffer = new MutableAsciiBuffer(new byte[ENCODE_BUFFER_SIZE]);
+            sequenceResetEncoder.gapFillFlag(true);
+        }
 
-            final HeaderEncoder header = sequenceResetEncoder.header();
+        final HeaderEncoder header = sequenceResetEncoder.header();
 
-            header.senderCompID(headerDecoder.senderCompID());
-            if (headerDecoder.hasSenderSubID())
-            {
-                header.senderSubID(headerDecoder.senderSubID());
-            }
-            if (headerDecoder.hasSenderLocationID())
-            {
-                header.senderLocationID(headerDecoder.senderLocationID());
-            }
+        header.senderCompID(headerDecoder.senderCompID());
+        if (headerDecoder.hasSenderSubID())
+        {
+            header.senderSubID(headerDecoder.senderSubID());
+        }
+        if (headerDecoder.hasSenderLocationID())
+        {
+            header.senderLocationID(headerDecoder.senderLocationID());
+        }
 
-            header.targetCompID(headerDecoder.targetCompID());
-            if (headerDecoder.hasTargetSubID())
-            {
-                header.targetSubID(headerDecoder.targetSubID());
-            }
-            if (headerDecoder.hasTargetLocationID())
-            {
-                header.targetLocationID(headerDecoder.targetLocationID());
-            }
+        header.targetCompID(headerDecoder.targetCompID());
+        if (headerDecoder.hasTargetSubID())
+        {
+            header.targetSubID(headerDecoder.targetSubID());
+        }
+        if (headerDecoder.hasTargetLocationID())
+        {
+            header.targetLocationID(headerDecoder.targetLocationID());
         }
 
         final int heartbeatRangeSequenceNumberEnd = headerDecoder.msgSeqNum();
