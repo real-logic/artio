@@ -175,7 +175,6 @@ public class CommonConfiguration
     public static final int DEFAULT_HEARTBEAT_INTERVAL_IN_S = 10;
 
     public static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 2_000L;
-    public static final int DEFAULT_ERROR_SLOT_SIZE = 1024;
     public static final long DEFAULT_HISTOGRAM_POLL_PERIOD_IN_MS = MINUTES.toMillis(1);
 
     private boolean printErrorMessages = true;
@@ -189,7 +188,6 @@ public class CommonConfiguration
     private String monitoringFile = null;
     private long replyTimeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
     private Aeron.Context aeronContext = new Aeron.Context();
-    private int errorSlotSize = DEFAULT_ERROR_SLOT_SIZE;
     private int sessionBufferSize = DEFAULT_SESSION_BUFFER_SIZE;
     private int inboundMaxClaimAttempts =
         getInteger(INBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS);
@@ -365,19 +363,6 @@ public class CommonConfiguration
     }
 
     /**
-     * Sets the error slot size. The error slot size is the number of different types of errors that are
-     * simultaneously held in the error buffer.
-     *
-     * @param errorSlotSize the error slot size
-     * @return this
-     */
-    public CommonConfiguration errorSlotSize(final int errorSlotSize)
-    {
-        this.errorSlotSize = errorSlotSize;
-        return this;
-    }
-
-    /**
      * Sets the inbound max claim attempts.
      *
      * @param inboundMaxClaimAttempts the inbound max claim attempts
@@ -488,11 +473,6 @@ public class CommonConfiguration
     public long replyTimeoutInMs()
     {
         return replyTimeoutInMs;
-    }
-
-    public int errorSlotSize()
-    {
-        return errorSlotSize;
     }
 
     public long histogramPollPeriodInMs()
