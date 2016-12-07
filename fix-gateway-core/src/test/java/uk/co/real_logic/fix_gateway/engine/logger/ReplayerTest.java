@@ -32,6 +32,7 @@ import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MOST_RECENT_MESSAGE;
+import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 
 public class ReplayerTest extends AbstractLogTest
@@ -154,6 +155,6 @@ public class ReplayerTest extends AbstractLogTest
     private void onMessage(final int messageType)
     {
         replayer.onMessage(
-            buffer, 1, buffer.capacity(), LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX, messageType, 0L, 0L);
+            buffer, 1, buffer.capacity(), LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX, messageType, 0L, OK, 0L);
     }
 }

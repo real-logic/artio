@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.engine.PossDupEnabler;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.messages.MessageStatus;
 import uk.co.real_logic.fix_gateway.protocol.ProtocolHandler;
 import uk.co.real_logic.fix_gateway.protocol.ProtocolSubscription;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
@@ -36,6 +37,7 @@ import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 
 /**
  * The replayer responds to resend requests with data from the log of sent messages.
@@ -109,9 +111,10 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         final int sequenceIndex,
         final int messageType,
         final long timestamp,
+        final MessageStatus status,
         final long position)
     {
-        if (messageType == ResendRequestDecoder.MESSAGE_TYPE)
+        if (messageType == ResendRequestDecoder.MESSAGE_TYPE && status == OK)
         {
             length = Math.min(length, srcBuffer.capacity() - srcOffset);
 

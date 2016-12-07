@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.library;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
+import uk.co.real_logic.fix_gateway.messages.MessageStatus;
 import uk.co.real_logic.fix_gateway.session.AcceptorSession;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -25,6 +26,7 @@ import uk.co.real_logic.fix_gateway.session.SessionParser;
 import uk.co.real_logic.fix_gateway.timing.Timer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 class SessionSubscriber implements AutoCloseable
 {
@@ -57,32 +59,52 @@ class SessionSubscriber implements AutoCloseable
         final int sequenceIndex,
         final int messageType,
         final long timestamp,
+        final MessageStatus status,
         final long position)
     {
         final long now = receiveTimer.recordSince(timestamp);
 
         try
         {
-            if (inCatchupMode)
+            switch (status)
             {
-                return handler.onMessage(
-                    buffer, offset, length, libraryId, sessionId, sequenceIndex, messageType, timestamp, position);
-            }
-            else
-            {
-                final Action action = parser.onMessage(buffer, offset, length, messageType, sessionId);
-                if (action == BREAK)
-                {
-                    return BREAK;
-                }
+                case OK:
+                    final Action action = parser.onMessage(buffer, offset, length, messageType, sessionId);
+                    if (action == BREAK)
+                    {
+                        return BREAK;
+                    }
 
-                if (session.isConnected())
-                {
+                    if (session.isConnected())
+                    {
+                        return handler.onMessage(
+                            buffer,
+                            offset,
+                            length,
+                            libraryId,
+                            sessionId,
+                            sequenceIndex,
+                            messageType,
+                            timestamp,
+                            position);
+                    }
+
+                    return action;
+
+                case CATCHUP_REPLAY:
                     return handler.onMessage(
-                        buffer, offset, length, libraryId, sessionId, sequenceIndex, messageType, timestamp, position);
-                }
+                        buffer,
+                        offset,
+                        length,
+                        libraryId,
+                        sessionId,
+                        sequenceIndex,
+                        messageType,
+                        timestamp,
+                        position);
 
-                return action;
+                default:
+                    return CONTINUE;
             }
         }
         finally
@@ -129,8 +151,7 @@ class SessionSubscriber implements AutoCloseable
 
     void onTimeout(
         final int libraryId,
-        final long sessionId
-    )
+        final long sessionId)
     {
         handler.onTimeout(libraryId, sessionId);
     }

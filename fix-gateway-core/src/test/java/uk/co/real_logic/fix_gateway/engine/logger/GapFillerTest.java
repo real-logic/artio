@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
-import uk.co.real_logic.fix_gateway.messages.MessageStatus;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 
@@ -26,6 +25,7 @@ import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
+import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 
 public class GapFillerTest extends AbstractLogTest
 {
@@ -40,12 +40,12 @@ public class GapFillerTest extends AbstractLogTest
         gapFiller.onMessage(
             buffer, 1, buffer.capacity(),
             LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX,
-            ResendRequestDecoder.MESSAGE_TYPE, 0L, 0L);
+            ResendRequestDecoder.MESSAGE_TYPE, 0L, OK, 0L);
 
         verify(publication).saveMessage(
             any(), eq(0), anyInt(),
             eq(LIBRARY_ID), eq(SequenceResetDecoder.MESSAGE_TYPE),
             eq(SESSION_ID), eq(SEQUENCE_INDEX), eq(CONNECTION_ID),
-            eq(MessageStatus.OK));
+            eq(OK));
     }
 }

@@ -602,6 +602,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int sequenceIndex,
         final int messageType,
         final long timestamp,
+        final MessageStatus status,
         final long position)
     {
         if (libraryId == this.libraryId)
@@ -611,7 +612,16 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             if (subscriber != null)
             {
                 return subscriber.onMessage(
-                    buffer, offset, length, libraryId, sessionId, sequenceIndex, messageType, timestamp, position);
+                    buffer,
+                    offset,
+                    length,
+                    libraryId,
+                    sessionId,
+                    sequenceIndex,
+                    messageType,
+                    timestamp,
+                    status,
+                    position);
             }
         }
 

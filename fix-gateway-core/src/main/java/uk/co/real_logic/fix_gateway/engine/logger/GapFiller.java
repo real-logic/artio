@@ -77,9 +77,10 @@ public class GapFiller implements ProtocolHandler, Agent
         final int sequenceIndex,
         final int messageType,
         final long timestamp,
+        final MessageStatus status,
         final long position)
     {
-        if (messageType == ResendRequestDecoder.MESSAGE_TYPE)
+        if (messageType == ResendRequestDecoder.MESSAGE_TYPE && status == MessageStatus.OK)
         {
             decoderBuffer.wrap(buffer);
             resendRequest.decode(decoderBuffer, offset, length);

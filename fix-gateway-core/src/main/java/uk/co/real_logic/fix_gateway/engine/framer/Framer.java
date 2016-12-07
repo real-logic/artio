@@ -241,7 +241,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 final int sequenceIndex,
                 final int messageType,
                 final long timestamp,
-                final long position)
+                final MessageStatus status, final long position)
             {
                 return senderEndPoints.onReplayMessage(sessionId, buffer, offset, length);
             }
@@ -641,6 +641,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int sequenceIndex,
         final int messageType,
         final long timestamp,
+        final MessageStatus status,
         final long position)
     {
         final long now = outboundTimer.recordSince(timestamp);

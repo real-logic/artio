@@ -38,6 +38,7 @@ import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.fix_gateway.messages.MessageStatus.CATCHUP_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
 
@@ -121,7 +122,8 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final int frameOffset = bufferClaim.offset() + MessageHeaderEncoder.ENCODED_LENGTH;
         messageEncoder
             .wrap(bufferClaim.buffer(), frameOffset)
-            .libraryId(libraryId);
+            .libraryId(libraryId)
+            .status(CATCHUP_REPLAY);
     }
 
     private void onIllegalState(final String msg)
@@ -221,7 +223,7 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
             encodeBuffer, 0, encodedLength,
             libraryId, SequenceResetDecoder.MESSAGE_TYPE,
             messageDecoder.session(), replayFromSequenceIndex, libraryId,
-            MessageStatus.OK) > 0;
+            CATCHUP_REPLAY) > 0;
 
         if (sent)
         {

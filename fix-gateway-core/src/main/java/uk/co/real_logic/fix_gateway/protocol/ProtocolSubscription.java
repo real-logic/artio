@@ -26,7 +26,6 @@ import uk.co.real_logic.fix_gateway.messages.ReplicatedMessageDecoder;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
-import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 import static uk.co.real_logic.fix_gateway.protocol.GatewayPublication.FRAME_SIZE;
 
 public final class ProtocolSubscription implements ControlledFragmentHandler
@@ -118,21 +117,17 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
     {
         messageFrame.wrap(buffer, offset, blockLength, version);
         final int messageLength = messageFrame.bodyLength();
-        if (messageFrame.status() == OK)
-        {
-            return protocolHandler.onMessage(
-                buffer,
-                offset + FRAME_SIZE,
-                messageLength,
-                messageFrame.libraryId(),
-                messageFrame.connection(),
-                messageFrame.session(),
-                messageFrame.sequenceIndex(),
-                messageFrame.messageType(),
-                messageFrame.timestamp(),
-                header.position());
-        }
-
-        return CONTINUE;
+        return protocolHandler.onMessage(
+            buffer,
+            offset + FRAME_SIZE,
+            messageLength,
+            messageFrame.libraryId(),
+            messageFrame.connection(),
+            messageFrame.session(),
+            messageFrame.sequenceIndex(),
+            messageFrame.messageType(),
+            messageFrame.timestamp(),
+            messageFrame.status(),
+            header.position());
     }
 }

@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.protocol;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
+import uk.co.real_logic.fix_gateway.messages.MessageStatus;
 
 public interface ProtocolHandler
 {
@@ -31,6 +32,7 @@ public interface ProtocolHandler
         int sequenceIndex,
         int messageType,
         long timestamp,
+        MessageStatus status,
         long position);
 
     Action onDisconnect(int libraryId, long connectionId, DisconnectReason reason);

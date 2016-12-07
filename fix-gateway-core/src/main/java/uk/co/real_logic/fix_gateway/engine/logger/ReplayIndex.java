@@ -21,10 +21,7 @@ import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
-import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
-import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
+import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.storage.messages.ReplayIndexRecordEncoder;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
@@ -32,6 +29,8 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.function.LongFunction;
+
+import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 
 /**
  * Builds an index of a composite key of session id and sequence number for a given stream.
@@ -110,22 +109,24 @@ public class ReplayIndex implements Index
             offset += frameHeaderDecoder.encodedLength();
 
             messageFrame.wrap(srcBuffer, offset, actingBlockLength, frameHeaderDecoder.version());
+            if (messageFrame.status() == OK)
+            {
+                offset += actingBlockLength + 2;
 
-            offset += actingBlockLength + 2;
+                asciiBuffer.wrap(srcBuffer);
+                fixHeader.decode(asciiBuffer, offset, messageFrame.bodyLength());
 
-            asciiBuffer.wrap(srcBuffer);
-            fixHeader.decode(asciiBuffer, offset, messageFrame.bodyLength());
+                final int alignedLength = BitUtil.align(srcLength, FrameDescriptor.FRAME_ALIGNMENT);
+                final long beginPosition = endPosition - alignedLength;
 
-            final int alignedLength = BitUtil.align(srcLength, FrameDescriptor.FRAME_ALIGNMENT);
-            final long beginPosition = endPosition - alignedLength;
+                final int sequenceNumber = fixHeader.msgSeqNum();
+                final int sequenceIndex = messageFrame.sequenceIndex();
+                final long fixSessionId = messageFrame.session();
 
-            final int sequenceNumber = fixHeader.msgSeqNum();
-            final int sequenceIndex = messageFrame.sequenceIndex();
-            final long fixSessionId = messageFrame.session();
-
-            fixSessionIdToIndex
-                .computeIfAbsent(fixSessionId, newSessionIndex)
-                .onRecord(streamId, aeronSessionId, beginPosition, endPosition, sequenceNumber, sequenceIndex);
+                fixSessionIdToIndex
+                    .computeIfAbsent(fixSessionId, newSessionIndex)
+                    .onRecord(streamId, aeronSessionId, beginPosition, endPosition, sequenceNumber, sequenceIndex);
+            }
         }
     }
 
