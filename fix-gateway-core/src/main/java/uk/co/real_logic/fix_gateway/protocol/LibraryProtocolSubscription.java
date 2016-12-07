@@ -33,7 +33,6 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
     private final ReleaseSessionReplyDecoder releaseSessionReply = new ReleaseSessionReplyDecoder();
     private final RequestSessionReplyDecoder requestSessionReply = new RequestSessionReplyDecoder();
-    private final CatchupDecoder catchup = new CatchupDecoder();
     private final NewSentPositionDecoder newSentPosition = new NewSentPositionDecoder();
     private final NotLeaderDecoder libraryConnect = new NotLeaderDecoder();
     private final ControlNotificationDecoder controlNotification = new ControlNotificationDecoder();
@@ -90,11 +89,6 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
                 return onRequestSessionReply(buffer, offset, blockLength, version);
             }
 
-            case CatchupDecoder.TEMPLATE_ID:
-            {
-                return onCatchup(buffer, offset, blockLength, version);
-            }
-
             case NotLeaderDecoder.TEMPLATE_ID:
             {
                 return onNotLeader(buffer, offset, blockLength, version);
@@ -146,20 +140,6 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             libraryId,
             controlNotification.sessions()
         );
-    }
-
-    private Action onCatchup(final DirectBuffer buffer, final int offset, final int blockLength, final int version)
-    {
-        catchup.wrap(buffer, offset, blockLength, version);
-        final int libraryId = catchup.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
-        if (action == ABORT)
-        {
-            return action;
-        }
-        return handler.onStartCatchup(
-            libraryId,
-            catchup.connection());
     }
 
     private Action onApplicationHeartbeat(

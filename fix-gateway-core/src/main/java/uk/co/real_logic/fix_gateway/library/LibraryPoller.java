@@ -717,32 +717,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    public Action onStartCatchup(final int libraryId, final long connectionId)
-    {
-        if (this.libraryId == libraryId)
-        {
-            final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
-            if (subscriber != null)
-            {
-                subscriber.startCatchup();
-            }
-        }
-
-        return CONTINUE;
-    }
-
-    void catchupComplete(final long sessionId)
-    {
-        for (SessionSubscriber subscriber : connectionIdToSession.values())
-        {
-            if (subscriber.session().id() == sessionId)
-            {
-                subscriber.catchupComplete();
-                return;
-            }
-        }
-    }
-
     public Action onNewSentPosition(final int libraryId, final long position)
     {
         if (this.libraryId == libraryId)

@@ -53,7 +53,6 @@ class RequestSessionReply extends LibraryReply<SessionReplyStatus>
 
     void onComplete(final SessionReplyStatus result)
     {
-        libraryPoller.catchupComplete(sessionId);
         super.onComplete(result);
     }
 

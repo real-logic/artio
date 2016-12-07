@@ -34,7 +34,6 @@ class SessionSubscriber implements AutoCloseable
     private final Session session;
     private final Timer receiveTimer;
     private final Timer sessionTimer;
-    private boolean inCatchupMode = false;
 
     private SessionHandler handler;
 
@@ -171,13 +170,4 @@ class SessionSubscriber implements AutoCloseable
         return session;
     }
 
-    void startCatchup()
-    {
-        inCatchupMode = true;
-    }
-
-    void catchupComplete()
-    {
-        inCatchupMode = false;
-    }
 }

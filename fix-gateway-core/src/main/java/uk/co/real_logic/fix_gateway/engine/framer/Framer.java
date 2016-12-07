@@ -954,8 +954,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 return;
             }
 
-            continuations.add(() ->
-                inboundPublication.saveStartCatchup(libraryId, connectionId));
             continuations.add(
                 new CatchupReplayer(
                     inboundMessages,

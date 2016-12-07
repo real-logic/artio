@@ -30,9 +30,7 @@ import java.util.List;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.fix_gateway.DebugLogger.logSbeMessage;
-import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
-import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_MESSAGE;
-import static uk.co.real_logic.fix_gateway.LogTag.APPLICATION_HEARTBEAT;
+import static uk.co.real_logic.fix_gateway.LogTag.*;
 import static uk.co.real_logic.fix_gateway.messages.ErrorDecoder.messageHeaderLength;
 import static uk.co.real_logic.fix_gateway.messages.ErrorEncoder.BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.messages.NotLeaderEncoder.libraryChannelHeaderLength;
@@ -73,7 +71,6 @@ public class GatewayPublication extends ClaimablePublication
     private final ReleaseSessionEncoder releaseSession = new ReleaseSessionEncoder();
     private final ReleaseSessionReplyEncoder releaseSessionReply = new ReleaseSessionReplyEncoder();
     private final ConnectEncoder connect = new ConnectEncoder();
-    private final CatchupEncoder catchup = new CatchupEncoder();
     private final NewSentPositionEncoder newSentPosition = new NewSentPositionEncoder();
     private final ResetSessionIdsEncoder resetSessionIds = new ResetSessionIdsEncoder();
     private final NotLeaderEncoder notLeader = new NotLeaderEncoder();
@@ -763,39 +760,6 @@ public class GatewayPublication extends ClaimablePublication
             .wrap(buffer, offset)
             .replyToId(replyToId)
             .status(status);
-
-        bufferClaim.commit();
-
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
-
-        return position;
-    }
-
-    public long saveStartCatchup(
-        final int libraryId, final long connectionId)
-    {
-        final long position = claim(CatchupEncoder.BLOCK_LENGTH + HEADER_LENGTH);
-        if (position < 0)
-        {
-            return position;
-        }
-
-        final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(catchup.sbeBlockLength())
-            .templateId(catchup.sbeTemplateId())
-            .schemaId(catchup.sbeSchemaId())
-            .version(catchup.sbeSchemaVersion());
-
-        offset += header.encodedLength();
-
-        catchup
-            .wrap(buffer, offset)
-            .libraryId(libraryId)
-            .connection(connectionId);
 
         bufferClaim.commit();
 

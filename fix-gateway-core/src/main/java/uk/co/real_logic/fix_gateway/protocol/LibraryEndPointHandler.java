@@ -59,8 +59,6 @@ public interface LibraryEndPointHandler
 
     Action onRequestSessionReply(int toId, long replyToId, SessionReplyStatus status);
 
-    Action onStartCatchup(int libraryId, long connectionId);
-
     Action onNewSentPosition(int libraryId, long position);
 
     Action onNotLeader(int libraryId, long replyToId, String libraryChannel);
