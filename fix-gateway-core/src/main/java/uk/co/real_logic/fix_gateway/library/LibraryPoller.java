@@ -64,9 +64,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         /** Currently connecting to an engine instance */
         CONNECTING,
 
-        /** Failed a connect or reconnect attempt with a hard timeout */
-        DISABLED,
-
         /** Was explicitly closed */
         CLOSED
     };
@@ -264,7 +261,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 return pollWithoutReconnect(timeInMs, fragmentLimit);
 
             case CLOSED:
-            case DISABLED:
             default:
                 return 0;
         }
@@ -330,7 +326,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
         else if (timeInMs > completeFailureTime)
         {
-            state = State.DISABLED;
+            fixLibrary.close();
             throw illegalStateDueToFailingToConnect();
         }
         else if (timeInMs > nextAttemptTime)
@@ -955,7 +951,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private void checkState()
     {
         // TODO: ban connecting from everything but library connect
-        if (state == State.CLOSED || state == State.DISABLED)
+        if (state == State.CLOSED)
         {
             throw new IllegalStateException("Library has been closed");
         }
@@ -963,7 +959,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public void close()
     {
-        connectionIdToSession.values().forEach(subscriber -> subscriber.session().disable());
-        state = State.CLOSED;
+        if (state != State.CLOSED)
+        {
+            connectionIdToSession.values().forEach(subscriber -> subscriber.session().disable());
+            state = State.CLOSED;
+        }
     }
 }

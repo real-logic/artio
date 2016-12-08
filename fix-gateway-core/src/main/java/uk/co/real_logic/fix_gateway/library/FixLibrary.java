@@ -15,13 +15,13 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
-import org.agrona.CloseHelper;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.SystemEpochClock;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.Reply;
+import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.timing.LibraryTimers;
@@ -140,9 +140,7 @@ public class FixLibrary extends GatewayProcess
      */
     public void close()
     {
-        CloseHelper.quietClose(poller);
-        super.close();
-        deleteFiles();
+        Exceptions.closeAll(poller, super::close, this::deleteFiles);
     }
 
     private void deleteFiles()
