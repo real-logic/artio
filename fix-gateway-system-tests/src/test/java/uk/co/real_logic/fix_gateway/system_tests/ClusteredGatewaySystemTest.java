@@ -47,7 +47,6 @@ import java.util.Optional;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
-import static org.agrona.CloseHelper.close;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
@@ -121,8 +120,7 @@ public class ClusteredGatewaySystemTest
     {
         closeLibrariesAndEngine();
 
-        close(mediaDriver);
-        cleanupDirectory(mediaDriver);
+        cleanupMediaDriver(mediaDriver);
     }
 
     private Optional<FixEngineRunner> findNewLeader()
@@ -409,8 +407,7 @@ public class ClusteredGatewaySystemTest
         }
         finally
         {
-            mediaDriver.close();
-            cleanupDirectory(mediaDriver);
+            cleanupMediaDriver(mediaDriver);
         }
     }
 }

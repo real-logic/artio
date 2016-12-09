@@ -49,7 +49,10 @@ public final class TestFixtures
     {
         final MediaDriver.Context context = mediaDriverContext(termBufferLength);
 
-        return MediaDriver.launch(context);
+        final MediaDriver mediaDriver = MediaDriver.launch(context);
+        final String aeronDirectoryName = context.aeronDirectoryName();
+        CloseChecker.onOpen(aeronDirectoryName, mediaDriver);
+        return mediaDriver;
     }
 
     public static MediaDriver.Context mediaDriverContext(final int termBufferLength)
@@ -61,13 +64,18 @@ public final class TestFixtures
             .ipcTermBufferLength(termBufferLength);
     }
 
-    public static void cleanupDirectory(final MediaDriver mediaDriver)
+    public static void cleanupMediaDriver(final MediaDriver mediaDriver)
     {
         if (mediaDriver != null)
         {
-            final File directory = new File(mediaDriver.aeronDirectoryName());
+            final String aeronDirectoryName = mediaDriver.aeronDirectoryName();
+            CloseChecker.onClose(aeronDirectoryName, mediaDriver);
+            mediaDriver.close();
+
+            final File directory = new File(aeronDirectoryName);
             if (directory.exists())
             {
+                CloseChecker.validate(aeronDirectoryName);
                 IoUtil.delete(directory, false);
             }
         }

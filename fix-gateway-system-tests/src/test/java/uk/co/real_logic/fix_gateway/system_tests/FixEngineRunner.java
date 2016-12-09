@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import io.aeron.CommonContext;
 import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
+import uk.co.real_logic.fix_gateway.CloseChecker;
 import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
@@ -61,6 +62,8 @@ public class FixEngineRunner implements AutoCloseable
                 .publicationTermBufferLength(TERM_BUFFER_LENGTH);
 
         mediaDriver = MediaDriver.launch(context);
+        final String aeronDirectoryName = context.aeronDirectoryName();
+        CloseChecker.onOpen(aeronDirectoryName, mediaDriver);
 
         final String acceptorLogs = ACCEPTOR_LOGS + ourId;
         delete(acceptorLogs);
@@ -126,8 +129,7 @@ public class FixEngineRunner implements AutoCloseable
     public void close()
     {
         CloseHelper.close(engine);
-        CloseHelper.close(mediaDriver);
-        cleanupDirectory(mediaDriver);
+        cleanupMediaDriver(mediaDriver);
     }
 
     public int nodeId()

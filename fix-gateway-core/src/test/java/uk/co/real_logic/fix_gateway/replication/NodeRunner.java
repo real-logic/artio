@@ -42,7 +42,7 @@ import static org.agrona.BitUtil.SIZE_OF_SHORT;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
-import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
+import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
 import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID;
@@ -136,8 +136,7 @@ class NodeRunner implements AutoCloseable
         }
 
         CloseHelper.close(aeron);
-        CloseHelper.close(mediaDriver);
-        cleanupDirectory(mediaDriver);
+        cleanupMediaDriver(mediaDriver);
     }
 
     public int poll(final int fragmentLimit)

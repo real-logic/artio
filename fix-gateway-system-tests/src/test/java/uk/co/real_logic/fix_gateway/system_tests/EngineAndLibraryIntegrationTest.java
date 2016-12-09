@@ -68,11 +68,11 @@ public class EngineAndLibraryIntegrationTest
     {
         try
         {
-            Exceptions.closeAll(library, library2, engine, mediaDriver);
+            Exceptions.closeAll(library, library2, engine);
         }
         finally
         {
-            cleanupDirectory(mediaDriver);
+            cleanupMediaDriver(mediaDriver);
         }
     }
 

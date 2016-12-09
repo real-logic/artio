@@ -24,7 +24,7 @@ public final class CloseChecker
 
     private static final Map<String, Resource> RESOURCES = new HashMap<>();
 
-    public static void onOpen(final String resourceId, final String ownerId)
+    public static void onOpen(final String resourceId, final Object owner)
     {
         if (CLOSE_CHECKER_ENABLED)
         {
@@ -37,19 +37,19 @@ public final class CloseChecker
                 final Resource resource = RESOURCES.computeIfAbsent(
                     resourceId, (key) -> new Resource());
 
-                resource.currentlyOpen.put(ownerId, e);
+                resource.currentlyOpen.put(owner, e);
             }
         }
     }
 
-    public static void onClose(final String resourceId, final String ownerId)
+    public static void onClose(final String resourceId, final Object owner)
     {
         if (CLOSE_CHECKER_ENABLED)
         {
             final Resource resource = RESOURCES.get(resourceId);
             if (resource != null)
             {
-                resource.currentlyOpen.remove(ownerId);
+                resource.currentlyOpen.remove(owner);
             }
         }
     }
@@ -75,11 +75,6 @@ public final class CloseChecker
 
     private static final class Resource
     {
-        final Map<String, Exception> currentlyOpen = new HashMap<>();
-
-        public void onOpen(final String ownerId, final Exception e)
-        {
-            currentlyOpen.put(ownerId, e);
-        }
+        final Map<Object, Exception> currentlyOpen = new HashMap<>();
     }
 }

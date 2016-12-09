@@ -155,7 +155,6 @@ public class MessageBasedSystemTest
     public void tearDown()
     {
         close(engine);
-        close(mediaDriver);
-        cleanupDirectory(mediaDriver);
+        cleanupMediaDriver(mediaDriver);
     }
 }

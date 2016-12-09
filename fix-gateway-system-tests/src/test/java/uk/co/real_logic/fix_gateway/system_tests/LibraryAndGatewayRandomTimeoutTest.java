@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import io.aeron.driver.MediaDriver;
-import org.agrona.CloseHelper;
 import org.agrona.IoUtil;
 import org.junit.After;
 import org.junit.Before;
@@ -36,6 +35,7 @@ import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.Reply.State.ERRORED;
 import static uk.co.real_logic.fix_gateway.Reply.State.TIMED_OUT;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.closeAll;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class LibraryAndGatewayRandomTimeoutTest
@@ -58,10 +58,8 @@ public class LibraryAndGatewayRandomTimeoutTest
     @After
     public void close() throws Exception
     {
-        CloseHelper.quietClose(initiatingLibrary);
-        CloseHelper.quietClose(initiatingEngine);
-        CloseHelper.quietClose(mediaDriver);
-        cleanupDirectory(mediaDriver);
+        closeAll(initiatingLibrary, initiatingEngine);
+        cleanupMediaDriver(mediaDriver);
     }
 
     @Test

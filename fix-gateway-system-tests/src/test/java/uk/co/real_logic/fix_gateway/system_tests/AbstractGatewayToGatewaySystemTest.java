@@ -32,7 +32,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.FixMatchers.hasConnectionId;
 import static uk.co.real_logic.fix_gateway.FixMatchers.hasSequenceIndex;
-import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupDirectory;
+import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
@@ -68,8 +68,7 @@ public class AbstractGatewayToGatewaySystemTest
         CloseHelper.close(initiatingEngine);
         CloseHelper.close(acceptingEngine);
 
-        CloseHelper.close(mediaDriver);
-        cleanupDirectory(mediaDriver);
+        cleanupMediaDriver(mediaDriver);
     }
 
     protected void assertOriginalLibraryDoesNotReceiveMessages(final int initiatorMessageCount)

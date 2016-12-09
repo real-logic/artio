@@ -219,8 +219,7 @@ public class SlowConsumerTest
     {
         close(library);
         close(engine);
-        close(mediaDriver);
-        cleanupDirectory(mediaDriver);
+        cleanupMediaDriver(mediaDriver);
         close(socket);
     }
 }
