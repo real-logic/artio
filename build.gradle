@@ -108,6 +108,8 @@ subprojects {
             }
         }
 
+        systemProperty 'fix.core.close_checker', 'true'
+
         beforeTest { desc ->
             if (System.properties["printTestNames"] != null)
             {

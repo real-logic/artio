@@ -21,13 +21,14 @@ import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.Reply;
-import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.timing.LibraryTimers;
 
 import java.io.File;
 import java.util.List;
+
+import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.closeAll;
 
 /**
  * FIX Library instances represent a process in the gateway where session management,
@@ -140,7 +141,7 @@ public class FixLibrary extends GatewayProcess
      */
     public void close()
     {
-        Exceptions.closeAll(poller, super::close, this::deleteFiles);
+        closeAll(poller, super::close, this::deleteFiles);
     }
 
     private void deleteFiles()

@@ -22,7 +22,6 @@ import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.Reply;
-import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
 import uk.co.real_logic.fix_gateway.engine.framer.FramerContext;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
@@ -32,6 +31,7 @@ import java.io.File;
 import java.util.List;
 
 import static org.agrona.concurrent.AgentRunner.startOnThread;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.closeAll;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.suppressingClose;
 
 /**
@@ -187,7 +187,7 @@ public final class FixEngine extends GatewayProcess
      */
     public synchronized void close()
     {
-        Exceptions.closeAll(framerRunner, engineContext, configuration, super::close);
+        closeAll(framerRunner, engineContext, configuration, super::close);
     }
 
     public EngineConfiguration configuration()
