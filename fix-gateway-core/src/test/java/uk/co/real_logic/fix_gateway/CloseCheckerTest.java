@@ -21,6 +21,7 @@ import org.junit.Test;
 public class CloseCheckerTest
 {
     private static final String RESOURCE_ID = "resource";
+    private static final String OWNER_ID = "owner";
 
     static
     {
@@ -30,25 +31,23 @@ public class CloseCheckerTest
     @After
     public void tearDown()
     {
-        CloseChecker.onClose(RESOURCE_ID);
+        CloseChecker.onClose(RESOURCE_ID, OWNER_ID);
     }
 
     @Test(expected = IllegalStateException.class)
     public void shouldNotifyWhenALibraryIsOpenedWhenOpen()
     {
-        CloseChecker.onOpen(RESOURCE_ID);
+        CloseChecker.onOpen(RESOURCE_ID, OWNER_ID);
 
-        CloseChecker.onOpen(RESOURCE_ID);
+        CloseChecker.validate(RESOURCE_ID);
     }
 
     @Test
-    public void shouldNotNotifyWhenALibraryIsOpenedWhenClose()
+    public void shouldNotInterfereWithoutValidation()
     {
-        CloseChecker.onOpen(RESOURCE_ID);
+        CloseChecker.onOpen(RESOURCE_ID, OWNER_ID);
 
-        CloseChecker.onClose(RESOURCE_ID);
-
-        CloseChecker.onOpen(RESOURCE_ID);
+        CloseChecker.onOpen(RESOURCE_ID, OWNER_ID);
     }
 
 }

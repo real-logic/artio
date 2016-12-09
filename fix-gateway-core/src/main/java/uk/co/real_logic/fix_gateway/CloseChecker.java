@@ -22,9 +22,9 @@ public final class CloseChecker
 {
     private static final boolean CLOSE_CHECKER_ENABLED = Boolean.getBoolean("fix.core.close_checker");
 
-    private static final Map<String, Exception> OPENED_RESOURCES = new HashMap<>();
+    private static final Map<String, Resource> RESOURCES = new HashMap<>();
 
-    public static void onOpen(final String resourceId)
+    public static void onOpen(final String resourceId, final String ownerId)
     {
         if (CLOSE_CHECKER_ENABLED)
         {
@@ -34,23 +34,52 @@ public final class CloseChecker
             }
             catch (final Exception e)
             {
-                final Exception currentlyOpen = OPENED_RESOURCES.put(resourceId, e);
-                if (currentlyOpen != null)
-                {
-                    throw new IllegalStateException(String.format(
-                        "Failed to close resource [%s]",
-                        resourceId),
-                        currentlyOpen);
-                }
+                final Resource resource = RESOURCES.computeIfAbsent(
+                    resourceId, (key) -> new Resource());
+
+                resource.currentlyOpen.put(ownerId, e);
             }
         }
     }
 
-    public static void onClose(final String resourceId)
+    public static void onClose(final String resourceId, final String ownerId)
     {
         if (CLOSE_CHECKER_ENABLED)
         {
-            OPENED_RESOURCES.remove(resourceId);
+            final Resource resource = RESOURCES.get(resourceId);
+            if (resource != null)
+            {
+                resource.currentlyOpen.remove(ownerId);
+            }
+        }
+    }
+
+    public static void validate(final String resourceId)
+    {
+        if (CLOSE_CHECKER_ENABLED)
+        {
+            final Resource resource = RESOURCES.get(resourceId);
+            if (resource != null && !resource.currentlyOpen.isEmpty())
+            {
+                final IllegalStateException exception = new IllegalStateException(String.format(
+                    "Resource [%s] open by %s",
+                    resourceId,
+                    resource.currentlyOpen.keySet()));
+
+                resource.currentlyOpen.values().forEach(exception::addSuppressed);
+
+                throw exception;
+            }
+        }
+    }
+
+    private static final class Resource
+    {
+        final Map<String, Exception> currentlyOpen = new HashMap<>();
+
+        public void onOpen(final String ownerId, final Exception e)
+        {
+            currentlyOpen.put(ownerId, e);
         }
     }
 }
