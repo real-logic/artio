@@ -37,7 +37,13 @@ public final class CloseChecker
                 final Resource resource = RESOURCES.computeIfAbsent(
                     resourceId, (key) -> new Resource());
 
-                resource.currentlyOpen.put(owner, e);
+                final Exception oldException = resource.currentlyOpen.put(owner, e);
+                if (oldException != null)
+                {
+                    final Error error = error(resourceId, owner);
+                    error.addSuppressed(oldException);
+                    throw error;
+                }
             }
         }
     }
@@ -61,16 +67,19 @@ public final class CloseChecker
             final Resource resource = RESOURCES.get(resourceId);
             if (resource != null && !resource.currentlyOpen.isEmpty())
             {
-                final IllegalStateException exception = new IllegalStateException(String.format(
-                    "Resource [%s] open by %s",
-                    resourceId,
-                    resource.currentlyOpen.keySet()));
-
-                resource.currentlyOpen.values().forEach(exception::addSuppressed);
-
-                throw exception;
+                final Error error = error(resourceId, resource.currentlyOpen.keySet());
+                resource.currentlyOpen.values().forEach(error::addSuppressed);
+                throw error;
             }
         }
+    }
+
+    private static Error error(final String resourceId, final Object owned)
+    {
+        return new Error(String.format(
+            "Resource [%s] open by %s",
+            resourceId,
+            owned));
     }
 
     private static final class Resource

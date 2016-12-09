@@ -46,7 +46,17 @@ public class CloseCheckerTest
     public void shouldNotInterfereWithoutValidation()
     {
         CloseChecker.onOpen(RESOURCE_ID, OWNER_ID);
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void shouldRecogniseDoubleOpens()
+    {
+        CloseChecker.onOpen(RESOURCE_ID, OWNER_ID);
 
         CloseChecker.onOpen(RESOURCE_ID, OWNER_ID);
+
+        CloseChecker.onClose(RESOURCE_ID, OWNER_ID);
+
+        CloseChecker.validate(RESOURCE_ID);
     }
 }
