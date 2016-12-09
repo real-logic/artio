@@ -34,7 +34,7 @@ public class CloseCheckerTest
         CloseChecker.onClose(RESOURCE_ID, OWNER_ID);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test(expected = Error.class)
     public void shouldNotifyWhenALibraryIsOpenedWhenOpen()
     {
         CloseChecker.onOpen(RESOURCE_ID, OWNER_ID);
@@ -48,7 +48,7 @@ public class CloseCheckerTest
         CloseChecker.onOpen(RESOURCE_ID, OWNER_ID);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test(expected = Error.class)
     public void shouldRecogniseDoubleOpens()
     {
         CloseChecker.onOpen(RESOURCE_ID, OWNER_ID);
