@@ -39,6 +39,7 @@ public class GatewayProcess implements AutoCloseable
     public static final int OUTBOUND_LIBRARY_STREAM = 2;
     public static final int OUTBOUND_REPLAY_STREAM = 3;
 
+    private CommonConfiguration configuration;
     protected MonitoringFile monitoringFile;
     protected FixCounters fixCounters;
     protected ErrorHandler errorHandler;
@@ -48,6 +49,7 @@ public class GatewayProcess implements AutoCloseable
 
     protected void init(final CommonConfiguration configuration)
     {
+        this.configuration = configuration;
         initMonitoring(configuration);
         initAeron(configuration);
     }
@@ -72,6 +74,7 @@ public class GatewayProcess implements AutoCloseable
     {
         final Aeron.Context ctx = aeronContext(configuration);
         aeron = Aeron.connect(ctx);
+        CloseChecker.onOpen(ctx.aeronDirectoryName(), aeron);
     }
 
     private Aeron.Context aeronContext(final CommonConfiguration configuration)
@@ -128,6 +131,7 @@ public class GatewayProcess implements AutoCloseable
     {
         quietClose(monitoringRunner);
         aeron.close();
+        CloseChecker.onClose(configuration.aeronContext().aeronDirectoryName(), aeron);
         monitoringFile.close();
     }
 }

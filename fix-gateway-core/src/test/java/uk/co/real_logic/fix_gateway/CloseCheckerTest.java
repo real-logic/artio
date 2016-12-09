@@ -49,5 +49,4 @@ public class CloseCheckerTest
 
         CloseChecker.onOpen(RESOURCE_ID, OWNER_ID);
     }
-
 }
