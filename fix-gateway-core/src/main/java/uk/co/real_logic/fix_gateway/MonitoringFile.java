@@ -43,10 +43,14 @@ public final class MonitoringFile implements AutoCloseable
     private final AtomicBuffer counterMetaDataBuffer;
     private final AtomicBuffer counterValuesBuffer;
     private final AtomicBuffer errorBuffer;
+    private final String absolutePath;
 
     public MonitoringFile(final boolean newFile, final CommonConfiguration configuration)
     {
         final File file = new File(configuration.monitoringFile()).getAbsoluteFile();
+        absolutePath = file.getAbsolutePath();
+        CloseChecker.validate(absolutePath);
+        CloseChecker.onOpen(absolutePath, this);
         final int length;
         if (newFile)
         {
@@ -93,5 +97,6 @@ public final class MonitoringFile implements AutoCloseable
     public void close()
     {
         IoUtil.unmap(mappedByteBuffer);
+        CloseChecker.onClose(absolutePath, this);
     }
 }
