@@ -1203,6 +1203,13 @@ public class Session implements AutoCloseable
         return false;
     }
 
+    /**
+     * Get the current sequence index. This is a number that increments everytime the
+     * sequence numbers get reset. In combination with the sequence numbers it provides
+     * a monotonically increasing sequence.
+     *
+     * @return the current sequence index
+     */
     public int sequenceIndex()
     {
         return sequenceIndex;
