@@ -74,13 +74,15 @@ public class FixLibrary extends GatewayProcess
     // ------------- Public API -------------
 
     /**
-     * Connect to an engine. This method blocks until the connection is complete and then returns.
+     * Start connecting to an engine. This method returns a FixLibrary immediately even if it hasn't connected.
+     *
+     * {@link #isConnected()} can be polled in order to determine whether library is connected. Also the
+     * {@link LibraryConnectHandler#onConnect(FixLibrary)} method will be invoked.
      *
      * @param configuration the configuration for this library instance.
-     * @return the library instance once it has connected.
+     * @return the library instance.
      * @throws FixGatewayException
-     *         if there's an error connecting to the FIX Gateway or if there's a timeout talking to
-     *         the FixEngine.
+     *         if there's an error connecting to the FIX Gateway.
      */
     public static FixLibrary connect(final LibraryConfiguration configuration)
     {
