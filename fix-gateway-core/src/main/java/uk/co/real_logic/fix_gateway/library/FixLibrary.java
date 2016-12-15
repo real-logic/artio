@@ -76,6 +76,7 @@ public class FixLibrary extends GatewayProcess
     /**
      * Start connecting to an engine. This method returns a FixLibrary immediately even if it hasn't connected.
      *
+     * You should call {@link #poll(int)} on a regular duty cycle until the connection completes.
      * {@link #isConnected()} can be polled in order to determine whether library is connected. Also the
      * {@link LibraryConnectHandler#onConnect(FixLibrary)} method will be invoked.
      *
