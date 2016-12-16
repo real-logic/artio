@@ -474,6 +474,48 @@ public class DecoderGeneratorTest
         assertEquals(0, someTimeValue);
     }
 
+    @Test
+    public void shouldGenerateIteratorForRepeatingGroups() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
+
+        canIterateOverGroup(decoder);
+
+        canIterateOverGroup(decoder);
+    }
+
+    @Test
+    public void shouldEncodeAllFieldsSet() throws Exception
+    {
+        final Decoder decoder = (Decoder) heartbeat.newInstance();
+        final Object allFieldsField = getField(decoder, ALL_FIELDS);
+        assertThat(allFieldsField, instanceOf(IntHashSet.class));
+
+        @SuppressWarnings("unchecked")
+        final Set<Integer> allFields = (Set<Integer>) allFieldsField;
+        assertThat(allFields, hasItem(123));
+        assertThat(allFields, hasItem(124));
+        assertThat(allFields, hasItem(35));
+        assertThat(allFields, not(hasItem(999)));
+    }
+
+    // TODO: validation for groups
+
+    private void canIterateOverGroup(final Decoder decoder) throws Exception
+    {
+        final Iterator<?> iterator = getEgGroupIterator(decoder);
+
+        assertTrue(iterator.hasNext());
+        Object group = iterator.next();
+        assertEquals(1, getGroupField(group));
+
+        assertTrue(iterator.hasNext());
+        group = iterator.next();
+        assertEquals(2, getGroupField(group));
+
+        assertFalse(iterator.hasNext());
+    }
+
     private void assertRepeatingGroupDecoded(final Decoder decoder) throws Exception
     {
         assertEquals(2, getNoEgGroupGroupCounter(decoder));
@@ -505,48 +547,6 @@ public class DecoderGeneratorTest
     {
         return cls.getField(field).get(null);
     }
-
-    @Test
-    public void shouldGenerateIteratorForRepeatingGroups() throws Exception
-    {
-        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
-
-        canIterateOverGroup(decoder);
-
-        canIterateOverGroup(decoder);
-    }
-
-    private void canIterateOverGroup(final Decoder decoder) throws Exception
-    {
-        final Iterator<?> iterator = getEgGroupIterator(decoder);
-
-        assertTrue(iterator.hasNext());
-        Object group = iterator.next();
-        assertEquals(1, getGroupField(group));
-
-        assertTrue(iterator.hasNext());
-        group = iterator.next();
-        assertEquals(2, getGroupField(group));
-
-        assertFalse(iterator.hasNext());
-    }
-
-    @Test
-    public void shouldEncodeAllFieldsSet() throws Exception
-    {
-        final Decoder decoder = (Decoder) heartbeat.newInstance();
-        final Object allFieldsField = getField(decoder, ALL_FIELDS);
-        assertThat(allFieldsField, instanceOf(IntHashSet.class));
-
-        @SuppressWarnings("unchecked")
-        final Set<Integer> allFields = (Set<Integer>) allFieldsField;
-        assertThat(allFields, hasItem(123));
-        assertThat(allFields, hasItem(124));
-        assertThat(allFields, hasItem(35));
-        assertThat(allFields, not(hasItem(999)));
-    }
-
-    // TODO: validation for groups
 
     private void assertHasComponentFieldGetter() throws NoSuchMethodException, ClassNotFoundException
     {
