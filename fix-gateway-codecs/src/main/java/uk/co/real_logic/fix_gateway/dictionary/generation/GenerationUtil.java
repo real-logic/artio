@@ -114,4 +114,13 @@ public final class GenerationUtil
         Verify.notNull(name, "name");
         return String.format("import static %s.%s;\n", cls.getCanonicalName(), name);
     }
+
+    public static String optionalStaticInit(final String containing)
+    {
+        return containing.isEmpty() ? "\n" :
+            "    static\n" +
+            "    {\n" +
+            containing +
+            "    }\n\n";
+    }
 }

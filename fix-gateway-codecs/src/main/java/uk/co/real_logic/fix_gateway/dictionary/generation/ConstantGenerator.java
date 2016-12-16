@@ -32,6 +32,7 @@ import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.DecoderGenerator.addField;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.importFor;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.optionalStaticInit;
 
 public class ConstantGenerator
 {
@@ -92,12 +93,9 @@ public class ConstantGenerator
 
                     out.append(String.format(
                         "    public static final IntHashSet %1$s = new IntHashSet(%3$s, -1);\n" +
-                        "    static\n" +
-                        "    {\n" +
-                        "%2$s" +
-                        "    }\n\n",
+                        "%2$s",
                         valuesField,
-                        addValues,
+                        optionalStaticInit(addValues),
                         sizeHashSet(field.values())
                     ));
                 }
@@ -155,7 +153,7 @@ public class ConstantGenerator
     {
         return String.format(
             "    public static String VERSION = \"FIX.%d.%d\";\n" +
-            "    public static char[] VERSION_CHARS = VERSION.toCharArray();\n",
+            "    public static char[] VERSION_CHARS = VERSION.toCharArray();\n\n",
             dictionary.majorVersion(),
             dictionary.minorVersion());
     }
