@@ -184,10 +184,10 @@ public final class SystemTestUtil
     public static FixEngine launchInitiatingEngine(final int libraryAeronPort)
     {
         delete(CLIENT_LOGS);
-        return launchInitiatingGatewayWithSameLogs(libraryAeronPort);
+        return launchInitiatingEngineWithSameLogs(libraryAeronPort);
     }
 
-    public static FixEngine launchInitiatingGatewayWithSameLogs(final int libraryAeronPort)
+    public static FixEngine launchInitiatingEngineWithSameLogs(final int libraryAeronPort)
     {
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, "engineCounters");
         return FixEngine.launch(initiatingConfig);

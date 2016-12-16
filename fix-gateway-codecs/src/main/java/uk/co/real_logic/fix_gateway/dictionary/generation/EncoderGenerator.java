@@ -477,7 +477,7 @@ public class EncoderGenerator extends Generator
         final String fieldName = formatPropertyName(name);
         final Field.Type type = field.type();
         final boolean mustCheckFlag = hasFlag(entry, field);
-        final boolean mustCheckLength = type.isArrayBased();
+        final boolean mustCheckLength = type.hasLengthField();
         final boolean needsMissingThrow = (type.isFloatBased() || mustCheckLength) && entry.required();
 
         final String enablingPrefix;
@@ -701,7 +701,7 @@ public class EncoderGenerator extends Generator
 
     protected boolean hasFlag(final Entry entry, final Field field)
     {
-        return (!entry.required() && !field.type().isArrayBased()) || field.type().isFloatBased();
+        return (!entry.required() && !field.type().hasLengthField()) || field.type().isFloatBased();
     }
 
     protected String resetTemporalValue(final String name)
@@ -734,11 +734,11 @@ public class EncoderGenerator extends Generator
 
     protected String optionalReset(final Field field, final String name)
     {
-        return field.type().isArrayBased() ? resetLength(name) : resetByFlag(name);
+        return field.type().hasLengthField() ? resetLength(name) : resetByFlag(name);
     }
 
     protected boolean toStringChecksHasGetter(final Entry entry, final Field field)
     {
-        return hasFlag(entry, field) || field.type().isArrayBased();
+        return hasFlag(entry, field) || field.type().hasLengthField();
     }
 }

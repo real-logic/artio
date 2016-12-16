@@ -36,7 +36,6 @@ import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerat
 import static uk.co.real_logic.fix_gateway.dictionary.generation.ConstantGenerator.sizeHashSet;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.rethrown;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
-import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.STRING;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 // TODO: optimisations
@@ -995,13 +994,13 @@ public class DecoderGenerator extends Generator
             optionalAssign(entry),
             fieldName,
             decodeMethodFor(field.type(), fieldName),
-            optionalStringAssignment(field.type(), fieldName),
+            storeLengthForArrays(field.type(), fieldName),
             suffix);
     }
 
-    private String optionalStringAssignment(final Type type, final String fieldName)
+    private String storeLengthForArrays(final Type type, final String fieldName)
     {
-        return type == STRING
+        return type.hasLengthField()
             ? String.format("                %sLength = valueLength;\n", fieldName)
             : "";
     }

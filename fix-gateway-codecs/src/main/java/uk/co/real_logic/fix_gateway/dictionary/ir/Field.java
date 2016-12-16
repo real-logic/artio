@@ -123,6 +123,8 @@ public final class Field implements Element
         EXCHANGE(true, false, false, true), // String using ISO 10383 (2 chars)
         COUNTRY(true, false, false, true), // String using ISO 3166
 
+        // NB: data doesn't have a length field because in specified
+        // XML files it often comes along with a length field.
         DATA(false, false, false, false),
 
         // Boolean types
@@ -137,18 +139,18 @@ public final class Field implements Element
         private final boolean isStringBased;
         private final boolean isIntBased;
         private final boolean isFloatBased;
-        private final boolean isArrayBased;
+        private final boolean hasLengthField;
 
         Type(
             final boolean isStringBased,
             final boolean isIntBased,
             final boolean isFloatBased,
-            final boolean isArrayBased)
+            final boolean hasLengthField)
         {
             this.isStringBased = isStringBased;
             this.isIntBased = isIntBased;
             this.isFloatBased = isFloatBased;
-            this.isArrayBased = isArrayBased;
+            this.hasLengthField = hasLengthField;
         }
 
         public boolean isStringBased()
@@ -166,9 +168,9 @@ public final class Field implements Element
             return isFloatBased;
         }
 
-        public boolean isArrayBased()
+        public boolean hasLengthField()
         {
-            return isArrayBased;
+            return hasLengthField;
         }
 
         public static Type lookup(final String name)

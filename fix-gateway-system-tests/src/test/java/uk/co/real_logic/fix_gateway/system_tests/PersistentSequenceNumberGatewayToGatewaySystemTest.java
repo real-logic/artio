@@ -140,7 +140,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
         config.sessionPersistenceStrategy(logon -> REPLICATED);
         acceptingEngine = FixEngine.launch(config);
-        initiatingEngine = launchInitiatingGatewayWithSameLogs(libraryAeronPort);
+        initiatingEngine = launchInitiatingEngineWithSameLogs(libraryAeronPort);
 
         final LibraryConfiguration acceptingLibraryConfig =
             acceptingLibraryConfig(acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL);

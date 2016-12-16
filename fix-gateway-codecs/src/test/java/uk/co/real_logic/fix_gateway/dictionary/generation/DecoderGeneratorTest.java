@@ -472,6 +472,9 @@ public class DecoderGeneratorTest
         final UtcTimestampDecoder someTimeDecoder = new UtcTimestampDecoder();
         final long someTimeValue = someTimeDecoder.decode(someTime, someTime.length);
         assertEquals(0, someTimeValue);
+
+        final String someTimeFieldAsString = getSomeTimeFieldAsString(decoder);
+        assertEquals("19700101-00:00:00", someTimeFieldAsString);
     }
 
     @Test
@@ -661,6 +664,11 @@ public class DecoderGeneratorTest
     private byte[] getSomeTimeField(final Decoder decoder) throws Exception
     {
         return (byte[]) get(decoder, SOME_TIME_FIELD);
+    }
+
+    private String getSomeTimeFieldAsString(final Decoder decoder) throws Exception
+    {
+        return (String) get(decoder, SOME_TIME_FIELD + "AsString");
     }
 
     private int getSomeTimeFieldLength(final Decoder decoder) throws Exception
