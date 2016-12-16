@@ -850,15 +850,24 @@ public class DecoderGenerator extends Generator
                 "                {\n" +
                 "                    unknownFields.add(tag);\n" +
                 "                }\n" +
-                "                return position - offset;\n\n" +
+                decodeTrailerOrReturn(hasCommonCompounds, 4) +
+                "\n" +
                 "            }\n\n" +
-                "            position = endOfField + 1;\n" +
-                "        }\n\n" +
-                (hasCommonCompounds ? "        position += trailer.decode(buffer, position, end - position);\n" : "") +
-                "        return position - offset;\n" +
+                "            if (position < (endOfField + 1))\n" +
+                "            {\n" +
+                "                position = endOfField + 1;\n" +
+                "            }\n" +
+                "        }\n" +
+                decodeTrailerOrReturn(hasCommonCompounds, 2) +
                 "    }\n\n";
 
         return prefix + body + suffix;
+    }
+
+    private String decodeTrailerOrReturn(final boolean hasCommonCompounds, final int indent)
+    {
+        return (hasCommonCompounds ? indent(indent, "position += trailer.decode(buffer, position, end - position);\n") : "") +
+        indent(indent, "return position - offset;\n");
     }
 
     private String isTrailerTag(final AggregateType type)
@@ -885,7 +894,8 @@ public class DecoderGenerator extends Generator
                 "                {\n" +
                 "                    next = new %1$s(trailer);\n" +
                 "                }\n" +
-                "                return next.decode(buffer, position, end - position);\n" +
+                "                final int thisGroupEntryLength = position - offset;\n" +
+                "                return thisGroupEntryLength + next.decode(buffer, position, end - position);\n" +
                 "            }\n",
                 decoderClassName(aggregate));
         }
@@ -953,7 +963,8 @@ public class DecoderGenerator extends Generator
             "                {\n" +
             "                    %1$s = new %2$s(trailer);\n" +
             "                }\n" +
-            "                position = %1$s.decode(buffer, endOfField + 1, end - endOfField);\n",
+            "                position = endOfField + 1;" +
+            "                position += %1$s.decode(buffer, position, end - endOfField);\n",
             formatPropertyName(group.name()),
             decoderClassName(group));
 

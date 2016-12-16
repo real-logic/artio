@@ -175,8 +175,11 @@ public class DecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE);
 
         final Decoder header = getHeader(decoder);
-
         assertEquals(75, getBodyLength(header));
+
+        final Decoder trailer = getTrailer(decoder);
+        System.out.println(Arrays.toString((char[]) get(trailer, "checkSum")));
+        assertEquals("039", getChecksum(trailer));
     }
 
     @Test
@@ -581,6 +584,16 @@ public class DecoderGeneratorTest
     private int getBodyLength(final Decoder header) throws Exception
     {
         return (int) get(header, BODY_LENGTH);
+    }
+
+    private Decoder getTrailer(final Decoder trailer) throws Exception
+    {
+        return (Decoder) get(trailer, "trailer");
+    }
+
+    private String getChecksum(final Decoder trailer) throws Exception
+    {
+        return (String) get(trailer, "checkSumAsString");
     }
 
     private Decoder getHeader(final Decoder decoder) throws Exception

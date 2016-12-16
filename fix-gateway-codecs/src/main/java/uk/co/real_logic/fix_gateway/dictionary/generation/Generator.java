@@ -38,6 +38,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.*;
@@ -563,4 +564,12 @@ public abstract class Generator
     }
 
     protected abstract String stringToString(String fieldName);
+
+    protected String indent(final int times, final String suffix)
+    {
+        final StringBuilder sb = new StringBuilder(times * 4 + suffix.length());
+        IntStream.range(0, times).forEach(x -> sb.append("    "));
+        sb.append(suffix);
+        return sb.toString();
+    }
 }
