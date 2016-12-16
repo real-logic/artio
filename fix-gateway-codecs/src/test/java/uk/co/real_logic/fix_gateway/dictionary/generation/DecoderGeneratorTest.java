@@ -46,9 +46,9 @@ import static uk.co.real_logic.fix_gateway.util.Reflection.*;
 
 public class DecoderGeneratorTest
 {
-    public static final char[] ABC = "abc".toCharArray();
-    public static final char[] AB = "ab".toCharArray();
-    public static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
+    private static final char[] ABC = "abc".toCharArray();
+    private static final char[] AB = "ab".toCharArray();
+    private static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
 
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
     private static ConstantGenerator constantGenerator = new ConstantGenerator(
@@ -178,7 +178,6 @@ public class DecoderGeneratorTest
         assertEquals(75, getBodyLength(header));
 
         final Decoder trailer = getTrailer(decoder);
-        System.out.println(Arrays.toString((char[]) get(trailer, "checkSum")));
         assertEquals("039", getChecksum(trailer));
     }
 
