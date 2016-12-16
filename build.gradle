@@ -278,8 +278,8 @@ project(':fix-gateway-system-tests') {
                 "io.aeron:aeron-client:${aeronVersion}"
 
         perfCompile project,
-                    'org.openjdk.jmh:jmh-core:1.17.2',
-                    'org.openjdk.jmh:jmh-generator-annprocess:1.17.2'
+                    'org.openjdk.jmh:jmh-core:1.17.3',
+                    'org.openjdk.jmh:jmh-generator-annprocess:1.17.3'
     }
 
     idea.module {
