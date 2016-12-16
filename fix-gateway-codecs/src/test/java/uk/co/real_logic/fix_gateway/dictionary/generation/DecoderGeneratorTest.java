@@ -510,27 +510,89 @@ public class DecoderGeneratorTest
         final Decoder decoder = (Decoder) fieldsMessage.newInstance();
         decode(EG_FIELDS_MESSAGE, decoder);
 
+        assertRequiredFieldsMessageFieldsDecoded(decoder, "GBP", "XLON", "GB");
+
         final char[] gbp = "GBP".toCharArray();
         final char[] xlon = "XLON".toCharArray();
         final char[] gb = "GB".toCharArray();
 
-        assertArrayEquals(gbp, getCurrencyField(decoder));
-        assertArrayEquals(xlon, getExchangeField(decoder));
-        assertArrayEquals(gb, getCountryField(decoder));
-
         assertArrayEquals(gbp, getOptionalCurrencyField(decoder));
         assertArrayEquals(xlon, getOptionalExchangeField(decoder));
         assertArrayEquals(gb, getOptionalCountryField(decoder));
-
-        assertEquals("GBP", getCurrencyFieldAsString(decoder));
-        assertEquals("XLON", getExchangeFieldAsString(decoder));
-        assertEquals("GB", getCountryFieldAsString(decoder));
 
         assertEquals("GBP", getOptionalCurrencyFieldAsString(decoder));
         assertEquals("XLON", getOptionalExchangeFieldAsString(decoder));
         assertEquals("GB", getOptionalCountryFieldAsString(decoder));
 
         assertValid(decoder);
+    }
+
+    @Test
+    public void shouldDecodeDifferentFieldTypesWithoutOptionalFields() throws Exception
+    {
+        final Decoder decoder = (Decoder) fieldsMessage.newInstance();
+        decode(EG_NO_OPTIONAL_FIELDS_MESSAGE, decoder);
+
+        assertRequiredFieldsMessageFieldsDecoded(decoder, "USD", "N", "US");
+
+        assertOptionalDifferentFieldsNotDecoded(decoder);
+
+        assertValid(decoder);
+    }
+
+    @Test
+    public void shouldResetDifferentFieldTypes() throws Exception
+    {
+        final Decoder decoder = (Decoder) fieldsMessage.newInstance();
+        decode(EG_FIELDS_MESSAGE, decoder);
+
+        decoder.reset();
+
+        assertRequiredFieldsMessageFieldsAsStringDecoded(decoder, "", "", "");
+        assertOptionalDifferentFieldsNotDecoded(decoder);
+
+        decode(EG_NO_OPTIONAL_FIELDS_MESSAGE, decoder);
+        assertRequiredFieldsMessageFieldsDecoded(decoder, "USD", "N", "US");
+        assertOptionalDifferentFieldsNotDecoded(decoder);
+
+        assertValid(decoder);
+    }
+
+    private void assertOptionalDifferentFieldsNotDecoded(final Decoder decoder) throws Exception
+    {
+        assertNull(getOptionalCurrencyFieldAsString(decoder));
+        assertNull(getOptionalExchangeFieldAsString(decoder));
+        assertNull(getOptionalCountryFieldAsString(decoder));
+    }
+
+    private void assertRequiredFieldsMessageFieldsDecoded(
+        final Decoder decoder, final String currency, final String exchange, final String country) throws Exception
+    {
+        final char[] currencyChars = currency.toCharArray();
+        final char[] exchangeChars = exchange.toCharArray();
+        final char[] countryChars = country.toCharArray();
+
+        final int currencyFieldLength = getCurrencyFieldLength(decoder);
+        final int exchangeFieldLength = getExchangeFieldLength(decoder);
+        final int countryFieldLength = getCountryFieldLength(decoder);
+
+        assertEquals(currencyChars.length, currencyFieldLength);
+        assertEquals(exchangeChars.length, exchangeFieldLength);
+        assertEquals(countryChars.length, countryFieldLength);
+
+        assertArrayEquals(currencyChars, Arrays.copyOf(getCurrencyField(decoder), currencyFieldLength));
+        assertArrayEquals(exchangeChars, Arrays.copyOf(getExchangeField(decoder), exchangeFieldLength));
+        assertArrayEquals(countryChars, Arrays.copyOf(getCountryField(decoder), countryFieldLength));
+
+        assertRequiredFieldsMessageFieldsAsStringDecoded(decoder, currency, exchange, country);
+    }
+
+    private void assertRequiredFieldsMessageFieldsAsStringDecoded(
+        final Decoder decoder, final String currency, final String exchange, final String country) throws Exception
+    {
+        assertEquals(currency, getCurrencyFieldAsString(decoder));
+        assertEquals(exchange, getExchangeFieldAsString(decoder));
+        assertEquals(country, getCountryFieldAsString(decoder));
     }
 
     private String getOptionalCountryFieldAsString(final Decoder decoder) throws Exception
@@ -591,6 +653,21 @@ public class DecoderGeneratorTest
     private char[] getCurrencyField(final Decoder decoder) throws Exception
     {
         return getChars(decoder, "currencyField");
+    }
+
+    private int getCurrencyFieldLength(final Decoder decoder) throws Exception
+    {
+        return getInt(decoder, "currencyFieldLength");
+    }
+
+    private int getExchangeFieldLength(final Decoder decoder) throws Exception
+    {
+        return getInt(decoder, "exchangeFieldLength");
+    }
+
+    private int getCountryFieldLength(final Decoder decoder) throws Exception
+    {
+        return getInt(decoder, "countryFieldLength");
     }
 
     // TODO: validation for groups

@@ -242,7 +242,7 @@ public final class ExampleDictionary
             "\0011004=GBP\0011005=XLON\0011006=GB\00110=209\001";
 
     public static final String EG_NO_OPTIONAL_FIELDS_MESSAGE =
-        "8=FIX.4.4\0019=0049\00135=Z\0011001=GBP\0011002=XLON\0011003=GB\00110=209\001";
+        "8=FIX.4.4\0019=0049\00135=Z\0011001=USD\0011002=N\0011003=US\00110=209\001";
 
     public static final int TEST_REQ_ID_TAG = 112;
 

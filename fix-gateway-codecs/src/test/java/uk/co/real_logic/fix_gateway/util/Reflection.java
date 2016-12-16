@@ -160,6 +160,11 @@ public final class Reflection
         return (char[]) get(decoder, field);
     }
 
+    public static int getInt(final Decoder decoder, final String field) throws Exception
+    {
+        return (int) get(decoder, field);
+    }
+
     public static String getString(final Decoder decoder, final String field) throws Exception
     {
         return (String) get(decoder, field);
