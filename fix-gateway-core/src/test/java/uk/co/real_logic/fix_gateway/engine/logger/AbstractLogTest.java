@@ -45,6 +45,7 @@ public class AbstractLogTest
     protected static final int BEGIN_SEQ_NO = 2;
     protected static final int END_SEQ_NO = 2;
     protected static final int SEQUENCE_INDEX = 1;
+    protected static final int ENCODE_OFFSET = 1;
 
     protected MessageHeaderEncoder header = new MessageHeaderEncoder();
     protected FixMessageEncoder messageFrame = new FixMessageEncoder();
@@ -124,7 +125,7 @@ public class AbstractLogTest
         return BitUtil.align(endPosition(), FRAME_ALIGNMENT);
     }
 
-    protected void bufferHasResendRequest(final int endSeqNo)
+    protected int bufferHasResendRequest(final int endSeqNo)
     {
         final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
         timestampEncoder.encode(System.currentTimeMillis());
@@ -138,10 +139,10 @@ public class AbstractLogTest
             .senderCompID("sender")
             .targetCompID("target");
 
-        resendRequest
+        return resendRequest
             .beginSeqNo(BEGIN_SEQ_NO)
             .endSeqNo(endSeqNo)
-            .encode(new MutableAsciiBuffer(buffer), 1);
+            .encode(new MutableAsciiBuffer(buffer), ENCODE_OFFSET);
     }
 
     protected void setupPublication(final int srcLength)

@@ -36,9 +36,9 @@ public class GapFillerTest extends AbstractLogTest
     @Test
     public void shouldGapFillInResponseToResendRequest()
     {
-        bufferHasResendRequest(END_SEQ_NO);
+        final int length = bufferHasResendRequest(END_SEQ_NO);
         gapFiller.onMessage(
-            buffer, 1, buffer.capacity(),
+            buffer, ENCODE_OFFSET, length,
             LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX,
             ResendRequestDecoder.MESSAGE_TYPE, 0L, OK, 0L);
 

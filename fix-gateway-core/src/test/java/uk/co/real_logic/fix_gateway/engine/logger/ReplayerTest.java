@@ -66,8 +66,8 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldParseResendRequest()
     {
-        bufferHasResendRequest(END_SEQ_NO);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE);
+        final int length = bufferHasResendRequest(END_SEQ_NO);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, length);
 
         verifyQueriedService(END_SEQ_NO);
         verifyNoMoreInteractions(publication);
@@ -76,8 +76,8 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldPublishAllRemainingMessages()
     {
-        bufferHasResendRequest(MOST_RECENT_MESSAGE);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE);
+        final int length = bufferHasResendRequest(MOST_RECENT_MESSAGE);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, length);
 
         verifyQueriedService(MOST_RECENT_MESSAGE);
         verifyNoMoreInteractions(publication);
@@ -112,7 +112,7 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldIgnoreIrrelevantFixMessages()
     {
-        onMessage(LogonDecoder.MESSAGE_TYPE);
+        onMessage(LogonDecoder.MESSAGE_TYPE, buffer.capacity());
 
         verifyNoMoreInteractions(replayQuery, publication);
     }
@@ -120,8 +120,8 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldValidateResendRequestMessageSequenceNumbers()
     {
-        bufferHasResendRequest(BEGIN_SEQ_NO - 1);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE);
+        final int length = bufferHasResendRequest(BEGIN_SEQ_NO - 1);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, length);
 
         verify(errorHandler).onError(any());
         verifyNoMoreInteractions(replayQuery, publication);
@@ -152,9 +152,10 @@ public class ReplayerTest extends AbstractLogTest
         assertNotEquals("Unable to find poss dup index", UNKNOWN_INDEX, possDupIndex);
     }
 
-    private void onMessage(final int messageType)
+    private void onMessage(final int messageType, final int length)
     {
         replayer.onMessage(
-            buffer, 1, buffer.capacity(), LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX, messageType, 0L, OK, 0L);
+            buffer, ENCODE_OFFSET, length,
+            LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX, messageType, 0L, OK, 0L);
     }
 }
