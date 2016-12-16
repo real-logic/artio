@@ -46,7 +46,7 @@ public final class CodecGenerationTool
             final PackageOutputManager decoder = new PackageOutputManager(outputPath, DECODER_PACKAGE);
 
             final EnumGenerator enumGenerator = new EnumGenerator(dictionary, parent);
-            final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, DECODER_PACKAGE, parent);
+            final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, DECODER_PACKAGE, decoder);
 
             final EncoderGenerator encoderGenerator = new EncoderGenerator(
                 dictionary, 1, ENCODER_PACKAGE, new PackageOutputManager(outputPath, ENCODER_PACKAGE), Validation.class);
