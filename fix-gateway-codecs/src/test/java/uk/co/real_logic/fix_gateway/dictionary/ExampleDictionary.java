@@ -30,7 +30,7 @@ import static java.util.Collections.emptyMap;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.ENCODER_PACKAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Category.ADMIN;
-import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.INT;
+import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type.*;
 import static uk.co.real_logic.fix_gateway.dictionary.ir.Field.registerField;
 
 public final class ExampleDictionary
@@ -39,6 +39,7 @@ public final class ExampleDictionary
     public static final String NO_EG_GROUP = "NoEgGroup";
     public static final String NO_COMPONENT_GROUP = "NoComponentGroup";
     public static final String EG_COMPONENT = "EgComponent";
+    public static final String FIELDS_MESSAGE = "FieldsMessage";
 
     public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
     public static final String OTHER_ENUM = PARENT_PACKAGE + "." + "OtherEnum";
@@ -51,6 +52,7 @@ public final class ExampleDictionary
     public static final String HEADER_ENCODER = TEST_PACKAGE + ".HeaderEncoder";
 
     public static final String HEARTBEAT_DECODER = TEST_PACKAGE + ".HeartbeatDecoder";
+    public static final String FIELDS_MESSAGE_DECODER = TEST_PACKAGE + "." + FIELDS_MESSAGE + "Decoder";
     public static final String HEADER_DECODER = TEST_PACKAGE + ".HeaderDecoder";
     public static final String COMPONENT_DECODER = TEST_PACKAGE + "." + EG_COMPONENT + "Decoder";
     public static final String OTHER_MESSAGE_DECODER = TEST_PACKAGE + ".OtherMessageDecoder";
@@ -235,6 +237,13 @@ public final class ExampleDictionary
         "8=FIX.4.4\0019=0049\00135=0\001115=abc\001116=2\001117=1.1" +
             "\001127=19700101-00:00:00\00110=209\001";
 
+    public static final String EG_FIELDS_MESSAGE =
+        "8=FIX.4.4\0019=0049\00135=Z\0011001=GBP\0011002=XLON\0011003=GB" +
+            "\0011004=GBP\0011005=XLON\0011006=GB\00110=209\001";
+
+    public static final String EG_NO_OPTIONAL_FIELDS_MESSAGE =
+        "8=FIX.4.4\0019=0049\00135=Z\0011001=GBP\0011002=XLON\0011003=GB\00110=209\001";
+
     public static final int TEST_REQ_ID_TAG = 112;
 
     public static final String OTHER_MESSAGE_TYPE = "AB";
@@ -314,7 +323,15 @@ public final class ExampleDictionary
         final Message otherMessage = new Message("OtherMessage", OTHER_MESSAGE_TYPE, ADMIN);
         otherMessage.requiredEntry(registerField(messageEgFields, 99, "OtherField", INT));
 
-        final List<Message> messages = asList(heartbeat, otherMessage);
+        final Message fieldsMessage = new Message(FIELDS_MESSAGE, "Z", ADMIN);
+        fieldsMessage.requiredEntry(registerField(messageEgFields, 1001, "CurrencyField", CURRENCY));
+        fieldsMessage.requiredEntry(registerField(messageEgFields, 1002, "ExchangeField", EXCHANGE));
+        fieldsMessage.requiredEntry(registerField(messageEgFields, 1003, "CountryField", COUNTRY));
+        fieldsMessage.optionalEntry(registerField(messageEgFields, 1004, "OptionalCurrencyField", CURRENCY));
+        fieldsMessage.optionalEntry(registerField(messageEgFields, 1005, "OptionalExchangeField", EXCHANGE));
+        fieldsMessage.optionalEntry(registerField(messageEgFields, 1006, "OptionalCountryField", COUNTRY));
+
+        final List<Message> messages = asList(heartbeat, otherMessage, fieldsMessage);
 
         final Map<String, Component> components = new HashMap<>();
         components.put(EG_COMPONENT, egComponent);

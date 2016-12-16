@@ -149,4 +149,19 @@ public final class Reflection
     {
         return get(object, "egComponent");
     }
+
+    public static byte[] getBytes(final Decoder decoder, final String field) throws Exception
+    {
+        return (byte[]) get(decoder, field);
+    }
+
+    public static char[] getChars(final Decoder decoder, final String field) throws Exception
+    {
+        return (char[]) get(decoder, field);
+    }
+
+    public static String getString(final Decoder decoder, final String field) throws Exception
+    {
+        return (String) get(decoder, field);
+    }
 }

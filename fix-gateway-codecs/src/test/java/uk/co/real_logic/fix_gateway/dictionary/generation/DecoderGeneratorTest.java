@@ -58,6 +58,7 @@ public class DecoderGeneratorTest
     private static Class<?> heartbeat;
     private static Class<?> component;
     private static Class<?> otherMessage;
+    private static Class<?> fieldsMessage;
 
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
@@ -74,6 +75,7 @@ public class DecoderGeneratorTest
             System.out.println(sources);
         }
         component = heartbeat.getClassLoader().loadClass(COMPONENT_DECODER);
+        fieldsMessage = heartbeat.getClassLoader().loadClass(FIELDS_MESSAGE_DECODER);
         compileInMemory(HEADER_DECODER, sources);
         otherMessage = compileInMemory(OTHER_MESSAGE_DECODER, sources);
     }
@@ -488,7 +490,7 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void shouldEncodeAllFieldsSet() throws Exception
+    public void shouldGenerateAllFieldsSet() throws Exception
     {
         final Decoder decoder = (Decoder) heartbeat.newInstance();
         final Object allFieldsField = getField(decoder, ALL_FIELDS);
@@ -500,6 +502,95 @@ public class DecoderGeneratorTest
         assertThat(allFields, hasItem(124));
         assertThat(allFields, hasItem(35));
         assertThat(allFields, not(hasItem(999)));
+    }
+
+    @Test
+    public void shouldDecodeDifferentFieldTypes() throws Exception
+    {
+        final Decoder decoder = (Decoder) fieldsMessage.newInstance();
+        decode(EG_FIELDS_MESSAGE, decoder);
+
+        final char[] gbp = "GBP".toCharArray();
+        final char[] xlon = "XLON".toCharArray();
+        final char[] gb = "GB".toCharArray();
+
+        assertArrayEquals(gbp, getCurrencyField(decoder));
+        assertArrayEquals(xlon, getExchangeField(decoder));
+        assertArrayEquals(gb, getCountryField(decoder));
+
+        assertArrayEquals(gbp, getOptionalCurrencyField(decoder));
+        assertArrayEquals(xlon, getOptionalExchangeField(decoder));
+        assertArrayEquals(gb, getOptionalCountryField(decoder));
+
+        assertEquals("GBP", getCurrencyFieldAsString(decoder));
+        assertEquals("XLON", getExchangeFieldAsString(decoder));
+        assertEquals("GB", getCountryFieldAsString(decoder));
+
+        assertEquals("GBP", getOptionalCurrencyFieldAsString(decoder));
+        assertEquals("XLON", getOptionalExchangeFieldAsString(decoder));
+        assertEquals("GB", getOptionalCountryFieldAsString(decoder));
+
+        assertValid(decoder);
+    }
+
+    private String getOptionalCountryFieldAsString(final Decoder decoder) throws Exception
+    {
+        return getString(decoder, "optionalCountryFieldAsString");
+    }
+
+    private String getOptionalExchangeFieldAsString(final Decoder decoder) throws Exception
+    {
+        return getString(decoder, "optionalExchangeFieldAsString");
+    }
+
+    private String getOptionalCurrencyFieldAsString(final Decoder decoder) throws Exception
+    {
+        return getString(decoder, "optionalCurrencyFieldAsString");
+    }
+
+    private String getCountryFieldAsString(final Decoder decoder) throws Exception
+    {
+        return getString(decoder, "countryFieldAsString");
+    }
+
+    private String getExchangeFieldAsString(final Decoder decoder) throws Exception
+    {
+        return getString(decoder, "exchangeFieldAsString");
+    }
+
+    private String getCurrencyFieldAsString(final Decoder decoder) throws Exception
+    {
+        return getString(decoder, "currencyFieldAsString");
+    }
+
+    private char[] getOptionalCountryField(final Decoder decoder) throws Exception
+    {
+        return getChars(decoder, "optionalCountryField");
+    }
+
+    private char[] getOptionalExchangeField(final Decoder decoder) throws Exception
+    {
+        return getChars(decoder, "optionalExchangeField");
+    }
+
+    private char[] getOptionalCurrencyField(final Decoder decoder) throws Exception
+    {
+        return getChars(decoder, "optionalCurrencyField");
+    }
+
+    private char[] getCountryField(final Decoder decoder) throws Exception
+    {
+        return getChars(decoder, "countryField");
+    }
+
+    private char[] getExchangeField(final Decoder decoder) throws Exception
+    {
+        return getChars(decoder, "exchangeField");
+    }
+
+    private char[] getCurrencyField(final Decoder decoder) throws Exception
+    {
+        return getChars(decoder, "currencyField");
     }
 
     // TODO: validation for groups
@@ -658,22 +749,17 @@ public class DecoderGeneratorTest
 
     private byte[] getDataField(final Decoder decoder) throws Exception
     {
-        return (byte[]) get(decoder, DATA_FIELD);
+        return getBytes(decoder, DATA_FIELD);
     }
 
     private byte[] getSomeTimeField(final Decoder decoder) throws Exception
     {
-        return (byte[]) get(decoder, SOME_TIME_FIELD);
+        return getBytes(decoder, SOME_TIME_FIELD);
     }
 
     private String getSomeTimeFieldAsString(final Decoder decoder) throws Exception
     {
         return (String) get(decoder, SOME_TIME_FIELD + "AsString");
-    }
-
-    private int getSomeTimeFieldLength(final Decoder decoder) throws Exception
-    {
-        return (int) get(decoder, SOME_TIME_FIELD + "Length");
     }
 
     private Object getBooleanField(final Decoder decoder) throws Exception
