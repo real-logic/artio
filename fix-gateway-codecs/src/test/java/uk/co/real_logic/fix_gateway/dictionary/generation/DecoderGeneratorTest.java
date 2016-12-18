@@ -50,11 +50,7 @@ public class DecoderGeneratorTest
     private static final char[] AB = "ab".toCharArray();
     private static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
 
-    private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
-    private static ConstantGenerator constantGenerator = new ConstantGenerator(
-        MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
-    private static DecoderGenerator decoderGenerator = new DecoderGenerator(
-        MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager, ValidationOn.class);
+    private static Class<?> heartbeatWithoutValidation;
     private static Class<?> heartbeat;
     private static Class<?> component;
     private static Class<?> otherMessage;
@@ -65,19 +61,33 @@ public class DecoderGeneratorTest
     @BeforeClass
     public static void generate() throws Exception
     {
-        constantGenerator.generate();
-        decoderGenerator.generate();
-        final Map<String, CharSequence> sources = outputManager.getSources();
-        // System.out.println(sources);
-        heartbeat = compileInMemory(HEARTBEAT_DECODER, sources);
+        final Map<String, CharSequence> sourcesWithValidation = generateSources(true);
+        final Map<String, CharSequence> sourcesWithoutValidation = generateSources(false);
+        heartbeat = compileInMemory(HEARTBEAT_DECODER, sourcesWithValidation);
         if (heartbeat == null)
         {
-            System.out.println(sources);
+            System.out.println(sourcesWithValidation);
         }
         component = heartbeat.getClassLoader().loadClass(COMPONENT_DECODER);
         fieldsMessage = heartbeat.getClassLoader().loadClass(FIELDS_MESSAGE_DECODER);
-        compileInMemory(HEADER_DECODER, sources);
-        otherMessage = compileInMemory(OTHER_MESSAGE_DECODER, sources);
+        compileInMemory(HEADER_DECODER, sourcesWithValidation);
+        otherMessage = compileInMemory(OTHER_MESSAGE_DECODER, sourcesWithValidation);
+
+        heartbeatWithoutValidation = compileInMemory(HEARTBEAT_DECODER, sourcesWithoutValidation);
+    }
+
+    private static Map<String, CharSequence> generateSources(final boolean validation)
+    {
+        final Class<?> validationClass = validation ? ValidationOn.class : ValidationOff.class;
+        final StringWriterOutputManager outputManager = new StringWriterOutputManager();
+        final ConstantGenerator constantGenerator = new ConstantGenerator(
+            MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
+        final DecoderGenerator decoderGenerator = new DecoderGenerator(
+            MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager, validationClass);
+
+        constantGenerator.generate();
+        decoderGenerator.generate();
+        return outputManager.getSources();
     }
 
     @Test
@@ -349,11 +359,6 @@ public class DecoderGeneratorTest
         assertThat(allFields, not(hasItem(999)));
     }
 
-    private Object getRequiredFields(final Decoder decoder) throws IllegalAccessException, NoSuchFieldException
-    {
-        return heartbeat.getField(REQUIRED_FIELDS).get(decoder);
-    }
-
     @Test
     public void shouldValidateMissingRequiredFields() throws Exception
     {
@@ -554,6 +559,93 @@ public class DecoderGeneratorTest
         decode(EG_NO_OPTIONAL_FIELDS_MESSAGE, decoder);
         assertRequiredFieldsMessageFieldsDecoded(decoder, "USD", "N", "US");
         assertOptionalDifferentFieldsNotDecoded(decoder);
+
+        assertValid(decoder);
+    }
+
+    // -----------------------------------------------------
+    //             Validation Off Test Cases
+    // -----------------------------------------------------
+
+    @Test
+    public void decodesValuesWithoutValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutValidation(DERIVED_FIELDS_MESSAGE);
+
+        assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
+        assertEquals(2, getIntField(decoder));
+        assertEquals(new DecimalFloat(11, 1), getFloatField(decoder));
+
+        assertValid(decoder);
+    }
+
+    @Test
+    public void shouldIgnoreMissingOptionalValuesWithoutValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutValidation(DERIVED_FIELDS_MESSAGE);
+
+        assertFalse(hasTestReqId(decoder));
+        assertFalse(hasBooleanField(decoder));
+        assertFalse(hasDataField(decoder));
+
+        assertValid(decoder);
+    }
+
+    @Test
+    public void setsMissingOptionalValuesWithoutValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutValidation(ENCODED_MESSAGE);
+
+        assertTrue(hasTestReqId(decoder));
+        assertTrue(hasBooleanField(decoder));
+        assertTrue(hasDataField(decoder));
+
+        assertArrayEquals(ABC, getTestReqId(decoder));
+        assertEquals(true, getBooleanField(decoder));
+        assertArrayEquals(new byte[]{'1', '2', '3'}, getDataField(decoder));
+
+        assertValid(decoder);
+    }
+
+    @Test
+    public void shouldDecodeRepeatingGroupsWithoutValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutValidation(REPEATING_GROUP_MESSAGE);
+
+        assertRepeatingGroupDecoded(decoder);
+    }
+
+    @Test
+    public void shouldDecodeRepeatingGroupsAfterResetWithoutValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutValidation(REPEATING_GROUP_MESSAGE);
+
+        assertRepeatingGroupDecoded(decoder);
+
+        decoder.reset();
+
+        decode(REPEATING_GROUP_MESSAGE, decoder);
+
+        assertRepeatingGroupDecoded(decoder);
+    }
+
+    @Test
+    public void shouldDecodeNestedRepeatingGroupsWithoutValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutValidation(NESTED_GROUP_MESSAGE);
+
+        assertEquals(1, getNoEgGroupGroupCounter(decoder));
+
+        final Object group = getEgGroup(decoder);
+        assertEquals(1, getGroupField(group));
+        assertNull(next(group));
+
+        final Object nestedGroup = getNestedGroup(group);
+        assertEquals(
+            heartbeat.getName() + "$EgGroupGroupDecoder$NestedGroupGroupDecoder",
+            nestedGroup.getClass().getName());
+        assertEquals(1, get(nestedGroup, "nestedField"));
+        assertNull(next(nestedGroup));
 
         assertValid(decoder);
     }
@@ -778,6 +870,13 @@ public class DecoderGeneratorTest
         return decoder;
     }
 
+    private Decoder decodeHeartbeatWithoutValidation(final String example) throws Exception
+    {
+        final Decoder decoder = (Decoder) heartbeatWithoutValidation.newInstance();
+        decode(example, decoder);
+        return decoder;
+    }
+
     private void decode(final String example, final Decoder decoder)
     {
         buffer.putAscii(1, example);
@@ -862,5 +961,10 @@ public class DecoderGeneratorTest
         assertTrue(String.format(
             "Decoder fails validation due to: %s for tag: %d", decoder.rejectReason(), decoder.invalidTagId()),
             isValid);
+    }
+
+    private Object getRequiredFields(final Decoder decoder) throws IllegalAccessException, NoSuchFieldException
+    {
+        return heartbeat.getField(REQUIRED_FIELDS).get(decoder);
     }
 }
