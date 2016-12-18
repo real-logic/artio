@@ -567,6 +567,20 @@ public class DecoderGeneratorTest
     //             Validation Off Test Cases
     // -----------------------------------------------------
 
+    // TODO: shouldIgnoreMissingRequiredFieldsInGroupsWithoutValidation
+    // TODO: shouldIgnoreUnknownFieldsWithoutValidation
+    // TODO: shouldIgnoreUnknownFieldsInGroupsWithoutValidation
+
+    @Test
+    public void shouldIgnoreMissingRequiredFieldsWithoutValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutValidation(MISSING_REQUIRED_FIELDS_MESSAGE);
+
+        assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
+        // Missing int field
+        assertEquals(new DecimalFloat(11, 1), getFloatField(decoder));
+    }
+
     @Test
     public void decodesValuesWithoutValidation() throws Exception
     {

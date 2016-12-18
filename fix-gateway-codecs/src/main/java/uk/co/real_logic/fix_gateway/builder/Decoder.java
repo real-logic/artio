@@ -23,20 +23,30 @@ public interface Decoder
 
     int decode(AsciiBuffer buffer, int offset, int length);
 
+    /**
+     * Resets the result of the decoder.
+     */
     void reset();
 
     /**
+     * If Validation is switched on then returns it true if the message is valid, false otherwise. If
+     * Validation is switched off then the result of this is undefined.
+     *
      * @return true if the message is valid, false otherwise
      */
     boolean validate();
 
     /**
+     * You must call {@link #validate()} first before relying on the result of this method.
+     *
      * @return the tag id of the tag that failed validation, or {@code NO_ERROR} if there's no error.
      */
     int invalidTagId();
 
     /**
-     * NB: Not enum to avoid cyclic compilation dependency
+     * You must call {@link #validate()} first before relying on the result of this method.
+     *
+     * This method doesn't return an enum in order to avoid cyclic compilation dependencies upon generated enums.
      *
      * @return the session reject reason error code corresponding to the validation error,
      * or {@code NO_ERROR} if there's no error.

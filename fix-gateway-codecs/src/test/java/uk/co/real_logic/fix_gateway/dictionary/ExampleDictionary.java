@@ -171,9 +171,6 @@ public final class ExampleDictionary
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001117=1.1\001127=19700101-00:00:00.001" +
             "\00110=161\001";
 
-    public static final String MISSING_EVERYTHING =
-        "8=FIX.4.4\0019=0027\00110=161\001";
-
     public static final String INVALID_TAG_NUMBER_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
             "\0019999=9999\00110=161\001";
