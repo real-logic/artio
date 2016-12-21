@@ -143,8 +143,8 @@ public class ClusteredGatewaySystemTest
         connectFixSession();
 
         final long begin = System.nanoTime();
-        roundtripAMessage(initiatingSession, acceptingOtfAcceptor);
-        final long position = roundtripAMessage(acceptingSession, initiatingOtfAcceptor);
+        roundTripAMessage(initiatingSession, acceptingOtfAcceptor);
+        final long position = roundTripAMessage(acceptingSession, initiatingOtfAcceptor);
 
         closeLibrariesAndEngine();
         final long end = System.nanoTime() + 1;
@@ -162,7 +162,7 @@ public class ClusteredGatewaySystemTest
     {
         connectFixSession();
 
-        roundtripAMessage(acceptingSession, initiatingOtfAcceptor);
+        roundTripAMessage(acceptingSession, initiatingOtfAcceptor);
 
         final FixEngineRunner oldLeader = leader;
         oldLeader.disable();
@@ -211,7 +211,7 @@ public class ClusteredGatewaySystemTest
 
         DebugLogger.log(GATEWAY_CLUSTER, "Connected New Fix Session\n");
 
-        roundtripAMessage(acceptingSession, initiatingOtfAcceptor);
+        roundTripAMessage(acceptingSession, initiatingOtfAcceptor);
 
         DebugLogger.log(GATEWAY_CLUSTER, "Message Roundtrip\n");
     }
@@ -288,7 +288,7 @@ public class ClusteredGatewaySystemTest
         assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
     }
 
-    private long roundtripAMessage(final Session sendingSession, final FakeOtfAcceptor receivingHandler)
+    private long roundTripAMessage(final Session sendingSession, final FakeOtfAcceptor receivingHandler)
     {
         final long position = sendTestRequest(sendingSession);
 
