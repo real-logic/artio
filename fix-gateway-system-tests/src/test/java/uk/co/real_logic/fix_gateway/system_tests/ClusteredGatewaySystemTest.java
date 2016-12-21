@@ -96,7 +96,7 @@ public class ClusteredGatewaySystemTest
 
         final LibraryConfiguration configuration = acceptingLibraryConfig(
             acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, null)
-            .replyTimeoutInMs(2_000);
+            .replyTimeoutInMs(5_000);
 
         configuration.libraryAeronChannels(cluster
             .stream()
@@ -106,7 +106,7 @@ public class ClusteredGatewaySystemTest
         this.leader = withTimeout(
             "Cluster failed to elect a leader",
             this::findNewLeader,
-            2000);
+            5000);
 
         acceptingLibrary = connect(configuration);
 
@@ -123,37 +123,23 @@ public class ClusteredGatewaySystemTest
         cleanupMediaDriver(mediaDriver);
     }
 
-    private Optional<FixEngineRunner> findNewLeader()
-    {
-        return cluster
-            .stream()
-            .filter((leader) -> leader != this.leader)
-            .filter(FixEngineRunner::isLeader)
-            .findFirst();
-    }
-
-    private IntStream ids()
-    {
-        return IntStream.range(0, CLUSTER_SIZE);
-    }
-
     @Test(timeout = 20_000)
     public void shouldExchangeMessagesInCluster()
     {
         connectFixSession();
 
         final long begin = System.nanoTime();
-        roundTripAMessage(initiatingSession, acceptingOtfAcceptor);
-        final long position = roundTripAMessage(acceptingSession, initiatingOtfAcceptor);
+        roundTripOneMessage(initiatingSession, acceptingOtfAcceptor);
+        final long position = roundTripOneMessage(acceptingSession, initiatingOtfAcceptor);
 
         closeLibrariesAndEngine();
         final long end = System.nanoTime() + 1;
 
         assertThat(acceptingHandler.sentPosition(), greaterThanOrEqualTo(position));
 
-        allClusterNodesHaveArchivedTestRequestMessage(begin, end, acceptingSession.id());
+        assertAllClusterNodesHaveArchivedTestRequestMessage(begin, end, acceptingSession.id());
 
-        allClusterNodesHaveSameIndexFiles();
+        assertAllClusterNodesHaveSameIndexFiles();
     }
 
     @Ignore
@@ -162,7 +148,7 @@ public class ClusteredGatewaySystemTest
     {
         connectFixSession();
 
-        roundTripAMessage(acceptingSession, initiatingOtfAcceptor);
+        roundTripOneMessage(acceptingSession, initiatingOtfAcceptor);
 
         final FixEngineRunner oldLeader = leader;
         oldLeader.disable();
@@ -200,9 +186,9 @@ public class ClusteredGatewaySystemTest
             {
                 pollLibraries();
 
-                oldSessionDisconnected(initiatingLibrary);
-                oldSessionDisconnected(acceptingLibrary);
-                oldSessionDisconnected(initiatingEngine);
+                assertOldSessionDisconnected(initiatingLibrary);
+                assertOldSessionDisconnected(acceptingLibrary);
+                assertOldSessionDisconnected(initiatingEngine);
 
                 assertConnectedToLeader();
             });
@@ -211,9 +197,23 @@ public class ClusteredGatewaySystemTest
 
         DebugLogger.log(GATEWAY_CLUSTER, "Connected New Fix Session\n");
 
-        roundTripAMessage(acceptingSession, initiatingOtfAcceptor);
+        roundTripOneMessage(acceptingSession, initiatingOtfAcceptor);
 
         DebugLogger.log(GATEWAY_CLUSTER, "Message Roundtrip\n");
+    }
+
+    private Optional<FixEngineRunner> findNewLeader()
+    {
+        return cluster
+            .stream()
+            .filter((leader) -> leader != this.leader)
+            .filter(FixEngineRunner::isLeader)
+            .findFirst();
+    }
+
+    private IntStream ids()
+    {
+        return IntStream.range(0, CLUSTER_SIZE);
     }
 
     private void assertConnectedToLeader()
@@ -221,14 +221,14 @@ public class ClusteredGatewaySystemTest
         assertTrue("Disconnected from Leader", connectedToLeader());
     }
 
-    private void oldSessionDisconnected(final FixEngine engine)
+    private void assertOldSessionDisconnected(final FixEngine engine)
     {
         final List<LibraryInfo> libraries = SystemTestUtil.libraries(engine);
         libraries.forEach(library ->
             assertThat("Old session hasn't disconnected yet", library.sessions(), hasSize(0)));
     }
 
-    private void oldSessionDisconnected(final FixLibrary library)
+    private void assertOldSessionDisconnected(final FixLibrary library)
     {
         assertThat("Old session hasn't disconnected yet", library.sessions(), hasSize(0));
     }
@@ -282,13 +282,14 @@ public class ClusteredGatewaySystemTest
                 initiatingLibrary.poll(1);
 
                 assertConnectedToLeader();
-            }, 10_000);
+            },
+            10_000);
         acceptingSession = acquireSession(acceptingHandler, acceptingLibrary, sessionId);
         assertEquals(ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());
         assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
     }
 
-    private long roundTripAMessage(final Session sendingSession, final FakeOtfAcceptor receivingHandler)
+    private long roundTripOneMessage(final Session sendingSession, final FakeOtfAcceptor receivingHandler)
     {
         final long position = sendTestRequest(sendingSession);
 
@@ -297,7 +298,7 @@ public class ClusteredGatewaySystemTest
         return position;
     }
 
-    private void allClusterNodesHaveArchivedTestRequestMessage(
+    private void assertAllClusterNodesHaveArchivedTestRequestMessage(
         final long begin, final long end, final long sessionId)
     {
         cluster.forEach(
@@ -328,13 +329,14 @@ public class ClusteredGatewaySystemTest
                         Throwable::printStackTrace);
                 }
 
-                assertEquals(configuration.nodeId() + " is missing the test request message from its log",
+                assertEquals(
+                    configuration.nodeId() + " is missing the test request message from its log",
                     1,
                     messageCounter.messageCount());
             });
     }
 
-    private void allClusterNodesHaveSameIndexFiles()
+    private void assertAllClusterNodesHaveSameIndexFiles()
     {
         final FixEngineRunner firstNode = cluster.get(0);
         final String logFileDir = firstNode.configuration().logFileDir();
