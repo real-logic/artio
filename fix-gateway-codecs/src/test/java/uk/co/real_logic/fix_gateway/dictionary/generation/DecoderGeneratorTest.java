@@ -571,8 +571,6 @@ public class DecoderGeneratorTest
     //             Validation Off Test Cases
     // -----------------------------------------------------
 
-    // TODO: shouldIgnoreMissingRequiredFieldsInGroupsWithoutValidation
-
     @Test
     public void shouldIgnoreMissingRequiredFieldsWithoutValidation() throws Exception
     {
