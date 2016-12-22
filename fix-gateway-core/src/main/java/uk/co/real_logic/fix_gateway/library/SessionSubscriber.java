@@ -155,7 +155,7 @@ class SessionSubscriber implements AutoCloseable
         handler.onTimeout(libraryId, sessionId);
     }
 
-    public int poll(final long time)
+    int poll(final long time)
     {
         return session.poll(time);
     }
@@ -165,7 +165,7 @@ class SessionSubscriber implements AutoCloseable
         session.requestDisconnect();
     }
 
-    public Session session()
+    Session session()
     {
         return session;
     }
