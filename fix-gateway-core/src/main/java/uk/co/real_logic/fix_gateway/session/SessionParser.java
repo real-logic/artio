@@ -422,4 +422,9 @@ public class SessionParser
     {
         return session;
     }
+
+    public void sequenceIndex(final int sequenceIndex)
+    {
+        session.sequenceIndex(sequenceIndex);
+    }
 }

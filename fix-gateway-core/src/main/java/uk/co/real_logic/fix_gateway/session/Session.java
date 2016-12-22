@@ -537,6 +537,24 @@ public class Session implements AutoCloseable
         return state == ACTIVE || state == AWAITING_RESEND;
     }
 
+
+    public boolean isAcceptor()
+    {
+        return false;
+    }
+
+    /**
+     * Get the current sequence index. This is a number that increments everytime the
+     * sequence numbers get reset. In combination with the sequence numbers it provides
+     * a monotonically increasing sequence.
+     *
+     * @return the current sequence index
+     */
+    public int sequenceIndex()
+    {
+        return sequenceIndex;
+    }
+
     /**
      * Close the session object and release its resources.
      *
@@ -1027,7 +1045,6 @@ public class Session implements AutoCloseable
 
     // ---------- Setters ----------
 
-
     Session heartbeatIntervalInS(final int heartbeatIntervalInS)
     {
         this.heartbeatIntervalInMs = SECONDS.toMillis((long)heartbeatIntervalInS);
@@ -1040,7 +1057,7 @@ public class Session implements AutoCloseable
         return this;
     }
 
-    Session nextRequiredMessageTime(final long nextRequiredMessageTime)
+    private Session nextRequiredMessageTime(final long nextRequiredMessageTime)
     {
         this.nextRequiredInboundMessageTimeInMs = nextRequiredMessageTime;
         return this;
@@ -1083,7 +1100,7 @@ public class Session implements AutoCloseable
         receivedMsgSeqNo.setOrdered(value);
     }
 
-    protected int expectedReceivedSeqNum()
+    int expectedReceivedSeqNum()
     {
         return lastReceivedMsgSeqNum + 1;
     }
@@ -1102,7 +1119,7 @@ public class Session implements AutoCloseable
         return lastSentMsgSeqNum;
     }
 
-    protected void incReceivedSeqNum()
+    private void incReceivedSeqNum()
     {
         lastReceivedMsgSeqNum++;
         receivedMsgSeqNo.increment();
@@ -1128,7 +1145,7 @@ public class Session implements AutoCloseable
         return this;
     }
 
-    public Action onInvalidMessage(
+    Action onInvalidMessage(
         final int refSeqNum,
         final int refTagId,
         final char[] refMsgType,
@@ -1187,37 +1204,20 @@ public class Session implements AutoCloseable
             '}';
     }
 
+    // TODO: restrict to only call from library
     public void disable()
     {
         state(SessionState.DISABLED);
         close();
     }
 
+    // TODO: restrict to only call from library
     public void libraryConnected(final boolean libraryConnected)
     {
         proxy.libraryConnected(libraryConnected);
     }
 
-    public boolean isAcceptor()
-    {
-        return false;
-    }
-
-    /**
-     * Get the current sequence index. This is a number that increments everytime the
-     * sequence numbers get reset. In combination with the sequence numbers it provides
-     * a monotonically increasing sequence.
-     *
-     * @return the current sequence index
-     */
-    public int sequenceIndex()
-    {
-        return sequenceIndex;
-    }
-
-    // Do not call from out side the gateway
-    // TODO: find a better way to encapsulate this method
-    public void sequenceIndex(final int sequenceIndex)
+    void sequenceIndex(final int sequenceIndex)
     {
         this.sequenceIndex = sequenceIndex;
     }
