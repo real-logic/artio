@@ -593,13 +593,25 @@ public class DecoderGeneratorTest
         assertEquals(new DecimalFloat(11, 1), getFloatField(decoder));
     }
 
-    // TODO: move message fields after the grou and check that they are decoded as well.
-    // TODO: above with validation as well
     @Test
     public void shouldIgnoreInvalidTagNumberInGroupsWithoutValidation() throws Exception
     {
         final Decoder decoder = decodeHeartbeatWithoutValidation(REPEATING_GROUP_MESSAGE_WITH_INVALID_TAG_NUMBER);
 
+        assertRepeatingGroupAndFieldsDecoded(decoder);
+    }
+
+    @Test
+    public void shouldIgnoreInvalidTagNumberInGroupsFieldAfterWithoutValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutValidation(
+            REPEATING_GROUP_MESSAGE_WITH_INVALID_TAG_NUMBER_FIELDS_AFTER);
+
+        assertRepeatingGroupAndFieldsDecoded(decoder);
+    }
+
+    private void assertRepeatingGroupAndFieldsDecoded(final Decoder decoder) throws Exception
+    {
         assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
         assertEquals(2, getIntField(decoder));
         assertEquals(new DecimalFloat(11, 1), getFloatField(decoder));
