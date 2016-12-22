@@ -49,6 +49,7 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 public class DecoderGenerator extends Generator
 {
+    public static final boolean CODEC_LOGGING = Boolean.getBoolean("fix.codec.log");
 
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
     public static final String GROUP_FIELDS = "GROUP_FIELDS";
@@ -567,7 +568,7 @@ public class DecoderGenerator extends Generator
             "    private %1$s %2$s = null;\n" +
             "    public %1$s %2$s()\n" +
             "    {\n" +
-            "        return %2$s;" +
+            "        return %2$s;\n" +
             "    }\n\n" +
             "%3$s",
             decoderClassName(group),
@@ -790,6 +791,7 @@ public class DecoderGenerator extends Generator
         final String prefix =
             "    public int decode(final AsciiBuffer buffer, final int offset, final int length)\n" +
             "    {\n" +
+            "        // Decode " + aggregate.name() + "\n" +
             "        int seenFieldCount = 0;\n" +
             "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
             "        {\n" +
@@ -849,7 +851,11 @@ public class DecoderGenerator extends Generator
                 "                {\n" +
                 "                    unknownFields.add(tag);\n" +
                 "                }\n" +
-                decodeTrailerOrReturn(hasCommonCompounds, 4) +
+                // Skip the thing if it's a completely unknown field and you aren't validating messages
+                "                if (" + CODEC_VALIDATION_ENABLED + " || allFields.contains(tag))\n" +
+                "                {\n" +
+                decodeTrailerOrReturn(hasCommonCompounds, 5) +
+                "                }\n" +
                 "\n" +
                 "            }\n\n" +
                 "            if (position < (endOfField + 1))\n" +
@@ -962,7 +968,7 @@ public class DecoderGenerator extends Generator
             "                {\n" +
             "                    %1$s = new %2$s(trailer);\n" +
             "                }\n" +
-            "                position = endOfField + 1;" +
+            "                position = endOfField + 1;\n" +
             "                position += %1$s.decode(buffer, position, end - endOfField);\n",
             formatPropertyName(group.name()),
             decoderClassName(group));

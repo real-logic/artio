@@ -64,9 +64,9 @@ public class DecoderGeneratorTest
         final Map<String, CharSequence> sourcesWithValidation = generateSources(true);
         final Map<String, CharSequence> sourcesWithoutValidation = generateSources(false);
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sourcesWithValidation);
-        if (heartbeat == null)
+        if (heartbeat == null || CODEC_LOGGING)
         {
-            System.out.println(sourcesWithValidation);
+            System.out.println("sourcesWithValidation = " + sourcesWithValidation);
         }
         component = heartbeat.getClassLoader().loadClass(COMPONENT_DECODER);
         fieldsMessage = heartbeat.getClassLoader().loadClass(FIELDS_MESSAGE_DECODER);
@@ -74,6 +74,10 @@ public class DecoderGeneratorTest
         otherMessage = compileInMemory(OTHER_MESSAGE_DECODER, sourcesWithValidation);
 
         heartbeatWithoutValidation = compileInMemory(HEARTBEAT_DECODER, sourcesWithoutValidation);
+        if (heartbeatWithoutValidation == null || CODEC_LOGGING)
+        {
+            System.out.println("sourcesWithoutValidation = " + sourcesWithoutValidation);
+        }
     }
 
     private static Map<String, CharSequence> generateSources(final boolean validation)
@@ -568,8 +572,6 @@ public class DecoderGeneratorTest
     // -----------------------------------------------------
 
     // TODO: shouldIgnoreMissingRequiredFieldsInGroupsWithoutValidation
-    // TODO: shouldIgnoreUnknownFieldsWithoutValidation
-    // TODO: shouldIgnoreUnknownFieldsInGroupsWithoutValidation
 
     @Test
     public void shouldIgnoreMissingRequiredFieldsWithoutValidation() throws Exception
@@ -579,6 +581,30 @@ public class DecoderGeneratorTest
         assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
         // Missing int field
         assertEquals(new DecimalFloat(11, 1), getFloatField(decoder));
+    }
+
+    @Test
+    public void shouldIgnoreInvalidTagNumberWithoutValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutValidation(INVALID_TAG_NUMBER_MESSAGE);
+
+        assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
+        assertEquals(2, getIntField(decoder));
+        assertEquals(new DecimalFloat(11, 1), getFloatField(decoder));
+    }
+
+    // TODO: move message fields after the grou and check that they are decoded as well.
+    // TODO: above with validation as well
+    @Test
+    public void shouldIgnoreInvalidTagNumberInGroupsWithoutValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutValidation(REPEATING_GROUP_MESSAGE_WITH_INVALID_TAG_NUMBER);
+
+        assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
+        assertEquals(2, getIntField(decoder));
+        assertEquals(new DecimalFloat(11, 1), getFloatField(decoder));
+
+        assertRepeatingGroupDecoded(decoder);
     }
 
     @Test
