@@ -249,7 +249,7 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
 
-        assertRepeatingGroupDecoded(decoder);
+        assertValidRepeatingGroupDecoded(decoder);
     }
 
     @Test
@@ -257,13 +257,13 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
 
-        assertRepeatingGroupDecoded(decoder);
+        assertValidRepeatingGroupDecoded(decoder);
 
         decoder.reset();
 
         decode(REPEATING_GROUP_MESSAGE, decoder);
 
-        assertRepeatingGroupDecoded(decoder);
+        assertValidRepeatingGroupDecoded(decoder);
     }
 
     @Test
@@ -271,7 +271,7 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
 
-        assertRepeatingGroupDecoded(decoder);
+        assertValidRepeatingGroupDecoded(decoder);
 
         decode(SINGLE_REPEATING_GROUP_MESSAGE, decoder);
 
@@ -283,7 +283,7 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
 
-        assertRepeatingGroupDecoded(decoder);
+        assertValidRepeatingGroupDecoded(decoder);
 
         decoder.reset();
 
@@ -584,6 +584,19 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void shouldIgnoreMissingRequiredFieldsWithRepeatingGroupWithoutValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutValidation(
+            REPEATING_GROUP_MESSAGE_WITH_MISSING_REQUIRED_FIELDS_MESSAGE);
+
+        assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
+        // Missing int field
+        assertEquals(new DecimalFloat(11, 1), getFloatField(decoder));
+
+        assertRepeatingGroupDecoded(decoder);
+    }
+
+    @Test
     public void shouldIgnoreInvalidTagNumberWithoutValidation() throws Exception
     {
         final Decoder decoder = decodeHeartbeatWithoutValidation(INVALID_TAG_NUMBER_MESSAGE);
@@ -608,15 +621,6 @@ public class DecoderGeneratorTest
             REPEATING_GROUP_MESSAGE_WITH_INVALID_TAG_NUMBER_FIELDS_AFTER);
 
         assertRepeatingGroupAndFieldsDecoded(decoder);
-    }
-
-    private void assertRepeatingGroupAndFieldsDecoded(final Decoder decoder) throws Exception
-    {
-        assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
-        assertEquals(2, getIntField(decoder));
-        assertEquals(new DecimalFloat(11, 1), getFloatField(decoder));
-
-        assertRepeatingGroupDecoded(decoder);
     }
 
     @Test
@@ -664,7 +668,7 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeatWithoutValidation(REPEATING_GROUP_MESSAGE);
 
-        assertRepeatingGroupDecoded(decoder);
+        assertValidRepeatingGroupDecoded(decoder);
     }
 
     @Test
@@ -672,13 +676,13 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeatWithoutValidation(REPEATING_GROUP_MESSAGE);
 
-        assertRepeatingGroupDecoded(decoder);
+        assertValidRepeatingGroupDecoded(decoder);
 
         decoder.reset();
 
         decode(REPEATING_GROUP_MESSAGE, decoder);
 
-        assertRepeatingGroupDecoded(decoder);
+        assertValidRepeatingGroupDecoded(decoder);
     }
 
     @Test
@@ -700,6 +704,15 @@ public class DecoderGeneratorTest
         assertNull(next(nestedGroup));
 
         assertValid(decoder);
+    }
+
+    private void assertRepeatingGroupAndFieldsDecoded(final Decoder decoder) throws Exception
+    {
+        assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
+        assertEquals(2, getIntField(decoder));
+        assertEquals(new DecimalFloat(11, 1), getFloatField(decoder));
+
+        assertValidRepeatingGroupDecoded(decoder);
     }
 
     private void assertOptionalDifferentFieldsNotDecoded(final Decoder decoder) throws Exception
@@ -831,6 +844,13 @@ public class DecoderGeneratorTest
         assertFalse(iterator.hasNext());
     }
 
+    private void assertValidRepeatingGroupDecoded(final Decoder decoder) throws Exception
+    {
+        assertRepeatingGroupDecoded(decoder);
+
+        assertValid(decoder);
+    }
+
     private void assertRepeatingGroupDecoded(final Decoder decoder) throws Exception
     {
         assertEquals(2, getNoEgGroupGroupCounter(decoder));
@@ -844,8 +864,6 @@ public class DecoderGeneratorTest
         group = next(group);
         assertEquals(2, getGroupField(group));
         assertNull(next(group));
-
-        assertValid(decoder);
     }
 
     private void assertSingleRepeatingGroupDecoded(final Decoder decoder) throws Exception
