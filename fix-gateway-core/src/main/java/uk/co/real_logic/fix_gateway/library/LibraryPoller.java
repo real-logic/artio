@@ -58,15 +58,21 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 {
     private enum State
     {
-        /** Has connected to an engine instance */
+        /**
+         * Has connected to an engine instance
+         */
         CONNECTED,
 
-        /** Currently connecting to an engine instance */
+        /**
+         * Currently connecting to an engine instance
+         */
         CONNECTING,
 
-        /** Was explicitly closed */
+        /**
+         * Was explicitly closed
+         */
         CLOSED
-    };
+    }
 
     private static final long NO_CORRELATION_ID = 0;
 
@@ -76,6 +82,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // Used when checking the consistency of the session ids
     private final LongHashSet sessionIds = new LongHashSet(MISSING_SESSION_ID);
+
+    private final SessionAccessor accessor = new SessionAccessor(LibraryPoller.class);
 
     // Uniquely identifies library session
     private final int libraryId;
@@ -185,9 +193,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             this, timeInMs() + timeoutInMs, sessionId, lastReceivedSequenceNumber, sequenceIndex);
     }
 
-    boolean removeSession(final Session session)
+    void disableSession(final Session session)
     {
-        return sessions.remove(session);
+        sessions.remove(session);
+        accessor.disable(session);
     }
 
     long saveReleaseSession(final Session session, final long correlationId)
@@ -445,7 +454,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         for (int i = 0, size = sessions.size(); i < size; i++)
         {
             final Session session = sessions.get(i);
-            session.libraryConnected(libraryConnected);
+            accessor.libraryConnected(session, libraryConnected);
         }
     }
 
@@ -537,7 +546,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 DebugLogger.log(FIX_MESSAGE, "Init Connect: %d, %d\n", connectionId, libraryId);
                 final boolean isInitiator = correlationIdToReply.get(replyToId) instanceof InitiateSessionReply;
                 final InitiateSessionReply reply =
-                    isInitiator ? (InitiateSessionReply)correlationIdToReply.remove(replyToId) : null;
+                    isInitiator ? (InitiateSessionReply) correlationIdToReply.remove(replyToId) : null;
                 final Session session = initiateSession(
                     connectionId, lastSentSequenceNumber, lastReceivedSequenceNumber, state,
                     isInitiator ? reply.configuration() : null, sequenceIndex);
@@ -718,7 +727,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     public Action onReleaseSessionReply(final int libraryId, final long replyToId, final SessionReplyStatus status)
     {
         final ReleaseToGatewayReply reply =
-            (ReleaseToGatewayReply)correlationIdToReply.remove(replyToId);
+            (ReleaseToGatewayReply) correlationIdToReply.remove(replyToId);
         if (reply != null)
         {
             reply.onComplete(status);
@@ -729,7 +738,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public Action onRequestSessionReply(final int toId, final long replyToId, final SessionReplyStatus status)
     {
-        final RequestSessionReply reply = (RequestSessionReply)correlationIdToReply.remove(replyToId);
+        final RequestSessionReply reply = (RequestSessionReply) correlationIdToReply.remove(replyToId);
         if (reply != null)
         {
             reply.onComplete(status);
@@ -961,7 +970,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (state != State.CLOSED)
         {
-            connectionIdToSession.values().forEach(subscriber -> subscriber.session().disable());
+            connectionIdToSession.values().forEach(subscriber -> accessor.disable(subscriber.session()));
             state = State.CLOSED;
         }
     }

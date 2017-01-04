@@ -46,8 +46,7 @@ class ReleaseToGatewayReply extends LibraryReply<SessionReplyStatus>
     {
         if (result == SessionReplyStatus.OK)
         {
-            libraryPoller.removeSession(session);
-            session.disable();
+            libraryPoller.disableSession(session);
         }
 
         super.onComplete(result);

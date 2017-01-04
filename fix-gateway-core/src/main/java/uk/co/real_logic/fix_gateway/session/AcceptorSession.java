@@ -20,7 +20,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
-public final class AcceptorSession extends Session
+public class AcceptorSession extends Session
 {
 
     public AcceptorSession(

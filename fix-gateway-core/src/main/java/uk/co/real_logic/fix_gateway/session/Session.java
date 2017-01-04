@@ -1205,15 +1205,13 @@ public class Session implements AutoCloseable
             '}';
     }
 
-    // TODO: restrict to only call from library
-    public void disable()
+    void disable()
     {
         state(SessionState.DISABLED);
         close();
     }
 
-    // TODO: restrict to only call from library
-    public void libraryConnected(final boolean libraryConnected)
+    void libraryConnected(final boolean libraryConnected)
     {
         proxy.libraryConnected(libraryConnected);
     }
