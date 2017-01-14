@@ -24,7 +24,7 @@ import org.junit.runner.RunWith;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import static uk.co.real_logic.fix_gateway.util.CustomMatchers.containsAscii;
+import static uk.co.real_logic.fix_gateway.util.CustomMatchers.sequenceEqualsAscii;
 
 @RunWith(Theories.class)
 public class MutableAsciiBufferTest
@@ -39,7 +39,7 @@ public class MutableAsciiBufferTest
         final int length = string.putAsciiInt(1, 0);
 
         assertEquals(1, length);
-        assertThat(string, containsAscii("0", 1, 1));
+        assertThat(string, sequenceEqualsAscii("0", 1, 1));
     }
 
     @Test
@@ -48,7 +48,7 @@ public class MutableAsciiBufferTest
         final int length = string.putAsciiInt(1, 123);
 
         assertEquals(3, length);
-        assertThat(string, containsAscii("123", 1, 3));
+        assertThat(string, sequenceEqualsAscii("123", 1, 3));
     }
 
     @Test
@@ -57,7 +57,7 @@ public class MutableAsciiBufferTest
         final int length = string.putAsciiInt(1, -123);
 
         assertEquals(4, length);
-        assertThat(string, containsAscii("-123", 1, 4));
+        assertThat(string, sequenceEqualsAscii("-123", 1, 4));
     }
 
     @Test
@@ -65,7 +65,7 @@ public class MutableAsciiBufferTest
     {
         final int length = string.putAsciiInt(1, Integer.MAX_VALUE);
 
-        assertThat(string, containsAscii(String.valueOf(Integer.MAX_VALUE), 1, length));
+        assertThat(string, sequenceEqualsAscii(String.valueOf(Integer.MAX_VALUE), 1, length));
     }
 
     @Test
@@ -73,7 +73,7 @@ public class MutableAsciiBufferTest
     {
         final int length = string.putAsciiInt(1, Integer.MIN_VALUE);
 
-        assertThat(string, containsAscii(String.valueOf(Integer.MIN_VALUE), 1, length));
+        assertThat(string, sequenceEqualsAscii(String.valueOf(Integer.MIN_VALUE), 1, length));
     }
 
     @Test
@@ -82,7 +82,7 @@ public class MutableAsciiBufferTest
         final int length = string.putAsciiLong(1, 0L);
 
         assertEquals(1, length);
-        assertThat(string, containsAscii("0", 1, 1));
+        assertThat(string, sequenceEqualsAscii("0", 1, 1));
     }
 
     @Test
@@ -91,7 +91,7 @@ public class MutableAsciiBufferTest
         final int length = string.putAsciiLong(1, 123L);
 
         assertEquals(3, length);
-        assertThat(string, containsAscii("123", 1, 3));
+        assertThat(string, sequenceEqualsAscii("123", 1, 3));
     }
 
     @Test
@@ -100,7 +100,7 @@ public class MutableAsciiBufferTest
         final int length = string.putAsciiLong(1, -123L);
 
         assertEquals(4, length);
-        assertThat(string, containsAscii("-123", 1, 4));
+        assertThat(string, sequenceEqualsAscii("-123", 1, 4));
     }
 
     @Test
@@ -108,7 +108,7 @@ public class MutableAsciiBufferTest
     {
         final int length = string.putAsciiLong(1, Long.MAX_VALUE);
 
-        assertThat(string, containsAscii(String.valueOf(Long.MAX_VALUE), 1, length));
+        assertThat(string, sequenceEqualsAscii(String.valueOf(Long.MAX_VALUE), 1, length));
     }
 
     @Test
@@ -116,7 +116,7 @@ public class MutableAsciiBufferTest
     {
         final int length = string.putAsciiLong(1, Long.MIN_VALUE);
 
-        assertThat(string, containsAscii(String.valueOf(Long.MIN_VALUE), 1, length));
+        assertThat(string, sequenceEqualsAscii(String.valueOf(Long.MIN_VALUE), 1, length));
     }
 
     @DataPoints

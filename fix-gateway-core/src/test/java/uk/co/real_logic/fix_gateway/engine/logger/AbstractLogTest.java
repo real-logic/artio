@@ -53,6 +53,7 @@ public class AbstractLogTest
     protected Publication publication = mock(Publication.class);
     protected BufferClaim claim = mock(BufferClaim.class);
     protected UnsafeBuffer resultBuffer = new UnsafeBuffer(new byte[16 * 1024]);
+    protected MutableAsciiBuffer resultAsciiBuffer = new MutableAsciiBuffer(resultBuffer);
 
     protected UnsafeBuffer buffer = new UnsafeBuffer(new byte[512]);
 
@@ -89,6 +90,14 @@ public class AbstractLogTest
 
         logEntryLength = testRequest.encode(asciiBuffer, 0);
 
+        bufferContainsMessage(sessionId, sequenceIndex, asciiBuffer);
+    }
+
+    protected void bufferContainsMessage(
+        final long sessionId,
+        final int sequenceIndex,
+        final MutableAsciiBuffer asciiBuffer)
+    {
         offset = START;
         header
             .wrap(buffer, offset)

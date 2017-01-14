@@ -16,11 +16,13 @@
 package uk.co.real_logic.fix_gateway;
 
 import io.aeron.driver.MediaDriver;
+import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 
 import java.io.File;
 
 import static io.aeron.driver.ThreadingMode.SHARED;
+import static org.mockito.Mockito.spy;
 
 public final class TestFixtures
 {
@@ -84,5 +86,16 @@ public final class TestFixtures
     public static String clusteredAeronChannel()
     {
         return "aeron:udp?endpoint=224.0.1.1:" + unusedPort();
+    }
+
+    public static ErrorHandler printingMockErrorHandler()
+    {
+        return spy(new ErrorHandler()
+        {
+            public void onError(final Throwable throwable)
+            {
+                throwable.printStackTrace();
+            }
+        });
     }
 }

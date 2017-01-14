@@ -28,15 +28,21 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
-import static org.junit.Assert.assertNotEquals;
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
+import static uk.co.real_logic.fix_gateway.util.CustomMatchers.sequenceEqualsAscii;
 
 public class ReplayerTest extends AbstractLogTest
 {
+    public static final byte[] MESSAGE_REQUIRING_LONGER_BODY_LENGTH =
+        ("8=FIX.4.4\0019=99\00135=1\00134=1\00149=LEH_LZJ02\00152=19700101-00:00:00.000\00156=CCG\001" +
+            "112=a12345678910123456789101234567891012345\00110=005\001").getBytes(US_ASCII);
+
     private static final int SIZE_OF_FRAME =
         FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength() + MessageHeaderDecoder.ENCODED_LENGTH;
     private static final int MAX_CLAIM_ATTEMPTS = 100;
@@ -97,6 +103,26 @@ public class ReplayerTest extends AbstractLogTest
     }
 
     @Test
+    public void shouldReplayMessageWithExpandingBodyLength()
+    {
+        bufferContainsMessage(MESSAGE_REQUIRING_LONGER_BODY_LENGTH);
+        final int srcLength = setupMessage();
+
+        replayer.onFragment(buffer, START, srcLength, null);
+
+        verifyClaim(srcLength + 6);
+        assertHasSetPossDupFlag();
+        verifyCommit();
+        hasNotOverwrittenSeperatorChar();
+    }
+
+    private void hasNotOverwrittenSeperatorChar()
+    {
+        final String lengthSection = resultAsciiBuffer.getAscii(offset + 11, 11);
+        assertEquals("9=104\00135=1\001", lengthSection);
+    }
+
+    @Test
     public void shouldPublishMessagesWithoutSetPossDupFlag()
     {
         bufferContainsMessage(false);
@@ -107,6 +133,9 @@ public class ReplayerTest extends AbstractLogTest
         verifyClaim(SIZE_OF_FRAME + srcLength + PossDupEnabler.POSS_DUP_FIELD.length);
         assertHasSetPossDupFlag();
         verifyCommit();
+
+        assertThat(resultAsciiBuffer,
+            sequenceEqualsAscii("8=FIX.4.4\0019=0068\001", offset + 1));
     }
 
     @Test
@@ -148,7 +177,7 @@ public class ReplayerTest extends AbstractLogTest
 
     private void assertHasSetPossDupFlag()
     {
-        final int possDupIndex = new MutableAsciiBuffer(resultBuffer).scan(0, resultBuffer.capacity(), 'Y');
+        final int possDupIndex = resultAsciiBuffer.scan(0, resultBuffer.capacity(), 'Y');
         assertNotEquals("Unable to find poss dup index", UNKNOWN_INDEX, possDupIndex);
     }
 
@@ -157,5 +186,12 @@ public class ReplayerTest extends AbstractLogTest
         replayer.onMessage(
             buffer, ENCODE_OFFSET, length,
             LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX, messageType, 0L, OK, 0L);
+    }
+
+    private void bufferContainsMessage(final byte[] message)
+    {
+        logEntryLength = message.length;
+        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(message);
+        bufferContainsMessage(SESSION_ID, SEQUENCE_NUMBER, asciiBuffer);
     }
 }
