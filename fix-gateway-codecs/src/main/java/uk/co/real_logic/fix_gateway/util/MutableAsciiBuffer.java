@@ -403,6 +403,16 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         }
     }
 
+    public static int lengthInAscii(final int value)
+    {
+        int characterCount = 0;
+        for (int remainder = value; remainder > 0; remainder = remainder / 10)
+        {
+            characterCount++;
+        }
+        return characterCount;
+    }
+
     /**
      * Puts an int into the buffer
      *

@@ -17,11 +17,16 @@ package uk.co.real_logic.fix_gateway.util;
 
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
+import org.junit.experimental.theories.DataPoints;
+import org.junit.experimental.theories.Theories;
+import org.junit.experimental.theories.Theory;
+import org.junit.runner.RunWith;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.util.CustomMatchers.containsAscii;
 
+@RunWith(Theories.class)
 public class MutableAsciiBufferTest
 {
 
@@ -112,6 +117,33 @@ public class MutableAsciiBufferTest
         final int length = string.putAsciiLong(1, Long.MIN_VALUE);
 
         assertThat(string, containsAscii(String.valueOf(Long.MIN_VALUE), 1, length));
+    }
+
+    @DataPoints
+    public static int[][] valuesAndLengths()
+    {
+        return new int[][]
+        {
+            {1, 1},
+            {10, 2},
+            {100, 3},
+            {1000, 4},
+            {12, 2},
+            {123, 3},
+            {2345, 4},
+            {9, 1},
+            {99, 2},
+            {999, 3},
+            {9999, 4},
+        };
+    }
+
+    @Theory
+    public void shouldCalculateCorrectAsciiLength(final int[] valueAndLength)
+    {
+        final int value = valueAndLength[0];
+        final int length = valueAndLength[1];
+        assertEquals("Wrong length for " + value, length, MutableAsciiBuffer.lengthInAscii(value));
     }
 
 }
