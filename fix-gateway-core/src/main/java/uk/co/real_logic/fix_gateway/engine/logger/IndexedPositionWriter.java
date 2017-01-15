@@ -76,7 +76,7 @@ class IndexedPositionWriter
         }
     }
 
-    public void indexedUpTo(final int aeronSessionId, final long position)
+    void indexedUpTo(final int aeronSessionId, final long position)
     {
         final Int2IntHashMap recordOffsets = this.recordOffsets;
 
@@ -120,12 +120,17 @@ class IndexedPositionWriter
         }
     }
 
-    public void updateChecksums()
+    void close()
+    {
+        updateChecksums();
+    }
+
+    void updateChecksums()
     {
         checksumFramer.updateChecksums();
     }
 
-    public AtomicBuffer buffer()
+    AtomicBuffer buffer()
     {
         return buffer;
     }

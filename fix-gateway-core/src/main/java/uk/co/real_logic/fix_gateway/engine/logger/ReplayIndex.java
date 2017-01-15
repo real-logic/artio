@@ -132,6 +132,7 @@ public class ReplayIndex implements Index
 
     public void close()
     {
+        positionWriter.close();
         fixSessionIdToIndex.clear();
         IoUtil.unmap(positionBuffer.byteBuffer());
     }
