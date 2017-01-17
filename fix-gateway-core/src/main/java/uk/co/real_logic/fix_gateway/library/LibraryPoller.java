@@ -111,7 +111,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private GatewayError errorType;
     private String errorMessage;
 
-    private State state;
+    private State state = State.CONNECTING;
 
     // State changed upon connect/reconnect
     private LivenessDetector livenessDetector;
@@ -277,7 +277,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private int pollWithoutReconnect(final long timeInMs, final int fragmentLimit)
     {
-        return inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit) +
+        final int messagesRead = inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit);
+        return messagesRead +
             pollSessions(timeInMs) +
             livenessDetector.poll(timeInMs) +
             checkReplies(timeInMs);
@@ -314,7 +315,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             // so we must clean up after ourselves
             try
             {
-                fixLibrary.close();
+                closeWithParent();
             }
             catch (final Exception closeException)
             {
@@ -335,7 +336,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
         else if (timeInMs > completeFailureTime)
         {
-            fixLibrary.close();
+            closeWithParent();
             throw illegalStateDueToFailingToConnect();
         }
         else if (timeInMs > nextAttemptTime)
@@ -355,10 +356,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private void attemptNextEngine()
     {
-        final List<String> aeronChannels = configuration.libraryAeronChannels();
-        final int nextIndex = (aeronChannels.indexOf(currentAeronChannel) + 1) % aeronChannels.size();
-        currentAeronChannel = aeronChannels.get(nextIndex);
-        DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to next engine (%s) in round-robin\n", currentAeronChannel);
+        if (enginesAreClustered)
+        {
+            final List<String> aeronChannels = configuration.libraryAeronChannels();
+            final int nextIndex = (aeronChannels.indexOf(currentAeronChannel) + 1) % aeronChannels.size();
+            currentAeronChannel = aeronChannels.get(nextIndex);
+            DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to next engine (%s) in round-robin\n", currentAeronChannel);
+        }
     }
 
     private IllegalStateException illegalStateDueToFailingToConnect()
@@ -782,6 +786,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
+            final long timeInMs = timeInMs();
+            livenessDetector.onHeartbeat(timeInMs);
+
             final LongHashSet sessionIds = this.sessionIds;
             final ArrayList<Session> sessions = this.sessions;
 
@@ -963,6 +970,18 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         if (state == State.CLOSED)
         {
             throw new IllegalStateException("Library has been closed");
+        }
+    }
+
+    private void closeWithParent()
+    {
+        try
+        {
+            fixLibrary.close();
+        }
+        finally
+        {
+            close();
         }
     }
 
