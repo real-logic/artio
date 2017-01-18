@@ -151,7 +151,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     boolean isConnected()
     {
-        return livenessDetector.isConnected();
+        return state == State.CONNECTED;
+    }
+
+    boolean isClosed()
+    {
+        return state == State.CLOSED;
     }
 
     int libraryId()
@@ -788,6 +793,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         {
             final long timeInMs = timeInMs();
             livenessDetector.onHeartbeat(timeInMs);
+            DebugLogger.log(
+                LIBRARY_CONNECT, "%d: Received Control Notification from engine at timeInMs %d\n", libraryId, timeInMs);
 
             final LongHashSet sessionIds = this.sessionIds;
             final ArrayList<Session> sessions = this.sessions;

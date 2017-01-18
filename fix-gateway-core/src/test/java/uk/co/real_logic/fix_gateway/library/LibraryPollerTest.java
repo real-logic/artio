@@ -168,12 +168,16 @@ public class LibraryPollerTest
 
         library.poll(1);
 
+        library.poll(1);
+
         assertFalse("Library failed to timeout", library.isConnected());
     }
 
     private void reconnectAfterTimeout()
     {
         receiveOneApplicationHeartbeat();
+
+        library.poll(1);
 
         library.poll(1);
 
@@ -245,6 +249,8 @@ public class LibraryPollerTest
         newLibraryPoller(singletonList(IPC_CHANNEL));
 
         library.connect();
+
+        library.poll(1);
 
         library.poll(1);
 

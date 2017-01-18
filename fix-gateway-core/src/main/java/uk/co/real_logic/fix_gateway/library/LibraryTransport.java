@@ -65,7 +65,6 @@ class LibraryTransport
             soloNode, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock,
             configuration.outboundMaxClaimAttempts());
 
-
         if (isReconnect())
         {
             inboundSubscription.close();

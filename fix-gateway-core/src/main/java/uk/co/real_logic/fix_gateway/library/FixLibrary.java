@@ -117,6 +117,11 @@ public class FixLibrary extends GatewayProcess
         return poller.isConnected();
     }
 
+    public boolean isClosed()
+    {
+        return poller.isClosed();
+    }
+
     /**
      * Get the identifier of the library.
      *
