@@ -278,12 +278,12 @@ project(':fix-gateway-system-tests') {
                 "io.aeron:aeron-client:${aeronVersion}"
 
         perfCompile project,
-                    'org.openjdk.jmh:jmh-core:1.17.3',
-                    'org.openjdk.jmh:jmh-generator-annprocess:1.17.3'
+                    'org.openjdk.jmh:jmh-core:1.17.4',
+                    'org.openjdk.jmh:jmh-generator-annprocess:1.17.4'
     }
 
     idea.module {
-        scopes.COMPILE.plus  += [ configurations.perfCompile ]
+        scopes.COMPILE.plus += [ configurations.perfCompile ]
     }
 
     task benchmarks(dependsOn: perfClasses) {
