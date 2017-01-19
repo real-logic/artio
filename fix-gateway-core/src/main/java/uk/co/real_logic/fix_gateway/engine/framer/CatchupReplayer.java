@@ -45,11 +45,11 @@ import static uk.co.real_logic.fix_gateway.messages.MessageStatus.CATCHUP_REPLAY
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
 
-class CatchupReplayer implements ControlledFragmentHandler, Continuation
+public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 {
     private static final int ENCODE_BUFFER_SIZE = 8 * 1024;
 
-    private static final int FRAME_LENGTH =
+    public static final int FRAME_LENGTH =
         MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + FixMessageEncoder.bodyHeaderLength();
 
     private enum State
@@ -247,13 +247,6 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
             srcBuffer, messageOffset, messageLength, srcOffset, srcLength);
         if (action == CONTINUE)
         {
-            DebugLogger.log(
-                CATCHUP,
-                "Resending: %s\n",
-                bufferClaim.buffer(),
-                bufferClaim.offset() + FRAME_LENGTH,
-                messageLength);
-
             // store the point to continue from if an abort happens.
             replayFromSequenceNumber = headerDecoder.msgSeqNum() + 1;
             replayFromSequenceIndex = messageDecoder.sequenceIndex();

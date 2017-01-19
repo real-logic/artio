@@ -20,6 +20,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
@@ -33,7 +34,9 @@ import java.util.function.IntPredicate;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
+import static uk.co.real_logic.fix_gateway.LogTag.CATCHUP;
 import static uk.co.real_logic.fix_gateway.engine.PossDupFinder.NO_ENTRY;
+import static uk.co.real_logic.fix_gateway.engine.framer.CatchupReplayer.FRAME_LENGTH;
 
 public class PossDupEnabler
 {
@@ -142,6 +145,13 @@ public class PossDupEnabler
 
     private void commit()
     {
+        DebugLogger.log(
+            CATCHUP,
+            "Resending: %s\n",
+            bufferClaim.buffer(),
+            bufferClaim.offset() + FRAME_LENGTH,
+            bufferClaim.length() - FRAME_LENGTH);
+
         onPreCommit.run();
         bufferClaim.commit();
     }
