@@ -25,4 +25,5 @@ public enum LogTag
     GATEWAY_MESSAGE,
     APPLICATION_HEARTBEAT,
     POSITION,
+    CATCHUP,
 }

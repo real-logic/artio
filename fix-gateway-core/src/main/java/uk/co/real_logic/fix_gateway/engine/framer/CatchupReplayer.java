@@ -29,7 +29,10 @@ import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import uk.co.real_logic.fix_gateway.engine.PossDupEnabler;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
-import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
+import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
@@ -37,7 +40,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.fix_gateway.LogTag.CATCHUP;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.CATCHUP_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
@@ -245,7 +248,7 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         if (action == CONTINUE)
         {
             DebugLogger.log(
-                FIX_MESSAGE,
+                CATCHUP,
                 "Resending: %s\n",
                 bufferClaim.buffer(),
                 bufferClaim.offset() + FRAME_LENGTH,
@@ -266,6 +269,7 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     public long attempt()
     {
+        DebugLogger.log(CATCHUP, "Attempt replay for %d", session.sessionId());
         switch (state)
         {
             case REPLAYING:
@@ -279,9 +283,10 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 // Know at this point that we've indexed up to the latest message.
                 // adding 1 to convert to inclusive numbering
                 abortedReplay = false;
-                // System.out.println("QUERY");
                 try
                 {
+                    DebugLogger.log(CATCHUP,
+                        "Querying for %d, currently at %d", session.sessionId(), currentSequenceIndex);
                     inboundMessages.query(
                         this,
                         session.sessionId(),
@@ -358,6 +363,7 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final GatewaySession session,
         final int libraryId)
     {
+        DebugLogger.log(CATCHUP, "OK for %d", session.sessionId());
         final long position = publication.saveRequestSessionReply(libraryId, OK, correlationId);
         if (position >= 0)
         {
@@ -368,6 +374,7 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     private long sendMissingMessages()
     {
+        DebugLogger.log(CATCHUP, "Missing Messages for %d", session.sessionId());
         final long position = inboundPublication.saveRequestSessionReply(libraryId, MISSING_MESSAGES, correlationId);
         if (position > 0)
         {
