@@ -269,7 +269,7 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     public long attempt()
     {
-        DebugLogger.log(CATCHUP, "Attempt replay for %d", session.sessionId());
+        DebugLogger.log(CATCHUP, "Attempt replay for %d\n", session.sessionId());
         switch (state)
         {
             case REPLAYING:
@@ -286,7 +286,9 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 try
                 {
                     DebugLogger.log(CATCHUP,
-                        "Querying for %d, currently at %d", session.sessionId(), currentSequenceIndex);
+                        "Querying for %d, currently at (%d, %d)\n",
+                        session.sessionId(), lastReceivedSeqNum, currentSequenceIndex);
+
                     inboundMessages.query(
                         this,
                         session.sessionId(),
@@ -363,7 +365,7 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final GatewaySession session,
         final int libraryId)
     {
-        DebugLogger.log(CATCHUP, "OK for %d", session.sessionId());
+        DebugLogger.log(CATCHUP, "OK for %d\n", session.sessionId());
         final long position = publication.saveRequestSessionReply(libraryId, OK, correlationId);
         if (position >= 0)
         {
@@ -374,7 +376,7 @@ class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     private long sendMissingMessages()
     {
-        DebugLogger.log(CATCHUP, "Missing Messages for %d", session.sessionId());
+        DebugLogger.log(CATCHUP, "Missing Messages for %d\n", session.sessionId());
         final long position = inboundPublication.saveRequestSessionReply(libraryId, MISSING_MESSAGES, correlationId);
         if (position > 0)
         {
