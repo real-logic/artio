@@ -22,16 +22,19 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
-import uk.co.real_logic.fix_gateway.engine.PossDupEnabler;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
+import static uk.co.real_logic.fix_gateway.engine.PossDupEnabler.POSS_DUP_FIELD;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
@@ -93,7 +96,9 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldPublishMessagesWithSetPossDupFlag()
     {
         bufferContainsMessage(true);
-        final int srcLength = setupMessage();
+
+        final int srcLength = fragmentLength();
+        setupMessage(srcLength);
 
         replayer.onFragment(buffer, START, srcLength, null);
 
@@ -106,14 +111,20 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldReplayMessageWithExpandingBodyLength()
     {
         bufferContainsMessage(MESSAGE_REQUIRING_LONGER_BODY_LENGTH);
-        final int srcLength = setupMessage();
+
+        final int srcLength = fragmentLength();
+        // Poss Dup Flag, and 1 longer body length
+        final int newLength = srcLength + 6;
+        setupMessage(newLength);
 
         replayer.onFragment(buffer, START, srcLength, null);
 
-        verifyClaim(srcLength + 6);
+        verifyClaim(newLength);
         assertHasSetPossDupFlag();
         verifyCommit();
         hasNotOverwrittenSeperatorChar();
+
+        assertEndsInValidChecksum(offset + 1);
     }
 
     private void hasNotOverwrittenSeperatorChar()
@@ -126,16 +137,31 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldPublishMessagesWithoutSetPossDupFlag()
     {
         bufferContainsMessage(false);
-        final int srcLength = setupMessage();
+        final int srcLength = fragmentLength();
+        final int lengthAfterPossDupFlag = srcLength + POSS_DUP_FIELD.length;
+        setupMessage(lengthAfterPossDupFlag);
 
-        replayer.onFragment(buffer, START, SIZE_OF_FRAME + srcLength, null);
+        replayer.onFragment(buffer, START, srcLength, null);
 
-        verifyClaim(SIZE_OF_FRAME + srcLength + PossDupEnabler.POSS_DUP_FIELD.length);
+        verifyClaim(lengthAfterPossDupFlag);
         assertHasSetPossDupFlag();
         verifyCommit();
 
+        final int afterOffset = this.offset + 1;
         assertThat(resultAsciiBuffer,
-            sequenceEqualsAscii("8=FIX.4.4\0019=0068\001", offset + 1));
+            sequenceEqualsAscii("8=FIX.4.4\0019=0068\001", afterOffset));
+
+        assertThat(resultAsciiBuffer,
+            sequenceEqualsAscii("8=FIX.4.4\0019=0068\001", afterOffset));
+
+        assertEndsInValidChecksum(afterOffset);
+    }
+
+    private void assertEndsInValidChecksum(final int afterOffset)
+    {
+        final String message = resultAsciiBuffer.getAscii(afterOffset, resultAsciiBuffer.capacity() - afterOffset);
+        final Matcher matcher = Pattern.compile("10=\\d+\001").matcher(message);
+        assertTrue(message, matcher.find());
     }
 
     @Test
@@ -162,12 +188,10 @@ public class ReplayerTest extends AbstractLogTest
         verifyNoMoreInteractions(errorHandler);
     }
 
-    private int setupMessage()
+    private void setupMessage(final int length)
     {
-        final int srcLength = fragmentLength();
-        setupClaim(srcLength);
-        setupPublication(srcLength);
-        return srcLength;
+        setupClaim(length);
+        setupPublication(length);
     }
 
     private void verifyQueriedService(final int endSeqNo)
@@ -177,7 +201,7 @@ public class ReplayerTest extends AbstractLogTest
 
     private void assertHasSetPossDupFlag()
     {
-        final int possDupIndex = resultAsciiBuffer.scan(0, resultBuffer.capacity(), 'Y');
+        final int possDupIndex = resultAsciiBuffer.scan(0, resultAsciiBuffer.capacity() - 1, 'Y');
         assertNotEquals("Unable to find poss dup index", UNKNOWN_INDEX, possDupIndex);
     }
 

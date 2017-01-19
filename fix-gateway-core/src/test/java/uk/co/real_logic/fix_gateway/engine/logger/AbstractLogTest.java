@@ -52,8 +52,8 @@ public class AbstractLogTest
 
     protected Publication publication = mock(Publication.class);
     protected BufferClaim claim = mock(BufferClaim.class);
-    protected UnsafeBuffer resultBuffer = new UnsafeBuffer(new byte[16 * 1024]);
-    protected MutableAsciiBuffer resultAsciiBuffer = new MutableAsciiBuffer(resultBuffer);
+    protected UnsafeBuffer resultBuffer;
+    protected MutableAsciiBuffer resultAsciiBuffer = new MutableAsciiBuffer();
 
     protected UnsafeBuffer buffer = new UnsafeBuffer(new byte[512]);
 
@@ -70,7 +70,7 @@ public class AbstractLogTest
     {
         final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
         timestampEncoder.encode(System.currentTimeMillis());
-        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[450]);
+        MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[450]);
         final TestRequestEncoder testRequest = new TestRequestEncoder();
 
         testRequest
@@ -89,6 +89,9 @@ public class AbstractLogTest
         }
 
         logEntryLength = testRequest.encode(asciiBuffer, 0);
+        // encode twice in test to ensure length limits
+        asciiBuffer = new MutableAsciiBuffer(new byte[logEntryLength]);
+        testRequest.encode(asciiBuffer, 0);
 
         bufferContainsMessage(sessionId, sequenceIndex, asciiBuffer);
     }
@@ -161,8 +164,11 @@ public class AbstractLogTest
 
     protected void setupClaim(final int srcLength)
     {
+        final int offset = START + 1;
+        resultBuffer = new UnsafeBuffer(new byte[offset + srcLength]);
+        resultAsciiBuffer.wrap(resultBuffer);
         when(claim.buffer()).thenReturn(resultBuffer);
-        when(claim.offset()).thenReturn(START + 1);
+        when(claim.offset()).thenReturn(offset);
         when(claim.length()).thenReturn(srcLength);
     }
 

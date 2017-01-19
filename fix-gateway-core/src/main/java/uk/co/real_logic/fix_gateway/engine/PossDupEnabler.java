@@ -41,7 +41,9 @@ import static uk.co.real_logic.fix_gateway.engine.framer.CatchupReplayer.FRAME_L
 public class PossDupEnabler
 {
     public static final byte[] POSS_DUP_FIELD = "43=Y\001".getBytes(StandardCharsets.US_ASCII);
-    private static final int CHECKSUM_TAG_SIZE = 3;
+
+    private static final int CHECKSUM_TAG_SIZE = "\00110=".length();
+    private static final int CHECKSUM_VALUE_LENGTH = 3;
 
     private final PossDupFinder possDupFinder = new PossDupFinder();
     private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
@@ -80,7 +82,8 @@ public class PossDupEnabler
         {
             final int lengthOfOldBodyLength = possDupFinder.lengthOfBodyLength();
             int newLength = srcLength + POSS_DUP_FIELD.length;
-            final int lengthOfNewBodyLength = MutableAsciiBuffer.lengthInAscii(newLength);
+            final int lengthOfNewBodyLength = MutableAsciiBuffer.lengthInAscii(
+                possDupFinder.bodyLength() + POSS_DUP_FIELD.length);
             // Account for having to resize the body length field
             // Might be smaller due to padding
             final int lengthDelta = Math.max(0, lengthOfNewBodyLength - lengthOfOldBodyLength);
@@ -113,6 +116,7 @@ public class PossDupEnabler
             }
             catch (final Exception e)
             {
+                e.printStackTrace();
                 bufferClaim.abort();
                 errorHandler.onError(e);
             }
@@ -174,7 +178,7 @@ public class PossDupEnabler
         final int messageLength,
         final MutableDirectBuffer claimBuffer,
         final int claimOffset,
-        final int lengthDelta)
+        final int totalLengthDelta)
     {
         // Sending time is a required field just before the poss dup field
         final int sendingTimeSrcEnd = possDupFinder.sendingTimeEnd();
@@ -185,12 +189,13 @@ public class PossDupEnabler
         final int lengthToPossDup = sendingTimeSrcEnd - srcOffset;
         final int possDupClaimOffset = claimOffset + lengthToPossDup;
         final int remainingClaimOffset = possDupClaimOffset + POSS_DUP_FIELD.length;
+        final int remainingLength = srcLength - lengthToPossDup;
 
         claimBuffer.putBytes(claimOffset, srcBuffer, srcOffset, lengthToPossDup);
         claimBuffer.putBytes(possDupClaimOffset, POSS_DUP_FIELD);
-        claimBuffer.putBytes(remainingClaimOffset, srcBuffer, sendingTimeSrcEnd, srcLength - lengthToPossDup);
+        claimBuffer.putBytes(remainingClaimOffset, srcBuffer, sendingTimeSrcEnd, remainingLength);
 
-        updateFrameBodyLength(messageLength, claimBuffer, claimOffset, lengthDelta);
+        updateFrameBodyLength(messageLength, claimBuffer, claimOffset, totalLengthDelta);
         final int messageClaimOffset = srcToClaim(messageOffset, srcOffset, claimOffset);
         updateMessage(srcOffset, messageClaimOffset, claimBuffer, claimOffset);
 
@@ -210,7 +215,7 @@ public class PossDupEnabler
     {
         mutableAsciiFlyweight.wrap(claimBuffer);
 
-        // Update Body Length
+        // BEGIN Update body length
         final int newBodyLength = possDupFinder.bodyLength() + POSS_DUP_FIELD.length;
         final int bodyLengthClaimOffset = srcToClaim(possDupFinder.bodyLengthOffset(), srcOffset, claimOffset);
         final int lengthOfOldBodyLength = possDupFinder.lengthOfBodyLength();
@@ -226,18 +231,25 @@ public class PossDupEnabler
                 bodyLengthClaimOffset,
                 mutableAsciiFlyweight.capacity() - index);
         }
+        // Max to avoid special casing the prefixing of the field with zeros
+        final int lengthOfUpdatedBodyLengthField = Math.max(lengthOfOldBodyLength, lengthOfNewBodyLength);
         mutableAsciiFlyweight.putNatural(
-            bodyLengthClaimOffset, Math.max(lengthOfOldBodyLength, lengthOfNewBodyLength), newBodyLength);
+            bodyLengthClaimOffset, lengthOfUpdatedBodyLengthField, newBodyLength);
+        // END Update body length
 
-        updateChecksum(messageClaimOffset, newBodyLength, bodyLengthClaimOffset);
+        final int beforeChecksum =
+            bodyLengthClaimOffset + lengthOfUpdatedBodyLengthField + newBodyLength;
+        updateChecksum(messageClaimOffset, beforeChecksum);
     }
 
-    private void updateChecksum(int messageClaimOffset, int newBodyLength, int bodyLengthClaimOffset)
+    private void updateChecksum(int messageClaimOffset, final int beforeChecksum)
     {
-        final int beforeChecksum = bodyLengthClaimOffset + newBodyLength + POSS_DUP_FIELD.length;
-        final int checksum = mutableAsciiFlyweight.computeChecksum(messageClaimOffset, beforeChecksum);
-        final int remaining = mutableAsciiFlyweight.capacity() - messageClaimOffset;
-        mutableAsciiFlyweight.putNatural(beforeChecksum + CHECKSUM_TAG_SIZE, 3, checksum);
+        final int lengthOfSeparator = 1;
+        final int checksumEnd = beforeChecksum + lengthOfSeparator;
+        final int checksum = mutableAsciiFlyweight.computeChecksum(messageClaimOffset, checksumEnd);
+        final int checksumValueOffset = beforeChecksum + CHECKSUM_TAG_SIZE;
+        mutableAsciiFlyweight.putNatural(checksumValueOffset, CHECKSUM_VALUE_LENGTH, checksum);
+        mutableAsciiFlyweight.putSeparator(checksumValueOffset + CHECKSUM_VALUE_LENGTH);
     }
 
     private void setPossDupFlag(

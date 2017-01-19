@@ -72,11 +72,6 @@ public final class CustomMatchers
         };
     }
 
-    public static Matcher<AsciiBuffer> startsWithAscii(final String expectedValue)
-    {
-        return sequenceEqualsAscii(expectedValue, 0, expectedValue.length());
-    }
-
     public static Matcher<DirectBuffer> containsString(final String expectedValue, final int offset, final int length)
     {
         Objects.requireNonNull(expectedValue);
