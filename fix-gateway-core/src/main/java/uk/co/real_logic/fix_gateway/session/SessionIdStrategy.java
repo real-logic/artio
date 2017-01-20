@@ -67,10 +67,11 @@ public interface SessionIdStrategy
      * @param targetCompId the target company id, always present.
      * @return the composite session key.
      */
-    CompositeKey onLogon(String senderCompId,
-                         String senderSubId,
-                         String senderLocationId,
-                         String targetCompId);
+    CompositeKey onLogon(
+        String senderCompId,
+        String senderSubId,
+        String senderLocationId,
+        String targetCompId);
 
     /**
      * Sets up an outbound message header with the composite session key.

@@ -245,8 +245,10 @@
         <data name="localSubId" id="8" type="varDataEncoding"/>
         <data name="localLocationId" id="9" type="varDataEncoding"/>
         <data name="remoteCompId" id="10" type="varDataEncoding"/>
-        <data name="username" id="11" type="varDataEncoding"/>
-        <data name="password" id="12" type="varDataEncoding"/>
+        <data name="remoteSubId" id="11" type="varDataEncoding"/>
+        <data name="remoteLocationId" id="12" type="varDataEncoding"/>
+        <data name="username" id="13" type="varDataEncoding"/>
+        <data name="password" id="14" type="varDataEncoding"/>
     </sbe:message>
 
     <sbe:message name="Error" id="13" description="An error has occurred">

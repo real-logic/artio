@@ -38,14 +38,17 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
         return requests;
     }
 
-    public void onSessionExists(final FixLibrary library,
-                                final long sessionId,
-                                final String acceptorCompId,
-                                final String acceptorSubId,
-                                final String acceptorLocationId,
-                                final String initiatorCompId,
-                                final String username,
-                                final String password)
+    public void onSessionExists(
+        final FixLibrary library,
+        final long sessionId,
+        final String localCompId,
+        final String localSubId,
+        final String localLocationId,
+        final String remoteCompId,
+        final String remoteSubId,
+        final String remoteLocationId,
+        final String username,
+        final String password)
     {
         final Reply<SessionReplyStatus> reply = library.requestSession(
             sessionId,
@@ -53,7 +56,7 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
             NO_MESSAGE_REPLAY,
             CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS);
         requests.add(new RequestInfo(
-            sessionId, reply, acceptorCompId, acceptorSubId, acceptorLocationId, initiatorCompId, username, password));
+            sessionId, reply, localCompId, localSubId, localLocationId, remoteCompId, username, password));
     }
 
     public static final class RequestInfo

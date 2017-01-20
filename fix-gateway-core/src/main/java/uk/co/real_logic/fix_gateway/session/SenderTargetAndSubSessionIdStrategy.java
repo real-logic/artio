@@ -206,5 +206,15 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
         {
             return new String(remoteCompID, US_ASCII);
         }
+
+        public String remoteSubId()
+        {
+            return "";
+        }
+
+        public String remoteLocationId()
+        {
+            return "";
+        }
     }
 }

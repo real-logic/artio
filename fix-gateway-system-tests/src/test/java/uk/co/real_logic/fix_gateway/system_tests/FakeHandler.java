@@ -98,14 +98,16 @@ public class FakeHandler
     public void onSessionExists(
         final FixLibrary library,
         final long sessionId,
-        final String acceptorCompId,
-        final String acceptorSubId,
-        final String acceptorLocationId,
-        final String initiatorCompId,
+        final String localCompId,
+        final String localSubId,
+        final String localLocationId,
+        final String remoteCompId,
+        final String remoteSubId,
+        final String remoteLocationId,
         final String username,
         final String password)
     {
-        completeSessionIds.add(new CompleteSessionId(acceptorCompId, initiatorCompId, sessionId));
+        completeSessionIds.add(new CompleteSessionId(localCompId, remoteCompId, sessionId));
     }
 
     // ----------- END EVENTS -----------

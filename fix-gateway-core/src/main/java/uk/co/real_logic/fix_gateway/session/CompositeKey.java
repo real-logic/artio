@@ -29,4 +29,8 @@ public interface CompositeKey
     String localLocationId();
 
     String remoteCompId();
+
+    String remoteSubId();
+
+    String remoteLocationId();
 }

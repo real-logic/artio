@@ -27,22 +27,29 @@ package uk.co.real_logic.fix_gateway.library;
 public interface SessionExistsHandler
 {
     /**
+     * If either of the subId or locationId fields are not present in the logon message <code>""</code> will
+     * be passed as an argument.
+     *
      * @param library the library object that this callback is associated with
      * @param sessionId the identifying number of the session that now exists.
-     * @param acceptorCompId
-     * @param acceptorSubId
-     * @param acceptorLocationId
-     * @param initiatorCompId
-     * @param username
-     * @param password
+     * @param localCompId the compId for the local party in the logon message (eg targetCompId if acceptor).
+     * @param localSubId the subId for the local party in the logon message (eg targetSubId if acceptor).
+     * @param localLocationId the locationId for the local party in the logon message (eg targetLocationId if acceptor)
+     * @param remoteCompId the compId for the local party in the logon message (eg senderCompId if acceptor).
+     * @param remoteSubId the subId for the local party in the logon message (eg senderSubId if acceptor).
+     * @param remoteLocationId the locationId for the local party in the logon message (eg senderLocationId if acceptor)
+     * @param username the username in the logon message (If FIX 4.4 or later)
+     * @param password the password in the logon message (If FIX 4.4 or later)
      */
     void onSessionExists(
         FixLibrary library,
         long sessionId,
-        String acceptorCompId,
-        String acceptorSubId,
-        String acceptorLocationId,
-        String initiatorCompId,
+        String localCompId,
+        String localSubId,
+        String localLocationId,
+        String remoteCompId,
+        String remoteSubId,
+        String remoteLocationId,
         String username,
         String password);
 }

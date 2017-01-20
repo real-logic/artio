@@ -325,9 +325,10 @@ public class LibraryPollerTest
             "",
             "",
             "",
+            "",
+            "",
             null,
-            null
-        );
+            null);
     }
 
     private SessionsDecoder hasOtherSessionId()

@@ -158,29 +158,36 @@ public class GatewayPublication extends ClaimablePublication
         final long sessionId,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
-        final String senderCompId,
-        final String senderSubId,
-        final String senderLocationId,
-        final String targetCompId,
+        final String localCompId,
+        final String localSubId,
+        final String localLocationId,
+        final String remoteCompId,
         final String username,
         final String password,
         final LogonStatus status)
     {
-        final byte[] senderCompIdBytes = bytes(senderCompId);
-        final byte[] senderSubIdBytes = bytes(senderSubId);
-        final byte[] senderLocationIdBytes = bytes(senderLocationId);
-        final byte[] targetCompIdBytes = bytes(targetCompId);
+        final String remoteSubId = "";
+        final String remoteLocationId = "";
+
+        final byte[] localCompIdBytes = bytes(localCompId);
+        final byte[] localSubIdBytes = bytes(localSubId);
+        final byte[] localLocationIdBytes = bytes(localLocationId);
+        final byte[] remoteCompIdBytes = bytes(remoteCompId);
+        final byte[] remoteSubIdBytes = bytes(remoteSubId);
+        final byte[] remoteLocationIdBytes = bytes(remoteLocationId);
         final byte[] usernameBytes = bytes(username);
         final byte[] passwordBytes = bytes(password);
 
         final long position = claim(
             header.encodedLength() +
                 LogonEncoder.BLOCK_LENGTH +
-                LogonEncoder.localSubIdHeaderLength() * 6 +
-                senderCompIdBytes.length +
-                senderSubIdBytes.length +
-                senderLocationIdBytes.length +
-                targetCompIdBytes.length +
+                LogonEncoder.localSubIdHeaderLength() * 8 +
+                localCompIdBytes.length +
+                localSubIdBytes.length +
+                localLocationIdBytes.length +
+                remoteCompIdBytes.length +
+                remoteSubIdBytes.length +
+                remoteLocationIdBytes.length +
                 usernameBytes.length +
                 passwordBytes.length);
 
@@ -209,10 +216,12 @@ public class GatewayPublication extends ClaimablePublication
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
             .status(status)
-            .putLocalCompId(senderCompIdBytes, 0, senderCompIdBytes.length)
-            .putLocalSubId(senderSubIdBytes, 0, senderSubIdBytes.length)
-            .putLocalLocationId(senderLocationIdBytes, 0, senderLocationIdBytes.length)
-            .putRemoteCompId(targetCompIdBytes, 0, targetCompIdBytes.length)
+            .putLocalCompId(localCompIdBytes, 0, localCompIdBytes.length)
+            .putLocalSubId(localSubIdBytes, 0, localSubIdBytes.length)
+            .putLocalLocationId(localLocationIdBytes, 0, localLocationIdBytes.length)
+            .putRemoteCompId(remoteCompIdBytes, 0, remoteCompIdBytes.length)
+            .putRemoteSubId(remoteSubIdBytes, 0, remoteSubIdBytes.length)
+            .putRemoteLocationId(remoteLocationIdBytes, 0, remoteLocationIdBytes.length)
             .putUsername(usernameBytes, 0, usernameBytes.length)
             .putPassword(passwordBytes, 0, passwordBytes.length);
 

@@ -584,10 +584,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         int lastSentSequenceNumber,
         int lastReceivedSequenceNumber,
         final LogonStatus status,
-        final String senderCompId,
-        final String senderSubId,
-        final String senderLocationId,
-        final String targetCompId,
+        final String localCompId,
+        final String localSubId,
+        final String localLocationId,
+        final String remoteCompId,
+        final String remoteSubId,
+        final String remoteLocationId,
         final String username,
         final String password)
     {
@@ -599,8 +601,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
             if (subscriber != null)
             {
-                final CompositeKey compositeKey = senderCompId.length() == 0 ? null :
-                    sessionIdStrategy.onLogon(senderCompId, senderSubId, senderLocationId, targetCompId);
+                final CompositeKey compositeKey = localCompId.length() == 0 ? null :
+                    sessionIdStrategy.onLogon(localCompId, localSubId, localLocationId, remoteCompId);
                 final SessionHandler handler =
                     configuration.sessionAcquireHandler().onSessionAcquired(subscriber.session());
                 subscriber.onLogon(
@@ -618,10 +620,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             sessionExistsHandler.onSessionExists(
                 fixLibrary,
                 sessionId,
-                senderCompId,
-                senderSubId,
-                senderLocationId,
-                targetCompId,
+                localCompId,
+                localSubId,
+                localLocationId,
+                remoteCompId,
+                remoteSubId,
+                remoteLocationId,
                 username,
                 password);
         }

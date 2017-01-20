@@ -44,10 +44,12 @@ public interface LibraryEndPointHandler
         int lastSentSequenceNumber,
         int lastReceivedSequenceNumber,
         LogonStatus status,
-        String senderCompId,
-        String senderSubId,
-        String senderLocationId,
-        String targetCompId,
+        String localCompId,
+        String localSubId,
+        String localLocationId,
+        String remoteCompId,
+        String remoteSubId,
+        String remoteLocationId,
         String username,
         String password);
 
