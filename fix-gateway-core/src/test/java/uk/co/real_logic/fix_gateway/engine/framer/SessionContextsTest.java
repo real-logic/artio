@@ -205,8 +205,8 @@ public class SessionContextsTest
     {
         final long sessionId = 123;
         final HeaderDecoder header = mock(HeaderDecoder.class);
-        when(header.senderCompIDAsString()).thenReturn(aSession.senderCompId());
-        when(header.targetCompIDAsString()).thenReturn(aSession.targetCompId());
+        when(header.senderCompIDAsString()).thenReturn(aSession.localCompId());
+        when(header.targetCompIDAsString()).thenReturn(aSession.remoteCompId());
 
         sessionContexts.onSentFollowerLogon(header, sessionId, SEQUENCE_INDEX);
 

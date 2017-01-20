@@ -176,7 +176,7 @@ public class GatewayPublication extends ClaimablePublication
         final long position = claim(
             header.encodedLength() +
                 LogonEncoder.BLOCK_LENGTH +
-                LogonEncoder.senderSubIdHeaderLength() * 6 +
+                LogonEncoder.localSubIdHeaderLength() * 6 +
                 senderCompIdBytes.length +
                 senderSubIdBytes.length +
                 senderLocationIdBytes.length +
@@ -209,10 +209,10 @@ public class GatewayPublication extends ClaimablePublication
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
             .status(status)
-            .putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length)
-            .putSenderSubId(senderSubIdBytes, 0, senderSubIdBytes.length)
-            .putSenderLocationId(senderLocationIdBytes, 0, senderLocationIdBytes.length)
-            .putTargetCompId(targetCompIdBytes, 0, targetCompIdBytes.length)
+            .putLocalCompId(senderCompIdBytes, 0, senderCompIdBytes.length)
+            .putLocalSubId(senderSubIdBytes, 0, senderSubIdBytes.length)
+            .putLocalLocationId(senderLocationIdBytes, 0, senderLocationIdBytes.length)
+            .putRemoteCompId(targetCompIdBytes, 0, targetCompIdBytes.length)
             .putUsername(usernameBytes, 0, usernameBytes.length)
             .putPassword(passwordBytes, 0, passwordBytes.length);
 

@@ -75,8 +75,8 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
         requireNonNull(headerEncoder, "headerEncoder");
 
         final CompositeKeyImpl composite = (CompositeKeyImpl)compositeKey;
-        headerEncoder.senderCompID(composite.senderCompID);
-        headerEncoder.targetCompID(composite.targetCompID);
+        headerEncoder.senderCompID(composite.localCompID);
+        headerEncoder.targetCompID(composite.remoteCompID);
     }
 
     public int save(final CompositeKey compositeKey, final MutableDirectBuffer buffer, final int offset)
@@ -85,8 +85,8 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
         requireNonNull(buffer, "buffer");
 
         final CompositeKeyImpl key = (CompositeKeyImpl) compositeKey;
-        final byte[] senderCompID = key.senderCompID;
-        final byte[] targetCompID = key.targetCompID;
+        final byte[] senderCompID = key.localCompID;
+        final byte[] targetCompID = key.remoteCompID;
 
         final int length = senderCompID.length + targetCompID.length + BLOCK_AND_LENGTH_FIELDS_LENGTH;
         if (buffer.capacity() < offset + length)
@@ -95,8 +95,8 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
         }
 
         keyEncoder.wrap(buffer, offset);
-        keyEncoder.putSenderCompId(senderCompID, 0, senderCompID.length);
-        keyEncoder.putTargetCompId(targetCompID, 0, targetCompID.length);
+        keyEncoder.putLocalCompId(senderCompID, 0, senderCompID.length);
+        keyEncoder.putRemoteCompId(targetCompID, 0, targetCompID.length);
 
         return length;
     }
@@ -107,38 +107,38 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
 
         keyDecoder.wrap(buffer, offset, actingBlockLength, actingVersion);
 
-        final int senderCompIdLength = keyDecoder.senderCompIdLength();
-        final byte[] senderCompId = new byte[senderCompIdLength];
-        keyDecoder.getSenderCompId(senderCompId, 0, senderCompIdLength);
+        final int localCompIdLength = keyDecoder.localCompIdLength();
+        final byte[] localCompId = new byte[localCompIdLength];
+        keyDecoder.getLocalCompId(localCompId, 0, localCompIdLength);
 
-        final int targetCompIdLength = keyDecoder.targetCompIdLength();
-        final byte[] targetCompId = new byte[targetCompIdLength];
-        keyDecoder.getTargetCompId(targetCompId, 0, targetCompIdLength);
+        final int remoteCompIdLength = keyDecoder.remoteCompIdLength();
+        final byte[] remoteCompId = new byte[remoteCompIdLength];
+        keyDecoder.getRemoteCompId(remoteCompId, 0, remoteCompIdLength);
 
-        return new CompositeKeyImpl(senderCompId, targetCompId);
+        return new CompositeKeyImpl(localCompId, remoteCompId);
     }
 
     private static final class CompositeKeyImpl implements CompositeKey
     {
-        private final byte[] senderCompID;
-        private final byte[] targetCompID;
+        private final byte[] localCompID;
+        private final byte[] remoteCompID;
         private final int hashCode;
 
-        private CompositeKeyImpl(final char[] senderCompID,
-                                 final int senderCompIDLength,
-                                 final char[] targetCompID,
-                                 final int targetCompIDLength)
+        private CompositeKeyImpl(final char[] localCompID,
+                                 final int localCompIDLength,
+                                 final char[] remoteCompID,
+                                 final int remoteCompIDLength)
         {
             this(
-                CodecUtil.toBytes(senderCompID, senderCompIDLength),
-                CodecUtil.toBytes(targetCompID, targetCompIDLength));
+                CodecUtil.toBytes(localCompID, localCompIDLength),
+                CodecUtil.toBytes(remoteCompID, remoteCompIDLength));
         }
 
-        private CompositeKeyImpl(final byte[] senderCompID, final byte[] targetCompID)
+        private CompositeKeyImpl(final byte[] localCompID, final byte[] remoteCompID)
         {
-            this.senderCompID = senderCompID;
-            this.targetCompID = targetCompID;
-            hashCode = hash(senderCompID, targetCompID);
+            this.localCompID = localCompID;
+            this.remoteCompID = remoteCompID;
+            hashCode = hash(localCompID, remoteCompID);
         }
 
         private int hash(final byte[] senderCompID, final byte[] targetCompID)
@@ -158,8 +158,8 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
             if (obj instanceof CompositeKeyImpl)
             {
                 final CompositeKeyImpl compositeKey = (CompositeKeyImpl)obj;
-                return Arrays.equals(compositeKey.senderCompID, senderCompID)
-                    && Arrays.equals(compositeKey.targetCompID, targetCompID);
+                return Arrays.equals(compositeKey.localCompID, localCompID)
+                    && Arrays.equals(compositeKey.remoteCompID, remoteCompID);
             }
 
             return false;
@@ -168,29 +168,29 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
         public String toString()
         {
             return "CompositeKey{" +
-                "senderCompID=" + senderCompId() +
-                ", targetCompID=" + targetCompId() +
+                "localCompId=" + localCompId() +
+                ", remoteCompId=" + remoteCompId() +
                 '}';
         }
 
-        public String senderCompId()
+        public String localCompId()
         {
-            return new String(senderCompID, US_ASCII);
+            return new String(localCompID, US_ASCII);
         }
 
-        public String senderSubId()
+        public String localSubId()
         {
             return "";
         }
 
-        public String senderLocationId()
+        public String localLocationId()
         {
             return "";
         }
 
-        public String targetCompId()
+        public String remoteCompId()
         {
-            return new String(targetCompID, US_ASCII);
+            return new String(remoteCompID, US_ASCII);
         }
     }
 }

@@ -241,10 +241,10 @@
         <field name="lastSentSequenceNumber" id="4" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
         <field name="status" id="6" type="LogonStatus"/>
-        <data name="senderCompId" id="7" type="varDataEncoding"/>
-        <data name="senderSubId" id="8" type="varDataEncoding"/>
-        <data name="senderLocationId" id="9" type="varDataEncoding"/>
-        <data name="targetCompId" id="10" type="varDataEncoding"/>
+        <data name="localCompId" id="7" type="varDataEncoding"/>
+        <data name="localSubId" id="8" type="varDataEncoding"/>
+        <data name="localLocationId" id="9" type="varDataEncoding"/>
+        <data name="remoteCompId" id="10" type="varDataEncoding"/>
         <data name="username" id="11" type="varDataEncoding"/>
         <data name="password" id="12" type="varDataEncoding"/>
     </sbe:message>

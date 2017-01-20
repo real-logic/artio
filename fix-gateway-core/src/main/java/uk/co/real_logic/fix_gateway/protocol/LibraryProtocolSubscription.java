@@ -262,10 +262,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             logon.lastSentSequenceNumber(),
             logon.lastReceivedSequenceNumber(),
             logon.status(),
-            logon.senderCompId(),
-            logon.senderSubId(),
-            logon.senderLocationId(),
-            logon.targetCompId(),
+            logon.localCompId(),
+            logon.localSubId(),
+            logon.localLocationId(),
+            logon.remoteCompId(),
             logon.username(),
             logon.password());
     }

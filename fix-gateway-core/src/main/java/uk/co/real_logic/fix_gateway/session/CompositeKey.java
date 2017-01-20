@@ -22,11 +22,11 @@ package uk.co.real_logic.fix_gateway.session;
  */
 public interface CompositeKey
 {
-    String senderCompId();
+    String localCompId();
 
-    String senderSubId();
+    String localSubId();
 
-    String senderLocationId();
+    String localLocationId();
 
-    String targetCompId();
+    String remoteCompId();
 }

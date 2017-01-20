@@ -73,20 +73,20 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
     public void setupSession(final CompositeKey compositeKey, final HeaderEncoder headerEncoder)
     {
         final CompositeKeyImpl composite = (CompositeKeyImpl) compositeKey;
-        headerEncoder.senderCompID(composite.senderCompID);
-        headerEncoder.senderSubID(composite.senderSubID);
-        headerEncoder.targetCompID(composite.targetCompID);
+        headerEncoder.senderCompID(composite.localCompId);
+        headerEncoder.senderSubID(composite.localSubID);
+        headerEncoder.targetCompID(composite.remoteCompID);
     }
 
     public int save(final CompositeKey compositeKey, final MutableDirectBuffer buffer, final int offset)
     {
         final CompositeKeyImpl key = (CompositeKeyImpl) compositeKey;
-        final byte[] senderCompID = key.senderCompID;
-        final byte[] senderSubID = key.senderSubID;
-        final byte[] targetCompID = key.targetCompID;
+        final byte[] localCompID = key.localCompId;
+        final byte[] localSubID = key.localSubID;
+        final byte[] remoteCompID = key.remoteCompID;
 
         final int length =
-            senderCompID.length + senderSubID.length + targetCompID.length + BLOCK_AND_LENGTH_FIELDS_LENGTH;
+            localCompID.length + localSubID.length + remoteCompID.length + BLOCK_AND_LENGTH_FIELDS_LENGTH;
 
         if (buffer.capacity() < offset + length)
         {
@@ -94,9 +94,9 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
         }
 
         keyEncoder.wrap(buffer, offset);
-        keyEncoder.putSenderCompId(senderCompID, 0, senderCompID.length);
-        keyEncoder.putSenderSubId(senderSubID, 0, senderSubID.length);
-        keyEncoder.putTargetCompId(targetCompID, 0, targetCompID.length);
+        keyEncoder.putLocalCompId(localCompID, 0, localCompID.length);
+        keyEncoder.putLocalSubId(localSubID, 0, localSubID.length);
+        keyEncoder.putRemoteCompId(remoteCompID, 0, remoteCompID.length);
 
         return length;
     }
@@ -105,58 +105,58 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
     {
         keyDecoder.wrap(buffer, offset, actingBlockLength, actingVersion);
 
-        final int senderCompIdLength = keyDecoder.senderCompIdLength();
-        final byte[] senderCompId = new byte[senderCompIdLength];
-        keyDecoder.getSenderCompId(senderCompId, 0, senderCompIdLength);
+        final int localCompIdLength = keyDecoder.localCompIdLength();
+        final byte[] localCompId = new byte[localCompIdLength];
+        keyDecoder.getLocalCompId(localCompId, 0, localCompIdLength);
 
-        final int senderSubIdLength = keyDecoder.senderSubIdLength();
-        final byte[] senderSubId = new byte[senderSubIdLength];
-        keyDecoder.getSenderSubId(senderSubId, 0, senderSubIdLength);
+        final int localSubIdLength = keyDecoder.localSubIdLength();
+        final byte[] localSubId = new byte[localSubIdLength];
+        keyDecoder.getLocalSubId(localSubId, 0, localSubIdLength);
 
-        final int targetCompIdLength = keyDecoder.targetCompIdLength();
-        final byte[] targetCompId = new byte[targetCompIdLength];
-        keyDecoder.getTargetCompId(targetCompId, 0, targetCompIdLength);
+        final int remoteCompIdLength = keyDecoder.remoteCompIdLength();
+        final byte[] remoteCompId = new byte[remoteCompIdLength];
+        keyDecoder.getRemoteCompId(remoteCompId, 0, remoteCompIdLength);
 
-        return new CompositeKeyImpl(senderCompId, senderSubId, targetCompId);
+        return new CompositeKeyImpl(localCompId, localSubId, remoteCompId);
     }
 
     private static final class CompositeKeyImpl implements CompositeKey
     {
-        private final byte[] senderCompID;
-        private final byte[] senderSubID;
-        private final byte[] targetCompID;
+        private final byte[] localCompId;
+        private final byte[] localSubID;
+        private final byte[] remoteCompID;
         private final int hashCode;
 
         private CompositeKeyImpl(
-            final char[] senderCompID,
-            final int senderCompIDLength,
-            final char[] senderSubID,
-            final int senderSubIDLength,
-            final char[] targetCompID,
-            final int targetCompIDLength)
+            final char[] localCompId,
+            final int localCompIDLength,
+            final char[] localSubID,
+            final int localSubIDLength,
+            final char[] remoteCompID,
+            final int remoteCompIDLength)
         {
             this(
-                CodecUtil.toBytes(senderCompID, senderCompIDLength),
-                CodecUtil.toBytes(senderSubID, senderSubIDLength),
-                CodecUtil.toBytes(targetCompID, targetCompIDLength));
+                CodecUtil.toBytes(localCompId, localCompIDLength),
+                CodecUtil.toBytes(localSubID, localSubIDLength),
+                CodecUtil.toBytes(remoteCompID, remoteCompIDLength));
         }
 
         private CompositeKeyImpl(
-            final byte[] senderCompID,
-            final byte[] senderSubID,
-            final byte[] targetCompID)
+            final byte[] localCompId,
+            final byte[] localSubID,
+            final byte[] remoteCompID)
         {
-            this.senderCompID = senderCompID;
-            this.senderSubID = senderSubID;
-            this.targetCompID = targetCompID;
-            hashCode = hash(this.senderCompID, this.senderSubID, this.targetCompID);
+            this.localCompId = localCompId;
+            this.localSubID = localSubID;
+            this.remoteCompID = remoteCompID;
+            hashCode = hash(this.localCompId, this.localSubID, this.remoteCompID);
         }
 
-        private int hash(final byte[] senderCompID, final byte[] senderSubID, final byte[] targetCompID)
+        private int hash(final byte[] localCompID, final byte[] localSubID, final byte[] remoteCompID)
         {
-            int result  = Arrays.hashCode(senderCompID);
-            result = 31 * result + Arrays.hashCode(senderSubID);
-            result = 31 * result + Arrays.hashCode(targetCompID);
+            int result  = Arrays.hashCode(localCompID);
+            result = 31 * result + Arrays.hashCode(localSubID);
+            result = 31 * result + Arrays.hashCode(remoteCompID);
             return result;
         }
 
@@ -170,9 +170,9 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
             if (obj instanceof CompositeKeyImpl)
             {
                 final CompositeKeyImpl compositeKey = (CompositeKeyImpl)obj;
-                return Arrays.equals(compositeKey.senderCompID, senderCompID)
-                    && Arrays.equals(compositeKey.senderSubID, senderSubID)
-                    && Arrays.equals(compositeKey.targetCompID, targetCompID);
+                return Arrays.equals(compositeKey.localCompId, localCompId)
+                    && Arrays.equals(compositeKey.localSubID, localSubID)
+                    && Arrays.equals(compositeKey.remoteCompID, remoteCompID);
             }
 
             return false;
@@ -181,30 +181,30 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
         public String toString()
         {
             return "CompositeKey{" +
-                "senderCompID=" + senderCompId() +
-                "senderSubID=" + senderSubId() +
-                ", targetCompID=" + targetCompId() +
+                "localCompId=" + localCompId() +
+                "localSubId=" + localSubId() +
+                ", remoteCompId=" + remoteCompId() +
                 '}';
         }
 
-        public String senderCompId()
+        public String localCompId()
         {
-            return new String(senderCompID, US_ASCII);
+            return new String(localCompId, US_ASCII);
         }
 
-        public String senderSubId()
+        public String localSubId()
         {
-            return new String(senderSubID, US_ASCII);
+            return new String(localSubID, US_ASCII);
         }
 
-        public String senderLocationId()
+        public String localLocationId()
         {
             return "";
         }
 
-        public String targetCompId()
+        public String remoteCompId()
         {
-            return new String(targetCompID, US_ASCII);
+            return new String(remoteCompID, US_ASCII);
         }
     }
 }

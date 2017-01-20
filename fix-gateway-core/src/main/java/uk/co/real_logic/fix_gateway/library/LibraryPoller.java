@@ -108,7 +108,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
      */
     private long currentCorrelationId = ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE);
 
-    private GatewayError errorType;
     private String errorMessage;
 
     private State state = State.CONNECTING;
@@ -408,7 +407,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
         try
         {
-            errorType = null;
             final long correlationId = ++currentCorrelationId;
             final int maxClaimAttempts = configuration.outboundMaxClaimAttempts();
             long position = Long.MIN_VALUE;
@@ -593,6 +591,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final String username,
         final String password)
     {
+
         final boolean thisLibrary = libraryId == this.libraryId;
         if (thisLibrary && status == LogonStatus.NEW)
         {
@@ -712,7 +711,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             else
             {
                 // case of a connect error
-                this.errorType = errorType;
                 this.errorMessage = message;
             }
         }

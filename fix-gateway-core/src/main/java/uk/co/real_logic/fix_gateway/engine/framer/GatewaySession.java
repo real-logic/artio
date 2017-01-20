@@ -170,7 +170,7 @@ class GatewaySession implements SessionInfo
         {
             session.setupSession(sessionId, sessionKey);
             sessionParser.sequenceIndex(context.sequenceIndex());
-            DebugLogger.log(GATEWAY_MESSAGE, "Setup Session As: %s\n", sessionKey.senderCompId());
+            DebugLogger.log(GATEWAY_MESSAGE, "Setup Session As: %s\n", sessionKey.localCompId());
         }
         senderEndPoint.onLogon(sessionId);
     }

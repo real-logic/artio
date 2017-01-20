@@ -76,12 +76,12 @@
         <field name="compositeKeyLength" id="3" type="int32"/>
     </sbe:message>
     <sbe:message name="SenderAndTargetCompositeKey" id="26" description="">
-        <data name="senderCompId" id="1" type="varDataEncoding"/>
-        <data name="targetCompId" id="2" type="varDataEncoding"/>
+        <data name="localCompId" id="1" type="varDataEncoding"/>
+        <data name="remoteCompId" id="2" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="SenderTargetAndSubCompositeKey" id="27" description="">
-        <data name="senderCompId" id="1" type="varDataEncoding"/>
-        <data name="senderSubId" id="2" type="varDataEncoding"/>
-        <data name="targetCompId" id="3" type="varDataEncoding"/>
+        <data name="localCompId" id="1" type="varDataEncoding"/>
+        <data name="localSubId" id="2" type="varDataEncoding"/>
+        <data name="remoteCompId" id="3" type="varDataEncoding"/>
     </sbe:message>
 </sbe:messageSchema>
