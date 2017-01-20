@@ -235,6 +235,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             configuration.senderSubId(),
             configuration.senderLocationId(),
             configuration.targetCompId(),
+            configuration.targetSubId(),
+            configuration.targetLocationId(),
             configuration.sequenceNumberType(),
             configuration.initialSequenceNumber(),
             configuration.username(),
@@ -602,7 +604,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             if (subscriber != null)
             {
                 final CompositeKey compositeKey = localCompId.length() == 0 ? null :
-                    sessionIdStrategy.onLogon(localCompId, localSubId, localLocationId, remoteCompId);
+                    sessionIdStrategy.onLogon(
+                        localCompId,
+                        localSubId,
+                        localLocationId,
+                        remoteCompId,
+                        remoteSubId,
+                        remoteLocationId);
                 final SessionHandler handler =
                     configuration.sessionAcquireHandler().onSessionAcquired(subscriber.session());
                 subscriber.onLogon(
@@ -893,8 +901,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         if (sessionConfiguration != null)
         {
             final CompositeKey key = sessionIdStrategy.onLogon(
-                sessionConfiguration.senderCompId(), sessionConfiguration.senderSubId(),
-                sessionConfiguration.senderLocationId(), sessionConfiguration.targetCompId());
+                sessionConfiguration.senderCompId(),
+                sessionConfiguration.senderSubId(),
+                sessionConfiguration.senderLocationId(),
+                sessionConfiguration.targetCompId(),
+                sessionConfiguration.targetSubId(),
+                sessionConfiguration.targetLocationId());
             sessionProxy.setupSession(-1, key);
 
             session

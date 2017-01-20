@@ -462,6 +462,8 @@ public class GatewayPublication extends ClaimablePublication
         final String senderSubId,
         final String senderLocationId,
         final String targetCompId,
+        final String targetSubId,
+        final String targetLocationId,
         final SequenceNumberType sequenceNumberType,
         final int requestedInitialSequenceNumber,
         final String username,
@@ -474,18 +476,22 @@ public class GatewayPublication extends ClaimablePublication
         final byte[] senderSubIdBytes = bytes(senderSubId);
         final byte[] senderLocationIdBytes = bytes(senderLocationId);
         final byte[] targetCompIdBytes = bytes(targetCompId);
+        final byte[] targetSubIdBytes = bytes(targetSubId);
+        final byte[] targetLocationIdBytes = bytes(targetLocationId);
         final byte[] usernameBytes = bytes(username);
         final byte[] passwordBytes = bytes(password);
 
         final long position = claim(
             header.encodedLength() +
                 InitiateConnectionEncoder.BLOCK_LENGTH +
-                InitiateConnectionDecoder.hostHeaderLength() * 7 +
+                InitiateConnectionDecoder.hostHeaderLength() * 9 +
                 hostBytes.length +
                 senderCompIdBytes.length +
                 senderSubIdBytes.length +
                 senderLocationIdBytes.length +
                 targetCompIdBytes.length +
+                targetSubIdBytes.length +
+                targetLocationIdBytes.length +
                 usernameBytes.length +
                 passwordBytes.length);
 
@@ -519,6 +525,8 @@ public class GatewayPublication extends ClaimablePublication
             .putSenderSubId(senderSubIdBytes, 0, senderSubIdBytes.length)
             .putSenderLocationId(senderLocationIdBytes, 0, senderLocationIdBytes.length)
             .putTargetCompId(targetCompIdBytes, 0, targetCompIdBytes.length)
+            .putTargetSubId(targetSubIdBytes, 0, targetSubIdBytes.length)
+            .putTargetLocationId(targetLocationIdBytes, 0, targetLocationIdBytes.length)
             .putUsername(usernameBytes, 0, usernameBytes.length)
             .putPassword(passwordBytes, 0, passwordBytes.length);
 

@@ -58,7 +58,9 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
         final String senderCompId,
         final String senderSubId,
         final String senderLocationId,
-        final String targetCompId)
+        final String targetCompId,
+        final String targetSubId,
+        final String targetLocationId)
     {
         requireNonNull(senderCompId, "senderCompId");
         requireNonNull(targetCompId, "targetCompId");

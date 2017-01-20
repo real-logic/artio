@@ -338,7 +338,9 @@ public class SessionContexts
             header.senderCompIDAsString(),
             header.senderSubIDAsString(),
             header.senderLocationIDAsString(),
-            header.targetCompIDAsString());
+            header.targetCompIDAsString(),
+            header.targetSubIDAsString(),
+            header.targetLocationIDAsString());
 
         final SessionContext sessionContext = assignSessionId(compositeKey, sessionId, sequenceIndex);
         compositeToContext.put(compositeKey, sessionContext);

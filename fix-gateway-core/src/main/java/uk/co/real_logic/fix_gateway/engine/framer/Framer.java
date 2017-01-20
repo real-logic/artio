@@ -462,6 +462,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final String senderSubId,
         final String senderLocationId,
         final String targetCompId,
+        final String targetSubId,
+        final String targetLocationId,
         final SequenceNumberType sequenceNumberType,
         final int requestedInitialSequenceNumber,
         final String username,
@@ -491,8 +493,22 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     }
 
                     onConnectionOpen(
-                        libraryId, senderCompId, senderSubId, senderLocationId, targetCompId, sequenceNumberType,
-                        username, password, heartbeatIntervalInS, correlationId, header, library, address, channel);
+                        libraryId,
+                        senderCompId,
+                        senderSubId,
+                        senderLocationId,
+                        targetCompId,
+                        targetSubId,
+                        targetLocationId,
+                        sequenceNumberType,
+                        username,
+                        password,
+                        heartbeatIntervalInS,
+                        correlationId,
+                        header,
+                        library,
+                        address,
+                        channel);
                 });
         }
         catch (final Exception e)
@@ -511,6 +527,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final String senderSubId,
         final String senderLocationId,
         final String targetCompId,
+        final String targetSubId,
+        final String targetLocationId,
         final SequenceNumberType sequenceNumberType,
         final String username,
         final String password,
@@ -526,7 +544,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final long connectionId = this.nextConnectionId++;
 
             final CompositeKey sessionKey = sessionIdStrategy.onLogon(
-                senderCompId, senderSubId, senderLocationId, targetCompId);
+                senderCompId,
+                senderSubId,
+                senderLocationId,
+                targetCompId,
+                targetSubId,
+                targetLocationId);
             final SessionContext sessionContext = sessionContexts.onLogon(sessionKey);
             if (sessionContext == SessionContexts.DUPLICATE_SESSION)
             {

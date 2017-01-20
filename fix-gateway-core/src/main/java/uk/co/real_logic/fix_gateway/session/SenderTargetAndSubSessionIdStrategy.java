@@ -56,7 +56,9 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
         final String senderCompId,
         final String senderSubId,
         final String senderLocationId,
-        final String targetCompId)
+        final String targetCompId,
+        final String targetSubId,
+        final String targetLocationId)
     {
         final char[] senderCompIdChars = senderCompId.toCharArray();
         final char[] senderSubIdChars = senderSubId.toCharArray();

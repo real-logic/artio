@@ -37,9 +37,11 @@ public final class SessionConfiguration
     private final String username;
     private final String password;
     private final String senderCompId;
-    private final String targetCompId;
     private final String senderSubId;
     private final String senderLocationId;
+    private final String targetCompId;
+    private final String targetSubId;
+    private final String targetLocationId;
     private final boolean sequenceNumbersPersistent;
     private final int initialSequenceNumber;
     private final long timeoutInMs;
@@ -58,17 +60,20 @@ public final class SessionConfiguration
         final String senderSubId,
         final String senderLocationId,
         final String targetCompId,
+        final String targetSubId,
+        final String targetLocationId,
         final boolean sequenceNumbersPersistent,
         final int initialSequenceNumber,
         final long timeoutInMs)
     {
-        this.timeoutInMs = timeoutInMs;
         Objects.requireNonNull(hosts);
         Objects.requireNonNull(ports);
         Objects.requireNonNull(senderCompId);
         Objects.requireNonNull(senderSubId);
         Objects.requireNonNull(senderLocationId);
         Objects.requireNonNull(targetCompId);
+        Objects.requireNonNull(targetSubId);
+        Objects.requireNonNull(targetLocationId);
 
         requireNonEmpty(hosts, "hosts");
         requireNonEmpty(ports, "ports");
@@ -77,6 +82,9 @@ public final class SessionConfiguration
         this.senderSubId = senderSubId;
         this.senderLocationId = senderLocationId;
         this.targetCompId = targetCompId;
+        this.targetSubId = targetSubId;
+        this.targetLocationId = targetLocationId;
+        this.timeoutInMs = timeoutInMs;
         this.hosts = hosts;
         this.ports = ports;
         this.username = username;
@@ -133,6 +141,16 @@ public final class SessionConfiguration
         return targetCompId;
     }
 
+    public String targetSubId()
+    {
+        return targetSubId;
+    }
+
+    public String targetLocationId()
+    {
+        return targetLocationId;
+    }
+
     public boolean sequenceNumbersPersistent()
     {
         return sequenceNumbersPersistent;
@@ -165,9 +183,11 @@ public final class SessionConfiguration
         private List<String> hosts = new ArrayList<>();
         private IntArrayList ports = new IntArrayList();
         private String senderCompId;
-        private String targetCompId;
         private String senderSubId = "";
         private String senderLocationId = "";
+        private String targetCompId;
+        private String targetSubId = "";
+        private String targetLocationId = "";
         private boolean sequenceNumbersPersistent = false;
         private int initialSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
         private long timeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
@@ -259,6 +279,18 @@ public final class SessionConfiguration
             return this;
         }
 
+        public Builder targetSubId(final String targetSubId)
+        {
+            this.targetSubId = targetSubId;
+            return this;
+        }
+
+        public Builder targetLocationId(final String targetLocationId)
+        {
+            this.targetLocationId = targetLocationId;
+            return this;
+        }
+
         /**
          * Set this flag if you want sequence numbers to persistent when you reconnect
          * to the acceptor.
@@ -305,8 +337,20 @@ public final class SessionConfiguration
 
         public SessionConfiguration build()
         {
-            return new SessionConfiguration(hosts, ports, username, password, senderCompId, senderSubId,
-                senderLocationId, targetCompId, sequenceNumbersPersistent, initialSequenceNumber, timeoutInMs);
+            return new SessionConfiguration(
+                hosts,
+                ports,
+                username,
+                password,
+                senderCompId,
+                senderSubId,
+                senderLocationId,
+                targetCompId,
+                targetSubId,
+                targetLocationId,
+                sequenceNumbersPersistent,
+                initialSequenceNumber,
+                timeoutInMs);
         }
     }
 }

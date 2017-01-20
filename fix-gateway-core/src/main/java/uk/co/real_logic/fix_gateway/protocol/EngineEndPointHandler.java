@@ -33,6 +33,8 @@ public interface EngineEndPointHandler
         String senderSubId,
         String senderLocationId,
         String targetCompId,
+        String targetSubId,
+        String targetLocationId,
         SequenceNumberType sequenceNumberType,
         int requestedInitialSequenceNumber,
         String username,

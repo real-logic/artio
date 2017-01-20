@@ -186,6 +186,8 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             initiateConnection.senderSubId(),
             initiateConnection.senderLocationId(),
             initiateConnection.targetCompId(),
+            initiateConnection.targetSubId(),
+            initiateConnection.targetLocationId(),
             initiateConnection.sequenceNumberType(),
             initiateConnection.requestedInitialSequenceNumber(),
             initiateConnection.username(),

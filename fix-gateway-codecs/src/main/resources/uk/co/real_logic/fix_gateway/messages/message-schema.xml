@@ -166,8 +166,10 @@
         <data name="senderSubId" id="7" type="varDataEncoding"/>
         <data name="senderLocationId" id="9" type="varDataEncoding"/>
         <data name="targetCompId" id="10" type="varDataEncoding"/>
-        <data name="username" id="11" type="varDataEncoding"/>
-        <data name="password" id="12" type="varDataEncoding"/>
+        <data name="targetSubId" id="11" type="varDataEncoding"/>
+        <data name="targetLocationId" id="12" type="varDataEncoding"/>
+        <data name="username" id="13" type="varDataEncoding"/>
+        <data name="password" id="14" type="varDataEncoding"/>
     </sbe:message>
 
     <sbe:message name="RequestDisconnect" id="12" description="Request a connection be disconnected">
