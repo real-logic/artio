@@ -147,9 +147,20 @@ public class GatewayPublication extends ClaimablePublication
         final long sessionId)
     {
         return saveLogon(
-            libraryId, connectionId, sessionId,
-            SessionInfo.UNK_SESSION, SessionInfo.UNK_SESSION,
-            null, null, null, null, null, null, LogonStatus.NEW);
+            libraryId,
+            connectionId,
+            sessionId,
+            SessionInfo.UNK_SESSION,
+            SessionInfo.UNK_SESSION,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            LogonStatus.NEW);
     }
 
     public long saveLogon(
@@ -162,13 +173,12 @@ public class GatewayPublication extends ClaimablePublication
         final String localSubId,
         final String localLocationId,
         final String remoteCompId,
+        final String remoteSubId,
+        final String remoteLocationId,
         final String username,
         final String password,
         final LogonStatus status)
     {
-        final String remoteSubId = "";
-        final String remoteLocationId = "";
-
         final byte[] localCompIdBytes = bytes(localCompId);
         final byte[] localSubIdBytes = bytes(localSubId);
         final byte[] localLocationIdBytes = bytes(localLocationId);

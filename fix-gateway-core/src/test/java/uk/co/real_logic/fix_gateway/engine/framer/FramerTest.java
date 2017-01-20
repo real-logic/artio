@@ -703,7 +703,7 @@ public class FramerTest
         when(inboundPublication.saveLogon(
             eq(LIBRARY_ID), anyLong(), anyLong(),
             anyInt(), anyInt(),
-            any(), any(), any(), any(),
+            any(), any(), any(), any(), any(), any(),
             any(), any(), any()))
             .thenReturn(BACK_PRESSURED, POSITION);
     }
@@ -803,7 +803,7 @@ public class FramerTest
         verify(inboundPublication, times).saveLogon(
             eq(LIBRARY_ID), eq(connectionId.getValue()), anyLong(),
             anyInt(), anyInt(),
-            any(), any(), any(), any(),
+            any(), any(), any(), any(), any(), any(),
             any(), any(), eq(status));
     }
 

@@ -566,8 +566,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     return inboundPublication.saveLogon(
                         libraryId, connectionId, sessionId,
                         lastSentSequenceNumber, lastReceivedSequenceNumber,
-                        senderCompId, senderSubId, senderLocationId, targetCompId,
-                        username, password, LogonStatus.NEW);
+                        senderCompId, senderSubId, senderLocationId, targetCompId, "",
+                        "", username, password, LogonStatus.NEW);
                 }
 
                 private long saveManageConnection()
@@ -925,6 +925,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 compositeKey.localSubId(),
                 compositeKey.localLocationId(),
                 compositeKey.remoteCompId(),
+                compositeKey.remoteSubId(),
+                compositeKey.remoteLocationId(),
                 username,
                 password,
                 status);

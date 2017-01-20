@@ -368,6 +368,8 @@ class ReceiverEndPoint
                     compositeKey.localSubId(),
                     compositeKey.localLocationId(),
                     compositeKey.remoteCompId(),
+                    compositeKey.remoteSubId(),
+                    compositeKey.remoteLocationId(),
                     username,
                     password,
                     LogonStatus.NEW));
