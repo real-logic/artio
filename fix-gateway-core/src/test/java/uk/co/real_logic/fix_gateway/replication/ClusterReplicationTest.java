@@ -71,7 +71,6 @@ public class ClusterReplicationTest
         }
     }
 
-    @Ignore
     @Test(timeout = TEST_TIMEOUT)
     public void shouldEstablishCluster()
     {
