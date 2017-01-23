@@ -27,7 +27,6 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 
 public class MessageDumperTest
 {
-
     @Test
     public void dumpsIr()
     {
@@ -40,7 +39,7 @@ public class MessageDumperTest
             .wrap(buffer, offset)
             .libraryId(4)
             .connection(1)
-            .type(ACCEPTOR)
+            .connectionType(ACCEPTOR)
             .lastSentSequenceNumber(3)
             .lastReceivedSequenceNumber(2)
             .sessionState(ACTIVE)
@@ -58,7 +57,7 @@ public class MessageDumperTest
             "    libraryId: 4,\n" +
             "    connection: 1,\n" +
             "    session: 0,\n" +
-            "    type: 'ACCEPTOR',\n" +
+            "    connectionType: 'ACCEPTOR',\n" +
             "    lastSentSequenceNumber: 3,\n" +
             "    lastReceivedSequenceNumber: 2,\n" +
             "    sessionState: 'ACTIVE',\n" +
@@ -70,5 +69,4 @@ public class MessageDumperTest
             result
         );
     }
-
 }

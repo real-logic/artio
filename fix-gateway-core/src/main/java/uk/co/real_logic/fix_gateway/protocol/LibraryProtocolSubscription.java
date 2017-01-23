@@ -116,11 +116,11 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         {
             return action;
         }
+
         return handler.onNotLeader(
             libraryId,
             libraryConnect.replyToId(),
-            libraryConnect.libraryChannel()
-        );
+            libraryConnect.libraryChannel());
     }
 
     private Action onControlNotification(
@@ -136,10 +136,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         {
             return action;
         }
+
         return handler.onControlNotification(
             libraryId,
-            controlNotification.sessions()
-        );
+            controlNotification.sessions());
     }
 
     private Action onApplicationHeartbeat(
@@ -162,6 +162,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         {
             return action;
         }
+
         return handler.onReleaseSessionReply(
             libraryId,
             releaseSessionReply.replyToId(),
@@ -178,6 +179,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         {
             return action;
         }
+
         return handler.onRequestSessionReply(
             libraryId,
             requestSessionReply.replyToId(),
@@ -196,10 +198,9 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         }
         return handler.onError(
             libraryId,
-            error.type(),
+            error.errorType(),
             error.replyToId(),
-            error.message()
-        );
+            error.message());
     }
 
     private Action onNewSentPosition(
@@ -212,10 +213,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         {
             return action;
         }
+
         return handler.onNewSentPosition(
             libraryId,
-            newSentPosition.position()
-        );
+            newSentPosition.position());
     }
 
     private Action onManageConnection(
@@ -233,7 +234,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             libraryId,
             manageConnection.connection(),
             manageConnection.session(),
-            manageConnection.type(),
+            manageConnection.connectionType(),
             manageConnection.lastSentSequenceNumber(),
             manageConnection.lastReceivedSequenceNumber(),
             buffer,
@@ -255,6 +256,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         {
             return action;
         }
+
         return handler.onLogon(
             libraryId,
             logon.connection(),
