@@ -28,10 +28,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.aeron.driver.Configuration.ERROR_BUFFER_LENGTH_PROP_NAME;
-import static org.agrona.CloseHelper.quietClose;
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
+import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.closeAll;
 
 public class GatewayProcess implements AutoCloseable
 {
@@ -39,7 +39,7 @@ public class GatewayProcess implements AutoCloseable
     public static final int OUTBOUND_LIBRARY_STREAM = 2;
     public static final int OUTBOUND_REPLAY_STREAM = 3;
 
-    private CommonConfiguration configuration;
+    protected CommonConfiguration configuration;
     protected MonitoringFile monitoringFile;
     protected FixCounters fixCounters;
     protected ErrorHandler errorHandler;
@@ -129,9 +129,14 @@ public class GatewayProcess implements AutoCloseable
 
     public void close()
     {
-        quietClose(monitoringRunner);
-        aeron.close();
-        CloseChecker.onClose(configuration.aeronContext().aeronDirectoryName(), aeron);
-        monitoringFile.close();
+        closeAll(
+            monitoringRunner,
+            () ->
+            {
+                aeron.close();
+                // Only record this as closed if the aeron.close() succeeded.
+                CloseChecker.onClose(configuration.aeronContext().aeronDirectoryName(), aeron);
+            },
+            monitoringFile);
     }
 }
