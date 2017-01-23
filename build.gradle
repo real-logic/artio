@@ -105,6 +105,7 @@ subprojects {
         }
 
         systemProperty 'fix.core.close_checker', 'true'
+        systemProperty "fix.core.debug", System.getProperty("fix.core.debug")
 
         beforeTest { desc ->
             if (System.properties["printTestNames"] != null)
