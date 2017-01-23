@@ -28,7 +28,7 @@ import static uk.co.real_logic.fix_gateway.decoder.LogonDecoder.MESSAGE_TYPE_BYT
 
 public class InitiatorSession extends Session
 {
-    private final boolean resetSeqNumFlagValue;
+    private final boolean resetSeqNum;
 
     public InitiatorSession(
         final int heartbeatInterval,
@@ -45,7 +45,7 @@ public class InitiatorSession extends Session
         final int initialSequenceNumber,
         final int sequenceIndex,
         final SessionState state,
-        final boolean resetSeqNumFlagValue)
+        final boolean resetSeqNum)
     {
         super(
             heartbeatInterval,
@@ -62,7 +62,7 @@ public class InitiatorSession extends Session
             sessionBufferSize,
             initialSequenceNumber,
             sequenceIndex);
-        this.resetSeqNumFlagValue = resetSeqNumFlagValue;
+        this.resetSeqNum = resetSeqNum;
     }
 
     public Action onLogon(
@@ -169,7 +169,7 @@ public class InitiatorSession extends Session
             final int heartbeatIntervalInS = (int) (heartbeatIntervalInMs() / 1000);
             final int sentSeqNum = newSentSeqNum();
             final long position = proxy.logon(
-                heartbeatIntervalInS, sentSeqNum, username(), password(), resetSeqNumFlagValue, sequenceIndex());
+                heartbeatIntervalInS, sentSeqNum, username(), password(), resetSeqNum, sequenceIndex());
             if (position >= 0)
             {
                 lastSentMsgSeqNum(sentSeqNum);

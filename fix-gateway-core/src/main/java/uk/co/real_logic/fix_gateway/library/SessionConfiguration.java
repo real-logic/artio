@@ -31,6 +31,8 @@ import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_REPLY_TIM
 public final class SessionConfiguration
 {
     public static final int AUTOMATIC_INITIAL_SEQUENCE_NUMBER = -1;
+    public static final boolean DEFAULT_RESET_SEQ_NUM = false;
+    public static final boolean DEFAULT_SEQUENCE_NUMBERS_PERSISTENT = false;
 
     private final List<String> hosts;
     private final IntArrayList ports;
@@ -45,6 +47,7 @@ public final class SessionConfiguration
     private final boolean sequenceNumbersPersistent;
     private final int initialSequenceNumber;
     private final long timeoutInMs;
+    private final boolean resetSeqNum;
 
     public static Builder builder()
     {
@@ -64,8 +67,10 @@ public final class SessionConfiguration
         final String targetLocationId,
         final boolean sequenceNumbersPersistent,
         final int initialSequenceNumber,
-        final long timeoutInMs)
+        final long timeoutInMs,
+        final boolean resetSeqNum)
     {
+        this.resetSeqNum = resetSeqNum;
         Objects.requireNonNull(hosts);
         Objects.requireNonNull(ports);
         Objects.requireNonNull(senderCompId);
@@ -176,6 +181,11 @@ public final class SessionConfiguration
         return timeoutInMs;
     }
 
+    public boolean resetSeqNum()
+    {
+        return resetSeqNum;
+    }
+
     public static final class Builder
     {
         private String username;
@@ -188,9 +198,10 @@ public final class SessionConfiguration
         private String targetCompId;
         private String targetSubId = "";
         private String targetLocationId = "";
-        private boolean sequenceNumbersPersistent = false;
+        private boolean sequenceNumbersPersistent = DEFAULT_SEQUENCE_NUMBERS_PERSISTENT;
         private int initialSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
         private long timeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
+        private boolean resetSeqNum = DEFAULT_RESET_SEQ_NUM;
 
         private Builder()
         {
@@ -335,6 +346,18 @@ public final class SessionConfiguration
             return this;
         }
 
+        /**
+         * Sets the value of the resetSeqNum (141=) flag when the initiator logon message is sent.
+         *
+         * @param resetSeqNum the value of the resetSeqNum (141=) flag when the initiator logon message is sent.
+         * @return this builder
+         */
+        public Builder resetSeqNum(final boolean resetSeqNum)
+        {
+            this.resetSeqNum = resetSeqNum;
+            return this;
+        }
+
         public SessionConfiguration build()
         {
             return new SessionConfiguration(
@@ -350,7 +373,8 @@ public final class SessionConfiguration
                 targetLocationId,
                 sequenceNumbersPersistent,
                 initialSequenceNumber,
-                timeoutInMs);
+                timeoutInMs,
+                resetSeqNum);
         }
     }
 }
