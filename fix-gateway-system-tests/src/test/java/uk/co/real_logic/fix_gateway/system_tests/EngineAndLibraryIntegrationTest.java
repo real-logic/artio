@@ -174,7 +174,10 @@ public class EngineAndLibraryIntegrationTest
                 library.poll(5);
                 return !library.isConnected();
             },
-            AWAIT_TIMEOUT
+            AWAIT_TIMEOUT,
+            () ->
+            {
+            }
         );
     }
 

@@ -348,7 +348,9 @@ public final class SystemTestUtil
                 library.poll(LIBRARY_LIMIT);
 
                 return library.isConnected();
-            });
+            },
+            DEFAULT_TIMEOUT_IN_MS,
+            library::close);
 
         return library;
     }
@@ -376,7 +378,10 @@ public final class SystemTestUtil
                 }
                 return libraries(engine).size() == count + 1;
             },
-            AWAIT_TIMEOUT
+            AWAIT_TIMEOUT,
+            () ->
+            {
+            }
         );
     }
 
@@ -401,7 +406,10 @@ public final class SystemTestUtil
                 library.poll(5);
                 return library.isConnected();
             },
-            AWAIT_TIMEOUT
+            AWAIT_TIMEOUT,
+            () ->
+            {
+            }
         );
     }
 

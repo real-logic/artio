@@ -54,7 +54,13 @@ public final class Timing
 
     public static void assertEventuallyTrue(final String message, final BooleanSupplier condition)
     {
-        assertEventuallyTrue(message, condition, DEFAULT_TIMEOUT_IN_MS);
+        assertEventuallyTrue(
+            message,
+            condition,
+            DEFAULT_TIMEOUT_IN_MS,
+            () ->
+            {
+            });
     }
 
     public static void assertEventuallyTrue(
@@ -97,7 +103,8 @@ public final class Timing
     public static void assertEventuallyTrue(
         final String message,
         final BooleanSupplier condition,
-        final long timeout)
+        final long timeout,
+        final Runnable failureCleanup)
     {
         final long endTime = System.currentTimeMillis() + timeout;
 
@@ -111,6 +118,8 @@ public final class Timing
             Thread.yield();
         }
         while (System.currentTimeMillis() < endTime);
+
+        failureCleanup.run();
 
         fail(message);
     }
