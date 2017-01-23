@@ -333,6 +333,12 @@ public class Archiver implements Agent, RawBlockHandler
         public boolean patch(
             final DirectBuffer bodyBuffer, final int readOffset, final int bodyLength)
         {
+            if (bodyBuffer.capacity() < readOffset + bodyLength ||
+                bodyLength < DataHeaderFlyweight.HEADER_LENGTH)
+            {
+                return false;
+            }
+
             header.wrap(bodyBuffer, readOffset, bodyLength);
             final int termId = header.termId();
             final int termWriteOffset = header.termOffset();

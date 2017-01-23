@@ -224,7 +224,7 @@ public class FollowerTest
 
     private void receivesResend()
     {
-        receivesResendFrom(POSITION, SESSION_ID_4, NEW_LEADERSHIP_TERM);
+        receivesResendFrom(SESSION_ID_4, NEW_LEADERSHIP_TERM, POSITION);
     }
 
     private void acknowledgeLogEntries(final VerificationMode mode)
@@ -233,7 +233,10 @@ public class FollowerTest
             .saveMessageAcknowledgement(POSITION + LENGTH, ID, OK);
     }
 
-    private void receivesResendFrom(final long position, final int leaderSessionId, final int leaderShipTerm)
+    private void receivesResendFrom(
+        final int leaderSessionId,
+        final int leaderShipTerm,
+        final long position)
     {
         whenControlPolled().then(
             (inv) ->

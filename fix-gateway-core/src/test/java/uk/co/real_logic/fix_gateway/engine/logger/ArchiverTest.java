@@ -579,6 +579,17 @@ public class ArchiverTest
     }
 
     @Test
+    public void shouldNotPatchEmptyBuffer()
+    {
+        // Patches could be empty - leader will send empty patch if the block is missing or corrupted.
+        // This should not cause an exception, reproduces #97
+        writeAndArchiveBuffer(INITIAL_VALUE);
+
+        final UnsafeBuffer emptyBuffer = new UnsafeBuffer(new byte[0]);
+        assertFalse(archiver.patch(sessionId(), emptyBuffer, 0, 0));
+    }
+
+    @Test
     public void shouldArchiveToCompletedPositionWhenClosed()
     {
         final long endOfFirstBuffer = writeAndArchiveBuffer(INITIAL_VALUE);
