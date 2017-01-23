@@ -246,22 +246,23 @@ public class ClusterReplicationTest
 
     private void assertBecomesCandidate(final NodeRunner... nodes)
     {
-        assertBecomes(ClusterAgent::isCandidate, allNodes, nodes);
+        assertBecomes("isCandidate", ClusterAgent::isCandidate, allNodes, nodes);
     }
 
     private void assertBecomesFollower(final NodeRunner... nodes)
     {
-        assertBecomes(ClusterAgent::isFollower, allNodes, nodes);
+        assertBecomes("isFollower", ClusterAgent::isFollower, allNodes, nodes);
     }
 
     private void assertBecomes(
+        final String message,
         final Predicate<ClusterAgent> predicate,
         final NodeRunner[] toPoll,
         final NodeRunner... nodes)
     {
         final ClusterAgent[] clusterNodes = getRaftNodes(nodes);
         assertEventuallyTrue(
-            "Predicate never true",
+            message + " never true",
             () ->
             {
                 poll(toPoll);
