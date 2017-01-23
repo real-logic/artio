@@ -334,7 +334,7 @@ public class SessionContexts
 
     void onSentFollowerLogon(final HeaderDecoder header, final long sessionId, final int sequenceIndex)
     {
-        final CompositeKey compositeKey = idStrategy.onLogon(
+        final CompositeKey compositeKey = idStrategy.onInitiateLogon(
             header.senderCompIDAsString(),
             header.senderSubIDAsString(),
             header.senderLocationIDAsString(),

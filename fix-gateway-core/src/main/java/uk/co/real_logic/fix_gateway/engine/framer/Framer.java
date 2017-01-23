@@ -543,7 +543,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             final long connectionId = this.nextConnectionId++;
 
-            final CompositeKey sessionKey = sessionIdStrategy.onLogon(
+            final CompositeKey sessionKey = sessionIdStrategy.onInitiateLogon(
                 senderCompId,
                 senderSubId,
                 senderLocationId,

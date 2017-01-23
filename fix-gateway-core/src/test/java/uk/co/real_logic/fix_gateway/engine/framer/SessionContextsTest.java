@@ -51,9 +51,9 @@ public class SessionContextsTest
     private SessionIdStrategy idStrategy = SessionIdStrategy.senderAndTarget();
     private SessionContexts sessionContexts = newSessionContexts(buffer);
 
-    private CompositeKey aSession = idStrategy.onLogon("a", null, null, "b", null, null);
-    private CompositeKey bSession = idStrategy.onLogon("b", null, null, "a", null, null);
-    private CompositeKey cSession = idStrategy.onLogon("c", null, null, "c", null, null);
+    private CompositeKey aSession = idStrategy.onInitiateLogon("a", null, null, "b", null, null);
+    private CompositeKey bSession = idStrategy.onInitiateLogon("b", null, null, "a", null, null);
+    private CompositeKey cSession = idStrategy.onInitiateLogon("c", null, null, "c", null, null);
 
     @Test
     public void sessionContextsAreUnique()
@@ -132,7 +132,7 @@ public class SessionContextsTest
 
         final List<CompositeKey> keys =
             IntStream.range(0, requiredNumberOfWritesToSpanSector)
-                     .mapToObj(i -> idStrategy.onLogon("b" + i, null, null, "a" + i, null, null))
+                     .mapToObj(i -> idStrategy.onInitiateLogon("b" + i, null, null, "a" + i, null, null))
                      .collect(toList());
 
         final List<SessionContext> contexts =

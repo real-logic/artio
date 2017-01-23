@@ -42,7 +42,7 @@ public class SenderAndTargetSessionIdStrategyTest
         final Set<Object> compositeKeys = IDS.stream()
             .flatMap((sender) ->
                 IDS.stream()
-                   .map((target) -> strategy.onLogon(sender, null, null, target, null, null)))
+                   .map((target) -> strategy.onInitiateLogon(sender, null, null, target, null, null)))
             .collect(toSet());
 
         assertThat(compositeKeys, hasSize(IDS.size() * IDS.size()));
@@ -54,8 +54,8 @@ public class SenderAndTargetSessionIdStrategyTest
         IDS.forEach((sender) ->
             IDS.forEach((target) ->
             {
-                final Object first = strategy.onLogon(sender, null, null, target, null, null);
-                final Object second = strategy.onLogon(sender, null, null, target, null, null);
+                final Object first = strategy.onInitiateLogon(sender, null, null, target, null, null);
+                final Object second = strategy.onInitiateLogon(sender, null, null, target, null, null);
                 assertEquals(first, second);
                 assertEquals(first.hashCode(), second.hashCode());
             }));
@@ -65,7 +65,7 @@ public class SenderAndTargetSessionIdStrategyTest
     public void savesAndLoadsACompositeKey()
     {
         final AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
-        final CompositeKey key = strategy.onLogon("SIGMAX", null, null, "ABC_DEFG04", null, null);
+        final CompositeKey key = strategy.onInitiateLogon("SIGMAX", null, null, "ABC_DEFG04", null, null);
 
         final int length = strategy.save(key, buffer, 1);
 
@@ -80,7 +80,7 @@ public class SenderAndTargetSessionIdStrategyTest
     public void validatesSpaceInBufferOnSave()
     {
         final AtomicBuffer buffer = new UnsafeBuffer(new byte[5]);
-        final CompositeKey key = strategy.onLogon("SIGMAX", null, null, "ABC_DEFG04", null, null);
+        final CompositeKey key = strategy.onInitiateLogon("SIGMAX", null, null, "ABC_DEFG04", null, null);
 
         final int length = strategy.save(key, buffer, 1);
 

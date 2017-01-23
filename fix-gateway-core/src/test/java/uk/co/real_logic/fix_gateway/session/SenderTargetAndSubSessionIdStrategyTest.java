@@ -41,7 +41,7 @@ public class SenderTargetAndSubSessionIdStrategyTest
             IDS.stream().flatMap((sender) ->
                 IDS.stream().flatMap((senderSub) ->
                     IDS.stream().map(
-                        (target) -> strategy.onLogon(sender, senderSub, null, target, null, null))))
+                        (target) -> strategy.onInitiateLogon(sender, senderSub, null, target, null, null))))
             .collect(toSet());
 
         assertThat(compositeKeys, hasSize(IDS.size() * IDS.size() * IDS.size()));
@@ -54,8 +54,8 @@ public class SenderTargetAndSubSessionIdStrategyTest
             IDS.forEach((senderSub) ->
                 IDS.forEach((target) ->
                 {
-                    final Object first = strategy.onLogon(sender, senderSub, null, target, null, null);
-                    final Object second = strategy.onLogon(sender, senderSub, null, target, null, null);
+                    final Object first = strategy.onInitiateLogon(sender, senderSub, null, target, null, null);
+                    final Object second = strategy.onInitiateLogon(sender, senderSub, null, target, null, null);
                     assertEquals(first, second);
                     assertEquals(first.hashCode(), second.hashCode());
                 })));
@@ -65,7 +65,7 @@ public class SenderTargetAndSubSessionIdStrategyTest
     public void savesAndLoadsACompositeKey()
     {
         final AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
-        final CompositeKey key = strategy.onLogon("SIGMAX", "LEH_LZJ02", null, "ABC_DEFG04", null, null);
+        final CompositeKey key = strategy.onInitiateLogon("SIGMAX", "LEH_LZJ02", null, "ABC_DEFG04", null, null);
 
         final int length = strategy.save(key, buffer, 1);
 
@@ -80,7 +80,7 @@ public class SenderTargetAndSubSessionIdStrategyTest
     public void validatesSpaceInBufferOnSave()
     {
         final AtomicBuffer buffer = new UnsafeBuffer(new byte[5]);
-        final CompositeKey key = strategy.onLogon("SIGMAX", "LEH_LZJ02", null, "ABC_DEFG04", null, null);
+        final CompositeKey key = strategy.onInitiateLogon("SIGMAX", "LEH_LZJ02", null, "ABC_DEFG04", null, null);
 
         final int length = strategy.save(key, buffer, 1);
 

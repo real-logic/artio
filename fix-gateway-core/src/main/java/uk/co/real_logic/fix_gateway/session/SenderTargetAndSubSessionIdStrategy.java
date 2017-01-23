@@ -44,7 +44,7 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
     {
     }
 
-    public CompositeKey onLogon(final HeaderDecoder header)
+    public CompositeKey onAcceptLogon(final HeaderDecoder header)
     {
         return new CompositeKeyImpl(
             header.targetCompID(), header.targetCompIDLength(),
@@ -52,7 +52,7 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
             header.senderCompID(), header.senderCompIDLength());
     }
 
-    public CompositeKey onLogon(
+    public CompositeKey onInitiateLogon(
         final String senderCompId,
         final String senderSubId,
         final String senderLocationId,

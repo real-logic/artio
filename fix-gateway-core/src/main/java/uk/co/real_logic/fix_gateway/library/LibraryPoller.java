@@ -604,7 +604,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             if (subscriber != null)
             {
                 final CompositeKey compositeKey = localCompId.length() == 0 ? null :
-                    sessionIdStrategy.onLogon(
+                    sessionIdStrategy.onInitiateLogon(
                         localCompId,
                         localSubId,
                         localLocationId,
@@ -900,7 +900,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
         if (sessionConfiguration != null)
         {
-            final CompositeKey key = sessionIdStrategy.onLogon(
+            final CompositeKey key = sessionIdStrategy.onInitiateLogon(
                 sessionConfiguration.senderCompId(),
                 sessionConfiguration.senderSubId(),
                 sessionConfiguration.senderLocationId(),

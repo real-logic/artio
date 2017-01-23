@@ -326,7 +326,7 @@ class ReceiverEndPoint
         if (sessionId == UNKNOWN)
         {
             logon.decode(buffer, offset, length);
-            final CompositeKey compositeKey = sessionIdStrategy.onLogon(logon.header());
+            final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(logon.header());
             final SessionContext sessionContext = sessionContexts.onLogon(compositeKey);
             sessionId = sessionContext.sessionId();
             if (sessionContext == DUPLICATE_SESSION)

@@ -315,7 +315,7 @@ public class SessionParser
         {
             if (authenticationStrategy.authenticate(logon))
             {
-                final CompositeKey sessionKey = sessionIdStrategy.onLogon(header);
+                final CompositeKey sessionKey = sessionIdStrategy.onAcceptLogon(header);
                 final long origSendingTime = origSendingTime(header);
                 final String username = username(logon);
                 final String password = password(logon);

@@ -89,7 +89,7 @@ public class ReceiverEndPointTest
         endPoint.gatewaySession(gatewaySession);
         when(mockSessionContexts.onLogon(any())).thenReturn(
             new SessionContext(SESSION_ID, SessionContext.UNKNOWN_SEQUENCE_INDEX, mockSessionContexts, 0));
-        when(mockSessionIdStrategy.onLogon(any())).thenReturn(compositeKey);
+        when(mockSessionIdStrategy.onAcceptLogon(any())).thenReturn(compositeKey);
         doAnswer(
             (inv) ->
             {
