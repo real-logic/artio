@@ -893,7 +893,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             configuration.sessionBufferSize(),
             initiatorInitialSequenceNumber(sessionConfiguration, lastSequenceNumber),
             sequenceIndex,
-            state)
+            state,
+            !sessionConfiguration.sequenceNumbersPersistent())
             .lastReceivedMsgSeqNum(
                 initiatorInitialSequenceNumber(sessionConfiguration, lastReceivedSequenceNumber) - 1);
 

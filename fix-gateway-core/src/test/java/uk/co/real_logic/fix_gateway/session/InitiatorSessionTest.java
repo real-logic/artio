@@ -42,7 +42,8 @@ public class InitiatorSessionTest extends AbstractSessionTest
         DEFAULT_SESSION_BUFFER_SIZE,
         1,
         SEQUENCE_INDEX,
-        CONNECTED);
+        CONNECTED,
+        false);
 
     @Test
     public void shouldInitiallyBeConnected()
