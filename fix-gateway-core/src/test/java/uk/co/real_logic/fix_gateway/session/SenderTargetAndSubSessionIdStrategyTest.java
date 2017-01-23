@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.session;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 
 import java.util.Set;
 
@@ -26,6 +27,8 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 import static uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategyTest.IDS;
 import static uk.co.real_logic.fix_gateway.session.SessionIdStrategy.INSUFFICIENT_SPACE;
 
@@ -41,14 +44,15 @@ public class SenderTargetAndSubSessionIdStrategyTest
             IDS.stream().flatMap((sender) ->
                 IDS.stream().flatMap((senderSub) ->
                     IDS.stream().map(
-                        (target) -> strategy.onInitiateLogon(sender, senderSub, null, target, null, null))))
+                        (target) -> strategy.onInitiateLogon(
+                            sender, senderSub, null, target, null, null))))
             .collect(toSet());
 
         assertThat(compositeKeys, hasSize(IDS.size() * IDS.size() * IDS.size()));
     }
 
     @Test
-    public void theSameIdIsEqual()
+    public void initiatingTheSameLogonTwiceGeneratesTheSameKey()
     {
         IDS.forEach((sender) ->
             IDS.forEach((senderSub) ->
@@ -56,6 +60,34 @@ public class SenderTargetAndSubSessionIdStrategyTest
                 {
                     final Object first = strategy.onInitiateLogon(sender, senderSub, null, target, null, null);
                     final Object second = strategy.onInitiateLogon(sender, senderSub, null, target, null, null);
+                    assertEquals(first, second);
+                    assertEquals(first.hashCode(), second.hashCode());
+                })));
+    }
+
+    @Test
+    public void initiatingAndAcceptingTheEquivalentLogonTwiceGeneratesTheSameKey()
+    {
+        IDS.forEach((initiatorSenderComp) ->
+            IDS.forEach((initiatorSenderSub) ->
+                IDS.forEach((initiatorTargetComp) ->
+                {
+                    final Object first = strategy.onInitiateLogon(
+                        initiatorSenderComp, initiatorSenderSub, null, initiatorTargetComp, null, null);
+
+                    final String acceptorSenderComp = initiatorTargetComp;
+                    final String acceptorTargetComp = initiatorSenderComp;
+                    final String acceptorTargetSub = initiatorSenderSub;
+                    final HeaderDecoder headerDecoder = mock(HeaderDecoder.class);
+
+                    when(headerDecoder.senderCompID()).thenReturn(acceptorSenderComp.toCharArray());
+                    when(headerDecoder.senderCompIDLength()).thenReturn(acceptorSenderComp.length());
+                    when(headerDecoder.targetCompID()).thenReturn(acceptorTargetComp.toCharArray());
+                    when(headerDecoder.targetCompIDLength()).thenReturn(acceptorTargetComp.length());
+                    when(headerDecoder.targetSubID()).thenReturn(acceptorTargetSub.toCharArray());
+                    when(headerDecoder.targetSubIDLength()).thenReturn(acceptorTargetSub.length());
+
+                    final Object second = strategy.onAcceptLogon(headerDecoder);
                     assertEquals(first, second);
                     assertEquals(first.hashCode(), second.hashCode());
                 })));

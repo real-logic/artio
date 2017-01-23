@@ -19,6 +19,8 @@ package uk.co.real_logic.fix_gateway.session;
  * The full identifying key of the session in question. Methods may return
  * empty Strings if the {@link SessionIdStrategy} doesn't use that information
  * as part of session identification.
+ *
+ * Implementors should provide appropriate equals/hashcode methods.
  */
 public interface CompositeKey
 {
