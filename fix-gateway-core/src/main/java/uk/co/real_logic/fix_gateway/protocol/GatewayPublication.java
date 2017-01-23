@@ -281,7 +281,7 @@ public class GatewayPublication extends ClaimablePublication
             .connection(connectionId)
             .session(sessionId)
             .libraryId(libraryId)
-            .type(type)
+            .connectionType(type)
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
             .sessionState(sessionState)
@@ -565,7 +565,7 @@ public class GatewayPublication extends ClaimablePublication
 
         error
             .wrap(buffer, offset)
-            .type(errorType)
+            .errorType(errorType)
             .libraryId(libraryId)
             .replyToId(replyToId)
             .putMessage(messageBytes, 0, messageBytes.length);

@@ -223,7 +223,7 @@
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="connection" id="2" type="ConnectionId"/>
         <field name="session" id="10" type="FixSessionId"/>
-        <field name="type" id="3" type="ConnectionType"/>
+        <field name="connectionType" id="3" type="ConnectionType"/>
         <field name="lastSentSequenceNumber" id="4" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
         <field name="sessionState" id="6" type="SessionState"/>
@@ -254,7 +254,7 @@
     </sbe:message>
 
     <sbe:message name="Error" id="13" description="An error has occurred">
-        <field name="type" id="1" type="GatewayError"/>
+        <field name="errorType" id="1" type="GatewayError"/>
         <field name="libraryId" id="2" type="LibraryId"/>
         <field name="replyToId" id="3" type="CorrelationId"/>
         <data name="message" id="4" type="varDataEncoding"/>
