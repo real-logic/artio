@@ -58,7 +58,7 @@ class NodeRunner implements AutoCloseable
     private final Int2IntHashMap nodeIdToId = new Int2IntHashMap(-1);
     private final MediaDriver mediaDriver;
     private final Aeron aeron;
-    private final ClusterAgent clusterNode;
+    private final ClusterAgent clusterAgent;
     private final ControlledFragmentHandler handler;
     private final ClusterableSubscription subscription;
 
@@ -124,8 +124,8 @@ class NodeRunner implements AutoCloseable
             .nodeHandler(stashingNodeHandler)
             .idleStrategy(new YieldingIdleStrategy());
 
-        clusterNode = new ClusterAgent(configuration, System.currentTimeMillis());
-        subscription = clusterNode.clusterStreams().subscription(1);
+        clusterAgent = new ClusterAgent(configuration, System.currentTimeMillis());
+        subscription = clusterAgent.clusterStreams().subscription(1);
     }
 
     public void close()
@@ -147,7 +147,7 @@ class NodeRunner implements AutoCloseable
         {
             try
             {
-                work += clusterNode.doWork();
+                work += clusterAgent.doWork();
                 work += subscription.controlledPoll(handler, fragmentLimit);
 
                 validateRole();
@@ -173,7 +173,7 @@ class NodeRunner implements AutoCloseable
 
     boolean isLeader()
     {
-        return clusterNode.isLeader();
+        return clusterAgent.isLeader();
     }
 
     private void validateRole()
@@ -181,27 +181,27 @@ class NodeRunner implements AutoCloseable
         switch (stashingNodeHandler.role())
         {
             case LEADER:
-                assertTrue(clusterNode.isLeader());
+                assertTrue(clusterAgent.isLeader());
                 break;
 
             case FOLLOWER:
-                assertTrue(clusterNode.isFollower());
+                assertTrue(clusterAgent.isFollower());
                 break;
 
             case CANDIDATE:
-                assertTrue(clusterNode.isCandidate());
+                assertTrue(clusterAgent.isCandidate());
                 break;
         }
     }
 
     public int leaderSessionId()
     {
-        return raftNode().termState().leaderSessionId().get();
+        return clusterAgent().termState().leaderSessionId().get();
     }
 
-    ClusterAgent raftNode()
+    ClusterAgent clusterAgent()
     {
-        return clusterNode;
+        return clusterAgent;
     }
 
     long replicatedPosition()

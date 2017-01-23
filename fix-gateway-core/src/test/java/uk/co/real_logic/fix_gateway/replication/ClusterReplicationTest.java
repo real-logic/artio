@@ -59,7 +59,7 @@ public class ClusterReplicationTest
         assertEventuallyFindsLeaderIn(allNodes);
 
         final NodeRunner leader = leader();
-        DebugLogger.log(RAFT, "Leader elected: %d\n\n", leader.raftNode().nodeId());
+        DebugLogger.log(RAFT, "Leader elected: %d\n\n", leader.clusterAgent().nodeId());
     }
 
     @After
@@ -84,7 +84,7 @@ public class ClusterReplicationTest
     {
         final NodeRunner leader = leader();
 
-        DebugLogger.log(RAFT, "Leader is %s\n", leader.raftNode().nodeId());
+        DebugLogger.log(RAFT, "Leader is %s\n", leader.clusterAgent().nodeId());
 
         final long position = sendMessageTo(leader);
 
@@ -228,7 +228,7 @@ public class ClusterReplicationTest
                 return nodeIdToId.size() >= followerCount;
             });
 
-        final short leaderId = leader.raftNode().nodeId();
+        final short leaderId = leader.clusterAgent().nodeId();
 
         for (final int id : nodeIds)
         {
@@ -272,7 +272,7 @@ public class ClusterReplicationTest
 
     private ClusterAgent[] getRaftNodes(final NodeRunner[] nodes)
     {
-        return Stream.of(nodes).map(NodeRunner::raftNode).toArray(ClusterAgent[]::new);
+        return Stream.of(nodes).map(NodeRunner::clusterAgent).toArray(ClusterAgent[]::new);
     }
 
     private static <T> boolean allMatch(final T[] values, final Predicate<T> predicate)
@@ -342,7 +342,7 @@ public class ClusterReplicationTest
 
     private long sendMessageTo(final NodeRunner leader)
     {
-        final ClusterablePublication publication = leader.raftNode().clusterStreams().publication(1);
+        final ClusterablePublication publication = leader.clusterAgent().clusterStreams().publication(1);
 
         return withTimeout(
             "Failed to send message",
@@ -434,7 +434,7 @@ public class ClusterReplicationTest
             {
                 leaderCount++;
             }
-            else if (node.raftNode().isFollower())
+            else if (node.clusterAgent().isFollower())
             {
                 followerCount++;
             }
