@@ -214,6 +214,11 @@ class NodeRunner implements AutoCloseable
         return nodeIdToId;
     }
 
+    long nodeId()
+    {
+        return clusterAgent().nodeId();
+    }
+
     private class NodeIdStasher implements NodeStateHandler
     {
         public void onNewNodeState(

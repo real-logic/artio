@@ -86,7 +86,7 @@ public class ClusterReplicationTest
     {
         final NodeRunner leader = leader();
 
-        DebugLogger.log(RAFT, "Leader is %s\n", leader.clusterAgent().nodeId());
+        DebugLogger.log(RAFT, "Leader is %s\n", leader.nodeId());
 
         final long position = sendMessageTo(leader);
 
@@ -103,6 +103,8 @@ public class ClusterReplicationTest
         final NodeRunner leader = leader();
         final NodeRunner[] followers = followers();
 
+        DebugLogger.log(RAFT, "Pausing Leader: %s\n", leader.nodeId());
+
         assertEventuallyTrue(
             "Failed to find leader",
             () ->
@@ -112,6 +114,7 @@ public class ClusterReplicationTest
             });
 
         assertBecomesFollower(leader);
+        assertLeadershipConsensus();
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -324,10 +327,13 @@ public class ClusterReplicationTest
             () ->
             {
                 pollAll();
-                final int leaderOfNode1 = node1.leaderSessionId();
-                return leaderOfNode1 == node2.leaderSessionId()
-                    && leaderOfNode1 == node3.leaderSessionId();
+                return nodesAgreeOnLeader();
             });
+    }
+
+    private void assertLeadershipConsensus()
+    {
+        assertTrue("Nodes don't agree on the leader" + clusterInfo(), nodesAgreeOnLeader());
     }
 
     private void assertAllNodesSeeSameLeader()

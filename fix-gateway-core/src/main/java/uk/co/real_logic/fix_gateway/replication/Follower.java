@@ -213,27 +213,33 @@ class Follower implements Role, RaftHandler
         return Action.CONTINUE;
     }
 
-    public Action onConsensusHeartbeat(final short leaderNodeId,
-                                       final int leaderShipTerm,
-                                       final long position,
-                                       final int leaderSessionId)
+    public Action onConsensusHeartbeat(
+        final short leaderNodeId,
+        final int leaderShipTerm,
+        final long position,
+        final int leaderSessionId)
     {
-        consensusPosition.set(position);
-
-        if (leaderNodeId != this.nodeId &&
-            leaderShipTerm > this.leaderShipTerm)
+        if (leaderNodeId != this.nodeId)
         {
-            termState
-                .leadershipTerm(leaderShipTerm)
-                .receivedPosition(receivedPosition)
-                .leaderSessionId(leaderSessionId);
-
-            if (leaderSessionId != termState.leaderSessionId().get())
+            if (leaderShipTerm == this.leaderShipTerm)
             {
-                checkLeaderChange();
+                consensusPosition.set(position);
+                termState.leaderSessionId(leaderSessionId);
             }
+            else if (leaderShipTerm > this.leaderShipTerm)
+            {
+                termState
+                    .leadershipTerm(leaderShipTerm)
+                    .receivedPosition(receivedPosition)
+                    .leaderSessionId(leaderSessionId);
 
-            follow(this.timeInMs);
+                if (leaderSessionId != termState.leaderSessionId().get())
+                {
+                    checkLeaderChange();
+                }
+
+                follow(this.timeInMs);
+            }
         }
 
         return Action.CONTINUE;
