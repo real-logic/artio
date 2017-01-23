@@ -342,7 +342,7 @@ public final class SystemTestUtil
     {
         final FixLibrary library = FixLibrary.connect(configuration);
         assertEventuallyTrue(
-            "Unable to connect to engine",
+            () -> "Unable to connect to engine",
             () ->
             {
                 library.poll(LIBRARY_LIMIT);
@@ -369,7 +369,7 @@ public final class SystemTestUtil
     public static void assertLibrariesDisconnect(final int count, final FixLibrary library, final FixEngine engine)
     {
         assertEventuallyTrue(
-            "libraries haven't disconnected yet",
+            () -> "libraries haven't disconnected yet",
             () ->
             {
                 if (library != null)
@@ -400,7 +400,7 @@ public final class SystemTestUtil
     public static void awaitLibraryConnect(final FixLibrary library)
     {
         assertEventuallyTrue(
-            "Library hasn't seen Engine",
+            () -> "Library hasn't seen Engine",
             () ->
             {
                 library.poll(5);

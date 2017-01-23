@@ -55,7 +55,7 @@ public final class Timing
     public static void assertEventuallyTrue(final String message, final BooleanSupplier condition)
     {
         assertEventuallyTrue(
-            message,
+            () -> message,
             condition,
             DEFAULT_TIMEOUT_IN_MS,
             () ->
@@ -101,7 +101,7 @@ public final class Timing
     }
 
     public static void assertEventuallyTrue(
-        final String message,
+        final Supplier<String> message,
         final BooleanSupplier condition,
         final long timeout,
         final Runnable failureCleanup)
@@ -121,7 +121,7 @@ public final class Timing
 
         failureCleanup.run();
 
-        fail(message);
+        fail(message.get());
     }
 
     private static boolean hasDebuggerAttached()

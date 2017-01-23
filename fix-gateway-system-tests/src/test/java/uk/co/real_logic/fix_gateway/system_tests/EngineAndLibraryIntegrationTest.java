@@ -168,7 +168,7 @@ public class EngineAndLibraryIntegrationTest
         CloseHelper.close(engine);
 
         assertEventuallyTrue(
-            "Engine still hasn't disconnected",
+            () -> "Engine still hasn't disconnected",
             () ->
             {
                 library.poll(5);

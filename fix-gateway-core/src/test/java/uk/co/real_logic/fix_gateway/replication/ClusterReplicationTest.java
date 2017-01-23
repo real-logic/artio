@@ -23,17 +23,19 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.Timing;
 
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static org.hamcrest.Matchers.hasEntry;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
-import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
 
 /**
@@ -331,8 +333,8 @@ public class ClusterReplicationTest
     private void assertAllNodesSeeSameLeader()
     {
         final int leaderSessionId = node1.leaderSessionId();
-        assertEquals("1 and 2 disagree on leader", leaderSessionId, node2.leaderSessionId());
-        assertEquals("1 and 3 disagree on leader", leaderSessionId, node3.leaderSessionId());
+        assertEquals("1 and 2 disagree on leader" + clusterInfo(), leaderSessionId, node2.leaderSessionId());
+        assertEquals("1 and 3 disagree on leader" + clusterInfo(), leaderSessionId, node3.leaderSessionId());
     }
 
     private boolean notReceivedMessage(final NodeRunner node)
@@ -454,6 +456,56 @@ public class ClusterReplicationTest
     private NodeRunner[] followers()
     {
         return nodes().filter((node) -> !node.isLeader()).toArray(NodeRunner[]::new);
+    }
+
+    private void assertEventuallyTrue(
+        final String message,
+        final BooleanSupplier test)
+    {
+        Timing.assertEventuallyTrue(
+            () -> message + clusterInfo(),
+            test,
+            DEFAULT_TIMEOUT_IN_MS,
+            () ->
+            {
+            }
+        );
+    }
+
+    private String clusterInfo()
+    {
+        return nodes()
+            .map(NodeRunner::clusterAgent)
+            .map(
+                (agent) ->
+                {
+                    final TermState termState = agent.termState();
+                    final int leaderSessionId = termState.leaderSessionId().get();
+                    final int leadershipTerm = termState.leadershipTerm();
+                    return String.format(
+                        "%s %d: leader=%d, term=%d", state(agent), agent.nodeId(), leaderSessionId, leadershipTerm);
+                })
+            .collect(Collectors.joining("\n", "\n", "\n"));
+    }
+
+    private String state(final ClusterAgent agent)
+    {
+        if (agent.isLeader())
+        {
+            return "leader   ";
+        }
+
+        if (agent.isFollower())
+        {
+            return "follower ";
+        }
+
+        if (agent.isCandidate())
+        {
+            return "candidate";
+        }
+
+        throw new IllegalStateException("Unknown state");
     }
 
     private Stream<NodeRunner> nodes()
