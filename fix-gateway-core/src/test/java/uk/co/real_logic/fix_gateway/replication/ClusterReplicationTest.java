@@ -20,11 +20,11 @@ import org.agrona.collections.Int2IntHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
 import java.util.stream.Stream;
 
@@ -38,7 +38,6 @@ import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
 /**
  * Test simulated cluster.
  */
-@Ignore
 public class ClusterReplicationTest
 {
     private static final int BUFFER_SIZE = 1337;
@@ -306,7 +305,7 @@ public class ClusterReplicationTest
             pollAll();
         }
 
-        eventuallyOneLeaderAndTwoFollowers();
+        eventuallyOneLeaderAndTwoFollowers(this::nodesAgreeOnLeader);
 
         assertAllNodesSeeSameLeader();
 
@@ -393,13 +392,32 @@ public class ClusterReplicationTest
 
     private void eventuallyOneLeaderAndTwoFollowers()
     {
+        eventuallyOneLeaderAndTwoFollowers(() -> true);
+    }
+
+    private void eventuallyOneLeaderAndTwoFollowers(final BooleanSupplier predicate)
+    {
         assertEventuallyTrue(
             "failed to find one leader with two followers",
             () ->
             {
                 pollAll();
-                return oneLeaderAndTwoFollowers();
+                return oneLeaderAndTwoFollowers() && predicate.getAsBoolean();
             });
+    }
+
+    private boolean nodesAgreeOnLeader()
+    {
+        final NodeRunner[] allNodes = this.allNodes;
+        final int leaderSessionId = allNodes[0].leaderSessionId();
+        for (int i = 1; i < allNodes.length; i++)
+        {
+            if (allNodes[i].leaderSessionId() != leaderSessionId)
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private boolean oneLeaderAndTwoFollowers()
