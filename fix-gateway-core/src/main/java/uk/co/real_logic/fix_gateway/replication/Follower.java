@@ -55,7 +55,6 @@ class Follower implements Role, RaftHandler
     private boolean requiresAcknowledgementResend = false;
 
     private short votedFor = NO_ONE;
-    private int leaderShipTerm;
     private long timeInMs;
 
     Follower(
@@ -97,7 +96,6 @@ class Follower implements Role, RaftHandler
         {
             termState
                 .receivedPosition(receivedPosition)
-                .leadershipTerm(leaderShipTerm)
                 .noLeader();
 
             clusterNode.transitionToCandidate(timeInMs);
@@ -192,7 +190,7 @@ class Follower implements Role, RaftHandler
         // Term has to be strictly greater because a follower has already
         // Voted for someone in its current leaderShipTerm and is electing for the
         // next leaderShipTerm
-        return candidatePosition >= receivedPosition && leaderShipTerm > this.leaderShipTerm;
+        return candidatePosition >= receivedPosition && leaderShipTerm > termState.leadershipTerm();
     }
 
     private boolean canVoteFor(final short candidateId)
@@ -221,12 +219,12 @@ class Follower implements Role, RaftHandler
     {
         if (leaderNodeId != this.nodeId)
         {
-            if (leaderShipTerm == this.leaderShipTerm)
+            if (leaderShipTerm == termState.leadershipTerm())
             {
                 consensusPosition.set(position);
                 termState.leaderSessionId(leaderSessionId);
             }
-            else if (leaderShipTerm > this.leaderShipTerm)
+            else if (leaderShipTerm > termState.leadershipTerm())
             {
                 termState
                     .leadershipTerm(leaderShipTerm)
@@ -281,7 +279,7 @@ class Follower implements Role, RaftHandler
     {
         return position == receivedPosition
             && leaderSessionId == termState.leaderSessionId().get()
-            && leaderShipTerm == this.leaderShipTerm;
+            && leaderShipTerm == termState.leadershipTerm();
     }
 
     Follower follow(final long timeInMs)
@@ -295,7 +293,6 @@ class Follower implements Role, RaftHandler
 
     private void readTermState()
     {
-        leaderShipTerm = termState.leadershipTerm();
         receivedPosition = termState.receivedPosition();
         checkLeaderChange();
         missingAckedPosition = 0;
