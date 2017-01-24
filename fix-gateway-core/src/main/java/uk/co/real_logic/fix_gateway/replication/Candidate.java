@@ -206,7 +206,11 @@ class Candidate implements Role, RaftHandler
             final boolean hasHigherLeadershipTerm = leaderShipTerm >= termState.leadershipTerm();
             DebugLogger.log(
                 RAFT, "%d: New Leader (%s, %s)%n", this.nodeId, hasHigherPosition, hasHigherLeadershipTerm);
-            if (hasHigherPosition && hasHigherLeadershipTerm)
+
+            // If a leader is already elected for this or a future term then you should just follow them
+            // Also follow leaders with a higher position than you, since you will never be able to get
+            // elected over them.
+            if (hasHigherPosition || hasHigherLeadershipTerm)
             {
                 transitionToFollower(leaderShipTerm, NO_ONE, position, dataSessionId);
 
