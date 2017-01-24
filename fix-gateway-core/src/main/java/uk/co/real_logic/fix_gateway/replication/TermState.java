@@ -106,6 +106,11 @@ class TermState
         return receivedPosition;
     }
 
+    void moveReceivedPosition(final long by)
+    {
+        receivedPosition += by;
+    }
+
     long lastAppliedPosition()
     {
         return lastAppliedPosition;

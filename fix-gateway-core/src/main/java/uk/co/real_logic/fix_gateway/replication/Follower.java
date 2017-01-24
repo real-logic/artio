@@ -50,7 +50,6 @@ class Follower implements Role, RaftHandler
     private RaftPublication controlPublication;
 
     private Subscription controlSubscription;
-    private long receivedPosition;
     private long missingAckedPosition;
     private boolean requiresAcknowledgementResend = false;
 
@@ -94,9 +93,7 @@ class Follower implements Role, RaftHandler
     {
         if (replyTimeout.hasTimedOut(timeInMs))
         {
-            termState
-                .receivedPosition(receivedPosition)
-                .noLeader();
+            termState.noLeader();
 
             clusterNode.transitionToCandidate(timeInMs);
 
@@ -114,7 +111,7 @@ class Follower implements Role, RaftHandler
         }
 
         final long imagePosition = raftArchiver.archivedPosition();
-        if (imagePosition > receivedPosition && imagePosition > missingAckedPosition)
+        if (imagePosition > termState.receivedPosition() && imagePosition > missingAckedPosition)
         {
             if (saveMessageAcknowledgement(MISSING_LOG_ENTRIES) >= 0)
             {
@@ -127,7 +124,7 @@ class Follower implements Role, RaftHandler
         final int bytesRead = raftArchiver.poll();
         if (bytesRead > 0 || requiresAcknowledgementResend)
         {
-            receivedPosition += bytesRead;
+            termState.moveReceivedPosition(bytesRead);
             saveOkAcknowledgement();
         }
 
@@ -136,7 +133,7 @@ class Follower implements Role, RaftHandler
 
     private long saveMessageAcknowledgement(final AcknowledgementStatus status)
     {
-        return acknowledgementPublication.saveMessageAcknowledgement(receivedPosition, nodeId, status);
+        return acknowledgementPublication.saveMessageAcknowledgement(termState.receivedPosition(), nodeId, status);
     }
 
     public void closeStreams()
@@ -190,7 +187,7 @@ class Follower implements Role, RaftHandler
         // Term has to be strictly greater because a follower has already
         // Voted for someone in its current leaderShipTerm and is electing for the
         // next leaderShipTerm
-        return candidatePosition >= receivedPosition && leaderShipTerm > termState.leadershipTerm();
+        return candidatePosition >= termState.receivedPosition() && leaderShipTerm > termState.leadershipTerm();
     }
 
     private boolean canVoteFor(final short candidateId)
@@ -228,7 +225,6 @@ class Follower implements Role, RaftHandler
             {
                 termState
                     .leadershipTerm(leaderShipTerm)
-                    .receivedPosition(receivedPosition)
                     .leaderSessionId(leaderSessionId);
 
                 if (leaderSessionId != termState.leaderSessionId().get())
@@ -257,7 +253,7 @@ class Follower implements Role, RaftHandler
             if (!raftArchiver.checkLeaderArchiver())
             {
                 raftArchiver.patch(bodyBuffer, bodyOffset, bodyLength);
-                receivedPosition += bodyLength;
+                termState.moveReceivedPosition(bodyLength);
                 saveOkAcknowledgement();
             }
         }
@@ -277,7 +273,7 @@ class Follower implements Role, RaftHandler
     private boolean isValidPosition(
         final int leaderSessionId, final int leaderShipTerm, final long position)
     {
-        return position == receivedPosition
+        return position == termState.receivedPosition()
             && leaderSessionId == termState.leaderSessionId().get()
             && leaderShipTerm == termState.leadershipTerm();
     }
@@ -290,10 +286,8 @@ class Follower implements Role, RaftHandler
         return this;
     }
 
-
     private void readTermState()
     {
-        receivedPosition = termState.receivedPosition();
         checkLeaderChange();
         missingAckedPosition = 0;
     }
