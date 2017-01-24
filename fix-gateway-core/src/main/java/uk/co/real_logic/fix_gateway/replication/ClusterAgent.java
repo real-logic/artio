@@ -35,6 +35,7 @@ public class ClusterAgent implements Agent
     private static final int HEARTBEAT_TO_TIMEOUT_RATIO = 4;
 
     private final short nodeId;
+    private final int ourSessionId;
     private final TermState termState = new TermState();
     private final Leader leader;
     private final Candidate candidate;
@@ -63,7 +64,7 @@ public class ClusterAgent implements Agent
         archiver = configuration.archiver();
 
         final Publication dataPublication = transport.leaderPublication();
-        final int ourSessionId = dataPublication.sessionId();
+        ourSessionId = dataPublication.sessionId();
         final long timeoutIntervalInMs = configuration.timeoutIntervalInMs();
         final long heartbeatTimeInMs = timeoutIntervalInMs / HEARTBEAT_TO_TIMEOUT_RATIO;
         final IntHashSet otherNodes = configuration.otherNodes();
@@ -314,5 +315,10 @@ public class ClusterAgent implements Agent
     public String roleName()
     {
         return agentNamePrefix + "Cluster Agent";
+    }
+
+    public int ourSessionId()
+    {
+        return ourSessionId;
     }
 }

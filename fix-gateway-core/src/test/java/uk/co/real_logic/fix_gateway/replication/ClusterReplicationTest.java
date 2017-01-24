@@ -33,8 +33,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
-import static org.hamcrest.Matchers.hasEntry;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
@@ -240,7 +240,7 @@ public class ClusterReplicationTest
         {
             if (id != leaderId)
             {
-                assertThat(nodeIdToId, hasEntry(id, id));
+                assertEquals(nodeIdToId + " missing " + id, id, nodeIdToId.get(id));
             }
         }
     }
@@ -504,8 +504,14 @@ public class ClusterReplicationTest
                     final TermState termState = agent.termState();
                     final int leaderSessionId = termState.leaderSessionId().get();
                     final int leadershipTerm = termState.leadershipTerm();
+                    final int ourSessionId = agent.ourSessionId();
                     return String.format(
-                        "%s %d: leader=%d, term=%d", state(agent), agent.nodeId(), leaderSessionId, leadershipTerm);
+                        "%s %d: leader=%d, term=%d, us=%d",
+                        state(agent),
+                        agent.nodeId(),
+                        leaderSessionId,
+                        leadershipTerm,
+                        ourSessionId);
                 })
             .collect(Collectors.joining("\n", "\n", "\n"));
     }
