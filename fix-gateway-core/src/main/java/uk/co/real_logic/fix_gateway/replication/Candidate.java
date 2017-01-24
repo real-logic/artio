@@ -203,8 +203,10 @@ class Candidate implements Role, RaftHandler
         if (nodeId != this.nodeId)
         {
             final boolean hasHigherPosition = position >= this.consensusPosition.get();
-            DebugLogger.log(RAFT, "%d: New Leader %s%n", this.nodeId, hasHigherPosition);
-            if (hasHigherPosition)
+            final boolean hasHigherLeadershipTerm = leaderShipTerm >= termState.leadershipTerm();
+            DebugLogger.log(
+                RAFT, "%d: New Leader (%s, %s)%n", this.nodeId, hasHigherPosition, hasHigherLeadershipTerm);
+            if (hasHigherPosition && hasHigherLeadershipTerm)
             {
                 transitionToFollower(leaderShipTerm, NO_ONE, position, dataSessionId);
 
