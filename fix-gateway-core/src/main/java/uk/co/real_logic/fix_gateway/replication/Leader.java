@@ -319,10 +319,10 @@ class Leader implements Role, RaftHandler
         return CONTINUE;
     }
 
-    private void transitionToFollower(final int leaderShipTerm, final short votedFor)
+    private void transitionToFollower(final int newLeaderShipTerm, final short votedFor)
     {
         termState
-            .leadershipTerm(leaderShipTerm)
+            .leadershipTerm(newLeaderShipTerm)
             .lastAppliedPosition(lastAppliedPosition)
             .receivedPosition(lastAppliedPosition);
 
