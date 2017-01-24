@@ -270,7 +270,7 @@ public class ClusterReplicationTest
             () ->
             {
                 poll(toPoll);
-                return allMatch(clusterNodes, predicate) && nodesAgreeOnLeadershipTerm();
+                return allMatch(clusterNodes, predicate);
             });
     }
 
