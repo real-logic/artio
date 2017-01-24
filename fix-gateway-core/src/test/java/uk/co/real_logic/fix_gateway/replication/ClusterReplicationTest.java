@@ -20,7 +20,6 @@ import org.agrona.collections.Int2IntHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.Timing;
@@ -28,6 +27,7 @@ import uk.co.real_logic.fix_gateway.Timing;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
+import java.util.function.ToIntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -40,12 +40,14 @@ import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
 
 /**
  * Test simulated cluster.
+ *
+ * Every operation should ensure that it has it's own timeout, since we avoid Junit's @Test timeouts
+ * as they cause the test code to be run on a different thread.
  */
 public class ClusterReplicationTest
 {
     private static final int BUFFER_SIZE = 1337;
     private static final int POSITION_AFTER_MESSAGE = BUFFER_SIZE + HEADER_LENGTH;
-    private static final int TEST_TIMEOUT = 10_000;
 
     private BufferClaim bufferClaim = new BufferClaim();
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[BUFFER_SIZE]);
@@ -73,7 +75,7 @@ public class ClusterReplicationTest
         }
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test
     public void shouldEstablishCluster()
     {
         checkClusterStable();
@@ -81,7 +83,7 @@ public class ClusterReplicationTest
         assertNodeStateReplicated();
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test
     public void shouldReplicateMessage()
     {
         final NodeRunner leader = leader();
@@ -95,7 +97,7 @@ public class ClusterReplicationTest
         assertMessageReceived();
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test
     public void shouldReformClusterAfterLeaderPause()
     {
         awaitLeadershipConsensus();
@@ -117,13 +119,13 @@ public class ClusterReplicationTest
         assertLeadershipConsensus();
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test
     public void shouldReformClusterAfterLeaderNetsplit()
     {
         leaderNetSplitScenario(true, true);
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test
     public void shouldReformClusterAfterPartialLeaderNetsplit()
     {
         // NB: under other partial failure, the leader would never stop being a leader
@@ -151,7 +153,7 @@ public class ClusterReplicationTest
         followerNetSplitScenario(true, true);
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test
     public void shouldRejoinClusterAfterPartialFollowerNetsplit()
     {
         followerNetSplitScenario(true, false);
@@ -170,13 +172,13 @@ public class ClusterReplicationTest
         eventuallyOneLeaderAndTwoFollowers();
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test
     public void shouldReformClusterAfterFollowerNetsplit()
     {
         clusterNetSplitScenario(true, true);
     }
 
-    @Test(timeout = TEST_TIMEOUT)
+    @Test
     public void shouldReformClusterAfterPartialFollowerNetsplit()
     {
         clusterNetSplitScenario(true, false);
@@ -192,13 +194,10 @@ public class ClusterReplicationTest
 
         nodes().forEach((nodeRunner) -> nodeRunner.dropFrames(false));
 
-        assertBecomesFollower(followers);
-
-        eventuallyOneLeaderAndTwoFollowers();
+        eventuallyOneLeaderAndTwoFollowersWithSameLeader();
     }
 
-    @Ignore
-    @Test(timeout = TEST_TIMEOUT)
+    @Test
     public void shouldNotReplicateMessageUntilClusterReformed()
     {
         final NodeRunner leader = leader();
@@ -267,11 +266,11 @@ public class ClusterReplicationTest
     {
         final ClusterAgent[] clusterNodes = getRaftNodes(nodes);
         assertEventuallyTrue(
-            message + " never true",
+            message + " or (agreement on term) never true",
             () ->
             {
                 poll(toPoll);
-                return allMatch(clusterNodes, predicate);
+                return allMatch(clusterNodes, predicate) && nodesAgreeOnLeadershipTerm();
             });
     }
 
@@ -313,7 +312,7 @@ public class ClusterReplicationTest
             pollAll();
         }
 
-        eventuallyOneLeaderAndTwoFollowers(this::nodesAgreeOnLeader);
+        eventuallyOneLeaderAndTwoFollowersWithSameLeader();
 
         assertAllNodesSeeSameLeader();
 
@@ -406,6 +405,11 @@ public class ClusterReplicationTest
         eventuallyOneLeaderAndTwoFollowers(() -> true);
     }
 
+    private void eventuallyOneLeaderAndTwoFollowersWithSameLeader()
+    {
+        eventuallyOneLeaderAndTwoFollowers(this::nodesAgreeOnLeader);
+    }
+
     private void eventuallyOneLeaderAndTwoFollowers(final BooleanSupplier predicate)
     {
         assertEventuallyTrue(
@@ -419,11 +423,21 @@ public class ClusterReplicationTest
 
     private boolean nodesAgreeOnLeader()
     {
+        return nodesAgreeOn(NodeRunner::leaderSessionId);
+    }
+
+    private boolean nodesAgreeOnLeadershipTerm()
+    {
+        return nodesAgreeOn(NodeRunner::leadershipTerm);
+    }
+
+    private boolean nodesAgreeOn(final ToIntFunction<NodeRunner> property)
+    {
         final NodeRunner[] allNodes = this.allNodes;
-        final int leaderSessionId = allNodes[0].leaderSessionId();
+        final int value = property.applyAsInt(allNodes[0]);
         for (int i = 1; i < allNodes.length; i++)
         {
-            if (allNodes[i].leaderSessionId() != leaderSessionId)
+            if (property.applyAsInt(allNodes[i]) != value)
             {
                 return false;
             }

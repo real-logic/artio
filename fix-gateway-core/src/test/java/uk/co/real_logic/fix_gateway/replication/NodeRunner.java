@@ -196,7 +196,17 @@ class NodeRunner implements AutoCloseable
 
     public int leaderSessionId()
     {
-        return clusterAgent().termState().leaderSessionId().get();
+        return termState().leaderSessionId().get();
+    }
+
+    private TermState termState()
+    {
+        return clusterAgent().termState();
+    }
+
+    public int leadershipTerm()
+    {
+        return termState().leadershipTerm();
     }
 
     ClusterAgent clusterAgent()

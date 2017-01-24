@@ -32,7 +32,7 @@ import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 public class ClusterAgent implements Agent
 {
     private static final int FRAGMENT_LIMIT = 5;
-    private static final int HEARTBEAT_TO_TIMEOUT_RATIO = 5;
+    private static final int HEARTBEAT_TO_TIMEOUT_RATIO = 4;
 
     private final short nodeId;
     private final TermState termState = new TermState();

@@ -70,7 +70,7 @@ class Candidate implements Role, RaftHandler
         this.clusterNode = clusterNode;
         this.clusterSize = clusterSize;
         this.acknowledgementStrategy = acknowledgementStrategy;
-        this.voteTimeout = new RandomTimeout(voteTimeout, 0L);
+        this.voteTimeout = new RandomTimeout(voteTimeout, timeInMs);
         this.termState = termState;
         this.consensusPosition = termState.consensusPosition();
         votesFor = new IntHashSet(2 * clusterSize, -1);

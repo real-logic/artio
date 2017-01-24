@@ -26,17 +26,16 @@ class RandomTimeout
 
     private long nextExpiry;
 
-    RandomTimeout(final long minTimeout, final long timeInMs)
+    RandomTimeout(final long timeout, final long timeInMs)
     {
-        this.minTimeout = minTimeout;
-        this.maxTimeout = minTimeout * MAX_TO_MIN_TIMEOUT;
+        this.minTimeout = timeout;
+        this.maxTimeout = timeout * MAX_TO_MIN_TIMEOUT;
         onKeepAlive(timeInMs);
     }
 
     void onKeepAlive(final long timeInMs)
     {
         final long timeout = ThreadLocalRandom.current().nextLong(minTimeout, maxTimeout);
-        // System.out.println(timeout);
         nextExpiry = timeInMs + timeout;
     }
 
