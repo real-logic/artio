@@ -51,7 +51,6 @@ class Candidate implements Role, RaftHandler
 
     private RaftPublication controlPublication;
     private Subscription controlSubscription;
-    private int leaderShipTerm;
     private long timeInMs;
     private boolean resendRequestVote = false;
 
@@ -83,7 +82,7 @@ class Candidate implements Role, RaftHandler
     {
         if (voteTimeout.hasTimedOut(timeInMs))
         {
-            DebugLogger.log(RAFT, "%d: restartElection @ %d in %d\n", nodeId, timeInMs, leaderShipTerm);
+            DebugLogger.log(RAFT, "%d: restartElection @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
 
             startElection(timeInMs);
 
@@ -126,7 +125,7 @@ class Candidate implements Role, RaftHandler
     public Action onRequestVote(
         final short candidateId, final int candidateSessionId, final int leaderShipTerm, long lastAckedPosition)
     {
-        if (leaderShipTerm > this.leaderShipTerm && lastAckedPosition >= consensusPosition.get())
+        if (leaderShipTerm > termState.leadershipTerm() && lastAckedPosition >= consensusPosition.get())
         {
             if (replyVote(candidateId, leaderShipTerm, FOR) < 0)
             {
@@ -192,7 +191,7 @@ class Candidate implements Role, RaftHandler
 
     private boolean shouldCountVote(final short candidateId, final int leaderShipTerm, final Vote vote)
     {
-        return candidateId == nodeId && leaderShipTerm == this.leaderShipTerm && vote == FOR;
+        return candidateId == nodeId && leaderShipTerm == termState.leadershipTerm() && vote == FOR;
     }
 
     public Action onConsensusHeartbeat(
@@ -245,9 +244,7 @@ class Candidate implements Role, RaftHandler
 
     Candidate startNewElection(final long timeInMs)
     {
-        this.leaderShipTerm = termState.leadershipTerm();
-
-        DebugLogger.log(RAFT, "%d: startNewElection @ %d in %d\n", nodeId, timeInMs, leaderShipTerm);
+        DebugLogger.log(RAFT, "%d: startNewElection @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
 
         startElection(timeInMs);
         return this;
@@ -268,7 +265,7 @@ class Candidate implements Role, RaftHandler
     private void startElection(final long timeInMs)
     {
         voteTimeout.onKeepAlive(timeInMs);
-        leaderShipTerm++;
+        termState.incLeadershipTerm();
         countVote(nodeId); // Vote for yourself
         requestVote();
     }
@@ -276,7 +273,7 @@ class Candidate implements Role, RaftHandler
     private void requestVote()
     {
         resendRequestVote =
-            controlPublication.saveRequestVote(nodeId, sessionId, consensusPosition.get(), leaderShipTerm) < 0;
+            controlPublication.saveRequestVote(nodeId, sessionId, consensusPosition.get(), termState.leadershipTerm()) < 0;
     }
 
 }

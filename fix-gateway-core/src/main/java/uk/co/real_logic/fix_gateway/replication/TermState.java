@@ -96,6 +96,11 @@ class TermState
         return leadershipTerm;
     }
 
+    void incLeadershipTerm()
+    {
+        leadershipTerm++;
+    }
+
     long receivedPosition()
     {
         return receivedPosition;
