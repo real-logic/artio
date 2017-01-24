@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 class TermState
 {
-    static final int NO_LEADER = 0;
+    private static final int NO_LEADER = 0;
 
     /** the aeron session id of the current leader */
     private AtomicInteger leaderSessionId = new AtomicInteger(NO_LEADER);
@@ -28,13 +28,13 @@ class TermState
     /** The raft leader's current term number */
     private int leadershipTerm;
 
-    /** The position within the current leadership term that we have read data on the session up to. */
+    /** The position that we have read data on the session up to. */
     private long receivedPosition;
 
-    /** The position within the current leadership term that we have applied to our state machine. */
+    /** The position that we have applied to our state machine. */
     private long lastAppliedPosition;
 
-    /** The position within the current leadership term that we can commit up to. */
+    /** The position that we can commit up to. */
     private final AtomicLong consensusPosition = new AtomicLong(0);
 
     TermState leaderSessionId(int leadershipSessionId)
