@@ -75,7 +75,6 @@ class Leader implements Role, RaftHandler
     private long previousConsensusPosition;
 
     private long nextHeartbeatTimeInMs;
-    private int leaderShipTerm;
     private long timeInMs;
 
     private long messageAcknowledgementPosition;
@@ -183,7 +182,7 @@ class Leader implements Role, RaftHandler
     {
         final long currentPosition = consensusPosition.get();
         if (controlPublication.saveConsensusHeartbeat(
-            nodeId, leaderShipTerm, currentPosition, ourSessionId, previousConsensusPosition) > 0)
+            nodeId, termState.leadershipTerm(), currentPosition, ourSessionId, previousConsensusPosition) > 0)
         {
             previousConsensusPosition = currentPosition;
             updateNextHeartbeatTime(timeInMs);
@@ -245,7 +244,7 @@ class Leader implements Role, RaftHandler
         // Ignore requests from yourself
         if (candidateId != this.nodeId)
         {
-            if (this.leaderShipTerm < leaderShipTerm && lastAckedPosition >= consensusPosition.get())
+            if (termState.leadershipTerm() < leaderShipTerm && lastAckedPosition >= consensusPosition.get())
             {
                 if (!replyVote(candidateId, leaderShipTerm, Vote.FOR))
                 {
@@ -308,7 +307,7 @@ class Leader implements Role, RaftHandler
                                        final long position,
                                        final int leaderSessionId)
     {
-        if (nodeId != this.nodeId && leaderShipTerm > this.leaderShipTerm)
+        if (nodeId != this.nodeId && leaderShipTerm > termState.leadershipTerm())
         {
             termState.leaderSessionId(leaderSessionId);
 
@@ -335,8 +334,6 @@ class Leader implements Role, RaftHandler
         this.timeInMs = timeInMs;
 
         termState.leaderSessionId(ourSessionId);
-
-        leaderShipTerm = termState.leadershipTerm();
 
         lastAppliedPosition = Math.max(HEADER_LENGTH, termState.lastAppliedPosition());
         heartbeat();
@@ -383,7 +380,7 @@ class Leader implements Role, RaftHandler
     private void saveResend(final DirectBuffer buffer, final int offset, final int length)
     {
         if (controlPublication.saveResend(
-            ourSessionId, leaderShipTerm, messageAcknowledgementPosition, buffer, offset, length) < 0)
+            ourSessionId, termState.leadershipTerm(), messageAcknowledgementPosition, buffer, offset, length) < 0)
         {
             repeatResendBuffer = buffer;
             repeatResendOffset = offset;
