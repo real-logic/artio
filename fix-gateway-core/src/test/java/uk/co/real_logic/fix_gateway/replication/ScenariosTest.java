@@ -26,9 +26,11 @@ import org.junit.runners.Parameterized;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
-import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
@@ -49,7 +51,6 @@ public class ScenariosTest
     private static final int SESSION_ID = 42;
     private static final int HEARTBEAT_INTERVAL_IN_MS = 10;
     private static final int NEW_LEADER_SESSION_ID = 43;
-    private static final int CLUSTER_SIZE = 5;
     private static final short ID = 2;
     private static final short NEW_LEADER_ID = 3;
     private static final DirectBuffer NODE_STATE_BUFFER = new UnsafeBuffer(new byte[1]);
@@ -73,6 +74,7 @@ public class ScenariosTest
     private final Archiver archiver = mock(Archiver.class);
     private final NodeStateHandler nodeStateHandler = mock(NodeStateHandler.class);
 
+    private final int clusterSize;
     private final RoleFixture roleFixture;
     private final Stimulus stimulus;
     private final Effect requiredEffect;
@@ -84,57 +86,60 @@ public class ScenariosTest
     @Parameterized.Parameters(name = "'{'{0}'}' {1} '{'{2}, {3}'}'")
     public static Iterable<Object[]> parameters()
     {
-        return Arrays.asList(
-            scenario(leader, newLeaderHeartbeat, transitionsToFollower, hasNewLeader(NEW_LEADER_SESSION_ID)),
+        final IntStream clusterSizes = IntStream.of(3, 5);
+        return clusterSizes.boxed().flatMap(size ->  Stream.of(
+            scenario(size, leader, newLeaderHeartbeat, transitionsToFollower, hasNewLeader(NEW_LEADER_SESSION_ID)),
 
-            scenario(leader, oldTermLeaderHeartbeat, neverTransitions, ignored),
+            scenario(size, leader, oldTermLeaderHeartbeat, neverTransitions, ignored),
 
-            scenario(leader, selfHeartbeat, neverTransitions, ignored),
+            scenario(size, leader, selfHeartbeat, neverTransitions, ignored),
 
-            scenario(leader, newLeaderRequestVote, votesAndFollows(CANDIDATE_ID), hasNoLeader(NEW_TERM)),
+            scenario(size, leader, newLeaderRequestVote, votesAndFollows(CANDIDATE_ID), hasNoLeader(NEW_TERM)),
 
-            scenario(leader, lowerTermRequestVote, neverTransitions, ignored),
+            scenario(size, leader, lowerTermRequestVote, neverTransitions, ignored),
 
-            scenario(leader, lowerPositionRequestVote, neverTransitions, ignored),
+            scenario(size, leader, lowerPositionRequestVote, neverTransitions, ignored),
 
-            scenario(follower, timesOut, transitionsToCandidate, hasNoLeader(LEADERSHIP_TERM)),
+            scenario(size, follower, timesOut, transitionsToCandidate, hasNoLeader(LEADERSHIP_TERM)),
 
-            scenario(follower, heartbeatBeforeTimeout, neverTransitions, ignored),
+            scenario(size, follower, heartbeatBeforeTimeout, neverTransitions, ignored),
 
-            scenario(follower, newLeaderRequestVote, voteForCandidate, ignored),
+            scenario(size, follower, newLeaderRequestVote, voteForCandidate, ignored),
 
-            scenario(follower, lowerTermRequestVote, neverTransitions, ignored),
+            scenario(size, follower, lowerTermRequestVote, neverTransitions, ignored),
 
-            scenario(follower, lowerPositionRequestVote, neverTransitions, ignored),
+            scenario(size, follower, lowerPositionRequestVote, neverTransitions, ignored),
 
-            scenario(follower, newLeaderHeartbeat, neverTransitions, hasNewLeader(NEW_LEADER_SESSION_ID)),
+            scenario(size, follower, newLeaderHeartbeat, neverTransitions, hasNewLeader(NEW_LEADER_SESSION_ID)),
 
-            scenario(follower, oldTermLeaderHeartbeat, neverTransitions, ignored),
+            scenario(size, follower, oldTermLeaderHeartbeat, neverTransitions, ignored),
 
-            scenario(candidate, startElection, requestsVote, ignored),
+            scenario(size, candidate, startElection, requestsVote, ignored),
 
-            scenario(candidate, onMajority, transitionsToLeader, ignored),
+            scenario(size, candidate, onMajority, transitionsToLeader, ignored),
 
-            scenario(candidate, newLeaderRequestVote, votesAndFollows(CANDIDATE_ID), hasNewLeader(SESSION_ID)),
+            scenario(size, candidate, newLeaderRequestVote, votesAndFollows(CANDIDATE_ID), hasNewLeader(SESSION_ID)),
 
-            scenario(candidate, lowerTermRequestVote, neverTransitions, ignored),
+            scenario(size, candidate, lowerTermRequestVote, neverTransitions, ignored),
 
-            scenario(candidate, lowerPositionRequestVote, neverTransitions, ignored),
+            scenario(size, candidate, lowerPositionRequestVote, neverTransitions, ignored),
 
-            scenario(candidate, newLeaderHeartbeat, transitionsToFollower, hasNewLeader(NEW_LEADER_SESSION_ID)),
+            scenario(size, candidate, newLeaderHeartbeat, transitionsToFollower, hasNewLeader(NEW_LEADER_SESSION_ID)),
 
-            scenario(candidate, oldTermLeaderHeartbeat, neverTransitions, ignored),
+            scenario(size, candidate, oldTermLeaderHeartbeat, neverTransitions, ignored),
 
-            scenario(candidate, selfHeartbeat, neverTransitions, ignored)
-        );
+            scenario(size, candidate, selfHeartbeat, neverTransitions, ignored)
+        )).collect(Collectors.toList());
     }
 
     public ScenariosTest(
+        final int clusterSize,
         final RoleFixture roleFixture,
         final Stimulus stimulus,
         final Effect requiredEffect,
         final State requiredState)
     {
+        this.clusterSize = clusterSize;
         this.roleFixture = roleFixture;
         this.stimulus = stimulus;
         this.requiredEffect = requiredEffect;
@@ -301,7 +306,7 @@ public class ScenariosTest
             ID,
             SESSION_ID,
             clusterNode,
-            CLUSTER_SIZE,
+            clusterSize,
             TIMEOUT_IN_MS,
             termState,
             new QuorumAcknowledgementStrategy(), NODE_STATE_BUFFER, nodeStateHandler);
@@ -450,8 +455,11 @@ public class ScenariosTest
             {
                 st.raftHandler.onReplyVote(
                     FOLLOWER_1_ID, ID, LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
-                st.raftHandler.onReplyVote(
-                    FOLLOWER_2_ID, ID, LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
+                if (st.clusterSize > 3)
+                {
+                    st.raftHandler.onReplyVote(
+                        FOLLOWER_2_ID, ID, LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
+                }
             }, "onMajority");
 
     private static Stimulus lowerPositionRequestVote =
@@ -486,6 +494,7 @@ public class ScenariosTest
     }
 
     private static Object[] scenario(
+        final int clusterSize,
         final RoleFixture roleFixture,
         final Stimulus stimulus,
         final Effect effect,
@@ -493,6 +502,7 @@ public class ScenariosTest
     {
         return new Object[]
         {
+            clusterSize,
             roleFixture,
             stimulus,
             effect,
