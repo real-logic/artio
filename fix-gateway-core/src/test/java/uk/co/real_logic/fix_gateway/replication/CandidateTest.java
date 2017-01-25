@@ -47,12 +47,12 @@ public class CandidateTest
 
     private RaftPublication controlPublication = mock(RaftPublication.class);
     private Subscription controlSubscription = mock(Subscription.class);
-    private ClusterAgent clusterNode = mock(ClusterAgent.class);
+    private ClusterAgent clusterAgent = mock(ClusterAgent.class);
     private TermState termState = new TermState();
     private NodeStateHandler nodeStateHandler = mock(NodeStateHandler.class);
 
     private Candidate candidate = new Candidate(
-        ID, DATA_SESSION_ID, clusterNode, CLUSTER_SIZE, VOTE_TIMEOUT,
+        ID, DATA_SESSION_ID, clusterAgent, CLUSTER_SIZE, VOTE_TIMEOUT,
         termState, new QuorumAcknowledgementStrategy(),
         NODE_STATE_BUFFER, nodeStateHandler);
 
@@ -74,7 +74,7 @@ public class CandidateTest
         candidate.onReplyVote(
             ID_5, ID, OLD_LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
 
-        neverTransitionsToLeader(clusterNode);
+        neverTransitionsToLeader(clusterAgent);
     }
 
     @Test
@@ -87,7 +87,22 @@ public class CandidateTest
         candidate.onReplyVote(
             ID_5, ID, NEW_LEADERSHIP_TERM, AGAINST, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
 
-        neverTransitionsToLeader(clusterNode);
+        neverTransitionsToLeader(clusterAgent);
+    }
+
+    @Test
+    public void shouldNotVoteAgainstYourself()
+    {
+        startElection();
+
+        requestsVote(NEW_LEADERSHIP_TERM, times(1));
+
+        // Candidate will receive own vote request
+        candidate.onRequestVote(ID, DATA_SESSION_ID, NEW_LEADERSHIP_TERM, POSITION);
+
+        verifyNoMoreInteractions(controlPublication);
+        neverTransitionsToLeader(clusterAgent);
+        neverTransitionsToFollower(clusterAgent);
     }
 
     @Test
@@ -102,7 +117,7 @@ public class CandidateTest
         candidate.onReplyVote(
             ID_5, otherCandidate, NEW_LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
 
-        neverTransitionsToLeader(clusterNode);
+        neverTransitionsToLeader(clusterAgent);
     }
 
     @Test
@@ -113,7 +128,7 @@ public class CandidateTest
         candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
         candidate.onReplyVote(ID_4, ID, NEW_LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
 
-        neverTransitionsToLeader(clusterNode);
+        neverTransitionsToLeader(clusterAgent);
     }
 
     @Test
@@ -126,8 +141,8 @@ public class CandidateTest
         requestsVote(NEW_LEADERSHIP_TERM, times(1));
         requestsVote(NEW_LEADERSHIP_TERM + 1, times(1));
 
-        neverTransitionsToLeader(clusterNode);
-        neverTransitionsToFollower(clusterNode);
+        neverTransitionsToLeader(clusterAgent);
+        neverTransitionsToFollower(clusterAgent);
     }
 
     @Test

@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 import static uk.co.real_logic.fix_gateway.replication.Follower.NO_ONE;
 import static uk.co.real_logic.fix_gateway.replication.messages.Vote.AGAINST;
@@ -125,6 +126,12 @@ class Candidate implements Role, RaftHandler
     public Action onRequestVote(
         final short candidateId, final int candidateSessionId, final int leaderShipTerm, long lastAckedPosition)
     {
+        // Ignore vote requests messages from yourself
+        if (candidateId == nodeId)
+        {
+            return CONTINUE;
+        }
+
         if (leaderShipTerm > termState.leadershipTerm() && lastAckedPosition >= consensusPosition.get())
         {
             if (replyVote(candidateId, leaderShipTerm, FOR) < 0)
