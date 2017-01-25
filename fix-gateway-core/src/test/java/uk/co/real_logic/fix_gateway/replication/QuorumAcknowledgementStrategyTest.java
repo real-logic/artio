@@ -15,10 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import org.agrona.collections.IntHashSet;
 import org.agrona.collections.Long2LongHashMap;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class QuorumAcknowledgementStrategyTest
 {
@@ -88,6 +90,16 @@ public class QuorumAcknowledgementStrategyTest
         final long ackedTerm = strategy.findAckedTerm(sessionIdToPosition);
 
         assertEquals(2, ackedTerm);
+    }
+
+    @Test
+    public void shouldElectWithMajority()
+    {
+        final IntHashSet votes = new IntHashSet(6, -1);
+        votes.add((short) 1);
+        votes.add((short) 2);
+
+        assertTrue(strategy.isElected(votes.size(), 3));
     }
 
 }
