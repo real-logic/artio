@@ -20,6 +20,7 @@ import org.agrona.collections.Long2LongHashMap;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class QuorumAcknowledgementStrategyTest
@@ -95,11 +96,27 @@ public class QuorumAcknowledgementStrategyTest
     @Test
     public void shouldElectWithMajority()
     {
-        final IntHashSet votes = new IntHashSet(6, -1);
-        votes.add((short) 1);
-        votes.add((short) 2);
+        final IntHashSet votedFor = votedFor();
+        votedFor.add((short) 1);
+        votedFor.add((short) 2);
 
-        assertTrue(strategy.isElected(votes.size(), 3));
+        assertTrue(strategy.isElected(votedFor.size(), 3));
+    }
+
+
+
+    @Test
+    public void shouldNotElectWithoutMajority()
+    {
+        final IntHashSet votes = votedFor();
+        votes.add((short) 1);
+
+        assertFalse(strategy.isElected(votes.size(), 3));
+    }
+
+    private IntHashSet votedFor()
+    {
+        return new IntHashSet(6, -1);
     }
 
 }
