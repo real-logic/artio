@@ -20,7 +20,6 @@ import org.agrona.collections.Int2IntHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.Timing;
@@ -45,7 +44,6 @@ import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
  * Every operation should ensure that it has it's own timeout, since we avoid Junit's @Test timeouts
  * as they cause the test code to be run on a different thread.
  */
-@Ignore
 public class ClusterReplicationTest
 {
     private static final int BUFFER_SIZE = 1337;
@@ -117,8 +115,7 @@ public class ClusterReplicationTest
                 return foundLeader(followers);
             });
 
-        assertBecomesFollower(leader);
-        assertLeadershipConsensus();
+        eventuallyOneLeaderAndTwoFollowersWithSameLeader();
     }
 
     @Test
@@ -215,7 +212,7 @@ public class ClusterReplicationTest
 
         follower.dropFrames(false);
 
-        assertBecomesFollower(follower);
+        eventuallyOneLeaderAndTwoFollowersWithSameLeader();
 
         assertMessageReceived();
     }
