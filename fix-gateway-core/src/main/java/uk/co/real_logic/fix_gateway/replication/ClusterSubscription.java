@@ -22,6 +22,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.replication.messages.ConsensusHeartbeatDecoder;
 import uk.co.real_logic.fix_gateway.replication.messages.MessageHeaderDecoder;
 
@@ -29,6 +30,7 @@ import java.util.PriorityQueue;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.util.Comparator.comparing;
+import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 class ClusterSubscription extends ClusterableSubscription
@@ -114,9 +116,9 @@ class ClusterSubscription extends ClusterableSubscription
             final int leaderShipTerm = consensusHeartbeat.leaderShipTerm();
             final int leaderSessionId = consensusHeartbeat.leaderSessionId();
             final long position = consensusHeartbeat.position();
-            final long previousPosition = consensusHeartbeat.startPosition();
+            final long startPosition = consensusHeartbeat.startPosition();
 
-            return onConsensusHeartbeat(leaderShipTerm, leaderSessionId, position, previousPosition);
+            return onConsensusHeartbeat(leaderShipTerm, leaderSessionId, position, startPosition);
         }
 
         return CONTINUE;
@@ -126,8 +128,16 @@ class ClusterSubscription extends ClusterableSubscription
         final int leaderShipTermId,
         final int leaderSessionId,
         final long position,
-        final long previousPosition)
+        final long startPosition)
     {
+        DebugLogger.log(
+            RAFT,
+            "Subscription Heartbeat(leaderShipTerm=%d, startPos=%d, pos=%d, leaderSessId=%d)%n",
+            leaderShipTermId,
+            startPosition,
+            position,
+            leaderSessionId);
+
         if (leaderShipTermId == currentLeadershipTermId)
         {
             if (messageFilter.consensusPosition < position)
@@ -139,9 +149,9 @@ class ClusterSubscription extends ClusterableSubscription
         }
         else if (leaderShipTermId == currentLeadershipTermId + 1 || dataImage == null)
         {
-            if (previousPosition != messageFilter.consensusPosition)
+            if (startPosition != messageFilter.consensusPosition)
             {
-                save(leaderShipTermId, leaderSessionId, position, previousPosition);
+                save(leaderShipTermId, leaderSessionId, position, startPosition);
             }
             else
             {
@@ -152,7 +162,7 @@ class ClusterSubscription extends ClusterableSubscription
         }
         else if (leaderShipTermId > currentLeadershipTermId)
         {
-            save(leaderShipTermId, leaderSessionId, position, previousPosition);
+            save(leaderShipTermId, leaderSessionId, position, startPosition);
         }
 
         // We deliberately ignore leaderShipTerm < currentLeadershipTermId, as they would be old
@@ -178,7 +188,7 @@ class ClusterSubscription extends ClusterableSubscription
 
     private boolean cannotAdvance()
     {
-        return dataImage == null || dataImage.position() == messageFilter.consensusPosition;
+        return dataImage == null || dataImage.position() >= messageFilter.consensusPosition;
     }
 
     public void close()
@@ -200,7 +210,15 @@ class ClusterSubscription extends ClusterableSubscription
 
         public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
         {
-            if (header.position() > consensusPosition)
+            final long headerPosition = header.position();
+
+            DebugLogger.log(
+                RAFT,
+                "Subscription onFragment(headerPosition=%d, consensusPosition=%d%n",
+                headerPosition,
+                consensusPosition);
+
+            if (headerPosition > consensusPosition)
             {
                 return ABORT;
             }
