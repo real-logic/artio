@@ -60,7 +60,7 @@ class NodeRunner implements AutoCloseable
     private final Aeron aeron;
     private final ClusterAgent clusterAgent;
     private final ControlledFragmentHandler handler;
-    private final ClusterableSubscription subscription;
+    private final ClusterSubscription subscription;
 
     private final AtomicBoolean guard = new AtomicBoolean();
     private long replicatedPosition = -1;

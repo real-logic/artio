@@ -56,7 +56,7 @@ class ClusterStreams extends ClusterableStreams
         return new ClusterPublication(dataPublication, leaderSessionId, ourSessionId, clusterStreamId);
     }
 
-    public ClusterableSubscription subscription(final int clusterStreamId)
+    public ClusterSubscription subscription(final int clusterStreamId)
     {
         return new ClusterSubscription(
             transport.dataSubscription(), clusterStreamId, transport.controlSubscription());
