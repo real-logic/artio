@@ -248,7 +248,7 @@ public class ScenariosTest
 
         final Leader leader = new Leader(
             ID,
-            new EntireClusterAcknowledgementStrategy(),
+            new QuorumAcknowledgementStrategy(),
             new IntHashSet(40, -1),
             clusterNode,
             0,
