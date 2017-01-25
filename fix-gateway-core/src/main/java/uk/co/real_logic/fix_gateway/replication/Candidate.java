@@ -173,6 +173,7 @@ class Candidate implements Role, RaftHandler
 
         if (shouldCountVote(candidateId, leaderShipTerm, vote) && countVote(senderNodeId))
         {
+            // TODO: is it right to keepalive the timeout at this point?
             voteTimeout.onKeepAlive(timeInMs);
 
             nodeStateHandler.onNewNodeState(senderNodeId, aeronSessionId, nodeStateBuffer, nodeStateLength);
@@ -277,6 +278,7 @@ class Candidate implements Role, RaftHandler
 
     private void startElection(final long timeInMs)
     {
+        votesFor.clear();
         voteTimeout.onKeepAlive(timeInMs);
         termState.incLeadershipTerm();
         countVote(nodeId); // Vote for yourself

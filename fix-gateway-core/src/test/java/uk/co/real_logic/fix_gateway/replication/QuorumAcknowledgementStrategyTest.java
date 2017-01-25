@@ -103,8 +103,6 @@ public class QuorumAcknowledgementStrategyTest
         assertTrue(strategy.isElected(votedFor.size(), 3));
     }
 
-
-
     @Test
     public void shouldNotElectWithoutMajority()
     {
