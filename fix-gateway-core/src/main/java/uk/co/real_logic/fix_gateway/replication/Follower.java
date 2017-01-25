@@ -211,7 +211,7 @@ class Follower implements Role, RaftHandler
     public Action onConsensusHeartbeat(
         final short leaderNodeId,
         final int leaderShipTerm,
-        final long position,
+        final long startPosition, final long position,
         final int leaderSessionId)
     {
         if (leaderNodeId != this.nodeId)

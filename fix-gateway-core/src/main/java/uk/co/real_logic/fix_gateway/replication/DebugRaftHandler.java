@@ -105,20 +105,25 @@ final class DebugRaftHandler implements RaftHandler
     }
 
     public Action onConsensusHeartbeat(
-        final short nodeId, final int leaderShipTerm, final long position, final int leaderSessionId)
+        final short nodeId,
+        final int leaderShipTerm,
+        final long startPosition,
+        final long position,
+        final int leaderSessionId)
     {
         DebugLogger.log(
             RAFT,
-            "%d: ConsensusHeartbeat(nodeId=%d, leaderShipTerm=%d, position=%d, leaderSessionId=%d)\n",
+            "%d: ConsensusHeartbeat(nodeId=%d, leaderShipTerm=%d, startPos=%d, pos=%d, leaderSessId=%d)\n",
             this.nodeId,
             nodeId,
             leaderShipTerm,
+            startPosition,
             position,
             leaderSessionId
         );
 
         return delegateHandler.onConsensusHeartbeat(
-            nodeId, leaderShipTerm, position, leaderSessionId
+            nodeId, leaderShipTerm, startPosition, position, leaderSessionId
         );
     }
 

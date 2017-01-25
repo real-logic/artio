@@ -35,7 +35,12 @@ interface RaftHandler
         int nodeStateLength,
         int aeronSessionId);
 
-    Action onConsensusHeartbeat(short nodeId, int leaderShipTerm, long position, int leaderSessionId);
+    Action onConsensusHeartbeat(
+        short nodeId,
+        int leaderShipTerm,
+        long startPosition,
+        long position,
+        int leaderSessionId);
 
     Action onResend(
         int leaderSessionId,

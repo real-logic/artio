@@ -322,6 +322,22 @@ public final class DebugLogger
     public static void log(
         final LogTag tag,
         final String formatString,
+        final long first,
+        final long second,
+        final long third,
+        final long fourth,
+        final long fifth,
+        final long sixth)
+    {
+        if (isEnabled(tag))
+        {
+            printf(formatString, first, second, third, fourth, fifth, sixth);
+        }
+    }
+
+    public static void log(
+        final LogTag tag,
+        final String formatString,
         final Object first,
         final long second,
         final long third,

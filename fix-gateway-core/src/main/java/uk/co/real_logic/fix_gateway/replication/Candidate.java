@@ -206,7 +206,7 @@ class Candidate implements Role, RaftHandler
     public Action onConsensusHeartbeat(
         short nodeId,
         final int leaderShipTerm,
-        final long position,
+        final long startPosition, final long position,
         final int dataSessionId)
     {
         if (nodeId != this.nodeId)

@@ -410,7 +410,7 @@ public class ScenariosTest
         final String name)
     {
         return namedStimulus(
-            (st) -> st.raftHandler.onConsensusHeartbeat(leaderId, leaderShipTerm, POSITION, dataSessionId), name);
+            (st) -> st.raftHandler.onConsensusHeartbeat(leaderId, leaderShipTerm, POSITION, POSITION, dataSessionId), name);
     }
 
     private static Stimulus timesOut =
@@ -423,7 +423,7 @@ public class ScenariosTest
                 when(st.controlSubscription.controlledPoll(any(), anyInt())).thenAnswer(
                     (inv) ->
                     {
-                        st.raftHandler.onConsensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, SESSION_ID);
+                        st.raftHandler.onConsensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, POSITION, SESSION_ID);
 
                         return 1;
                     });
@@ -444,7 +444,7 @@ public class ScenariosTest
 
     private static void heartbeat(final ScenariosTest st)
     {
-        st.raftHandler.onConsensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, SESSION_ID);
+        st.raftHandler.onConsensusHeartbeat(NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, POSITION, SESSION_ID);
     }
 
     private static Stimulus startElection = namedStimulus((st) -> {}, "startElection");
