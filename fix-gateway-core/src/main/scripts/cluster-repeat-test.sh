@@ -8,6 +8,6 @@ params=$2
 for i in $(seq 1 $count)
 do
   echo $i
-  ./gradlew $params -Dtest.single=ClusterReplicationTest --rerun-tasks :fix-gateway-core:test > "$i.out"
+  ./gradlew $params --rerun-tasks :fix-gateway-core:test --tests *ClusterReplicationTest > "$i.out"
 done
 
