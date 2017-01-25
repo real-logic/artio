@@ -20,7 +20,6 @@ import org.agrona.collections.Int2IntHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.Timing;
@@ -197,12 +196,8 @@ public class ClusterReplicationTest
         eventuallyOneLeaderAndTwoFollowersWithSameLeader();
     }
 
-    // TODO: fix this test: the message needs to replicated by other two nodes whilst the follower is netsplit.
-    // Then the follower can catchup
-    // TODO: also add a test that a message can be sent around afterwards.
-    @Ignore
     @Test
-    public void shouldNotReplicateMessageUntilClusterReformed()
+    public void shouldEventuallyReplicateMessageWhenClusterReformed()
     {
         final NodeRunner leader = leader();
         final NodeRunner follower = aFollower();
@@ -211,15 +206,32 @@ public class ClusterReplicationTest
 
         assertBecomesCandidate(follower);
 
+        assertTrue("nodes received message when one was supposedly netsplit", noNodesReceivedMessage());
+
+        // position is absolute, no need to use this one
         sendMessageTo(leader);
 
-        assertTrue("nodes received message when one was supposedly netsplit", noNodesReceivedMessage());
+        messageCommittedBetweenTwoLiveNodes(follower);
 
         follower.dropFrames(false);
 
         eventuallyOneLeaderAndTwoFollowersWithSameLeader();
 
         assertMessageReceived();
+    }
+
+    private void messageCommittedBetweenTwoLiveNodes(final NodeRunner follower)
+    {
+        final NodeRunner[] liveNodes = nodes().filter(node -> node != follower).toArray(NodeRunner[]::new);
+
+        assertEventuallyTrue(
+            "message not committed",
+            () ->
+            {
+                pollAll();
+                return receivedMessage(liveNodes[0]) && receivedMessage(liveNodes[1]);
+            }
+        );
     }
 
     private void assertNodeStateReplicated()
@@ -348,7 +360,12 @@ public class ClusterReplicationTest
 
     private boolean notReceivedMessage(final NodeRunner node)
     {
-        return node.replicatedPosition() < POSITION_AFTER_MESSAGE;
+        return !receivedMessage(node);
+    }
+
+    private boolean receivedMessage(final NodeRunner node)
+    {
+        return node.replicatedPosition() >= POSITION_AFTER_MESSAGE;
     }
 
     private long sendMessageTo(final NodeRunner leader)
@@ -499,21 +516,23 @@ public class ClusterReplicationTest
     private String clusterInfo()
     {
         return nodes()
-            .map(NodeRunner::clusterAgent)
             .map(
-                (agent) ->
+                (runner) ->
                 {
+                    final ClusterAgent agent = runner.clusterAgent();
                     final TermState termState = agent.termState();
                     final int leaderSessionId = termState.leaderSessionId().get();
                     final int leadershipTerm = termState.leadershipTerm();
                     final int ourSessionId = agent.ourSessionId();
+                    final long position = runner.replicatedPosition();
                     return String.format(
-                        "%s %d: leader=%d, term=%d, us=%d",
+                        "%s %d: leader=%d, term=%d, us=%d, pos=%d",
                         state(agent),
                         agent.nodeId(),
                         leaderSessionId,
                         leadershipTerm,
-                        ourSessionId);
+                        ourSessionId,
+                        position);
                 })
             .collect(Collectors.joining("\n", "\n", "\n"));
     }
