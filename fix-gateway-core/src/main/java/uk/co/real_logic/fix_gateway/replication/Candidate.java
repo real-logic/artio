@@ -165,11 +165,12 @@ class Candidate implements Role, RaftHandler
     {
         DebugLogger.log(
             RAFT,
-            "%d: Received vote from %d about %d in %d%n",
+            "%d: Received vote from %d about %d in %d (localTerm=%d)%n",
             nodeId,
             senderNodeId,
             candidateId,
-            leaderShipTerm);
+            leaderShipTerm,
+            termState.leadershipTerm());
 
         if (shouldCountVote(candidateId, leaderShipTerm, vote) && countVote(senderNodeId))
         {
