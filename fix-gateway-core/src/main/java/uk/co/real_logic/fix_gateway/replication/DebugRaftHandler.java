@@ -50,7 +50,7 @@ final class DebugRaftHandler implements RaftHandler
     {
         DebugLogger.log(
             RAFT,
-            "%2$d: MessageAcknowledgement(newAckedPos=%3$d, nodeId=%4$d, %1$s)\n",
+            "%2$d: MessageAcknowledgement(newAckedPos=%3$d, nodeId=%4$d, %1$s)%n",
             status,
             this.nodeId,
             newAckedPosition,
@@ -67,7 +67,7 @@ final class DebugRaftHandler implements RaftHandler
     {
         DebugLogger.log(
             RAFT,
-            "%d: RequestVote(candidateId=%d, candidateSessionId=%d, leadershipTerm=%d, lastAckedPosition=%d)\n",
+            "%d: RequestVote(candidateId=%d, candidateSessionId=%d, leadershipTerm=%d, lastAckedPosition=%d)%n",
             this.nodeId,
             candidateId,
             candidateSessionId,
@@ -91,7 +91,7 @@ final class DebugRaftHandler implements RaftHandler
     {
         DebugLogger.log(
             RAFT,
-            "%2$d: ReplyVote(senderNodeId=%3$d, candidateId=%4$d, leaderShipTerm=%5$d, %1$s)\n",
+            "%2$d: ReplyVote(senderNodeId=%3$d, candidateId=%4$d, leaderShipTerm=%5$d, %1$s)%n",
             vote,
             this.nodeId,
             senderNodeId,
@@ -113,7 +113,7 @@ final class DebugRaftHandler implements RaftHandler
     {
         DebugLogger.log(
             RAFT,
-            "%d: ConsensusHeartbeat(nodeId=%d, leaderShipTerm=%d, startPos=%d, pos=%d, leaderSessId=%d)\n",
+            "%d: ConsensusHeartbeat(nodeId=%d, leaderShipTerm=%d, startPos=%d, pos=%d, leaderSessId=%d)%n",
             this.nodeId,
             nodeId,
             leaderShipTerm,
@@ -137,7 +137,7 @@ final class DebugRaftHandler implements RaftHandler
     {
         DebugLogger.log(
             RAFT,
-            "%d: Resend(leaderSessionId=%d, leaderShipTerm=%d, startPosition=%d, bodyLength=%d)\n",
+            "%d: Resend(leaderSessionId=%d, leaderShipTerm=%d, startPosition=%d, bodyLength=%d)%n",
             this.nodeId,
             leaderSessionId,
             leaderShipTerm,
