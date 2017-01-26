@@ -173,7 +173,8 @@ class RaftPublication
         final int leaderShipTerm,
         final long position,
         final int leaderSessionId,
-        final long startPosition)
+        final long streamStartPosition,
+        final long streamPosition)
     {
         final long pos = claim(CONSENSUS_HEARTBEAT_LENGTH);
         if (position < 0)
@@ -199,7 +200,8 @@ class RaftPublication
             .leaderShipTerm(leaderShipTerm)
             .position(position)
             .leaderSessionId(leaderSessionId)
-            .startPosition(startPosition);
+            .streamStartPosition(streamStartPosition)
+            .streamPosition(streamPosition);
 
         bufferClaim.commit();
 

@@ -38,8 +38,9 @@ interface RaftHandler
     Action onConsensusHeartbeat(
         short nodeId,
         int leaderShipTerm,
-        long startPosition,
         long position,
+        long startPosition,
+        long streamPosition,
         int leaderSessionId);
 
     Action onResend(

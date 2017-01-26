@@ -275,7 +275,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         final int readMessages = controlSubscription().controlledPoll(new RaftSubscription(raftHandler), 10);
         assertEquals(0, readMessages);
         verify(raftHandler, never())
-            .onConsensusHeartbeat(anyShort(), anyInt(), anyLong(), anyLong(), eq(leaderSessionId));
+            .onConsensusHeartbeat(anyShort(), anyInt(), anyLong(), anyLong(), anyLong(), eq(leaderSessionId));
     }
 
     private int roundtripABuffer()

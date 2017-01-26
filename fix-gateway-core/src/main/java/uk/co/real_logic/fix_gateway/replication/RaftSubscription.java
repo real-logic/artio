@@ -96,8 +96,9 @@ class RaftSubscription implements ControlledFragmentHandler
                 return handler.onConsensusHeartbeat(
                     consensusHeartbeat.nodeId(),
                     consensusHeartbeat.leaderShipTerm(),
-                    consensusHeartbeat.startPosition(),
                     consensusHeartbeat.position(),
+                    consensusHeartbeat.streamStartPosition(),
+                    consensusHeartbeat.streamPosition(),
                     consensusHeartbeat.leaderSessionId());
             }
 

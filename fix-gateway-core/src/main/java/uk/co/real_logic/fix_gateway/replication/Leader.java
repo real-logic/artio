@@ -170,9 +170,15 @@ class Leader implements Role, RaftHandler
 
     private void heartbeat()
     {
+        // TODO: compute correct relative position for our publication
         final long currentPosition = consensusPosition.get();
         if (controlPublication.saveConsensusHeartbeat(
-            nodeId, termState.leadershipTerm(), currentPosition, ourSessionId, previousConsensusPosition) > 0)
+            nodeId,
+            termState.leadershipTerm(),
+            currentPosition,
+            ourSessionId,
+            previousConsensusPosition,
+            currentPosition) > 0)
         {
             previousConsensusPosition = currentPosition;
             updateNextHeartbeatTime(timeInMs);
@@ -300,8 +306,8 @@ class Leader implements Role, RaftHandler
 
     public Action onConsensusHeartbeat(final short nodeId,
                                        final int leaderShipTerm,
-                                       final long startPosition, final long position,
-                                       final int leaderSessionId)
+                                       final long position, final long startPosition,
+                                       final long streamPosition, final int leaderSessionId)
     {
         if (nodeId != this.nodeId && leaderShipTerm > termState.leadershipTerm())
         {

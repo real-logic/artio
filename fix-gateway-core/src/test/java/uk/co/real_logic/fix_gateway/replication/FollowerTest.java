@@ -197,7 +197,7 @@ public class FollowerTest
 
     private void onHeartbeat()
     {
-        follower.onConsensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, POSITION, POSITION, SESSION_ID_4);
+        follower.onConsensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, POSITION, POSITION, POSITION, SESSION_ID_4);
     }
 
     private void notifyMissingLogEntries(final VerificationMode mode)
@@ -216,7 +216,7 @@ public class FollowerTest
         whenControlPolled().then(
             (inv) ->
             {
-                follower.onConsensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, position, position, SESSION_ID_4);
+                follower.onConsensusHeartbeat(ID_4, NEW_LEADERSHIP_TERM, position, position, position, SESSION_ID_4);
 
                 return 1;
             });

@@ -116,9 +116,9 @@ class ClusterSubscription extends ClusterableSubscription
             final int leaderShipTerm = consensusHeartbeat.leaderShipTerm();
             final int leaderSessionId = consensusHeartbeat.leaderSessionId();
             final long position = consensusHeartbeat.position();
-            final long startPosition = consensusHeartbeat.startPosition();
+            final long streamStartPosition = consensusHeartbeat.streamStartPosition();
 
-            return onConsensusHeartbeat(leaderShipTerm, leaderSessionId, position, startPosition);
+            return onConsensusHeartbeat(leaderShipTerm, leaderSessionId, position, streamStartPosition);
         }
 
         return CONTINUE;
@@ -128,14 +128,14 @@ class ClusterSubscription extends ClusterableSubscription
         final int leaderShipTermId,
         final int leaderSessionId,
         final long position,
-        final long startPosition)
+        final long streamStartPosition)
     {
         DebugLogger.log(
             RAFT,
-            "Subscription Heartbeat(leaderShipTerm=%d, startPos=%d, pos=%d, leaderSessId=%d)%n",
+            "Subscription Heartbeat(leaderShipTerm=%d, pos=%d, sStartPos=%d, leaderSessId=%d)%n",
             leaderShipTermId,
-            startPosition,
             position,
+            streamStartPosition,
             leaderSessionId);
 
         if (leaderShipTermId == currentLeadershipTermId)
@@ -149,9 +149,9 @@ class ClusterSubscription extends ClusterableSubscription
         }
         else if (leaderShipTermId == currentLeadershipTermId + 1 || dataImage == null)
         {
-            if (startPosition != messageFilter.consensusPosition)
+            if (streamStartPosition != messageFilter.consensusPosition)
             {
-                save(leaderShipTermId, leaderSessionId, position, startPosition);
+                save(leaderShipTermId, leaderSessionId, position, streamStartPosition);
             }
             else
             {
@@ -162,7 +162,7 @@ class ClusterSubscription extends ClusterableSubscription
         }
         else if (leaderShipTermId > currentLeadershipTermId)
         {
-            save(leaderShipTermId, leaderSessionId, position, startPosition);
+            save(leaderShipTermId, leaderSessionId, position, streamStartPosition);
         }
 
         // We deliberately ignore leaderShipTerm < currentLeadershipTermId, as they would be old

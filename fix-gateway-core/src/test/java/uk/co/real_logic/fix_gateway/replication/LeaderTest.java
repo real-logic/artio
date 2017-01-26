@@ -106,7 +106,7 @@ public class LeaderTest
     public void onElectionHeartbeat()
     {
         verify(controlPublication)
-            .saveConsensusHeartbeat(ID, LEADERSHIP_TERM, POSITION, LEADER_SESSION_ID, 0);
+            .saveConsensusHeartbeat(ID, LEADERSHIP_TERM, POSITION, LEADER_SESSION_ID, 0, POSITION);
     }
 
     @Test
