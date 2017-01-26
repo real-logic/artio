@@ -211,19 +211,21 @@ class ClusterSubscription extends ClusterableSubscription
         public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
         {
             final long headerPosition = header.position();
+            final int clusterStreamId = ReservedValue.clusterStreamId(header);
 
             DebugLogger.log(
                 RAFT,
-                "Subscription onFragment(headerPosition=%d, consensusPosition=%d%n",
+                "Subscription onFragment(hdrPos=%d, csnsPos=%d, ourStream=%d, msgStream=%d)%n",
                 headerPosition,
-                consensusPosition);
+                consensusPosition,
+                this.clusterStreamId,
+                clusterStreamId);
 
             if (headerPosition > consensusPosition)
             {
                 return ABORT;
             }
 
-            final int clusterStreamId = ReservedValue.clusterStreamId(header);
             if (this.clusterStreamId == clusterStreamId)
             {
                 messageHeader.wrap(buffer, offset);
