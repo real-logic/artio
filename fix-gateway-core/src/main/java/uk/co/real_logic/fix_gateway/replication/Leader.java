@@ -125,6 +125,7 @@ class Leader implements Role, RaftHandler
 
     public int checkConditions(final long timeInMs)
     {
+        final int resends = CollectionUtil.removeIf(resendHandlers, ResendHandler::reAttemptResend);
         final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
         final int delta = (int) (newPosition - consensusPosition.get());
         if (delta > 0)
@@ -134,17 +135,17 @@ class Leader implements Role, RaftHandler
             heartbeat();
 
             // Deliberately Suppress below heartbeat because there's no need to send two
-            return delta;
+            return resends + delta;
         }
 
         if (timeInMs > nextHeartbeatTimeInMs)
         {
             heartbeat();
 
-            return 1;
+            return resends + 1;
         }
 
-        return CollectionUtil.removeIf(resendHandlers, ResendHandler::reAttemptResend);
+        return resends;
     }
 
     public int pollCommands(final int fragmentLimit, final long timeInMs)
