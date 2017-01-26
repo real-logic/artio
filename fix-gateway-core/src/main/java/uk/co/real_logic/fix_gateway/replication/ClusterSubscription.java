@@ -270,7 +270,7 @@ class ClusterSubscription extends ClusterableSubscription
 
         private int previousLeadershipTermId()
         {
-            return leaderSessionId - 1;
+            return leaderShipTermId - 1;
         }
     }
 

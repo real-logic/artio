@@ -40,6 +40,8 @@ import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasResult;
 public class ClusterSubscriptionTest
 {
     private static final int CLUSTER_STREAM_ID = 1;
+    private static final int LEADER = 1;
+    private static final int OTHER_LEADER = 2;
 
     private Subscription dataSubscription = mock(Subscription.class);
     private Subscription controlSubscription = mock(Subscription.class);
@@ -59,21 +61,21 @@ public class ClusterSubscriptionTest
     @Test
     public void shouldUpdatePositionWhenAcknowledged()
     {
-        onConsensusHeartbeatPoll(1, 1, 0, 1);
+        onConsensusHeartbeatPoll(1, LEADER, 0, 1);
 
-        onConsensusHeartbeatPoll(1, 1, 1, 2);
+        onConsensusHeartbeatPoll(1, LEADER, 1, 2);
 
-        assertState(1, 1, 2);
+        assertState(1, LEADER, 2);
     }
 
     @Test
     public void shouldStashUpdatesWithGap()
     {
-        onConsensusHeartbeatPoll(1, 1, 0, 1);
+        onConsensusHeartbeatPoll(1, LEADER, 0, 1);
 
-        onConsensusHeartbeatPoll(2, 2, 2, 4);
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, 2, 4);
 
-        assertState(1, 1, 1);
+        assertState(1, LEADER, 1);
     }
 
     @Test
@@ -81,23 +83,23 @@ public class ClusterSubscriptionTest
     {
         shouldStashUpdatesWithGap();
 
-        onConsensusHeartbeatPoll(1, 1, 1, 2);
+        onConsensusHeartbeatPoll(1, LEADER, 1, 2);
 
-        assertState(1, 1, 2);
+        assertState(1, LEADER, 2);
 
         clusterSubscription.hasMatchingFutureAck();
 
-        assertState(2, 2, 4);
+        assertState(2, OTHER_LEADER, 4);
     }
 
     @Test
     public void shouldStashUpdatesFromFutureLeadershipTerm()
     {
-        onConsensusHeartbeatPoll(1, 1, 0, 1);
+        onConsensusHeartbeatPoll(1, LEADER, 0, 1);
 
-        onConsensusHeartbeatPoll(3, 3, 2, 4);
+        onConsensusHeartbeatPoll(3, OTHER_LEADER, 2, 4);
 
-        assertState(1, 1, 1);
+        assertState(1, LEADER, 1);
     }
 
     @Test
@@ -105,13 +107,13 @@ public class ClusterSubscriptionTest
     {
         shouldStashUpdatesFromFutureLeadershipTerm();
 
-        onConsensusHeartbeatPoll(2, 2, 1, 2);
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, 1, 2);
 
-        assertState(2, 2, 2);
+        assertState(2, OTHER_LEADER, 2);
 
         clusterSubscription.hasMatchingFutureAck();
 
-        assertState(3, 3, 4);
+        assertState(3, OTHER_LEADER, 4);
     }
 
     @Test
