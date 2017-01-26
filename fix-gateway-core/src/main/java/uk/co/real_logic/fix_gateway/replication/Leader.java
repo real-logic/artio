@@ -19,6 +19,7 @@ import io.aeron.Subscription;
 import io.aeron.logbuffer.BlockHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
+import org.agrona.collections.CollectionUtil;
 import org.agrona.collections.IntHashSet;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -26,6 +27,8 @@ import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus;
 import uk.co.real_logic.fix_gateway.replication.messages.Vote;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
@@ -50,12 +53,7 @@ class Leader implements Role, RaftHandler
 
     // Counts of how many acknowledgements
     private final Long2LongHashMap nodeToPosition = new Long2LongHashMap(NO_SESSION_ID);
-    private final ResendHandler resendHandler = new ResendHandler();
-
-    // retry a resend when it gets back pressured
-    private DirectBuffer repeatResendBuffer;
-    private int repeatResendOffset;
-    private int repeatResendLength;
+    private final List<ResendHandler> resendHandlers = new ArrayList<>();
 
     private ArchiveReader.SessionReader ourArchiveReader;
     private RaftPublication controlPublication;
@@ -76,8 +74,6 @@ class Leader implements Role, RaftHandler
 
     private long nextHeartbeatTimeInMs;
     private long timeInMs;
-
-    private long messageAcknowledgementPosition;
 
     Leader(
         final short nodeId,
@@ -148,14 +144,7 @@ class Leader implements Role, RaftHandler
             return 1;
         }
 
-        if (repeatResendBuffer != null)
-        {
-            saveResend(repeatResendBuffer, repeatResendOffset, repeatResendLength);
-
-            return 1;
-        }
-
-        return 0;
+        return CollectionUtil.removeIf(resendHandlers, ResendHandler::reAttemptResend);
     }
 
     public int pollCommands(final int fragmentLimit, final long timeInMs)
@@ -205,13 +194,19 @@ class Leader implements Role, RaftHandler
         if (status == MISSING_LOG_ENTRIES)
         {
             final int length = (int) (raftArchiver.archivedPosition() - position);
-            messageAcknowledgementPosition = position;
             if (validateReader())
             {
-                position = Math.max(position, HEADER_LENGTH);
-                if (!ourArchiveReader.readBlock(position, length, resendHandler))
+                final ResendHandler resendHandler = new ResendHandler();
+                resendHandler.messageAcknowledgementPosition = position;
+                final long readPosition = Math.max(position, HEADER_LENGTH);
+                if (!ourArchiveReader.readBlock(readPosition, length, resendHandler))
                 {
-                    saveResend(EMPTY_BUFFER, 0, 0);
+                    resendHandler.emptyResend();
+                }
+
+                if (!resendHandler.resendIsComplete())
+                {
+                    resendHandlers.add(resendHandler);
                 }
             }
             else
@@ -370,27 +365,53 @@ class Leader implements Role, RaftHandler
 
     private class ResendHandler implements BlockHandler
     {
+        // retry a resend when it gets back pressured
+        private long messageAcknowledgementPosition;
+        private DirectBuffer repeatResendBuffer;
+        private int repeatResendOffset;
+        private int repeatResendLength;
+
         public void onBlock(
             final DirectBuffer buffer, final int offset, final int length, final int sessionId, final int termId)
         {
             saveResend(buffer, offset, length);
         }
-    }
 
-    private void saveResend(final DirectBuffer buffer, final int offset, final int length)
-    {
-        if (controlPublication.saveResend(
-            ourSessionId, termState.leadershipTerm(), messageAcknowledgementPosition, buffer, offset, length) < 0)
+        private void saveResend(final DirectBuffer buffer, final int offset, final int length)
         {
-            repeatResendBuffer = buffer;
-            repeatResendOffset = offset;
-            repeatResendLength = length;
+            if (controlPublication.saveResend(
+                ourSessionId, termState.leadershipTerm(), messageAcknowledgementPosition, buffer, offset, length) < 0)
+            {
+                repeatResendBuffer = buffer;
+                repeatResendOffset = offset;
+                repeatResendLength = length;
+            }
+            else
+            {
+                repeatResendBuffer = null;
+                repeatResendOffset = 0;
+                repeatResendLength = 0;
+            }
         }
-        else
+
+        private boolean reAttemptResend()
         {
-            repeatResendBuffer = null;
-            repeatResendOffset = 0;
-            repeatResendLength = 0;
+            final boolean resendIsComplete = resendIsComplete();
+            if (!resendIsComplete)
+            {
+                saveResend(repeatResendBuffer, repeatResendOffset, repeatResendLength);
+            }
+            return resendIsComplete;
+        }
+
+        private boolean resendIsComplete()
+        {
+            return repeatResendBuffer == null;
+        }
+
+        private void emptyResend()
+        {
+            saveResend(EMPTY_BUFFER, 0, 0);
         }
     }
 

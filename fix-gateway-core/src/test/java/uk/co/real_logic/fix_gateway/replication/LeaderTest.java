@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver.SessionArchiver;
 
 import static io.aeron.Publication.BACK_PRESSURED;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 
@@ -41,6 +42,7 @@ public class LeaderTest
     private static final long POSITION = 40L;
     private static final int HEARTBEAT_INTERVAL_IN_MS = 10;
     private static final short FOLLOWER_ID = 4;
+    private static final short OTHER_FOLLOWER_ID = 5;
     private static final DirectBuffer NODE_STATE_BUFFER = new UnsafeBuffer(new byte[1]);
 
     private RaftPublication controlPublication = mock(RaftPublication.class);
@@ -124,13 +126,12 @@ public class LeaderTest
     @Test
     public void shouldResendDataInResponseToMissingLogEntriesWhenBackPressured()
     {
+        final long followerPosition = 0;
+
         when(sessionArchiver.archivedPosition()).thenReturn(POSITION);
-        when(controlPublication.saveResend(anyInt(), anyInt(), anyLong(), any(), anyInt(), anyInt()))
-            .thenReturn(BACK_PRESSURED, 100L);
+        backpressureResend(followerPosition);
 
         leader.readData();
-
-        final long followerPosition = 0;
 
         receivesMissingLogEntries(followerPosition);
 
@@ -139,6 +140,36 @@ public class LeaderTest
         leader.poll(1, 0);
 
         resendsMissingLogEntries(followerPosition, (int) POSITION, times(2));
+    }
+
+    @Test
+    public void shouldSupportMultipleSimultaneousResendsWhenBackPressured()
+    {
+        final long followerPosition = 0;
+        final long otherFollowerPosition = 20;
+
+        when(sessionArchiver.archivedPosition()).thenReturn(POSITION);
+
+        backpressureResend(otherFollowerPosition);
+        backpressureResend(followerPosition);
+
+        leader.readData();
+
+        receivesMissingLogEntries(followerPosition);
+        receivesMissingLogEntries(otherFollowerPosition, OTHER_FOLLOWER_ID);
+
+        leader.poll(1, 0);
+
+        leader.poll(1, 0);
+
+        resendsMissingLogEntries(otherFollowerPosition, (int) POSITION, times(2));
+        resendsMissingLogEntries(followerPosition, (int) POSITION, times(2));
+    }
+
+    private void backpressureResend(final long position)
+    {
+        when(controlPublication.saveResend(anyInt(), anyInt(), eq(position), any(), anyInt(), anyInt()))
+            .thenReturn(BACK_PRESSURED, 100L);
     }
 
     @Test
@@ -155,7 +186,12 @@ public class LeaderTest
 
     private void receivesMissingLogEntries(final long followerPosition)
     {
-        leader.onMessageAcknowledgement(followerPosition, FOLLOWER_ID, MISSING_LOG_ENTRIES);
+        receivesMissingLogEntries(followerPosition, FOLLOWER_ID);
+    }
+
+    private void receivesMissingLogEntries(final long followerPosition, final short followerId)
+    {
+        leader.onMessageAcknowledgement(followerPosition, followerId, MISSING_LOG_ENTRIES);
     }
 
     private void resendsMissingLogEntries(final long followerPosition, final int length, final VerificationMode mode)
@@ -166,7 +202,7 @@ public class LeaderTest
             eq(followerPosition),
             any(),
             eq(0),
-            eq(length));
+            eq((int) (length - followerPosition)));
     }
 
     private OngoingStubbing<Boolean> whenBlockRead()
