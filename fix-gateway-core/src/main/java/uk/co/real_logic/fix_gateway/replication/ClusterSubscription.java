@@ -46,6 +46,7 @@ class ClusterSubscription extends ClusterableSubscription
     private final Subscription controlSubscription;
 
     private int currentLeadershipTermId = Integer.MIN_VALUE;
+    private long currentLeadershipsStreamStartPosition;
     private long previousPosition;
     private Image dataImage;
 
@@ -93,7 +94,8 @@ class ClusterSubscription extends ClusterableSubscription
         {
             futureAcks.poll();
 
-            switchTerms(ack.leaderShipTermId, ack.leaderSessionId, ack.streamPosition, ack.startPosition);
+            switchTerms(
+                ack.leaderShipTermId, ack.leaderSessionId, ack.startPosition, ack.streamStartPosition(), ack.streamPosition);
 
             return true;
         }
@@ -159,18 +161,18 @@ class ClusterSubscription extends ClusterableSubscription
         {
             if (startPosition != previousPosition)
             {
-                save(leaderShipTermId, leaderSessionId, startPosition, streamPosition);
+                save(leaderShipTermId, leaderSessionId, startPosition, streamStartPosition, streamPosition);
             }
             else
             {
-                switchTerms(leaderShipTermId, leaderSessionId, streamPosition, position);
+                switchTerms(leaderShipTermId, leaderSessionId, position, streamStartPosition, streamPosition);
 
                 return BREAK;
             }
         }
         else if (leaderShipTermId > currentLeadershipTermId)
         {
-            save(leaderShipTermId, leaderSessionId, startPosition, streamPosition);
+            save(leaderShipTermId, leaderSessionId, startPosition, streamStartPosition, streamPosition);
         }
 
         // We deliberately ignore leaderShipTerm < currentLeadershipTermId, as they would be old
@@ -182,22 +184,26 @@ class ClusterSubscription extends ClusterableSubscription
     private void switchTerms(
         final int leaderShipTermId,
         final int leaderSessionId,
-        final long streamPosition,
-        final long position)
+        final long position,
+        final long streamStartPosition,
+        final long streamPosition)
     {
         dataImage = dataSubscription.imageBySessionId(leaderSessionId);
         messageFilter.streamConsensusPosition = streamPosition;
         currentLeadershipTermId = leaderShipTermId;
+        currentLeadershipsStreamStartPosition = streamStartPosition;
         previousPosition = position;
     }
 
     private void save(
         final int leaderShipTermId,
         final int leaderSessionId,
-        final long previousPosition,
+        final long startPosition,
+        final long streamStartPosition,
         final long streamPosition)
     {
-        futureAcks.add(new FutureAck(leaderShipTermId, leaderSessionId, streamPosition, previousPosition));
+        futureAcks.add(new FutureAck(
+            leaderShipTermId, leaderSessionId, streamStartPosition, streamPosition, startPosition));
     }
 
     private boolean cannotAdvance()
@@ -225,6 +231,7 @@ class ClusterSubscription extends ClusterableSubscription
         public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
         {
             final long headerPosition = header.position();
+            final long fragmentStartPosition = headerPosition - length;
             final int clusterStreamId = ReservedValue.clusterStreamId(header);
 
             DebugLogger.log(
@@ -235,9 +242,19 @@ class ClusterSubscription extends ClusterableSubscription
                 this.clusterStreamId,
                 clusterStreamId);
 
+            // We never have to deal with the case where a message fragment spans over the end of a leadership term
+            // - they are aligned.
+
+            // Concensus hasn't been reached for this message.
             if (headerPosition > streamConsensusPosition)
             {
                 return ABORT;
+            }
+
+            // Skip data published on the leader's publication when they weren't a leader.
+            if (fragmentStartPosition < currentLeadershipsStreamStartPosition)
+            {
+                return CONTINUE;
             }
 
             if (this.clusterStreamId == clusterStreamId)
@@ -259,15 +276,18 @@ class ClusterSubscription extends ClusterableSubscription
         private final int leaderSessionId;
         private final long streamPosition;
         private final long startPosition;
+        private final long streamStartPosition;
 
         private FutureAck(
             final int leaderShipTermId,
             final int leaderSessionId,
+            final long streamStartPosition,
             final long streamPosition,
             final long startPosition)
         {
             this.leaderShipTermId = leaderShipTermId;
             this.leaderSessionId = leaderSessionId;
+            this.streamStartPosition = streamStartPosition;
             this.streamPosition = streamPosition;
             this.startPosition = startPosition;
         }
@@ -285,6 +305,11 @@ class ClusterSubscription extends ClusterableSubscription
         private int previousLeadershipTermId()
         {
             return leaderShipTermId - 1;
+        }
+
+        private long streamStartPosition()
+        {
+            return streamStartPosition;
         }
     }
 

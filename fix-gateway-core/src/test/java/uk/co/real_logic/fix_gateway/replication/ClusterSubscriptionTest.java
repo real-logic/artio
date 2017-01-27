@@ -173,29 +173,31 @@ public class ClusterSubscriptionTest
     public void shouldIgnoreUnagreedDataFromFormerLeadersPublication()
     {
         final int firstTermLen = 128;
-        final int unagreedData = 64;
+        final int unagreedDataLen = 64;
         final int secondTermLen = 256;
         final int thirdTermLen = 384;
         final int firstTermEnd = firstTermLen;
         final int secondTermEnd = firstTermEnd + secondTermLen;
         final int thirdTermEnd = secondTermEnd + thirdTermLen;
-        final int thirdTermStreamStart = firstTermLen + unagreedData;
+        final int unagreedDataEnd = firstTermLen + unagreedDataLen;
+        final int thirdTermStreamStart = unagreedDataEnd;
         final int thirdTermStreamEnd = thirdTermStreamStart + thirdTermLen;
 
         onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
         pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
-        pollsMessageFragment(leaderDataImage, firstTermLen + unagreedData, unagreedData, ABORT);
+        pollsMessageFragment(leaderDataImage, unagreedDataEnd, unagreedDataLen, ABORT);
 
         onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
         pollsMessageFragment(otherLeaderDataImage, secondTermLen, CONTINUE);
 
         onConsensusHeartbeatPoll(3, LEADER, thirdTermEnd, thirdTermStreamStart, thirdTermStreamEnd);
+        pollsMessageFragment(leaderDataImage, unagreedDataEnd, unagreedDataLen, CONTINUE);
         pollsMessageFragment(leaderDataImage, thirdTermStreamEnd, thirdTermLen, CONTINUE);
 
         verifyReceivesFragment(firstTermLen);
         verifyReceivesFragment(secondTermLen);
         verifyReceivesFragment(thirdTermLen);
-        verifyReceivesFragment(unagreedData, never());
+        verifyReceivesFragment(unagreedDataLen, never());
     }
 
     @Test
