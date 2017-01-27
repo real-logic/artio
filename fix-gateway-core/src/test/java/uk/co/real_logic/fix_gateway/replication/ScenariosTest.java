@@ -264,7 +264,7 @@ public class ScenariosTest
             .controlPublication(controlPublication)
             .acknowledgementSubscription(acknowledgementSubscription)
             .dataSubscription(dataSubscription)
-            .getsElected(TIME);
+            .getsElected(TIME, POSITION);
 
         return leader;
     }

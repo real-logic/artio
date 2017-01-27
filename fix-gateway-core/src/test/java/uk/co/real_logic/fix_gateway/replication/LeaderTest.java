@@ -85,7 +85,7 @@ public class LeaderTest
             .acknowledgementSubscription(acknowledgementSubscription)
             .dataSubscription(dataSubscription)
             .controlSubscription(controlSubscription)
-            .getsElected(TIME);
+            .getsElected(TIME, POSITION);
 
         whenBlockRead().then(inv ->
         {

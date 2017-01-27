@@ -70,7 +70,13 @@ class Leader implements Role, RaftHandler
     private final NodeStateHandler nodeStateHandler;
     /** Position in the log that has been applied to the state machine*/
     private long lastAppliedPosition;
-    private long previousConsensusPosition;
+
+    /**
+     * This is [concensusPosition] - [streamPosition]. Updated
+     * when you get elected leader and valid for the duration of your leadership term.
+     */
+    private long streamPositionDelta;
+    private long previousStreamPosition;
 
     private long nextHeartbeatTimeInMs;
     private long timeInMs;
@@ -170,17 +176,22 @@ class Leader implements Role, RaftHandler
 
     private void heartbeat()
     {
-        // TODO: compute correct relative position for our publication
         final long currentPosition = consensusPosition.get();
+        heartbeat(currentPosition);
+    }
+
+    private void heartbeat(final long currentPosition)
+    {
+        final long streamPosition = currentPosition - streamPositionDelta;
         if (controlPublication.saveConsensusHeartbeat(
             nodeId,
             termState.leadershipTerm(),
             currentPosition,
             ourSessionId,
-            previousConsensusPosition,
-            currentPosition) > 0)
+            previousStreamPosition,
+            streamPosition) > 0)
         {
-            previousConsensusPosition = currentPosition;
+            previousStreamPosition = streamPosition;
             updateNextHeartbeatTime(timeInMs);
         }
     }
@@ -331,14 +342,17 @@ class Leader implements Role, RaftHandler
         clusterNode.transitionToFollower(this, votedFor, timeInMs);
     }
 
-    Leader getsElected(final long timeInMs)
+    Leader getsElected(final long timeInMs, final long streamPosition)
     {
         this.timeInMs = timeInMs;
 
         termState.leaderSessionId(ourSessionId);
 
         lastAppliedPosition = Math.max(HEADER_LENGTH, termState.lastAppliedPosition());
-        heartbeat();
+
+        final long currentPosition = consensusPosition.get();
+        streamPositionDelta = currentPosition - streamPosition;
+        heartbeat(currentPosition);
 
         raftArchiver.checkLeaderArchiver();
 

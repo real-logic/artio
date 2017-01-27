@@ -48,6 +48,7 @@ public class ClusterAgent implements Agent
     private final String agentNamePrefix;
     private final ArchiveReader archiveReader;
     private final Archiver archiver;
+    private final Publication dataPublication;
 
     private Role currentRole;
 
@@ -62,9 +63,9 @@ public class ClusterAgent implements Agent
         agentNamePrefix = configuration.agentNamePrefix();
         archiveReader = configuration.archiveReader();
         archiver = configuration.archiver();
-
-        final Publication dataPublication = transport.leaderPublication();
+        dataPublication = transport.leaderPublication();
         ourSessionId = dataPublication.sessionId();
+
         final long timeoutIntervalInMs = configuration.timeoutIntervalInMs();
         final long heartbeatTimeInMs = timeoutIntervalInMs / HEARTBEAT_TO_TIMEOUT_RATIO;
         final IntHashSet otherNodes = configuration.otherNodes();
@@ -194,7 +195,7 @@ public class ClusterAgent implements Agent
 
             transport.injectLeaderSubscriptions(leader);
 
-            currentRole = leader.getsElected(timeInMs);
+            currentRole = leader.getsElected(timeInMs, dataPublication.position());
 
             onNewLeader();
             roleHandler.onTransitionToLeader(leadershipTerm);
