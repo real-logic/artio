@@ -39,7 +39,7 @@ interface RaftHandler
         short nodeId,
         int leaderShipTerm,
         long position,
-        long startPosition,
+        long streamStartPosition,
         long streamPosition,
         int leaderSessionId);
 

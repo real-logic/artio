@@ -58,9 +58,9 @@ public class ClusterSubscriptionTest
     @Test
     public void shouldUpdatePositionWhenAcknowledged()
     {
-        onConsensusHeartbeatPoll(1, LEADER, 0, 1);
+        onConsensusHeartbeatPoll(1, LEADER, 1, 0, 1);
 
-        onConsensusHeartbeatPoll(1, LEADER, 1, 2);
+        onConsensusHeartbeatPoll(1, LEADER, 2, 1, 2);
 
         assertState(1, LEADER, 2);
     }
@@ -68,9 +68,9 @@ public class ClusterSubscriptionTest
     @Test
     public void shouldStashUpdatesWithGap()
     {
-        onConsensusHeartbeatPoll(1, LEADER, 0, 1);
+        onConsensusHeartbeatPoll(1, LEADER, 1, 0, 1);
 
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, 2, 4);
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, 4, 2, 4);
 
         assertState(1, LEADER, 1);
     }
@@ -80,7 +80,7 @@ public class ClusterSubscriptionTest
     {
         shouldStashUpdatesWithGap();
 
-        onConsensusHeartbeatPoll(1, LEADER, 1, 2);
+        onConsensusHeartbeatPoll(1, LEADER, 2, 1, 2);
 
         assertState(1, LEADER, 2);
 
@@ -92,9 +92,9 @@ public class ClusterSubscriptionTest
     @Test
     public void shouldStashUpdatesFromFutureLeadershipTerm()
     {
-        onConsensusHeartbeatPoll(1, LEADER, 0, 1);
+        onConsensusHeartbeatPoll(1, LEADER, 1, 0, 1);
 
-        onConsensusHeartbeatPoll(3, OTHER_LEADER, 2, 4);
+        onConsensusHeartbeatPoll(3, OTHER_LEADER, 4, 2, 4);
 
         assertState(1, LEADER, 1);
     }
@@ -104,7 +104,7 @@ public class ClusterSubscriptionTest
     {
         shouldStashUpdatesFromFutureLeadershipTerm();
 
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, 1, 2);
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, 2, 1, 2);
 
         assertState(2, OTHER_LEADER, 2);
 
@@ -121,9 +121,9 @@ public class ClusterSubscriptionTest
         final int newPosition = 1376;
 
         // Subscription Heartbeat(leaderShipTerm=1, startPos=0, pos=0, leaderSessId=432774274)
-        onConsensusHeartbeatPoll(leaderShipTermId, leaderSessionId, 0, 0);
+        onConsensusHeartbeatPoll(leaderShipTermId, leaderSessionId, 0, 0, 0);
         // Subscription Heartbeat(leaderShipTerm=1, startPos=0, pos=1376, leaderSessId=432774274)
-        onConsensusHeartbeatPoll(leaderShipTermId, leaderSessionId, 0, newPosition);
+        onConsensusHeartbeatPoll(leaderShipTermId, leaderSessionId, newPosition, 0, newPosition);
 
         // Subscription onFragment(headerPosition=1376, consensusPosition=1376
         when(handler.onFragment(any(), anyInt(), anyInt(), any())).thenReturn(CONTINUE);
@@ -151,11 +151,13 @@ public class ClusterSubscriptionTest
     private void onConsensusHeartbeatPoll(
         final int leaderShipTermId,
         final int leaderSessionId,
-        final long startPosition,
-        final long position)
+        final long position,
+        final long streamStartPosition,
+        final long streamPosition)
     {
         clusterSubscription.hasMatchingFutureAck();
-        clusterSubscription.onConsensusHeartbeat(leaderShipTermId, leaderSessionId, position, startPosition);
+        clusterSubscription.onConsensusHeartbeat(
+            leaderShipTermId, leaderSessionId, position, streamStartPosition, streamPosition);
     }
 
     private void assertState(

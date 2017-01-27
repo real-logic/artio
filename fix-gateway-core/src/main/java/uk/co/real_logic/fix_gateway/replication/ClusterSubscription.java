@@ -117,8 +117,9 @@ class ClusterSubscription extends ClusterableSubscription
             final int leaderSessionId = consensusHeartbeat.leaderSessionId();
             final long position = consensusHeartbeat.position();
             final long streamStartPosition = consensusHeartbeat.streamStartPosition();
+            final long streamPosition = consensusHeartbeat.streamPosition();
 
-            return onConsensusHeartbeat(leaderShipTerm, leaderSessionId, position, streamStartPosition);
+            return onConsensusHeartbeat(leaderShipTerm, leaderSessionId, position, streamStartPosition, streamPosition);
         }
 
         return CONTINUE;
@@ -128,14 +129,16 @@ class ClusterSubscription extends ClusterableSubscription
         final int leaderShipTermId,
         final int leaderSessionId,
         final long position,
-        final long streamStartPosition)
+        final long streamStartPosition,
+        final long streamPosition)
     {
         DebugLogger.log(
             RAFT,
-            "Subscription Heartbeat(leaderShipTerm=%d, pos=%d, sStartPos=%d, leaderSessId=%d)%n",
+            "Subscription Heartbeat(leaderShipTerm=%d, pos=%d, sStartPos=%d, sPos=%d, leaderSessId=%d)%n",
             leaderShipTermId,
             position,
             streamStartPosition,
+            streamPosition,
             leaderSessionId);
 
         if (leaderShipTermId == currentLeadershipTermId)

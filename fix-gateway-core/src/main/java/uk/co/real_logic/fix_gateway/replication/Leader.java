@@ -315,10 +315,13 @@ class Leader implements Role, RaftHandler
         return CONTINUE;
     }
 
-    public Action onConsensusHeartbeat(final short nodeId,
-                                       final int leaderShipTerm,
-                                       final long position, final long startPosition,
-                                       final long streamPosition, final int leaderSessionId)
+    public Action onConsensusHeartbeat(
+        final short nodeId,
+        final int leaderShipTerm,
+        final long position,
+        final long streamStartPosition,
+        final long streamPosition,
+        final int leaderSessionId)
     {
         if (nodeId != this.nodeId && leaderShipTerm > termState.leadershipTerm())
         {
