@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
@@ -25,6 +26,7 @@ import org.junit.Test;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.hamcrest.Matchers.equalTo;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -43,7 +45,9 @@ public class ClusterSubscriptionTest
 
     private Subscription dataSubscription = mock(Subscription.class);
     private Subscription controlSubscription = mock(Subscription.class);
-    private Image dataImage = mock(Image.class);
+    private Header header = mock(Header.class);
+    private Image leaderDataImage = mock(Image.class);
+    private Image otherLeaderDataImage = mock(Image.class);
     private ControlledFragmentHandler handler = mock(ControlledFragmentHandler.class);
 
     private ClusterSubscription clusterSubscription = new ClusterSubscription(
@@ -52,7 +56,12 @@ public class ClusterSubscriptionTest
     @Before
     public void setUp()
     {
-        when(dataSubscription.imageBySessionId(anyInt())).thenReturn(dataImage);
+        when(dataSubscription.imageBySessionId(LEADER)).thenReturn(leaderDataImage);
+        when(dataSubscription.imageBySessionId(OTHER_LEADER)).thenReturn(otherLeaderDataImage);
+
+        when(handler.onFragment(any(), anyInt(), anyInt(), any())).thenReturn(CONTINUE);
+
+        when(header.reservedValue()).thenReturn(ReservedValue.ofClusterStreamId(CLUSTER_STREAM_ID));
     }
 
     @Test
@@ -73,6 +82,21 @@ public class ClusterSubscriptionTest
         onConsensusHeartbeatPoll(2, OTHER_LEADER, 4, 2, 4);
 
         assertState(1, LEADER, 1);
+    }
+
+    @Test
+    public void shouldTransitionBetweenLeadersWithDifferentPositionDeltas()
+    {
+        final int leaderStreamPosition = 128;
+
+        onConsensusHeartbeatPoll(1, LEADER, 128, 0, leaderStreamPosition);
+        pollsMessageFragment(leaderDataImage, leaderStreamPosition, CONTINUE);
+
+        final int otherLeaderStreamPosition = 128;
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, 256, 0, otherLeaderStreamPosition);
+        pollsMessageFragment(otherLeaderDataImage, otherLeaderStreamPosition, CONTINUE);
+
+        assertState(2, OTHER_LEADER, otherLeaderStreamPosition);
     }
 
     @Test
@@ -117,35 +141,44 @@ public class ClusterSubscriptionTest
     public void replicateClusterReplicationTestBug()
     {
         final int leaderShipTermId = 1;
-        final int leaderSessionId = 432774274;
         final int newPosition = 1376;
 
         // Subscription Heartbeat(leaderShipTerm=1, startPos=0, pos=0, leaderSessId=432774274)
-        onConsensusHeartbeatPoll(leaderShipTermId, leaderSessionId, 0, 0, 0);
+        onConsensusHeartbeatPoll(leaderShipTermId, LEADER, 0, 0, 0);
         // Subscription Heartbeat(leaderShipTerm=1, startPos=0, pos=1376, leaderSessId=432774274)
-        onConsensusHeartbeatPoll(leaderShipTermId, leaderSessionId, newPosition, 0, newPosition);
+        onConsensusHeartbeatPoll(leaderShipTermId, LEADER, newPosition, 0, newPosition);
 
         // Subscription onFragment(headerPosition=1376, consensusPosition=1376
-        when(handler.onFragment(any(), anyInt(), anyInt(), any())).thenReturn(CONTINUE);
+        pollsMessageFragment(leaderDataImage, newPosition, CONTINUE);
+
+        verify(leaderDataImage).controlledPoll(any(), eq(1));
+        verifyReceivesFragment(newPosition);
+    }
+
+    private void verifyReceivesFragment(final int newPosition)
+    {
+        verify(handler).onFragment(any(UnsafeBuffer.class), eq(0), eq(newPosition), eq(header));
+    }
+
+    private void pollsMessageFragment(
+        final Image dataImage,
+        final int newPosition,
+        final Action expectedAction)
+    {
         when(dataImage.controlledPoll(any(), anyInt())).thenAnswer(
             (inv) ->
             {
                 final ControlledFragmentHandler handler = (ControlledFragmentHandler) inv.getArguments()[0];
 
-                final Header header = mock(Header.class);
                 when(header.position()).thenReturn((long) newPosition);
-                when(header.reservedValue()).thenReturn(ReservedValue.ofClusterStreamId(CLUSTER_STREAM_ID));
 
                 final UnsafeBuffer buffer = new UnsafeBuffer(new byte[newPosition]);
-                handler.onFragment(buffer, 0, newPosition, header);
+                final Action action = handler.onFragment(buffer, 0, newPosition, header);
+                assertEquals(expectedAction, action);
                 return null;
             });
 
-        final int fragmentLimit = 10;
-        clusterSubscription.controlledPoll(handler, fragmentLimit);
-
-        verify(dataImage).controlledPoll(any(), eq(fragmentLimit));
-        verify(handler).onFragment(any(), eq(0), eq(newPosition), any());
+        clusterSubscription.controlledPoll(handler, 1);
     }
 
     private void onConsensusHeartbeatPoll(
@@ -163,7 +196,7 @@ public class ClusterSubscriptionTest
     private void assertState(
         final int currentLeadershipTermId,
         final Integer leadershipSessionId,
-        final long currentConsensusPosition)
+        final long streamPosition)
     {
         assertThat(clusterSubscription,
             hasResult(
@@ -175,8 +208,8 @@ public class ClusterSubscriptionTest
 
         assertThat(clusterSubscription,
             hasResult(
-                "currentConsensusPosition",
-                ClusterSubscription::currentConsensusPosition,
-                equalTo(currentConsensusPosition)));
+                "streamPosition",
+                ClusterSubscription::streamPosition,
+                equalTo(streamPosition)));
     }
 }

@@ -39,13 +39,14 @@ class ClusterSubscription extends ClusterableSubscription
     private final ConsensusHeartbeatDecoder consensusHeartbeat = new ConsensusHeartbeatDecoder();
     private final ControlledFragmentHandler onControlMessage = this::onControlMessage;
     private final PriorityQueue<FutureAck> futureAcks = new PriorityQueue<>(
-        comparing(FutureAck::leaderShipTerm).thenComparing(FutureAck::position));
+        comparing(FutureAck::leaderShipTerm).thenComparing(FutureAck::streamPosition));
 
     private final MessageFilter messageFilter;
     private final Subscription dataSubscription;
     private final Subscription controlSubscription;
 
     private int currentLeadershipTermId = Integer.MIN_VALUE;
+    private long previousPosition;
     private Image dataImage;
 
     ClusterSubscription(
@@ -88,11 +89,11 @@ class ClusterSubscription extends ClusterableSubscription
         final FutureAck ack = futureAcks.peek();
         if (ack != null
             && currentLeadershipTermId == ack.previousLeadershipTermId()
-            && messageFilter.consensusPosition == ack.previousPosition)
+            && previousPosition == ack.startPosition)
         {
             futureAcks.poll();
 
-            switchTerms(ack.leaderShipTermId, ack.leaderSessionId, ack.position);
+            switchTerms(ack.leaderShipTermId, ack.leaderSessionId, ack.streamPosition, ack.startPosition);
 
             return true;
         }
@@ -143,29 +144,32 @@ class ClusterSubscription extends ClusterableSubscription
 
         if (leaderShipTermId == currentLeadershipTermId)
         {
-            if (messageFilter.consensusPosition < position)
+            if (messageFilter.streamConsensusPosition < streamPosition)
             {
-                messageFilter.consensusPosition = position;
+                messageFilter.streamConsensusPosition = streamPosition;
+                previousPosition = position;
 
                 return BREAK;
             }
         }
         else if (leaderShipTermId == currentLeadershipTermId + 1 || dataImage == null)
         {
-            if (streamStartPosition != messageFilter.consensusPosition)
+            final long length = streamPosition - streamStartPosition;
+            final long startPosition = position - length;
+            if (startPosition != previousPosition)
             {
-                save(leaderShipTermId, leaderSessionId, position, streamStartPosition);
+                save(leaderShipTermId, leaderSessionId, streamStartPosition, streamPosition);
             }
             else
             {
-                switchTerms(leaderShipTermId, leaderSessionId, position);
+                switchTerms(leaderShipTermId, leaderSessionId, streamPosition, position);
 
                 return BREAK;
             }
         }
         else if (leaderShipTermId > currentLeadershipTermId)
         {
-            save(leaderShipTermId, leaderSessionId, position, streamStartPosition);
+            save(leaderShipTermId, leaderSessionId, streamStartPosition, streamPosition);
         }
 
         // We deliberately ignore leaderShipTerm < currentLeadershipTermId, as they would be old
@@ -174,24 +178,29 @@ class ClusterSubscription extends ClusterableSubscription
         return CONTINUE;
     }
 
-    private void switchTerms(final int leaderShipTermId, final int leaderSessionId, final long position)
+    private void switchTerms(final int leaderShipTermId,
+                             final int leaderSessionId,
+                             final long streamPosition,
+                             final long position)
     {
         dataImage = dataSubscription.imageBySessionId(leaderSessionId);
-        messageFilter.consensusPosition = position;
+        messageFilter.streamConsensusPosition = streamPosition;
         currentLeadershipTermId = leaderShipTermId;
+        previousPosition = position;
     }
 
-    private void save(final int leaderShipTermId,
-                      final int leaderSessionId,
-                      final long position,
-                      final long previousPosition)
+    private void save(
+        final int leaderShipTermId,
+        final int leaderSessionId,
+        final long previousPosition,
+        final long streamPosition)
     {
-        futureAcks.add(new FutureAck(leaderShipTermId, leaderSessionId, position, previousPosition));
+        futureAcks.add(new FutureAck(leaderShipTermId, leaderSessionId, streamPosition, previousPosition));
     }
 
     private boolean cannotAdvance()
     {
-        return dataImage == null || dataImage.position() >= messageFilter.consensusPosition;
+        return dataImage == null || dataImage.position() >= messageFilter.streamConsensusPosition;
     }
 
     public void close()
@@ -204,7 +213,7 @@ class ClusterSubscription extends ClusterableSubscription
         private ControlledFragmentHandler fragmentHandler;
         private final int clusterStreamId;
 
-        private long consensusPosition;
+        private long streamConsensusPosition;
 
         private MessageFilter(final int clusterStreamId)
         {
@@ -220,11 +229,11 @@ class ClusterSubscription extends ClusterableSubscription
                 RAFT,
                 "Subscription onFragment(hdrPos=%d, csnsPos=%d, ourStream=%d, msgStream=%d)%n",
                 headerPosition,
-                consensusPosition,
+                streamConsensusPosition,
                 this.clusterStreamId,
                 clusterStreamId);
 
-            if (headerPosition > consensusPosition)
+            if (headerPosition > streamConsensusPosition)
             {
                 return ABORT;
             }
@@ -246,19 +255,19 @@ class ClusterSubscription extends ClusterableSubscription
     {
         private final int leaderShipTermId;
         private final int leaderSessionId;
-        private final long position;
-        private final long previousPosition;
+        private final long streamPosition;
+        private final long startPosition;
 
         private FutureAck(
             final int leaderShipTermId,
             final int leaderSessionId,
-            final long position,
-            final long previousPosition)
+            final long streamPosition,
+            final long startPosition)
         {
             this.leaderShipTermId = leaderShipTermId;
             this.leaderSessionId = leaderSessionId;
-            this.position = position;
-            this.previousPosition = previousPosition;
+            this.streamPosition = streamPosition;
+            this.startPosition = startPosition;
         }
 
         private int leaderShipTerm()
@@ -266,9 +275,9 @@ class ClusterSubscription extends ClusterableSubscription
             return leaderShipTermId;
         }
 
-        private long position()
+        private long streamPosition()
         {
-            return position;
+            return streamPosition;
         }
 
         private int previousLeadershipTermId()
@@ -277,14 +286,14 @@ class ClusterSubscription extends ClusterableSubscription
         }
     }
 
-    long currentConsensusPosition()
+    long streamPosition()
     {
-        return messageFilter.consensusPosition;
+        return messageFilter.streamConsensusPosition;
     }
 
     public long positionOf(final int aeronSessionId)
     {
-        return currentConsensusPosition();
+        return streamPosition();
     }
 
     int currentLeadershipTermId()
