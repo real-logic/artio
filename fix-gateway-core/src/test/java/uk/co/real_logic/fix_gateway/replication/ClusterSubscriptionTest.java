@@ -25,6 +25,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.verification.VerificationMode;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
@@ -169,6 +170,35 @@ public class ClusterSubscriptionTest
     }
 
     @Test
+    public void shouldIgnoreUnagreedDataFromFormerLeadersPublication()
+    {
+        final int firstTermLen = 128;
+        final int unagreedData = 64;
+        final int secondTermLen = 256;
+        final int thirdTermLen = 384;
+        final int firstTermEnd = firstTermLen;
+        final int secondTermEnd = firstTermEnd + secondTermLen;
+        final int thirdTermEnd = secondTermEnd + thirdTermLen;
+        final int thirdTermStreamStart = firstTermLen + unagreedData;
+        final int thirdTermStreamEnd = thirdTermStreamStart + thirdTermLen;
+
+        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
+        pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
+        pollsMessageFragment(leaderDataImage, firstTermLen + unagreedData, unagreedData, ABORT);
+
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
+        pollsMessageFragment(otherLeaderDataImage, secondTermLen, CONTINUE);
+
+        onConsensusHeartbeatPoll(3, LEADER, thirdTermEnd, thirdTermStreamStart, thirdTermStreamEnd);
+        pollsMessageFragment(leaderDataImage, thirdTermStreamEnd, thirdTermLen, CONTINUE);
+
+        verifyReceivesFragment(firstTermLen);
+        verifyReceivesFragment(secondTermLen);
+        verifyReceivesFragment(thirdTermLen);
+        verifyReceivesFragment(unagreedData, never());
+    }
+
+    @Test
     public void replicateClusterReplicationTestBug()
     {
         final int leaderShipTermId = 1;
@@ -198,7 +228,16 @@ public class ClusterSubscriptionTest
 
     private void pollsMessageFragment(
         final Image dataImage,
-        final int newStreamPosition,
+        final int streamPosition,
+        final Action expectedAction)
+    {
+        pollsMessageFragment(dataImage, streamPosition, streamPosition, expectedAction);
+    }
+
+    private void pollsMessageFragment(
+        final Image dataImage,
+        final int streamPosition,
+        final int length,
         final Action expectedAction)
     {
         when(dataImage.controlledPoll(any(), anyInt())).thenAnswer(
@@ -206,10 +245,10 @@ public class ClusterSubscriptionTest
             {
                 final ControlledFragmentHandler handler = (ControlledFragmentHandler) inv.getArguments()[0];
 
-                when(header.position()).thenReturn((long) newStreamPosition);
+                when(header.position()).thenReturn((long) streamPosition);
 
-                final UnsafeBuffer buffer = new UnsafeBuffer(new byte[newStreamPosition]);
-                final Action action = handler.onFragment(buffer, 0, newStreamPosition, header);
+                final UnsafeBuffer buffer = new UnsafeBuffer(new byte[length]);
+                final Action action = handler.onFragment(buffer, 0, length, header);
                 assertEquals(expectedAction, action);
                 return null;
             }).then(inv -> null);

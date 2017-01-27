@@ -179,10 +179,11 @@ class ClusterSubscription extends ClusterableSubscription
         return CONTINUE;
     }
 
-    private void switchTerms(final int leaderShipTermId,
-                             final int leaderSessionId,
-                             final long streamPosition,
-                             final long position)
+    private void switchTerms(
+        final int leaderShipTermId,
+        final int leaderSessionId,
+        final long streamPosition,
+        final long position)
     {
         dataImage = dataSubscription.imageBySessionId(leaderSessionId);
         messageFilter.streamConsensusPosition = streamPosition;
