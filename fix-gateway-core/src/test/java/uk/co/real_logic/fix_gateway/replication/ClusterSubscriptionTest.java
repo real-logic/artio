@@ -22,11 +22,9 @@ import io.aeron.logbuffer.Header;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -46,7 +44,6 @@ public class ClusterSubscriptionTest
     private Subscription dataSubscription = mock(Subscription.class);
     private Subscription controlSubscription = mock(Subscription.class);
     private Image dataImage = mock(Image.class);
-    private ArgumentCaptor<Integer> leadershipSessionId = ArgumentCaptor.forClass(Integer.class);
     private ControlledFragmentHandler handler = mock(ControlledFragmentHandler.class);
 
     private ClusterSubscription clusterSubscription = new ClusterSubscription(
@@ -55,7 +52,7 @@ public class ClusterSubscriptionTest
     @Before
     public void setUp()
     {
-        when(dataSubscription.imageBySessionId(leadershipSessionId.capture())).thenReturn(dataImage);
+        when(dataSubscription.imageBySessionId(anyInt())).thenReturn(dataImage);
     }
 
     @Test
@@ -172,7 +169,7 @@ public class ClusterSubscriptionTest
                 ClusterSubscription::currentLeadershipTermId,
                 equalTo(currentLeadershipTermId)));
 
-        assertEquals("Wrong leadershipSessionId", leadershipSessionId, this.leadershipSessionId.getValue());
+        verify(dataSubscription, atLeastOnce()).imageBySessionId(eq(leadershipSessionId));
 
         assertThat(clusterSubscription,
             hasResult(
