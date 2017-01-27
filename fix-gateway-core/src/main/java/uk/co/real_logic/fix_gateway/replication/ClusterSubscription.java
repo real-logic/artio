@@ -142,6 +142,9 @@ class ClusterSubscription extends ClusterableSubscription
             streamPosition,
             leaderSessionId);
 
+        final long length = streamPosition - streamStartPosition;
+        final long startPosition = position - length;
+
         if (leaderShipTermId == currentLeadershipTermId)
         {
             if (messageFilter.streamConsensusPosition < streamPosition)
@@ -154,11 +157,9 @@ class ClusterSubscription extends ClusterableSubscription
         }
         else if (leaderShipTermId == currentLeadershipTermId + 1 || dataImage == null)
         {
-            final long length = streamPosition - streamStartPosition;
-            final long startPosition = position - length;
             if (startPosition != previousPosition)
             {
-                save(leaderShipTermId, leaderSessionId, streamStartPosition, streamPosition);
+                save(leaderShipTermId, leaderSessionId, startPosition, streamPosition);
             }
             else
             {
@@ -169,7 +170,7 @@ class ClusterSubscription extends ClusterableSubscription
         }
         else if (leaderShipTermId > currentLeadershipTermId)
         {
-            save(leaderShipTermId, leaderSessionId, streamStartPosition, streamPosition);
+            save(leaderShipTermId, leaderSessionId, startPosition, streamPosition);
         }
 
         // We deliberately ignore leaderShipTerm < currentLeadershipTermId, as they would be old
