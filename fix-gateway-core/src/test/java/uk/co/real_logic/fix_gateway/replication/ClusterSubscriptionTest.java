@@ -228,7 +228,6 @@ public class ClusterSubscriptionTest
     // Your only way of receiving that data is through resend on the control stream
     // You may have missed some concensus messages as well.
 
-    // TODO: resend then receive it via the data stream - try to avoid dupes.
     // TODO: ensure that resends don't corrupt internal the state
     //  - can do the future ack processing thing
     //  - can continue to subscribe afterwards
@@ -247,6 +246,56 @@ public class ClusterSubscriptionTest
         pollsMessageFragment(leaderDataImage, firstTermEnd, CONTINUE);
 
         onResend(firstTermEnd, secondTermLen);
+        onResend(secondTermEnd, thirdTermLen);
+
+        verifyReceivesFragment(firstTermLen);
+        verifyReceivesFragmentWithAnyHeader(secondTermLen);
+        verifyReceivesFragmentWithAnyHeader(thirdTermLen);
+        verifyNoOtherFragmentsReceived();
+    }
+
+    @Test
+    public void shouldNotReceiveResendDataTwiceResendFirst()
+    {
+        final int firstTermLen = 128;
+        final int secondTermLen = 256;
+        final int thirdTermLen = 384;
+        final int firstTermEnd = firstTermLen;
+        final int secondTermEnd = firstTermEnd + secondTermLen;
+
+        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
+        pollsMessageFragment(leaderDataImage, firstTermEnd, CONTINUE);
+
+        onResend(firstTermEnd, secondTermLen);
+
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
+        pollsMessageFragment(otherLeaderDataImage, secondTermEnd, CONTINUE);
+
+        onResend(secondTermEnd, thirdTermLen);
+
+        verifyReceivesFragment(firstTermLen);
+        verifyReceivesFragmentWithAnyHeader(secondTermLen);
+        verifyReceivesFragmentWithAnyHeader(thirdTermLen);
+        verifyNoOtherFragmentsReceived();
+    }
+
+    @Test
+    public void shouldNotReceiveResendDataTwiceHeartbeatFirst()
+    {
+        final int firstTermLen = 128;
+        final int secondTermLen = 256;
+        final int thirdTermLen = 384;
+        final int firstTermEnd = firstTermLen;
+        final int secondTermEnd = firstTermEnd + secondTermLen;
+
+        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
+        pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
+
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
+        pollsMessageFragment(otherLeaderDataImage, secondTermLen, CONTINUE);
+
+        onResend(firstTermEnd, secondTermLen);
+
         onResend(secondTermEnd, thirdTermLen);
 
         verifyReceivesFragment(firstTermLen);
