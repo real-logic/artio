@@ -105,7 +105,7 @@ class RaftSubscription implements ControlledFragmentHandler
             case ResendDecoder.TEMPLATE_ID:
             {
                 resend.wrap(buffer, offset, blockLength, version);
-                final int bodyOffset = offset + ENCODED_LENGTH + blockLength + bodyHeaderLength();
+                final int bodyOffset = bodyOffset(offset, blockLength);
                 return handler.onResend(
                     resend.leaderSessionId(),
                     resend.leaderShipTerm(),
@@ -118,5 +118,10 @@ class RaftSubscription implements ControlledFragmentHandler
         }
 
         return CONTINUE;
+    }
+
+    static int bodyOffset(final int offset, final int blockLength)
+    {
+        return offset + ENCODED_LENGTH + blockLength + bodyHeaderLength();
     }
 }

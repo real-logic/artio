@@ -24,6 +24,8 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.SessionReader;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
@@ -53,6 +55,9 @@ public class ClusterSubscriptionTest
     private Image otherLeaderDataImage = mock(Image.class);
     private Image thirdLeaderDataImage = mock(Image.class);
     private ControlledFragmentHandler handler = mock(ControlledFragmentHandler.class);
+
+    private ArchiveReader archiveReader = mock(ArchiveReader.class);
+    private SessionReader leaderArchiveReader = mock(SessionReader.class);
 
     private ClusterSubscription clusterSubscription = new ClusterSubscription(
         dataSubscription, CLUSTER_STREAM_ID, controlSubscription);
@@ -197,7 +202,7 @@ public class ClusterSubscriptionTest
         verifyReceivesFragment(firstTermLen);
         verifyReceivesFragment(secondTermLen);
         verifyReceivesFragment(thirdTermLen);
-        verifyReceivesFragment(unagreedDataLen, never());
+        verifyNoOtherFragmentsReceived();
     }
 
     @Test
@@ -218,6 +223,49 @@ public class ClusterSubscriptionTest
         verifyReceivesFragment(newPosition);
     }
 
+    // Scenario for resend tests:
+    // A leader has committed data to a quorum of nodes excluding you, then it dies.
+    // Your only way of receiving that data is through resend on the control stream
+    // You may have missed some concensus messages as well.
+
+    // TODO: multiple leadership resends
+    // TODO: resend then receive it via the data stream - try to avoid dupes.
+    // TODO: ensure that resends don't corrupt internal the state
+    //  - can do the future ack processing thing
+    //  - can continue to subscribe afterwards
+    // TODO: what the resend is the same leader?
+
+    @Test
+    public void shouldCommitResendDataIfNextThingInStream()
+    {
+        final int firstTermLen = 128;
+        final int secondTermLen = 256;
+        final int firstTermEnd = firstTermLen;
+
+        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
+        pollsMessageFragment(leaderDataImage, firstTermEnd, CONTINUE);
+
+        onResend(firstTermEnd, secondTermLen);
+
+        verifyReceivesFragment(firstTermLen);
+        verifyReceivesFragmentWithAnyHeader(secondTermLen);
+        verifyNoOtherFragmentsReceived();
+    }
+
+    private void onResend(final int startPosition, final int resendLen)
+    {
+        final UnsafeBuffer resendBuffer = new UnsafeBuffer(new byte[resendLen]);
+        clusterSubscription.hasMatchingFutureAck();
+        clusterSubscription.onResend(
+            OTHER_LEADER, 2, startPosition, resendBuffer, 0, resendLen);
+    }
+
+    @Test
+    public void shouldCommitResendDataIfGapFromLocalLog()
+    {
+
+    }
+
     private void verifyReceivesFragment(final int newStreamPosition)
     {
         verifyReceivesFragment(newStreamPosition, times(1));
@@ -226,6 +274,11 @@ public class ClusterSubscriptionTest
     private void verifyReceivesFragment(final int newStreamPosition, final VerificationMode times)
     {
         verify(handler, times).onFragment(any(UnsafeBuffer.class), eq(0), eq(newStreamPosition), eq(header));
+    }
+
+    private void verifyReceivesFragmentWithAnyHeader(final int newStreamPosition)
+    {
+        verify(handler).onFragment(any(UnsafeBuffer.class), eq(0), eq(newStreamPosition), any(Header.class));
     }
 
     private void pollsMessageFragment(
@@ -293,5 +346,10 @@ public class ClusterSubscriptionTest
                 "streamPosition",
                 ClusterSubscription::streamPosition,
                 equalTo(streamPosition)));
+    }
+
+    private void verifyNoOtherFragmentsReceived()
+    {
+        verifyNoMoreInteractions(handler);
     }
 }

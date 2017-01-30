@@ -25,30 +25,34 @@ import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.replication.messages.ConsensusHeartbeatDecoder;
 import uk.co.real_logic.fix_gateway.replication.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.replication.messages.ResendDecoder;
 
 import java.util.PriorityQueue;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
-import static java.util.Comparator.comparing;
+import static java.util.Comparator.comparingInt;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 class ClusterSubscription extends ClusterableSubscription
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
+    private final ResendDecoder resend = new ResendDecoder();
     private final ConsensusHeartbeatDecoder consensusHeartbeat = new ConsensusHeartbeatDecoder();
     private final ControlledFragmentHandler onControlMessage = this::onControlMessage;
     private final PriorityQueue<FutureAck> futureAcks = new PriorityQueue<>(
-        comparing(FutureAck::leaderShipTerm).thenComparing(FutureAck::streamPosition));
+        comparingInt(FutureAck::leaderShipTerm).thenComparingLong(FutureAck::startPosition));
 
     private final MessageFilter messageFilter;
     private final Subscription dataSubscription;
     private final Subscription controlSubscription;
 
+    private Header resendHeader;
     private int currentLeadershipTermId = Integer.MIN_VALUE;
     private long currentLeadershipsStreamStartPosition;
     private long previousPosition;
     private Image dataImage;
+    private ControlledFragmentHandler handler;
 
     ClusterSubscription(
         final Subscription dataSubscription,
@@ -68,6 +72,8 @@ class ClusterSubscription extends ClusterableSubscription
 
     public int controlledPoll(final ControlledFragmentHandler fragmentHandler, final int fragmentLimit)
     {
+        this.handler = fragmentHandler;
+
         if (cannotAdvance())
         {
             if (!hasMatchingFutureAck())
@@ -81,7 +87,6 @@ class ClusterSubscription extends ClusterableSubscription
             }
         }
 
-        messageFilter.fragmentHandler = fragmentHandler;
         return dataImage.controlledPoll(messageFilter, fragmentLimit);
     }
 
@@ -110,19 +115,41 @@ class ClusterSubscription extends ClusterableSubscription
         final Header header)
     {
         messageHeader.wrap(buffer, offset);
-        if (messageHeader.templateId() == ConsensusHeartbeatDecoder.TEMPLATE_ID)
+        final int actingBlockLength = messageHeader.blockLength();
+        final int version = messageHeader.version();
+
+        switch (messageHeader.templateId())
         {
-            offset += MessageHeaderDecoder.ENCODED_LENGTH;
+            case ConsensusHeartbeatDecoder.TEMPLATE_ID:
+            {
+                offset += MessageHeaderDecoder.ENCODED_LENGTH;
 
-            consensusHeartbeat.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
+                consensusHeartbeat.wrap(buffer, offset, actingBlockLength, version);
 
-            final int leaderShipTerm = consensusHeartbeat.leaderShipTerm();
-            final int leaderSessionId = consensusHeartbeat.leaderSessionId();
-            final long position = consensusHeartbeat.position();
-            final long streamStartPosition = consensusHeartbeat.streamStartPosition();
-            final long streamPosition = consensusHeartbeat.streamPosition();
+                final int leaderShipTerm = consensusHeartbeat.leaderShipTerm();
+                final int leaderSessionId = consensusHeartbeat.leaderSessionId();
+                final long position = consensusHeartbeat.position();
+                final long streamStartPosition = consensusHeartbeat.streamStartPosition();
+                final long streamPosition = consensusHeartbeat.streamPosition();
 
-            return onConsensusHeartbeat(leaderShipTerm, leaderSessionId, position, streamStartPosition, streamPosition);
+                return onConsensusHeartbeat(
+                    leaderShipTerm, leaderSessionId, position, streamStartPosition, streamPosition);
+            }
+
+            case ResendDecoder.TEMPLATE_ID:
+            {
+                offset += MessageHeaderDecoder.ENCODED_LENGTH;
+
+                resend.wrap(buffer, offset, actingBlockLength, version);
+
+                onResend(
+                    resend.leaderSessionId(),
+                    resend.leaderShipTerm(),
+                    resend.startPosition(),
+                    buffer,
+                    RaftSubscription.bodyOffset(offset, actingBlockLength),
+                    resend.bodyLength());
+            }
         }
 
         return CONTINUE;
@@ -181,6 +208,28 @@ class ClusterSubscription extends ClusterableSubscription
         return CONTINUE;
     }
 
+    Action onResend(
+        final int leaderSessionId,
+        final int leaderShipTerm,
+        final long startPosition,
+        final DirectBuffer bodyBuffer,
+        final int bodyOffset,
+        final int bodyLength)
+    {
+        // If next chunk needed then just commit the thing immediately
+        // Otherwise store a future ack, with a note to look in the log.
+        if (previousPosition == startPosition)
+        {
+            resendHeader.buffer(bodyBuffer);
+            resendHeader.offset(bodyOffset);
+            handler.onFragment(bodyBuffer, bodyOffset, bodyLength, resendHeader);
+
+            previousPosition += bodyLength;
+        }
+
+        return CONTINUE;
+    }
+
     private void switchTerms(
         final int leaderShipTermId,
         final int leaderSessionId,
@@ -189,6 +238,7 @@ class ClusterSubscription extends ClusterableSubscription
         final long streamPosition)
     {
         dataImage = dataSubscription.imageBySessionId(leaderSessionId);
+        resendHeader = new Header(dataImage.initialTermId(), dataImage.termBufferLength());
         messageFilter.streamConsensusPosition = streamPosition;
         currentLeadershipTermId = leaderShipTermId;
         currentLeadershipsStreamStartPosition = streamStartPosition;
@@ -208,7 +258,7 @@ class ClusterSubscription extends ClusterableSubscription
 
     private boolean cannotAdvance()
     {
-        return dataImage == null || dataImage.position() >= messageFilter.streamConsensusPosition;
+        return dataImage == null || messageFilter.streamConsensusPosition <= dataImage.position();
     }
 
     public void close()
@@ -218,7 +268,6 @@ class ClusterSubscription extends ClusterableSubscription
 
     private final class MessageFilter implements ControlledFragmentHandler
     {
-        private ControlledFragmentHandler fragmentHandler;
         private final int clusterStreamId;
 
         private long streamConsensusPosition;
@@ -262,7 +311,7 @@ class ClusterSubscription extends ClusterableSubscription
                 messageHeader.wrap(buffer, offset);
                 if (messageHeader.templateId() != ConsensusHeartbeatDecoder.TEMPLATE_ID)
                 {
-                    return fragmentHandler.onFragment(buffer, offset, length, header);
+                    return handler.onFragment(buffer, offset, length, header);
                 }
             }
 
@@ -297,11 +346,6 @@ class ClusterSubscription extends ClusterableSubscription
             return leaderShipTermId;
         }
 
-        private long streamPosition()
-        {
-            return streamPosition;
-        }
-
         private int previousLeadershipTermId()
         {
             return leaderShipTermId - 1;
@@ -310,6 +354,11 @@ class ClusterSubscription extends ClusterableSubscription
         private long streamStartPosition()
         {
             return streamStartPosition;
+        }
+
+        public long startPosition()
+        {
+            return startPosition;
         }
     }
 
