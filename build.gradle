@@ -322,41 +322,47 @@ project(':fix-gateway-samples') {
     }
 }
 
-uploadArchives {
-    repositories {
-        mavenDeployer {
-            pom.project {
-                name = 'Fix Gateway'
-                packaging = 'pom'
-                description = 'Resilient High-Performance FIX Gateway'
+if (System.properties["uploadArchives"] != null) {
+    println "Enabling uploading of archives"
 
-                url = 'https://github.com/real-logic/FIX-Gateway'
+    subprojects {
+        uploadArchives {
+            repositories {
+                mavenDeployer {
+                    pom.project {
+                        name = 'Fix Gateway'
+                        packaging = 'pom'
+                        description = 'Resilient High-Performance FIX Gateway'
 
-                scm {
-                    connection = 'scm:git:https://github.com/real-logic/FIX-Gateway.git'
-                    developerConnection = 'scm:git:https://github.com/real-logic/FIX-Gateway.git'
-                    url = 'https://github.com/real-logic/FIX-Gateway.git'
-                }
+                        url = 'https://github.com/real-logic/FIX-Gateway'
 
-                licenses {
-                    license {
-                        name = 'The Apache License, Version 2.0'
-                        url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                    }
-                }
+                        scm {
+                            connection = 'scm:git:https://github.com/real-logic/FIX-Gateway.git'
+                            developerConnection = 'scm:git:https://github.com/real-logic/FIX-Gateway.git'
+                            url = 'https://github.com/real-logic/FIX-Gateway.git'
+                        }
 
-                developers {
-                    developer {
-                        id = 'mjpt777'
-                        name = 'Martin Thompson'
-                        email = 'mjpt777@gmail.com'
-                        url = 'https://github.com/mjpt777'
-                    }
-                    developer {
-                        id = 'RichardWarburton'
-                        name = 'Richard Warburton'
-                        email = 'richard.warburton@gmail.com'
-                        url = 'https://github.com/RichardWarburton'
+                        licenses {
+                            license {
+                                name = 'The Apache License, Version 2.0'
+                                url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                            }
+                        }
+
+                        developers {
+                            developer {
+                                id = 'mjpt777'
+                                name = 'Martin Thompson'
+                                email = 'mjpt777@gmail.com'
+                                url = 'https://github.com/mjpt777'
+                            }
+                            developer {
+                                id = 'RichardWarburton'
+                                name = 'Richard Warburton'
+                                email = 'richard.warburton@gmail.com'
+                                url = 'https://github.com/RichardWarburton'
+                            }
+                        }
                     }
                 }
             }
