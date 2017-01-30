@@ -168,7 +168,7 @@ public class LeaderTest
 
     private void backpressureResend(final long position)
     {
-        when(controlPublication.saveResend(anyInt(), anyInt(), eq(position), any(), anyInt(), anyInt()))
+        when(controlPublication.saveResend(anyInt(), anyInt(), eq(position), anyLong(), any(), anyInt(), anyInt()))
             .thenReturn(BACK_PRESSURED, 100L);
     }
 
@@ -200,6 +200,7 @@ public class LeaderTest
             eq(LEADER_SESSION_ID),
             eq(LEADERSHIP_TERM),
             eq(followerPosition),
+            anyLong(),
             any(),
             eq(0),
             eq((int) (length - followerPosition)));

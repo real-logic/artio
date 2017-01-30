@@ -230,7 +230,7 @@ public class ClusterSubscriptionTest
 
     // TODO: ensure that resends don't corrupt internal the state
     //  - can do the future ack processing thing
-    //  - can continue to subscribe afterwards
+    //  - can continue to subscribe afterwards - Done for leading position.
     // TODO: what the resend is the same leader?
 
     @Test
@@ -245,8 +245,8 @@ public class ClusterSubscriptionTest
         onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
         pollsMessageFragment(leaderDataImage, firstTermEnd, CONTINUE);
 
-        onResend(firstTermEnd, secondTermLen);
-        onResend(secondTermEnd, thirdTermLen);
+        onResend(0, firstTermEnd, secondTermLen);
+        onResend(secondTermLen, secondTermEnd, thirdTermLen);
 
         verifyReceivesFragment(firstTermLen);
         verifyReceivesFragmentWithAnyHeader(secondTermLen);
@@ -264,14 +264,14 @@ public class ClusterSubscriptionTest
         final int secondTermEnd = firstTermEnd + secondTermLen;
 
         onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
-        pollsMessageFragment(leaderDataImage, firstTermEnd, CONTINUE);
+        pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
 
-        onResend(firstTermEnd, secondTermLen);
+        onResend(0, firstTermEnd, secondTermLen);
 
         onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
-        pollsMessageFragment(otherLeaderDataImage, secondTermEnd, CONTINUE);
+        pollsMessageFragment(otherLeaderDataImage, secondTermLen, CONTINUE);
 
-        onResend(secondTermEnd, thirdTermLen);
+        onResend(secondTermLen, secondTermEnd, thirdTermLen);
 
         verifyReceivesFragment(firstTermLen);
         verifyReceivesFragmentWithAnyHeader(secondTermLen);
@@ -294,13 +294,39 @@ public class ClusterSubscriptionTest
         onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
         pollsMessageFragment(otherLeaderDataImage, secondTermLen, CONTINUE);
 
-        onResend(firstTermEnd, secondTermLen);
+        onResend(0, firstTermEnd, secondTermLen);
 
-        onResend(secondTermEnd, thirdTermLen);
+        onResend(secondTermLen, secondTermEnd, thirdTermLen);
 
         verifyReceivesFragment(firstTermLen);
         verifyReceivesFragmentWithAnyHeader(secondTermLen);
         verifyReceivesFragmentWithAnyHeader(thirdTermLen);
+        verifyNoOtherFragmentsReceived();
+    }
+
+    @Test
+    public void shouldContinueToReceiveNormalDataAfterAResend()
+    {
+        // 2nd and third chunks really same term from OTHER_LEADER
+        final int firstTermLen = 128;
+        final int secondTermLen = 256;
+        final int thirdTermLen = 384;
+        final int firstTermEnd = firstTermLen;
+        final int secondTermEnd = firstTermEnd + secondTermLen;
+        final int thirdTermEnd = secondTermEnd + thirdTermLen;
+        final int thirdTermStreamStart = secondTermLen + thirdTermLen;
+
+        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
+        pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
+
+        onResend(0, firstTermEnd, secondTermLen);
+
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, thirdTermEnd, secondTermLen, thirdTermStreamStart);
+        pollsMessageFragment(otherLeaderDataImage, thirdTermStreamStart, thirdTermLen, CONTINUE);
+
+        verifyReceivesFragment(firstTermLen);
+        verifyReceivesFragmentWithAnyHeader(secondTermLen);
+        verifyReceivesFragment(thirdTermLen);
         verifyNoOtherFragmentsReceived();
     }
 
@@ -310,12 +336,12 @@ public class ClusterSubscriptionTest
 
     }
 
-    private void onResend(final int startPosition, final int resendLen)
+    private void onResend(final long streamStartPosition, final int startPosition, final int resendLen)
     {
         final UnsafeBuffer resendBuffer = new UnsafeBuffer(new byte[resendLen]);
         clusterSubscription.hasMatchingFutureAck();
         clusterSubscription.onResend(
-            OTHER_LEADER, 2, startPosition, resendBuffer, 0, resendLen);
+            OTHER_LEADER, 2, startPosition, streamStartPosition, resendBuffer, 0, resendLen);
     }
 
     private void verifyReceivesFragment(final int newStreamPosition)

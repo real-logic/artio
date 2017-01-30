@@ -216,6 +216,7 @@ class Leader implements Role, RaftHandler
             {
                 final ResendHandler resendHandler = new ResendHandler();
                 resendHandler.messageAcknowledgementPosition = position;
+                resendHandler.messageAcknowledgementStreamPosition = position - streamPositionDelta;
                 final long readPosition = Math.max(position, HEADER_LENGTH);
                 if (!ourArchiveReader.readBlock(readPosition, length, resendHandler))
                 {
@@ -389,8 +390,10 @@ class Leader implements Role, RaftHandler
 
     private class ResendHandler implements BlockHandler
     {
-        // retry a resend when it gets back pressured
         private long messageAcknowledgementPosition;
+        private long messageAcknowledgementStreamPosition;
+
+        // retry a resend when it gets back pressured
         private DirectBuffer repeatResendBuffer;
         private int repeatResendOffset;
         private int repeatResendLength;
@@ -404,7 +407,13 @@ class Leader implements Role, RaftHandler
         private void saveResend(final DirectBuffer buffer, final int offset, final int length)
         {
             if (controlPublication.saveResend(
-                ourSessionId, termState.leadershipTerm(), messageAcknowledgementPosition, buffer, offset, length) < 0)
+                ourSessionId,
+                termState.leadershipTerm(),
+                messageAcknowledgementPosition,
+                messageAcknowledgementStreamPosition,
+                buffer,
+                offset,
+                length) < 0)
             {
                 repeatResendBuffer = buffer;
                 repeatResendOffset = offset;

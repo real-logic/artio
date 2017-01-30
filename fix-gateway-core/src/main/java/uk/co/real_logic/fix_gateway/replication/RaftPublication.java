@@ -212,6 +212,7 @@ class RaftPublication
         final int leaderSessionId,
         final int leaderShipTerm,
         final long startPosition,
+        final long streamStartPosition,
         final DirectBuffer bodyBuffer,
         final int bodyOffset,
         final int bodyLength)
@@ -239,6 +240,7 @@ class RaftPublication
             .leaderSessionId(leaderSessionId)
             .leaderShipTerm(leaderShipTerm)
             .startPosition(startPosition)
+            .streamStartPosition(streamStartPosition)
             .putBody(bodyBuffer, bodyOffset, bodyLength);
 
         bufferClaim.commit();

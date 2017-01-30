@@ -66,7 +66,8 @@
         <field name="leaderSessionId" id="1" type="int32"/>
         <field name="leaderShipTerm" id="2" type="int32"/>
         <field name="startPosition" id="3" type="int64"/>
-        <data name="body" id="4" type="varDataEncoding"/>
+        <field name="streamStartPosition" id="4" type="int64"/>
+        <data name="body" id="5" type="varDataEncoding"/>
     </sbe:message>
     <sbe:message name="LeadershipTerm" id="7" description="">
         <field name="sessionId" id="1" type="int32"/>
