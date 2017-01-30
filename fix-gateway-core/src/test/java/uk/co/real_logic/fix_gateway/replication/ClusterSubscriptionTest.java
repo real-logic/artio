@@ -228,7 +228,6 @@ public class ClusterSubscriptionTest
     // Your only way of receiving that data is through resend on the control stream
     // You may have missed some concensus messages as well.
 
-    // TODO: multiple leadership resends
     // TODO: resend then receive it via the data stream - try to avoid dupes.
     // TODO: ensure that resends don't corrupt internal the state
     //  - can do the future ack processing thing
@@ -240,16 +239,26 @@ public class ClusterSubscriptionTest
     {
         final int firstTermLen = 128;
         final int secondTermLen = 256;
+        final int thirdTermLen = 384;
         final int firstTermEnd = firstTermLen;
+        final int secondTermEnd = firstTermEnd + secondTermLen;
 
         onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
         pollsMessageFragment(leaderDataImage, firstTermEnd, CONTINUE);
 
         onResend(firstTermEnd, secondTermLen);
+        onResend(secondTermEnd, thirdTermLen);
 
         verifyReceivesFragment(firstTermLen);
         verifyReceivesFragmentWithAnyHeader(secondTermLen);
+        verifyReceivesFragmentWithAnyHeader(thirdTermLen);
         verifyNoOtherFragmentsReceived();
+    }
+
+    @Test
+    public void shouldCommitResendDataIfGapFromLocalLog()
+    {
+
     }
 
     private void onResend(final int startPosition, final int resendLen)
@@ -258,12 +267,6 @@ public class ClusterSubscriptionTest
         clusterSubscription.hasMatchingFutureAck();
         clusterSubscription.onResend(
             OTHER_LEADER, 2, startPosition, resendBuffer, 0, resendLen);
-    }
-
-    @Test
-    public void shouldCommitResendDataIfGapFromLocalLog()
-    {
-
     }
 
     private void verifyReceivesFragment(final int newStreamPosition)
