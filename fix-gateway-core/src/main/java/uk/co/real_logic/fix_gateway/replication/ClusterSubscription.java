@@ -23,6 +23,8 @@ import io.aeron.logbuffer.Header;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.SessionReader;
 import uk.co.real_logic.fix_gateway.replication.messages.ConsensusHeartbeatDecoder;
 import uk.co.real_logic.fix_gateway.replication.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.replication.messages.ResendDecoder;
@@ -30,7 +32,7 @@ import uk.co.real_logic.fix_gateway.replication.messages.ResendDecoder;
 import java.util.PriorityQueue;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
-import static java.util.Comparator.comparingInt;
+import static java.util.Comparator.comparingLong;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
@@ -41,11 +43,12 @@ class ClusterSubscription extends ClusterableSubscription
     private final ConsensusHeartbeatDecoder consensusHeartbeat = new ConsensusHeartbeatDecoder();
     private final ControlledFragmentHandler onControlMessage = this::onControlMessage;
     private final PriorityQueue<FutureAck> futureAcks = new PriorityQueue<>(
-        comparingInt(FutureAck::leaderShipTerm).thenComparingLong(FutureAck::startPosition));
+        comparingLong(FutureAck::startPosition));
 
     private final MessageFilter messageFilter;
     private final Subscription dataSubscription;
     private final Subscription controlSubscription;
+    private final ArchiveReader archiveReader;
 
     private Header resendHeader;
     private int currentLeadershipTermId = Integer.MIN_VALUE;
@@ -53,13 +56,16 @@ class ClusterSubscription extends ClusterableSubscription
     private long previousAcknowledgedPosition;
     private Image dataImage;
     private ControlledFragmentHandler handler;
+    private SessionReader leaderArchiveReader;
 
     ClusterSubscription(
         final Subscription dataSubscription,
         final int clusterStreamId,
-        final Subscription controlSubscription)
+        final Subscription controlSubscription,
+        final ArchiveReader archiveReader)
     {
         this.controlSubscription = controlSubscription;
+        this.archiveReader = archiveReader;
         // We use clusterStreamId as a reserved value filter
         if (clusterStreamId == NO_FILTER)
         {
@@ -85,6 +91,13 @@ class ClusterSubscription extends ClusterableSubscription
                     return messagesRead;
                 }
             }
+            else if (cannotAdvance() && leaderArchiveReader != null)
+            {
+                streamConsumedPosition = leaderArchiveReader.readUpTo(
+                    streamConsumedPosition,
+                    messageFilter.streamConsensusPosition,
+                    handler);
+            }
         }
 
         return dataImage.controlledPoll(messageFilter, fragmentLimit);
@@ -94,7 +107,6 @@ class ClusterSubscription extends ClusterableSubscription
     {
         final FutureAck ack = futureAcks.peek();
         if (ack != null
-            && currentLeadershipTermId == ack.previousLeadershipTermId()
             && previousAcknowledgedPosition == ack.startPosition)
         {
             futureAcks.poll();
@@ -218,16 +230,17 @@ class ClusterSubscription extends ClusterableSubscription
         final int leaderSessionId,
         final int leaderShipTermId,
         final long startPosition,
-        final long streamStartPosition, final DirectBuffer bodyBuffer,
+        final long streamStartPosition,
+        final DirectBuffer bodyBuffer,
         final int bodyOffset,
         final int bodyLength)
     {
+        final long streamPosition = streamStartPosition + bodyLength;
+
         Action action = CONTINUE;
-        // If next chunk needed then just commit the thing immediately
-        // Otherwise store a future ack, with a note to look in the log.
-        final boolean consume = previousAcknowledgedPosition == startPosition;
-        if (consume)
+        if (startPosition == previousAcknowledgedPosition)
         {
+            // If next chunk needed then just commit the thing immediately
             resendHeader.buffer(bodyBuffer);
             resendHeader.offset(bodyOffset);
             action = handler.onFragment(bodyBuffer, bodyOffset, bodyLength, resendHeader);
@@ -236,19 +249,29 @@ class ClusterSubscription extends ClusterableSubscription
                 return action;
             }
 
-            streamConsumedPosition += bodyLength;
-            previousAcknowledgedPosition += bodyLength;
+            if (isNextLeadershipTerm(leaderShipTermId))
+            {
+                final long position = startPosition + bodyLength;
+                switchTerms(
+                    leaderShipTermId,
+                    leaderSessionId,
+                    position,
+                    streamPosition,
+                    streamPosition);
+            }
+            else
+            {
+                streamConsumedPosition += bodyLength;
+                previousAcknowledgedPosition += bodyLength;
+            }
         }
-
-        if (isNextLeadershipTerm(leaderShipTermId))
+        else if (startPosition > previousAcknowledgedPosition)
         {
-            final long position = startPosition + bodyLength;
-            final long streamPosition = streamStartPosition + bodyLength;
-            switchTerms(
+            save(
                 leaderShipTermId,
                 leaderSessionId,
-                position,
-                consume ? streamPosition : streamStartPosition,
+                startPosition,
+                streamStartPosition,
                 streamPosition);
         }
 
@@ -264,6 +287,8 @@ class ClusterSubscription extends ClusterableSubscription
     {
         dataImage = dataSubscription.imageBySessionId(leaderSessionId);
         resendHeader = new Header(dataImage.initialTermId(), dataImage.termBufferLength());
+        leaderArchiveReader = archiveReader.session(leaderSessionId);
+
         messageFilter.streamConsensusPosition = streamPosition;
         currentLeadershipTermId = leaderShipTermId;
         this.streamConsumedPosition = streamConsumedPosition;
@@ -371,11 +396,6 @@ class ClusterSubscription extends ClusterableSubscription
         private int leaderShipTerm()
         {
             return leaderShipTermId;
-        }
-
-        private int previousLeadershipTermId()
-        {
-            return leaderShipTermId - 1;
         }
 
         private long streamStartPosition()

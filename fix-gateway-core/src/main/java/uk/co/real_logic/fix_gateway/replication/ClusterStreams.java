@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Publication;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -28,17 +29,20 @@ class ClusterStreams extends ClusterableStreams
     private final int ourSessionId;
     private final AtomicInteger leaderSessionId;
     private final Publication dataPublication;
+    private final ArchiveReader archiveReader;
 
     ClusterStreams(
         final RaftTransport transport,
         final int ourSessionId,
         final AtomicInteger leaderSessionId,
-        final Publication dataPublication)
+        final Publication dataPublication,
+        final ArchiveReader archiveReader)
     {
         this.transport = transport;
         this.ourSessionId = ourSessionId;
         this.leaderSessionId = leaderSessionId;
         this.dataPublication = dataPublication;
+        this.archiveReader = archiveReader;
     }
 
     public boolean isLeader()
@@ -59,6 +63,6 @@ class ClusterStreams extends ClusterableStreams
     public ClusterSubscription subscription(final int clusterStreamId)
     {
         return new ClusterSubscription(
-            transport.dataSubscription(), clusterStreamId, transport.controlSubscription());
+            transport.dataSubscription(), clusterStreamId, transport.controlSubscription(), archiveReader);
     }
 }

@@ -127,12 +127,14 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         leaderSubscription = new ClusterSubscription(
             dataSubscription(),
             CLUSTER_STREAM_ID,
-            controlSubscription());
+            controlSubscription(),
+            archiveReader);
 
         follower1Subscription = new ClusterSubscription(
             dataSubscription(),
             CLUSTER_STREAM_ID,
-            controlSubscription());
+            controlSubscription(),
+            archiveReader);
     }
 
     @Test(timeout = TEST_TIMEOUT)

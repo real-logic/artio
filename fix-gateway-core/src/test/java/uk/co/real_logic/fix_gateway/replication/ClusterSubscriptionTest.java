@@ -23,11 +23,11 @@ import io.aeron.logbuffer.Header;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.invocation.InvocationOnMock;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.SessionReader;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
@@ -57,10 +57,10 @@ public class ClusterSubscriptionTest
     private ControlledFragmentHandler handler = mock(ControlledFragmentHandler.class);
 
     private ArchiveReader archiveReader = mock(ArchiveReader.class);
-    private SessionReader leaderArchiveReader = mock(SessionReader.class);
+    private SessionReader otherLeaderArchiveReader = mock(SessionReader.class);
 
     private ClusterSubscription clusterSubscription = new ClusterSubscription(
-        dataSubscription, CLUSTER_STREAM_ID, controlSubscription);
+        dataSubscription, CLUSTER_STREAM_ID, controlSubscription, archiveReader);
 
     @Before
     public void setUp()
@@ -72,6 +72,8 @@ public class ClusterSubscriptionTest
         when(handler.onFragment(any(), anyInt(), anyInt(), any())).thenReturn(CONTINUE);
 
         when(header.reservedValue()).thenReturn(ReservedValue.ofClusterStreamId(CLUSTER_STREAM_ID));
+
+        when(archiveReader.session(OTHER_LEADER)).thenReturn(otherLeaderArchiveReader);
     }
 
     @Test
@@ -190,7 +192,6 @@ public class ClusterSubscriptionTest
 
         onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
         pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
-        pollsMessageFragment(leaderDataImage, unagreedDataEnd, unagreedDataLen, ABORT);
 
         onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
         pollsMessageFragment(otherLeaderDataImage, secondTermLen, CONTINUE);
@@ -227,11 +228,6 @@ public class ClusterSubscriptionTest
     // A leader has committed data to a quorum of nodes excluding you, then it dies.
     // Your only way of receiving that data is through resend on the control stream
     // You may have missed some concensus messages as well.
-
-    // TODO: ensure that resends don't corrupt internal the state
-    //  - can do the future ack processing thing
-    //  - can continue to subscribe afterwards - Done for leading position.
-    // TODO: what the resend is the same leader?
 
     @Test
     public void shouldCommitResendDataIfNextThingInStream()
@@ -314,15 +310,15 @@ public class ClusterSubscriptionTest
         final int firstTermEnd = firstTermLen;
         final int secondTermEnd = firstTermEnd + secondTermLen;
         final int thirdTermEnd = secondTermEnd + thirdTermLen;
-        final int thirdTermStreamStart = secondTermLen + thirdTermLen;
+        final int thirdTermStreamEnd = secondTermLen + thirdTermLen;
 
         onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
         pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
 
         onResend(0, firstTermEnd, secondTermLen);
 
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, thirdTermEnd, secondTermLen, thirdTermStreamStart);
-        pollsMessageFragment(otherLeaderDataImage, thirdTermStreamStart, thirdTermLen, CONTINUE);
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, thirdTermEnd, secondTermLen, thirdTermStreamEnd);
+        pollsMessageFragment(otherLeaderDataImage, thirdTermStreamEnd, thirdTermLen, CONTINUE);
 
         verifyReceivesFragment(firstTermLen);
         verifyReceivesFragmentWithAnyHeader(secondTermLen);
@@ -331,10 +327,57 @@ public class ClusterSubscriptionTest
     }
 
     @Test
-    public void shouldCommitResendDataIfGapFromLocalLog()
+    public void shouldCommitFromLocalLogIfGapInSubscription()
     {
+        // You might receive resends out of order, using the raft leader-probing mechanism for resends.
+        final int firstTermLen = 128;
+        final int secondTermLen = 256;
+        final int thirdTermLen = 384;
+        final int firstTermEnd = firstTermLen;
+        final int secondTermEnd = firstTermEnd + secondTermLen;
+        final long thirdTermStreamStart = secondTermLen;
+        final long thirdTermStreamEnd = thirdTermStreamStart + thirdTermLen;
 
+        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
+        pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
+
+        // You got netsplit when the data was sent out on the main data channel
+        when(otherLeaderDataImage.position()).thenReturn(thirdTermStreamEnd);
+
+        // But the data has been resend and archived by the follower.
+        onResend(secondTermLen, secondTermEnd, thirdTermLen);
+        dataWasArchived(thirdTermStreamStart, thirdTermStreamEnd);
+
+        onResend(0, firstTermEnd, secondTermLen);
+
+        poll();
+
+        verifyReceivesFragment(firstTermLen);
+        verifyReceivesFragmentWithAnyHeader(secondTermLen);
+        verifyReceivesFragmentWithAnyHeader(thirdTermLen);
+        verifyNoOtherFragmentsReceived();
     }
+
+    private void dataWasArchived(
+        final long streamStart, final long streamEnd)
+    {
+        when(otherLeaderArchiveReader.readUpTo(eq(streamStart), eq(streamEnd), any())).then(
+            inv ->
+            {
+                callHandler(
+                    streamEnd,
+                    (int) (streamEnd - streamStart),
+                    CONTINUE,
+                    inv,
+                    2);
+                return streamEnd;
+            });
+    }
+
+    // TODO: ensure that resends don't corrupt internal the state
+    //  - can do the future ack processing thing
+    //  - can continue to subscribe afterwards - Done for leading position.
+    // TODO: also test a control message coming in after a restart, but the data already having been dropped.
 
     private void onResend(final long streamStartPosition, final int startPosition, final int resendLen)
     {
@@ -376,17 +419,28 @@ public class ClusterSubscriptionTest
         when(dataImage.controlledPoll(any(), anyInt())).thenAnswer(
             (inv) ->
             {
-                final ControlledFragmentHandler handler = (ControlledFragmentHandler) inv.getArguments()[0];
-
-                when(header.position()).thenReturn((long) streamPosition);
-
-                final UnsafeBuffer buffer = new UnsafeBuffer(new byte[length]);
-                final Action action = handler.onFragment(buffer, 0, length, header);
-                assertEquals(expectedAction, action);
-                return null;
-            }).then(inv -> null);
+                callHandler(streamPosition, length, expectedAction, inv, 0);
+                when(dataImage.position()).thenReturn((long) streamPosition);
+                return 1;
+            }).then(inv -> 0);
 
         poll();
+    }
+
+    private void callHandler(
+        final long streamPosition,
+        final int length,
+        final Action expectedAction,
+        final InvocationOnMock inv,
+        final int handlerArgumentIndex)
+    {
+        final ControlledFragmentHandler handler = (ControlledFragmentHandler) inv.getArguments()[handlerArgumentIndex];
+
+        when(header.position()).thenReturn(streamPosition);
+
+        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[length]);
+        final Action action = handler.onFragment(buffer, 0, length, header);
+        assertEquals(expectedAction, action);
     }
 
     private void poll()
