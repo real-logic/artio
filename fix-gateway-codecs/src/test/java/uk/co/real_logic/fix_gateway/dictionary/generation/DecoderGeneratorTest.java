@@ -245,6 +245,16 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void shouldToStringShorterStringsAfterLongerStrings() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_MESSAGE);
+
+        decode(SHORTER_STRING_MESSAGE, decoder);
+
+        assertThat(decoder.toString(), containsString("\"OnBehalfOfCompID\": \"ab\","));
+    }
+
+    @Test
     public void shouldDecodeRepeatingGroups() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);

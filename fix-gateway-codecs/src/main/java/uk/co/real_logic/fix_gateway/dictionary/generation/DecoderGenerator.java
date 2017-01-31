@@ -1063,7 +1063,7 @@ public class DecoderGenerator extends Generator
 
     protected String stringToString(final String fieldName)
     {
-        return String.format("new String(%s)", fieldName);
+        return String.format("new String(%s, 0, %1$sLength)", fieldName);
     }
 
     protected boolean hasFlag(final Entry entry, final Field field)
