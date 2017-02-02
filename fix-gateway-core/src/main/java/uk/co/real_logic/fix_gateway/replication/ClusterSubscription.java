@@ -115,8 +115,8 @@ class ClusterSubscription extends ClusterableSubscription
         {
             futureAcks.poll();
 
-            switchTerms(
-                ack.leaderShipTermId, ack.leaderSessionId, ack.startPosition, ack.streamStartPosition(), ack.streamPosition);
+            onSwitchTerms(
+                ack.leaderShipTerm, ack.leaderSessionId, ack.startPosition, ack.streamStartPosition(), ack.streamPosition);
 
             return true;
         }
@@ -209,7 +209,7 @@ class ClusterSubscription extends ClusterableSubscription
             }
             else
             {
-                switchTerms(leaderShipTermId, leaderSessionId, position, streamStartPosition, streamPosition);
+                onSwitchTerms(leaderShipTermId, leaderSessionId, position, streamStartPosition, streamPosition);
 
                 return BREAK;
             }
@@ -232,7 +232,7 @@ class ClusterSubscription extends ClusterableSubscription
 
     Action onResend(
         final int leaderSessionId,
-        final int leaderShipTermId,
+        final int leaderShipTerm,
         final long startPosition,
         final long streamStartPosition,
         final DirectBuffer bodyBuffer,
@@ -244,6 +244,11 @@ class ClusterSubscription extends ClusterableSubscription
         Action action = CONTINUE;
         if (startPosition == previousConsensusPosition)
         {
+            final boolean nextLeadershipTerm = isNextLeadershipTerm(leaderShipTerm);
+            if (nextLeadershipTerm)
+            {
+                onSwitchTermUpdateSources(leaderSessionId);
+            }
             // If next chunk needed then just commit the thing immediately
             resendHeader.buffer(bodyBuffer);
             resendHeader.offset(bodyOffset);
@@ -253,15 +258,10 @@ class ClusterSubscription extends ClusterableSubscription
                 return action;
             }
 
-            if (isNextLeadershipTerm(leaderShipTermId))
+            if (nextLeadershipTerm)
             {
                 final long position = startPosition + bodyLength;
-                switchTerms(
-                    leaderShipTermId,
-                    leaderSessionId,
-                    position,
-                    streamPosition,
-                    streamPosition);
+                onSwitchTermUpdatePositions(leaderShipTerm, position, streamPosition, streamPosition);
             }
             else
             {
@@ -272,7 +272,7 @@ class ClusterSubscription extends ClusterableSubscription
         else if (startPosition > previousConsensusPosition)
         {
             save(
-                leaderShipTermId,
+                leaderShipTerm,
                 leaderSessionId,
                 startPosition,
                 streamStartPosition,
@@ -282,32 +282,47 @@ class ClusterSubscription extends ClusterableSubscription
         return action;
     }
 
-    private void switchTerms(
-        final int leaderShipTermId,
+    private void onSwitchTerms(
+        final int leaderShipTerm,
         final int leaderSessionId,
         final long position,
         final long streamConsumedPosition,
         final long streamPosition)
     {
+        onSwitchTermUpdateSources(leaderSessionId);
+        onSwitchTermUpdatePositions(leaderShipTerm, position, streamConsumedPosition, streamPosition);
+    }
+
+    // Can be retried if update is aborted.
+    private void onSwitchTermUpdateSources(final int leaderSessionId)
+    {
         dataImage = dataSubscription.imageBySessionId(leaderSessionId);
         resendHeader = new Header(dataImage.initialTermId(), dataImage.termBufferLength());
         leaderArchiveReader = archiveReader.session(leaderSessionId);
+    }
 
+    // Mutates state in a non-abortable way.
+    private void onSwitchTermUpdatePositions(
+        final int leaderShipTerm,
+        final long position,
+        final long streamConsumedPosition,
+        final long streamPosition)
+    {
         messageFilter.streamConsensusPosition = streamPosition;
-        currentLeadershipTerm = leaderShipTermId;
+        currentLeadershipTerm = leaderShipTerm;
         this.lastAppliedPosition = streamConsumedPosition;
         previousConsensusPosition = position;
     }
 
     private void save(
-        final int leaderShipTermId,
+        final int leaderShipTerm,
         final int leaderSessionId,
         final long startPosition,
         final long streamStartPosition,
         final long streamPosition)
     {
         futureAcks.add(new FutureAck(
-            leaderShipTermId, leaderSessionId, streamStartPosition, streamPosition, startPosition));
+            leaderShipTerm, leaderSessionId, streamStartPosition, streamPosition, startPosition));
     }
 
     private boolean cannotAdvance()
@@ -377,29 +392,24 @@ class ClusterSubscription extends ClusterableSubscription
 
     private final class FutureAck
     {
-        private final int leaderShipTermId;
+        private final int leaderShipTerm;
         private final int leaderSessionId;
         private final long streamPosition;
         private final long startPosition;
         private final long streamStartPosition;
 
         private FutureAck(
-            final int leaderShipTermId,
+            final int leaderShipTerm,
             final int leaderSessionId,
             final long streamStartPosition,
             final long streamPosition,
             final long startPosition)
         {
-            this.leaderShipTermId = leaderShipTermId;
+            this.leaderShipTerm = leaderShipTerm;
             this.leaderSessionId = leaderSessionId;
             this.streamStartPosition = streamStartPosition;
             this.streamPosition = streamPosition;
             this.startPosition = startPosition;
-        }
-
-        private int leaderShipTerm()
-        {
-            return leaderShipTermId;
         }
 
         private long streamStartPosition()
@@ -423,7 +433,7 @@ class ClusterSubscription extends ClusterableSubscription
         return streamPosition();
     }
 
-    int currentLeadershipTermId()
+    int currentLeadershipTerm()
     {
         return currentLeadershipTerm;
     }

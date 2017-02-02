@@ -358,6 +358,27 @@ public class ClusterSubscriptionTest
         verifyNoOtherFragmentsReceived();
     }
 
+    @Test
+    public void shouldCommitResendDataAtStart()
+    {
+        // You might receive resends out of order, using the raft leader-probing mechanism for resends.
+        final int firstTermLen = 128;
+        final int secondTermLen = 256;
+        final int firstTermEnd = firstTermLen;
+        final int secondTermEnd = firstTermEnd + secondTermLen;
+
+        poll();
+        when(otherLeaderDataImage.position()).thenReturn(0L);
+        onResend(1, 0, 0, firstTermLen);
+
+        onConsensusHeartbeatPoll(2, LEADER, secondTermEnd, 0, secondTermLen);
+        pollsMessageFragment(leaderDataImage, secondTermLen, CONTINUE);
+
+        verifyReceivesFragmentWithAnyHeader(firstTermLen);
+        verifyReceivesFragment(secondTermLen);
+        verifyNoOtherFragmentsReceived();
+    }
+
     private void dataWasArchived(
         final long streamStart, final long streamEnd)
     {
@@ -374,17 +395,21 @@ public class ClusterSubscriptionTest
             });
     }
 
-    // TODO: ensure that resends don't corrupt internal the state
-    //  - can do the future ack processing thing
-    //  - can continue to subscribe afterwards - Done for leading position.
-    // TODO: also test a control message coming in after a restart, but the data already having been dropped.
-
     private void onResend(final long streamStartPosition, final int startPosition, final int resendLen)
+    {
+        onResend(2, streamStartPosition, startPosition, resendLen);
+    }
+
+    private void onResend(
+        final int leaderShipTerm,
+        final long streamStartPosition,
+        final int startPosition,
+        final int resendLen)
     {
         final UnsafeBuffer resendBuffer = new UnsafeBuffer(new byte[resendLen]);
         clusterSubscription.hasMatchingFutureAck();
         clusterSubscription.onResend(
-            OTHER_LEADER, 2, startPosition, streamStartPosition, resendBuffer, 0, resendLen);
+            OTHER_LEADER, leaderShipTerm, startPosition, streamStartPosition, resendBuffer, 0, resendLen);
     }
 
     private void verifyReceivesFragment(final int newStreamPosition)
@@ -449,7 +474,7 @@ public class ClusterSubscriptionTest
     }
 
     private void onConsensusHeartbeatPoll(
-        final int leaderShipTermId,
+        final int leaderShipTerm,
         final int leaderSessionId,
         final long position,
         final long streamStartPosition,
@@ -457,7 +482,7 @@ public class ClusterSubscriptionTest
     {
         clusterSubscription.hasMatchingFutureAck();
         clusterSubscription.onConsensusHeartbeat(
-            leaderShipTermId, leaderSessionId, position, streamStartPosition, streamPosition);
+            leaderShipTerm, leaderSessionId, position, streamStartPosition, streamPosition);
     }
 
     private void assertState(
@@ -467,8 +492,8 @@ public class ClusterSubscriptionTest
     {
         assertThat(clusterSubscription,
             hasResult(
-                "currentLeadershipTermId",
-                ClusterSubscription::currentLeadershipTermId,
+                "currentLeadershipTerm",
+                ClusterSubscription::currentLeadershipTerm,
                 equalTo(currentLeadershipTermId)));
 
         verify(dataSubscription, atLeastOnce()).imageBySessionId(eq(leadershipSessionId));
