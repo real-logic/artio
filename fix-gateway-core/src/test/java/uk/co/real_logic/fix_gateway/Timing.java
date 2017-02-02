@@ -65,14 +65,14 @@ public final class Timing
 
     public static void assertEventuallyTrue(
         final String message,
-        final Runnable runnable)
+        final Block runnable)
     {
         assertEventuallyTrue(message, runnable, DEFAULT_TIMEOUT_IN_MS);
     }
 
     public static void assertEventuallyTrue(
         final String message,
-        final Runnable runnable,
+        final Block runnable,
         final long timeoutInMs)
     {
         final long endTime = System.currentTimeMillis() + timeoutInMs;
@@ -130,5 +130,10 @@ public final class Timing
         final String jvmArguments = runtimeMXBean.getInputArguments().toString();
 
         return jvmArguments.contains("-agentlib:jdwp");
+    }
+
+    public interface Block
+    {
+        void run() throws Exception;
     }
 }

@@ -29,6 +29,7 @@ import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.fix_gateway.Timing;
 import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
@@ -208,9 +209,20 @@ public class FramerTest
     {
         aClientConnects();
 
-        framer.doWork();
+        awaitEndpointCreation();
 
-        verifyEndpointsCreated();
+    }
+
+    private void awaitEndpointCreation()
+    {
+        Timing.assertEventuallyTrue(
+            "endpoints never created",
+            () ->
+            {
+                framer.doWork();
+
+                verifyEndpointsCreated();
+            });
     }
 
     @Test
@@ -405,9 +417,7 @@ public class FramerTest
     {
         openSocket();
 
-        framer.doWork();
-
-        verifyEndpointsCreated();
+        awaitEndpointCreation();
 
         verifySessionsAcquired(CONNECTED);
     }
