@@ -88,11 +88,11 @@ class ClusterSubscription extends ClusterableSubscription
         {
             if (!hasMatchingFutureAck())
             {
-                final int messagesRead = controlSubscription.controlledPoll(onControlMessage, fragmentLimit);
+                controlSubscription.controlledPoll(onControlMessage, fragmentLimit);
 
                 if (cannotAdvance())
                 {
-                    return messagesRead;
+                    return 0;
                 }
             }
             else if (cannotAdvance() && leaderArchiveReader != null)
