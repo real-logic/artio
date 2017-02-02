@@ -370,7 +370,7 @@ public class ClusterSubscriptionTest
 
         poll();
         when(otherLeaderDataImage.position()).thenReturn(0L);
-        onResend(1, 0, 0, firstTermLen);
+        onResend(1, 0, 0, firstTermLen, CONTINUE);
 
         onConsensusHeartbeatPoll(2, LEADER, secondTermEnd, 0, secondTermLen);
         pollsMessageFragment(leaderDataImage, secondTermLen, CONTINUE);
@@ -415,7 +415,7 @@ public class ClusterSubscriptionTest
         pollsMessageFragment(leaderDataImage, firstTermEnd, CONTINUE);
 
         backPressureNextCommit();
-        onResend(0, firstTermEnd, secondTermLen);
+        onResend(2, (long) 0, firstTermEnd, secondTermLen, ABORT);
         onResend(0, firstTermEnd, secondTermLen);
         onResend(secondTermLen, secondTermEnd, thirdTermLen);
 
@@ -448,19 +448,21 @@ public class ClusterSubscriptionTest
 
     private void onResend(final long streamStartPosition, final int startPosition, final int resendLen)
     {
-        onResend(2, streamStartPosition, startPosition, resendLen);
+        onResend(2, streamStartPosition, startPosition, resendLen, CONTINUE);
     }
 
     private void onResend(
         final int leaderShipTerm,
         final long streamStartPosition,
         final int startPosition,
-        final int resendLen)
+        final int resendLen,
+        final Action expectedAction)
     {
         final UnsafeBuffer resendBuffer = new UnsafeBuffer(new byte[resendLen]);
         clusterSubscription.hasMatchingFutureAck();
         final Action action = clusterSubscription.onResend(
             OTHER_LEADER, leaderShipTerm, startPosition, streamStartPosition, resendBuffer, 0, resendLen);
+        assertEquals(expectedAction, action);
     }
 
     private void verifyReceivesFragment(final int newStreamPosition)
