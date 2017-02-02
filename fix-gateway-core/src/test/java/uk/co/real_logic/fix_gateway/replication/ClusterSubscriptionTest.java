@@ -20,6 +20,7 @@ import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
+import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
@@ -347,7 +348,7 @@ public class ClusterSubscriptionTest
 
         // But the data has been resend and archived by the follower.
         onResend(secondTermLen, secondTermEnd, thirdTermLen);
-        dataWasArchived(thirdTermStreamStart, thirdTermStreamEnd);
+        dataWasArchived(thirdTermStreamStart, thirdTermStreamEnd, CONTINUE);
 
         onResend(0, firstTermEnd, secondTermLen);
 
@@ -381,8 +382,6 @@ public class ClusterSubscriptionTest
     }
 
     // Back Pressure Tests
-    // TODO: resend in the presence of back-pressure
-    // TODO: resend and read off of the archiver reader in the presence of back-pressure
 
     @Test
     public void shouldPollDataWhenBackPressured()
@@ -425,24 +424,61 @@ public class ClusterSubscriptionTest
         verifyNoOtherFragmentsReceived();
     }
 
+    @Test
+    public void shouldCommitFromLocalLogIfGapInSubscriptionWhenBackPressured()
+    {
+        // You might receive resends out of order, using the raft leader-probing mechanism for resends.
+        final int firstTermLen = 128;
+        final int secondTermLen = 256;
+        final int thirdTermLen = 384;
+        final int firstTermEnd = firstTermLen;
+        final int secondTermEnd = firstTermEnd + secondTermLen;
+        final long thirdTermStreamStart = secondTermLen;
+        final long thirdTermStreamEnd = thirdTermStreamStart + thirdTermLen;
+
+        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
+        pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
+
+        // You got netsplit when the data was sent out on the main data channel
+        when(otherLeaderDataImage.position()).thenReturn(thirdTermStreamEnd);
+
+        // But the data has been resend and archived by the follower.
+        onResend(secondTermLen, secondTermEnd, thirdTermLen);
+
+        onResend(0, firstTermEnd, secondTermLen);
+
+        backPressureNextCommit();
+
+        dataWasArchived(thirdTermStreamStart, thirdTermStreamEnd, ABORT);
+        poll();
+
+        dataWasArchived(thirdTermStreamStart, thirdTermStreamEnd, CONTINUE);
+        poll();
+
+        verifyReceivesFragment(firstTermLen);
+        verifyReceivesFragmentWithAnyHeader(secondTermLen);
+        verifyReceivesFragmentWithAnyHeader(thirdTermLen, times(2));
+        verifyNoOtherFragmentsReceived();
+    }
+
     private void backPressureNextCommit()
     {
         when(handler.onFragment(any(), anyInt(), anyInt(), any())).thenReturn(ABORT, CONTINUE);
     }
 
     private void dataWasArchived(
-        final long streamStart, final long streamEnd)
+        final long streamStart, final long streamEnd, final Action expectedAction)
     {
-        when(otherLeaderArchiveReader.readUpTo(eq(streamStart), eq(streamEnd), any())).then(
+        when(otherLeaderArchiveReader.readUpTo(eq(streamStart + DataHeaderFlyweight.HEADER_LENGTH), eq(streamEnd), any())).then(
             inv ->
             {
                 callHandler(
                     streamEnd,
                     (int) (streamEnd - streamStart),
-                    CONTINUE,
+                    expectedAction,
                     inv,
                     2);
-                return streamEnd;
+                return expectedAction == ABORT ? streamStart : streamEnd;
             });
     }
 

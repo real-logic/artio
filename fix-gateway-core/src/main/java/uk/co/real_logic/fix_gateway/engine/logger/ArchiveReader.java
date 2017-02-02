@@ -272,7 +272,7 @@ public class ArchiveReader implements AutoCloseable
         /**
          * Reads a message out of this session's log archive.
          *
-         * @param beginPosition the log position to start reading at
+         * @param beginPosition the log position to start reading at, specified by the beginning of the message
          * @param endPosition the last start position of a message to stop reading at (NB: can read up to a fragment beyond)
          * @param handler the handler to pass the data into
          * @return the position after the end of this message. If there's another message, then this is its start.

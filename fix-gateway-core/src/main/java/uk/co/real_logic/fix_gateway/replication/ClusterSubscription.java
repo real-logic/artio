@@ -20,6 +20,7 @@ import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
+import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
@@ -92,19 +93,42 @@ class ClusterSubscription extends ClusterableSubscription
 
                 if (cannotAdvance())
                 {
+                    if (leaderArchiveReader != null && appliedBehindConcensus())
+                    {
+                        readFromLog();
+
+                        return 1;
+                    }
+
                     return 0;
                 }
             }
-            else if (cannotAdvance() && leaderArchiveReader != null)
+
+            if (cannotAdvance() && leaderArchiveReader != null)
             {
-                lastAppliedPosition = leaderArchiveReader.readUpTo(
-                    lastAppliedPosition,
-                    messageFilter.streamConsensusPosition,
-                    handler);
+                readFromLog();
             }
         }
 
         return dataImage.controlledPoll(messageFilter, fragmentLimit);
+    }
+
+    private boolean appliedBehindConcensus()
+    {
+        return (messageFilter.streamConsensusPosition - lastAppliedPosition) > 0;
+    }
+
+    private void readFromLog()
+    {
+        final long readUpTo = leaderArchiveReader.readUpTo(
+            lastAppliedPosition + DataHeaderFlyweight.HEADER_LENGTH,
+            messageFilter.streamConsensusPosition,
+            handler);
+
+        if (readUpTo > 0)
+        {
+            lastAppliedPosition = readUpTo;
+        }
     }
 
     boolean hasMatchingFutureAck()
