@@ -385,13 +385,13 @@ public class ClusterSubscriptionTest
     // TODO: resend and read off of the archiver reader in the presence of back-pressure
 
     @Test
-    public void shouldPollDataInPresenceOfBackPressure()
+    public void shouldPollDataWhenBackPressured()
     {
         final int firstTermLen = 128;
         final int firstTermStreamPosition = firstTermLen;
         final int firstTermPosition = firstTermLen;
 
-        backPressureFirstCommit();
+        backPressureNextCommit();
 
         willReceiveConcensusHeartbeat(
             1, LEADER, firstTermPosition, 0, firstTermStreamPosition);
@@ -402,7 +402,30 @@ public class ClusterSubscriptionTest
         verifyNoOtherFragmentsReceived();
     }
 
-    private void backPressureFirstCommit()
+    @Test
+    public void shouldCommitResendDataIfNextThingInStreamWhenBackPressured()
+    {
+        final int firstTermLen = 128;
+        final int secondTermLen = 256;
+        final int thirdTermLen = 384;
+        final int firstTermEnd = firstTermLen;
+        final int secondTermEnd = firstTermEnd + secondTermLen;
+
+        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
+        pollsMessageFragment(leaderDataImage, firstTermEnd, CONTINUE);
+
+        backPressureNextCommit();
+        onResend(0, firstTermEnd, secondTermLen);
+        onResend(0, firstTermEnd, secondTermLen);
+        onResend(secondTermLen, secondTermEnd, thirdTermLen);
+
+        verifyReceivesFragment(firstTermLen);
+        verifyReceivesFragmentWithAnyHeader(secondTermLen, times(2));
+        verifyReceivesFragmentWithAnyHeader(thirdTermLen);
+        verifyNoOtherFragmentsReceived();
+    }
+
+    private void backPressureNextCommit()
     {
         when(handler.onFragment(any(), anyInt(), anyInt(), any())).thenReturn(ABORT, CONTINUE);
     }
@@ -436,7 +459,7 @@ public class ClusterSubscriptionTest
     {
         final UnsafeBuffer resendBuffer = new UnsafeBuffer(new byte[resendLen]);
         clusterSubscription.hasMatchingFutureAck();
-        clusterSubscription.onResend(
+        final Action action = clusterSubscription.onResend(
             OTHER_LEADER, leaderShipTerm, startPosition, streamStartPosition, resendBuffer, 0, resendLen);
     }
 
@@ -452,7 +475,13 @@ public class ClusterSubscriptionTest
 
     private void verifyReceivesFragmentWithAnyHeader(final int newStreamPosition)
     {
-        verify(handler).onFragment(any(UnsafeBuffer.class), eq(0), eq(newStreamPosition), any(Header.class));
+        verifyReceivesFragmentWithAnyHeader(newStreamPosition, times(1));
+    }
+
+    private void verifyReceivesFragmentWithAnyHeader(final int newStreamPosition, final VerificationMode times)
+    {
+        verify(handler, times)
+            .onFragment(any(UnsafeBuffer.class), eq(0), eq(newStreamPosition), any(Header.class));
     }
 
     private void pollsMessageFragment(
