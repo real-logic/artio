@@ -28,6 +28,7 @@ import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.SessionReader;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertEquals;
@@ -160,20 +161,20 @@ public class ClusterSubscriptionTest
         final int secondTermEnd = firstTermEnd + secondTermLen;
         final int thirdTermEnd = secondTermEnd + thirdTermLen;
 
-        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
+        willReceiveConcensusHeartbeat(1, LEADER, firstTermEnd, 0, firstTermLen);
         pollsMessageFragment(leaderDataImage, firstTermEnd, CONTINUE);
 
         onConsensusHeartbeatPoll(3, THIRD_LEADER, thirdTermEnd, 0, thirdTermLen);
 
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
+        willReceiveConcensusHeartbeat(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
         pollsMessageFragment(otherLeaderDataImage, secondTermLen, CONTINUE);
 
-        clusterSubscription.hasMatchingFutureAck();
         pollsMessageFragment(thirdLeaderDataImage, thirdTermLen, CONTINUE);
 
         verifyReceivesFragment(firstTermLen);
         verifyReceivesFragment(secondTermLen);
         verifyReceivesFragment(thirdTermLen);
+        verifyNoOtherFragmentsReceived();
     }
 
     @Test
@@ -379,6 +380,33 @@ public class ClusterSubscriptionTest
         verifyNoOtherFragmentsReceived();
     }
 
+    // Back Pressure Tests
+    // TODO: resend in the presence of back-pressure
+    // TODO: resend and read off of the archiver reader in the presence of back-pressure
+
+    @Test
+    public void shouldPollDataInPresenceOfBackPressure()
+    {
+        final int firstTermLen = 128;
+        final int firstTermStreamPosition = firstTermLen;
+        final int firstTermPosition = firstTermLen;
+
+        backPressureFirstCommit();
+
+        willReceiveConcensusHeartbeat(
+            1, LEADER, firstTermPosition, 0, firstTermStreamPosition);
+        pollsMessageFragment(leaderDataImage, firstTermLen, ABORT);
+        pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
+
+        verifyReceivesFragment(firstTermLen, times(2));
+        verifyNoOtherFragmentsReceived();
+    }
+
+    private void backPressureFirstCommit()
+    {
+        when(handler.onFragment(any(), anyInt(), anyInt(), any())).thenReturn(ABORT, CONTINUE);
+    }
+
     private void dataWasArchived(
         final long streamStart, final long streamEnd)
     {
@@ -445,7 +473,10 @@ public class ClusterSubscriptionTest
             (inv) ->
             {
                 callHandler(streamPosition, length, expectedAction, inv, 0);
-                when(dataImage.position()).thenReturn((long) streamPosition);
+                if (expectedAction != ABORT)
+                {
+                    when(dataImage.position()).thenReturn((long) streamPosition);
+                }
                 return 1;
             }).then(inv -> 0);
 
@@ -483,6 +514,20 @@ public class ClusterSubscriptionTest
         clusterSubscription.hasMatchingFutureAck();
         clusterSubscription.onConsensusHeartbeat(
             leaderShipTerm, leaderSessionId, position, streamStartPosition, streamPosition);
+    }
+
+    private void willReceiveConcensusHeartbeat(
+        final int leaderShipTerm,
+        final int leader,
+        final long position,
+        final long streamStartPosition,
+        final long streamPosition)
+    {
+        when(controlSubscription.controlledPoll(any(), anyInt())).then(inv ->
+        {
+            clusterSubscription.onConsensusHeartbeat(leaderShipTerm, leader, position, streamStartPosition, streamPosition);
+            return 1;
+        }).thenReturn(0);
     }
 
     private void assertState(

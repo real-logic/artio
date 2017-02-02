@@ -173,7 +173,7 @@ class ClusterSubscription extends ClusterableSubscription
     }
 
     Action onConsensusHeartbeat(
-        final int leaderShipTermId,
+        final int leaderShipTerm,
         final int leaderSessionId,
         final long position,
         final long streamStartPosition,
@@ -182,7 +182,7 @@ class ClusterSubscription extends ClusterableSubscription
         DebugLogger.log(
             RAFT,
             "Subscription Heartbeat(leaderShipTerm=%d, pos=%d, sStartPos=%d, sPos=%d, leaderSessId=%d)%n",
-            leaderShipTermId,
+            leaderShipTerm,
             position,
             streamStartPosition,
             streamPosition,
@@ -191,7 +191,7 @@ class ClusterSubscription extends ClusterableSubscription
         final long length = streamPosition - streamStartPosition;
         final long startPosition = position - length;
 
-        if (leaderShipTermId == currentLeadershipTerm)
+        if (leaderShipTerm == currentLeadershipTerm)
         {
             if (messageFilter.streamConsensusPosition < streamPosition)
             {
@@ -201,22 +201,22 @@ class ClusterSubscription extends ClusterableSubscription
                 return BREAK;
             }
         }
-        else if (isNextLeadershipTerm(leaderShipTermId))
+        else if (isNextLeadershipTerm(leaderShipTerm))
         {
             if (startPosition != previousConsensusPosition)
             {
-                save(leaderShipTermId, leaderSessionId, startPosition, streamStartPosition, streamPosition);
+                save(leaderShipTerm, leaderSessionId, startPosition, streamStartPosition, streamPosition);
             }
             else
             {
-                onSwitchTerms(leaderShipTermId, leaderSessionId, position, streamStartPosition, streamPosition);
+                onSwitchTerms(leaderShipTerm, leaderSessionId, position, streamStartPosition, streamPosition);
 
                 return BREAK;
             }
         }
-        else if (leaderShipTermId > currentLeadershipTerm)
+        else if (leaderShipTerm > currentLeadershipTerm)
         {
-            save(leaderShipTermId, leaderSessionId, startPosition, streamStartPosition, streamPosition);
+            save(leaderShipTerm, leaderSessionId, startPosition, streamStartPosition, streamPosition);
         }
 
         // We deliberately ignore leaderShipTerm < currentLeadershipTerm, as they would be old
@@ -381,7 +381,10 @@ class ClusterSubscription extends ClusterableSubscription
                 if (messageHeader.templateId() != ConsensusHeartbeatDecoder.TEMPLATE_ID)
                 {
                     final Action action = handler.onFragment(buffer, offset, length, header);
-                    lastAppliedPosition += length;
+                    if (action != ABORT)
+                    {
+                        lastAppliedPosition += length;
+                    }
                     return action;
                 }
             }
