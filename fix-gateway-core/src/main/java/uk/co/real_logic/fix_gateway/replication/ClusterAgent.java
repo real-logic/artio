@@ -23,6 +23,8 @@ import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
+import java.util.function.Supplier;
+
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 
@@ -46,7 +48,8 @@ public class ClusterAgent implements Agent
     private final NodeStateHandler nodeStateHandler;
     private final RoleHandler roleHandler;
     private final String agentNamePrefix;
-    private final ArchiveReader archiveReader;
+    private final Supplier<ArchiveReader> archiveReaderSupplier;
+    private final ArchiveReader agentArchiveReader;
     private final Archiver archiver;
     private final Publication dataPublication;
 
@@ -61,7 +64,8 @@ public class ClusterAgent implements Agent
         nodeStateHandler = configuration.nodeStateHandler();
         roleHandler = configuration.nodeHandler();
         agentNamePrefix = configuration.agentNamePrefix();
-        archiveReader = configuration.archiveReader();
+        archiveReaderSupplier = configuration.archiveReaderSupplier();
+        agentArchiveReader = archiveReaderSupplier.get();
         archiver = configuration.archiver();
         dataPublication = transport.leaderPublication();
         ourSessionId = dataPublication.sessionId();
@@ -76,7 +80,7 @@ public class ClusterAgent implements Agent
 
         requireNonNull(otherNodes, "otherNodes");
         requireNonNull(acknowledgementStrategy, "acknowledgementStrategy");
-        requireNonNull(archiveReader, "archiveReader");
+        requireNonNull(archiveReaderSupplier, "archiveReader");
         requireNonNull(archiver, "archiver");
 
         leader = new Leader(
@@ -88,7 +92,7 @@ public class ClusterAgent implements Agent
             heartbeatTimeInMs,
             termState,
             ourSessionId,
-            archiveReader,
+            agentArchiveReader,
             raftArchiver,
             nodeState,
             nodeStateHandler);
@@ -118,7 +122,8 @@ public class ClusterAgent implements Agent
 
         startAsFollower(timeInMs);
 
-        clusterStreams = new ClusterStreams(transport, ourSessionId, termState.leaderSessionId(), dataPublication, archiveReader);
+        clusterStreams = new ClusterStreams(
+            transport, ourSessionId, termState.leaderSessionId(), dataPublication, archiveReaderSupplier);
         outboundPipe = new OutboundPipe(configuration.copyToPublication(), clusterStreams());
     }
 
@@ -310,7 +315,7 @@ public class ClusterAgent implements Agent
         follower.closeStreams();
         candidate.closeStreams();
         archiver.onClose();
-        archiveReader.close();
+        agentArchiveReader.close();
     }
 
     public String roleName()

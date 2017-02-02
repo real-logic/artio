@@ -48,6 +48,9 @@ import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LO
 import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
+/**
+ * Test Runner for an individual node, use single threaded.
+ */
 class NodeRunner implements AutoCloseable
 {
     private static final long TIMEOUT_IN_MS = 300;
@@ -118,7 +121,7 @@ class NodeRunner implements AutoCloseable
             .failCounter(mock(AtomicCounter.class))
             .aeronChannel(AERON_CHANNEL)
             .archiver(archiver)
-            .archiveReader(archiveReader)
+            .archiveReaderSupplier(() -> archiveReader)
             .nodeState(nodeState)
             .nodeStateHandler(new NodeIdStasher())
             .nodeHandler(stashingNodeHandler)

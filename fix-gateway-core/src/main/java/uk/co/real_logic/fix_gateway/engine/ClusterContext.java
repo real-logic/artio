@@ -118,7 +118,6 @@ class ClusterContext extends EngineContext
         final int cacheSetSize = configuration.loggerCacheSetSize();
         final String logFileDir = configuration.logFileDir();
 
-        final ArchiveReader dataArchiveReader = archiveReader(dataStream);
         final Archiver archiver = new Archiver(
             newArchiveMetaData(logFileDir), cacheNumSets, cacheSetSize, dataStream, configuration.agentNamePrefix(),
             outboundClusterCompletionPosition());
@@ -129,7 +128,7 @@ class ClusterContext extends EngineContext
             .timeoutIntervalInMs(configuration.clusterTimeoutIntervalInMs())
             .idleStrategy(configuration.framerIdleStrategy())
             .archiver(archiver)
-            .archiveReader(dataArchiveReader)
+            .archiveReaderSupplier(() -> archiveReader(dataStream))
             .failCounter(fixCounters.failedRaftPublications())
             .maxClaimAttempts(configuration.inboundMaxClaimAttempts())
             .copyTo(inboundPublication)

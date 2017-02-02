@@ -19,6 +19,7 @@ import io.aeron.Publication;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 /**
  * Thread-safe constructor of clusterable streams
@@ -29,20 +30,20 @@ class ClusterStreams extends ClusterableStreams
     private final int ourSessionId;
     private final AtomicInteger leaderSessionId;
     private final Publication dataPublication;
-    private final ArchiveReader archiveReader;
+    private final Supplier<ArchiveReader> archiveReaderSupplier;
 
     ClusterStreams(
         final RaftTransport transport,
         final int ourSessionId,
         final AtomicInteger leaderSessionId,
         final Publication dataPublication,
-        final ArchiveReader archiveReader)
+        final Supplier<ArchiveReader> archiveReaderSupplier)
     {
         this.transport = transport;
         this.ourSessionId = ourSessionId;
         this.leaderSessionId = leaderSessionId;
         this.dataPublication = dataPublication;
-        this.archiveReader = archiveReader;
+        this.archiveReaderSupplier = archiveReaderSupplier;
     }
 
     public boolean isLeader()
@@ -62,6 +63,7 @@ class ClusterStreams extends ClusterableStreams
 
     public ClusterSubscription subscription(final int clusterStreamId)
     {
+        final ArchiveReader archiveReader = archiveReaderSupplier.get();
         return new ClusterSubscription(
             transport.dataSubscription(), clusterStreamId, transport.controlSubscription(), archiveReader);
     }

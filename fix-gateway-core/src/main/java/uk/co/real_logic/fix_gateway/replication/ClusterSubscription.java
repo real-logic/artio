@@ -20,9 +20,9 @@ import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
-import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.SessionReader;
 import uk.co.real_logic.fix_gateway.replication.messages.ConsensusHeartbeatDecoder;
@@ -36,6 +36,10 @@ import static java.util.Comparator.comparingLong;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
+/**
+ * Not thread safe, create a new cluster subscription for each thread that wants to read
+ * from the RAFT stream.
+ */
 class ClusterSubscription extends ClusterableSubscription
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
@@ -313,7 +317,7 @@ class ClusterSubscription extends ClusterableSubscription
 
     public void close()
     {
-        CloseHelper.close(dataSubscription);
+        Exceptions.closeAll(dataSubscription, controlSubscription, archiveReader);
     }
 
     private final class MessageFilter implements ControlledFragmentHandler

@@ -24,6 +24,8 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
+import java.util.function.Supplier;
+
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 
@@ -60,7 +62,7 @@ public class ClusterNodeConfiguration
     private AcknowledgementStrategy acknowledgementStrategy;
     private int maxClaimAttempts = DEFAULT_MAX_CLAIM_ATTEMPTS;
     private AtomicCounter failCounter;
-    private ArchiveReader archiveReader;
+    private Supplier<ArchiveReader> archiveReaderSupplier;
     private Archiver archiver;
     private RaftTransport raftTransport = new RaftTransport(this);
     private Publication copyToPublication;
@@ -150,9 +152,9 @@ public class ClusterNodeConfiguration
         return this;
     }
 
-    public ClusterNodeConfiguration archiveReader(final ArchiveReader archiveReader)
+    public ClusterNodeConfiguration archiveReaderSupplier(final Supplier<ArchiveReader> archiveReader)
     {
-        this.archiveReader = archiveReader;
+        this.archiveReaderSupplier = archiveReader;
         return this;
     }
 
@@ -253,9 +255,9 @@ public class ClusterNodeConfiguration
         return failCounter;
     }
 
-    public ArchiveReader archiveReader()
+    public Supplier<ArchiveReader> archiveReaderSupplier()
     {
-        return archiveReader;
+        return archiveReaderSupplier;
     }
 
     public Archiver archiver()
