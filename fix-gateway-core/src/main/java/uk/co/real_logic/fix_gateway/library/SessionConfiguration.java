@@ -70,7 +70,6 @@ public final class SessionConfiguration
         final long timeoutInMs,
         final boolean resetSeqNum)
     {
-        this.resetSeqNum = resetSeqNum;
         Objects.requireNonNull(hosts);
         Objects.requireNonNull(ports);
         Objects.requireNonNull(senderCompId);
@@ -96,6 +95,7 @@ public final class SessionConfiguration
         this.password = password;
         this.sequenceNumbersPersistent = sequenceNumbersPersistent;
         this.initialSequenceNumber = initialSequenceNumber;
+        this.resetSeqNum = resetSeqNum;
     }
 
     private void requireNonEmpty(final List<?> values, final String name)

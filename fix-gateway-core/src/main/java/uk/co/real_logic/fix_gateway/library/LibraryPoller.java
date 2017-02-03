@@ -894,7 +894,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             initiatorInitialSequenceNumber(sessionConfiguration, lastSequenceNumber),
             sequenceIndex,
             state,
-            sessionConfiguration == null ? false : sessionConfiguration.resetSeqNum())
+            sessionConfiguration != null && sessionConfiguration.resetSeqNum())
             .lastReceivedMsgSeqNum(
                 initiatorInitialSequenceNumber(sessionConfiguration, lastReceivedSequenceNumber) - 1);
 
