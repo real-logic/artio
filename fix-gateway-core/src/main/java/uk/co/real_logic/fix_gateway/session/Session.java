@@ -788,6 +788,7 @@ public class Session implements AutoCloseable
         if (lastSentMsgSeqNum() == 1)
         {
             lastReceivedMsgSeqNumOnly(1);
+            setLogonState(heartbeatInterval, username, password);
             // You've received a reply to a resetSeqNumFlag = Y message
             return CONTINUE;
         }

@@ -51,10 +51,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         delete(ACCEPTOR_LOGS);
         delete(CLIENT_LOGS);
         backupLocation = File.createTempFile("backup", "tmp");
-
-        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false, false);
-
-        assertSequenceIndicesAre(0);
     }
 
     @After
@@ -119,7 +115,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT)
     public void sessionsCanBeReset()
     {
-        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, true, false);
+        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, true, false, false);
 
         assertSequenceIndicesAre(0);
     }
@@ -127,12 +123,24 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT)
     public void sequenceNumbersCanBeReset()
     {
-        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 2, false, true);
+        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 2, false, true, false);
 
         assertSequenceIndicesAre(1);
     }
 
-    private void launch(final int initialSequenceNumber, final boolean resetAll, final boolean resetSequenceNumbers)
+    @Test(timeout = TEST_TIMEOUT)
+    public void sequenceNumbersCanBeResetOnLogon()
+    {
+        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, false, false, true);
+
+        assertSequenceIndicesAre(0); // TODO
+    }
+
+    private void launch(
+        final int initialSequenceNumber,
+        final boolean resetAll,
+        final boolean resetSequenceNumbers,
+        final boolean resetSequenceNumbersOnLogon)
     {
         mediaDriver = launchMediaDriver();
 
@@ -176,10 +184,10 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             assertEquals(COMPLETED, acceptingReply.state());
         }
 
-        connectPersistingSessions(initialSequenceNumber);
+        connectPersistingSessions(initialSequenceNumber, resetSequenceNumbersOnLogon);
     }
 
-    private void connectPersistingSessions(final int initialSequenceNumber)
+    private void connectPersistingSessions(final int initialSequenceNumber, final boolean resetSeqNum)
     {
         final SessionConfiguration config = SessionConfiguration.builder()
             .address("localhost", port)
@@ -188,6 +196,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             .targetCompId(ACCEPTOR_ID)
             .sequenceNumbersPersistent(true)
             .initialSequenceNumber(initialSequenceNumber)
+            .resetSeqNum(resetSeqNum)
             .build();
 
         final Reply<Session> reply = initiatingLibrary.initiate(config);
@@ -201,15 +210,19 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private void sequenceNumbersCanPersistOverRestarts(final int initialSequenceNumber)
     {
-        exchangeMessagesAroundARestart(initialSequenceNumber, 4, false, false);
+        exchangeMessagesAroundARestart(initialSequenceNumber, 4, false, false, false);
     }
 
     private void exchangeMessagesAroundARestart(
         final int initialSequenceNumber,
         final int sequNumAfter,
         final boolean resetAll,
-        final boolean resetSequenceNumbers)
+        final boolean resetSequenceNumbers, final boolean resetSequenceNumbersOnLogon)
     {
+        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false, false, resetSequenceNumbersOnLogon);
+
+        assertSequenceIndicesAre(0);
+
         sendTestRequest(initiatingSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
         assertSequenceFromInitToAcceptAt(2, 2);
@@ -224,7 +237,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         clearMessages();
         close();
 
-        launch(initialSequenceNumber, resetAll, resetSequenceNumbers);
+        launch(initialSequenceNumber, resetAll, resetSequenceNumbers, resetSequenceNumbersOnLogon);
 
         assertEquals("initiatedSessionId not stable over restarts", initiatedSessionId, initiatingSession.id());
         assertEquals("acceptingSessionId not stable over restarts", acceptingSessionId, acceptingSession.id());

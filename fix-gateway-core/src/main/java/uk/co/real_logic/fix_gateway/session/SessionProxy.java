@@ -145,14 +145,16 @@ public class SessionProxy
         final int msgSeqNo,
         final String username,
         final String password,
-        final boolean resetSeqNumFlag, final int sequenceIndex)
+        final boolean resetSeqNumFlag,
+        final int sequenceIndex)
     {
         final HeaderEncoder header = logon.header();
         setupHeader(header, msgSeqNo);
 
         logon
             .heartBtInt(heartbeatIntervalInS)
-            .resetSeqNumFlag(resetSeqNumFlag);
+            .resetSeqNumFlag(resetSeqNumFlag)
+            .encryptMethod(0); // may have been previously reset
 
         if (!nullOrEmpty(username))
         {
