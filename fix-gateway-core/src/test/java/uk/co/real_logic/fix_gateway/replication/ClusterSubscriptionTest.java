@@ -67,15 +67,35 @@ public class ClusterSubscriptionTest
     @Before
     public void setUp()
     {
-        when(dataSubscription.imageBySessionId(LEADER)).thenReturn(leaderDataImage);
-        when(dataSubscription.imageBySessionId(OTHER_LEADER)).thenReturn(otherLeaderDataImage);
-        when(dataSubscription.imageBySessionId(THIRD_LEADER)).thenReturn(thirdLeaderDataImage);
+        leaderImageAvailable();
+        otherLeaderImageAvailable();
+        imageAvailable(thirdLeaderDataImage, THIRD_LEADER);
 
         when(handler.onFragment(any(), anyInt(), anyInt(), any())).thenReturn(CONTINUE);
 
         when(header.reservedValue()).thenReturn(ReservedValue.ofClusterStreamId(CLUSTER_STREAM_ID));
 
         when(archiveReader.session(OTHER_LEADER)).thenReturn(otherLeaderArchiveReader);
+    }
+
+    private void otherLeaderImageAvailable()
+    {
+        imageAvailable(otherLeaderDataImage, OTHER_LEADER);
+    }
+
+    private void leaderImageAvailable()
+    {
+        imageAvailable(leaderDataImage, LEADER);
+    }
+
+    private void imageAvailable(final Image image, final int aeronSessionId)
+    {
+        when(dataSubscription.imageBySessionId(aeronSessionId)).thenReturn(image);
+    }
+
+    private void imageNotAvailable(final int aeronSessionId)
+    {
+        imageAvailable(null, aeronSessionId);
     }
 
     @Test
@@ -101,16 +121,54 @@ public class ClusterSubscriptionTest
     @Test
     public void shouldTransitionBetweenLeadersWithDifferentPositionDeltas()
     {
-        final int leaderStreamPosition = 128;
-        onConsensusHeartbeatPoll(1, LEADER, 128, 0, leaderStreamPosition);
-        pollsMessageFragment(leaderDataImage, leaderStreamPosition, CONTINUE);
+        final int firstTermLength = 128;
+        final int firstTermPosition = firstTermLength;
+        final int firstTermStreamPosition = firstTermLength;
+        final int secondTermLength = 256;
+        final int secondTermStreamPosition = secondTermLength;
+        final int secondTermPosition = firstTermPosition + secondTermLength;
 
-        final int otherLeaderStreamPosition = 128;
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, 256, 0, otherLeaderStreamPosition);
-        pollsMessageFragment(otherLeaderDataImage, otherLeaderStreamPosition, CONTINUE);
+        onConsensusHeartbeatPoll(1, LEADER, firstTermPosition, 0, firstTermStreamPosition);
+        pollsMessageFragment(leaderDataImage, firstTermStreamPosition, CONTINUE);
 
-        assertState(2, OTHER_LEADER, otherLeaderStreamPosition);
-        verifyReceivesFragment(leaderStreamPosition, times(2));
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermPosition, 0, secondTermStreamPosition);
+        pollsMessageFragment(otherLeaderDataImage, secondTermStreamPosition, CONTINUE);
+
+        assertState(2, OTHER_LEADER, secondTermStreamPosition);
+        verifyReceivesFragment(firstTermLength);
+        verifyReceivesFragment(secondTermLength);
+        verifyNoOtherFragmentsReceived();
+    }
+
+    @Test
+    public void shouldTransitionBetweenLeadersWithDifferentPositionDeltasWhenDataLagsControl()
+    {
+        imageNotAvailable(LEADER);
+        imageNotAvailable(OTHER_LEADER);
+
+        final int firstTermLength = 128;
+        final int firstTermPosition = firstTermLength;
+        final int firstTermStreamPosition = firstTermLength;
+        final int secondTermLength = 256;
+        final int secondTermStreamPosition = secondTermLength;
+        final int secondTermPosition = firstTermPosition + secondTermLength;
+
+        onConsensusHeartbeatPoll(1, LEADER, firstTermPosition, 0, firstTermStreamPosition);
+        leaderImageAvailable();
+        onConsensusHeartbeatPoll(1, LEADER, firstTermPosition, 0, firstTermStreamPosition);
+
+        pollsMessageFragment(leaderDataImage, firstTermStreamPosition, CONTINUE);
+
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermPosition, 0, secondTermStreamPosition);
+        otherLeaderImageAvailable();
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermPosition, 0, secondTermStreamPosition);
+
+        pollsMessageFragment(otherLeaderDataImage, secondTermStreamPosition, CONTINUE);
+
+        assertState(2, OTHER_LEADER, secondTermStreamPosition);
+        verifyReceivesFragment(firstTermLength);
+        verifyReceivesFragment(secondTermLength);
+        verifyNoOtherFragmentsReceived();
     }
 
     @Test

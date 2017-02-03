@@ -35,6 +35,9 @@ import java.util.PriorityQueue;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.util.Comparator.comparingLong;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
+import static uk.co.real_logic.fix_gateway.replication.ClusterSubscription.Ternary.FAILED;
+import static uk.co.real_logic.fix_gateway.replication.ClusterSubscription.Ternary.FALSE;
+import static uk.co.real_logic.fix_gateway.replication.ClusterSubscription.Ternary.TRUE;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 /**
@@ -87,7 +90,13 @@ class ClusterSubscription extends ClusterableSubscription
 
         if (cannotAdvance())
         {
-            if (!hasMatchingFutureAck())
+            final Ternary hasMatchingFutureAck = hasMatchingFutureAck();
+            if (hasMatchingFutureAck == FAILED)
+            {
+                return 0;
+            }
+
+            if (hasMatchingFutureAck == FALSE)
             {
                 controlSubscription.controlledPoll(onControlMessage, fragmentLimit);
 
@@ -131,7 +140,14 @@ class ClusterSubscription extends ClusterableSubscription
         }
     }
 
-    boolean hasMatchingFutureAck()
+    enum Ternary
+    {
+        TRUE,
+        FALSE,
+        FAILED;
+    }
+
+    Ternary hasMatchingFutureAck()
     {
         final FutureAck ack = futureAcks.peek();
         if (ack != null
@@ -139,13 +155,13 @@ class ClusterSubscription extends ClusterableSubscription
         {
             futureAcks.poll();
 
-            onSwitchTerms(
+            final boolean success = onSwitchTerms(
                 ack.leaderShipTerm, ack.leaderSessionId, ack.startPosition, ack.streamStartPosition(), ack.streamPosition);
 
-            return true;
+            return success ? TRUE : FAILED;
         }
 
-        return false;
+        return FALSE;
     }
 
     private Action onControlMessage(
@@ -233,9 +249,9 @@ class ClusterSubscription extends ClusterableSubscription
             }
             else
             {
-                onSwitchTerms(leaderShipTerm, leaderSessionId, position, streamStartPosition, streamPosition);
-
-                return BREAK;
+                final boolean success = onSwitchTerms(
+                    leaderShipTerm, leaderSessionId, position, streamStartPosition, streamPosition);
+                return success ? BREAK : ABORT;
             }
         }
         else if (leaderShipTerm > currentLeadershipTerm)
@@ -271,7 +287,11 @@ class ClusterSubscription extends ClusterableSubscription
             final boolean nextLeadershipTerm = isNextLeadershipTerm(leaderShipTerm);
             if (nextLeadershipTerm)
             {
-                onSwitchTermUpdateSources(leaderSessionId);
+                // THe new leader's image isn't available yet.
+                if (!onSwitchTermUpdateSources(leaderSessionId))
+                {
+                    return ABORT;
+                }
             }
             // If next chunk needed then just commit the thing immediately
             resendHeader.buffer(bodyBuffer);
@@ -306,23 +326,35 @@ class ClusterSubscription extends ClusterableSubscription
         return action;
     }
 
-    private void onSwitchTerms(
+    private boolean onSwitchTerms(
         final int leaderShipTerm,
         final int leaderSessionId,
         final long position,
         final long streamConsumedPosition,
         final long streamPosition)
     {
-        onSwitchTermUpdateSources(leaderSessionId);
-        onSwitchTermUpdatePositions(leaderShipTerm, position, streamConsumedPosition, streamPosition);
+        final boolean success = onSwitchTermUpdateSources(leaderSessionId);
+        if (success)
+        {
+            onSwitchTermUpdatePositions(leaderShipTerm, position, streamConsumedPosition, streamPosition);
+        }
+        return success;
     }
 
     // Can be retried if update is aborted.
-    private void onSwitchTermUpdateSources(final int leaderSessionId)
+    private boolean onSwitchTermUpdateSources(final int leaderSessionId)
     {
-        dataImage = dataSubscription.imageBySessionId(leaderSessionId);
+        final Image newDataImage = dataSubscription.imageBySessionId(leaderSessionId);
+        if (newDataImage == null)
+        {
+            return false;
+        }
+
+        dataImage = newDataImage;
         resendHeader = new Header(dataImage.initialTermId(), dataImage.termBufferLength());
         leaderArchiveReader = archiveReader.session(leaderSessionId);
+
+        return true;
     }
 
     // Mutates state in a non-abortable way.
