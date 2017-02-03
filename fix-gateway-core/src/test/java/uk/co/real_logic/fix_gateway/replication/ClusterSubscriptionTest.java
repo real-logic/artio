@@ -75,27 +75,7 @@ public class ClusterSubscriptionTest
 
         when(header.reservedValue()).thenReturn(ReservedValue.ofClusterStreamId(CLUSTER_STREAM_ID));
 
-        when(archiveReader.session(OTHER_LEADER)).thenReturn(otherLeaderArchiveReader);
-    }
-
-    private void otherLeaderImageAvailable()
-    {
-        imageAvailable(otherLeaderDataImage, OTHER_LEADER);
-    }
-
-    private void leaderImageAvailable()
-    {
-        imageAvailable(leaderDataImage, LEADER);
-    }
-
-    private void imageAvailable(final Image image, final int aeronSessionId)
-    {
-        when(dataSubscription.imageBySessionId(aeronSessionId)).thenReturn(image);
-    }
-
-    private void imageNotAvailable(final int aeronSessionId)
-    {
-        imageAvailable(null, aeronSessionId);
+        archiveReaderAvailable();
     }
 
     @Test
@@ -419,6 +399,42 @@ public class ClusterSubscriptionTest
     }
 
     @Test
+    public void shouldCommitFromLocalLogWhenArchiverLags()
+    {
+        archiveReaderUnavailable();
+
+        final int firstTermLen = 128;
+        final int secondTermLen = 256;
+        final int thirdTermLen = 384;
+        final int firstTermEnd = firstTermLen;
+        final int secondTermEnd = firstTermEnd + secondTermLen;
+        final long thirdTermStreamStart = secondTermLen;
+        final long thirdTermStreamEnd = thirdTermStreamStart + thirdTermLen;
+
+        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
+        pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
+
+        // You got netsplit when the data was sent out on the main data channel
+        when(otherLeaderDataImage.position()).thenReturn(thirdTermStreamEnd);
+
+        // But the data has been resend and archived by the follower.
+        onResend(secondTermLen, secondTermEnd, thirdTermLen);
+        dataWasArchived(thirdTermStreamStart, thirdTermStreamEnd, CONTINUE);
+
+        onResend(0, firstTermEnd, secondTermLen);
+
+        poll();
+
+        archiveReaderAvailable();
+        poll();
+
+        verifyReceivesFragment(firstTermLen);
+        verifyReceivesFragmentWithAnyHeader(secondTermLen);
+        verifyReceivesFragmentWithAnyHeader(thirdTermLen);
+        verifyNoOtherFragmentsReceived();
+    }
+
+    @Test
     public void shouldCommitResendDataAtStart()
     {
         // You might receive resends out of order, using the raft leader-probing mechanism for resends.
@@ -679,4 +695,44 @@ public class ClusterSubscriptionTest
     {
         verifyNoMoreInteractions(handler);
     }
+
+    private void archiveReaderAvailable()
+    {
+        archiveReader(otherLeaderArchiveReader);
+    }
+
+    private void archiveReaderUnavailable()
+    {
+        archiveReader(null);
+    }
+
+    private void archiveReader(final SessionReader archiveReader)
+    {
+        when(this.archiveReader.session(OTHER_LEADER)).thenReturn(archiveReader);
+    }
+
+    private void otherLeaderImageAvailable()
+    {
+        imageAvailable(otherLeaderDataImage, OTHER_LEADER);
+    }
+
+    private void leaderImageAvailable()
+    {
+        imageAvailable(leaderDataImage, LEADER);
+    }
+
+    private void imageAvailable(final Image image, final int aeronSessionId)
+    {
+        when(dataSubscription.imageBySessionId(aeronSessionId)).thenReturn(image);
+        if (image != null)
+        {
+            when(image.sessionId()).thenReturn(aeronSessionId);
+        }
+    }
+
+    private void imageNotAvailable(final int aeronSessionId)
+    {
+        imageAvailable(null, aeronSessionId);
+    }
+
 }

@@ -102,7 +102,7 @@ class ClusterSubscription extends ClusterableSubscription
 
                 if (cannotAdvance())
                 {
-                    if (leaderArchiveReader != null && appliedBehindConcensus())
+                    if (appliedBehindConcensus() && hasLeaderArchiveReader())
                     {
                         readFromLog();
 
@@ -113,7 +113,7 @@ class ClusterSubscription extends ClusterableSubscription
                 }
             }
 
-            if (cannotAdvance() && leaderArchiveReader != null)
+            if (cannotAdvance() && hasLeaderArchiveReader())
             {
                 readFromLog();
             }
@@ -293,6 +293,7 @@ class ClusterSubscription extends ClusterableSubscription
                     return ABORT;
                 }
             }
+
             // If next chunk needed then just commit the thing immediately
             resendHeader.buffer(bodyBuffer);
             resendHeader.offset(bodyOffset);
@@ -352,9 +353,18 @@ class ClusterSubscription extends ClusterableSubscription
 
         dataImage = newDataImage;
         resendHeader = new Header(dataImage.initialTermId(), dataImage.termBufferLength());
-        leaderArchiveReader = archiveReader.session(leaderSessionId);
 
         return true;
+    }
+
+    private boolean hasLeaderArchiveReader()
+    {
+        if (leaderArchiveReader == null)
+        {
+            leaderArchiveReader = archiveReader.session(dataImage.sessionId());
+        }
+
+        return leaderArchiveReader != null;
     }
 
     // Mutates state in a non-abortable way.

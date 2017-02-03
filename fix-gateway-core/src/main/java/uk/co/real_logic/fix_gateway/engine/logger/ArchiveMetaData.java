@@ -27,9 +27,12 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 
+import static uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder.ENCODED_LENGTH;
+
 public class ArchiveMetaData implements AutoCloseable
 {
     private static final int META_DATA_FILE_SIZE = 8 + ArchiveMetaDataDecoder.BLOCK_LENGTH;
+    private static final int MINIMUM_BUFFER_SIZE = ENCODED_LENGTH + ArchiveMetaDataDecoder.BLOCK_LENGTH;
 
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
@@ -90,9 +93,20 @@ public class ArchiveMetaData implements AutoCloseable
             return null;
         }
 
-        metaDataBuffer.wrap(existingBufferFactory.map(file));
-        headerDecoder.wrap(metaDataBuffer, 0);
-        decoder.wrap(metaDataBuffer, headerDecoder.encodedLength(), headerDecoder.blockLength(), headerDecoder.version());
+        final ByteBuffer buffer = existingBufferFactory.map(file);
+        if (buffer.capacity() < MINIMUM_BUFFER_SIZE)
+        {
+            return null;
+        }
+
+        metaDataBuffer.wrap(buffer);
+
+        int offset = 0;
+        headerDecoder.wrap(metaDataBuffer, offset);
+
+        offset += ENCODED_LENGTH;
+
+        decoder.wrap(metaDataBuffer, offset, headerDecoder.blockLength(), headerDecoder.version());
 
         return decoder;
     }
