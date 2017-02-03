@@ -329,6 +329,13 @@ if (System.properties["uploadArchives"] != null) {
         uploadArchives {
             repositories {
                 mavenDeployer {
+                    snapshotRepository(url: project.ext.repoSnapshotUrl){
+                        authentication(userName: ossrhUsername, password: ossrhPassword)
+                    }
+                    repository(url: project.ext.repoReleaseUrl){
+                        authentication(userName:ossrhUsername, password: ossrhPassword)
+                    }
+
                     pom.project {
                         name = 'Fix Gateway'
                         packaging = 'pom'
