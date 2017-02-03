@@ -51,7 +51,7 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
-import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_CLUSTER;
+import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_CLUSTER_TEST;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
@@ -173,7 +173,7 @@ public class ClusteredGatewaySystemTest
                 return connectedToLeader();
             });
 
-        DebugLogger.log(GATEWAY_CLUSTER, "Library has connected to new leader\n");
+        DebugLogger.log(GATEWAY_CLUSTER_TEST, "Library has connected to new leader\n");
 
         initiatingSession.close();
         acceptingSession.close();
@@ -195,11 +195,11 @@ public class ClusteredGatewaySystemTest
 
         connectFixSession();
 
-        DebugLogger.log(GATEWAY_CLUSTER, "Connected New Fix Session\n");
+        DebugLogger.log(GATEWAY_CLUSTER_TEST, "Connected New Fix Session\n");
 
         roundTripOneMessage(acceptingSession, initiatingOtfAcceptor);
 
-        DebugLogger.log(GATEWAY_CLUSTER, "Message Roundtrip\n");
+        DebugLogger.log(GATEWAY_CLUSTER_TEST, "Message Roundtrip\n");
     }
 
     private Optional<FixEngineRunner> findNewLeader()
@@ -242,7 +242,7 @@ public class ClusteredGatewaySystemTest
     private void logLeader(final FixEngineRunner oldLeader, final String formatString)
     {
         DebugLogger.log(
-            GATEWAY_CLUSTER,
+            GATEWAY_CLUSTER_TEST,
             formatString,
             oldLeader.libraryChannel(),
             oldLeader.configuration().agentNamePrefix());
