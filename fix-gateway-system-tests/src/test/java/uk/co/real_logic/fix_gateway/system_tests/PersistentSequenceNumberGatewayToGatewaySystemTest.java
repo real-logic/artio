@@ -117,6 +117,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, true, false, false);
 
+        // Different sessions themselves, so we start again at 0
         assertSequenceIndicesAre(0);
     }
 
@@ -217,7 +218,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final int initialSequenceNumber,
         final int sequNumAfter,
         final boolean resetAll,
-        final boolean resetSequenceNumbers, final boolean resetSequenceNumbersOnLogon)
+        final boolean resetSequenceNumbers,
+        final boolean resetSequenceNumbersOnLogon)
     {
         launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false, false, resetSequenceNumbersOnLogon);
 
