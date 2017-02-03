@@ -65,6 +65,8 @@ public class ClusteredGatewaySystemTest
 {
     private static final int CLUSTER_SIZE = 3;
 
+    private static final int FRAGMENT_LIMIT = 10;
+
     private int libraryAeronPort = unusedPort();
     private List<FixEngineRunner> cluster;
 
@@ -123,7 +125,7 @@ public class ClusteredGatewaySystemTest
         cleanupMediaDriver(mediaDriver);
     }
 
-    @Test(timeout = 20_000)
+    @Test
     public void shouldExchangeMessagesInCluster()
     {
         connectFixSession();
@@ -143,7 +145,7 @@ public class ClusteredGatewaySystemTest
     }
 
     @Ignore
-    @Test(timeout = 40_000)
+    @Test
     public void shouldExchangeMessagesAfterPartitionHeals()
     {
         connectFixSession();
@@ -235,8 +237,8 @@ public class ClusteredGatewaySystemTest
 
     private void pollLibraries()
     {
-        initiatingLibrary.poll(1);
-        acceptingLibrary.poll(1);
+        initiatingLibrary.poll(FRAGMENT_LIMIT);
+        acceptingLibrary.poll(FRAGMENT_LIMIT);
     }
 
     private void logLeader(final FixEngineRunner oldLeader, final String formatString)
@@ -278,8 +280,8 @@ public class ClusteredGatewaySystemTest
         final long sessionId = acceptingHandler.awaitSessionIdFor(INITIATOR_ID, ACCEPTOR_ID,
             () ->
             {
-                acceptingLibrary.poll(1);
-                initiatingLibrary.poll(1);
+                acceptingLibrary.poll(FRAGMENT_LIMIT);
+                initiatingLibrary.poll(FRAGMENT_LIMIT);
 
                 assertConnectedToLeader();
             },
