@@ -801,13 +801,12 @@ public class Session implements AutoCloseable
         }
         else
         {
-            resendSaveLogon = true;
             lastSentMsgSeqNum(newSeqNum);
             lastReceivedMsgSeqNum(msgSeqNo - 1); // onMessage will check and increment this
             setLogonState(heartbeatInterval, username, password);
+            return null;
         }
 
-        return null;
     }
 
     private void setLogonState(final int heartbeatInterval, final String username, final String password)

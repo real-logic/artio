@@ -28,12 +28,13 @@ import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Predicate;
 
-import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_TEST;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_TYPE;
-import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasResult;
+import static uk.co.real_logic.fix_gateway.system_tests.FixMessage.hasMessageSequenceNumber;
+import static uk.co.real_logic.fix_gateway.system_tests.FixMessage.hasSequenceIndex;
 
 /**
  * An otf acceptor used to accumulate/log/check acceptor interactions.
@@ -151,11 +152,19 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
 
     void allMessagesHaveSequenceIndex(final int sequenceIndex)
     {
-        messages.forEach(message -> assertThat(message.toString(), message, hasSequenceIndex(sequenceIndex)));
+        messages(hasSequenceIndex(sequenceIndex), msg -> true);
     }
 
-    private Matcher<FixMessage> hasSequenceIndex(final int sequenceIndex)
+    void logonMessagesHaveSequenceNumbers(final int sequenceIndex)
     {
-        return hasResult("sequenceIndex", FixMessage::sequenceIndex, equalTo(sequenceIndex));
+        messages(hasMessageSequenceNumber(sequenceIndex), FixMessage::isLogon);
     }
+
+    private void messages(final Matcher<FixMessage> matcher, final Predicate<? super FixMessage> pred)
+    {
+        messages.stream()
+                .filter(pred)
+                .forEach(message -> assertThat(message.toString(), message, matcher));
+    }
+
 }

@@ -134,7 +134,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, false, false, true);
 
-        assertSequenceIndicesAre(0); // TODO
+        acceptingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
+        initiatingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
+        // TODO: assertSequenceIndicesAre(1);
     }
 
     private void launch(

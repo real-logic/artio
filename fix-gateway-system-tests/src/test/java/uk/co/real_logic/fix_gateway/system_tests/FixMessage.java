@@ -16,8 +16,12 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.agrona.collections.Int2ObjectHashMap;
+import org.hamcrest.Matcher;
 import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.session.Session;
+
+import static org.hamcrest.Matchers.equalTo;
+import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasResult;
 
 /**
  * Convenient dumb fix message wrapper for testing purposes.
@@ -28,18 +32,28 @@ public class FixMessage extends Int2ObjectHashMap<String>
     private Session session;
     private int sequenceIndex;
 
-    public FixMessage()
+    FixMessage()
     {
     }
 
-    public String getMsgType()
+    String getMsgType()
     {
         return get(Constants.MSG_TYPE);
     }
 
-    public String getPossDup()
+    boolean isLogon()
+    {
+        return "A".equals(getMsgType());
+    }
+
+    String getPossDup()
     {
         return get(Constants.POSS_DUP_FLAG);
+    }
+
+    String getMessageSequenceNumber()
+    {
+        return get(Constants.MSG_SEQ_NUM);
     }
 
     public Session session()
@@ -57,8 +71,21 @@ public class FixMessage extends Int2ObjectHashMap<String>
         this.sequenceIndex = sequenceIndex;
     }
 
-    public int sequenceIndex()
+    int sequenceIndex()
     {
         return sequenceIndex;
+    }
+
+    static Matcher<FixMessage> hasSequenceIndex(final int sequenceIndex)
+    {
+        return hasResult("sequenceIndex", FixMessage::sequenceIndex, equalTo(sequenceIndex));
+    }
+
+    static Matcher<FixMessage> hasMessageSequenceNumber(final int sequenceNumber)
+    {
+        return hasResult(
+            "messageSequenceNumber",
+            FixMessage::getMessageSequenceNumber,
+            equalTo(String.valueOf(sequenceNumber)));
     }
 }
