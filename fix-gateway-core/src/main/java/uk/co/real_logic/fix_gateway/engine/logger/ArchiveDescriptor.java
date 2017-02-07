@@ -36,7 +36,7 @@ public final class ArchiveDescriptor
         return BitUtil.align(frameLength, FRAME_ALIGNMENT);
     }
 
-    static long alignTerm(final long position)
+    public static long alignTerm(final long position)
     {
         return align(position, FRAME_ALIGNMENT);
     }
