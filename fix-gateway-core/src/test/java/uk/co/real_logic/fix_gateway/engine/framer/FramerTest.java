@@ -771,7 +771,7 @@ public class FramerTest
     {
         return framer.onInitiateConnection(
             LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG",
-            null, null, TRANSIENT, AUTOMATIC_INITIAL_SEQUENCE_NUMBER, "", "", HEARTBEAT_INTERVAL_IN_S, CORR_ID, header);
+            null, null, TRANSIENT, AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false, "", "", HEARTBEAT_INTERVAL_IN_S, CORR_ID, header);
     }
 
     private void aClientConnects() throws IOException

@@ -238,6 +238,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             configuration.targetSubId(),
             configuration.targetLocationId(),
             configuration.sequenceNumberType(),
+            configuration.resetSeqNum(),
             configuration.initialSequenceNumber(),
             configuration.username(),
             configuration.password(),

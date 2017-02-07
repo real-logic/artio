@@ -37,6 +37,7 @@ public interface EngineEndPointHandler
         String targetLocationId,
         SequenceNumberType sequenceNumberType,
         int requestedInitialSequenceNumber,
+        boolean resetSequenceNumber,
         String username,
         String password,
         int heartbeatIntervalInS,

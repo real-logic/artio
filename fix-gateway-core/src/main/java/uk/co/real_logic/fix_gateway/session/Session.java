@@ -427,7 +427,7 @@ public class Session implements AutoCloseable
         return position;
     }
 
-    private void nextSequenceIndex()
+    protected void nextSequenceIndex()
     {
         sequenceIndex++;
     }

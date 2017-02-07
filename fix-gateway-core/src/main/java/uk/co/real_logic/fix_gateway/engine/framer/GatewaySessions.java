@@ -106,7 +106,8 @@ class GatewaySessions
             FixEngine.ENGINE_LIBRARY_ID,
             sessionBufferSize,
             lastSentSequenceNumber + 1,
-            0 // TODO: correct sequence index
+            // This gets set by the receiver end point once the logon message has been received.
+            0
         );
 
         final SessionParser sessionParser = new SessionParser(

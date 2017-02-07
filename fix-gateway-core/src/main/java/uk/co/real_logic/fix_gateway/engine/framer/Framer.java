@@ -466,6 +466,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final String targetLocationId,
         final SequenceNumberType sequenceNumberType,
         final int requestedInitialSequenceNumber,
+        final boolean resetSequenceNumber,
         final String username,
         final String password,
         final int heartbeatIntervalInS,
@@ -501,6 +502,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         targetSubId,
                         targetLocationId,
                         sequenceNumberType,
+                        resetSequenceNumber,
                         username,
                         password,
                         heartbeatIntervalInS,
@@ -530,6 +532,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final String targetSubId,
         final String targetLocationId,
         final SequenceNumberType sequenceNumberType,
+        final boolean resetSequenceNumber,
         final String username,
         final String password,
         final int heartbeatIntervalInS,
@@ -557,7 +560,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 return;
             }
 
-            sessionContext.onLogon(sequenceNumberType == TRANSIENT);
+            sessionContext.onLogon(resetSequenceNumber || sequenceNumberType == TRANSIENT);
             final long sessionId = sessionContext.sessionId();
             final GatewaySession session =
                 setupConnection(

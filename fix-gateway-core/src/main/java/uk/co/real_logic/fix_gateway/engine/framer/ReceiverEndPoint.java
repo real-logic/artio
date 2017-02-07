@@ -345,7 +345,8 @@ class ReceiverEndPoint
             else
             {
                 final PersistenceLevel persistenceLevel = sessionReplicationStrategy.getPersistenceLevel(logon);
-                final boolean resetSeqNum = resetSequenceNumbersUponLogon(persistenceLevel);
+                final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
+                final boolean resetSeqNum = resetSequenceNumbersUponLogon(persistenceLevel) || resetSeqNumFlag;
                 final int sentSequenceNumber = sequenceNumber(sentSequenceNumberIndex, resetSeqNum, sessionId);
                 final int receivedSequenceNumber = sequenceNumber(receivedSequenceNumberIndex, resetSeqNum, sessionId);
                 final String username = SessionParser.username(logon);

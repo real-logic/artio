@@ -465,6 +465,7 @@ public class GatewayPublication extends ClaimablePublication
         final String targetSubId,
         final String targetLocationId,
         final SequenceNumberType sequenceNumberType,
+        final boolean resetSequenceNumber,
         final int requestedInitialSequenceNumber,
         final String username,
         final String password,
@@ -519,6 +520,7 @@ public class GatewayPublication extends ClaimablePublication
             .requestedInitialSequenceNumber(requestedInitialSequenceNumber)
             .sequenceNumberType(sequenceNumberType)
             .heartbeatIntervalInS(heartbeatIntervalInS)
+            .resetSequenceNumber(resetSequenceNumber ? ResetSequenceNumber.YES : ResetSequenceNumber.NO)
             .correlationId(correlationId)
             .putHost(hostBytes, 0, hostBytes.length)
             .putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length)

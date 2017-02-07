@@ -190,6 +190,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             initiateConnection.targetLocationId(),
             initiateConnection.sequenceNumberType(),
             initiateConnection.requestedInitialSequenceNumber(),
+            initiateConnection.resetSequenceNumber() == ResetSequenceNumber.YES,
             initiateConnection.username(),
             initiateConnection.password(),
             initiateConnection.heartbeatIntervalInS(),

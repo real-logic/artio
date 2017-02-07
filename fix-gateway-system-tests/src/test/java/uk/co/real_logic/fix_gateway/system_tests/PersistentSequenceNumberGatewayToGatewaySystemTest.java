@@ -136,7 +136,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         acceptingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
         initiatingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
-        // TODO: assertSequenceIndicesAre(1);
+        assertSequenceIndicesAre(1);
     }
 
     private void launch(
