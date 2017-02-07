@@ -68,11 +68,11 @@ public class ClusteredGatewaySystemTest
     private static final int FRAGMENT_LIMIT = 10;
 
     private int libraryAeronPort = unusedPort();
-    private List<FixEngineRunner> cluster;
+    private List<FixEngineRunner> acceptingCluster;
 
-    private MediaDriver mediaDriver;
     private FixLibrary acceptingLibrary;
 
+    private MediaDriver initiatingMediaDriver;
     private FixEngine initiatingEngine;
     private FixLibrary initiatingLibrary;
 
@@ -89,18 +89,18 @@ public class ClusteredGatewaySystemTest
     @Before
     public void setUp()
     {
-        mediaDriver = launchMediaDriver();
+        initiatingMediaDriver = launchMediaDriver();
 
-        cluster = new ArrayList<>();
+        acceptingCluster = new ArrayList<>();
         // Put them in the collection one by one, because if there's an error initializing
         // a latter runner, this ensures that the earlier ones get closed
-        ids().forEach((ourId) -> cluster.add(new FixEngineRunner(ourId, ids())));
+        ids().forEach((ourId) -> acceptingCluster.add(new FixEngineRunner(ourId, ids())));
 
         final LibraryConfiguration configuration = acceptingLibraryConfig(
             acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, null)
             .replyTimeoutInMs(5_000);
 
-        configuration.libraryAeronChannels(cluster
+        configuration.libraryAeronChannels(acceptingCluster
             .stream()
             .map(FixEngineRunner::libraryChannel)
             .collect(toList()));
@@ -115,6 +115,10 @@ public class ClusteredGatewaySystemTest
         assertNotNull("Unable to connect to any cluster members", acceptingLibrary);
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+
+        configuration
+            .libraryAeronChannels()
+            .forEach(channel -> assertNotEquals(initiatingLibrary.currentAeronChannel(), channel));
     }
 
     @After
@@ -122,7 +126,7 @@ public class ClusteredGatewaySystemTest
     {
         closeLibrariesAndEngine();
 
-        cleanupMediaDriver(mediaDriver);
+        cleanupMediaDriver(initiatingMediaDriver);
     }
 
     @Test
@@ -206,7 +210,7 @@ public class ClusteredGatewaySystemTest
 
     private Optional<FixEngineRunner> findNewLeader()
     {
-        return cluster
+        return acceptingCluster
             .stream()
             .filter((leader) -> leader != this.leader)
             .filter(FixEngineRunner::isLeader)
@@ -303,7 +307,7 @@ public class ClusteredGatewaySystemTest
     private void assertAllClusterNodesHaveArchivedTestRequestMessage(
         final long begin, final long end, final long sessionId)
     {
-        cluster.forEach(
+        acceptingCluster.forEach(
             (runner) ->
             {
                 final EngineConfiguration configuration = runner.configuration();
@@ -340,9 +344,9 @@ public class ClusteredGatewaySystemTest
 
     private void assertAllClusterNodesHaveSameIndexFiles()
     {
-        final FixEngineRunner firstNode = cluster.get(0);
+        final FixEngineRunner firstNode = acceptingCluster.get(0);
         final String logFileDir = firstNode.configuration().logFileDir();
-        cluster.stream().skip(1).forEach(
+        acceptingCluster.stream().skip(1).forEach(
             (runner) ->
             {
                 final String otherLogFileDir = runner.configuration().logFileDir();
@@ -407,11 +411,11 @@ public class ClusteredGatewaySystemTest
         try
         {
             closeAll(acceptingLibrary, initiatingLibrary, initiatingEngine);
-            closeAll(cluster);
+            closeAll(acceptingCluster);
         }
         finally
         {
-            cleanupMediaDriver(mediaDriver);
+            cleanupMediaDriver(initiatingMediaDriver);
         }
     }
 }
