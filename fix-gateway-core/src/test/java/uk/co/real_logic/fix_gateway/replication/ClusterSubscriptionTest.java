@@ -50,6 +50,18 @@ public class ClusterSubscriptionTest
     private static final int OTHER_LEADER = 2;
     private static final int THIRD_LEADER = 3;
 
+    // Standard position points for tests
+    // NB: uses different lengths to identify which leader was being polled in the handler verify
+
+    private static final int FIRST_TERM_LENGTH = 128;
+    private static final int SECOND_TERM_LENGTH = 256;
+    private static final int THIRD_TERM_LENGTH = 384;
+    private static final int FIRST_TERM_END = FIRST_TERM_LENGTH;
+    private static final int SECOND_TERM_END = FIRST_TERM_END + SECOND_TERM_LENGTH;
+    private static final int THIRD_TERM_END = SECOND_TERM_END + THIRD_TERM_LENGTH;
+    private static final int THIRD_TERM_STREAM_END = SECOND_TERM_LENGTH + THIRD_TERM_LENGTH;
+    private static final long THIRD_TERM_STREAM_START = SECOND_TERM_LENGTH;
+
     private Subscription dataSubscription = mock(Subscription.class);
     private Subscription controlSubscription = mock(Subscription.class);
     private Header header = mock(Header.class);
@@ -91,22 +103,18 @@ public class ClusterSubscriptionTest
     @Test
     public void shouldTransitionBetweenLeadersWithDifferentPositionDeltas()
     {
-        final int firstTermLength = 128;
-        final int firstTermPosition = firstTermLength;
-        final int firstTermStreamPosition = firstTermLength;
-        final int secondTermLength = 256;
-        final int secondTermStreamPosition = secondTermLength;
-        final int secondTermPosition = firstTermPosition + secondTermLength;
+        final int firstTermStreamEnd = FIRST_TERM_LENGTH;
+        final int secondTermStreamEnd = SECOND_TERM_LENGTH;
 
-        onConsensusHeartbeatPoll(1, LEADER, firstTermPosition, 0, firstTermStreamPosition);
-        pollsMessageFragment(leaderDataImage, firstTermStreamPosition, CONTINUE);
+        onConsensusHeartbeatPoll(1, LEADER, FIRST_TERM_END, 0, firstTermStreamEnd);
+        pollsMessageFragment(leaderDataImage, firstTermStreamEnd, CONTINUE);
 
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermPosition, 0, secondTermStreamPosition);
-        pollsMessageFragment(otherLeaderDataImage, secondTermStreamPosition, CONTINUE);
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, SECOND_TERM_END, 0, secondTermStreamEnd);
+        pollsMessageFragment(otherLeaderDataImage, secondTermStreamEnd, CONTINUE);
 
-        assertState(2, OTHER_LEADER, secondTermStreamPosition);
-        verifyReceivesFragment(firstTermLength);
-        verifyReceivesFragment(secondTermLength);
+        assertState(2, OTHER_LEADER, secondTermStreamEnd);
+        verifyReceivesFragment(FIRST_TERM_LENGTH);
+        verifyReceivesFragment(SECOND_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
 
@@ -144,121 +152,85 @@ public class ClusterSubscriptionTest
     @Test
     public void shouldStashUpdatesWithGap()
     {
-        final int firstTermLen = 128;
-        final int secondTermLen = 256;
-        final int thirdTermLen = 384;
-        final int firstTermEnd = firstTermLen;
-        final int secondTermEnd = firstTermEnd + secondTermLen;
-        final int thirdTermEnd = secondTermEnd + thirdTermLen;
+        onConsensusHeartbeatPoll(1, LEADER, FIRST_TERM_END, 0, FIRST_TERM_END);
 
-        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermEnd);
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, THIRD_TERM_END, 0, THIRD_TERM_LENGTH);
 
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, thirdTermEnd, 0, thirdTermLen);
-
-        assertState(1, LEADER, firstTermEnd);
+        assertState(1, LEADER, FIRST_TERM_END);
     }
 
     @Test
     public void shouldApplyUpdatesWhenGapFilled()
     {
-        final int firstTermLen = 128;
-        final int secondTermLen = 256;
-        final int thirdTermLen = 384;
-        final int firstTermEnd = firstTermLen;
-        final int secondTermEnd = firstTermEnd + secondTermLen;
-        final int thirdTermEnd = secondTermEnd + thirdTermLen;
-
         shouldStashUpdatesWithGap();
 
-        onConsensusHeartbeatPoll(1, LEADER, secondTermEnd, firstTermEnd, secondTermEnd);
+        onConsensusHeartbeatPoll(1, LEADER, SECOND_TERM_END, FIRST_TERM_END, SECOND_TERM_END);
 
-        assertState(1, LEADER, secondTermEnd);
+        assertState(1, LEADER, SECOND_TERM_END);
 
         clusterSubscription.hasMatchingFutureAck();
 
-        assertState(2, OTHER_LEADER, thirdTermLen);
+        assertState(2, OTHER_LEADER, THIRD_TERM_LENGTH);
     }
 
     @Test
     public void shouldStashUpdatesFromFutureLeadershipTerm()
     {
-        final int firstTermLen = 128;
-        final int secondTermLen = 256;
-        final int thirdTermLen = 384;
-        final int firstTermEnd = firstTermLen;
-        final int secondTermEnd = firstTermEnd + secondTermLen;
-        final int thirdTermEnd = secondTermEnd + thirdTermLen;
+        onConsensusHeartbeatPoll(1, LEADER, FIRST_TERM_END, 0, FIRST_TERM_LENGTH);
 
-        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
+        onConsensusHeartbeatPoll(3, THIRD_LEADER, THIRD_TERM_END, 0, THIRD_TERM_LENGTH);
 
-        onConsensusHeartbeatPoll(3, THIRD_LEADER, thirdTermEnd, 0, thirdTermLen);
-
-        assertState(1, LEADER, firstTermEnd);
+        assertState(1, LEADER, FIRST_TERM_END);
     }
 
     @Test
     public void shouldUpdatePositionFromFutureLeadershipTerm()
     {
-        final int firstTermLen = 128;
-        final int secondTermLen = 256;
-        final int thirdTermLen = 384;
-        final int secondTermEnd = firstTermLen + secondTermLen;
-        final int thirdTermEnd = secondTermEnd + thirdTermLen;
-
         shouldStashUpdatesFromFutureLeadershipTerm();
 
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, SECOND_TERM_END, 0, SECOND_TERM_LENGTH);
 
-        assertState(2, OTHER_LEADER, secondTermLen);
+        assertState(2, OTHER_LEADER, SECOND_TERM_LENGTH);
 
         clusterSubscription.hasMatchingFutureAck();
 
-        assertState(3, THIRD_LEADER, thirdTermLen);
+        assertState(3, THIRD_LEADER, THIRD_TERM_LENGTH);
     }
 
     @Test
     public void shouldCommitUpdatesFromFutureLeadershipTermWithDifferentPositionDeltas()
     {
-        // NB: uses different lengths to identify which leader was being polled in the handler verify
-        final int firstTermLen = 128;
-        final int secondTermLen = 256;
-        final int thirdTermLen = 384;
-        final int firstTermEnd = firstTermLen;
-        final int secondTermEnd = firstTermEnd + secondTermLen;
-        final int thirdTermEnd = secondTermEnd + thirdTermLen;
+        willReceiveConsensusHeartbeat(1, LEADER, FIRST_TERM_END, 0, FIRST_TERM_LENGTH);
+        pollsMessageFragment(leaderDataImage, FIRST_TERM_END, CONTINUE);
 
-        willReceiveConsensusHeartbeat(1, LEADER, firstTermEnd, 0, firstTermLen);
-        pollsMessageFragment(leaderDataImage, firstTermEnd, CONTINUE);
+        onConsensusHeartbeatPoll(3, THIRD_LEADER, THIRD_TERM_END, 0, THIRD_TERM_LENGTH);
 
-        onConsensusHeartbeatPoll(3, THIRD_LEADER, thirdTermEnd, 0, thirdTermLen);
+        willReceiveConsensusHeartbeat(2, OTHER_LEADER, SECOND_TERM_END, 0, SECOND_TERM_LENGTH);
+        pollsMessageFragment(otherLeaderDataImage, SECOND_TERM_LENGTH, CONTINUE);
 
-        willReceiveConsensusHeartbeat(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
-        pollsMessageFragment(otherLeaderDataImage, secondTermLen, CONTINUE);
+        pollsMessageFragment(thirdLeaderDataImage, THIRD_TERM_LENGTH, CONTINUE);
 
-        pollsMessageFragment(thirdLeaderDataImage, thirdTermLen, CONTINUE);
-
-        verifyReceivesFragment(firstTermLen);
-        verifyReceivesFragment(secondTermLen);
-        verifyReceivesFragment(thirdTermLen);
+        verifyReceivesFragment(FIRST_TERM_LENGTH);
+        verifyReceivesFragment(SECOND_TERM_LENGTH);
+        verifyReceivesFragment(THIRD_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
 
     @Test
     public void shouldIgnoreUnagreedDataFromFormerLeadersPublication()
     {
-        final int firstTermLen = 128;
         final int unagreedDataLen = 64;
         final int secondTermLen = 256;
         final int thirdTermLen = 384;
-        final int firstTermEnd = firstTermLen;
+        final int firstTermEnd = FIRST_TERM_LENGTH;
         final int secondTermEnd = firstTermEnd + secondTermLen;
         final int thirdTermEnd = secondTermEnd + thirdTermLen;
-        final int unagreedDataEnd = firstTermLen + unagreedDataLen;
+        final int unagreedDataEnd = FIRST_TERM_LENGTH + unagreedDataLen;
         final int thirdTermStreamStart = unagreedDataEnd;
         final int thirdTermStreamEnd = thirdTermStreamStart + thirdTermLen;
 
-        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
-        pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
+        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, FIRST_TERM_LENGTH);
+        pollsMessageFragment(leaderDataImage, FIRST_TERM_LENGTH, CONTINUE);
 
         onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
         pollsMessageFragment(otherLeaderDataImage, secondTermLen, CONTINUE);
@@ -267,7 +239,7 @@ public class ClusterSubscriptionTest
         pollsMessageFragment(leaderDataImage, unagreedDataEnd, unagreedDataLen, CONTINUE);
         pollsMessageFragment(leaderDataImage, thirdTermStreamEnd, thirdTermLen, CONTINUE);
 
-        verifyReceivesFragment(firstTermLen);
+        verifyReceivesFragment(FIRST_TERM_LENGTH);
         verifyReceivesFragment(secondTermLen);
         verifyReceivesFragment(thirdTermLen);
         verifyNoOtherFragmentsReceived();
@@ -299,97 +271,70 @@ public class ClusterSubscriptionTest
     @Test
     public void shouldCommitResendDataIfNextThingInStream()
     {
-        final int firstTermLen = 128;
-        final int secondTermLen = 256;
-        final int thirdTermLen = 384;
-        final int firstTermEnd = firstTermLen;
-        final int secondTermEnd = firstTermEnd + secondTermLen;
+        onConsensusHeartbeatPoll(1, LEADER, FIRST_TERM_END, 0, FIRST_TERM_LENGTH);
+        pollsMessageFragment(leaderDataImage, FIRST_TERM_END, CONTINUE);
 
-        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
-        pollsMessageFragment(leaderDataImage, firstTermEnd, CONTINUE);
+        onResend(0, FIRST_TERM_END, SECOND_TERM_LENGTH);
+        onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
 
-        onResend(0, firstTermEnd, secondTermLen);
-        onResend(secondTermLen, secondTermEnd, thirdTermLen);
-
-        verifyReceivesFragment(firstTermLen);
-        verifyReceivesFragmentWithAnyHeader(secondTermLen);
-        verifyReceivesFragmentWithAnyHeader(thirdTermLen);
+        verifyReceivesFragment(FIRST_TERM_LENGTH);
+        verifyReceivesFragmentWithAnyHeader(SECOND_TERM_LENGTH);
+        verifyReceivesFragmentWithAnyHeader(THIRD_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
 
     @Test
     public void shouldNotReceiveResendDataTwiceResendFirst()
     {
-        final int firstTermLen = 128;
-        final int secondTermLen = 256;
-        final int thirdTermLen = 384;
-        final int firstTermEnd = firstTermLen;
-        final int secondTermEnd = firstTermEnd + secondTermLen;
+        onConsensusHeartbeatPoll(1, LEADER, FIRST_TERM_END, 0, FIRST_TERM_LENGTH);
+        pollsMessageFragment(leaderDataImage, FIRST_TERM_LENGTH, CONTINUE);
 
-        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
-        pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
+        onResend(0, FIRST_TERM_END, SECOND_TERM_LENGTH);
 
-        onResend(0, firstTermEnd, secondTermLen);
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, SECOND_TERM_END, 0, SECOND_TERM_LENGTH);
+        pollsMessageFragment(otherLeaderDataImage, SECOND_TERM_LENGTH, CONTINUE);
 
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
-        pollsMessageFragment(otherLeaderDataImage, secondTermLen, CONTINUE);
+        onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
 
-        onResend(secondTermLen, secondTermEnd, thirdTermLen);
-
-        verifyReceivesFragment(firstTermLen);
-        verifyReceivesFragmentWithAnyHeader(secondTermLen);
-        verifyReceivesFragmentWithAnyHeader(thirdTermLen);
+        verifyReceivesFragment(FIRST_TERM_LENGTH);
+        verifyReceivesFragmentWithAnyHeader(SECOND_TERM_LENGTH);
+        verifyReceivesFragmentWithAnyHeader(THIRD_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
 
     @Test
     public void shouldNotReceiveResendDataTwiceHeartbeatFirst()
     {
-        final int firstTermLen = 128;
-        final int secondTermLen = 256;
-        final int thirdTermLen = 384;
-        final int firstTermEnd = firstTermLen;
-        final int secondTermEnd = firstTermEnd + secondTermLen;
+        onConsensusHeartbeatPoll(1, LEADER, FIRST_TERM_END, 0, FIRST_TERM_LENGTH);
+        pollsMessageFragment(leaderDataImage, FIRST_TERM_LENGTH, CONTINUE);
 
-        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
-        pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, SECOND_TERM_END, 0, SECOND_TERM_LENGTH);
+        pollsMessageFragment(otherLeaderDataImage, SECOND_TERM_LENGTH, CONTINUE);
 
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
-        pollsMessageFragment(otherLeaderDataImage, secondTermLen, CONTINUE);
+        onResend(0, FIRST_TERM_END, SECOND_TERM_LENGTH);
 
-        onResend(0, firstTermEnd, secondTermLen);
+        onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
 
-        onResend(secondTermLen, secondTermEnd, thirdTermLen);
-
-        verifyReceivesFragment(firstTermLen);
-        verifyReceivesFragmentWithAnyHeader(secondTermLen);
-        verifyReceivesFragmentWithAnyHeader(thirdTermLen);
+        verifyReceivesFragment(FIRST_TERM_LENGTH);
+        verifyReceivesFragmentWithAnyHeader(SECOND_TERM_LENGTH);
+        verifyReceivesFragmentWithAnyHeader(THIRD_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
 
     @Test
     public void shouldContinueToReceiveNormalDataAfterAResend()
     {
-        // 2nd and third chunks really same term from OTHER_LEADER
-        final int firstTermLen = 128;
-        final int secondTermLen = 256;
-        final int thirdTermLen = 384;
-        final int firstTermEnd = firstTermLen;
-        final int secondTermEnd = firstTermEnd + secondTermLen;
-        final int thirdTermEnd = secondTermEnd + thirdTermLen;
-        final int thirdTermStreamEnd = secondTermLen + thirdTermLen;
+        onConsensusHeartbeatPoll(1, LEADER, FIRST_TERM_END, 0, FIRST_TERM_LENGTH);
+        pollsMessageFragment(leaderDataImage, FIRST_TERM_LENGTH, CONTINUE);
 
-        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
-        pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
+        onResend(0, FIRST_TERM_END, SECOND_TERM_LENGTH);
 
-        onResend(0, firstTermEnd, secondTermLen);
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, THIRD_TERM_END, SECOND_TERM_LENGTH, THIRD_TERM_STREAM_END);
+        pollsMessageFragment(otherLeaderDataImage, THIRD_TERM_STREAM_END, THIRD_TERM_LENGTH, CONTINUE);
 
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, thirdTermEnd, secondTermLen, thirdTermStreamEnd);
-        pollsMessageFragment(otherLeaderDataImage, thirdTermStreamEnd, thirdTermLen, CONTINUE);
-
-        verifyReceivesFragment(firstTermLen);
-        verifyReceivesFragmentWithAnyHeader(secondTermLen);
-        verifyReceivesFragment(thirdTermLen);
+        verifyReceivesFragment(FIRST_TERM_LENGTH);
+        verifyReceivesFragmentWithAnyHeader(SECOND_TERM_LENGTH);
+        verifyReceivesFragment(THIRD_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
 
@@ -397,31 +342,24 @@ public class ClusterSubscriptionTest
     public void shouldCommitFromLocalLogIfGapInSubscription()
     {
         // You might receive resends out of order, using the raft leader-probing mechanism for resends.
-        final int firstTermLen = 128;
-        final int secondTermLen = 256;
-        final int thirdTermLen = 384;
-        final int firstTermEnd = firstTermLen;
-        final int secondTermEnd = firstTermEnd + secondTermLen;
-        final long thirdTermStreamStart = secondTermLen;
-        final long thirdTermStreamEnd = thirdTermStreamStart + thirdTermLen;
 
-        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
-        pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
+        onConsensusHeartbeatPoll(1, LEADER, FIRST_TERM_END, 0, FIRST_TERM_LENGTH);
+        pollsMessageFragment(leaderDataImage, FIRST_TERM_LENGTH, CONTINUE);
 
         // You got netsplit when the data was sent out on the main data channel
-        when(otherLeaderDataImage.position()).thenReturn(thirdTermStreamEnd);
+        when(otherLeaderDataImage.position()).thenReturn((long) THIRD_TERM_STREAM_END);
 
         // But the data has been resend and archived by the follower.
-        onResend(secondTermLen, secondTermEnd, thirdTermLen);
-        dataWasArchived(thirdTermStreamStart, thirdTermStreamEnd, CONTINUE);
+        onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
+        dataWasArchived(THIRD_TERM_STREAM_START, THIRD_TERM_STREAM_END, CONTINUE);
 
-        onResend(0, firstTermEnd, secondTermLen);
+        onResend(0, FIRST_TERM_END, SECOND_TERM_LENGTH);
 
         poll();
 
-        verifyReceivesFragment(firstTermLen);
-        verifyReceivesFragmentWithAnyHeader(secondTermLen);
-        verifyReceivesFragmentWithAnyHeader(thirdTermLen);
+        verifyReceivesFragment(FIRST_TERM_LENGTH);
+        verifyReceivesFragmentWithAnyHeader(SECOND_TERM_LENGTH);
+        verifyReceivesFragmentWithAnyHeader(THIRD_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
 
@@ -430,34 +368,26 @@ public class ClusterSubscriptionTest
     {
         archiveReaderUnavailable();
 
-        final int firstTermLen = 128;
-        final int secondTermLen = 256;
-        final int thirdTermLen = 384;
-        final int firstTermEnd = firstTermLen;
-        final int secondTermEnd = firstTermEnd + secondTermLen;
-        final long thirdTermStreamStart = secondTermLen;
-        final long thirdTermStreamEnd = thirdTermStreamStart + thirdTermLen;
-
-        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
-        pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
+        onConsensusHeartbeatPoll(1, LEADER, FIRST_TERM_END, 0, FIRST_TERM_LENGTH);
+        pollsMessageFragment(leaderDataImage, FIRST_TERM_LENGTH, CONTINUE);
 
         // You got netsplit when the data was sent out on the main data channel
-        when(otherLeaderDataImage.position()).thenReturn(thirdTermStreamEnd);
+        when(otherLeaderDataImage.position()).thenReturn((long) THIRD_TERM_STREAM_END);
 
         // But the data has been resend and archived by the follower.
-        onResend(secondTermLen, secondTermEnd, thirdTermLen);
-        dataWasArchived(thirdTermStreamStart, thirdTermStreamEnd, CONTINUE);
+        onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
+        dataWasArchived(THIRD_TERM_STREAM_START, THIRD_TERM_STREAM_END, CONTINUE);
 
-        onResend(0, firstTermEnd, secondTermLen);
+        onResend(0, FIRST_TERM_END, SECOND_TERM_LENGTH);
 
         poll();
 
         archiveReaderAvailable();
         poll();
 
-        verifyReceivesFragment(firstTermLen);
-        verifyReceivesFragmentWithAnyHeader(secondTermLen);
-        verifyReceivesFragmentWithAnyHeader(thirdTermLen);
+        verifyReceivesFragment(FIRST_TERM_LENGTH);
+        verifyReceivesFragmentWithAnyHeader(SECOND_TERM_LENGTH);
+        verifyReceivesFragmentWithAnyHeader(THIRD_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
 
@@ -465,20 +395,15 @@ public class ClusterSubscriptionTest
     public void shouldCommitResendDataAtStart()
     {
         // You might receive resends out of order, using the raft leader-probing mechanism for resends.
-        final int firstTermLen = 128;
-        final int secondTermLen = 256;
-        final int firstTermEnd = firstTermLen;
-        final int secondTermEnd = firstTermEnd + secondTermLen;
-
         poll();
         when(otherLeaderDataImage.position()).thenReturn(0L);
-        onResend(1, 0, 0, firstTermLen, CONTINUE);
+        onResend(1, 0, 0, FIRST_TERM_LENGTH, CONTINUE);
 
-        onConsensusHeartbeatPoll(2, LEADER, secondTermEnd, 0, secondTermLen);
-        pollsMessageFragment(leaderDataImage, secondTermLen, CONTINUE);
+        onConsensusHeartbeatPoll(2, LEADER, SECOND_TERM_END, 0, SECOND_TERM_LENGTH);
+        pollsMessageFragment(leaderDataImage, SECOND_TERM_LENGTH, CONTINUE);
 
-        verifyReceivesFragmentWithAnyHeader(firstTermLen);
-        verifyReceivesFragment(secondTermLen);
+        verifyReceivesFragmentWithAnyHeader(FIRST_TERM_LENGTH);
+        verifyReceivesFragment(SECOND_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
 
@@ -487,41 +412,33 @@ public class ClusterSubscriptionTest
     @Test
     public void shouldPollDataWhenBackPressured()
     {
-        final int firstTermLen = 128;
-        final int firstTermStreamPosition = firstTermLen;
-        final int firstTermPosition = firstTermLen;
+        final int firstTermStreamEnd = FIRST_TERM_LENGTH;
 
         backPressureNextCommit();
 
         willReceiveConsensusHeartbeat(
-            1, LEADER, firstTermPosition, 0, firstTermStreamPosition);
-        pollsMessageFragment(leaderDataImage, firstTermLen, ABORT);
-        pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
+            1, LEADER, FIRST_TERM_END, 0, firstTermStreamEnd);
+        pollsMessageFragment(leaderDataImage, FIRST_TERM_LENGTH, ABORT);
+        pollsMessageFragment(leaderDataImage, FIRST_TERM_LENGTH, CONTINUE);
 
-        verifyReceivesFragment(firstTermLen, times(2));
+        verifyReceivesFragment(FIRST_TERM_LENGTH, times(2));
         verifyNoOtherFragmentsReceived();
     }
 
     @Test
     public void shouldCommitResendDataIfNextThingInStreamWhenBackPressured()
     {
-        final int firstTermLen = 128;
-        final int secondTermLen = 256;
-        final int thirdTermLen = 384;
-        final int firstTermEnd = firstTermLen;
-        final int secondTermEnd = firstTermEnd + secondTermLen;
-
-        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
-        pollsMessageFragment(leaderDataImage, firstTermEnd, CONTINUE);
+        onConsensusHeartbeatPoll(1, LEADER, FIRST_TERM_END, 0, FIRST_TERM_LENGTH);
+        pollsMessageFragment(leaderDataImage, FIRST_TERM_END, CONTINUE);
 
         backPressureNextCommit();
-        onResend(2, (long)0, firstTermEnd, secondTermLen, ABORT);
-        onResend(0, firstTermEnd, secondTermLen);
-        onResend(secondTermLen, secondTermEnd, thirdTermLen);
+        onResend(2, (long)0, FIRST_TERM_END, SECOND_TERM_LENGTH, ABORT);
+        onResend(0, FIRST_TERM_END, SECOND_TERM_LENGTH);
+        onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
 
-        verifyReceivesFragment(firstTermLen);
-        verifyReceivesFragmentWithAnyHeader(secondTermLen, times(2));
-        verifyReceivesFragmentWithAnyHeader(thirdTermLen);
+        verifyReceivesFragment(FIRST_TERM_LENGTH);
+        verifyReceivesFragmentWithAnyHeader(SECOND_TERM_LENGTH, times(2));
+        verifyReceivesFragmentWithAnyHeader(THIRD_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
 
@@ -529,36 +446,28 @@ public class ClusterSubscriptionTest
     public void shouldCommitFromLocalLogIfGapInSubscriptionWhenBackPressured()
     {
         // You might receive resends out of order, using the raft leader-probing mechanism for resends.
-        final int firstTermLen = 128;
-        final int secondTermLen = 256;
-        final int thirdTermLen = 384;
-        final int firstTermEnd = firstTermLen;
-        final int secondTermEnd = firstTermEnd + secondTermLen;
-        final long thirdTermStreamStart = secondTermLen;
-        final long thirdTermStreamEnd = thirdTermStreamStart + thirdTermLen;
-
-        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
-        pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
+        onConsensusHeartbeatPoll(1, LEADER, FIRST_TERM_END, 0, FIRST_TERM_LENGTH);
+        pollsMessageFragment(leaderDataImage, FIRST_TERM_LENGTH, CONTINUE);
 
         // You got netsplit when the data was sent out on the main data channel
-        when(otherLeaderDataImage.position()).thenReturn(thirdTermStreamEnd);
+        when(otherLeaderDataImage.position()).thenReturn((long) THIRD_TERM_STREAM_END);
 
         // But the data has been resend and archived by the follower.
-        onResend(secondTermLen, secondTermEnd, thirdTermLen);
+        onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
 
-        onResend(0, firstTermEnd, secondTermLen);
+        onResend(0, FIRST_TERM_END, SECOND_TERM_LENGTH);
 
         backPressureNextCommit();
 
-        dataWasArchived(thirdTermStreamStart, thirdTermStreamEnd, ABORT);
+        dataWasArchived(THIRD_TERM_STREAM_START, THIRD_TERM_STREAM_END, ABORT);
         poll();
 
-        dataWasArchived(thirdTermStreamStart, thirdTermStreamEnd, CONTINUE);
+        dataWasArchived(THIRD_TERM_STREAM_START, THIRD_TERM_STREAM_END, CONTINUE);
         poll();
 
-        verifyReceivesFragment(firstTermLen);
-        verifyReceivesFragmentWithAnyHeader(secondTermLen);
-        verifyReceivesFragmentWithAnyHeader(thirdTermLen, times(2));
+        verifyReceivesFragment(FIRST_TERM_LENGTH);
+        verifyReceivesFragmentWithAnyHeader(SECOND_TERM_LENGTH);
+        verifyReceivesFragmentWithAnyHeader(THIRD_TERM_LENGTH, times(2));
         verifyNoOtherFragmentsReceived();
     }
 
