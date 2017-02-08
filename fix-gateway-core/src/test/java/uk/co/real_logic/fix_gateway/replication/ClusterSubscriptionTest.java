@@ -23,7 +23,6 @@ import io.aeron.logbuffer.Header;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.verification.VerificationMode;
@@ -169,17 +168,6 @@ public class ClusterSubscriptionTest
     @Test
     public void shouldStashUpdatesFromFutureLeadershipTerm()
     {
-        onConsensusHeartbeatPoll(1, LEADER, 1, 0, 1);
-
-        onConsensusHeartbeatPoll(3, THIRD_LEADER, 4, 2, 4);
-
-        assertState(1, LEADER, 1);
-    }
-
-    @Ignore // TODO
-    @Test
-    public void shouldUpdatePositionFromFutureLeadershipTerm()
-    {
         final int firstTermLen = 128;
         final int secondTermLen = 256;
         final int thirdTermLen = 384;
@@ -187,15 +175,31 @@ public class ClusterSubscriptionTest
         final int secondTermEnd = firstTermEnd + secondTermLen;
         final int thirdTermEnd = secondTermEnd + thirdTermLen;
 
+        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermLen);
+
+        onConsensusHeartbeatPoll(3, THIRD_LEADER, thirdTermEnd, 0, thirdTermLen);
+
+        assertState(1, LEADER, firstTermEnd);
+    }
+
+    @Test
+    public void shouldUpdatePositionFromFutureLeadershipTerm()
+    {
+        final int firstTermLen = 128;
+        final int secondTermLen = 256;
+        final int thirdTermLen = 384;
+        final int secondTermEnd = firstTermLen + secondTermLen;
+        final int thirdTermEnd = secondTermEnd + thirdTermLen;
+
         shouldStashUpdatesFromFutureLeadershipTerm();
 
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, 2, 1, 2);
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
 
-        assertState(2, OTHER_LEADER, 2);
+        assertState(2, OTHER_LEADER, secondTermEnd);
 
         clusterSubscription.hasMatchingFutureAck();
 
-        assertState(3, THIRD_LEADER, 4);
+        assertState(3, THIRD_LEADER, thirdTermEnd);
     }
 
     @Test
