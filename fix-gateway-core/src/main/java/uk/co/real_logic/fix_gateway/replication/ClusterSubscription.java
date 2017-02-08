@@ -160,13 +160,16 @@ class ClusterSubscription extends ClusterableSubscription
     Ternary hasMatchingFutureAck()
     {
         final FutureAck ack = futureAcks.peek();
-        if (ack != null
-            && previousConsensusPosition == ack.startPosition)
+        if (ack != null && previousConsensusPosition == ack.startPosition)
         {
             futureAcks.poll();
 
             final boolean success = onSwitchTerms(
-                ack.leaderShipTerm, ack.leaderSessionId, ack.startPosition, ack.streamStartPosition(), ack.streamPosition);
+                ack.leaderShipTerm,
+                ack.leaderSessionId,
+                ack.startPosition,
+                ack.streamStartPosition(),
+                ack.streamPosition);
 
             return success ? TRUE : FAILED;
         }
@@ -174,6 +177,7 @@ class ClusterSubscription extends ClusterableSubscription
         return FALSE;
     }
 
+    @SuppressWarnings("FinalParameters")
     private Action onControlMessage(
         final DirectBuffer buffer,
         int offset,
@@ -442,7 +446,7 @@ class ClusterSubscription extends ClusterableSubscription
             // We never have to deal with the case where a message fragment spans over the end of a leadership term
             // - they are aligned.
 
-            // Concensus hasn't been reached for this message.
+            // Consensus hasn't been reached for this message.
             if (headerPosition > streamConsensusPosition)
             {
                 return ABORT;

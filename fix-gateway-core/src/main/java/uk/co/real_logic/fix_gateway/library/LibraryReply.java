@@ -64,7 +64,7 @@ abstract class LibraryReply<T> implements Reply<T>
         return state;
     }
 
-    void onComplete(T result)
+    void onComplete(final T result)
     {
         this.result = result;
         state = State.COMPLETED;

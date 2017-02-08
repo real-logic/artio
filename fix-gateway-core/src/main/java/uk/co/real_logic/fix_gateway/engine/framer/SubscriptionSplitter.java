@@ -77,7 +77,7 @@ class SubscriptionSplitter implements ControlledFragmentHandler
         this.replicatedConnectionIds = replicatedConnectionIds;
     }
 
-    public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
+    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         final MessageHeaderDecoder messageHeaderDecoder = this.messageHeaderDecoder;
 
@@ -99,9 +99,10 @@ class SubscriptionSplitter implements ControlledFragmentHandler
 
                     final long connection = fixMessage.connection();
                     final int libraryId = fixMessage.libraryId();
-                    return onReplicatedMessage(
-                        buffer, offset, length, header, connection, libraryId);
+
+                    return onReplicatedMessage(buffer, offset, length, header, connection, libraryId);
                 }
+
                 case DisconnectDecoder.TEMPLATE_ID:
                 {
                     final DisconnectDecoder disconnect = this.disconnect;
@@ -109,8 +110,8 @@ class SubscriptionSplitter implements ControlledFragmentHandler
 
                     final long connection = disconnect.connection();
                     final int libraryId = disconnect.libraryId();
-                    return onReplicatedMessage(
-                        buffer, offset, length, header, connection, libraryId);
+
+                    return onReplicatedMessage(buffer, offset, length, header, connection, libraryId);
                 }
 
                 default:
@@ -162,14 +163,14 @@ class SubscriptionSplitter implements ControlledFragmentHandler
         }
     }
 
-    private Action replicateMessage(final DirectBuffer buffer,
-                                    final int offset,
-                                    final int length,
-                                    final Header header,
-                                    final int libraryId)
+    private Action replicateMessage(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final Header header,
+        final int libraryId)
     {
-        final int requiredLength =
-            HEADER_LENGTH + ReplicatedMessageEncoder.BLOCK_LENGTH + length;
+        final int requiredLength = HEADER_LENGTH + ReplicatedMessageEncoder.BLOCK_LENGTH + length;
         final long position = clusterPublication.tryClaim(requiredLength, bufferClaim);
         if (position < 0)
         {

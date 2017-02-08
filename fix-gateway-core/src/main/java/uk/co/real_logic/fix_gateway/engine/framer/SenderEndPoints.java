@@ -86,6 +86,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         return CONTINUE;
     }
 
+    @SuppressWarnings("FinalParameters")
     public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
         messageHeader.wrap(buffer, offset);

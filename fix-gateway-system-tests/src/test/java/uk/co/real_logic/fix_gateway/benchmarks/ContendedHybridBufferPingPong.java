@@ -26,13 +26,12 @@ import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.*;
 
 public final class ContendedHybridBufferPingPong extends AbstractContendedPingPong
 {
-
     private final FileChannel writeChannel = newFile("ping");
     private final MappedByteBuffer mappedWriteBuffer;
 
     private final ByteBuffer readResponseBuffer = ByteBuffer.allocateDirect(MESSAGE_SIZE);
 
-    public static void main(String[] args) throws Exception
+    public static void main(final String[] args) throws Exception
     {
         new ContendedHybridBufferPingPong().benchmark();
     }

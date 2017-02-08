@@ -76,17 +76,17 @@ subprojects {
     }
 
     dependencies {
-        checkstyle 'com.puppycrawl.tools:checkstyle:7.4'
+        checkstyle 'com.puppycrawl.tools:checkstyle:7.5.1'
         checkstyle "com.github.sevntu.checkstyle:sevntu-checks:1.23.0"
 
         testCompile 'org.hamcrest:hamcrest-all:1.3',
-                'junit:junit:4.12',
-                'org.mockito:mockito-core:2.6.8'
+            'junit:junit:4.12',
+            'org.mockito:mockito-core:2.6.8'
     }
 
     checkstyle {
         configFile = new File(rootDir, 'config/checkstyle/checkstyle.xml')
-        toolVersion = "7.4"
+        toolVersion = "7.5.1"
     }
 
     test {
@@ -97,9 +97,9 @@ subprojects {
             afterSuite { desc, result ->
                 if (!desc.parent) {
                     println "Results: ${result.resultType} (${result.testCount} tests, " +
-                            "${result.successfulTestCount} successes, " +
-                            "${result.failedTestCount} failures, " +
-                            "${result.skippedTestCount} skipped)"
+                        "${result.successfulTestCount} successes, " +
+                        "${result.failedTestCount} failures, " +
+                        "${result.skippedTestCount} skipped)"
                 }
             }
         }
@@ -108,15 +108,13 @@ subprojects {
         systemProperty "fix.core.debug", System.getProperty("fix.core.debug")
 
         beforeTest { desc ->
-            if (System.properties["printTestNames"] != null)
-            {
+            if (System.properties["printTestNames"] != null) {
                 print "Executing test ${desc.name} [${desc.className}]"
             }
         }
 
         afterTest { desc, result ->
-            if (System.properties["printTestNames"] != null)
-            {
+            if (System.properties["printTestNames"] != null) {
                 println " with result: ${result.resultType}"
             }
         }
@@ -175,13 +173,13 @@ project(':fix-gateway-codecs') {
     compileGeneratedJava.dependsOn 'generateMessages'
     compileGeneratedJava.classpath += sourceSets.main.runtimeClasspath
 
-    task (generateMessages, type: JavaExec) {
+    task(generateMessages, type: JavaExec) {
         main = 'uk.co.real_logic.sbe.SbeTool'
         classpath = sourceSets.main.runtimeClasspath
         systemProperties('sbe.output.dir': generatedDir,
-                'sbe.target.language': 'Java',
-                'sbe.validation.stop.on.error': 'true',
-                'sbe.validation.xsd': validationXsdPath)
+            'sbe.target.language': 'Java',
+            'sbe.validation.stop.on.error': 'true',
+            'sbe.validation.xsd': validationXsdPath)
         args = [
             'src/main/resources/uk/co/real_logic/fix_gateway/messages/message-schema.xml',
             'src/main/resources/uk/co/real_logic/fix_gateway/replication/replication-message-schema.xml',
@@ -213,7 +211,7 @@ project(':fix-gateway-session-codecs') {
     compileGeneratedJava.dependsOn 'generateCodecs'
     compileGeneratedJava.classpath += sourceSets.main.runtimeClasspath
 
-    task (generateCodecs, type: JavaExec) {
+    task(generateCodecs, type: JavaExec) {
         main = 'uk.co.real_logic.fix_gateway.dictionary.CodecGenerationTool'
         classpath = sourceSets.main.runtimeClasspath
         args = [generatedDir, 'src/main/resources/session_dictionary.xml']
@@ -273,18 +271,18 @@ project(':fix-gateway-system-tests') {
 
     dependencies {
         testCompile project(path: ':fix-gateway-core', configuration: 'tests'),
-                    project(path: ':fix-gateway-codecs', configuration: 'tests')
+            project(path: ':fix-gateway-codecs', configuration: 'tests')
 
         compile project(path: ':fix-gateway-core'),
-                "io.aeron:aeron-client:${aeronVersion}"
+            "io.aeron:aeron-client:${aeronVersion}"
 
         perfCompile project,
-                    'org.openjdk.jmh:jmh-core:1.17.4',
-                    'org.openjdk.jmh:jmh-generator-annprocess:1.17.4'
+            'org.openjdk.jmh:jmh-core:1.17.4',
+            'org.openjdk.jmh:jmh-generator-annprocess:1.17.4'
     }
 
     idea.module {
-        scopes.COMPILE.plus += [ configurations.perfCompile ]
+        scopes.COMPILE.plus += [configurations.perfCompile]
     }
 
     task benchmarks(dependsOn: perfClasses) {
@@ -329,11 +327,11 @@ if (System.properties["uploadArchives"] != null) {
         uploadArchives {
             repositories {
                 mavenDeployer {
-                    snapshotRepository(url: project.ext.repoSnapshotUrl){
+                    snapshotRepository(url: project.ext.repoSnapshotUrl) {
                         authentication(userName: ossrhUsername, password: ossrhPassword)
                     }
-                    repository(url: project.ext.repoReleaseUrl){
-                        authentication(userName:ossrhUsername, password: ossrhPassword)
+                    repository(url: project.ext.repoReleaseUrl) {
+                        authentication(userName: ossrhUsername, password: ossrhPassword)
                     }
 
                     pom.project {

@@ -241,7 +241,7 @@ public class Archiver implements Agent, RawBlockHandler
             final FileChannel fileChannel,
             final long fileOffset,
             final UnsafeBuffer termBuffer,
-            int termOffset,
+            final int termOffset,
             final int length,
             final int sessionId,
             final int termId)
@@ -260,7 +260,8 @@ public class Archiver implements Agent, RawBlockHandler
                 writeChecksumForBlock(termBuffer, termOffset, length);
 
                 final long transferred = fileChannel.transferTo(fileOffset, length, currentLogChannel);
-                final long endPosition = computePosition(termId, termOffset + length, positionBitsToShift, initialTermId);
+                final long endPosition = computePosition(
+                    termId, termOffset + length, positionBitsToShift, initialTermId);
                 positionHandler.onArchivedPosition(sessionId, endPosition, length);
 
                 if (transferred != length)
@@ -279,16 +280,18 @@ public class Archiver implements Agent, RawBlockHandler
             }
         }
 
-        private void writeChecksumForBlock(final UnsafeBuffer termBuffer, int termOffset, final int length)
+        private void writeChecksumForBlock(final UnsafeBuffer termBuffer, final int termOffset, final int length)
         {
             final ByteBuffer byteBuffer = termBuffer.byteBuffer();
             final int end = termOffset + length - HEADER_LENGTH;
             int remaining = length;
-            while (termOffset < end)
+            int offset = termOffset;
+
+            while (offset < end)
             {
-                header.wrap(termBuffer, termOffset, remaining);
+                header.wrap(termBuffer, offset, remaining);
                 final int frameLength = header.frameLength();
-                final int messageOffset = termOffset + HEADER_LENGTH;
+                final int messageOffset = offset + HEADER_LENGTH;
                 checksum.reset();
 
                 if (byteBuffer != null)
@@ -297,7 +300,7 @@ public class Archiver implements Agent, RawBlockHandler
                     // to UnsafeBuffer instances as of Aeron 1.0
                     final int wrapAdjustment = termBuffer.wrapAdjustment();
 
-                    final int limit = termOffset + frameLength;
+                    final int limit = offset + frameLength;
                     if (messageOffset > limit)
                     {
                         throw new IllegalArgumentException(
@@ -320,7 +323,7 @@ public class Archiver implements Agent, RawBlockHandler
                 writeChecksum(header);
 
                 final int alignedFrameLength = ArchiveDescriptor.alignTerm(frameLength);
-                termOffset += alignedFrameLength;
+                offset += alignedFrameLength;
                 remaining -= alignedFrameLength;
             }
         }
@@ -409,6 +412,7 @@ public class Archiver implements Agent, RawBlockHandler
             }
         }
 
+        @SuppressWarnings("FinalParameters")
         private void writeToFile(
             final DirectBuffer bodyBuffer,
             int readOffset,

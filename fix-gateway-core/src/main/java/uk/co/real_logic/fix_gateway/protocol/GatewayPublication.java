@@ -43,7 +43,8 @@ public class GatewayPublication extends ClaimablePublication
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
 
     private static final byte[] NO_BYTES = {};
-    private static final int CONNECT_SIZE = ManageConnectionEncoder.BLOCK_LENGTH + ManageConnectionDecoder.addressHeaderLength();
+    private static final int CONNECT_SIZE =
+        ManageConnectionEncoder.BLOCK_LENGTH + ManageConnectionDecoder.addressHeaderLength();
     private static final int HEARTBEAT_LENGTH = HEADER_LENGTH + ApplicationHeartbeatEncoder.BLOCK_LENGTH;
     private static final int LIBRARY_CONNECT_LENGTH = HEADER_LENGTH + LibraryConnectEncoder.BLOCK_LENGTH;
     private static final int DISCONNECT_LENGTH = HEADER_LENGTH + DisconnectEncoder.BLOCK_LENGTH;
@@ -797,8 +798,7 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveNotLeader(
-        final int libraryId, final long replyToId, final DirectBuffer channel)
+    public long saveNotLeader(final int libraryId, final long replyToId, final DirectBuffer channel)
     {
         final int channelLength = (channel == null ? 0 : channel.capacity());
         final long position = claim(NOT_LEADER_BLOCK_LENGTH + channelLength);

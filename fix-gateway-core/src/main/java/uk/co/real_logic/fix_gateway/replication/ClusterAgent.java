@@ -191,7 +191,7 @@ public class ClusterAgent implements Agent
 
     private final NodeState candidateState = new NodeState()
     {
-        void transitionToLeader(final Candidate candidate, long timeInMs)
+        void transitionToLeader(final Candidate candidate, final long timeInMs)
         {
             final int leadershipTerm = termState.leadershipTerm();
             DebugLogger.log(RAFT, "%d: C -> Leader @ %d in %d\n", nodeId, timeInMs, leadershipTerm);

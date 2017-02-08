@@ -205,13 +205,14 @@ public class PossDupEnabler
     private void updateFrameBodyLength(
         final int messageLength, final MutableDirectBuffer claimBuffer, final int claimOffset, final int lengthDelta)
     {
-        final int frameBodyLengthOffset = claimOffset + MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH;
+        final int frameBodyLengthOffset =
+            claimOffset + MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH;
         final short frameBodyLength = (short) (messageLength + lengthDelta);
         claimBuffer.putShort(frameBodyLengthOffset, frameBodyLength, LITTLE_ENDIAN);
     }
 
     private void updateMessage(
-        final int srcOffset, final int messageClaimOffset, final MutableDirectBuffer claimBuffer, int claimOffset)
+        final int srcOffset, final int messageClaimOffset, final MutableDirectBuffer claimBuffer, final int claimOffset)
     {
         mutableAsciiFlyweight.wrap(claimBuffer);
 
@@ -242,7 +243,7 @@ public class PossDupEnabler
         updateChecksum(messageClaimOffset, beforeChecksum);
     }
 
-    private void updateChecksum(int messageClaimOffset, final int beforeChecksum)
+    private void updateChecksum(final int messageClaimOffset, final int beforeChecksum)
     {
         final int lengthOfSeparator = 1;
         final int checksumEnd = beforeChecksum + lengthOfSeparator;

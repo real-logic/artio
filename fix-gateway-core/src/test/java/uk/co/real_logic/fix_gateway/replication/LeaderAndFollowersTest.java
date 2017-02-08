@@ -300,6 +300,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         return leaderSubscription.controlledPoll(leaderHandler, FRAGMENT_LIMIT);
     }
 
+    @SuppressWarnings("FinalParameters")
     private void pollUntilRead(final Role role, int toRead)
     {
         while (toRead > 0)
@@ -326,11 +327,12 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         return (int)position;
     }
 
-    private void leaderCommitted(int offset, int length)
+    private void leaderCommitted(final int offset, final int length)
     {
         leaderCommitted(offset, length, VALUE);
     }
 
+    @SuppressWarnings("FinalParameters")
     private void leaderCommitted(int offset, int length, final int value)
     {
         offset += HEADER_LENGTH;

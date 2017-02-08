@@ -656,7 +656,7 @@ public class FramerTest
 
     private Action onRequestSession()
     {
-        return framer.onRequestSession(LIBRARY_ID, SESSION_ID, CORR_ID, NO_MESSAGE_REPLAY,  NO_MESSAGE_REPLAY);
+        return framer.onRequestSession(LIBRARY_ID, SESSION_ID, CORR_ID, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
     }
 
     private void sessionIsActive()
@@ -770,8 +770,23 @@ public class FramerTest
     private Action onInitiateConnection()
     {
         return framer.onInitiateConnection(
-            LIBRARY_ID, TEST_ADDRESS.getPort(), TEST_ADDRESS.getHostName(), "LEH_LZJ02", null, null, "CCG",
-            null, null, TRANSIENT, AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false, "", "", HEARTBEAT_INTERVAL_IN_S, CORR_ID, header);
+            LIBRARY_ID,
+            TEST_ADDRESS.getPort(),
+            TEST_ADDRESS.getHostName(),
+            "LEH_LZJ02",
+            null,
+            null,
+            "CCG",
+            null,
+            null,
+            TRANSIENT,
+            AUTOMATIC_INITIAL_SEQUENCE_NUMBER,
+            false,
+            "",
+            "",
+            HEARTBEAT_INTERVAL_IN_S,
+            CORR_ID,
+            header);
     }
 
     private void aClientConnects() throws IOException
@@ -846,7 +861,7 @@ public class FramerTest
         when(receivedSequenceNumberIndex.lastKnownSequenceNumber(anyInt())).thenReturn(1);
     }
 
-    private void sentIndexedToPosition(final long position, final Long ... positions)
+    private void sentIndexedToPosition(final long position, final Long... positions)
     {
         when(sentSequenceNumberIndex.indexedPosition(anyInt())).thenReturn(position, positions);
     }

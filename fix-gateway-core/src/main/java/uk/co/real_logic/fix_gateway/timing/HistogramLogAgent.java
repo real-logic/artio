@@ -25,7 +25,6 @@ import java.util.List;
 
 public class HistogramLogAgent implements Agent
 {
-
     private final List<Timer> timers;
     private final HistogramHandler histogramHandler;
     private final long intervalInMs;
@@ -34,6 +33,7 @@ public class HistogramLogAgent implements Agent
 
     private long nextWriteTimeInMs = 0;
 
+    @SuppressWarnings("FinalParameters")
     public HistogramLogAgent(
         final List<Timer> timers,
         final String logFile,
@@ -52,6 +52,7 @@ public class HistogramLogAgent implements Agent
         {
             histogramHandler = new HistogramLogWriter(timers.size(), logFile, errorHandler);
         }
+
         this.histogramHandler = histogramHandler;
         timers.forEach(timer -> this.histogramHandler.identifyTimer(timer.id(), timer.name()));
         histogramHandler.onEndTimerIdentification();

@@ -55,7 +55,7 @@ class NodeHandler implements ControlledFragmentHandler
         int position = 0;
         for (ReplicatedMessage replicatedMessage : replicatedMessages)
         {
-            int messageLength = DataHeaderFlyweight.HEADER_LENGTH + replicatedMessage.length;
+            final int messageLength = DataHeaderFlyweight.HEADER_LENGTH + replicatedMessage.length;
             position = ArchiveDescriptor.alignTerm(position + messageLength);
             assertEquals(replicatedMessages.toString(), position, replicatedMessage.position);
         }

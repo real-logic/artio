@@ -56,6 +56,7 @@ public class FixArchiveScanner
 
     private class LogEntryHandler implements FragmentHandler
     {
+        @SuppressWarnings("FinalParameters")
         public void onFragment(
             final DirectBuffer buffer, int offset, final int length, final Header header)
         {

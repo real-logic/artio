@@ -87,9 +87,10 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
     private int pollCommands()
     {
         return outboundLibrarySubscription.controlledPoll(onLibraryFragmentFunc, LIMIT) +
-               outboundClusterSubscription.controlledPoll(onClusterFragmentFunc, LIMIT);
+            outboundClusterSubscription.controlledPoll(onClusterFragmentFunc, LIMIT);
     }
 
+    @SuppressWarnings("FinalParameters")
     private Action onLibraryFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
         messageHeader.wrap(buffer, offset);
@@ -127,6 +128,7 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
         return Action.CONTINUE;
     }
 
+    @SuppressWarnings("FinalParameters")
     private Action onClusterFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
         offset = wrapHeader(buffer, offset);
@@ -170,6 +172,7 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
         return Action.CONTINUE;
     }
 
+    @SuppressWarnings("FinalParameters")
     private int wrapHeader(final DirectBuffer buffer, int offset)
     {
         messageHeader.wrap(buffer, offset);
@@ -204,7 +207,7 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
         if (archivedPosition != MISSING)
         {
             // TODO: fix the length right
-            getPositions(libraryId).newPosition(archivedPosition, (int) archivedPosition);
+            getPositions(libraryId).newPosition(archivedPosition, (int)archivedPosition);
         }
     }
 
@@ -264,6 +267,7 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
             this.libraryId = libraryId;
         }
 
+        @SuppressWarnings("FinalParameters")
         private void newPosition(long endPosition, final int alignedLength)
         {
             final long startPosition = endPosition - alignedLength;

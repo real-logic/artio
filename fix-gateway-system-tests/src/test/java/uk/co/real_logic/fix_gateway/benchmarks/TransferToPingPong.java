@@ -28,23 +28,22 @@ public final class TransferToPingPong extends AbstractPingPong
 
     private static final FileChannel PONG_BUFFER = NetworkBenchmarkUtil.newFile("pong");
 
-    public static void main(String[] args) throws IOException
+    public static void main(final String[] args) throws IOException
     {
         new TransferToPingPong().benchmark();
     }
 
-    protected void ping(SocketChannel channel, long time) throws IOException
+    protected void ping(final SocketChannel channel, final long time) throws IOException
     {
         writeChannel(channel, PING_BUFFER, null, time);
 
         readChannel(channel, PING_BUFFER);
     }
 
-    protected void pong(SocketChannel channel) throws IOException
+    protected void pong(final SocketChannel channel) throws IOException
     {
         final long time = readChannel(channel, PONG_BUFFER);
 
         writeChannel(channel, PONG_BUFFER, null, time);
     }
-
 }

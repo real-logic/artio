@@ -605,7 +605,7 @@ public class EncoderGenerator extends Generator
             fieldName);
     }
 
-    private String putValue(final String fieldName, final String tag, final String type, String optionalSuffix)
+    private String putValue(final String fieldName, final String tag, final String type, final String optionalSuffix)
     {
         return String.format(
             "%s" +
@@ -652,7 +652,7 @@ public class EncoderGenerator extends Generator
             bytes));
     }
 
-    protected String stringToString(String fieldName)
+    protected String stringToString(final String fieldName)
     {
         return String.format("new String(%s, 0, %1$sLength, StandardCharsets.US_ASCII)", fieldName);
     }

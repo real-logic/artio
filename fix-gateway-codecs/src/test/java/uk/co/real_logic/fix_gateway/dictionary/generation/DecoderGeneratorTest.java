@@ -884,7 +884,7 @@ public class DecoderGeneratorTest
         assertValid(decoder);
     }
 
-    private Object getStatic(Class<?> cls, String field) throws IllegalAccessException, NoSuchFieldException
+    private Object getStatic(final Class<?> cls, final String field) throws IllegalAccessException, NoSuchFieldException
     {
         return cls.getField(field).get(null);
     }

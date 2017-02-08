@@ -28,27 +28,32 @@ public final class Reflection
     {
     }
 
-    public static void setInt(final Object object, final String setter, final int value) throws Exception
+    public static void setInt(final Object object, final String setter, final int value)
+        throws Exception
     {
         set(object, setter, int.class, value);
     }
 
-    public static void setFloat(final Object object, final String setter, final DecimalFloat value) throws Exception
+    public static void setFloat(final Object object, final String setter, final DecimalFloat value)
+        throws Exception
     {
         set(object, setter, DecimalFloat.class, value);
     }
 
-    public static void setCharSequence(final Object object, final String setter, final CharSequence value) throws Exception
+    public static void setCharSequence(final Object object, final String setter, final CharSequence value)
+        throws Exception
     {
         set(object, setter, CharSequence.class, value);
     }
 
-    public static void setBoolean(final Object object, final String setter, final boolean value) throws Exception
+    public static void setBoolean(final Object object, final String setter, final boolean value)
+        throws Exception
     {
         set(object, setter, boolean.class, value);
     }
 
-    public static void setByteArray(final Object object, final String setter, final byte[] value) throws Exception
+    public static void setByteArray(final Object object, final String setter, final byte[] value)
+        throws Exception
     {
         set(object, setter, byte[].class, value);
     }
@@ -60,14 +65,14 @@ public final class Reflection
         final Object value) throws Exception
     {
         object.getClass()
-              .getMethod(setterName, type)
-              .invoke(object, value);
+            .getMethod(setterName, type)
+            .invoke(object, value);
     }
 
     public static void setField(
-            final Object object,
-            final String fieldName,
-            final Object value) throws Exception
+        final Object object,
+        final String fieldName,
+        final Object value) throws Exception
     {
         field(object, fieldName).set(object, value);
     }
@@ -75,15 +80,15 @@ public final class Reflection
     public static Object get(final Object value, final String name) throws Exception
     {
         return value.getClass()
-                    .getMethod(name)
-                    .invoke(value);
+            .getMethod(name)
+            .invoke(value);
     }
 
     public static Object get(final Object value, final String name, final int parameter) throws Exception
     {
         return value.getClass()
-                    .getMethod(name, int.class)
-                    .invoke(value, parameter);
+            .getMethod(name, int.class)
+            .invoke(value, parameter);
     }
 
     public static Object getField(final Object object, final String fieldName) throws Exception
@@ -91,7 +96,7 @@ public final class Reflection
         return field(object, fieldName).get(object);
     }
 
-    public static Field field(Object object, String fieldName) throws NoSuchFieldException
+    public static Field field(final Object object, final String fieldName) throws NoSuchFieldException
     {
         final Field field = object.getClass().getDeclaredField(fieldName);
         field.setAccessible(true);
@@ -101,8 +106,8 @@ public final class Reflection
     public static Object call(final Object value, final String methodName) throws Exception
     {
         return value.getClass()
-                    .getMethod(methodName)
-                    .invoke(value);
+            .getMethod(methodName)
+            .invoke(value);
     }
 
     public static void reset(final Encoder encoder) throws Exception
@@ -127,7 +132,7 @@ public final class Reflection
 
     public static Iterator<?> getEgGroupIterator(final Decoder decoder) throws Exception
     {
-        return (Iterator<?>) get(decoder, "egGroupGroupIterator");
+        return (Iterator<?>)get(decoder, "egGroupGroupIterator");
     }
 
     public static Object getComponentGroup(final Object stub, final int numberOfElements) throws Exception
@@ -152,21 +157,21 @@ public final class Reflection
 
     public static byte[] getBytes(final Decoder decoder, final String field) throws Exception
     {
-        return (byte[]) get(decoder, field);
+        return (byte[])get(decoder, field);
     }
 
     public static char[] getChars(final Decoder decoder, final String field) throws Exception
     {
-        return (char[]) get(decoder, field);
+        return (char[])get(decoder, field);
     }
 
     public static int getInt(final Decoder decoder, final String field) throws Exception
     {
-        return (int) get(decoder, field);
+        return (int)get(decoder, field);
     }
 
     public static String getString(final Decoder decoder, final String field) throws Exception
     {
-        return (String) get(decoder, field);
+        return (String)get(decoder, field);
     }
 }

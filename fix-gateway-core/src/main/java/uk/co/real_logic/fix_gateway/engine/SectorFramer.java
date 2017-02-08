@@ -41,6 +41,7 @@ public class SectorFramer
         this.capacity = capacity;
     }
 
+    @SuppressWarnings("FinalParameters")
     public int claim(int filePosition, final int length)
     {
         final int nextSectorStart = nextSectorStart(filePosition);

@@ -71,7 +71,7 @@ public class Server implements Agent
             .libraryAeronChannels(singletonList(aeronChannel)));
     }
 
-    public static AgentRunner createServer(final IdleStrategy idleStrategy, ErrorHandler errorHandler)
+    public static AgentRunner createServer(final IdleStrategy idleStrategy, final ErrorHandler errorHandler)
     {
         return new AgentRunner(idleStrategy, errorHandler, null, new Server());
     }
@@ -92,5 +92,4 @@ public class Server implements Agent
         fixEngine.close();
         mediaDriver.close();
     }
-
 }

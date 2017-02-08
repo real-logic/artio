@@ -89,7 +89,7 @@ public class AsciiFormatterTest
         assertFormatsTo("MsgSeqNum too low, expecting 0 but received 1", formatter);
     }
 
-    private void assertFormatsTo(String format, AsciiFormatter formatter)
+    private void assertFormatsTo(final String format, final AsciiFormatter formatter)
     {
         assertEquals(format, new String(formatter.value(), 0, formatter.length(), US_ASCII));
     }

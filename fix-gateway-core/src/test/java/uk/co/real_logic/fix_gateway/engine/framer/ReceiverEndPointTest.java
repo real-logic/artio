@@ -76,12 +76,11 @@ public class ReceiverEndPointTest
     private GatewaySession gatewaySession = mock(GatewaySession.class);
     private final LongHashSet replicatedConnectionIds = new LongHashSet(SessionContexts.MISSING_SESSION_ID);
 
-    private ReceiverEndPoint endPoint =
-        new ReceiverEndPoint(
-            mockChannel, BUFFER_SIZE, clusterablePublication, libraryPublication, sessionReplicationStrategy,
-            CONNECTION_ID, UNKNOWN, SEQUENCE_INDEX, mockSessionIdStrategy, mockSessionContexts,
-            sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID,
-            DETERMINE_AT_LOGON, ConnectionType.ACCEPTOR, replicatedConnectionIds);
+    private ReceiverEndPoint endPoint = new ReceiverEndPoint(
+        mockChannel, BUFFER_SIZE, clusterablePublication, libraryPublication, sessionReplicationStrategy,
+        CONNECTION_ID, UNKNOWN, SEQUENCE_INDEX, mockSessionIdStrategy, mockSessionContexts,
+        sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID,
+        DETERMINE_AT_LOGON, ConnectionType.ACCEPTOR, replicatedConnectionIds);
 
     @Before
     public void setUp()
@@ -397,7 +396,7 @@ public class ReceiverEndPointTest
     }
 
     private void savesFramedMessages(
-        int numberOfMessages,
+        final int numberOfMessages,
         final MessageStatus status,
         final int msgLen)
     {

@@ -29,7 +29,6 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 public class StressSessionHandler implements SessionHandler
 {
-
     private final AsciiBuffer string = new MutableAsciiBuffer();
     private final Printer printer = new PrinterImpl();
 
@@ -61,7 +60,8 @@ public class StressSessionHandler implements SessionHandler
     {
     }
 
-    public ControlledFragmentHandler.Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason)
+    public ControlledFragmentHandler.Action onDisconnect(
+        final int libraryId, final long sessionId, final DisconnectReason reason)
     {
         if (StressConfiguration.PRINT_EXCHANGE)
         {

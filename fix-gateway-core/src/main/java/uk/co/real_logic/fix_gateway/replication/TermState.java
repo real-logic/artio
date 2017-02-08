@@ -37,7 +37,7 @@ class TermState
     /** The position that we can commit up to. */
     private final AtomicLong consensusPosition = new AtomicLong(0);
 
-    TermState leaderSessionId(int leadershipSessionId)
+    TermState leaderSessionId(final int leadershipSessionId)
     {
         this.leaderSessionId.set(leadershipSessionId);
         return this;
@@ -49,7 +49,7 @@ class TermState
         return this;
     }
 
-    TermState leadershipTerm(int leadershipTerm)
+    TermState leadershipTerm(final int leadershipTerm)
     {
         this.leadershipTerm = leadershipTerm;
         return this;
@@ -130,7 +130,6 @@ class TermState
         return this;
     }
 
-    @Override
     public String toString()
     {
         return "TermState{" +

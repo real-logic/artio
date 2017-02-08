@@ -105,21 +105,18 @@ public final class OtfValidator implements OtfMessageAcceptor
         return delegate.onField(tag, buffer, offset, length);
     }
 
-    @Override
-    public MessageControl onGroupHeader(int tag, int numInGroup)
+    public MessageControl onGroupHeader(final int tag, final int numInGroup)
     {
         groupLevel++;
         return delegate.onGroupHeader(tag, numInGroup);
     }
 
-    @Override
-    public MessageControl onGroupBegin(int tag, int numInGroup, int index)
+    public MessageControl onGroupBegin(final int tag, final int numInGroup, final int index)
     {
         return delegate.onGroupBegin(tag, numInGroup, index);
     }
 
-    @Override
-    public MessageControl onGroupEnd(int tag, int numInGroup, int index)
+    public MessageControl onGroupEnd(final int tag, final int numInGroup, final int index)
     {
         final MessageControl control = delegate.onGroupEnd(tag, numInGroup, index);
         if (numInGroup == index + 1)
@@ -129,8 +126,8 @@ public final class OtfValidator implements OtfMessageAcceptor
         return control;
     }
 
-    @Override
-    public boolean onError(ValidationError error, int messageType, int tagNumber, AsciiFieldFlyweight value)
+    public boolean onError(
+        final ValidationError error, final int messageType, final int tagNumber, final AsciiFieldFlyweight value)
     {
         return delegate.onError(error, messageType, tagNumber, value);
     }

@@ -103,7 +103,7 @@ public class SlowConsumerTest
             framerIdleStrategy.step();
         }
 
-        bytesInBufferAtLeast(sessionInfo, (long) MAX_BYTES_IN_BUFFER);
+        bytesInBufferAtLeast(sessionInfo, (long)MAX_BYTES_IN_BUFFER);
 
         framerIdleStrategy.stopStepping();
     }
@@ -141,7 +141,8 @@ public class SlowConsumerTest
             {
                 byteBuffer.position(1).limit(BUFFER_CAPACITY);
                 bytesRead = socket.read(byteBuffer);
-            } while (bytesRead > 0);
+            }
+            while (bytesRead > 0);
 
             session.send(testRequest);
 
@@ -190,10 +191,10 @@ public class SlowConsumerTest
         logon
             .heartBtInt(10)
             .header()
-                .sendingTime(timestamp.buffer())
-                .msgSeqNum(1)
-                .senderCompID(INITIATOR_ID)
-                .targetCompID(ACCEPTOR_ID);
+            .sendingTime(timestamp.buffer())
+            .msgSeqNum(1)
+            .senderCompID(INITIATOR_ID)
+            .targetCompID(ACCEPTOR_ID);
 
         final int length = logon.encode(buffer, 0);
         byteBuffer.limit(length);

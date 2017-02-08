@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.util;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
+@SuppressWarnings("LineLength")
 public final class TestMessages
 {
     // BUY 100 CVS MKT DAY
