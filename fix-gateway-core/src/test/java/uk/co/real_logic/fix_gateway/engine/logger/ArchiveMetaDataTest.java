@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.agrona.IoUtil;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import uk.co.real_logic.fix_gateway.storage.messages.ArchiveMetaDataDecoder;
@@ -36,27 +37,31 @@ public class ArchiveMetaDataTest
 
     private String tempDir = IoUtil.tmpDirName() + File.separator + "amdt";
     private LogDirectoryDescriptor directory = new LogDirectoryDescriptor(tempDir);
+    private ArchiveMetaData archiveMetaData = newArchiveMetaData();
 
     @After
     public void teardown()
     {
-        IoUtil.delete(new File(tempDir), true);
+        archiveMetaData.close();
+        final File dir = new File(tempDir);
+        if (dir.exists())
+        {
+            IoUtil.delete(dir, false);
+        }
     }
 
     @Test
     public void shouldValidateFileExists()
     {
-        final ArchiveMetaData archiveMetaData = newArchiveMetaData();
-
         final ArchiveMetaDataDecoder decoder = archiveMetaData.read(STREAM_ID, SESSION_ID);
         assertNull(decoder);
+
+        archiveMetaData.close();
     }
 
     @Test
     public void shouldValidateLengthOfBuffer() throws IOException
     {
-        final ArchiveMetaData archiveMetaData = newArchiveMetaData();
-
         final File metaDataFile = directory.metaDataLogFile(STREAM_ID, SESSION_ID);
         IoUtil.mapNewFile(metaDataFile, 0);
 
@@ -67,8 +72,6 @@ public class ArchiveMetaDataTest
     @Test
     public void shouldStoreMetaDataInformation()
     {
-        final ArchiveMetaData archiveMetaData = newArchiveMetaData();
-
         archiveMetaData.write(STREAM_ID, SESSION_ID, INITIAL_TERM_ID, TERM_BUFFER_LENGTH);
 
         final ArchiveMetaDataDecoder decoder = archiveMetaData.read(STREAM_ID, SESSION_ID);
