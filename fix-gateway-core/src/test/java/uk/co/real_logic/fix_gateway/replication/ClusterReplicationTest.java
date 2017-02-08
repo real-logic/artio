@@ -71,6 +71,7 @@ public class ClusterReplicationTest
     {
         for (final NodeRunner nodeRunner : allNodes)
         {
+            nodeRunner.checkConsistencyOfReplicatedPositions();
             nodeRunner.close();
         }
     }

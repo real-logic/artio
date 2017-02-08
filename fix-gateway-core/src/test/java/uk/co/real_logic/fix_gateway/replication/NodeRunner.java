@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Aeron;
 import io.aeron.driver.MediaDriver;
-import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Int2IntHashMap;
@@ -25,7 +24,6 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.YieldingIdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
@@ -36,12 +34,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.aeron.CommonContext.AERON_DIR_PROP_DEFAULT;
 import static io.aeron.driver.ThreadingMode.SHARED;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static org.agrona.BitUtil.SIZE_OF_SHORT;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
-import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
@@ -62,22 +58,14 @@ class NodeRunner implements AutoCloseable
     private final MediaDriver mediaDriver;
     private final Aeron aeron;
     private final ClusterAgent clusterAgent;
-    private final ControlledFragmentHandler handler;
+    private final NodeHandler handler;
     private final ClusterSubscription subscription;
 
     private final AtomicBoolean guard = new AtomicBoolean();
-    private long replicatedPosition = -1;
 
     NodeRunner(final int nodeId, final int... otherNodes)
     {
-        this.handler =
-            (buffer, offset, length, header) ->
-            {
-                replicatedPosition = offset + length;
-                DebugLogger.log(RAFT, "%d: position %d\n", nodeId, replicatedPosition);
-                return CONTINUE;
-            };
-
+        this.handler = new NodeHandler(nodeId);
         this.frameDropper = new FrameDropper(nodeId);
 
         final int termBufferLength = 1024 * 1024;
@@ -207,7 +195,7 @@ class NodeRunner implements AutoCloseable
         return clusterAgent().termState();
     }
 
-    public int leadershipTerm()
+    int leadershipTerm()
     {
         return termState().leadershipTerm();
     }
@@ -219,7 +207,12 @@ class NodeRunner implements AutoCloseable
 
     long replicatedPosition()
     {
-        return replicatedPosition;
+        return handler.replicatedPosition();
+    }
+
+    void checkConsistencyOfReplicatedPositions()
+    {
+        handler.checkConsistencyOfReplicatedPositions();
     }
 
     Int2IntHashMap nodeIdToId()

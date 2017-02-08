@@ -110,4 +110,16 @@ public final class Exceptions
             originalException.addSuppressed(ex);
         }
     }
+
+    public static void printStackTrace()
+    {
+        try
+        {
+            throw new Exception();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace(System.out);
+        }
+    }
 }
