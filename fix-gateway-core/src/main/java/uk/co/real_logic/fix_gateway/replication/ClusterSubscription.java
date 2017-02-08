@@ -441,7 +441,6 @@ class ClusterSubscription extends ClusterableSubscription
                 this.clusterStreamId,
                 clusterStreamId,
                 aeronSessionId);
-            System.out.println(this);
 
             // We never have to deal with the case where a message fragment spans over the end of a leadership term
             // - they are aligned.
