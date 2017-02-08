@@ -89,16 +89,6 @@ public class ClusterSubscriptionTest
     }
 
     @Test
-    public void shouldStashUpdatesWithGap()
-    {
-        onConsensusHeartbeatPoll(1, LEADER, 1, 0, 1);
-
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, 4, 2, 4);
-
-        assertState(1, LEADER, 1);
-    }
-
-    @Test
     public void shouldTransitionBetweenLeadersWithDifferentPositionDeltas()
     {
         final int firstTermLength = 128;
@@ -152,17 +142,41 @@ public class ClusterSubscriptionTest
     }
 
     @Test
+    public void shouldStashUpdatesWithGap()
+    {
+        final int firstTermLen = 128;
+        final int secondTermLen = 256;
+        final int thirdTermLen = 384;
+        final int firstTermEnd = firstTermLen;
+        final int secondTermEnd = firstTermEnd + secondTermLen;
+        final int thirdTermEnd = secondTermEnd + thirdTermLen;
+
+        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, firstTermEnd);
+
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, thirdTermEnd, 0, thirdTermLen);
+
+        assertState(1, LEADER, firstTermEnd);
+    }
+
+    @Test
     public void shouldApplyUpdatesWhenGapFilled()
     {
+        final int firstTermLen = 128;
+        final int secondTermLen = 256;
+        final int thirdTermLen = 384;
+        final int firstTermEnd = firstTermLen;
+        final int secondTermEnd = firstTermEnd + secondTermLen;
+        final int thirdTermEnd = secondTermEnd + thirdTermLen;
+
         shouldStashUpdatesWithGap();
 
-        onConsensusHeartbeatPoll(1, LEADER, 2, 1, 2);
+        onConsensusHeartbeatPoll(1, LEADER, secondTermEnd, firstTermEnd, secondTermEnd);
 
-        assertState(1, LEADER, 2);
+        assertState(1, LEADER, secondTermEnd);
 
         clusterSubscription.hasMatchingFutureAck();
 
-        assertState(2, OTHER_LEADER, 4);
+        assertState(2, OTHER_LEADER, thirdTermLen);
     }
 
     @Test
@@ -195,11 +209,11 @@ public class ClusterSubscriptionTest
 
         onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
 
-        assertState(2, OTHER_LEADER, secondTermEnd);
+        assertState(2, OTHER_LEADER, secondTermLen);
 
         clusterSubscription.hasMatchingFutureAck();
 
-        assertState(3, THIRD_LEADER, thirdTermEnd);
+        assertState(3, THIRD_LEADER, thirdTermLen);
     }
 
     @Test
