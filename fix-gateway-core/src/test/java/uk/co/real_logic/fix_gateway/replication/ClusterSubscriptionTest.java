@@ -23,6 +23,7 @@ import io.aeron.logbuffer.Header;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.verification.VerificationMode;
@@ -175,9 +176,17 @@ public class ClusterSubscriptionTest
         assertState(1, LEADER, 1);
     }
 
+    @Ignore // TODO
     @Test
     public void shouldUpdatePositionFromFutureLeadershipTerm()
     {
+        final int firstTermLen = 128;
+        final int secondTermLen = 256;
+        final int thirdTermLen = 384;
+        final int firstTermEnd = firstTermLen;
+        final int secondTermEnd = firstTermEnd + secondTermLen;
+        final int thirdTermEnd = secondTermEnd + thirdTermLen;
+
         shouldStashUpdatesFromFutureLeadershipTerm();
 
         onConsensusHeartbeatPoll(2, OTHER_LEADER, 2, 1, 2);
@@ -672,7 +681,7 @@ public class ClusterSubscriptionTest
     }
 
     private void assertState(
-        final int currentLeadershipTermId,
+        final int currentLeadershipTerm,
         final Integer leadershipSessionId,
         final long streamPosition)
     {
@@ -680,7 +689,7 @@ public class ClusterSubscriptionTest
             hasResult(
                 "currentLeadershipTerm",
                 ClusterSubscription::currentLeadershipTerm,
-                equalTo(currentLeadershipTermId)));
+                equalTo(currentLeadershipTerm)));
 
         verify(dataSubscription, atLeastOnce()).imageBySessionId(eq(leadershipSessionId));
 

@@ -35,9 +35,8 @@ import java.util.PriorityQueue;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.util.Comparator.comparingLong;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
-import static uk.co.real_logic.fix_gateway.replication.ClusterSubscription.Ternary.FAILED;
-import static uk.co.real_logic.fix_gateway.replication.ClusterSubscription.Ternary.FALSE;
-import static uk.co.real_logic.fix_gateway.replication.ClusterSubscription.Ternary.TRUE;
+import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor.alignTerm;
+import static uk.co.real_logic.fix_gateway.replication.ClusterSubscription.Ternary.*;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 /**
@@ -60,7 +59,7 @@ class ClusterSubscription extends ClusterableSubscription
 
     private Header resendHeader;
     private int currentLeadershipTerm = Integer.MIN_VALUE;
-    private long lastAppliedPosition;
+    private long lastAppliedStreamPosition;
     private long previousConsensusPosition;
     private Image dataImage;
     private ControlledFragmentHandler handler;
@@ -113,7 +112,7 @@ class ClusterSubscription extends ClusterableSubscription
                 }
             }
 
-            if (cannotAdvance() && hasLeaderArchiveReader())
+            if (cannotAdvance() && appliedBehindConcensus() && hasLeaderArchiveReader())
             {
                 readFromLog();
             }
@@ -124,20 +123,31 @@ class ClusterSubscription extends ClusterableSubscription
 
     private boolean appliedBehindConcensus()
     {
-        return (messageFilter.streamConsensusPosition - lastAppliedPosition) > 0;
+        return (messageFilter.streamConsensusPosition - lastAppliedStreamPosition) > 0;
     }
 
     private void readFromLog()
     {
+        final long lastAppliedStreamPosition = this.lastAppliedStreamPosition;
+        final long beginPosition = lastAppliedStreamPosition + DataHeaderFlyweight.HEADER_LENGTH;
+        final long endPosition = messageFilter.streamConsensusPosition;
+
         final long readUpTo = leaderArchiveReader.readUpTo(
-            lastAppliedPosition + DataHeaderFlyweight.HEADER_LENGTH,
-            messageFilter.streamConsensusPosition,
+            beginPosition,
+            endPosition,
             handler);
 
         if (readUpTo > 0)
         {
-            lastAppliedPosition = readUpTo;
+            this.lastAppliedStreamPosition = alignTerm(readUpTo);
         }
+
+        DebugLogger.log(
+            RAFT,
+            "Subscription readFromLog(appliedStreamPos=%d, endPos=%d, appliedStreamPosAfter=%d)%n",
+            lastAppliedStreamPosition,
+            endPosition,
+            this.lastAppliedStreamPosition);
     }
 
     enum Ternary
@@ -236,7 +246,7 @@ class ClusterSubscription extends ClusterableSubscription
             if (messageFilter.streamConsensusPosition < streamPosition)
             {
                 messageFilter.streamConsensusPosition = streamPosition;
-                previousConsensusPosition = position;
+                previousConsensusPosition = alignTerm(position);
 
                 return BREAK;
             }
@@ -310,8 +320,8 @@ class ClusterSubscription extends ClusterableSubscription
             }
             else
             {
-                lastAppliedPosition += bodyLength;
-                previousConsensusPosition += bodyLength;
+                lastAppliedStreamPosition = alignTerm(lastAppliedStreamPosition + bodyLength);
+                previousConsensusPosition = alignTerm(previousConsensusPosition + bodyLength);
             }
         }
         else if (startPosition > previousConsensusPosition)
@@ -376,8 +386,8 @@ class ClusterSubscription extends ClusterableSubscription
     {
         messageFilter.streamConsensusPosition = streamPosition;
         currentLeadershipTerm = leaderShipTerm;
-        this.lastAppliedPosition = streamConsumedPosition;
-        previousConsensusPosition = position;
+        lastAppliedStreamPosition = alignTerm(streamConsumedPosition);
+        previousConsensusPosition = alignTerm(position);
     }
 
     private void save(
@@ -414,17 +424,20 @@ class ClusterSubscription extends ClusterableSubscription
 
         public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
         {
+            final int aeronSessionId = header.sessionId();
             final long headerPosition = header.position();
             final long fragmentStartPosition = headerPosition - length;
             final int clusterStreamId = ReservedValue.clusterStreamId(header);
 
             DebugLogger.log(
                 RAFT,
-                "Subscription onFragment(hdrPos=%d, csnsPos=%d, ourStream=%d, msgStream=%d)%n",
+                "Subscription onFragment(hdrPos=%d, csnsPos=%d, ourStream=%d, msgStream=%d, sessId=%d)%n",
                 headerPosition,
                 streamConsensusPosition,
                 this.clusterStreamId,
-                clusterStreamId);
+                clusterStreamId,
+                aeronSessionId);
+            System.out.println(this);
 
             // We never have to deal with the case where a message fragment spans over the end of a leadership term
             // - they are aligned.
@@ -436,7 +449,7 @@ class ClusterSubscription extends ClusterableSubscription
             }
 
             // Skip data published on the leader's publication when they weren't a leader.
-            if (fragmentStartPosition < lastAppliedPosition)
+            if (fragmentStartPosition < lastAppliedStreamPosition)
             {
                 return CONTINUE;
             }
@@ -449,7 +462,7 @@ class ClusterSubscription extends ClusterableSubscription
                     final Action action = handler.onFragment(buffer, offset, length, header);
                     if (action != ABORT)
                     {
-                        lastAppliedPosition += length;
+                        lastAppliedStreamPosition = alignTerm(lastAppliedStreamPosition + length);
                     }
                     return action;
                 }
