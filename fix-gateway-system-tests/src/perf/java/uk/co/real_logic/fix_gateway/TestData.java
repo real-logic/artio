@@ -20,6 +20,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
+@SuppressWarnings("LineLength")
 public final class TestData
 {
     public static final UnsafeBuffer NEW_ORDER_SINGLE = new UnsafeBuffer(ByteBuffer.wrap(

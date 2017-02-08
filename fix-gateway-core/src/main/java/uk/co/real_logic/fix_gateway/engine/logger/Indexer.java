@@ -77,7 +77,8 @@ public class Indexer implements Agent, ControlledFragmentHandler
 
                         final long nextMessagePosition = alignTerm(endOfLastMessageposition) + HEADER_LENGTH;
                         endOfLastMessageposition = sessionReader.read(nextMessagePosition, index);
-                    } while (endOfLastMessageposition > 0);
+                    }
+                    while (endOfLastMessageposition > 0);
                 }
             });
         }

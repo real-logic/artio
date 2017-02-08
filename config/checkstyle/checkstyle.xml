@@ -6,6 +6,8 @@
         <property name="file" value="config/checkstyle/suppress.xml"/>
     </module>
 
+    <module name="SuppressWarningsFilter"/>
+
     <module name="SeverityMatchFilter">
         <property name="severity" value="info"/>
         <property name="acceptOnMatch" value="false"/>
@@ -19,9 +21,13 @@
         <property name="tabWidth" value="4"/>
         <property name="severity" value="error"/>
 
+        <module name="SuppressWarningsHolder"/>
+
         <module name="Indentation"/>
 
         <module name="ConstantName"/>
+
+        <module name="FinalParameters"/>
 
         <module name="FinalLocalVariable"/>
 
@@ -48,7 +54,7 @@
         <module name="UnusedImports"/>
 
         <module name="LineLength">
-            <property name="max" value="130"/>
+            <property name="max" value="120"/>
             <property name="ignorePattern" value="^[ \t]*\*.*@.*$"/>
         </module>
 
@@ -98,6 +104,7 @@
 
         <module name="RightCurly">
             <property name="option" value="alone"/>
+            <property name="tokens" value="LITERAL_ELSE, LITERAL_DO, LITERAL_WHILE"/>
         </module>
 
         <module name="EmptyStatement"/>

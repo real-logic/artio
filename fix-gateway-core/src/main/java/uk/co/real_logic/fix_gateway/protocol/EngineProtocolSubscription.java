@@ -40,6 +40,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         this.handler = handler;
     }
 
+    @SuppressWarnings("FinalParameters")
     public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
         messageHeader.wrap(buffer, offset);

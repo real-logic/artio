@@ -24,7 +24,7 @@ import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREF
 
 public class ErrorPrinter implements Agent
 {
-    public static void main(String[] args)
+    public static void main(final String[] args)
     {
         final EngineConfiguration configuration = new EngineConfiguration();
         configuration.libraryAeronChannel("").conclude();

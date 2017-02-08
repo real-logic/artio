@@ -214,11 +214,11 @@ public class ConstantGenerator
             constantName(name));
     }
 
-    private String constantName(String name)
+    private String constantName(final String name)
     {
-        name = name.replace("ID", "Id");
-        return toUpperCase(name.charAt(0)) +
-            name.substring(1)
+        final String replacedName = name.replace("ID", "Id");
+        return toUpperCase(replacedName.charAt(0)) +
+            replacedName.substring(1)
                 .chars()
                 .mapToObj((codePoint) -> (isUpperCase(codePoint) ? "_" : "") + (char)toUpperCase(codePoint))
                 .collect(joining());

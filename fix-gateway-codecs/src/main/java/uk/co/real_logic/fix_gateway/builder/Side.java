@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.builder;
 
 /**
- * .
+ * Side of the market.
  */
 public enum Side
 {
@@ -25,7 +25,7 @@ public enum Side
 
     private final int value;
 
-    Side(int value)
+    Side(final int value)
     {
         this.value = value;
     }
@@ -35,7 +35,7 @@ public enum Side
         return value;
     }
 
-    public static Side valueOf(int value)
+    public static Side valueOf(final int value)
     {
         switch (value)
         {

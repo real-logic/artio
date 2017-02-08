@@ -200,12 +200,12 @@ public class ClusterSubscriptionTest
         final int secondTermEnd = firstTermEnd + secondTermLen;
         final int thirdTermEnd = secondTermEnd + thirdTermLen;
 
-        willReceiveConcensusHeartbeat(1, LEADER, firstTermEnd, 0, firstTermLen);
+        willReceiveConsensusHeartbeat(1, LEADER, firstTermEnd, 0, firstTermLen);
         pollsMessageFragment(leaderDataImage, firstTermEnd, CONTINUE);
 
         onConsensusHeartbeatPoll(3, THIRD_LEADER, thirdTermEnd, 0, thirdTermLen);
 
-        willReceiveConcensusHeartbeat(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
+        willReceiveConsensusHeartbeat(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
         pollsMessageFragment(otherLeaderDataImage, secondTermLen, CONTINUE);
 
         pollsMessageFragment(thirdLeaderDataImage, thirdTermLen, CONTINUE);
@@ -466,7 +466,7 @@ public class ClusterSubscriptionTest
 
         backPressureNextCommit();
 
-        willReceiveConcensusHeartbeat(
+        willReceiveConsensusHeartbeat(
             1, LEADER, firstTermPosition, 0, firstTermStreamPosition);
         pollsMessageFragment(leaderDataImage, firstTermLen, ABORT);
         pollsMessageFragment(leaderDataImage, firstTermLen, CONTINUE);
@@ -488,7 +488,7 @@ public class ClusterSubscriptionTest
         pollsMessageFragment(leaderDataImage, firstTermEnd, CONTINUE);
 
         backPressureNextCommit();
-        onResend(2, (long) 0, firstTermEnd, secondTermLen, ABORT);
+        onResend(2, (long)0, firstTermEnd, secondTermLen, ABORT);
         onResend(0, firstTermEnd, secondTermLen);
         onResend(secondTermLen, secondTermEnd, thirdTermLen);
 
@@ -543,17 +543,19 @@ public class ClusterSubscriptionTest
     private void dataWasArchived(
         final long streamStart, final long streamEnd, final Action expectedAction)
     {
-        when(otherLeaderArchiveReader.readUpTo(eq(streamStart + DataHeaderFlyweight.HEADER_LENGTH), eq(streamEnd), any())).then(
-            inv ->
-            {
-                callHandler(
-                    streamEnd,
-                    (int) (streamEnd - streamStart),
-                    expectedAction,
-                    inv,
-                    2);
-                return expectedAction == ABORT ? streamStart : streamEnd;
-            });
+        when(otherLeaderArchiveReader.readUpTo(
+            eq(streamStart + DataHeaderFlyweight.HEADER_LENGTH), eq(streamEnd), any()))
+            .then(
+                (inv) ->
+                {
+                    callHandler(
+                        streamEnd,
+                        (int)(streamEnd - streamStart),
+                        expectedAction,
+                        inv,
+                        2);
+                    return expectedAction == ABORT ? streamStart : streamEnd;
+                });
     }
 
     private void onResend(final long streamStartPosition, final int startPosition, final int resendLen)
@@ -616,7 +618,7 @@ public class ClusterSubscriptionTest
                 callHandler(streamPosition, length, expectedAction, inv, 0);
                 if (expectedAction != ABORT)
                 {
-                    when(dataImage.position()).thenReturn((long) streamPosition);
+                    when(dataImage.position()).thenReturn((long)streamPosition);
                 }
                 return 1;
             }).then(inv -> 0);
@@ -631,7 +633,7 @@ public class ClusterSubscriptionTest
         final InvocationOnMock inv,
         final int handlerArgumentIndex)
     {
-        final ControlledFragmentHandler handler = (ControlledFragmentHandler) inv.getArguments()[handlerArgumentIndex];
+        final ControlledFragmentHandler handler = (ControlledFragmentHandler)inv.getArguments()[handlerArgumentIndex];
 
         when(header.position()).thenReturn(streamPosition);
 
@@ -657,18 +659,20 @@ public class ClusterSubscriptionTest
             leaderShipTerm, leaderSessionId, position, streamStartPosition, streamPosition);
     }
 
-    private void willReceiveConcensusHeartbeat(
+    private void willReceiveConsensusHeartbeat(
         final int leaderShipTerm,
         final int leader,
         final long position,
         final long streamStartPosition,
         final long streamPosition)
     {
-        when(controlSubscription.controlledPoll(any(), anyInt())).then(inv ->
-        {
-            clusterSubscription.onConsensusHeartbeat(leaderShipTerm, leader, position, streamStartPosition, streamPosition);
-            return 1;
-        }).thenReturn(0);
+        when(controlSubscription.controlledPoll(any(), anyInt())).then(
+            (inv) ->
+            {
+                clusterSubscription.onConsensusHeartbeat(
+                    leaderShipTerm, leader, position, streamStartPosition, streamPosition);
+                return 1;
+            }).thenReturn(0);
     }
 
     private void assertState(

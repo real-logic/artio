@@ -65,7 +65,8 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         return MessageControl.CONTINUE;
     }
 
-    public synchronized MessageControl onField(final int tag, final AsciiBuffer buffer, final int offset, final int length)
+    public synchronized MessageControl onField(
+        final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
         DebugLogger.log(FIX_TEST, "Field: %s=%s\n", tag, buffer, offset, length);
         if (tag == Constants.SENDER_COMP_ID)
@@ -99,7 +100,7 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         final AsciiFieldFlyweight value)
     {
         this.error = error;
-        System.err.printf("%s for %d @ %d\n", error, messageType, tagNumber);
+        System.err.printf("%s for %d @ %d%n", error, messageType, tagNumber);
         return false;
     }
 
@@ -145,14 +146,14 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
     public Optional<FixMessage> hasReceivedMessage(final String messageType)
     {
         return messages()
-              .stream()
-              .filter(fixMessage -> fixMessage.get(MSG_TYPE).equals(messageType))
-              .findFirst();
+            .stream()
+            .filter((fixMessage) -> fixMessage.get(MSG_TYPE).equals(messageType))
+            .findFirst();
     }
 
     void allMessagesHaveSequenceIndex(final int sequenceIndex)
     {
-        messages(hasSequenceIndex(sequenceIndex), msg -> true);
+        messages(hasSequenceIndex(sequenceIndex), (msg) -> true);
     }
 
     void logonMessagesHaveSequenceNumbers(final int sequenceIndex)
@@ -160,11 +161,11 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         messages(hasMessageSequenceNumber(sequenceIndex), FixMessage::isLogon);
     }
 
-    private void messages(final Matcher<FixMessage> matcher, final Predicate<? super FixMessage> pred)
+    private void messages(final Matcher<FixMessage> matcher, final Predicate<? super FixMessage> predicate)
     {
         messages.stream()
-                .filter(pred)
-                .forEach(message -> assertThat(message.toString(), message, matcher));
+            .filter(predicate)
+            .forEach((message) -> assertThat(message.toString(), message, matcher));
     }
 
 }

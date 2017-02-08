@@ -871,8 +871,11 @@ public class DecoderGenerator extends Generator
 
     private String decodeTrailerOrReturn(final boolean hasCommonCompounds, final int indent)
     {
-        return (hasCommonCompounds ? indent(indent, "position += trailer.decode(buffer, position, end - position);\n") : "") +
-        indent(indent, "return position - offset;\n");
+        return
+            (hasCommonCompounds ?
+                indent(indent, "position += trailer.decode(buffer, position, end - position);\n")
+                : "") +
+            indent(indent, "return position - offset;\n");
     }
 
     private String isTrailerTag(final AggregateType type)
@@ -1016,7 +1019,7 @@ public class DecoderGenerator extends Generator
         return entry.required() ? "" : String.format("                has%s = true;\n", entry.name());
     }
 
-    private String decodeMethodFor(final Type type, String fieldName)
+    private String decodeMethodFor(final Type type, final String fieldName)
     {
         switch (type)
         {

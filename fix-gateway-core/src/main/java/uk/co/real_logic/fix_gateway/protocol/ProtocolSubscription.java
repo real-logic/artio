@@ -48,7 +48,8 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
         return new ProtocolSubscription(protocolHandler, CONTINUE);
     }
 
-    public static ControlledFragmentHandler of(final ProtocolHandler protocolHandler, final ControlledFragmentHandler other)
+    public static ControlledFragmentHandler of(
+        final ProtocolHandler protocolHandler, final ControlledFragmentHandler other)
     {
         final ProtocolSubscription subscription = new ProtocolSubscription(protocolHandler, UNKNOWN_TEMPLATE);
         return (buffer, offset, length, header) ->
@@ -64,13 +65,13 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
         };
     }
 
-    private ProtocolSubscription(final ProtocolHandler protocolHandler,
-                                 final Action defaultAction)
+    private ProtocolSubscription(final ProtocolHandler protocolHandler, final Action defaultAction)
     {
         this.protocolHandler = protocolHandler;
         this.defaultAction = defaultAction;
     }
 
+    @SuppressWarnings("FinalParameters")
     public Action onFragment(final DirectBuffer buffer, int offset, int length, final Header header)
     {
         messageHeader.wrap(buffer, offset);

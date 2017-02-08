@@ -102,7 +102,8 @@ public class AcceptorSessionTest extends AbstractSessionTest
     @Test
     public void shouldDisconnectIfInvalidSendingTimeAtLogonWhenBackPressured()
     {
-        when(mockProxy.rejectWhilstNotLoggedOn(anyInt(), any(), eq(SEQUENCE_INDEX))).thenReturn(BACK_PRESSURED, POSITION);
+        when(mockProxy.rejectWhilstNotLoggedOn(anyInt(), any(), eq(SEQUENCE_INDEX)))
+            .thenReturn(BACK_PRESSURED, POSITION);
 
         logonWithInvalidSendingTime(ABORT);
 

@@ -74,13 +74,13 @@ public class ReplayQueryTest extends AbstractLogTest
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);
 
         when(mockReader.session(anyInt())).thenReturn(mockSessionReader);
-        readPositions(100L, (long) UNKNOWN_SESSION);
+        readPositions(100L, (long)UNKNOWN_SESSION);
 
         bufferContainsMessage(true);
         indexRecord();
     }
 
-    private void readPositions(final Long firstPosition, final Long ... remainingPositions)
+    private void readPositions(final Long firstPosition, final Long... remainingPositions)
     {
         when(mockSessionReader.read(anyLong(), any(ControlledFragmentHandler.class)))
             .thenReturn(firstPosition, remainingPositions);
@@ -117,7 +117,8 @@ public class ReplayQueryTest extends AbstractLogTest
         final int endSequenceNumber,
         final int endSequenceIndex)
     {
-        return query.query(mockHandler, sessionId, beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex);
+        return query.query(
+            mockHandler, sessionId, beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex);
     }
 
     @Test
@@ -144,7 +145,6 @@ public class ReplayQueryTest extends AbstractLogTest
         {
             IoUtil.delete(new File(DEFAULT_LOG_FILE_DIR), false);
         }
-
     }
 
     @Test

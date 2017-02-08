@@ -184,7 +184,8 @@ public class CommonConfiguration
     private AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.none();
     private MessageValidationStrategy messageValidationStrategy = MessageValidationStrategy.none();
     private SessionCustomisationStrategy sessionCustomisationStrategy = SessionCustomisationStrategy.none();
-    private int monitoringBuffersLength = getInteger(MONITORING_BUFFERS_LENGTH_PROPERTY, DEFAULT_MONITORING_BUFFER_LENGTH);
+    private int monitoringBuffersLength = getInteger(
+        MONITORING_BUFFERS_LENGTH_PROPERTY, DEFAULT_MONITORING_BUFFER_LENGTH);
     private String monitoringFile = null;
     private long replyTimeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
     private Aeron.Context aeronContext = new Aeron.Context();
@@ -211,7 +212,7 @@ public class CommonConfiguration
      * @param sendingTimeWindowInMs the current sending time in milliseconds
      * @return this
      */
-    public CommonConfiguration sendingTimeWindowInMs(long sendingTimeWindowInMs)
+    public CommonConfiguration sendingTimeWindowInMs(final long sendingTimeWindowInMs)
     {
         this.sendingTimeWindowInMs = sendingTimeWindowInMs;
         return this;
@@ -314,7 +315,7 @@ public class CommonConfiguration
      * @return this
      * @see CommonConfiguration#MONITORING_FILE_PROPERTY
      */
-    public CommonConfiguration monitoringFile(String monitoringFile)
+    public CommonConfiguration monitoringFile(final String monitoringFile)
     {
         this.monitoringFile = monitoringFile;
         return this;
@@ -389,8 +390,9 @@ public class CommonConfiguration
     }
 
     /**
-     * Sets the session's encoding buffer size. The session buffer is a buffer used by each Session to encode
-     * messages via {@link uk.co.real_logic.fix_gateway.session.Session#send(uk.co.real_logic.fix_gateway.builder.MessageEncoder)}.
+     * Sets the session's encoding buffer size. The session buffer is a buffer used by each Session to encode messages
+     * via
+     * {@link uk.co.real_logic.fix_gateway.session.Session#send(uk.co.real_logic.fix_gateway.builder.MessageEncoder)}.
      *
      * @param bufferSize the session's encoding buffer size
      * @return this
@@ -516,7 +518,8 @@ public class CommonConfiguration
         {
             if (monitoringFile() == null)
             {
-                monitoringFile(getProperty(MONITORING_FILE_PROPERTY, String.format(DEFAULT_MONITORING_FILE, fixSuffix)));
+                monitoringFile(getProperty(
+                    MONITORING_FILE_PROPERTY, String.format(DEFAULT_MONITORING_FILE, fixSuffix)));
             }
 
             if (histogramLoggingFile() == null)

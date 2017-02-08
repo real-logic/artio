@@ -117,6 +117,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         return tally;
     }
 
+    @SuppressWarnings("FinalParameters")
     public int getInt(int startInclusive, final int endExclusive)
     {
         final byte first = getByte(startInclusive);
@@ -215,6 +216,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         }
     }
 
+    @SuppressWarnings("FinalParameters")
     public DecimalFloat getFloat(final DecimalFloat number, int offset, int length)
     {
         // Throw away trailing spaces or zeros
@@ -601,6 +603,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         }
     }
 
+    @SuppressWarnings("FinalParameters")
     private int putLong(long remainder, final int end)
     {
         int index = end;

@@ -422,7 +422,7 @@ public class ClusterReplicationTest
             });
     }
 
-    private boolean foundLeader(NodeRunner... nodes)
+    private boolean foundLeader(final NodeRunner... nodes)
     {
         final long leaderCount = Stream.of(nodes).filter(NodeRunner::isLeader).count();
         return leaderCount == 1;

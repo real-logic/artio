@@ -45,7 +45,7 @@ public class EngineDescriptorStore implements NodeStateHandler
         final short nodeId,
         final int aeronSessionId,
         final DirectBuffer buffer,
-        int nodeStateLength)
+        final int nodeStateLength)
     {
         int offset = 0;
         messageHeader.wrap(buffer, offset);
@@ -77,7 +77,7 @@ public class EngineDescriptorStore implements NodeStateHandler
 
     public void onNewLeader(final int leaderSessionId)
     {
-        this.leaderSessionId = Integer.valueOf(leaderSessionId);
+        this.leaderSessionId = leaderSessionId;
         updateLeaderLibraryChannel();
     }
 

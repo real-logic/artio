@@ -55,15 +55,16 @@ class Candidate implements Role, RaftHandler
     private long timeInMs;
     private boolean resendRequestVote = false;
 
-    Candidate(final short nodeId,
-              final int sessionId,
-              final ClusterAgent clusterAgent,
-              final int clusterSize,
-              final long voteTimeout,
-              final TermState termState,
-              final AcknowledgementStrategy acknowledgementStrategy,
-              final DirectBuffer nodeState,
-              final NodeStateHandler nodeStateHandler)
+    Candidate(
+        final short nodeId,
+        final int sessionId,
+        final ClusterAgent clusterAgent,
+        final int clusterSize,
+        final long voteTimeout,
+        final TermState termState,
+        final AcknowledgementStrategy acknowledgementStrategy,
+        final DirectBuffer nodeState,
+        final NodeStateHandler nodeStateHandler)
     {
         this.nodeId = nodeId;
         this.sessionId = sessionId;
@@ -124,7 +125,7 @@ class Candidate implements Role, RaftHandler
     }
 
     public Action onRequestVote(
-        final short candidateId, final int candidateSessionId, final int leaderShipTerm, long lastAckedPosition)
+        final short candidateId, final int candidateSessionId, final int leaderShipTerm, final long lastAckedPosition)
     {
         // Ignore vote requests messages from yourself
         if (candidateId == nodeId)
@@ -204,7 +205,7 @@ class Candidate implements Role, RaftHandler
     }
 
     public Action onConsensusHeartbeat(
-        short nodeId,
+        final short nodeId,
         final int leaderShipTerm,
         final long position,
         final long streamStartPosition,
@@ -232,10 +233,11 @@ class Candidate implements Role, RaftHandler
         return Action.CONTINUE;
     }
 
-    private void transitionToFollower(final int leaderShipTerm,
-                                      final short votedFor,
-                                      final long position,
-                                      final int leaderSessionId)
+    private void transitionToFollower(
+        final int leaderShipTerm,
+        final short votedFor,
+        final long position,
+        final int leaderSessionId)
     {
         votesFor.clear();
         termState
@@ -290,8 +292,8 @@ class Candidate implements Role, RaftHandler
 
     private void requestVote()
     {
-        resendRequestVote =
-            controlPublication.saveRequestVote(nodeId, sessionId, consensusPosition.get(), termState.leadershipTerm()) < 0;
+        resendRequestVote = controlPublication.saveRequestVote(
+            nodeId, sessionId, consensusPosition.get(), termState.leadershipTerm()) < 0;
     }
 
 }

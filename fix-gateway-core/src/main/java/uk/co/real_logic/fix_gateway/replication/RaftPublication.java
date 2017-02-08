@@ -29,9 +29,11 @@ import static uk.co.real_logic.fix_gateway.replication.messages.ReplyVoteEncoder
 class RaftPublication
 {
     private static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
-    private static final int MESSAGE_ACKNOWLEDGEMENT_LENGTH = HEADER_LENGTH + MessageAcknowledgementEncoder.BLOCK_LENGTH;
+    private static final int MESSAGE_ACKNOWLEDGEMENT_LENGTH =
+        HEADER_LENGTH + MessageAcknowledgementEncoder.BLOCK_LENGTH;
     private static final int REQUEST_VOTE_LENGTH = HEADER_LENGTH + RequestVoteEncoder.BLOCK_LENGTH;
-    private static final int REPLY_VOTE_LENGTH = HEADER_LENGTH + ReplyVoteEncoder.BLOCK_LENGTH + nodeStateHeaderLength();
+    private static final int REPLY_VOTE_LENGTH =
+        HEADER_LENGTH + ReplyVoteEncoder.BLOCK_LENGTH + nodeStateHeaderLength();
     private static final int CONSENSUS_HEARTBEAT_LENGTH = HEADER_LENGTH + ConsensusHeartbeatEncoder.BLOCK_LENGTH;
     private static final int RESEND_BLOCK_LENGTH =
         HEADER_LENGTH + ResendEncoder.BLOCK_LENGTH + ResendDecoder.bodyHeaderLength();

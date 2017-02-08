@@ -639,7 +639,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * {@inheritDoc}
      */
-    public EngineConfiguration monitoringFile(String monitoringFile)
+    public EngineConfiguration monitoringFile(final String monitoringFile)
     {
         super.monitoringFile(monitoringFile);
         return this;

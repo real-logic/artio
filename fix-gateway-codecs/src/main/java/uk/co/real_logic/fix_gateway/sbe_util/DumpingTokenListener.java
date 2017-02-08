@@ -132,12 +132,14 @@ public class DumpingTokenListener implements TokenListener
         builder.append('\n');
     }
 
-    public void onBeginComposite(final Token fieldToken, final List<Token> tokens, final int fromIndex, final int toIndex)
+    public void onBeginComposite(
+        final Token fieldToken, final List<Token> tokens, final int fromIndex, final int toIndex)
     {
         //namedScope.push(fieldToken.name() + ".");
     }
 
-    public void onEndComposite(final Token fieldToken, final List<Token> tokens, final int fromIndex, final int toIndex)
+    public void onEndComposite(
+        final Token fieldToken, final List<Token> tokens, final int fromIndex, final int toIndex)
     {
     }
 
@@ -159,7 +161,11 @@ public class DumpingTokenListener implements TokenListener
     }
 
     public void onVarData(
-        final Token fieldToken, final DirectBuffer buffer, final int bufferIndex, final int length, final Token typeToken)
+        final Token fieldToken,
+        final DirectBuffer buffer,
+        final int bufferIndex,
+        final int length,
+        final Token typeToken)
     {
         final String value;
         try
@@ -227,7 +233,6 @@ public class DumpingTokenListener implements TokenListener
         return null;
     }
 
-    @Override
     public String toString()
     {
         return builder.toString();

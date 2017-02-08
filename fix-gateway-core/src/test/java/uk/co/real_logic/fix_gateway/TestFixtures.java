@@ -47,13 +47,14 @@ public final class TestFixtures
         return launchMediaDriver(TERM_BUFFER_LENGTH);
     }
 
-    public static MediaDriver launchMediaDriver(int termBufferLength)
+    public static MediaDriver launchMediaDriver(final int termBufferLength)
     {
         final MediaDriver.Context context = mediaDriverContext(termBufferLength);
 
         final MediaDriver mediaDriver = MediaDriver.launch(context);
         final String aeronDirectoryName = context.aeronDirectoryName();
         CloseChecker.onOpen(aeronDirectoryName, mediaDriver);
+
         return mediaDriver;
     }
 
@@ -90,12 +91,6 @@ public final class TestFixtures
 
     public static ErrorHandler printingMockErrorHandler()
     {
-        return spy(new ErrorHandler()
-        {
-            public void onError(final Throwable throwable)
-            {
-                throwable.printStackTrace();
-            }
-        });
+        return spy(Throwable::printStackTrace);
     }
 }

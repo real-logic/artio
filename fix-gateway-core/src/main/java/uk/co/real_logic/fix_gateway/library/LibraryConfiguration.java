@@ -52,9 +52,7 @@ public final class LibraryConfiguration extends CommonConfiguration
          remoteSubId,
          remoteLocationId,
          username,
-         password) ->
-        {
-        };
+         password) -> {};
     public static final LibraryConnectHandler DEFAULT_LIBRARY_CONNECT_HANDLER = new LibraryConnectHandler()
     {
         public void onConnect(final FixLibrary library)
@@ -91,7 +89,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     /**
      * When a new session connects to the gateway you register a callback handler to find
      * out about the event. This method sets the handler for this library instance.
-     * <p>
+     *
      * Only needed if this is the accepting library instance.
      *
      * @param sessionAcquireHandler the new session handler
@@ -219,7 +217,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     /**
      * {@inheritDoc}
      */
-    public LibraryConfiguration monitoringFile(String monitoringFile)
+    public LibraryConfiguration monitoringFile(final String monitoringFile)
     {
         super.monitoringFile(monitoringFile);
         return this;

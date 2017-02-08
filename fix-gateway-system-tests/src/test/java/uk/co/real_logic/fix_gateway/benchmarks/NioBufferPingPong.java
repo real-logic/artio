@@ -34,7 +34,7 @@ public final class NioBufferPingPong extends AbstractPingPong
         new NioBufferPingPong().benchmark();
     }
 
-    protected void ping(SocketChannel channel, long time) throws IOException
+    protected void ping(final SocketChannel channel, final long time) throws IOException
     {
         writeByteBuffer(channel, pingWriteBuffer, time);
 
@@ -43,7 +43,7 @@ public final class NioBufferPingPong extends AbstractPingPong
         checkEqual(time, result);
     }
 
-    protected void pong(SocketChannel channel) throws IOException
+    protected void pong(final SocketChannel channel) throws IOException
     {
         final long value = readByteBuffer(channel, pongReadBuffer);
 

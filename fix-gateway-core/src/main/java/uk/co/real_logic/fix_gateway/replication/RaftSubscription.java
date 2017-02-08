@@ -42,6 +42,7 @@ class RaftSubscription implements ControlledFragmentHandler
         this.handler = handler;
     }
 
+    @SuppressWarnings("FinalParameters")
     public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
         messageHeader.wrap(buffer, offset);
@@ -58,8 +59,7 @@ class RaftSubscription implements ControlledFragmentHandler
                 return handler.onMessageAcknowledgement(
                     messageAcknowledgement.newAckedPosition(),
                     messageAcknowledgement.nodeId(),
-                    messageAcknowledgement.status()
-                );
+                    messageAcknowledgement.status());
             }
 
             case RequestVoteDecoder.TEMPLATE_ID:
@@ -69,8 +69,7 @@ class RaftSubscription implements ControlledFragmentHandler
                     requestVote.candidateId(),
                     requestVote.candidateSessionId(),
                     requestVote.leaderShipTerm(),
-                    requestVote.lastAckedPosition()
-                );
+                    requestVote.lastAckedPosition());
             }
 
             case ReplyVoteDecoder.TEMPLATE_ID:
@@ -86,8 +85,7 @@ class RaftSubscription implements ControlledFragmentHandler
                     replyVote.vote(),
                     nodeStateBuffer,
                     nodeStateLength,
-                    header.sessionId()
-                );
+                    header.sessionId());
             }
 
             case ConsensusHeartbeatDecoder.TEMPLATE_ID:
@@ -112,8 +110,7 @@ class RaftSubscription implements ControlledFragmentHandler
                     resend.startPosition(),
                     buffer,
                     bodyOffset,
-                    resend.bodyLength()
-                );
+                    resend.bodyLength());
             }
         }
 

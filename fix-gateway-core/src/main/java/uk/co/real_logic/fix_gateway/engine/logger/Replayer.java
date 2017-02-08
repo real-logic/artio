@@ -104,7 +104,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     public Action onMessage(
         final DirectBuffer srcBuffer,
         final int srcOffset,
-        int length,
+        final int length,
         final int libraryId,
         final long connectionId,
         final long sessionId,
@@ -116,12 +116,12 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     {
         if (messageType == ResendRequestDecoder.MESSAGE_TYPE && status == OK)
         {
-            length = Math.min(length, srcBuffer.capacity() - srcOffset);
+            final int limit = Math.min(length, srcBuffer.capacity() - srcOffset);
 
             asciiBuffer.wrap(srcBuffer);
             currentMessageOffset = srcOffset;
-            currentMessageLength = length;
-            resendRequest.decode(asciiBuffer, srcOffset, length);
+            currentMessageLength = limit;
+            resendRequest.decode(asciiBuffer, srcOffset, limit);
 
             final int beginSeqNo = resendRequest.beginSeqNo();
             final int endSeqNo = resendRequest.endSeqNo();

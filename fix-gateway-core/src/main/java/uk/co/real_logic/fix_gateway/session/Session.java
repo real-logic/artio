@@ -445,7 +445,8 @@ public class Session implements AutoCloseable
         final int sentSeqNum = 1;
         final int heartbeatIntervalInS = (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs);
         nextSequenceIndex();
-        final long position = proxy.logon(heartbeatIntervalInS, sentSeqNum, username(), password(), true, sequenceIndex());
+        final long position = proxy.logon(
+            heartbeatIntervalInS, sentSeqNum, username(), password(), true, sequenceIndex());
         lastSentMsgSeqNum(sentSeqNum, position);
 
         return position;
@@ -824,9 +825,10 @@ public class Session implements AutoCloseable
         proxy.setupSession(sessionId, sessionKey);
     }
 
-    private Action replyToLogon(int heartbeatInterval, final boolean resetSeqNumFlag)
+    private Action replyToLogon(final int heartbeatInterval, final boolean resetSeqNumFlag)
     {
-        return checkPosition(proxy.logon(heartbeatInterval, newSentSeqNum(), null, null, resetSeqNumFlag, sequenceIndex()));
+        return checkPosition(proxy.logon(
+            heartbeatInterval, newSentSeqNum(), null, null, resetSeqNumFlag, sequenceIndex()));
     }
 
     Action validateSendingTime(final long sendingTime)
@@ -847,7 +849,7 @@ public class Session implements AutoCloseable
             INVALID_SENDING_TIME);
     }
 
-    Action validateHeartbeat(int heartbeatInterval)
+    Action validateHeartbeat(final int heartbeatInterval)
     {
         if (heartbeatInterval < 0)
         {
@@ -966,7 +968,8 @@ public class Session implements AutoCloseable
         final int expectedMsgSeqNo = expectedReceivedSeqNum();
         if (receivedMsgSeqNo > expectedMsgSeqNo)
         {
-            final Action action = checkPosition(proxy.resendRequest(newSentSeqNum(), expectedMsgSeqNo, 0, sequenceIndex()));
+            final Action action = checkPosition(
+                proxy.resendRequest(newSentSeqNum(), expectedMsgSeqNo, 0, sequenceIndex()));
             if (action != ABORT)
             {
                 lastReceivedMsgSeqNum(newSeqNo - 1);
@@ -1182,7 +1185,8 @@ public class Session implements AutoCloseable
             state(ACTIVE);
         }
 
-        return onMessage(msgSeqNum, HeartbeatDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+        return onMessage(
+            msgSeqNum, HeartbeatDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
     }
 
     Action onInvalidMessageType(final int msgSeqNum, final char[] msgType, final int msgTypeLength)

@@ -211,7 +211,6 @@ public final class Field implements Element
             return description;
         }
 
-        @Override
         public boolean equals(final Object o)
         {
             if (o == null || getClass() != o.getClass())
@@ -220,10 +219,10 @@ public final class Field implements Element
             }
 
             final Value value = (Value)o;
-            return Objects.equals(representation, value.representation) && Objects.equals(description, value.description);
+            return Objects.equals(representation, value.representation) &&
+                Objects.equals(description, value.description);
         }
 
-        @Override
         public int hashCode()
         {
             int result = representation.hashCode();
@@ -231,7 +230,6 @@ public final class Field implements Element
             return result;
         }
 
-        @Override
         public String toString()
         {
             return "Value{" +

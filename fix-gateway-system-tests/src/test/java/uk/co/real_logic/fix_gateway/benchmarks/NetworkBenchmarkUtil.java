@@ -59,7 +59,7 @@ public final class NetworkBenchmarkUtil
         return 0;
     }
 
-    public static FileChannel newFile(String filename)
+    public static FileChannel newFile(final String filename)
     {
         try
         {
@@ -76,7 +76,8 @@ public final class NetworkBenchmarkUtil
         }
     }
 
-    public static void writeByteBuffer(final SocketChannel channel, final ByteBuffer buffer, final long value) throws IOException
+    public static void writeByteBuffer(final SocketChannel channel, final ByteBuffer buffer, final long value)
+        throws IOException
     {
         buffer.putLong(0, value);
         buffer.clear();
@@ -112,7 +113,7 @@ public final class NetworkBenchmarkUtil
     public static void printStats(final Histogram histogram)
     {
         System.out.printf(
-            "Max = %d, Mean = %f, 99.9%% = %d\n",
+            "Max = %d, Mean = %f, 99.9%% = %d%n",
             histogram.getMaxValue(),
             histogram.getMean(),
             histogram.getValueAtPercentile(99.9));

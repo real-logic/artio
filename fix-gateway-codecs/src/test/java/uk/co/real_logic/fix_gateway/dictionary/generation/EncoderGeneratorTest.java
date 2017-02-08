@@ -637,7 +637,7 @@ public class EncoderGeneratorTest
         setCharSequence(header, MSG_TYPE, "0");
     }
 
-    private void setRequiredFields(Encoder encoder) throws Exception
+    private void setRequiredFields(final Encoder encoder) throws Exception
     {
         setRequiredFields(encoder, 1);
     }
@@ -665,8 +665,7 @@ public class EncoderGeneratorTest
         setInt(encoder, INT_FIELD, 2);
     }
 
-    private void setSomeTimeField(final Encoder encoder,
-                                  final int someTime) throws Exception
+    private void setSomeTimeField(final Encoder encoder, final int someTime) throws Exception
     {
         final UtcTimestampEncoder utcTimestampEncoder = new UtcTimestampEncoder();
         final int length = utcTimestampEncoder.encode(someTime);
@@ -675,7 +674,7 @@ public class EncoderGeneratorTest
             .invoke(encoder, utcTimestampEncoder.buffer(), length);
     }
 
-    private void setOptionalFields(Encoder encoder) throws Exception
+    private void setOptionalFields(final Encoder encoder) throws Exception
     {
         setTestReqIdTo(encoder, ABC);
         setBoolean(encoder, BOOLEAN_FIELD, true);

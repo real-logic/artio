@@ -58,7 +58,8 @@ public class SessionContexts
     public static final long MISSING_SESSION_ID = -2;
 
     static final SessionContext DUPLICATE_SESSION = new SessionContext(-3, -3, null, OUT_OF_SPACE);
-    static final SessionContext UNKNOWN_SESSION = new SessionContext(Session.UNKNOWN, (int) Session.UNKNOWN, null, OUT_OF_SPACE);
+    static final SessionContext UNKNOWN_SESSION = new SessionContext(
+        Session.UNKNOWN, (int)Session.UNKNOWN, null, OUT_OF_SPACE);
     static final long LOWEST_VALID_SESSION_ID = 1L;
 
     private static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
@@ -192,7 +193,7 @@ public class SessionContexts
             crc32.reset();
             byteBuffer.clear().position(sectorEnd).limit(nextChecksum);
             crc32.update(byteBuffer);
-            final int calculatedChecksum = (int) crc32.getValue();
+            final int calculatedChecksum = (int)crc32.getValue();
             final int savedChecksum = buffer.getInt(nextChecksum);
             validateCheckSum("session ids", sectorEnd, nextSectorEnd, savedChecksum, calculatedChecksum);
             return nextSectorEnd;
@@ -220,8 +221,8 @@ public class SessionContexts
     }
 
     private SessionContext assignSessionId(final CompositeKey compositeKey,
-                                           final long sessionId,
-                                           final int sequenceIndex)
+        final long sessionId,
+        final int sequenceIndex)
     {
         int keyPosition = OUT_OF_SPACE;
         final int compositeKeyLength = idStrategy.save(compositeKey, compositeKeyBuffer, 0);
@@ -281,7 +282,7 @@ public class SessionContexts
         byteBuffer.clear().position(start).limit(endOfData);
         crc32.reset();
         crc32.update(byteBuffer);
-        final int checksumValue = (int) crc32.getValue();
+        final int checksumValue = (int)crc32.getValue();
         buffer.putInt(checksumOffset, checksumValue);
     }
 
@@ -294,7 +295,8 @@ public class SessionContexts
     {
         if (!currentlyAuthenticatedSessionIds.isEmpty())
         {
-            throw new IllegalStateException("There are currently authenticated sessions: " + currentlyAuthenticatedSessionIds);
+            throw new IllegalStateException(
+                "There are currently authenticated sessions: " + currentlyAuthenticatedSessionIds);
         }
 
         counter = LOWEST_VALID_SESSION_ID;
@@ -306,7 +308,7 @@ public class SessionContexts
             mappedFile.transferTo(backupLocation);
         }
 
-        buffer.setMemory(0, buffer.capacity(), (byte) 0);
+        buffer.setMemory(0, buffer.capacity(), (byte)0);
         initialiseBuffer();
     }
 

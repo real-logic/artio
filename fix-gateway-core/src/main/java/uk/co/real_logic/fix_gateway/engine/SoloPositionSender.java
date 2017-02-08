@@ -42,6 +42,7 @@ class SoloPositionSender implements Index
         this.publication = publication;
     }
 
+    @SuppressWarnings("FinalParameters")
     public void indexRecord(
         final DirectBuffer buffer,
         int offset,

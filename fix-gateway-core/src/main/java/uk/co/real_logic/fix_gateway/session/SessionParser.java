@@ -86,10 +86,9 @@ public class SessionParser
 
     private static boolean detectUsernameAndPassword()
     {
-        return Stream.of(LogonDecoder.class.getMethods())
-                     .filter(method -> "usernameAsString".equals(method.getName()))
-                     .findAny()
-                     .isPresent();
+        return Stream
+            .of(LogonDecoder.class.getMethods())
+            .anyMatch((method) -> "usernameAsString".equals(method.getName()));
     }
 
     public Action onMessage(
@@ -162,8 +161,8 @@ public class SessionParser
     private long decodeTimestamp(final byte[] sendingTime)
     {
         return CODEC_VALIDATION_ENABLED
-             ? timestampDecoder.decode(sendingTime, sendingTime.length)
-             : MISSING_LONG;
+            ? timestampDecoder.decode(sendingTime, sendingTime.length)
+            : MISSING_LONG;
     }
 
     private Action onAnyOtherMessage(final int offset, final int length)
@@ -307,7 +306,8 @@ public class SessionParser
         final HeaderDecoder header = logon.header();
         final char[] beginString = header.beginString();
         final int beginStringLength = header.beginStringLength();
-        if (CODEC_VALIDATION_ENABLED && (!logon.validate() || !session.onBeginString(beginString, beginStringLength, true)))
+        if (CODEC_VALIDATION_ENABLED && (!logon.validate() ||
+            !session.onBeginString(beginString, beginStringLength, true)))
         {
             return onCodecInvalidMessage(logon, header, true);
         }

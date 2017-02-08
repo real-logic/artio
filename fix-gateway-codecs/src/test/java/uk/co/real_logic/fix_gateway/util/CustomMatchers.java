@@ -47,7 +47,8 @@ public final class CustomMatchers
         return sequenceEqualsAscii(expectedValue, offset, expectedValue.length());
     }
 
-    public static Matcher<AsciiBuffer> sequenceEqualsAscii(final String expectedValue, final int offset, final int length)
+    public static Matcher<AsciiBuffer> sequenceEqualsAscii(
+        final String expectedValue, final int offset, final int length)
     {
         Objects.requireNonNull(expectedValue);
 
@@ -119,7 +120,7 @@ public final class CustomMatchers
                     final Object value = method.invoke(item);
                     return valueMatcher.matches(value);
                 }
-                catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e)
+                catch (final IllegalAccessException | InvocationTargetException | NoSuchMethodException e)
                 {
                     e.printStackTrace();
                     error = e.getMessage();

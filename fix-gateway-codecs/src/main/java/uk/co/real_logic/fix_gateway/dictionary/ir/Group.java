@@ -32,7 +32,7 @@ public final class Group extends Aggregate implements Element
         return numberField;
     }
 
-    public static Group of(Field field)
+    public static Group of(final Field field)
     {
         final String name = field.name();
         final String normalisedName = name.startsWith("No") ? name.substring(2) : name;
@@ -41,5 +41,4 @@ public final class Group extends Aggregate implements Element
         final Field numberField = new Field(field.number(), fieldName, Field.Type.NUMINGROUP);
         return new Group(groupName, new Entry(false, numberField));
     }
-
 }

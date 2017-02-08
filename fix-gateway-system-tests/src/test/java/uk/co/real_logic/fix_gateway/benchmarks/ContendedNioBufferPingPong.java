@@ -25,11 +25,10 @@ import static uk.co.real_logic.fix_gateway.benchmarks.NetworkBenchmarkUtil.*;
 // TODO: look at aeron buffer sizes
 public final class ContendedNioBufferPingPong extends AbstractContendedPingPong
 {
-
     private static final ByteBuffer SEND_PING_BUFFER = ByteBuffer.allocateDirect(MESSAGE_SIZE);
     private static final ByteBuffer READ_RESPONSE_BUFFER = ByteBuffer.allocateDirect(MESSAGE_SIZE);
 
-    public static void main(String[] args) throws Exception
+    public static void main(final String[] args) throws Exception
     {
         new ContendedNioBufferPingPong().benchmark();
     }

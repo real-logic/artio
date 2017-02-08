@@ -368,7 +368,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             final List<String> aeronChannels = configuration.libraryAeronChannels();
             final int nextIndex = (aeronChannels.indexOf(currentAeronChannel) + 1) % aeronChannels.size();
             currentAeronChannel = aeronChannels.get(nextIndex);
-            DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to next engine (%s) in round-robin\n", currentAeronChannel);
+            DebugLogger.log(
+                LIBRARY_CONNECT, "Attempting connect to next engine (%s) in round-robin\n", currentAeronChannel);
         }
     }
 
@@ -584,8 +585,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int libraryId,
         final long connectionId,
         final long sessionId,
-        int lastSentSequenceNumber,
-        int lastReceivedSequenceNumber,
+        final int lastSentSequenceNumber,
+        final int lastReceivedSequenceNumber,
         final LogonStatus status,
         final String localCompId,
         final String localSubId,

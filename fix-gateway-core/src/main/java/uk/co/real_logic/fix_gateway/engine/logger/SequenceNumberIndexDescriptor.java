@@ -27,7 +27,7 @@ import static uk.co.real_logic.fix_gateway.engine.SectorFramer.nextSectorStart;
 
 /**
  * Stores a cache of the last sent sequence number.
- * <p>
+ *
  * Each instance is not thread-safe, however, they can share a common
  * off-heap in a single-writer threadsafe manner.
  *
@@ -65,12 +65,12 @@ final class SequenceNumberIndexDescriptor
         return proposedCapacity;
     }
 
-    public static File passingPath(String indexFilePath)
+    public static File passingPath(final String indexFilePath)
     {
         return new File(indexFilePath + "-passing");
     }
 
-    public static File writablePath(String indexFilePath)
+    public static File writablePath(final String indexFilePath)
     {
         return new File(indexFilePath + "-writable");
     }

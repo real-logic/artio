@@ -72,7 +72,7 @@ class Leader implements Role, RaftHandler
     private long lastAppliedPosition;
 
     /**
-     * This is [concensusPosition] - [streamPosition]. Updated
+     * This is [consensusPosition] - [streamPosition]. Updated
      * when you get elected leader and valid for the duration of your leadership term.
      */
     private long streamPositionDelta;
@@ -201,8 +201,7 @@ class Leader implements Role, RaftHandler
         this.nextHeartbeatTimeInMs = timeInMs + heartbeatIntervalInMs;
     }
 
-    public Action onMessageAcknowledgement(
-        long position, final short nodeId, final AcknowledgementStatus status)
+    public Action onMessageAcknowledgement(final long position, final short nodeId, final AcknowledgementStatus status)
     {
         if (status == OK)
         {
@@ -447,5 +446,4 @@ class Leader implements Role, RaftHandler
             saveResend(EMPTY_BUFFER, 0, 0);
         }
     }
-
 }

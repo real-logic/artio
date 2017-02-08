@@ -84,8 +84,10 @@ public final class DictionaryParser
         final Map<Entry, String> forwardReferences = new HashMap<>();
         final Map<String, Component> components = parseComponents(document, fields, forwardReferences);
         final List<Message> messages = parseMessages(document, fields, components, forwardReferences);
-        final Component header = extractComponent(document, fields, findHeader, "Header", components, forwardReferences);
-        final Component trailer = extractComponent(document, fields, findTrailer, "Trailer", components, forwardReferences);
+        final Component header = extractComponent(
+            document, fields, findHeader, "Header", components, forwardReferences);
+        final Component trailer = extractComponent(
+            document, fields, findTrailer, "Trailer", components, forwardReferences);
 
         reconnectForwardReferences(forwardReferences, components);
 

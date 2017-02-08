@@ -71,10 +71,10 @@ public class SequenceNumberIndexWriter implements Index
     private long nextRollPosition = UNINITIALISED;
 
     public SequenceNumberIndexWriter(
-            final AtomicBuffer inMemoryBuffer,
-            final MappedFile indexFile,
-            final ErrorHandler errorHandler,
-            final int streamId)
+        final AtomicBuffer inMemoryBuffer,
+        final MappedFile indexFile,
+        final ErrorHandler errorHandler,
+        final int streamId)
     {
         this.inMemoryBuffer = inMemoryBuffer;
         this.indexFile = indexFile;
@@ -95,8 +95,8 @@ public class SequenceNumberIndexWriter implements Index
         {
             initialiseBuffer();
             positions = new IndexedPositionWriter(
-                    positionsBuffer(inMemoryBuffer, positionTableOffset),
-                    errorHandler);
+                positionsBuffer(inMemoryBuffer, positionTableOffset),
+                errorHandler);
         }
         catch (final Exception e)
         {
@@ -107,12 +107,12 @@ public class SequenceNumberIndexWriter implements Index
     }
 
     public void indexRecord(
-            final DirectBuffer buffer,
-            final int srcOffset,
-            final int length,
-            final int streamId,
-            final int aeronSessionId,
-            final long endPosition)
+        final DirectBuffer buffer,
+        final int srcOffset,
+        final int length,
+        final int streamId,
+        final int aeronSessionId,
+        final long endPosition)
     {
         if (streamId != this.streamId)
         {
@@ -163,7 +163,7 @@ public class SequenceNumberIndexWriter implements Index
 
     void resetSequenceNumbers()
     {
-        inMemoryBuffer.setMemory(0, positionTableOffset, (byte) 0);
+        inMemoryBuffer.setMemory(0, positionTableOffset, (byte)0);
         initialiseBlankBuffer();
     }
 
@@ -205,8 +205,8 @@ public class SequenceNumberIndexWriter implements Index
         }
 
         final boolean flipsFiles = rename(indexPath, passingPlacePath)
-                && rename(writablePath, indexPath)
-                && rename(passingPlacePath, writablePath);
+            && rename(writablePath, indexPath)
+            && rename(passingPlacePath, writablePath);
 
         if (RUNNING_ON_WINDOWS)
         {
@@ -264,11 +264,9 @@ public class SequenceNumberIndexWriter implements Index
         new IndexedPositionReader(positions.buffer()).readLastPosition(consumer);
     }
 
-    private void saveRecord(
-            final int newSequenceNumber,
-            final long sessionId)
+    private void saveRecord(final int newSequenceNumber, final long sessionId)
     {
-        int position = (int) recordOffsets.get(sessionId);
+        int position = (int)recordOffsets.get(sessionId);
         if (position == MISSING_RECORD)
         {
             position = SequenceNumberIndexDescriptor.HEADER_SIZE;
@@ -278,7 +276,7 @@ public class SequenceNumberIndexWriter implements Index
                 if (position == OUT_OF_SPACE)
                 {
                     errorHandler.onError(new IllegalStateException(
-                            "Sequence Number Index out of space, can't claim slot for " + sessionId));
+                        "Sequence Number Index out of space, can't claim slot for " + sessionId));
                     return;
                 }
 
@@ -304,24 +302,24 @@ public class SequenceNumberIndexWriter implements Index
     }
 
     private void createNewRecord(
-            final int sequenceNumber,
-            final long sessionId,
-            int position)
+        final int sequenceNumber,
+        final long sessionId,
+        final int position)
     {
         recordOffsets.put(sessionId, position);
         lastKnownEncoder
-                .wrap(inMemoryBuffer, position)
-                .sessionId(sessionId);
+            .wrap(inMemoryBuffer, position)
+            .sessionId(sessionId);
         updateSequenceNumber(position, sequenceNumber);
     }
 
     private void initialiseBuffer()
     {
         validateBufferSizes();
-        final AtomicBuffer filebuffer = indexFile.buffer();
-        if (fileHasBeenInitialized(filebuffer))
+        final AtomicBuffer fileBuffer = indexFile.buffer();
+        if (fileHasBeenInitialized(fileBuffer))
         {
-            readFile(filebuffer);
+            readFile(fileBuffer);
         }
         else if (passingPlacePath.exists())
         {
@@ -334,9 +332,9 @@ public class SequenceNumberIndexWriter implements Index
             else
             {
                 errorHandler.onError(new IllegalStateException(String.format(
-                        "Unable to recover index file from %s to %s due to rename failure",
-                        passingPlacePath,
-                        indexPath)));
+                    "Unable to recover index file from %s to %s due to rename failure",
+                    passingPlacePath,
+                    indexPath)));
             }
         }
         else
@@ -348,18 +346,18 @@ public class SequenceNumberIndexWriter implements Index
     private void initialiseBlankBuffer()
     {
         LoggerUtil.initialiseBuffer(
-                inMemoryBuffer,
-                fileHeaderEncoder,
-                fileHeaderDecoder,
-                lastKnownEncoder.sbeSchemaId(),
-                lastKnownEncoder.sbeTemplateId(),
-                lastKnownEncoder.sbeSchemaVersion(),
-                lastKnownEncoder.sbeBlockLength());
+            inMemoryBuffer,
+            fileHeaderEncoder,
+            fileHeaderDecoder,
+            lastKnownEncoder.sbeSchemaId(),
+            lastKnownEncoder.sbeTemplateId(),
+            lastKnownEncoder.sbeSchemaVersion(),
+            lastKnownEncoder.sbeBlockLength());
     }
 
-    private boolean fileHasBeenInitialized(final AtomicBuffer filebuffer)
+    private boolean fileHasBeenInitialized(final AtomicBuffer fileBuffer)
     {
-        return filebuffer.getShort(0) != 0 || filebuffer.getInt(FIRST_CHECKSUM_LOCATION) != 0;
+        return fileBuffer.getShort(0) != 0 || fileBuffer.getInt(FIRST_CHECKSUM_LOCATION) != 0;
     }
 
     private void validateBufferSizes()
@@ -369,35 +367,35 @@ public class SequenceNumberIndexWriter implements Index
         if (fileCapacity != inMemoryCapacity)
         {
             throw new IllegalStateException(String.format(
-                    "In memory buffer and disk file don't have the same size, disk: %d, memory: %d",
-                    fileCapacity,
-                    inMemoryCapacity
+                "In memory buffer and disk file don't have the same size, disk: %d, memory: %d",
+                fileCapacity,
+                inMemoryCapacity
             ));
         }
 
         if (fileCapacity < SECTOR_SIZE)
         {
             throw new IllegalStateException(String.format(
-                    "Cannot create sequencen number of size < 1 sector: %d",
-                    fileCapacity
+                "Cannot create sequencen number of size < 1 sector: %d",
+                fileCapacity
             ));
         }
     }
 
-    private void readFile(final AtomicBuffer filebuffer)
+    private void readFile(final AtomicBuffer fileBuffer)
     {
-        loadBuffer(filebuffer);
+        loadBuffer(fileBuffer);
         checksumFramer.validateCheckSums();
     }
 
-    private void loadBuffer(final AtomicBuffer filebuffer)
+    private void loadBuffer(final AtomicBuffer fileBuffer)
     {
-        inMemoryBuffer.putBytes(0, filebuffer, 0, fileCapacity);
+        inMemoryBuffer.putBytes(0, fileBuffer, 0, fileCapacity);
     }
 
     private void updateSequenceNumber(
-            final int recordOffset,
-            final int value)
+        final int recordOffset,
+        final int value)
     {
         inMemoryBuffer.putIntOrdered(recordOffset + SEQUENCE_NUMBER_OFFSET, value);
     }

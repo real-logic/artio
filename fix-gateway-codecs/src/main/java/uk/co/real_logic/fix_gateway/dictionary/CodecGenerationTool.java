@@ -49,7 +49,10 @@ public final class CodecGenerationTool
             final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, DECODER_PACKAGE, decoder);
 
             final EncoderGenerator encoderGenerator = new EncoderGenerator(
-                dictionary, 1, ENCODER_PACKAGE, new PackageOutputManager(outputPath, ENCODER_PACKAGE), Validation.class);
+                dictionary,
+                1,
+                ENCODER_PACKAGE,
+                new PackageOutputManager(outputPath, ENCODER_PACKAGE), Validation.class);
 
             final DecoderGenerator decoderGenerator = new DecoderGenerator(
                 dictionary, 1, DECODER_PACKAGE, decoder, Validation.class);
