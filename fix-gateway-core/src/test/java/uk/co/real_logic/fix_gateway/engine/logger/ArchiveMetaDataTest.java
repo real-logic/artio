@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.agrona.IoUtil;
 import org.junit.After;
+import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
@@ -43,6 +44,17 @@ public class ArchiveMetaDataTest
     public void teardown()
     {
         archiveMetaData.close();
+        ensureTempDirDoesntExist();
+    }
+
+    @Before
+    public void setUp()
+    {
+        ensureTempDirDoesntExist();
+    }
+
+    private void ensureTempDirDoesntExist()
+    {
         final File dir = new File(tempDir);
         if (dir.exists())
         {
