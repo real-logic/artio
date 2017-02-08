@@ -295,14 +295,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private int sendOutboundMessages()
     {
         final int newMessagesRead =
-            outboundLibrarySubscription.controlledPoll(outboundLibrarySubscriber, outboundLibraryFragmentLimit);
+            outboundLibrarySubscription.poll(outboundLibrarySubscriber, outboundLibraryFragmentLimit);
         int messagesRead = newMessagesRead +
-            outboundSlowSubscription.controlledPoll(senderEndPoints, outboundLibraryFragmentLimit);
+            outboundSlowSubscription.poll(senderEndPoints, outboundLibraryFragmentLimit);
 
         if (isClustered())
         {
             messagesRead +=
-                outboundClusterSubscription.controlledPoll(outboundClusterSubscriber, outboundLibraryFragmentLimit);
+                outboundClusterSubscription.poll(outboundClusterSubscriber, outboundLibraryFragmentLimit);
         }
 
         return messagesRead;

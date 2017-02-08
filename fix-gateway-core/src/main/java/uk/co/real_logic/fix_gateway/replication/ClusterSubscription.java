@@ -83,7 +83,7 @@ class ClusterSubscription extends ClusterableSubscription
         messageFilter = new MessageFilter(clusterStreamId);
     }
 
-    public int controlledPoll(final ControlledFragmentHandler fragmentHandler, final int fragmentLimit)
+    public int poll(final ControlledFragmentHandler fragmentHandler, final int fragmentLimit)
     {
         this.handler = fragmentHandler;
 

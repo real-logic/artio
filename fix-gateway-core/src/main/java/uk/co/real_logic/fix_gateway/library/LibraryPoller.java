@@ -284,7 +284,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private int pollWithoutReconnect(final long timeInMs, final int fragmentLimit)
     {
-        final int messagesRead = inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit);
+        final int messagesRead = inboundSubscription.poll(outboundSubscription, fragmentLimit);
         return messagesRead +
             pollSessions(timeInMs) +
             livenessDetector.poll(timeInMs) +

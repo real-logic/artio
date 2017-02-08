@@ -31,7 +31,7 @@ public class SoloSubscription extends ClusterableSubscription
         this.subscription = subscription;
     }
 
-    public int controlledPoll(final ControlledFragmentHandler fragmentHandler, final int fragmentLimit)
+    public int poll(final ControlledFragmentHandler fragmentHandler, final int fragmentLimit)
     {
         return subscription.controlledPoll(fragmentHandler, fragmentLimit);
     }

@@ -40,7 +40,7 @@ class OutboundPipe implements ControlledFragmentHandler
     {
         if (publication != null && streams.isLeader())
         {
-            return subscription.controlledPoll(this, fragmentLimit);
+            return subscription.poll(this, fragmentLimit);
         }
 
         return 0;

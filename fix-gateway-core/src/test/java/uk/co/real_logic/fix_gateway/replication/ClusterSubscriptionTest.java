@@ -580,7 +580,7 @@ public class ClusterSubscriptionTest
 
     private void poll()
     {
-        clusterSubscription.controlledPoll(handler, 1);
+        clusterSubscription.poll(handler, 1);
     }
 
     private void onConsensusHeartbeatPoll(

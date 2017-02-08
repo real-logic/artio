@@ -294,7 +294,7 @@ public class LibraryPollerTest
 
     private OngoingStubbing<Integer> whenPolled()
     {
-        return when(inboundSubscription.controlledPoll(any(), anyInt()));
+        return when(inboundSubscription.poll(any(), anyInt()));
     }
 
     private void manageConnection(final long connectionId, final long sessionId)

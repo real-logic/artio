@@ -19,7 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 
 public abstract class ClusterableSubscription implements AutoCloseable
 {
-    public abstract int controlledPoll(ControlledFragmentHandler fragmentHandler, int fragmentLimit);
+    public abstract int poll(ControlledFragmentHandler fragmentHandler, int fragmentLimit);
 
     public abstract long positionOf(int aeronSessionId);
 

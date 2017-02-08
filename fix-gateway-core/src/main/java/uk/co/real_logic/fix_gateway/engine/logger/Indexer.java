@@ -60,7 +60,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
 
     public int doWork() throws Exception
     {
-        return subscription.controlledPoll(this, LIMIT) + CollectionUtil.sum(indices, Index::doWork);
+        return subscription.poll(this, LIMIT) + CollectionUtil.sum(indices, Index::doWork);
     }
 
     private void catchIndexUp()
@@ -119,7 +119,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
         }
 
         // We know that any remaining data to quiesce at this point must be in the subscription.
-        subscription.controlledPoll(this::quiesceFragment, Integer.MAX_VALUE);
+        subscription.poll(this::quiesceFragment, Integer.MAX_VALUE);
     }
 
     private Action quiesceFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)

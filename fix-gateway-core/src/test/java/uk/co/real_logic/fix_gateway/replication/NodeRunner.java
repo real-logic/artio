@@ -139,7 +139,7 @@ class NodeRunner implements AutoCloseable
             try
             {
                 work += clusterAgent.doWork();
-                work += subscription.controlledPoll(handler, fragmentLimit);
+                work += subscription.poll(handler, fragmentLimit);
 
                 validateRole();
             }

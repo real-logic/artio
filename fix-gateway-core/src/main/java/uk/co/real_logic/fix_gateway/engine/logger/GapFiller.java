@@ -64,7 +64,7 @@ public class GapFiller implements ProtocolHandler, Agent
 
     public int doWork() throws Exception
     {
-        return subscription.controlledPoll(protocolSubscription, FRAGMENT_LIMIT);
+        return subscription.poll(protocolSubscription, FRAGMENT_LIMIT);
     }
 
     public Action onMessage(

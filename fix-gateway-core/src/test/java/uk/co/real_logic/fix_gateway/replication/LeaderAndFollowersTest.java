@@ -168,7 +168,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
         assertEventuallyTrue(
             "follower 1 polls a message",
-            () -> follower1Subscription.controlledPoll(follower1Handler, FRAGMENT_LIMIT) > 0);
+            () -> follower1Subscription.poll(follower1Handler, FRAGMENT_LIMIT) > 0);
 
         verify(follower1Handler).onFragment(any(), eq(HEADER_LENGTH), eq(position - HEADER_LENGTH), any());
     }
@@ -207,7 +207,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         offerBuffer();
 
         follower1.poll(FRAGMENT_LIMIT, 0);
-        follower1Subscription.controlledPoll(follower1Handler, FRAGMENT_LIMIT);
+        follower1Subscription.poll(follower1Handler, FRAGMENT_LIMIT);
 
         pollUntilRead(leader, 1);
         leaderNeverCommitted();
@@ -219,7 +219,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         final int position = offerBuffer();
 
         follower1.poll(FRAGMENT_LIMIT, 0);
-        follower1Subscription.controlledPoll(follower1Handler, FRAGMENT_LIMIT);
+        follower1Subscription.poll(follower1Handler, FRAGMENT_LIMIT);
 
         pollUntilRead(leader, 1);
         leaderNeverCommitted();
@@ -285,7 +285,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         final int position = offerBuffer();
 
         follower1.poll(FRAGMENT_LIMIT, 0);
-        follower1Subscription.controlledPoll(follower1Handler, FRAGMENT_LIMIT);
+        follower1Subscription.poll(follower1Handler, FRAGMENT_LIMIT);
 
         follower2.poll(FRAGMENT_LIMIT, 0);
 
@@ -297,7 +297,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
     private int pollLeaderSubscription()
     {
-        return leaderSubscription.controlledPoll(leaderHandler, FRAGMENT_LIMIT);
+        return leaderSubscription.poll(leaderHandler, FRAGMENT_LIMIT);
     }
 
     @SuppressWarnings("FinalParameters")

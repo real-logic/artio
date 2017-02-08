@@ -86,8 +86,8 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
 
     private int pollCommands()
     {
-        return outboundLibrarySubscription.controlledPoll(onLibraryFragmentFunc, LIMIT) +
-            outboundClusterSubscription.controlledPoll(onClusterFragmentFunc, LIMIT);
+        return outboundLibrarySubscription.poll(onLibraryFragmentFunc, LIMIT) +
+            outboundClusterSubscription.poll(onClusterFragmentFunc, LIMIT);
     }
 
     @SuppressWarnings("FinalParameters")

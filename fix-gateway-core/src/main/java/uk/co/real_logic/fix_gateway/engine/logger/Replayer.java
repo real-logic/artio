@@ -211,7 +211,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
     public int doWork() throws Exception
     {
-        return subscription.controlledPoll(protocolSubscription, POLL_LIMIT);
+        return subscription.poll(protocolSubscription, POLL_LIMIT);
     }
 
     public void onClose()
