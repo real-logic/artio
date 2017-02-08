@@ -17,17 +17,22 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
+import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
-import org.agrona.collections.LongArrayList;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 
 class NodeHandler implements ControlledFragmentHandler
 {
     private final int nodeId;
-    private final LongArrayList replicatedPositions = new LongArrayList();
+    private final List<ReplicatedMessage> replicatedMessages = new ArrayList<>();
 
     NodeHandler(final int nodeId)
     {
@@ -36,9 +41,9 @@ class NodeHandler implements ControlledFragmentHandler
 
     public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        final long replicatedPosition = header.position();
-        DebugLogger.log(RAFT, "%d: position %d\n", nodeId, replicatedPosition);
-        replicatedPositions.add(replicatedPosition);
+        final long position = header.position();
+        DebugLogger.log(RAFT, "%d: position %d\n", nodeId, position);
+        replicatedMessages.add(new ReplicatedMessage(position, length));
 
         // Exceptions.printStackTrace();
 
@@ -47,17 +52,44 @@ class NodeHandler implements ControlledFragmentHandler
 
     void checkConsistencyOfReplicatedPositions()
     {
-        // TODO
+        int position = 0;
+        for (ReplicatedMessage replicatedMessage : replicatedMessages)
+        {
+            int messageLength = DataHeaderFlyweight.HEADER_LENGTH + replicatedMessage.length;
+            position = ArchiveDescriptor.alignTerm(position + messageLength);
+            assertEquals(replicatedMessages.toString(), position, replicatedMessage.position);
+        }
+    }
+
+    private static final class ReplicatedMessage
+    {
+        private final long position;
+        private final int length;
+
+        private ReplicatedMessage(final long position, final int length)
+        {
+            this.position = position;
+            this.length = length;
+        }
+
+        public String toString()
+        {
+            return "{" +
+                "position=" + position +
+                ", length=" + length +
+                '}';
+        }
     }
 
     long replicatedPosition()
     {
-        if (replicatedPositions.isEmpty())
+        if (replicatedMessages.isEmpty())
         {
             return 0;
         }
 
-        return replicatedPositions.getLong(replicatedPositions.size() - 1);
+        final ReplicatedMessage lastMessage = replicatedMessages.get(replicatedMessages.size() - 1);
+        return lastMessage.position;
     }
 
 }

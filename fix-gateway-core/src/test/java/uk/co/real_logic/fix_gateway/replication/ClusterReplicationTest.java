@@ -71,7 +71,6 @@ public class ClusterReplicationTest
     {
         for (final NodeRunner nodeRunner : allNodes)
         {
-            nodeRunner.checkConsistencyOfReplicatedPositions();
             nodeRunner.close();
         }
     }
@@ -315,6 +314,13 @@ public class ClusterReplicationTest
                 pollAll();
                 return !noNodesReceivedMessage();
             });
+
+        checkConsistencyOfReplicatedPositions();
+    }
+
+    private void checkConsistencyOfReplicatedPositions()
+    {
+        nodes().forEach(NodeRunner::checkConsistencyOfReplicatedPositions);
     }
 
     private boolean noNodesReceivedMessage()
