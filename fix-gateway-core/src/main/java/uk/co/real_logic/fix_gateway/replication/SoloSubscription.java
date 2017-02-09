@@ -48,11 +48,6 @@ class SoloSubscription extends ClusterableSubscription implements ControlledFrag
         subscription.close();
     }
 
-    public long positionOf(final int aeronSessionId)
-    {
-        return subscription.imageBySessionId(aeronSessionId).position();
-    }
-
     public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         clusterHeader.update(header.position(), header.sessionId());

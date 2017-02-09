@@ -43,8 +43,8 @@ import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.protocol.*;
 import uk.co.real_logic.fix_gateway.replication.ClusterFragmentHandler;
+import uk.co.real_logic.fix_gateway.replication.ClusterSubscription;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
-import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -124,7 +124,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private final EngineConfiguration configuration;
     private final EndPointFactory endPointFactory;
-    private final ClusterableSubscription outboundClusterSubscription;
+    private final ClusterSubscription outboundClusterSubscription;
     private final Subscription outboundLibrarySubscription;
     private final Subscription outboundSlowSubscription;
     private final Subscription replaySubscription;
@@ -158,7 +158,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final Timer sendTimer,
         final EngineConfiguration configuration,
         final EndPointFactory endPointFactory,
-        final ClusterableSubscription outboundClusterSubscription,
+        final ClusterSubscription outboundClusterSubscription,
         final Subscription outboundLibrarySubscription,
         final Subscription outboundSlowSubscription,
         final Subscription replaySubscription,
@@ -1111,7 +1111,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (isClustered())
         {
             final Long2LongHashMap outboundClusterPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
-            final long position = outboundClusterSubscription.positionOf(OUTBOUND_LIBRARY_STREAM);
+            final long position = outboundClusterSubscription.lastAppliedPosition();
             outboundClusterPositions.put(OUTBOUND_LIBRARY_STREAM, position);
             outboundClusterCompletionPosition.complete(outboundClusterPositions);
         }

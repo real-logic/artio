@@ -28,8 +28,8 @@ import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
+import uk.co.real_logic.fix_gateway.replication.ClusterSubscription;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
-import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.util.ArrayList;
@@ -258,7 +258,7 @@ public abstract class EngineContext implements AutoCloseable
 
     public abstract Streams inboundLibraryStreams();
 
-    public abstract ClusterableSubscription outboundClusterSubscription();
+    public abstract ClusterSubscription outboundClusterSubscription();
 
     // Each invocation should return a new instance of the subscription
     public Subscription outboundLibrarySubscription()

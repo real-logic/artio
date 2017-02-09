@@ -19,7 +19,5 @@ public abstract class ClusterableSubscription implements AutoCloseable
 {
     public abstract int poll(ClusterFragmentHandler fragmentHandler, int fragmentLimit);
 
-    public abstract long positionOf(int aeronSessionId);
-
     public abstract void close();
 }

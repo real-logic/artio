@@ -190,9 +190,9 @@ class ClusterContext extends EngineContext
         return inboundLibraryStreams;
     }
 
-    public ClusterableSubscription outboundClusterSubscription()
+    public ClusterSubscription outboundClusterSubscription()
     {
-        return outboundLibraryStreams().subscription();
+        return (ClusterSubscription) outboundLibraryStreams().subscription();
     }
 
     public void close()

@@ -43,7 +43,7 @@ import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
  * Not thread safe, create a new cluster subscription for each thread that wants to read
  * from the RAFT stream.
  */
-class ClusterSubscription extends ClusterableSubscription
+public class ClusterSubscription extends ClusterableSubscription
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final ResendDecoder resend = new ResendDecoder();
@@ -66,6 +66,9 @@ class ClusterSubscription extends ClusterableSubscription
     private ClusterFragmentHandler handler;
     private SessionReader leaderArchiveReader;
     // replicated position - transport/stream position
+    // replicated - transport = delta
+    // replicated = delta + transport
+    // transport = replicated - delta
     private long positionDelta;
 
     ClusterSubscription(
@@ -525,13 +528,13 @@ class ClusterSubscription extends ClusterableSubscription
         return messageFilter.streamConsensusPosition;
     }
 
-    public long positionOf(final int aeronSessionId)
-    {
-        return streamPosition();
-    }
-
     int currentLeadershipTerm()
     {
         return currentLeadershipTerm;
+    }
+
+    public long lastAppliedPosition()
+    {
+        return lastAppliedStreamPosition + positionDelta;
     }
 }

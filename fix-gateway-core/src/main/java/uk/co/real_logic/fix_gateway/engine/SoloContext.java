@@ -26,9 +26,9 @@ import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
+import uk.co.real_logic.fix_gateway.replication.ClusterSubscription;
 import uk.co.real_logic.fix_gateway.replication.ClusterablePublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
-import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.util.ArrayList;
@@ -163,7 +163,7 @@ class SoloContext extends EngineContext
         return inboundLibraryStreams;
     }
 
-    public ClusterableSubscription outboundClusterSubscription()
+    public ClusterSubscription outboundClusterSubscription()
     {
         return null;
     }
