@@ -24,14 +24,14 @@ import org.agrona.DirectBuffer;
  * NB: left exposed as a public class because it the additional functionality over
  * {@link ClusterableSubscription} of being able to lookup the position of a session.
  */
-public class SoloSubscription extends ClusterableSubscription implements ControlledFragmentHandler
+class SoloSubscription extends ClusterableSubscription implements ControlledFragmentHandler
 {
     private final Subscription subscription;
     private final ClusterHeader clusterHeader;
 
     private ClusterFragmentHandler fragmentHandler;
 
-    public SoloSubscription(final Subscription subscription)
+    SoloSubscription(final Subscription subscription)
     {
         this.subscription = subscription;
         clusterHeader = new ClusterHeader(subscription.streamId());
