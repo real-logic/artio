@@ -157,7 +157,7 @@ public class CommonConfiguration
             }
         }
 
-        DEBUG_PRINT_THREAD = getProperty(DEBUG_PRINT_THREAD_PROPERTY);
+        DEBUG_PRINT_THREAD = getProperty(DEBUG_PRINT_THREAD_PROPERTY) + " : ";
         DEBUG_PRINT_MESSAGES = debugPrintMessages;
         DEBUG_TAGS = debugTags;
     }
