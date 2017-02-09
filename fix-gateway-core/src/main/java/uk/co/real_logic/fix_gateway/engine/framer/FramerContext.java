@@ -111,6 +111,7 @@ public class FramerContext
             configuration,
             endPointFactory,
             engineContext.outboundClusterSubscription(),
+            engineContext.outboundClusterSubscription(),
             engineContext.outboundLibrarySubscription(),
             engineContext.outboundLibrarySubscription(),
             replaySubscription,

@@ -155,6 +155,7 @@ public class FramerTest
             engineConfiguration,
             mockEndPointFactory,
             mock(ClusterSubscription.class),
+            mock(ClusterSubscription.class),
             outboundLibrarySubscription,
             mock(Subscription.class),
             mock(Subscription.class),

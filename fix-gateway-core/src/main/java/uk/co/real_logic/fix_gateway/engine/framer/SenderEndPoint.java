@@ -18,12 +18,10 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
-import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
-import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -38,7 +36,6 @@ import static uk.co.real_logic.fix_gateway.protocol.GatewayPublication.FRAME_SIZ
 
 class SenderEndPoint implements AutoCloseable
 {
-    private final FixMessageEncoder fixMessageEncoder = new FixMessageEncoder();
     private final long connectionId;
     private final TcpChannel channel;
     private final AtomicCounter bytesInBuffer;
@@ -47,6 +44,7 @@ class SenderEndPoint implements AutoCloseable
     private final Framer framer;
     private final int maxBytesInBuffer;
 
+    private long sentPosition;
     private int libraryId;
     private long sessionId;
 
@@ -74,7 +72,8 @@ class SenderEndPoint implements AutoCloseable
         final int libraryId,
         final DirectBuffer directBuffer,
         final int offset,
-        final int length)
+        final int length,
+        final long position)
     {
         if (isWrongLibraryId(libraryId))
         {
@@ -84,7 +83,7 @@ class SenderEndPoint implements AutoCloseable
 
         if (isSlowConsumer())
         {
-            final long bytesInBuffer = this.bytesInBuffer.getWeak() + length;
+            final long bytesInBuffer = bytesInBufferWeak() + length;
             if (bytesInBuffer > maxBytesInBuffer)
             {
                 removeEndpoint(SLOW_CONSUMER);
@@ -101,7 +100,11 @@ class SenderEndPoint implements AutoCloseable
 
             if (written != length)
             {
-                becomeSlowConsumer(directBuffer, offset, written, length);
+                becomeSlowConsumer(written, length, position);
+            }
+            else
+            {
+                sentPosition = position;
             }
         }
         catch (final IOException ex)
@@ -161,20 +164,11 @@ class SenderEndPoint implements AutoCloseable
         removeEndpoint(EXCEPTION);
     }
 
-    private void becomeSlowConsumer(final DirectBuffer buffer, final int offset, final int written, final int length)
+    private void becomeSlowConsumer(final int written, final int length, final long position)
     {
-        bytesInBuffer.setOrdered(length - written);
-        if (written > 0)
-        {
-            updateBytesSent(buffer, offset - FRAME_SIZE, written);
-        }
-    }
-
-    private void updateBytesSent(final DirectBuffer buffer, final int offset, final int bytesSent)
-    {
-        fixMessageEncoder
-            .wrap((MutableDirectBuffer) buffer, offset)
-            .bytesSent(bytesSent);
+        final int remainingBytes = length - written;
+        bytesInBuffer.setOrdered(remainingBytes);
+        sentPosition = position - remainingBytes;
     }
 
     private void removeEndpoint(final DisconnectReason reason)
@@ -202,7 +196,8 @@ class SenderEndPoint implements AutoCloseable
         final FixMessageDecoder fixMessage,
         final DirectBuffer directBuffer,
         final int offset,
-        final int length)
+        final int length,
+        final long position)
     {
         final int libraryId = fixMessage.libraryId();
         if (isWrongLibraryId(libraryId))
@@ -216,17 +211,21 @@ class SenderEndPoint implements AutoCloseable
             return CONTINUE;
         }
 
-        int bytesSent = fixMessage.bytesSent();
-        final int bodyLength = fixMessage.bodyLength();
-        if (bodyLength == bytesSent)
+        // Skip messages where the end point has become a slow consumer, but
+        // the slow consumer stream hasn't polled up to update with the regular stream
+        if (position <= sentPosition)
         {
             return CONTINUE;
         }
 
         try
         {
+            final int bodyLength = fixMessage.bodyLength();
+            final long beginningOfMessage = position - bodyLength;
+            final int bytesPreviouslySent = (int) (sentPosition - beginningOfMessage);
+
             final int wrapAdjustment = directBuffer.wrapAdjustment();
-            final int dataOffset = offset + FRAME_SIZE + bytesSent;
+            final int dataOffset = offset + FRAME_SIZE + bytesPreviouslySent;
             final ByteBuffer buffer = directBuffer.byteBuffer();
             buffer.limit(wrapAdjustment + offset + length);
             buffer.position(wrapAdjustment + dataOffset);
@@ -234,10 +233,10 @@ class SenderEndPoint implements AutoCloseable
             final int written = channel.write(buffer);
             bytesInBuffer.addOrdered(-written);
 
-            bytesSent += written;
-            if (bodyLength > bytesSent)
+            sentPosition += written;
+
+            if (bodyLength > (written + bytesPreviouslySent))
             {
-                updateBytesSent(directBuffer, fixMessage.offset(), bytesSent);
                 return ABORT;
             }
         }
@@ -259,12 +258,17 @@ class SenderEndPoint implements AutoCloseable
 
     private boolean isSlowConsumer()
     {
-        return bytesInBuffer() > 0;
+        return bytesInBufferWeak() > 0;
     }
 
     long bytesInBuffer()
     {
         return bytesInBuffer.get();
+    }
+
+    private long bytesInBufferWeak()
+    {
+        return bytesInBuffer.getWeak();
     }
 
     void onLogon(final long sessionId)

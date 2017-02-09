@@ -125,6 +125,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final EngineConfiguration configuration;
     private final EndPointFactory endPointFactory;
     private final ClusterSubscription outboundClusterSubscription;
+    private final ClusterSubscription outboundClusterSlowSubscription;
     private final Subscription outboundLibrarySubscription;
     private final Subscription outboundSlowSubscription;
     private final Subscription replaySubscription;
@@ -159,6 +160,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final EngineConfiguration configuration,
         final EndPointFactory endPointFactory,
         final ClusterSubscription outboundClusterSubscription,
+        final ClusterSubscription outboundClusterSlowSubscription,
         final Subscription outboundLibrarySubscription,
         final Subscription outboundSlowSubscription,
         final Subscription replaySubscription,
@@ -187,6 +189,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.configuration = configuration;
         this.endPointFactory = endPointFactory;
         this.outboundClusterSubscription = outboundClusterSubscription;
+        this.outboundClusterSlowSubscription = outboundClusterSlowSubscription;
         this.outboundLibrarySubscription = outboundLibrarySubscription;
         this.outboundSlowSubscription = outboundSlowSubscription;
         this.replaySubscription = replaySubscription;
@@ -305,6 +308,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             messagesRead +=
                 outboundClusterSubscription.poll(outboundClusterSubscriber, outboundLibraryFragmentLimit);
+            messagesRead +=
+                outboundClusterSlowSubscription.poll(senderEndPoints, outboundLibraryFragmentLimit);
         }
 
         return messagesRead;
@@ -680,7 +685,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             sessionContexts.onSentFollowerMessage(sessionId, sequenceIndex, messageType, buffer, offset, length);
         }
 
-        senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length);
+        senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length, position);
 
         sendTimer.recordSince(now);
 

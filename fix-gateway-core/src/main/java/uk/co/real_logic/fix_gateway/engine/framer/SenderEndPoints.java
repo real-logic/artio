@@ -22,10 +22,12 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.replication.ClusterFragmentHandler;
+import uk.co.real_logic.fix_gateway.replication.ClusterHeader;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
-class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
+class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, ClusterFragmentHandler
 {
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
 
@@ -58,12 +60,13 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         final long connectionId,
         final DirectBuffer buffer,
         final int offset,
-        final int length)
+        final int length,
+        final long position)
     {
         final SenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
-            endPoint.onNormalFramedMessage(libraryId, buffer, offset, length);
+            endPoint.onNormalFramedMessage(libraryId, buffer, offset, length, position);
         }
     }
 
@@ -89,6 +92,21 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
     @SuppressWarnings("FinalParameters")
     public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
     {
+        return onSlowConsumerMessageFragment(buffer, offset, length, header.position());
+    }
+
+    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final ClusterHeader header)
+    {
+        return onSlowConsumerMessageFragment(buffer, offset, length, header.position());
+    }
+
+    @SuppressWarnings("FinalParameters")
+    private Action onSlowConsumerMessageFragment(
+        final DirectBuffer buffer,
+        int offset,
+        final int length,
+        final long position)
+    {
         messageHeader.wrap(buffer, offset);
 
         if (messageHeader.templateId() == FixMessageDecoder.TEMPLATE_ID)
@@ -100,7 +118,8 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
             final SenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
             if (senderEndPoint != null)
             {
-                return senderEndPoint.onSlowConsumerMessageFragment(fixMessage, buffer, offset, length - HEADER_LENGTH);
+                return senderEndPoint.onSlowConsumerMessageFragment(
+                    fixMessage, buffer, offset, length - HEADER_LENGTH, position);
             }
         }
 
