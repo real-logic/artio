@@ -278,8 +278,8 @@ public class ClusterSubscriptionTest
         onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
 
         verifyReceivesFragment(FIRST_TERM_LENGTH);
-        verifyReceivesFragmentWithAnyHeader(SECOND_TERM_LENGTH);
-        verifyReceivesFragmentWithAnyHeader(THIRD_TERM_LENGTH);
+        verifyReceivesFragment(SECOND_TERM_LENGTH);
+        verifyReceivesFragment(THIRD_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
 
@@ -297,8 +297,8 @@ public class ClusterSubscriptionTest
         onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
 
         verifyReceivesFragment(FIRST_TERM_LENGTH);
-        verifyReceivesFragmentWithAnyHeader(SECOND_TERM_LENGTH);
-        verifyReceivesFragmentWithAnyHeader(THIRD_TERM_LENGTH);
+        verifyReceivesFragment(SECOND_TERM_LENGTH);
+        verifyReceivesFragment(THIRD_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
 
@@ -316,8 +316,8 @@ public class ClusterSubscriptionTest
         onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
 
         verifyReceivesFragment(FIRST_TERM_LENGTH);
-        verifyReceivesFragmentWithAnyHeader(SECOND_TERM_LENGTH);
-        verifyReceivesFragmentWithAnyHeader(THIRD_TERM_LENGTH);
+        verifyReceivesFragment(SECOND_TERM_LENGTH);
+        verifyReceivesFragment(THIRD_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
 
@@ -333,7 +333,7 @@ public class ClusterSubscriptionTest
         pollsMessageFragment(otherLeaderDataImage, THIRD_TERM_STREAM_END, THIRD_TERM_LENGTH, CONTINUE);
 
         verifyReceivesFragment(FIRST_TERM_LENGTH);
-        verifyReceivesFragmentWithAnyHeader(SECOND_TERM_LENGTH);
+        verifyReceivesFragment(SECOND_TERM_LENGTH);
         verifyReceivesFragment(THIRD_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
@@ -358,8 +358,8 @@ public class ClusterSubscriptionTest
         poll();
 
         verifyReceivesFragment(FIRST_TERM_LENGTH);
-        verifyReceivesFragmentWithAnyHeader(SECOND_TERM_LENGTH);
-        verifyReceivesFragmentWithAnyHeader(THIRD_TERM_LENGTH);
+        verifyReceivesFragment(SECOND_TERM_LENGTH);
+        verifyReceivesFragment(THIRD_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
 
@@ -386,8 +386,8 @@ public class ClusterSubscriptionTest
         poll();
 
         verifyReceivesFragment(FIRST_TERM_LENGTH);
-        verifyReceivesFragmentWithAnyHeader(SECOND_TERM_LENGTH);
-        verifyReceivesFragmentWithAnyHeader(THIRD_TERM_LENGTH);
+        verifyReceivesFragment(SECOND_TERM_LENGTH);
+        verifyReceivesFragment(THIRD_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
 
@@ -402,7 +402,7 @@ public class ClusterSubscriptionTest
         onConsensusHeartbeatPoll(2, LEADER, SECOND_TERM_END, 0, SECOND_TERM_LENGTH);
         pollsMessageFragment(leaderDataImage, SECOND_TERM_LENGTH, CONTINUE);
 
-        verifyReceivesFragmentWithAnyHeader(FIRST_TERM_LENGTH);
+        verifyReceivesFragment(FIRST_TERM_LENGTH);
         verifyReceivesFragment(SECOND_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
@@ -437,8 +437,8 @@ public class ClusterSubscriptionTest
         onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
 
         verifyReceivesFragment(FIRST_TERM_LENGTH);
-        verifyReceivesFragmentWithAnyHeader(SECOND_TERM_LENGTH, times(2));
-        verifyReceivesFragmentWithAnyHeader(THIRD_TERM_LENGTH);
+        verifyReceivesFragment(SECOND_TERM_LENGTH, times(2));
+        verifyReceivesFragment(THIRD_TERM_LENGTH);
         verifyNoOtherFragmentsReceived();
     }
 
@@ -466,8 +466,8 @@ public class ClusterSubscriptionTest
         poll();
 
         verifyReceivesFragment(FIRST_TERM_LENGTH);
-        verifyReceivesFragmentWithAnyHeader(SECOND_TERM_LENGTH);
-        verifyReceivesFragmentWithAnyHeader(THIRD_TERM_LENGTH, times(2));
+        verifyReceivesFragment(SECOND_TERM_LENGTH);
+        verifyReceivesFragment(THIRD_TERM_LENGTH, times(2));
         verifyNoOtherFragmentsReceived();
     }
 
@@ -521,17 +521,6 @@ public class ClusterSubscriptionTest
     private void verifyReceivesFragment(final int newStreamPosition, final VerificationMode times)
     {
         verify(handler, times).onFragment(any(UnsafeBuffer.class), eq(0), eq(newStreamPosition), any());
-    }
-
-    private void verifyReceivesFragmentWithAnyHeader(final int newStreamPosition)
-    {
-        verifyReceivesFragmentWithAnyHeader(newStreamPosition, times(1));
-    }
-
-    private void verifyReceivesFragmentWithAnyHeader(final int newStreamPosition, final VerificationMode times)
-    {
-        verify(handler, times)
-            .onFragment(any(UnsafeBuffer.class), eq(0), eq(newStreamPosition), any());
     }
 
     private void pollsMessageFragment(
