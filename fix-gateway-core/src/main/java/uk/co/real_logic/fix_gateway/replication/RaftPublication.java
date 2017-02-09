@@ -175,8 +175,8 @@ class RaftPublication
         final int leaderShipTerm,
         final long position,
         final int leaderSessionId,
-        final long streamStartPosition,
-        final long streamPosition)
+        final long transportStartPosition,
+        final long transportPosition)
     {
         final long pos = claim(CONSENSUS_HEARTBEAT_LENGTH);
         if (position < 0)
@@ -202,8 +202,8 @@ class RaftPublication
             .leaderShipTerm(leaderShipTerm)
             .position(position)
             .leaderSessionId(leaderSessionId)
-            .streamStartPosition(streamStartPosition)
-            .streamPosition(streamPosition);
+            .transportStartPosition(transportStartPosition)
+            .transportPosition(transportPosition);
 
         bufferClaim.commit();
 
@@ -214,7 +214,7 @@ class RaftPublication
         final int leaderSessionId,
         final int leaderShipTerm,
         final long startPosition,
-        final long streamStartPosition,
+        final long transportStartPosition,
         final DirectBuffer bodyBuffer,
         final int bodyOffset,
         final int bodyLength)
@@ -242,7 +242,7 @@ class RaftPublication
             .leaderSessionId(leaderSessionId)
             .leaderShipTerm(leaderShipTerm)
             .startPosition(startPosition)
-            .streamStartPosition(streamStartPosition)
+            .transportStartPosition(transportStartPosition)
             .putBody(bodyBuffer, bodyOffset, bodyLength);
 
         bufferClaim.commit();

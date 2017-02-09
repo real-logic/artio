@@ -102,13 +102,13 @@ class LeadershipTermIndex
         {
             encoder
                 .wrap(buffer, currentRow)
-                .finalStreamPosition(finalStreamPositionOfPreviousLeader);
+                .finalTransportPosition(finalStreamPositionOfPreviousLeader);
         }
 
         encoder
             .wrap(buffer, currentRow)
             .initialPosition(initialPosition)
-            .initialStreamPosition(initialStreamPosition)
+            .initialTransportPosition(initialStreamPosition)
             .sessionId(sessionId);
 
         currentRow(currentRow + ROW_SIZE);
@@ -147,7 +147,7 @@ class LeadershipTermIndex
                     this.decoder.wrap(buffer, midOffset, actingBlockLength, actingVersion);
 
                 cursor.sessionId = decoder.sessionId();
-                cursor.streamPosition = decoder.initialStreamPosition() + termOffset;
+                cursor.transportPosition = decoder.initialTransportPosition() + termOffset;
 
                 return true;
             }
@@ -180,19 +180,14 @@ class LeadershipTermIndex
         return HEADER_SIZE + index * ROW_SIZE;
     }
 
-    private LeadershipTermDecoder wrap(final int mid)
-    {
-        return decoder.wrap(buffer, offset(mid), actingBlockLength, actingVersion);
-    }
-
     static class Cursor
     {
-        private long streamPosition;
+        private long transportPosition;
         private int sessionId;
 
-        long streamPosition()
+        long transportPosition()
         {
-            return streamPosition;
+            return transportPosition;
         }
 
         int sessionId()

@@ -603,7 +603,7 @@ public class ClusterSubscriptionTest
     private void assertState(
         final int currentLeadershipTerm,
         final Integer leadershipSessionId,
-        final long streamPosition)
+        final long transportPosition)
     {
         assertThat(clusterSubscription,
             hasResult(
@@ -615,9 +615,9 @@ public class ClusterSubscriptionTest
 
         assertThat(clusterSubscription,
             hasResult(
-                "streamPosition",
-                ClusterSubscription::streamPosition,
-                equalTo(streamPosition)));
+                "transportPosition",
+                ClusterSubscription::transportPosition,
+                equalTo(transportPosition)));
     }
 
     private void verifyNoOtherFragmentsReceived()

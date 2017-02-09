@@ -121,7 +121,7 @@ public class LeadershipTermIndexTest
     private void assertCursor(final int expectedSessionId, final int expectedStreamPosition)
     {
         assertEquals(expectedSessionId, cursor.sessionId());
-        assertEquals(expectedStreamPosition, cursor.streamPosition());
+        assertEquals(expectedStreamPosition, cursor.transportPosition());
     }
 
     private void assertFindsPosition(final int position)

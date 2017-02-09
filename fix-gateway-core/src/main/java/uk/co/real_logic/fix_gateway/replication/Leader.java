@@ -72,11 +72,11 @@ class Leader implements Role, RaftHandler
     private long lastAppliedPosition;
 
     /**
-     * This is [consensusPosition] - [streamPosition]. Updated
+     * This is [consensusPosition] - [transportPosition]. Updated
      * when you get elected leader and valid for the duration of your leadership term.
      */
-    private long streamPositionDelta;
-    private long previousStreamPosition;
+    private long transportPositionDelta;
+    private long previousTransportPosition;
 
     private long nextHeartbeatTimeInMs;
     private long timeInMs;
@@ -182,16 +182,16 @@ class Leader implements Role, RaftHandler
 
     private void heartbeat(final long currentPosition)
     {
-        final long streamPosition = currentPosition - streamPositionDelta;
+        final long transportPosition = currentPosition - transportPositionDelta;
         if (controlPublication.saveConsensusHeartbeat(
             nodeId,
             termState.leadershipTerm(),
             currentPosition,
             ourSessionId,
-            previousStreamPosition,
-            streamPosition) > 0)
+            previousTransportPosition,
+            transportPosition) > 0)
         {
-            previousStreamPosition = streamPosition;
+            previousTransportPosition = transportPosition;
             updateNextHeartbeatTime(timeInMs);
         }
     }
@@ -215,7 +215,7 @@ class Leader implements Role, RaftHandler
             {
                 final ResendHandler resendHandler = new ResendHandler();
                 resendHandler.messageAcknowledgementPosition = position;
-                resendHandler.messageAcknowledgementStreamPosition = position - streamPositionDelta;
+                resendHandler.messageAcknowledgementTransportPosition = position - transportPositionDelta;
                 final long readPosition = Math.max(position, HEADER_LENGTH);
                 if (!ourArchiveReader.readBlock(readPosition, length, resendHandler))
                 {
@@ -319,8 +319,8 @@ class Leader implements Role, RaftHandler
         final short nodeId,
         final int leaderShipTerm,
         final long position,
-        final long streamStartPosition,
-        final long streamPosition,
+        final long transportStartPosition,
+        final long transportPosition,
         final int leaderSessionId)
     {
         if (nodeId != this.nodeId && leaderShipTerm > termState.leadershipTerm())
@@ -345,7 +345,7 @@ class Leader implements Role, RaftHandler
         clusterNode.transitionToFollower(this, votedFor, timeInMs);
     }
 
-    Leader getsElected(final long timeInMs, final long streamPosition)
+    Leader getsElected(final long timeInMs, final long transportPosition)
     {
         this.timeInMs = timeInMs;
 
@@ -354,7 +354,7 @@ class Leader implements Role, RaftHandler
         lastAppliedPosition = Math.max(HEADER_LENGTH, termState.lastAppliedPosition());
 
         final long currentPosition = consensusPosition.get();
-        streamPositionDelta = currentPosition - streamPosition;
+        transportPositionDelta = currentPosition - transportPosition;
         heartbeat(currentPosition);
 
         raftArchiver.checkLeaderArchiver();
@@ -390,7 +390,7 @@ class Leader implements Role, RaftHandler
     private class ResendHandler implements BlockHandler
     {
         private long messageAcknowledgementPosition;
-        private long messageAcknowledgementStreamPosition;
+        private long messageAcknowledgementTransportPosition;
 
         // retry a resend when it gets back pressured
         private DirectBuffer repeatResendBuffer;
@@ -409,7 +409,7 @@ class Leader implements Role, RaftHandler
                 ourSessionId,
                 termState.leadershipTerm(),
                 messageAcknowledgementPosition,
-                messageAcknowledgementStreamPosition,
+                messageAcknowledgementTransportPosition,
                 buffer,
                 offset,
                 length) < 0)
