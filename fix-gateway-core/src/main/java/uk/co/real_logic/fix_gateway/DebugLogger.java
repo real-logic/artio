@@ -27,6 +27,7 @@ import java.io.PrintStream;
 import java.nio.ByteBuffer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEBUG_PRINT_THREAD;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEBUG_TAGS;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEBUG_FILE;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEBUG_PRINT_MESSAGES;
@@ -278,12 +279,20 @@ public final class DebugLogger
         final String formatString,
         final Object ... args)
     {
-        OUTPUT.printf(threadName() + formatString, args);
+        final String threadName = threadName();
+        if (isThreadEnabled(threadName))
+        {
+            OUTPUT.printf(threadName + formatString, args);
+        }
     }
 
     private static void println(final String message)
     {
-        OUTPUT.println(threadName() + message);
+        final String threadName = threadName();
+        if (isThreadEnabled(threadName))
+        {
+            OUTPUT.println(threadName + message);
+        }
     }
 
     private static String threadName()
@@ -370,6 +379,11 @@ public final class DebugLogger
     private static boolean isEnabled(final LogTag tag)
     {
         return DEBUG_PRINT_MESSAGES && DEBUG_TAGS.contains(tag);
+    }
+
+    private static boolean isThreadEnabled(final String threadName)
+    {
+        return DEBUG_PRINT_THREAD == null || DEBUG_PRINT_THREAD.equals(threadName);
     }
 
 }

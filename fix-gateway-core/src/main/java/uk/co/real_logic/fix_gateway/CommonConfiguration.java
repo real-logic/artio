@@ -65,6 +65,10 @@ public class CommonConfiguration
      */
     public static final String DEBUG_PRINT_MESSAGES_PROPERTY = "fix.core.debug";
     /**
+     * Property name for the flag to specify a thread to print
+     */
+    public static final String DEBUG_PRINT_THREAD_PROPERTY = "fix.core.debug.thread";
+    /**
      * Property name for the flag to enable or disable flushing of writes
      */
     public static final String FORCE_WRITES_MESSAGES_PROPERTY = "fix.core.flush";
@@ -121,15 +125,16 @@ public class CommonConfiguration
      */
     public static final boolean DEBUG_PRINT_MESSAGES;
     public static final Set<LogTag> DEBUG_TAGS;
+    public static final String DEBUG_PRINT_THREAD;
 
     static
     {
-        final String property = getProperty(DEBUG_PRINT_MESSAGES_PROPERTY);
+        final String debugPrintMessagesValue = getProperty(DEBUG_PRINT_MESSAGES_PROPERTY);
         boolean debugPrintMessages = false;
         Set<LogTag> debugTags = Collections.emptySet();
-        if (property != null)
+        if (debugPrintMessagesValue != null)
         {
-            if ("all".equals(property) || "true".equals(property))
+            if ("all".equals(debugPrintMessagesValue) || "true".equals(debugPrintMessagesValue))
             {
                 debugPrintMessages = true;
                 debugTags = EnumSet.allOf(LogTag.class);
@@ -139,7 +144,7 @@ public class CommonConfiguration
                 try
                 {
                     debugTags = Stream
-                        .of(property.split(","))
+                        .of(debugPrintMessagesValue.split(","))
                         .map(LogTag::valueOf)
                         .collect(toCollection(() -> EnumSet.noneOf(LogTag.class)));
 
@@ -152,6 +157,7 @@ public class CommonConfiguration
             }
         }
 
+        DEBUG_PRINT_THREAD = getProperty(DEBUG_PRINT_THREAD_PROPERTY);
         DEBUG_PRINT_MESSAGES = debugPrintMessages;
         DEBUG_TAGS = debugTags;
     }
