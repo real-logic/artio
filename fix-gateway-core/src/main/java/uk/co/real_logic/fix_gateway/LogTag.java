@@ -26,4 +26,5 @@ public enum LogTag
     APPLICATION_HEARTBEAT,
     POSITION,
     CATCHUP,
+    INDEX,
 }

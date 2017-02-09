@@ -19,6 +19,7 @@ import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
 import org.junit.After;
 import uk.co.real_logic.fix_gateway.Reply;
+import uk.co.real_logic.fix_gateway.Reply.State;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
@@ -143,6 +144,7 @@ public class AbstractGatewayToGatewaySystemTest
         pollUntilReply(reply);
         initiatingSession = reply.resultIfPresent();
 
+        assertEquals(State.COMPLETED, reply.state());
         assertConnected(initiatingSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
     }

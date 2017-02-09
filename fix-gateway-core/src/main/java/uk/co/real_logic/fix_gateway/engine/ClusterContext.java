@@ -20,7 +20,10 @@ import io.aeron.Publication;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.FixCounters;
-import uk.co.real_logic.fix_gateway.engine.logger.*;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
+import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
+import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
+import uk.co.real_logic.fix_gateway.engine.logger.Replayer;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.*;
@@ -35,7 +38,6 @@ import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.
 
 class ClusterContext extends EngineContext
 {
-    private final String libraryAeronChannel;
     private final Publication inboundPublication;
     private final StreamIdentifier dataStream;
     private final ClusterAgent clusterAgent;
@@ -58,7 +60,7 @@ class ClusterContext extends EngineContext
         {
             final String channel = configuration.clusterAeronChannel();
             dataStream = new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID);
-            libraryAeronChannel = configuration.libraryAeronChannel();
+            final String libraryAeronChannel = configuration.libraryAeronChannel();
             inboundPublication = aeron.addPublication(libraryAeronChannel, INBOUND_LIBRARY_STREAM);
             clusterAgent = node(configuration, fixCounters, aeron, channel, engineDescriptorStore);
             newStreams(clusterAgent.clusterStreams());
@@ -186,12 +188,6 @@ class ClusterContext extends EngineContext
     public Streams inboundLibraryStreams()
     {
         return inboundLibraryStreams;
-    }
-
-    public SoloSubscription outboundLibrarySubscription()
-    {
-        return new SoloSubscription(
-            aeron.addSubscription(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
     }
 
     public ClusterableSubscription outboundClusterSubscription()

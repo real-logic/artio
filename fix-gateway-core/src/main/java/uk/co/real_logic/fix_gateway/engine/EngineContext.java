@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine;
 
 import io.aeron.Aeron;
 import io.aeron.Publication;
+import io.aeron.Subscription;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
@@ -29,7 +30,6 @@ import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
-import uk.co.real_logic.fix_gateway.replication.SoloSubscription;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
 import java.util.ArrayList;
@@ -261,7 +261,10 @@ public abstract class EngineContext implements AutoCloseable
     public abstract ClusterableSubscription outboundClusterSubscription();
 
     // Each invocation should return a new instance of the subscription
-    public abstract SoloSubscription outboundLibrarySubscription();
+    public Subscription outboundLibrarySubscription()
+    {
+        return aeron.addSubscription(configuration.libraryAeronChannel(), OUTBOUND_LIBRARY_STREAM);
+    }
 
     public abstract ReplayQuery inboundReplayQuery();
 

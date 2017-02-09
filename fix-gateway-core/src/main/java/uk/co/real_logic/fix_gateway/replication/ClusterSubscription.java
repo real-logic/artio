@@ -49,6 +49,7 @@ class ClusterSubscription extends ClusterableSubscription
     private final ResendDecoder resend = new ResendDecoder();
     private final ConsensusHeartbeatDecoder consensusHeartbeat = new ConsensusHeartbeatDecoder();
     private final ControlledFragmentHandler onControlMessage = this::onControlMessage;
+    private final ControlledFragmentHandler archiveHandler = this::onArchiveHandler;
     private final PriorityQueue<FutureAck> futureAcks = new PriorityQueue<>(
         comparingLong(FutureAck::startPosition));
 
@@ -56,14 +57,16 @@ class ClusterSubscription extends ClusterableSubscription
     private final Subscription dataSubscription;
     private final Subscription controlSubscription;
     private final ArchiveReader archiveReader;
+    private final ClusterHeader clusterHeader;
 
-    private Header resendHeader;
     private int currentLeadershipTerm = Integer.MIN_VALUE;
     private long lastAppliedStreamPosition;
     private long previousConsensusPosition;
     private Image dataImage;
-    private ControlledFragmentHandler handler;
+    private ClusterFragmentHandler handler;
     private SessionReader leaderArchiveReader;
+    // replicated position - transport/stream position
+    private long positionDelta;
 
     ClusterSubscription(
         final Subscription dataSubscription,
@@ -81,9 +84,10 @@ class ClusterSubscription extends ClusterableSubscription
 
         this.dataSubscription = dataSubscription;
         messageFilter = new MessageFilter(clusterStreamId);
+        clusterHeader = new ClusterHeader(clusterStreamId);
     }
 
-    public int poll(final ControlledFragmentHandler fragmentHandler, final int fragmentLimit)
+    public int poll(final ClusterFragmentHandler fragmentHandler, final int fragmentLimit)
     {
         this.handler = fragmentHandler;
 
@@ -135,7 +139,7 @@ class ClusterSubscription extends ClusterableSubscription
         final long readUpTo = leaderArchiveReader.readUpTo(
             beginPosition,
             endPosition,
-            handler);
+            archiveHandler);
 
         if (readUpTo > 0)
         {
@@ -150,11 +154,17 @@ class ClusterSubscription extends ClusterableSubscription
             this.lastAppliedStreamPosition);
     }
 
+    private Action onArchiveHandler(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    {
+        clusterHeader.update(header.position(), header.sessionId());
+        return handler.onFragment(buffer, offset, length, clusterHeader);
+    }
+
     enum Ternary
     {
         TRUE,
         FALSE,
-        FAILED;
+        FAILED
     }
 
     Ternary hasMatchingFutureAck()
@@ -294,6 +304,7 @@ class ClusterSubscription extends ClusterableSubscription
         final int bodyLength)
     {
         final long streamPosition = streamStartPosition + bodyLength;
+        final long position = startPosition + bodyLength;
 
         Action action = CONTINUE;
         if (startPosition == previousConsensusPosition)
@@ -309,9 +320,10 @@ class ClusterSubscription extends ClusterableSubscription
             }
 
             // If next chunk needed then just commit the thing immediately
-            resendHeader.buffer(bodyBuffer);
-            resendHeader.offset(bodyOffset);
-            action = handler.onFragment(bodyBuffer, bodyOffset, bodyLength, resendHeader);
+
+            // TODO: correct session id
+            clusterHeader.update(position, leaderSessionId);
+            action = handler.onFragment(bodyBuffer, bodyOffset, bodyLength, clusterHeader);
             if (action == ABORT)
             {
                 return action;
@@ -319,7 +331,6 @@ class ClusterSubscription extends ClusterableSubscription
 
             if (nextLeadershipTerm)
             {
-                final long position = startPosition + bodyLength;
                 onSwitchTermUpdatePositions(leaderShipTerm, position, streamPosition, streamPosition);
             }
             else
@@ -366,7 +377,6 @@ class ClusterSubscription extends ClusterableSubscription
         }
 
         dataImage = newDataImage;
-        resendHeader = new Header(dataImage.initialTermId(), dataImage.termBufferLength());
 
         return true;
     }
@@ -392,6 +402,7 @@ class ClusterSubscription extends ClusterableSubscription
         currentLeadershipTerm = leaderShipTerm;
         lastAppliedStreamPosition = alignTerm(streamConsumedPosition);
         previousConsensusPosition = alignTerm(position);
+        positionDelta = position - streamConsumedPosition;
     }
 
     private void save(
@@ -462,7 +473,8 @@ class ClusterSubscription extends ClusterableSubscription
                 messageHeader.wrap(buffer, offset);
                 if (messageHeader.templateId() != ConsensusHeartbeatDecoder.TEMPLATE_ID)
                 {
-                    final Action action = handler.onFragment(buffer, offset, length, header);
+                    clusterHeader.update(headerPosition + positionDelta, header.sessionId());
+                    final Action action = handler.onFragment(buffer, offset, length, clusterHeader);
                     if (action != ABORT)
                     {
                         lastAppliedStreamPosition = alignTerm(lastAppliedStreamPosition + length);

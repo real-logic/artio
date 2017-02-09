@@ -15,11 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-public abstract class ClusterableSubscription implements AutoCloseable
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import org.agrona.DirectBuffer;
+
+public interface ClusterFragmentHandler
 {
-    public abstract int poll(ClusterFragmentHandler fragmentHandler, int fragmentLimit);
-
-    public abstract long positionOf(int aeronSessionId);
-
-    public abstract void close();
+    Action onFragment(DirectBuffer buffer, int offset, int length, ClusterHeader header);
 }

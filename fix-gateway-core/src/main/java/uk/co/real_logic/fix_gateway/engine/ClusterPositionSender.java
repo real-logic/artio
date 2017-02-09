@@ -15,9 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
+import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
+import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Int2IntHashMap;
 import org.agrona.collections.Int2ObjectHashMap;
@@ -28,6 +30,8 @@ import uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver.ArchivedPositionHandler;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
+import uk.co.real_logic.fix_gateway.replication.ClusterFragmentHandler;
+import uk.co.real_logic.fix_gateway.replication.ClusterHeader;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 
 import java.util.Arrays;
@@ -59,16 +63,16 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
     private final Long2LongHashMap aeronSessionIdToArchivedPosition = new Long2LongHashMap(MISSING);
     private final Int2IntHashMap aeronSessionIdToLibraryId = new Int2IntHashMap(MISSING);
 
-    private final ClusterableSubscription outboundLibrarySubscription;
+    private final Subscription outboundLibrarySubscription;
     private final ControlledFragmentHandler onLibraryFragmentFunc = this::onLibraryFragment;
     private final ClusterableSubscription outboundClusterSubscription;
-    private final ControlledFragmentHandler onClusterFragmentFunc = this::onClusterFragment;
+    private final ClusterFragmentHandler onClusterFragmentFunc = this::onClusterFragment;
     private final IntFunction<LibraryPositions> newLibraryPositionsFunc = LibraryPositions::new;
     private final GatewayPublication inboundLibraryPublication;
     private final String agentNamePrefix;
 
     ClusterPositionSender(
-        final ClusterableSubscription outboundLibrarySubscription,
+        final Subscription outboundLibrarySubscription,
         final ClusterableSubscription outboundClusterSubscription,
         final GatewayPublication inboundLibraryPublication,
         final String agentNamePrefix)
@@ -86,7 +90,7 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
 
     private int pollCommands()
     {
-        return outboundLibrarySubscription.poll(onLibraryFragmentFunc, LIMIT) +
+        return outboundLibrarySubscription.controlledPoll(onLibraryFragmentFunc, LIMIT) +
             outboundClusterSubscription.poll(onClusterFragmentFunc, LIMIT);
     }
 
@@ -129,7 +133,8 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
     }
 
     @SuppressWarnings("FinalParameters")
-    private Action onClusterFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
+    private Action onClusterFragment(
+        final DirectBuffer buffer, int offset, final int length, final ClusterHeader header)
     {
         offset = wrapHeader(buffer, offset);
 
@@ -147,7 +152,8 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
             final int version = messageHeader.version();
             final int actingBlockLength = messageHeader.blockLength();
             // the length of the original message before it was wrapped, aligned to frame boundaries.
-            final int wrappedFrameLength = header.frameLength() - ReplicatedMessageDecoder.BLOCK_LENGTH;
+            final int wrappedFrameLength =
+                length + DataHeaderFlyweight.HEADER_LENGTH - ReplicatedMessageDecoder.BLOCK_LENGTH;
 
             switch (messageHeader.templateId())
             {

@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.library;
 
 import io.aeron.Aeron;
+import io.aeron.Subscription;
 import org.agrona.concurrent.NanoClock;
 import org.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -23,7 +24,6 @@ import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
-import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
@@ -36,10 +36,9 @@ class LibraryTransport
     private final FixCounters fixCounters;
     private final Aeron aeron;
 
-    private Streams inboundLibraryStreams;
     private Streams outboundLibraryStreams;
 
-    private ClusterableSubscription inboundSubscription;
+    private Subscription inboundSubscription;
     private GatewayPublication outboundPublication;
 
     LibraryTransport(
@@ -58,9 +57,6 @@ class LibraryTransport
         final ClusterableStreams soloNode = ClusterableStreams.solo(aeron, aeronChannel);
         DebugLogger.log(LIBRARY_CONNECT, "Directed streams at %s\n", aeronChannel);
 
-        inboundLibraryStreams = new Streams(
-            soloNode, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,
-            configuration.inboundMaxClaimAttempts());
         outboundLibraryStreams = new Streams(
             soloNode, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock,
             configuration.outboundMaxClaimAttempts());
@@ -70,11 +66,11 @@ class LibraryTransport
             inboundSubscription.close();
             outboundPublication.close();
         }
-        inboundSubscription = inboundLibraryStreams.subscription();
+        inboundSubscription = aeron.addSubscription(aeronChannel, INBOUND_LIBRARY_STREAM);
         outboundPublication = outboundLibraryStreams.gatewayPublication(configuration.libraryIdleStrategy());
     }
 
-    ClusterableSubscription inboundSubscription()
+    Subscription inboundSubscription()
     {
         return inboundSubscription;
     }

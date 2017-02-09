@@ -15,8 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.logbuffer.Header;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -29,7 +28,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 
-class NodeHandler implements ControlledFragmentHandler
+class NodeHandler implements ClusterFragmentHandler
 {
     private final int nodeId;
     private final List<ReplicatedMessage> replicatedMessages = new ArrayList<>();
@@ -39,7 +38,7 @@ class NodeHandler implements ControlledFragmentHandler
         this.nodeId = nodeId;
     }
 
-    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final ClusterHeader header)
     {
         final long position = header.position();
         DebugLogger.log(RAFT, "%d: position %d\n", nodeId, position);

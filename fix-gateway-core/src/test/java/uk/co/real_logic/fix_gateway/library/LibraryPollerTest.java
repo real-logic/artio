@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import io.aeron.Subscription;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Before;
@@ -28,7 +29,6 @@ import uk.co.real_logic.fix_gateway.engine.framer.FakeEpochClock;
 import uk.co.real_logic.fix_gateway.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.fix_gateway.messages.LogonStatus;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
-import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.timing.LibraryTimers;
 
@@ -69,7 +69,7 @@ public class LibraryPollerTest
     private SessionHandler sessionHandler = mock(SessionHandler.class);
     private SessionAcquireHandler sessionAcquireHandler = mock(SessionAcquireHandler.class);
     private GatewayPublication outboundPublication = mock(GatewayPublication.class);
-    private ClusterableSubscription inboundSubscription = mock(ClusterableSubscription.class);
+    private Subscription inboundSubscription = mock(Subscription.class);
     private LibraryTransport transport = mock(LibraryTransport.class);
     private FixCounters counters = mock(FixCounters.class);
     private FixLibrary fixLibrary = mock(FixLibrary.class);
@@ -294,7 +294,7 @@ public class LibraryPollerTest
 
     private OngoingStubbing<Integer> whenPolled()
     {
-        return when(inboundSubscription.poll(any(), anyInt()));
+        return when(inboundSubscription.controlledPoll(any(), anyInt()));
     }
 
     private void manageConnection(final long connectionId, final long sessionId)

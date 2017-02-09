@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
@@ -25,12 +26,14 @@ import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.fix_gateway.*;
+import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.FixCounters;
+import uk.co.real_logic.fix_gateway.LivenessDetector;
+import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.fix_gateway.protocol.*;
-import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.timing.LibraryTimers;
 import uk.co.real_logic.fix_gateway.timing.Timer;
@@ -114,7 +117,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // State changed upon connect/reconnect
     private LivenessDetector livenessDetector;
-    private ClusterableSubscription inboundSubscription;
+    private Subscription inboundSubscription;
     private GatewayPublication outboundPublication;
     private String currentAeronChannel;
     private long nextAttemptTime;
@@ -284,7 +287,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private int pollWithoutReconnect(final long timeInMs, final int fragmentLimit)
     {
-        final int messagesRead = inboundSubscription.poll(outboundSubscription, fragmentLimit);
+        final int messagesRead = inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit);
         return messagesRead +
             pollSessions(timeInMs) +
             livenessDetector.poll(timeInMs) +

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
@@ -37,10 +38,10 @@ import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
-import uk.co.real_logic.fix_gateway.replication.SoloSubscription;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -107,7 +108,7 @@ public class FramerTest
     private final GatewaySessions gatewaySessions = mock(GatewaySessions.class);
     private final GatewaySession gatewaySession = mock(GatewaySession.class);
     private final Session session = mock(Session.class);
-    private final SoloSubscription outboundSubscription = mock(SoloSubscription.class);
+    private final Subscription outboundLibrarySubscription = mock(Subscription.class);
     private final ClusterableStreams node = mock(ClusterableStreams.class);
 
     @SuppressWarnings("unchecked")
@@ -154,8 +155,8 @@ public class FramerTest
             engineConfiguration,
             mockEndPointFactory,
             mock(ClusterableSubscription.class),
-            outboundSubscription,
-            mock(ClusterableSubscription.class),
+            outboundLibrarySubscription,
+            mock(Subscription.class),
             mock(Subscription.class),
             mock(QueuedPipe.class),
             mockSessionIdStrategy,
@@ -749,6 +750,7 @@ public class FramerTest
 
     private void libraryConnects()
     {
+        when(outboundLibrarySubscription.imageBySessionId(anyInt())).thenReturn(mock(Image.class));
         assertEquals(Action.CONTINUE, onLibraryConnect());
     }
 

@@ -68,7 +68,7 @@ public class ClusterSubscriptionTest
     private Image leaderDataImage = mock(Image.class);
     private Image otherLeaderDataImage = mock(Image.class);
     private Image thirdLeaderDataImage = mock(Image.class);
-    private ControlledFragmentHandler handler = mock(ControlledFragmentHandler.class);
+    private ClusterFragmentHandler handler = mock(ClusterFragmentHandler.class);
 
     private ArchiveReader archiveReader = mock(ArchiveReader.class);
     private SessionReader otherLeaderArchiveReader = mock(SessionReader.class);
@@ -520,7 +520,7 @@ public class ClusterSubscriptionTest
 
     private void verifyReceivesFragment(final int newStreamPosition, final VerificationMode times)
     {
-        verify(handler, times).onFragment(any(UnsafeBuffer.class), eq(0), eq(newStreamPosition), eq(header));
+        verify(handler, times).onFragment(any(UnsafeBuffer.class), eq(0), eq(newStreamPosition), any());
     }
 
     private void verifyReceivesFragmentWithAnyHeader(final int newStreamPosition)
@@ -531,7 +531,7 @@ public class ClusterSubscriptionTest
     private void verifyReceivesFragmentWithAnyHeader(final int newStreamPosition, final VerificationMode times)
     {
         verify(handler, times)
-            .onFragment(any(UnsafeBuffer.class), eq(0), eq(newStreamPosition), any(Header.class));
+            .onFragment(any(UnsafeBuffer.class), eq(0), eq(newStreamPosition), any());
     }
 
     private void pollsMessageFragment(

@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.replication;
 import io.aeron.Publication;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BufferClaim;
-import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.AtomicBuffer;
@@ -60,8 +59,8 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[1024]);
 
-    private ControlledFragmentHandler leaderHandler = mock(ControlledFragmentHandler.class);
-    private ControlledFragmentHandler follower1Handler = mock(ControlledFragmentHandler.class);
+    private ClusterFragmentHandler leaderHandler = mock(ClusterFragmentHandler.class);
+    private ClusterFragmentHandler follower1Handler = mock(ClusterFragmentHandler.class);
     private NodeStateHandler nodeStateHandler = mock(NodeStateHandler.class);
 
     private int leaderSessionId;

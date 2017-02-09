@@ -16,14 +16,13 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Publication;
-import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.logbuffer.Header;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
-class OutboundPipe implements ControlledFragmentHandler
+class OutboundPipe implements ClusterFragmentHandler
 {
     private final Publication publication;
     private final ClusterStreams streams;
@@ -46,7 +45,7 @@ class OutboundPipe implements ControlledFragmentHandler
         return 0;
     }
 
-    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final ClusterHeader header)
     {
         final long position = publication.offer(buffer, offset, length);
         if (position < 0)

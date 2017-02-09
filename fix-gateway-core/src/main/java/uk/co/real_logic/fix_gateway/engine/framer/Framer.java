@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import io.aeron.Image;
 import io.aeron.Publication;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
@@ -39,10 +40,11 @@ import uk.co.real_logic.fix_gateway.engine.framer.TcpChannelSupplier.NewChannelH
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
+import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.protocol.*;
+import uk.co.real_logic.fix_gateway.replication.ClusterFragmentHandler;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
-import uk.co.real_logic.fix_gateway.replication.SoloSubscription;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
@@ -115,7 +117,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private final ControlledFragmentHandler outboundLibrarySubscriber;
     private final ControlledFragmentHandler outboundReplaySubscriber;
-    private final ControlledFragmentHandler outboundClusterSubscriber;
+    private final ClusterFragmentHandler outboundClusterSubscriber;
 
     private final ReceiverEndPoints receiverEndPoints = new ReceiverEndPoints();
     private final SenderEndPoints senderEndPoints;
@@ -123,8 +125,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final EngineConfiguration configuration;
     private final EndPointFactory endPointFactory;
     private final ClusterableSubscription outboundClusterSubscription;
-    private final SoloSubscription outboundLibrarySubscription;
-    private final ClusterableSubscription outboundSlowSubscription;
+    private final Subscription outboundLibrarySubscription;
+    private final Subscription outboundSlowSubscription;
     private final Subscription replaySubscription;
     private final GatewayPublication inboundPublication;
     private final ClusterableStreams clusterableStreams;
@@ -157,8 +159,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final EngineConfiguration configuration,
         final EndPointFactory endPointFactory,
         final ClusterableSubscription outboundClusterSubscription,
-        final SoloSubscription outboundLibrarySubscription,
-        final ClusterableSubscription outboundSlowSubscription,
+        final Subscription outboundLibrarySubscription,
+        final Subscription outboundSlowSubscription,
         final Subscription replaySubscription,
         final QueuedPipe<AdminCommand> adminCommands,
         final SessionIdStrategy sessionIdStrategy,
@@ -295,9 +297,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private int sendOutboundMessages()
     {
         final int newMessagesRead =
-            outboundLibrarySubscription.poll(outboundLibrarySubscriber, outboundLibraryFragmentLimit);
+            outboundLibrarySubscription.controlledPoll(outboundLibrarySubscriber, outboundLibraryFragmentLimit);
         int messagesRead = newMessagesRead +
-            outboundSlowSubscription.poll(senderEndPoints, outboundLibraryFragmentLimit);
+            outboundSlowSubscription.controlledPoll(senderEndPoints, outboundLibraryFragmentLimit);
 
         if (isClustered())
         {
@@ -332,7 +334,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private void tryAcquireLibrarySessions(final LiveLibraryInfo library)
     {
         final int librarySessionId = library.aeronSessionId();
-        final long libraryPosition = outboundLibrarySubscription.positionOf(librarySessionId);
+        final long libraryPosition = outboundLibrarySubscription.imageBySessionId(librarySessionId).position();
         final boolean indexed = indexedPosition(librarySessionId, libraryPosition);
         if (indexed)
         {
@@ -1100,7 +1102,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         idToLibrary.values().forEach(liveLibraryInfo ->
         {
             final int aeronSessionId = liveLibraryInfo.aeronSessionId();
-            final long position = outboundLibrarySubscription.positionOf(aeronSessionId);
+            final Image image = outboundLibrarySubscription.imageBySessionId(aeronSessionId);
+            final long position = image.position();
             outboundPositions.put(aeronSessionId, position);
         });
         outboundLibraryCompletionPosition.complete(outboundPositions);

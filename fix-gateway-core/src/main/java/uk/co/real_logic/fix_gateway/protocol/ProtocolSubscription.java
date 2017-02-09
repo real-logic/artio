@@ -23,14 +23,15 @@ import uk.co.real_logic.fix_gateway.messages.DisconnectDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.messages.ReplicatedMessageDecoder;
+import uk.co.real_logic.fix_gateway.replication.ClusterFragmentHandler;
+import uk.co.real_logic.fix_gateway.replication.ClusterHeader;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.protocol.GatewayPublication.FRAME_SIZE;
 
-public final class ProtocolSubscription implements ControlledFragmentHandler
+public final class ProtocolSubscription implements ControlledFragmentHandler, ClusterFragmentHandler
 {
-
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
 
     private static final Action UNKNOWN_TEMPLATE = null;
@@ -71,8 +72,20 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
         this.defaultAction = defaultAction;
     }
 
+    public Action onFragment(
+        final DirectBuffer buffer, final int offset, final int length, final ClusterHeader header)
+    {
+        return onFragment(buffer, offset, length, header.position());
+    }
+
+    public Action onFragment(
+        final DirectBuffer buffer, final int offset, final int length, final Header header)
+    {
+        return onFragment(buffer, offset, length, header.position());
+    }
+
     @SuppressWarnings("FinalParameters")
-    public Action onFragment(final DirectBuffer buffer, int offset, int length, final Header header)
+    private Action onFragment(final DirectBuffer buffer, int offset, int length, final long position)
     {
         messageHeader.wrap(buffer, offset);
 
@@ -84,7 +97,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
         {
             case FixMessageDecoder.TEMPLATE_ID:
             {
-                return onFixMessage(buffer, offset, blockLength, version, header);
+                return onFixMessage(buffer, offset, blockLength, version, position);
             }
 
             case DisconnectDecoder.TEMPLATE_ID:
@@ -97,7 +110,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
                 // Skip over replicated message header to its payload
                 offset += ReplicatedMessageDecoder.BLOCK_LENGTH;
                 length -= HEADER_LENGTH + ReplicatedMessageDecoder.BLOCK_LENGTH;
-                return onFragment(buffer, offset, length, header);
+                return onFragment(buffer, offset, length, position);
             }
         }
 
@@ -114,7 +127,11 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
     }
 
     private Action onFixMessage(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version, final Header header)
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final long position)
     {
         messageFrame.wrap(buffer, offset, blockLength, version);
         final int messageLength = messageFrame.bodyLength();
@@ -129,6 +146,6 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
             messageFrame.messageType(),
             messageFrame.timestamp(),
             messageFrame.status(),
-            header.position());
+            position);
     }
 }

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
+import io.aeron.Subscription;
 import org.junit.After;
 import org.junit.Test;
 import org.mockito.verification.VerificationMode;
@@ -41,7 +42,7 @@ public class ClusterPositionSenderTest
 
     private GatewayPublication publication = mock(GatewayPublication.class);
     private ClusterPositionSender positionSender = new ClusterPositionSender(
-        mock(ClusterableSubscription.class),
+        mock(Subscription.class),
         mock(ClusterableSubscription.class),
         publication,
         DEFAULT_NAME_PREFIX);

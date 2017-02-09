@@ -15,14 +15,16 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.logbuffer.Header;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.CollectionUtil;
 import org.agrona.concurrent.Agent;
+import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.LogTag;
 import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
+import uk.co.real_logic.fix_gateway.replication.ClusterFragmentHandler;
+import uk.co.real_logic.fix_gateway.replication.ClusterHeader;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
-import uk.co.real_logic.fix_gateway.replication.ReservedValue;
 
 import java.util.List;
 
@@ -33,7 +35,7 @@ import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor.align
 /**
  * Incrementally builds indexes by polling a subscription.
  */
-public class Indexer implements Agent, ControlledFragmentHandler
+public class Indexer implements Agent, ClusterFragmentHandler
 {
     private static final int LIMIT = 10;
 
@@ -84,11 +86,17 @@ public class Indexer implements Agent, ControlledFragmentHandler
         }
     }
 
-    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final ClusterHeader header)
     {
-        final int streamId = ReservedValue.streamId(header);
+        final int streamId = header.streamId();
         final int aeronSessionId = header.sessionId();
         final long position = header.position();
+        DebugLogger.log(
+            LogTag.INDEX,
+            "Indexing @ %d from [%d, %d]%n",
+            position,
+            streamId,
+            aeronSessionId);
         for (final Index index : indices)
         {
             index.indexRecord(buffer, offset, length, streamId, aeronSessionId, position);
@@ -122,7 +130,8 @@ public class Indexer implements Agent, ControlledFragmentHandler
         subscription.poll(this::quiesceFragment, Integer.MAX_VALUE);
     }
 
-    private Action quiesceFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    private Action quiesceFragment(
+        final DirectBuffer buffer, final int offset, final int length, final ClusterHeader header)
     {
         if (completedPosition(header.sessionId()) <= header.position())
         {

@@ -17,23 +17,30 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.Header;
+import org.agrona.DirectBuffer;
 
 /**
  * NB: left exposed as a public class because it the additional functionality over
  * {@link ClusterableSubscription} of being able to lookup the position of a session.
  */
-public class SoloSubscription extends ClusterableSubscription
+public class SoloSubscription extends ClusterableSubscription implements ControlledFragmentHandler
 {
     private final Subscription subscription;
+    private final ClusterHeader clusterHeader;
+
+    private ClusterFragmentHandler fragmentHandler;
 
     public SoloSubscription(final Subscription subscription)
     {
         this.subscription = subscription;
+        clusterHeader = new ClusterHeader(subscription.streamId());
     }
 
-    public int poll(final ControlledFragmentHandler fragmentHandler, final int fragmentLimit)
+    public int poll(final ClusterFragmentHandler fragmentHandler, final int fragmentLimit)
     {
-        return subscription.controlledPoll(fragmentHandler, fragmentLimit);
+        this.fragmentHandler = fragmentHandler;
+        return subscription.controlledPoll(this, fragmentLimit);
     }
 
     public void close()
@@ -44,5 +51,11 @@ public class SoloSubscription extends ClusterableSubscription
     public long positionOf(final int aeronSessionId)
     {
         return subscription.imageBySessionId(aeronSessionId).position();
+    }
+
+    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
+    {
+        clusterHeader.update(header.position(), header.sessionId());
+        return fragmentHandler.onFragment(buffer, offset, length, clusterHeader);
     }
 }
