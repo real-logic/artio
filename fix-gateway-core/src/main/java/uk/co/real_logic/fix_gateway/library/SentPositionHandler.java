@@ -32,7 +32,7 @@ public interface SentPositionHandler
     /**
      * Called when one or more messages has been sent.
      *
-     * @param position the position that corresponds to what has been sent via TCP.
+     * @param position the position that corresponds to what is owned by the gateway.
      * @return appropriate action to indicate back pressure
      */
     Action onSendCompleted(long position);
