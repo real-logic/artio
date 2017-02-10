@@ -90,9 +90,14 @@ public class SlowConsumerTest
         final Session session = acquireSession(handler, library);
         final SessionInfo sessionInfo = getSessionInfo();
 
+        while (!socketIsConnected())
+        {
+            library.poll(1);
+        }
+
         framerIdleStrategy.startStepping();
 
-        while (socketIsConnected() || session.canSendMessage())
+        while (socketIsConnected())
         {
             if (session.canSendMessage())
             {
