@@ -46,6 +46,7 @@ class GatewaySessions
     private final MessageValidationStrategy validationStrategy;
     private final int sessionBufferSize;
     private final long sendingTimeWindowInMs;
+    private final long reasonableTransmissionTimeInMs;
 
     GatewaySessions(
         final EpochClock clock,
@@ -56,7 +57,8 @@ class GatewaySessions
         final AuthenticationStrategy authenticationStrategy,
         final MessageValidationStrategy validationStrategy,
         final int sessionBufferSize,
-        final long sendingTimeWindowInMs)
+        final long sendingTimeWindowInMs,
+        final long reasonableTransmissionTimeInMs)
     {
         this.clock = clock;
         this.publication = publication;
@@ -67,6 +69,7 @@ class GatewaySessions
         this.validationStrategy = validationStrategy;
         this.sessionBufferSize = sessionBufferSize;
         this.sendingTimeWindowInMs = sendingTimeWindowInMs;
+        this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
     }
 
     void acquire(
@@ -107,8 +110,8 @@ class GatewaySessions
             sessionBufferSize,
             lastSentSequenceNumber + 1,
             // This gets set by the receiver end point once the logon message has been received.
-            0
-        );
+            0,
+            reasonableTransmissionTimeInMs);
 
         final SessionParser sessionParser = new SessionParser(
             session,

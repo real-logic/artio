@@ -899,7 +899,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             initiatorInitialSequenceNumber(sessionConfiguration, lastSequenceNumber),
             sequenceIndex,
             state,
-            sessionConfiguration != null && sessionConfiguration.resetSeqNum())
+            sessionConfiguration != null && sessionConfiguration.resetSeqNum(),
+            configuration.reasonableTransmissionTimeInMs())
             .lastReceivedMsgSeqNum(
                 initiatorInitialSequenceNumber(sessionConfiguration, lastReceivedSequenceNumber) - 1);
 
@@ -974,7 +975,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             sessionBufferSize,
             1,
             sequenceIndex,
-            state)
+            state,
+            configuration.reasonableTransmissionTimeInMs())
             .address(host, port);
     }
 

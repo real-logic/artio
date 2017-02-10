@@ -104,6 +104,7 @@ public class Session implements AutoCloseable
     private final long sendingTimeWindowInMs;
     private final AtomicCounter receivedMsgSeqNo;
     private final AtomicCounter sentMsgSeqNo;
+    private final long reasonableTransmissionTimeInMs;
 
     CompositeKey sessionKey;
 
@@ -140,7 +141,8 @@ public class Session implements AutoCloseable
         final int libraryId,
         final int sessionBufferSize,
         final int initialSequenceNumber,
-        final int sequenceIndex)
+        final int sequenceIndex,
+        final long reasonableTransmissionTimeInMs)
     {
         Verify.notNull(clock, "clock");
         Verify.notNull(state, "session state");
@@ -159,7 +161,8 @@ public class Session implements AutoCloseable
         this.sentMsgSeqNo = sentMsgSeqNo;
         this.libraryId = libraryId;
         this.sequenceIndex = sequenceIndex;
-        lastSentMsgSeqNum = initialSequenceNumber - 1;
+        this.lastSentMsgSeqNum = initialSequenceNumber - 1;
+        this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
 
         asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
 
@@ -693,7 +696,7 @@ public class Session implements AutoCloseable
 
     private void incNextReceivedInboundMessageTime(final long time)
     {
-        nextRequiredMessageTime(time + heartbeatIntervalInMs());
+        this.nextRequiredInboundMessageTimeInMs = time + heartbeatIntervalInMs() + reasonableTransmissionTimeInMs;
     }
 
     public Action onLogon(
@@ -1057,12 +1060,6 @@ public class Session implements AutoCloseable
         sendingHeartbeatIntervalInMs = (long)(heartbeatIntervalInMs * HEARTBEAT_PAUSE_FACTOR);
         nextRequiredHeartbeatTimeInMs = time + sendingHeartbeatIntervalInMs;
 
-        return this;
-    }
-
-    private Session nextRequiredMessageTime(final long nextRequiredMessageTime)
-    {
-        this.nextRequiredInboundMessageTimeInMs = nextRequiredMessageTime;
         return this;
     }
 

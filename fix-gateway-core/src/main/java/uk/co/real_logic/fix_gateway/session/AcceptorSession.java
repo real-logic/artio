@@ -22,7 +22,6 @@ import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 
 public class AcceptorSession extends Session
 {
-
     public AcceptorSession(
         final int defaultInterval,
         final long connectionId,
@@ -37,7 +36,8 @@ public class AcceptorSession extends Session
         final int sessionBufferSize,
         final int initialSequenceNumber,
         final int sequenceIndex,
-        final SessionState state)
+        final SessionState state,
+        final long reasonableTransmissionTimeInMs)
     {
         super(
             defaultInterval,
@@ -53,7 +53,8 @@ public class AcceptorSession extends Session
             libraryId,
             sessionBufferSize,
             initialSequenceNumber,
-            sequenceIndex);
+            sequenceIndex,
+            reasonableTransmissionTimeInMs);
     }
 
 }

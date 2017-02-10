@@ -97,7 +97,8 @@ public class FramerContext
             configuration.authenticationStrategy(),
             configuration.messageValidationStrategy(),
             configuration.sessionBufferSize(),
-            configuration.sendingTimeWindowInMs());
+            configuration.sendingTimeWindowInMs(),
+            configuration.reasonableTransmissionTimeInMs());
 
         sentSequenceNumberIndex = new SequenceNumberIndexReader(configuration.sentSequenceNumberBuffer());
         receivedSequenceNumberIndex = new SequenceNumberIndexReader(configuration.receivedSequenceNumberBuffer());

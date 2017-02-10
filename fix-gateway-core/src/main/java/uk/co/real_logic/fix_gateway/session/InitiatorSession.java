@@ -45,7 +45,8 @@ public class InitiatorSession extends Session
         final int initialSequenceNumber,
         final int sequenceIndex,
         final SessionState state,
-        final boolean resetSeqNum)
+        final boolean resetSeqNum,
+        final long reasonableTransmissionTimeInMs)
     {
         super(
             heartbeatInterval,
@@ -61,7 +62,8 @@ public class InitiatorSession extends Session
             libraryId,
             sessionBufferSize,
             initialSequenceNumber,
-            sequenceIndex);
+            sequenceIndex,
+            reasonableTransmissionTimeInMs);
         this.resetSeqNum = resetSeqNum;
     }
 

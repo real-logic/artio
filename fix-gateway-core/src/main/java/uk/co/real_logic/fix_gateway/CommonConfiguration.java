@@ -35,6 +35,7 @@ import java.util.stream.Stream;
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toCollection;
 
 /**
@@ -105,6 +106,11 @@ public class CommonConfiguration
 
     public static final String DEFAULT_HISTOGRAM_LOGGING_FILE = DEFAULT_DIRECTORY + File.separator + "histograms";
     public static final String DEFAULT_NAME_PREFIX = "";
+    public static final int DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S = 3;
+    public static final long DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS =
+        SECONDS.toMillis(DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S);
+
+    private long reasonableTransmissionTimeInMs = DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
 
     public static void validateTimeout(final long timeoutInMs)
     {
@@ -300,6 +306,17 @@ public class CommonConfiguration
     {
         this.messageValidationStrategy = messageValidationStrategy;
         return this;
+    }
+
+    public CommonConfiguration reasonableTransmissionTimeInMs(final long reasonableTransmissionTimeInMs)
+    {
+        this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
+        return this;
+    }
+
+    public long reasonableTransmissionTimeInMs()
+    {
+        return reasonableTransmissionTimeInMs;
     }
 
     /**

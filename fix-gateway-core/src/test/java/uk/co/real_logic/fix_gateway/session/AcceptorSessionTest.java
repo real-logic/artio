@@ -24,6 +24,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.SENDINGTIME_ACCURACY_PROBLEM;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
@@ -48,7 +49,8 @@ public class AcceptorSessionTest extends AbstractSessionTest
             DEFAULT_SESSION_BUFFER_SIZE,
             1,
             SEQUENCE_INDEX,
-            CONNECTED);
+            CONNECTED,
+            DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS);
     }
 
     @Test

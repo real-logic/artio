@@ -40,6 +40,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.*;
@@ -56,6 +57,7 @@ public abstract class AbstractSessionTest
     static final long SENDING_TIME_WINDOW = 2000;
     static final long CONNECTION_ID = 3L;
     static final int HEARTBEAT_INTERVAL = 2;
+    static final int SESSION_TIMEOUT = HEARTBEAT_INTERVAL + DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S;
     static final CompositeKey SESSION_KEY = mock(CompositeKey.class);
     static final int LIBRARY_ID = 4;
     static final int SEQUENCE_INDEX = 0;
@@ -715,7 +717,7 @@ public abstract class AbstractSessionTest
 
         final int sentMsgSeqNo = nextMsgSeqNum();
 
-        fakeClock.advanceSeconds(heartbeatInterval);
+        fakeClock.advanceSeconds(heartbeatInterval + DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S);
 
         onMessage(recvMsgSeqNo);
 
@@ -820,7 +822,7 @@ public abstract class AbstractSessionTest
 
     protected void twoHeartBeatIntervalsPass()
     {
-        fakeClock.advanceSeconds(HEARTBEAT_INTERVAL * 2);
+        fakeClock.advanceSeconds(SESSION_TIMEOUT * 2);
     }
 
     protected void verifyConnected()
