@@ -108,7 +108,7 @@ public class ClusterSubscription extends ClusterableSubscription
 
                 if (cannotAdvance())
                 {
-                    if (appliedBehindConcensus() && hasLeaderArchiveReader())
+                    if (gapBeforeSubscription() && hasLeaderArchiveReader())
                     {
                         readFromLog();
 
@@ -119,7 +119,7 @@ public class ClusterSubscription extends ClusterableSubscription
                 }
             }
 
-            if (cannotAdvance() && appliedBehindConcensus() && hasLeaderArchiveReader())
+            if (cannotAdvance() && gapBeforeSubscription() && hasLeaderArchiveReader())
             {
                 readFromLog();
             }
@@ -128,9 +128,11 @@ public class ClusterSubscription extends ClusterableSubscription
         return dataImage.controlledPoll(messageFilter, fragmentLimit);
     }
 
-    private boolean appliedBehindConcensus()
+    private boolean gapBeforeSubscription()
     {
-        return (messageFilter.transportConsensusPosition - lastAppliedTransportPosition) > 0;
+        //return dataImage != null && lastAppliedTransportPosition < dataImage.position();
+        // Disable reading from the archive until we evaluate the restart + long-netsplit recovery scenarios.
+        return false;
     }
 
     private void readFromLog()

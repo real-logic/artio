@@ -23,6 +23,7 @@ import io.aeron.logbuffer.Header;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.verification.VerificationMode;
@@ -338,6 +339,7 @@ public class ClusterSubscriptionTest
         verifyNoOtherFragmentsReceived();
     }
 
+    @Ignore
     @Test
     public void shouldCommitFromLocalLogIfGapInSubscription()
     {
@@ -363,6 +365,7 @@ public class ClusterSubscriptionTest
         verifyNoOtherFragmentsReceived();
     }
 
+    @Ignore
     @Test
     public void shouldCommitFromLocalLogWhenArchiverLags()
     {
@@ -442,6 +445,7 @@ public class ClusterSubscriptionTest
         verifyNoOtherFragmentsReceived();
     }
 
+    @Ignore
     @Test
     public void shouldCommitFromLocalLogIfGapInSubscriptionWhenBackPressured()
     {
