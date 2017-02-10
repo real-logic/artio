@@ -39,6 +39,10 @@
             <validValue name="NO">0</validValue>
             <validValue name="YES">1</validValue>
         </enum>
+        <enum name="SlowStatus" encodingType="uint8">
+            <validValue name="NOT_SLOW">0</validValue>
+            <validValue name="SLOW">1</validValue>
+        </enum>
         <enum name="GatewayError" encodingType="uint16">
             <validValue name="EXCEPTION">0</validValue>
             <validValue name="DUPLICATE_SESSION">1</validValue>
@@ -336,6 +340,13 @@
     <sbe:message name="ResetSequenceNumber" id="42"
                  description="A header for replicated messages">
         <field name="session" id="1" type="FixSessionId"/>
+    </sbe:message>
+
+    <sbe:message name="SlowStatusNotification" id="43"
+                 description="Notification of sessions become slow or not">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connectionId" id="2" type="ConnectionId"/>
+        <field name="status" id="3" type="SlowStatus"/>
     </sbe:message>
 
 </sbe:messageSchema>

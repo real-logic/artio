@@ -57,6 +57,8 @@ public class GatewayPublication extends ClaimablePublication
         ConnectEncoder.addressHeaderLength();
     private static final int NOT_LEADER_BLOCK_LENGTH =
         NotLeaderEncoder.BLOCK_LENGTH + HEADER_LENGTH + libraryChannelHeaderLength();
+    private static final int SLOW_STATUS_NOTIFICATION_LENGTH =
+        HEADER_LENGTH + SlowStatusNotificationEncoder.BLOCK_LENGTH;
 
     private final LogonEncoder logon = new LogonEncoder();
     private final ManageConnectionEncoder manageConnection = new ManageConnectionEncoder();
@@ -78,6 +80,7 @@ public class GatewayPublication extends ClaimablePublication
     private final ControlNotificationEncoder controlNotification = new ControlNotificationEncoder();
     private final LibraryTimeoutEncoder libraryTimeout = new LibraryTimeoutEncoder();
     private final ResetSequenceNumberEncoder resetSequenceNumber = new ResetSequenceNumberEncoder();
+    private final SlowStatusNotificationEncoder slowStatusNotification = new SlowStatusNotificationEncoder();
 
     private final NanoClock nanoClock;
 
@@ -936,6 +939,39 @@ public class GatewayPublication extends ClaimablePublication
             final long sessionId = sessions.get(i).sessionId();
             sessionsEncoder.next().sessionId(sessionId);
         }
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+
+        return position;
+    }
+
+    public long saveSlowStatusNotification(final int libraryId, final long connectionId, final SlowStatus status)
+    {
+        final long position = claim(SLOW_STATUS_NOTIFICATION_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        int offset = bufferClaim.offset();
+
+        header
+            .wrap(buffer, offset)
+            .blockLength(slowStatusNotification.sbeBlockLength())
+            .templateId(slowStatusNotification.sbeTemplateId())
+            .schemaId(slowStatusNotification.sbeSchemaId())
+            .version(slowStatusNotification.sbeSchemaVersion());
+
+        offset += header.encodedLength();
+
+        slowStatusNotification
+            .wrap(buffer, offset)
+            .libraryId(libraryId)
+            .connectionId(connectionId)
+            .status(status);
 
         bufferClaim.commit();
 

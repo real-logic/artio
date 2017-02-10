@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
+import org.agrona.collections.LongHashSet;
 import uk.co.real_logic.fix_gateway.Timing;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.library.*;
@@ -39,6 +40,7 @@ public class FakeHandler
     private final OtfParser parser;
     private final FakeOtfAcceptor acceptor;
 
+    private final LongHashSet slowSessions = new LongHashSet(-1);
     private final Deque<CompleteSessionId> completeSessionIds = new ArrayDeque<>();
 
     private Session lastSession;
@@ -72,6 +74,18 @@ public class FakeHandler
 
     public void onTimeout(final int libraryId, final long sessionId)
     {
+    }
+
+    public void onSlowStatus(final int libraryId, final long sessionId, final boolean hasBecomeSlow)
+    {
+        if (hasBecomeSlow)
+        {
+            slowSessions.add(sessionId);
+        }
+        else
+        {
+            slowSessions.remove(sessionId);
+        }
     }
 
     public Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason)
@@ -221,5 +235,10 @@ public class FakeHandler
         {
             return sessionId;
         }
+    }
+
+    public boolean isSlow(final long sessionId)
+    {
+        return slowSessions.contains(sessionId);
     }
 }

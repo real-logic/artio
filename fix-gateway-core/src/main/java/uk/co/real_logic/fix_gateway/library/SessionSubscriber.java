@@ -155,6 +155,11 @@ class SessionSubscriber implements AutoCloseable
         handler.onTimeout(libraryId, sessionId);
     }
 
+    void onSlowStatusNotification(final int libraryId, final boolean hasBecomeSlow)
+    {
+        handler.onSlowStatus(libraryId, session.id(), hasBecomeSlow);
+    }
+
     int poll(final long time)
     {
         return session.poll(time);
@@ -169,5 +174,4 @@ class SessionSubscriber implements AutoCloseable
     {
         return session;
     }
-
 }

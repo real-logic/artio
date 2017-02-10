@@ -66,4 +66,6 @@ public interface LibraryEndPointHandler
     Action onNotLeader(int libraryId, long replyToId, String libraryChannel);
 
     Action onControlNotification(int libraryId, SessionsDecoder sessions);
+
+    Action onSlowStatusNotification(int libraryId, long connectionId, boolean hasBecomeSlow);
 }

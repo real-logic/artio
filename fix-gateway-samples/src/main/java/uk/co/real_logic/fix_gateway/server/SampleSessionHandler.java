@@ -58,6 +58,10 @@ public class SampleSessionHandler implements SessionHandler
     {
     }
 
+    public void onSlowStatus(final int libraryId, final long sessionId, final boolean hasBecomeSlow)
+    {
+    }
+
     public Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason)
     {
         System.out.printf("%d Disconnected: %s\n", sessionId, reason);

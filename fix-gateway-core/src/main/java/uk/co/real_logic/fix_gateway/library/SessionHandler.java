@@ -59,8 +59,17 @@ public interface SessionHandler
     void onTimeout(int libraryId, long sessionId);
 
     /**
-     * The session has disconnected.
+     * Invoked if a session has been detected as being, or no longer being demarcated as a slow
+     * session.
      *
+     * @param libraryId the id of library which the session used to owned by.
+     * @param sessionId the id of the session.
+     * @param hasBecomeSlow true iff the session has been detected as slow, false if it is no longer slow.
+     */
+    void onSlowStatus(int libraryId, long sessionId, boolean hasBecomeSlow);
+
+    /**
+     * The session has disconnected.
      *
      * @param libraryId the id of library which the session used to owned by.
      * @param sessionId the id of the session.

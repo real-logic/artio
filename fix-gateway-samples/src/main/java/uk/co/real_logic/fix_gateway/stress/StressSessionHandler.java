@@ -60,6 +60,10 @@ public class StressSessionHandler implements SessionHandler
     {
     }
 
+    public void onSlowStatus(final int libraryId, final long sessionId, final boolean hasBecomeSlow)
+    {
+    }
+
     public ControlledFragmentHandler.Action onDisconnect(
         final int libraryId, final long sessionId, final DisconnectReason reason)
     {

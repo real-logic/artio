@@ -169,6 +169,12 @@ class SenderEndPoint implements AutoCloseable
         final int remainingBytes = length - written;
         bytesInBuffer.setOrdered(remainingBytes);
         sentPosition = position - remainingBytes;
+        sendSlowStatus(true);
+    }
+
+    private void sendSlowStatus(final boolean hasBecomeSlow)
+    {
+        framer.slowStatus(libraryId, connectionId, hasBecomeSlow);
     }
 
     private void removeEndpoint(final DisconnectReason reason)
@@ -238,6 +244,11 @@ class SenderEndPoint implements AutoCloseable
             if (bodyLength > (written + bytesPreviouslySent))
             {
                 return ABORT;
+            }
+
+            if (!isSlowConsumer())
+            {
+                sendSlowStatus(false);
             }
         }
         catch (final IOException ex)

@@ -856,6 +856,21 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
+    public Action onSlowStatusNotification(
+        final int libraryId, final long connectionId, final boolean hasBecomeSlow)
+    {
+        if (libraryId == this.libraryId)
+        {
+            final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
+            if (subscriber != null)
+            {
+                subscriber.onSlowStatusNotification(libraryId, hasBecomeSlow);
+            }
+        }
+
+        return CONTINUE;
+    }
+
     // -----------------------------------------------------------------------
     //                     END EVENT HANDLERS
     // -----------------------------------------------------------------------

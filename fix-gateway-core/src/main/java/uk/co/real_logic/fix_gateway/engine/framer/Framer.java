@@ -25,6 +25,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.collections.Long2LongHashMap;
+import org.agrona.collections.Long2LongHashMap.LongIterator;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.EpochClock;
@@ -150,6 +151,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ReplayQuery inboundMessages;
     private final ErrorHandler errorHandler;
     private final GatewayPublication outboundPublication;
+    // Both connection id to library id maps
+    private final Long2LongHashMap resendSlowStatus = new Long2LongHashMap(-1);
+    private final Long2LongHashMap resendNotSlowStatus = new Long2LongHashMap(-1);
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
@@ -284,12 +288,36 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             pollLibraries(timeInMs) +
             gatewaySessions.pollSessions(timeInMs) +
             adminCommands.drain(onAdminCommand) +
-            checkReplies();
+            checkDutyCycle();
     }
 
-    private int checkReplies()
+    private int checkDutyCycle()
     {
-        return removeIf(replies, ResetSequenceNumberCommand::poll);
+        return removeIf(replies, ResetSequenceNumberCommand::poll) +
+               resendSaveNotifications(this.resendSlowStatus, SlowStatus.SLOW) +
+               resendSaveNotifications(this.resendNotSlowStatus, SlowStatus.NOT_SLOW);
+    }
+
+    private int resendSaveNotifications(final Long2LongHashMap resend, final SlowStatus status)
+    {
+        int actions = 0;
+        if (!resend.isEmpty())
+        {
+            final LongIterator keyIterator = resend.keySet().iterator();
+            while (keyIterator.hasNext())
+            {
+                final long connectionId = keyIterator.nextValue();
+                final int libraryId = (int) resend.get(connectionId);
+                final long position = inboundPublication.saveSlowStatusNotification(
+                    libraryId, connectionId, status);
+                if (position > 0)
+                {
+                    actions++;
+                    keyIterator.remove();
+                }
+            }
+        }
+        return actions;
     }
 
     private int sendReplayMessages()
@@ -1132,6 +1160,34 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (continuation.attemptToAction() != CONTINUE)
         {
             retryManager.schedule(continuation);
+        }
+    }
+
+    void slowStatus(final int libraryId, final long connectionId, final boolean hasBecomeSlow)
+    {
+        if (hasBecomeSlow)
+        {
+            sendSlowStatus(libraryId, connectionId, resendNotSlowStatus, resendSlowStatus, SlowStatus.SLOW);
+        }
+        else
+        {
+            sendSlowStatus(libraryId, connectionId, resendSlowStatus, resendNotSlowStatus, SlowStatus.NOT_SLOW);
+        }
+    }
+
+    private void sendSlowStatus(
+        final int libraryId,
+        final long connectionId,
+        final Long2LongHashMap toNotResend,
+        final Long2LongHashMap toResend,
+        final SlowStatus status)
+    {
+        toNotResend.remove(connectionId);
+        final long position = inboundPublication.saveSlowStatusNotification(
+            libraryId, connectionId, status);
+        if (Pressure.isBackPressured(position))
+        {
+            toResend.put(connectionId, libraryId);
         }
     }
 }

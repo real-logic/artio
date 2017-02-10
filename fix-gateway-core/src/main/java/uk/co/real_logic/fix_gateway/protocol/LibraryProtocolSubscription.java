@@ -36,6 +36,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private final NewSentPositionDecoder newSentPosition = new NewSentPositionDecoder();
     private final NotLeaderDecoder libraryConnect = new NotLeaderDecoder();
     private final ControlNotificationDecoder controlNotification = new ControlNotificationDecoder();
+    private final SlowStatusNotificationDecoder slowStatusNotification = new SlowStatusNotificationDecoder();
 
     private final LibraryEndPointHandler handler;
 
@@ -99,6 +100,11 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             {
                 return onControlNotification(buffer, offset, blockLength, version);
             }
+
+            case SlowStatusNotificationDecoder.TEMPLATE_ID:
+            {
+                return onSlowStatusNotification(buffer, offset, blockLength, version);
+            }
         }
 
         return CONTINUE;
@@ -141,6 +147,26 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         return handler.onControlNotification(
             libraryId,
             controlNotification.sessions());
+    }
+
+    private Action onSlowStatusNotification(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version)
+    {
+        slowStatusNotification.wrap(buffer, offset, blockLength, version);
+        final int libraryId = slowStatusNotification.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
+
+        return handler.onSlowStatusNotification(
+            libraryId,
+            slowStatusNotification.connectionId(),
+            slowStatusNotification.status() == SlowStatus.SLOW);
     }
 
     private Action onApplicationHeartbeat(
