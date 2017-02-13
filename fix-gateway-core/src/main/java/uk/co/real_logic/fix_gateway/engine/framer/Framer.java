@@ -627,8 +627,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     return inboundPublication.saveSessionExists(
                         libraryId, connectionId, sessionId,
                         lastSentSequenceNumber, lastReceivedSequenceNumber,
-                        senderCompId, senderSubId, senderLocationId, targetCompId, "",
-                        "", username, password, LogonStatus.NEW, SlowStatus.NOT_SLOW);
+                        senderCompId, senderSubId, senderLocationId, targetCompId, targetSubId,
+                        targetLocationId, username, password, LogonStatus.NEW, SlowStatus.NOT_SLOW);
                 }
 
                 private long saveManageConnection()
