@@ -97,8 +97,7 @@ public class ClusteredGatewaySystemTest
         // a latter runner, this ensures that the earlier ones get closed
         ids().forEach((ourId) -> acceptingCluster.add(new FixEngineRunner(ourId, ids())));
 
-        final LibraryConfiguration configuration = acceptingLibraryConfig(
-            acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, null)
+        final LibraryConfiguration configuration = acceptingLibraryConfig(acceptingHandler)
             .replyTimeoutInMs(5_000);
 
         configuration.libraryAeronChannels(acceptingCluster

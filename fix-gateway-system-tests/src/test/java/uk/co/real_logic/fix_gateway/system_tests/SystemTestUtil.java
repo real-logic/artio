@@ -244,19 +244,16 @@ public final class SystemTestUtil
     }
 
     public static LibraryConfiguration acceptingLibraryConfig(
-        final FakeHandler sessionHandler,
-        final String acceptorId,
-        final String initiatorId,
-        final String libraryAeronChannel)
+        final FakeHandler sessionHandler)
     {
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
-        setupAuthentication(acceptorId, initiatorId, libraryConfiguration);
+        setupAuthentication(ACCEPTOR_ID, INITIATOR_ID, libraryConfiguration);
 
         libraryConfiguration
             .sessionExistsHandler(sessionHandler)
             .sessionAcquireHandler(sessionHandler)
             .sentPositionHandler(sessionHandler)
-            .libraryAeronChannels(singletonList(libraryAeronChannel));
+            .libraryAeronChannels(singletonList(IPC_CHANNEL));
 
         return libraryConfiguration;
     }
@@ -366,7 +363,7 @@ public final class SystemTestUtil
 
     public static FixLibrary newAcceptingLibrary(final FakeHandler sessionHandler)
     {
-        return connect(acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL));
+        return connect(acceptingLibraryConfig(sessionHandler));
     }
 
     public static void assertConnected(final Session session)

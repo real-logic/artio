@@ -38,7 +38,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.util.List;
 
-import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.agrona.CloseHelper.close;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -75,8 +74,7 @@ public class SlowConsumerTest
             .framerIdleStrategy(framerIdleStrategy);
         config.senderMaxBytesInBuffer(MAX_BYTES_IN_BUFFER);
         engine = FixEngine.launch(config);
-        final LibraryConfiguration libraryConfiguration =
-            acceptingLibraryConfig(handler, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL);
+        final LibraryConfiguration libraryConfiguration = acceptingLibraryConfig(handler);
         libraryConfiguration.outboundMaxClaimAttempts(1);
         library = connect(libraryConfiguration);
     }
