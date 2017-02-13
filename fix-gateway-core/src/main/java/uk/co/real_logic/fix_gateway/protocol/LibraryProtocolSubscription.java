@@ -27,7 +27,7 @@ import static uk.co.real_logic.fix_gateway.messages.ManageConnectionDecoder.addr
 public final class LibraryProtocolSubscription implements ControlledFragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
-    private final LogonDecoder logon = new LogonDecoder();
+    private final SessionExistsDecoder sessionExists = new SessionExistsDecoder();
     private final ManageConnectionDecoder manageConnection = new ManageConnectionDecoder();
     private final ErrorDecoder error = new ErrorDecoder();
     private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
@@ -61,9 +61,9 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
                 return onNewSentPosition(buffer, offset, blockLength, version);
             }
 
-            case LogonDecoder.TEMPLATE_ID:
+            case SessionExistsDecoder.TEMPLATE_ID:
             {
-                return onLogon(buffer, offset, blockLength, version);
+                return onSessionExists(buffer, offset, blockLength, version);
             }
 
             case ManageConnectionDecoder.TEMPLATE_ID:
@@ -273,31 +273,31 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageConnection.sequenceIndex());
     }
 
-    private Action onLogon(
+    private Action onSessionExists(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
-        logon.wrap(buffer, offset, blockLength, version);
-        final int libraryId = logon.libraryId();
+        sessionExists.wrap(buffer, offset, blockLength, version);
+        final int libraryId = sessionExists.libraryId();
         final Action action = handler.onApplicationHeartbeat(libraryId);
         if (action == ABORT)
         {
             return action;
         }
 
-        return handler.onLogon(
+        return handler.onSessionExists(
             libraryId,
-            logon.connection(),
-            logon.session(),
-            logon.lastSentSequenceNumber(),
-            logon.lastReceivedSequenceNumber(),
-            logon.status(),
-            logon.localCompId(),
-            logon.localSubId(),
-            logon.localLocationId(),
-            logon.remoteCompId(),
-            logon.remoteSubId(),
-            logon.remoteLocationId(),
-            logon.username(),
-            logon.password());
+            sessionExists.connection(),
+            sessionExists.session(),
+            sessionExists.lastSentSequenceNumber(),
+            sessionExists.lastReceivedSequenceNumber(),
+            sessionExists.status(),
+            sessionExists.localCompId(),
+            sessionExists.localSubId(),
+            sessionExists.localLocationId(),
+            sessionExists.remoteCompId(),
+            sessionExists.remoteSubId(),
+            sessionExists.remoteLocationId(),
+            sessionExists.username(),
+            sessionExists.password());
     }
 }

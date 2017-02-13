@@ -359,7 +359,7 @@ class ReceiverEndPoint
 
                 choosePublication(persistenceLevel);
 
-                return stashIfBackpressured(offset, publication.saveLogon(
+                return stashIfBackpressured(offset, publication.saveSessionExists(
                     libraryId,
                     connectionId,
                     sessionId,

@@ -149,7 +149,7 @@ public class InitiatorSession extends Session
 
     private Action saveLogonMessage(final long sessionId)
     {
-        final long position = publication.saveLogon(libraryId, connectionId, sessionId);
+        final long position = publication.saveSessionExists(libraryId, connectionId, sessionId);
         if (position < 0)
         {
             resendSaveLogon = true;

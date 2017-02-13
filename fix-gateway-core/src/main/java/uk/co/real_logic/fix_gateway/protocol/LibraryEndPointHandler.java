@@ -37,7 +37,7 @@ public interface LibraryEndPointHandler
         long replyToId,
         int sequenceIndex);
 
-    Action onLogon(
+    Action onSessionExists(
         int libraryId,
         long connectionId,
         long sessionId,

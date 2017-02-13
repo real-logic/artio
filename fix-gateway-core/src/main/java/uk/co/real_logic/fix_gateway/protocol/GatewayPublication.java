@@ -60,7 +60,7 @@ public class GatewayPublication extends ClaimablePublication
     private static final int SLOW_STATUS_NOTIFICATION_LENGTH =
         HEADER_LENGTH + SlowStatusNotificationEncoder.BLOCK_LENGTH;
 
-    private final LogonEncoder logon = new LogonEncoder();
+    private final SessionExistsEncoder logon = new SessionExistsEncoder();
     private final ManageConnectionEncoder manageConnection = new ManageConnectionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
     private final RequestDisconnectEncoder requestDisconnect = new RequestDisconnectEncoder();
@@ -145,12 +145,12 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveLogon(
+    public long saveSessionExists(
         final int libraryId,
         final long connectionId,
         final long sessionId)
     {
-        return saveLogon(
+        return saveSessionExists(
             libraryId,
             connectionId,
             sessionId,
@@ -167,7 +167,7 @@ public class GatewayPublication extends ClaimablePublication
             LogonStatus.NEW);
     }
 
-    public long saveLogon(
+    public long saveSessionExists(
         final int libraryId,
         final long connectionId,
         final long sessionId,
@@ -194,8 +194,8 @@ public class GatewayPublication extends ClaimablePublication
 
         final long position = claim(
             header.encodedLength() +
-                LogonEncoder.BLOCK_LENGTH +
-                LogonEncoder.localSubIdHeaderLength() * 8 +
+                SessionExistsEncoder.BLOCK_LENGTH +
+                SessionExistsEncoder.localSubIdHeaderLength() * 8 +
                 localCompIdBytes.length +
                 localSubIdBytes.length +
                 localLocationIdBytes.length +

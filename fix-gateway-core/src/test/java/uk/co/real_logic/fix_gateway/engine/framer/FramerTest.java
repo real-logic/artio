@@ -712,7 +712,7 @@ public class FramerTest
 
     private void backPressureSaveLogon()
     {
-        when(inboundPublication.saveLogon(
+        when(inboundPublication.saveSessionExists(
             eq(LIBRARY_ID), anyLong(), anyLong(),
             anyInt(), anyInt(),
             any(), any(), any(), any(), any(), any(),
@@ -828,7 +828,7 @@ public class FramerTest
 
     private void verifyLogonSaved(final VerificationMode times, final LogonStatus status)
     {
-        verify(inboundPublication, times).saveLogon(
+        verify(inboundPublication, times).saveSessionExists(
             eq(LIBRARY_ID), eq(connectionId.getValue()), anyLong(),
             anyInt(), anyInt(),
             any(), any(), any(), any(), any(), any(),

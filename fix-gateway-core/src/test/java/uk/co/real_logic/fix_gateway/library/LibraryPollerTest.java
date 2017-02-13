@@ -315,7 +315,7 @@ public class LibraryPollerTest
             REPLY_TO_ID,
             SEQUENCE_INDEX);
 
-        library.onLogon(
+        library.onSessionExists(
             libraryId(),
             connectionId,
             sessionId,

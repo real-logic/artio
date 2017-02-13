@@ -245,7 +245,7 @@
     <sbe:message name="ResetSessionIds" id="36" description="All session ids have been reset">
     </sbe:message>
 
-    <sbe:message name="Logon" id="9" description="A logon has occurred">
+    <sbe:message name="SessionExists" id="9" description="A session exists at the gateway">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="connection" id="2" type="ConnectionId"/>
         <field name="session" id="3" type="FixSessionId"/>

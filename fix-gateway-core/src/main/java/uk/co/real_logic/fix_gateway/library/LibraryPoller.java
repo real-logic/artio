@@ -584,7 +584,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    public Action onLogon(
+    public Action onSessionExists(
         final int libraryId,
         final long connectionId,
         final long sessionId,

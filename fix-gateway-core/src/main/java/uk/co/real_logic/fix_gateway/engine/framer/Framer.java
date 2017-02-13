@@ -624,7 +624,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
                 private long saveLogon()
                 {
-                    return inboundPublication.saveLogon(
+                    return inboundPublication.saveSessionExists(
                         libraryId, connectionId, sessionId,
                         lastSentSequenceNumber, lastReceivedSequenceNumber,
                         senderCompId, senderSubId, senderLocationId, targetCompId, "",
@@ -977,7 +977,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final String username = gatewaySession.username();
             final String password = gatewaySession.password();
 
-            return inboundPublication.saveLogon(
+            return inboundPublication.saveSessionExists(
                 libraryId,
                 connectionId,
                 gatewaySession.sessionId(),
