@@ -228,7 +228,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final Runnable beforeConnect,
         final boolean resetSequenceNumbersOnLogon)
     {
-        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, this::nothing,resetSequenceNumbersOnLogon);
+        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, this::nothing, resetSequenceNumbersOnLogon);
 
         assertSequenceIndicesAre(0);
 
