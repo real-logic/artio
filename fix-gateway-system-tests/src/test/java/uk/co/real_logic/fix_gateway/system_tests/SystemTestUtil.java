@@ -284,11 +284,20 @@ public final class SystemTestUtil
     public static Session acquireSession(
         final FakeHandler sessionHandler, final FixLibrary library, final long sessionId)
     {
-        final SessionReplyStatus reply = requestSession(library, sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
+        return acquireSession(sessionHandler, library, sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
+    }
+
+    public static Session acquireSession(
+        final FakeHandler sessionHandler,
+        final FixLibrary library,
+        final long sessionId,
+        final int lastReceivedMsgSeqNum,
+        final int sequenceIndex)
+    {
+        final SessionReplyStatus reply = requestSession(library, sessionId, lastReceivedMsgSeqNum, sequenceIndex);
         assertEquals(SessionReplyStatus.OK, reply);
         final Session session = sessionHandler.lastSession();
         sessionHandler.resetSession();
-
         return session;
     }
 

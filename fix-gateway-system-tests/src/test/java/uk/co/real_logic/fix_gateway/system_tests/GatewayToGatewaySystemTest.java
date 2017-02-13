@@ -40,6 +40,7 @@ import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISABLED;
+import static uk.co.real_logic.fix_gateway.system_tests.FixMessage.hasMessageSequenceNumber;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
@@ -500,7 +501,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         if (lastReceivedMsgSeqNum != NO_MESSAGE_REPLAY && status == OK)
         {
             final FixMessage firstReplayedMessage = otfAcceptor.messages().get(0);
-            assertEquals("1", firstReplayedMessage.getMessageSequenceNumber());
+            assertThat(firstReplayedMessage, hasMessageSequenceNumber(1));
             assertEquals(1, firstReplayedMessage.sequenceIndex());
             assertEquals("Y", firstReplayedMessage.getPossDup());
         }
