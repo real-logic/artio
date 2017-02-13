@@ -31,9 +31,7 @@ import java.io.File;
 import java.io.IOException;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
