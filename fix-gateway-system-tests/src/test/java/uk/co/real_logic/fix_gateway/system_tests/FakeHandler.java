@@ -42,6 +42,7 @@ public class FakeHandler
     private Session lastSession;
     private boolean hasDisconnected = false;
     private long sentPosition;
+    private boolean lastSessionWasSlow;
 
     FakeHandler(final FakeOtfAcceptor acceptor)
     {
@@ -91,11 +92,12 @@ public class FakeHandler
         return CONTINUE;
     }
 
-    public SessionHandler onSessionAcquired(final Session session)
+    public SessionHandler onSessionAcquired(final Session session, final boolean isSlow)
     {
         assertNotEquals(Session.UNKNOWN, session.id());
         sessions.add(session);
         this.lastSession = session;
+        this.lastSessionWasSlow = isSlow;
         return this;
     }
 
@@ -236,5 +238,10 @@ public class FakeHandler
     public boolean isSlow(final Session session)
     {
         return slowSessions.contains(session);
+    }
+
+    public boolean lastSessionWasSlow()
+    {
+        return lastSessionWasSlow;
     }
 }

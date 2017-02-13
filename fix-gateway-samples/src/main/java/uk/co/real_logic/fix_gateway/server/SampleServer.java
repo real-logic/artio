@@ -104,7 +104,7 @@ public final class SampleServer
         IoUtil.delete(new File(configuration.logFileDir()), true);
     }
 
-    private static SessionHandler onConnect(final Session session)
+    private static SessionHandler onConnect(final Session session, final boolean isSlow)
     {
         SampleServer.session = session;
 

@@ -164,7 +164,8 @@ public class GatewayPublication extends ClaimablePublication
             null,
             null,
             null,
-            LogonStatus.NEW);
+            LogonStatus.NEW,
+            SlowStatus.NOT_SLOW);
     }
 
     public long saveSessionExists(
@@ -181,7 +182,8 @@ public class GatewayPublication extends ClaimablePublication
         final String remoteLocationId,
         final String username,
         final String password,
-        final LogonStatus status)
+        final LogonStatus logonstatus,
+        final SlowStatus slowStatus)
     {
         final byte[] localCompIdBytes = bytes(localCompId);
         final byte[] localSubIdBytes = bytes(localSubId);
@@ -229,7 +231,8 @@ public class GatewayPublication extends ClaimablePublication
             .session(sessionId)
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
-            .status(status)
+            .logonStatus(logonstatus)
+            .slowStatus(slowStatus)
             .putLocalCompId(localCompIdBytes, 0, localCompIdBytes.length)
             .putLocalSubId(localSubIdBytes, 0, localSubIdBytes.length)
             .putLocalLocationId(localLocationIdBytes, 0, localLocationIdBytes.length)

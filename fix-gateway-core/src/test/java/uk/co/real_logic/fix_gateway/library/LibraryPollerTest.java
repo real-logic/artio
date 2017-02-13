@@ -88,7 +88,7 @@ public class LibraryPollerTest
         when(counters.receivedMsgSeqNo(anyLong())).thenReturn(mock(AtomicCounter.class));
         when(counters.sentMsgSeqNo(anyLong())).thenReturn(mock(AtomicCounter.class));
 
-        when(sessionAcquireHandler.onSessionAcquired(session.capture())).thenReturn(sessionHandler);
+        when(sessionAcquireHandler.onSessionAcquired(session.capture(), anyBoolean())).thenReturn(sessionHandler);
     }
 
     @Test
@@ -322,6 +322,7 @@ public class LibraryPollerTest
             LAST_SENT_SEQUENCE_NUMBER,
             LAST_RECEIVED_SEQUENCE_NUMBER,
             LogonStatus.NEW,
+            false,
             "",
             "",
             "",

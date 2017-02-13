@@ -373,7 +373,8 @@ class ReceiverEndPoint
                     compositeKey.remoteLocationId(),
                     username,
                     password,
-                    LogonStatus.NEW));
+                    LogonStatus.NEW,
+                    SlowStatus.NOT_SLOW));
             }
         }
 

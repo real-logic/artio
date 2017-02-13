@@ -74,7 +74,7 @@ public final class SerialConnections
                     .build();
 
                 final LibraryConfiguration libraryConfiguration = new LibraryConfiguration()
-                    .sessionAcquireHandler(session -> testReqIdFinder)
+                    .sessionAcquireHandler((session, isSlow) -> testReqIdFinder)
                     .libraryAeronChannels(singletonList(aeronChannel));
 
                 try (FixLibrary library = SampleUtil.blockingConnect(libraryConfiguration))

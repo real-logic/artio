@@ -26,5 +26,5 @@ import uk.co.real_logic.fix_gateway.session.Session;
 @FunctionalInterface
 public interface SessionAcquireHandler
 {
-    SessionHandler onSessionAcquired(Session session);
+    SessionHandler onSessionAcquired(Session session, boolean isSlow);
 }

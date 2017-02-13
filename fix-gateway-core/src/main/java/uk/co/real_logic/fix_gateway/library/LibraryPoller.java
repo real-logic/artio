@@ -590,7 +590,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long sessionId,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
-        final LogonStatus status,
+        final LogonStatus logonstatus,
+        final boolean isSlow,
         final String localCompId,
         final String localSubId,
         final String localLocationId,
@@ -600,9 +601,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final String username,
         final String password)
     {
-
         final boolean thisLibrary = libraryId == this.libraryId;
-        if (thisLibrary && status == LogonStatus.NEW)
+        if (thisLibrary && logonstatus == LogonStatus.NEW)
         {
             DebugLogger.log(FIX_MESSAGE, "Library Logon: %d, %d\n", connectionId, sessionId);
             final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
@@ -617,7 +617,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                         remoteSubId,
                         remoteLocationId);
                 final SessionHandler handler =
-                    configuration.sessionAcquireHandler().onSessionAcquired(subscriber.session());
+                    configuration.sessionAcquireHandler().onSessionAcquired(subscriber.session(), isSlow);
                 subscriber.onLogon(
                     sessionId,
                     lastSentSequenceNumber,
@@ -628,7 +628,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     handler);
             }
         }
-        else if (libraryId == ENGINE_LIBRARY_ID || thisLibrary && status == LIBRARY_NOTIFICATION)
+        else if (libraryId == ENGINE_LIBRARY_ID || thisLibrary && logonstatus == LIBRARY_NOTIFICATION)
         {
             sessionExistsHandler.onSessionExists(
                 fixLibrary,

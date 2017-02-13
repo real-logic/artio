@@ -628,7 +628,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         libraryId, connectionId, sessionId,
                         lastSentSequenceNumber, lastReceivedSequenceNumber,
                         senderCompId, senderSubId, senderLocationId, targetCompId, "",
-                        "", username, password, LogonStatus.NEW);
+                        "", username, password, LogonStatus.NEW, SlowStatus.NOT_SLOW);
                 }
 
                 private long saveManageConnection()
@@ -810,8 +810,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 .sessions()
                 .stream()
                 .map((gatewaySession) ->
-                    (Continuation)() ->
-                        saveLogon(libraryId, gatewaySession, UNK_SESSION, UNK_SESSION, LIBRARY_NOTIFICATION))
+                    (Continuation) () ->
+                        saveSessionExists(libraryId, gatewaySession, UNK_SESSION, UNK_SESSION, LIBRARY_NOTIFICATION))
                 .collect(Collectors.toList()));
 
         return retryManager.firstAttempt(correlationId, unitOfWork);
@@ -948,7 +948,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySession.sequenceIndex()));
 
         continuations.add(() ->
-            saveLogon(libraryId, gatewaySession, lastSentSeqNum, lastRecvSeqNum, LogonStatus.NEW));
+            saveSessionExists(libraryId, gatewaySession, lastSentSeqNum, lastRecvSeqNum, LogonStatus.NEW));
 
         catchupSession(
             continuations,
@@ -963,12 +963,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return retryManager.firstAttempt(correlationId, new UnitOfWork(continuations));
     }
 
-    private long saveLogon(
+    private long saveSessionExists(
         final int libraryId,
         final GatewaySession gatewaySession,
         final int lastSentSeqNum,
         final int lastReceivedSeqNum,
-        final LogonStatus status)
+        final LogonStatus logonstatus)
     {
         final CompositeKey compositeKey = gatewaySession.sessionKey();
         if (compositeKey != null)
@@ -976,6 +976,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final long connectionId = gatewaySession.connectionId();
             final String username = gatewaySession.username();
             final String password = gatewaySession.password();
+            final SlowStatus slowStatus = gatewaySession.bytesInBuffer() > 0 ? SlowStatus.SLOW : SlowStatus.NOT_SLOW;
 
             return inboundPublication.saveSessionExists(
                 libraryId,
@@ -991,7 +992,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 compositeKey.remoteLocationId(),
                 username,
                 password,
-                status);
+                logonstatus,
+                slowStatus);
         }
 
         return COMPLETE;

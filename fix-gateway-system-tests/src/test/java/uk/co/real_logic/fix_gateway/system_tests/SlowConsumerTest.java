@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
+import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -59,11 +60,13 @@ public class SlowConsumerTest
     private FakeOtfAcceptor acceptingOtfAcceptor = new FakeOtfAcceptor();
     private FakeHandler handler = new FakeHandler(acceptingOtfAcceptor);
 
+    private TestRequestEncoder testRequest = newTestRequest();
     private LogonEncoder logon = new LogonEncoder();
     private ByteBuffer byteBuffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(byteBuffer);
     private SteppingIdleStrategy framerIdleStrategy = new SteppingIdleStrategy();
     private SocketChannel socket;
+    private Session session;
 
     @Before
     public void setUp() throws IOException
@@ -84,8 +87,7 @@ public class SlowConsumerTest
     {
         initiateConnection();
 
-        final TestRequestEncoder testRequest = newTestRequest();
-        final Session session = acquireSession(handler, library);
+        session = acquireSession(handler, library);
         final SessionInfo sessionInfo = getSessionInfo();
 
         while (!socketIsConnected())
@@ -113,34 +115,12 @@ public class SlowConsumerTest
     }
 
     @Test(timeout = TEST_TIMEOUT)
-    public void shouldRestoreConnectionFromQuarantineWhenItCatchesUp() throws IOException
+    public void shouldRestoreConnectionFromSlowGroupWhenItCatchesUp() throws IOException
     {
-        initiateConnection();
-
-        final TestRequestEncoder testRequest = newTestRequest();
-        final Session session = acquireSession(handler, library);
-        final SessionInfo sessionInfo = getSessionInfo();
-
-        assertNotSlow(session);
-
-        framerIdleStrategy.startStepping();
-
-        // Get into a quarantined state
-        while (sessionInfo.bytesInBuffer() == 0 || !handler.isSlow(session))
-        {
-            for (int i = 0; i < 10; i++)
-            {
-                session.send(testRequest);
-            }
-
-            library.poll(1);
-            framerIdleStrategy.step();
-        }
-
-        assertTrue(handler.isSlow(session));
+        final SessionInfo sessionInfo = sessionBecomesSlow();
         socket.configureBlocking(false);
 
-        // Get out of quarantined state
+        // Get out of slow state
         while (sessionInfo.bytesInBuffer() > 0 || handler.isSlow(session))
         {
             int bytesRead;
@@ -162,6 +142,47 @@ public class SlowConsumerTest
 
         assertEquals(ACTIVE, session.state());
         assertTrue(socketIsConnected());
+    }
+
+    @Test(timeout = TEST_TIMEOUT)
+    public void shouldNotifyLibraryOfSlowConnectionWhenAcquired() throws IOException
+    {
+        sessionBecomesSlow();
+
+        framerIdleStrategy.stopStepping();
+
+        assertEquals(SessionReplyStatus.OK, releaseToGateway(library, session));
+
+        session = acquireSession(handler, library, session.id());
+
+        assertTrue("Session not slow", handler.lastSessionWasSlow());
+    }
+
+    private SessionInfo sessionBecomesSlow() throws IOException
+    {
+        initiateConnection();
+
+        session = acquireSession(handler, library);
+        final SessionInfo sessionInfo = getSessionInfo();
+
+        assertNotSlow(session);
+
+        framerIdleStrategy.startStepping();
+
+        // Get into a slow state
+        while (sessionInfo.bytesInBuffer() == 0 || !handler.isSlow(session))
+        {
+            for (int i = 0; i < 10; i++)
+            {
+                session.send(testRequest);
+            }
+
+            library.poll(1);
+            framerIdleStrategy.step();
+        }
+
+        assertTrue(handler.isSlow(session));
+        return sessionInfo;
     }
 
     private void assertNotSlow(final Session session)

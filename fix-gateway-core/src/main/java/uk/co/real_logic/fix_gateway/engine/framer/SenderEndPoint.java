@@ -267,6 +267,7 @@ class SenderEndPoint implements AutoCloseable
         return !(libraryId == ENGINE_LIBRARY_ID || libraryId == this.libraryId);
     }
 
+    // Only access on Framer thread
     private boolean isSlowConsumer()
     {
         return bytesInBufferWeak() > 0;
