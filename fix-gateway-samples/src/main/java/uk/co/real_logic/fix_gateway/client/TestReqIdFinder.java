@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.otf.MessageControl;
 import uk.co.real_logic.fix_gateway.otf.OtfMessageAcceptor;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
+import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -45,7 +46,7 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
         final int offset,
         final int length,
         final int libraryId,
-        final long sessionId,
+        final Session session,
         final int sequenceIndex,
         final int messageType,
         final long timestampInNs,
@@ -63,15 +64,15 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
         return CONTINUE;
     }
 
-    public void onTimeout(final int libraryId, final long sessionId)
+    public void onTimeout(final int libraryId, final Session session)
     {
     }
 
-    public void onSlowStatus(final int libraryId, final long sessionId, final boolean hasBecomeSlow)
+    public void onSlowStatus(final int libraryId, final Session session, final boolean hasBecomeSlow)
     {
     }
 
-    public Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason)
+    public Action onDisconnect(final int libraryId, final Session session, final DisconnectReason reason)
     {
         return CONTINUE;
     }

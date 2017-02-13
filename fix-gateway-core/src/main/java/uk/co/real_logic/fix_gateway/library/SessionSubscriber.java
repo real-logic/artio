@@ -81,7 +81,7 @@ class SessionSubscriber implements AutoCloseable
                             offset,
                             length,
                             libraryId,
-                            sessionId,
+                            session,
                             sequenceIndex,
                             messageType,
                             timestamp,
@@ -96,7 +96,7 @@ class SessionSubscriber implements AutoCloseable
                         offset,
                         length,
                         libraryId,
-                        sessionId,
+                        session,
                         sequenceIndex,
                         messageType,
                         timestamp,
@@ -115,7 +115,7 @@ class SessionSubscriber implements AutoCloseable
     Action onDisconnect(final int libraryId, final DisconnectReason reason)
     {
         session.onDisconnect();
-        return handler.onDisconnect(libraryId, session.id(), reason);
+        return handler.onDisconnect(libraryId, session, reason);
     }
 
     void onLogon(
@@ -148,16 +148,14 @@ class SessionSubscriber implements AutoCloseable
         session.password(password);
     }
 
-    void onTimeout(
-        final int libraryId,
-        final long sessionId)
+    void onTimeout(final int libraryId)
     {
-        handler.onTimeout(libraryId, sessionId);
+        handler.onTimeout(libraryId, session);
     }
 
     void onSlowStatusNotification(final int libraryId, final boolean hasBecomeSlow)
     {
-        handler.onSlowStatus(libraryId, session.id(), hasBecomeSlow);
+        handler.onSlowStatus(libraryId, session, hasBecomeSlow);
     }
 
     int poll(final long time)

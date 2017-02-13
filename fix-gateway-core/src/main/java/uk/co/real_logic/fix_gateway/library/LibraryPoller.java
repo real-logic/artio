@@ -831,7 +831,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     final SessionSubscriber subscriber = connectionIdToSession.remove(session.connectionId());
                     if (subscriber != null)
                     {
-                        subscriber.onTimeout(libraryId, sessionId);
+                        subscriber.onTimeout(libraryId);
                     }
                     session.close();
                     sessions.remove(i);

@@ -100,7 +100,7 @@ public class LibraryPollerTest
 
         library.onControlNotification(libraryId(), noSessionIds());
 
-        verify(sessionHandler).onTimeout(libraryId(), SESSION_ID);
+        verify(sessionHandler).onTimeout(libraryId(), session.getValue());
     }
 
     @Test
@@ -113,7 +113,8 @@ public class LibraryPollerTest
 
         library.onControlNotification(libraryId(), hasOtherSessionId());
 
-        verify(sessionHandler).onTimeout(libraryId(), SESSION_ID);
+        final Session firstSession = session.getAllValues().get(0);
+        verify(sessionHandler).onTimeout(libraryId(), firstSession);
     }
 
     @Test

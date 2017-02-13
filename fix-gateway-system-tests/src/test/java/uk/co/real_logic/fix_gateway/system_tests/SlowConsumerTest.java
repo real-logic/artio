@@ -128,7 +128,7 @@ public class SlowConsumerTest
         framerIdleStrategy.startStepping();
 
         // Get into a quarantined state
-        while (sessionInfo.bytesInBuffer() == 0 || !isSlow(session))
+        while (sessionInfo.bytesInBuffer() == 0 || !handler.isSlow(session))
         {
             for (int i = 0; i < 10; i++)
             {
@@ -139,11 +139,11 @@ public class SlowConsumerTest
             framerIdleStrategy.step();
         }
 
-        assertTrue(isSlow(session));
+        assertTrue(handler.isSlow(session));
         socket.configureBlocking(false);
 
         // Get out of quarantined state
-        while (sessionInfo.bytesInBuffer() > 0 || isSlow(session))
+        while (sessionInfo.bytesInBuffer() > 0 || handler.isSlow(session))
         {
             int bytesRead;
             do
@@ -166,14 +166,9 @@ public class SlowConsumerTest
         assertTrue(socketIsConnected());
     }
 
-    private boolean isSlow(final Session session)
-    {
-        return handler.isSlow(session.id());
-    }
-
     private void assertNotSlow(final Session session)
     {
-        assertFalse(isSlow(session));
+        assertFalse(handler.isSlow(session));
     }
 
     private void bytesInBufferAtLeast(final SessionInfo sessionInfo, final long bytesInBuffer)

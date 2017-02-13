@@ -41,7 +41,7 @@ public class StressSessionHandler implements SessionHandler
         final int offset,
         final int length,
         final int libraryId,
-        final long sessionId,
+        final Session session,
         final int sequenceIndex,
         final int messageType,
         final long timestampInNs,
@@ -50,26 +50,26 @@ public class StressSessionHandler implements SessionHandler
         if (StressConfiguration.PRINT_EXCHANGE)
         {
             string.wrap(buffer);
-            System.out.printf("%d -> %s\n", sessionId, printer.toString(string, offset, length, messageType));
+            System.out.printf("%d -> %s\n", session, printer.toString(string, offset, length, messageType));
         }
 
         return CONTINUE;
     }
 
-    public void onTimeout(final int libraryId, final long sessionId)
+    public void onTimeout(final int libraryId, final Session session)
     {
     }
 
-    public void onSlowStatus(final int libraryId, final long sessionId, final boolean hasBecomeSlow)
+    public void onSlowStatus(final int libraryId, final Session session, final boolean hasBecomeSlow)
     {
     }
 
     public ControlledFragmentHandler.Action onDisconnect(
-        final int libraryId, final long sessionId, final DisconnectReason reason)
+        final int libraryId, final Session session, final DisconnectReason reason)
     {
         if (StressConfiguration.PRINT_EXCHANGE)
         {
-            System.out.printf("%d Disconnected: %s\n", sessionId, reason);
+            System.out.printf("%d Disconnected: %s\n", session, reason);
         }
 
         return CONTINUE;
