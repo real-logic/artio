@@ -496,11 +496,13 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
                 assertContainsOnlySession(session, library);
             });
 
+        // Has received catch up messages
         if (lastReceivedMsgSeqNum != NO_MESSAGE_REPLAY && status == OK)
         {
-            final FixMessage message = otfAcceptor.messages().get(0);
-            assertEquals(1, message.sequenceIndex());
-            assertEquals("Y", message.getPossDup());
+            final FixMessage firstReplayedMessage = otfAcceptor.messages().get(0);
+            assertEquals("1", firstReplayedMessage.getMessageSequenceNumber());
+            assertEquals(1, firstReplayedMessage.sequenceIndex());
+            assertEquals("Y", firstReplayedMessage.getPossDup());
         }
     }
 
