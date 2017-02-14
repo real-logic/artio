@@ -44,7 +44,7 @@ public final class FixBenchmarkServer
             System.out.printf("Using %s idle strategy\n", idleStrategy.getClass().getSimpleName());
             while (true)
             {
-                final boolean notConnected = library.isConnected();
+                final boolean notConnected = !library.isConnected();
 
                 idleStrategy.idle(library.poll(10));
 
