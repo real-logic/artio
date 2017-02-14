@@ -36,6 +36,7 @@ import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
@@ -401,6 +402,19 @@ public final class SystemTestUtil
         assertEquals(COMPLETED, reply.state());
 
         return reply.resultIfPresent();
+    }
+
+    public static Optional<LibraryInfo> libraryInfoById(final List<LibraryInfo> libraries, final int libraryId)
+    {
+        return libraries
+            .stream()
+            .filter(libraryInfo -> libraryInfo.libraryId() == libraryId)
+            .findFirst();
+    }
+
+    public static LibraryInfo engineLibrary(final List<LibraryInfo> libraries)
+    {
+        return libraryInfoById(libraries, ENGINE_LIBRARY_ID).get(); // Error if not present
     }
 
     public static void awaitLibraryConnect(final FixLibrary library)

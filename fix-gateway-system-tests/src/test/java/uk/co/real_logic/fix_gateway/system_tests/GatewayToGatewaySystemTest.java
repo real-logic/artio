@@ -376,11 +376,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void librariesShouldBeNotifiedOfGatewayManagedSessionsOnConnect()
     {
-        final FakeOtfAcceptor otfAcceptor2 = new FakeOtfAcceptor();
-        final FakeHandler handler2 = new FakeHandler(otfAcceptor2);
-        try (FixLibrary library2 = newAcceptingLibrary(handler2))
+        try (LibraryDriver library2 = new LibraryDriver())
         {
-            assertEquals(1, handler2.awaitSessionId(() -> library2.poll(1)));
+            assertEquals(1, library2.awaitSessionId());
         }
     }
 
@@ -439,7 +437,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
-        acceptingEngineHasSession();
+        acceptingEngineHasSessionAndLibraryIsNotified();
     }
 
     @Test
@@ -450,7 +448,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertEquals(DISABLED, acceptingSession.state());
 
-        acceptingEngineHasSession();
+        acceptingEngineHasSessionAndLibraryIsNotified();
     }
 
     private void releaseSessionToEngine(

@@ -141,11 +141,13 @@ public class FakeHandler
 
     public long awaitSessionId(final Runnable poller)
     {
-        while (!hasSeenSession())
-        {
-            poller.run();
-            Thread.yield();
-        }
+        Timing.assertEventuallyTrue(
+            "Couldn't find session Id",
+            () ->
+            {
+                poller.run();
+                return hasSeenSession();
+            });
 
         return lastSessionId().sessionId();
     }
