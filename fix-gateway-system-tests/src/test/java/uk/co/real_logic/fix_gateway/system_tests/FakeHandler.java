@@ -44,7 +44,7 @@ public class FakeHandler
     private long sentPosition;
     private boolean lastSessionWasSlow;
 
-    FakeHandler(final FakeOtfAcceptor acceptor)
+    public FakeHandler(final FakeOtfAcceptor acceptor)
     {
         this.acceptor = acceptor;
         parser = new OtfParser(acceptor, new IntDictionary());

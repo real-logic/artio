@@ -259,7 +259,7 @@ public final class SystemTestUtil
         return libraryConfiguration;
     }
 
-    static void setupAuthentication(
+    public static void setupAuthentication(
         final String acceptorId, final String initiatorId, final CommonConfiguration configuration)
     {
         final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(acceptorId)
