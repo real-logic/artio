@@ -3,6 +3,8 @@
 set -eu
 
 java \
+  -verbose:gc \
+  -XX:+PrintGCDetails \
   -cp fix-gateway-system-tests-*-benchmarks.jar \
   -Dfix.codecs.no_validation=true \
   -Dfix.benchmark.warmup=100000 \
