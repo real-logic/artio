@@ -3,6 +3,8 @@
 set -eu
 
 java \
+  -verbose:gc \
+  -XX:+PrintGCDetails \
   -XX:+UnlockCommercialFeatures \
   -XX:+UnlockDiagnosticVMOptions \
   -XX:+DebugNonSafepoints \
