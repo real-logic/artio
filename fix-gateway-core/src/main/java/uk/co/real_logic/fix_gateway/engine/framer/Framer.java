@@ -411,7 +411,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final int receivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             final boolean hasLoggedIn = receivedSequenceNumber != UNK_SESSION;
             final SessionState state = hasLoggedIn ? ACTIVE : CONNECTED;
-            this.gatewaySessions.acquire(
+            gatewaySessions.acquire(
                 session,
                 state,
                 session.heartbeatIntervalInS(),
@@ -888,6 +888,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 lastReceivedSequenceNumber,
                 username,
                 password);
+
+            schedule(() -> saveSessionExists(
+                ENGINE_LIBRARY_ID,
+                session,
+                lastSentSequenceNumber,
+                lastReceivedSequenceNumber,
+                LogonStatus.LIBRARY_NOTIFICATION));
         }
 
         return action;

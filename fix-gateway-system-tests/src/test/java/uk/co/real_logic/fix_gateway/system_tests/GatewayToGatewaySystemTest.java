@@ -275,6 +275,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         releaseToGateway(initiatingLibrary, initiatingSession);
 
+        libraryNotifiedThatGatewayOwnsSession(initiatingHandler, sessionId);
+
         reacquireSession(
             initiatingSession, initiatingLibrary, initiatingEngine,  initiatingOtfAcceptor,
             sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, OK);
@@ -288,8 +290,11 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acquireAcceptingSession();
 
         final long sessionId = acceptingSession.id();
+        acceptingHandler.clearSessions();
 
         releaseToGateway(acceptingLibrary, acceptingSession);
+
+        libraryNotifiedThatGatewayOwnsSession(acceptingHandler, sessionId);
 
         reacquireSession(
             acceptingSession, acceptingLibrary, acceptingEngine, acceptingOtfAcceptor,
@@ -564,5 +569,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     private void logoutAcceptingSession()
     {
         assertThat(acceptingSession.startLogout(), greaterThan(0L));
+    }
+
+    private void libraryNotifiedThatGatewayOwnsSession(final FakeHandler handler, final long expectedSessionId)
+    {
+        final long sessionId = handler.awaitSessionId(this::pollLibraries);
+
+        assertEquals(sessionId, expectedSessionId);
     }
 }

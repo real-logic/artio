@@ -340,6 +340,7 @@ public final class SystemTestUtil
         final LibraryConfiguration configuration = new LibraryConfiguration()
             .sessionAcquireHandler(sessionHandler)
             .sentPositionHandler(sessionHandler)
+            .sessionExistsHandler(sessionHandler)
             .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort));
 
         return connect(configuration);
