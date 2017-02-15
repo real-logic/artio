@@ -4,8 +4,8 @@ set -eu
 
 TMP="/dev/shm/"
 
-rm -rf "$TMP/aeron*"
-rm -rf "$TMP/fix*"
+rm -rf "$TMP/aeron"*
+rm -rf "$TMP/fix"*
 
 java \
   -verbose:gc \
