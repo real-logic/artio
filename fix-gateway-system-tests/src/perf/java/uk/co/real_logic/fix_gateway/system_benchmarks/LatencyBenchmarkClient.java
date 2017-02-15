@@ -35,19 +35,22 @@ public final class LatencyBenchmarkClient extends AbstractBenchmarkClient
 
     public void runBenchmark() throws IOException
     {
-        try (SocketChannel socketChannel = open())
+        while (true)
         {
-            logon(socketChannel);
+            try (SocketChannel socketChannel = open())
+            {
+                logon(socketChannel);
 
-            final TestRequestEncoder testRequest = setupTestRequest();
-            final HeaderEncoder header = testRequest.header();
-            final Histogram histogram = new Histogram(3);
+                final TestRequestEncoder testRequest = setupTestRequest();
+                final HeaderEncoder header = testRequest.header();
+                final Histogram histogram = new Histogram(3);
 
-            runWarmup(socketChannel, testRequest, header, histogram);
+                runWarmup(socketChannel, testRequest, header, histogram);
 
-            parkAfterWarmup();
+                parkAfterWarmup();
 
-            runTimedRuns(socketChannel, testRequest, header, histogram);
+                runTimedRuns(socketChannel, testRequest, header, histogram);
+            }
         }
     }
 
