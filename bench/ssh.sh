@@ -1,3 +1,3 @@
 #!/bin/sh
 
-ssh -i $PEM ubuntu@$EC2
+ssh -o "StrictHostKeyChecking no" -i $PEM ubuntu@$EC2
