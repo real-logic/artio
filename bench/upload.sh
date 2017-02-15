@@ -3,4 +3,4 @@
 set -eu
 
 ./gradlew benchmarks
-scp -i $PEM fix-gateway-system-tests/build/libs/*-benchmarks.jar ubuntu@$EC2:fix-gateway/
+./bench/scp.sh fix-gateway-system-tests/build/libs/*-benchmarks.jar

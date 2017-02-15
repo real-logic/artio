@@ -2,6 +2,11 @@
 
 set -eu
 
+TMP="/dev/shm/"
+
+rm -rf "$TMP/aeron*"
+rm -rf "$TMP/fix*"
+
 java \
   -verbose:gc \
   -XX:+PrintGCDetails \
