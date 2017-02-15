@@ -176,6 +176,7 @@ public class HistogramLogReader implements AutoCloseable
             "90:   %G\n" +
             "99:   %G\n" +
             "99.9: %G\n" +
+            "99.99: %G\n" +
             "100:  %G\n" +
             "----------\n",
 
@@ -187,6 +188,7 @@ public class HistogramLogReader implements AutoCloseable
             scaledPercentile(histogram, scalingFactor, 90),
             scaledPercentile(histogram, scalingFactor, 99),
             scaledPercentile(histogram, scalingFactor, 99.9),
+            scaledPercentile(histogram, scalingFactor, 99.99),
             scaledPercentile(histogram, scalingFactor, 100));
     }
 
