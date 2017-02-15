@@ -42,14 +42,17 @@ public class HistogramLogReader implements AutoCloseable
 {
     public static void main(final String[] args) throws IOException
     {
-        if (args.length != 1)
+        if (args.length < 1)
         {
-            System.err.println("Usage: HistogramLogReader <logFile>");
+            System.err.println("Usage: HistogramLogReader <logFile> [-s]");
             System.err.println("Where <logFile> is the path to histogram log file");
             System.exit(-1);
         }
 
         final String path = args[0];
+        final boolean justSample = args.length == 2 && "-s".equals(args[1]);
+        final boolean loop = !justSample;
+
         final File file = new File(path);
         final double scalingFactor = MICROSECONDS.toNanos(1);
         final BackoffIdleStrategy idleStrategy = new BackoffIdleStrategy(0, 0, MILLISECONDS.toNanos(1),
@@ -57,13 +60,15 @@ public class HistogramLogReader implements AutoCloseable
 
         try (HistogramLogReader logReader = new HistogramLogReader(file))
         {
-            while (true)
+            do
             {
+
                 final int sampleCount = logReader.read(
                     (recordedAtTime, name, histogram) -> prettyPrint(recordedAtTime, histogram, name, scalingFactor));
 
                 idleStrategy.idle(sampleCount);
             }
+            while (loop);
         }
     }
 

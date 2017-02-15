@@ -2,4 +2,8 @@
 
 set -eu
 
-java -cp fix-gateway-system-tests-*-benchmarks.jar uk.creal_logic.fix_gateway.timing.HistogramLogReader 
+for file in engine-histograms library-histograms
+do
+  java -cp fix-gateway-system-tests-*-benchmarks.jar uk.co.real_logic.fix_gateway.timing.HistogramLogReader $file -s
+done
+
