@@ -81,7 +81,8 @@ public final class LatencyBenchmarkClient extends AbstractBenchmarkClient
             exchangeMessage(socketChannel, testRequest, header, WARMUP_MESSAGES + i, histogram);
         }
 
-        HistogramLogReader.prettyPrint(0, histogram, "Client in Micros", 1000);
+        HistogramLogReader.prettyPrint(
+            System.currentTimeMillis(), histogram, "Client in Micros", 1000);
     }
 
     private void exchangeMessage(
