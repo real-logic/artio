@@ -201,7 +201,7 @@ class SenderEndPoint implements AutoCloseable
     Action onSlowConsumerMessageFragment(
         final FixMessageDecoder fixMessage,
         final DirectBuffer directBuffer,
-        final int offset,
+        final int offsetAfterHeader,
         final int length,
         final long position)
     {
@@ -227,28 +227,46 @@ class SenderEndPoint implements AutoCloseable
         try
         {
             final int bodyLength = fixMessage.bodyLength();
-            final long beginningOfMessage = position - bodyLength;
-            final int bytesPreviouslySent = (int) (sentPosition - beginningOfMessage);
+            final long startOfMessage = position - length;
+
+            final int remainingLength;
+            final int bytesPreviouslySent;
+
+            // You've complete the stream and there's another message in between.
+            if (sentPosition < startOfMessage)
+            {
+                remainingLength = bodyLength;
+                bytesPreviouslySent = 0;
+            }
+            else
+            {
+                remainingLength = (int) (position - sentPosition);
+                bytesPreviouslySent = bodyLength - remainingLength;
+            }
+
+            final int dataOffset = offsetAfterHeader + FRAME_SIZE + bytesPreviouslySent;
+            final ByteBuffer buffer = directBuffer.byteBuffer();
 
             final int wrapAdjustment = directBuffer.wrapAdjustment();
-            final int dataOffset = offset + FRAME_SIZE + bytesPreviouslySent;
-            final ByteBuffer buffer = directBuffer.byteBuffer();
-            buffer.limit(wrapAdjustment + offset + length);
-            buffer.position(wrapAdjustment + dataOffset);
+            buffer.limit(wrapAdjustment + dataOffset + remainingLength);
+            ByteBufferUtil.position(buffer, wrapAdjustment + dataOffset);
 
             final int written = channel.write(buffer);
             bytesInBuffer.addOrdered(-written);
 
-            sentPosition += written;
-
             if (bodyLength > (written + bytesPreviouslySent))
             {
+                sentPosition += written;
                 return ABORT;
             }
-
-            if (!isSlowConsumer())
+            else
             {
-                sendSlowStatus(false);
+                sentPosition = position;
+
+                if (!isSlowConsumer())
+                {
+                    sendSlowStatus(false);
+                }
             }
         }
         catch (final IOException ex)
