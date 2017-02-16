@@ -71,7 +71,7 @@ class SenderEndPoint implements AutoCloseable
         final int libraryId,
         final DirectBuffer directBuffer,
         final int offset,
-        final int length,
+        final int bodyLength,
         final long position)
     {
         if (isWrongLibraryId(libraryId))
@@ -82,7 +82,7 @@ class SenderEndPoint implements AutoCloseable
 
         if (isSlowConsumer())
         {
-            final long bytesInBuffer = bytesInBufferWeak() + length;
+            final long bytesInBuffer = bytesInBufferWeak() + bodyLength;
             if (bytesInBuffer > maxBytesInBuffer)
             {
                 removeEndpoint(SLOW_CONSUMER);
@@ -95,11 +95,11 @@ class SenderEndPoint implements AutoCloseable
 
         try
         {
-            final int written = writeFramedMessage(directBuffer, offset, length);
+            final int written = writeFramedMessage(directBuffer, offset, bodyLength);
 
-            if (written != length)
+            if (written != bodyLength)
             {
-                becomeSlowConsumer(written, length, position);
+                becomeSlowConsumer(written, bodyLength, position);
             }
             else
             {
@@ -163,9 +163,9 @@ class SenderEndPoint implements AutoCloseable
         removeEndpoint(EXCEPTION);
     }
 
-    private void becomeSlowConsumer(final int written, final int length, final long position)
+    void becomeSlowConsumer(final int written, final int bodyLength, final long position)
     {
-        final int remainingBytes = length - written;
+        final int remainingBytes = bodyLength - written;
         bytesInBuffer.setOrdered(remainingBytes);
         sentPosition = position - remainingBytes;
         sendSlowStatus(true);
