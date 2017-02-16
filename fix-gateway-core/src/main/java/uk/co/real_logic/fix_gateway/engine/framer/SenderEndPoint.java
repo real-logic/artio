@@ -21,7 +21,6 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
-import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -199,13 +198,13 @@ class SenderEndPoint implements AutoCloseable
     }
 
     Action onSlowConsumerMessageFragment(
-        final FixMessageDecoder fixMessage,
         final DirectBuffer directBuffer,
         final int offsetAfterHeader,
         final int length,
-        final long position)
+        final long position,
+        final int bodyLength,
+        final int libraryId)
     {
-        final int libraryId = fixMessage.libraryId();
         if (isWrongLibraryId(libraryId))
         {
             invalidLibraryAttempts.increment();
@@ -226,7 +225,6 @@ class SenderEndPoint implements AutoCloseable
 
         try
         {
-            final int bodyLength = fixMessage.bodyLength();
             final long startOfMessage = position - length;
 
             final int remainingLength;

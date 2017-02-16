@@ -118,8 +118,10 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
             final SenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
             if (senderEndPoint != null)
             {
+                final int bodyLength = fixMessage.bodyLength();
+                final int libraryId = fixMessage.libraryId();
                 return senderEndPoint.onSlowConsumerMessageFragment(
-                    fixMessage, buffer, offset, length - HEADER_LENGTH, position);
+                    buffer, offset, length - HEADER_LENGTH, position, bodyLength, libraryId);
             }
         }
 
