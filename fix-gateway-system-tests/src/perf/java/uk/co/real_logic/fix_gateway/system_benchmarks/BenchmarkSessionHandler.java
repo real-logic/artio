@@ -45,6 +45,11 @@ public final class BenchmarkSessionHandler implements SessionHandler
 
     public void onSlowStatus(final int libraryId, final Session session, final boolean hasBecomeSlow)
     {
+        System.out.println(
+            "sessionId = " + session.id() +
+            (hasBecomeSlow ? " became slow" : " became not slow") +
+            ", lastReceivedMsgSeqNum = " + session.lastReceivedMsgSeqNum() +
+            ", lastSentMsgSeqNum = " + session.lastSentMsgSeqNum());
     }
 
     public Action onDisconnect(final int libraryId, final Session session, final DisconnectReason reason)
