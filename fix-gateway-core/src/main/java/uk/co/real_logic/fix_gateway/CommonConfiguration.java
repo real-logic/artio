@@ -201,7 +201,7 @@ public class CommonConfiguration
         MONITORING_BUFFERS_LENGTH_PROPERTY, DEFAULT_MONITORING_BUFFER_LENGTH);
     private String monitoringFile = null;
     private long replyTimeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
-    private Aeron.Context aeronContext = new Aeron.Context();
+    private final Aeron.Context aeronContext = new Aeron.Context();
     private int sessionBufferSize = DEFAULT_SESSION_BUFFER_SIZE;
     private int inboundMaxClaimAttempts =
         getInteger(INBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS);
