@@ -40,7 +40,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     public static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
     public static final GatewayErrorHandler DEFAULT_GATEWAY_ERROR_HANDLER =
         (errorType, libraryId, message) -> CONTINUE;
-    public static final int DEFAULT_RECONNECT_ATTEMPTS = 10;
     public static final SentPositionHandler DEFAULT_SENT_POSITION_HANDLER = position -> CONTINUE;
     public static final SessionExistsHandler DEFAULT_SESSION_EXISTS_HANDLER =
         (library,
@@ -83,7 +82,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     private GatewayErrorHandler gatewayErrorHandler = DEFAULT_GATEWAY_ERROR_HANDLER;
     private SentPositionHandler sentPositionHandler = DEFAULT_SENT_POSITION_HANDLER;
     private List<String> libraryAeronChannels = new ArrayList<>();
-    private int reconnectAttempts = DEFAULT_RECONNECT_ATTEMPTS;
     private LibraryConnectHandler libraryConnectHandler = DEFAULT_LIBRARY_CONNECT_HANDLER;
 
     /**
@@ -144,12 +142,6 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
-    public LibraryConfiguration reconnectAttempts(final int reconnectAttempts)
-    {
-        this.reconnectAttempts = reconnectAttempts;
-        return this;
-    }
-
     public LibraryConfiguration libraryConnectHandler(final LibraryConnectHandler libraryConnectHandler)
     {
         this.libraryConnectHandler = libraryConnectHandler;
@@ -184,11 +176,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     public SentPositionHandler sentPositionHandler()
     {
         return sentPositionHandler;
-    }
-
-    public int reconnectAttempts()
-    {
-        return reconnectAttempts;
     }
 
     public LibraryConnectHandler libraryConnectHandler()

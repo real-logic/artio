@@ -417,8 +417,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             if (position > 0)
             {
                 this.connectCorrelationId = correlationId;
-                final int reconnectAttempts = configuration.reconnectAttempts();
-                nextAttemptTime = (configuration.replyTimeoutInMs() / reconnectAttempts) + timeInMs;
+                nextAttemptTime = configuration.connectAttemptTimeoutInMs() + timeInMs;
             }
             else
             {
