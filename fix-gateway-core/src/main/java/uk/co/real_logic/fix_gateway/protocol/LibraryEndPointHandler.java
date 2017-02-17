@@ -37,13 +37,14 @@ public interface LibraryEndPointHandler
         long replyToId,
         int sequenceIndex);
 
-    Action onLogon(
+    Action onSessionExists(
         int libraryId,
         long connectionId,
         long sessionId,
         int lastSentSequenceNumber,
         int lastReceivedSequenceNumber,
-        LogonStatus status,
+        LogonStatus logonstatus,
+        boolean isSlow,
         String localCompId,
         String localSubId,
         String localLocationId,

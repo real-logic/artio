@@ -19,6 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.library.SessionHandler;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
+import uk.co.real_logic.fix_gateway.session.Session;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
@@ -29,7 +30,7 @@ public final class BenchmarkSessionHandler implements SessionHandler
         final int offset,
         final int length,
         final int libraryId,
-        final long sessionId,
+        final Session session,
         final int sequenceIndex,
         final int messageType,
         final long timestampInNs,
@@ -38,17 +39,22 @@ public final class BenchmarkSessionHandler implements SessionHandler
         return CONTINUE;
     }
 
-    public void onTimeout(final int libraryId, final long sessionId)
+    public void onTimeout(final int libraryId, final Session session)
     {
     }
 
-    public void onSlowStatus(final int libraryId, final long sessionId, final boolean hasBecomeSlow)
+    public void onSlowStatus(final int libraryId, final Session session, final boolean hasBecomeSlow)
     {
+        System.out.println(
+            "sessionId = " + session.id() +
+            (hasBecomeSlow ? " became slow" : " became not slow") +
+            ", lastReceivedMsgSeqNum = " + session.lastReceivedMsgSeqNum() +
+            ", lastSentMsgSeqNum = " + session.lastSentMsgSeqNum());
     }
 
-    public Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason)
+    public Action onDisconnect(final int libraryId, final Session session, final DisconnectReason reason)
     {
-        System.out.printf("%d disconnected due to %s\n", sessionId, reason);
+        System.out.printf("%d disconnected due to %s\n", session.id(), reason);
 
         return CONTINUE;
     }

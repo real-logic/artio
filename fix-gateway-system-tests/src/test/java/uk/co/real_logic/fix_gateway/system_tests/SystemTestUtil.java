@@ -36,6 +36,7 @@ import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
@@ -244,24 +245,21 @@ public final class SystemTestUtil
     }
 
     public static LibraryConfiguration acceptingLibraryConfig(
-        final FakeHandler sessionHandler,
-        final String acceptorId,
-        final String initiatorId,
-        final String libraryAeronChannel)
+        final FakeHandler sessionHandler)
     {
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
-        setupAuthentication(acceptorId, initiatorId, libraryConfiguration);
+        setupAuthentication(ACCEPTOR_ID, INITIATOR_ID, libraryConfiguration);
 
         libraryConfiguration
             .sessionExistsHandler(sessionHandler)
             .sessionAcquireHandler(sessionHandler)
             .sentPositionHandler(sessionHandler)
-            .libraryAeronChannels(singletonList(libraryAeronChannel));
+            .libraryAeronChannels(singletonList(IPC_CHANNEL));
 
         return libraryConfiguration;
     }
 
-    static void setupAuthentication(
+    public static void setupAuthentication(
         final String acceptorId, final String initiatorId, final CommonConfiguration configuration)
     {
         final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(acceptorId)
@@ -284,11 +282,20 @@ public final class SystemTestUtil
     public static Session acquireSession(
         final FakeHandler sessionHandler, final FixLibrary library, final long sessionId)
     {
-        final SessionReplyStatus reply = requestSession(library, sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
+        return acquireSession(sessionHandler, library, sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
+    }
+
+    public static Session acquireSession(
+        final FakeHandler sessionHandler,
+        final FixLibrary library,
+        final long sessionId,
+        final int lastReceivedMsgSeqNum,
+        final int sequenceIndex)
+    {
+        final SessionReplyStatus reply = requestSession(library, sessionId, lastReceivedMsgSeqNum, sequenceIndex);
         assertEquals(SessionReplyStatus.OK, reply);
         final Session session = sessionHandler.lastSession();
         sessionHandler.resetSession();
-
         return session;
     }
 
@@ -333,6 +340,7 @@ public final class SystemTestUtil
         final LibraryConfiguration configuration = new LibraryConfiguration()
             .sessionAcquireHandler(sessionHandler)
             .sentPositionHandler(sessionHandler)
+            .sessionExistsHandler(sessionHandler)
             .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort));
 
         return connect(configuration);
@@ -357,7 +365,7 @@ public final class SystemTestUtil
 
     public static FixLibrary newAcceptingLibrary(final FakeHandler sessionHandler)
     {
-        return connect(acceptingLibraryConfig(sessionHandler, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL));
+        return connect(acceptingLibraryConfig(sessionHandler));
     }
 
     public static void assertConnected(final Session session)
@@ -395,6 +403,19 @@ public final class SystemTestUtil
         assertEquals(COMPLETED, reply.state());
 
         return reply.resultIfPresent();
+    }
+
+    public static Optional<LibraryInfo> libraryInfoById(final List<LibraryInfo> libraries, final int libraryId)
+    {
+        return libraries
+            .stream()
+            .filter(libraryInfo -> libraryInfo.libraryId() == libraryId)
+            .findFirst();
+    }
+
+    public static LibraryInfo engineLibrary(final List<LibraryInfo> libraries)
+    {
+        return libraryInfoById(libraries, ENGINE_LIBRARY_ID).get(); // Error if not present
     }
 
     public static void awaitLibraryConnect(final FixLibrary library)

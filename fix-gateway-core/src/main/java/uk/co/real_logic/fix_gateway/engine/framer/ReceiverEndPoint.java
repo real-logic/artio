@@ -359,7 +359,7 @@ class ReceiverEndPoint
 
                 choosePublication(persistenceLevel);
 
-                return stashIfBackpressured(offset, publication.saveLogon(
+                return stashIfBackpressured(offset, publication.saveSessionExists(
                     libraryId,
                     connectionId,
                     sessionId,
@@ -373,7 +373,8 @@ class ReceiverEndPoint
                     compositeKey.remoteLocationId(),
                     username,
                     password,
-                    LogonStatus.NEW));
+                    LogonStatus.NEW,
+                    SlowStatus.NOT_SLOW));
             }
         }
 

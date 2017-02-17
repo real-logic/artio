@@ -26,9 +26,6 @@ import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.session.Session;
 
-import java.util.List;
-import java.util.Optional;
-
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.FixMatchers.hasConnectionId;
@@ -36,7 +33,6 @@ import static uk.co.real_logic.fix_gateway.FixMatchers.hasSequenceIndex;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
@@ -226,21 +222,20 @@ public class AbstractGatewayToGatewaySystemTest
         acceptingEngine = FixEngine.launch(acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID));
     }
 
-    protected void acceptingEngineHasSession()
+    protected void acceptingEngineHasSessionAndLibraryIsNotified()
     {
-        final LibraryInfo engine = withTimeout(
-            "accepting engine has failed to acquire session",
-            () ->
-            {
-                final List<LibraryInfo> libraries = SystemTestUtil.libraries(acceptingEngine);
-                return libraries.size() == 1
-                     ? Optional.of(libraries.get(0))
-                     : Optional.empty();
-            },
-            5_000);
+        try (LibraryDriver library2 = new LibraryDriver())
+        {
+            library2.becomeOnlyLibraryConnectedTo(acceptingEngine);
 
-        assertEquals(ENGINE_LIBRARY_ID, engine.libraryId());
-        assertThat(engine.sessions(), contains(hasConnectionId(acceptingSession.connectionId())));
+            final LibraryInfo engine = engineLibrary(libraries(acceptingEngine));
+
+            assertEquals(ENGINE_LIBRARY_ID, engine.libraryId());
+            assertThat(engine.sessions(), contains(hasConnectionId(acceptingSession.connectionId())));
+
+            final long sessionId = library2.awaitSessionId();
+            assertEquals(sessionId, acceptingSession.id());
+        }
     }
 
     protected void assertSequenceIndicesAre(final int sequenceIndex)

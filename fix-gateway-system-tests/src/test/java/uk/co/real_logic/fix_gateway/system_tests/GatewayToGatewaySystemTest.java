@@ -28,7 +28,6 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import java.util.List;
 import java.util.function.IntSupplier;
 
-import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.FixMatchers.*;
@@ -40,6 +39,7 @@ import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISABLED;
+import static uk.co.real_logic.fix_gateway.system_tests.FixMessage.hasMessageSequenceNumber;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
@@ -275,6 +275,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         releaseToGateway(initiatingLibrary, initiatingSession);
 
+        libraryNotifiedThatGatewayOwnsSession(initiatingHandler, sessionId);
+
         reacquireSession(
             initiatingSession, initiatingLibrary, initiatingEngine,  initiatingOtfAcceptor,
             sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, OK);
@@ -288,8 +290,11 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acquireAcceptingSession();
 
         final long sessionId = acceptingSession.id();
+        acceptingHandler.clearSessions();
 
         releaseToGateway(acceptingLibrary, acceptingSession);
+
+        libraryNotifiedThatGatewayOwnsSession(acceptingHandler, sessionId);
 
         reacquireSession(
             acceptingSession, acceptingLibrary, acceptingEngine, acceptingOtfAcceptor,
@@ -376,12 +381,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void librariesShouldBeNotifiedOfGatewayManagedSessionsOnConnect()
     {
-        final FakeOtfAcceptor otfAcceptor2 = new FakeOtfAcceptor();
-        final FakeHandler handler2 = new FakeHandler(otfAcceptor2);
-        try (FixLibrary library2 = connect(
-            acceptingLibraryConfig(handler2, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL)))
+        try (LibraryDriver library2 = new LibraryDriver())
         {
-            assertEquals(1, handler2.awaitSessionId(() -> library2.poll(1)));
+            assertEquals(1, library2.awaitSessionId());
         }
     }
 
@@ -440,7 +442,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
-        acceptingEngineHasSession();
+        acceptingEngineHasSessionAndLibraryIsNotified();
     }
 
     @Test
@@ -451,7 +453,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertEquals(DISABLED, acceptingSession.state());
 
-        acceptingEngineHasSession();
+        acceptingEngineHasSessionAndLibraryIsNotified();
     }
 
     private void releaseSessionToEngine(
@@ -496,11 +498,13 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
                 assertContainsOnlySession(session, library);
             });
 
+        // Has received catch up messages
         if (lastReceivedMsgSeqNum != NO_MESSAGE_REPLAY && status == OK)
         {
-            final FixMessage message = otfAcceptor.messages().get(0);
-            assertEquals(1, message.sequenceIndex());
-            assertEquals("Y", message.getPossDup());
+            final FixMessage firstReplayedMessage = otfAcceptor.messages().get(0);
+            assertThat(firstReplayedMessage, hasMessageSequenceNumber(1));
+            assertEquals(1, firstReplayedMessage.sequenceIndex());
+            assertEquals("Y", firstReplayedMessage.getPossDup());
         }
     }
 
@@ -565,5 +569,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     private void logoutAcceptingSession()
     {
         assertThat(acceptingSession.startLogout(), greaterThan(0L));
+    }
+
+    private void libraryNotifiedThatGatewayOwnsSession(final FakeHandler handler, final long expectedSessionId)
+    {
+        final long sessionId = handler.awaitSessionId(this::pollLibraries);
+
+        assertEquals(sessionId, expectedSessionId);
     }
 }

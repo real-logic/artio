@@ -111,7 +111,7 @@ public final class SampleClient
         System.exit(0);
     }
 
-    private static SessionHandler onConnect(final Session session)
+    private static SessionHandler onConnect(final Session session, final boolean isSlow)
     {
         return TEST_REQ_ID_FINDER;
     }

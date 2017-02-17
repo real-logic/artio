@@ -17,8 +17,6 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
-import org.agrona.collections.Long2ObjectHashMap;
-import org.agrona.collections.LongHashSet;
 import uk.co.real_logic.fix_gateway.Timing;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
 import uk.co.real_logic.fix_gateway.library.*;
@@ -26,9 +24,7 @@ import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.session.Session;
 
-import java.util.ArrayDeque;
-import java.util.Collection;
-import java.util.Deque;
+import java.util.*;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertNotEquals;
@@ -36,16 +32,17 @@ import static org.junit.Assert.assertNotEquals;
 public class FakeHandler
     implements SessionHandler, SessionAcquireHandler, SessionExistsHandler, SentPositionHandler
 {
-    private final Long2ObjectHashMap<Session> connectionIdToSession = new Long2ObjectHashMap<>();
     private final OtfParser parser;
     private final FakeOtfAcceptor acceptor;
 
-    private final LongHashSet slowSessions = new LongHashSet(-1);
+    private final List<Session> sessions = new ArrayList<>();
+    private final Set<Session> slowSessions = new HashSet<>();
     private final Deque<CompleteSessionId> completeSessionIds = new ArrayDeque<>();
 
     private Session lastSession;
     private boolean hasDisconnected = false;
     private long sentPosition;
+    private boolean lastSessionWasSlow;
 
     public FakeHandler(final FakeOtfAcceptor acceptor)
     {
@@ -60,7 +57,7 @@ public class FakeHandler
         final int offset,
         final int length,
         final int libraryId,
-        final long sessionId,
+        final Session session,
         final int sequenceIndex,
         final int messageType,
         final long timestampInNs,
@@ -68,38 +65,39 @@ public class FakeHandler
     {
         parser.onMessage(buffer, offset, length);
         acceptor.lastMessage().sequenceIndex(sequenceIndex);
-        acceptor.forSession(connectionIdToSession.get(sessionId));
+        acceptor.forSession(session);
         return CONTINUE;
     }
 
-    public void onTimeout(final int libraryId, final long sessionId)
+    public void onTimeout(final int libraryId, final Session session)
     {
     }
 
-    public void onSlowStatus(final int libraryId, final long sessionId, final boolean hasBecomeSlow)
+    public void onSlowStatus(final int libraryId, final Session session, final boolean hasBecomeSlow)
     {
         if (hasBecomeSlow)
         {
-            slowSessions.add(sessionId);
+            slowSessions.add(session);
         }
         else
         {
-            slowSessions.remove(sessionId);
+            slowSessions.remove(session);
         }
     }
 
-    public Action onDisconnect(final int libraryId, final long sessionId, final DisconnectReason reason)
+    public Action onDisconnect(final int libraryId, final Session session, final DisconnectReason reason)
     {
-        connectionIdToSession.remove(sessionId);
+        sessions.remove(session);
         hasDisconnected = true;
         return CONTINUE;
     }
 
-    public SessionHandler onSessionAcquired(final Session session)
+    public SessionHandler onSessionAcquired(final Session session, final boolean isSlow)
     {
         assertNotEquals(Session.UNKNOWN, session.id());
-        connectionIdToSession.put(session.id(), session);
+        sessions.add(session);
         this.lastSession = session;
+        this.lastSessionWasSlow = isSlow;
         return this;
     }
 
@@ -131,9 +129,9 @@ public class FakeHandler
         lastSession = null;
     }
 
-    public Collection<Session> sessions()
+    public List<Session> sessions()
     {
-        return connectionIdToSession.values();
+        return sessions;
     }
 
     public boolean hasDisconnected()
@@ -143,11 +141,13 @@ public class FakeHandler
 
     public long awaitSessionId(final Runnable poller)
     {
-        while (!hasSeenSession())
-        {
-            poller.run();
-            Thread.yield();
-        }
+        Timing.assertEventuallyTrue(
+            "Couldn't find session Id",
+            () ->
+            {
+                poller.run();
+                return hasSeenSession();
+            });
 
         return lastSessionId().sessionId();
     }
@@ -237,8 +237,13 @@ public class FakeHandler
         }
     }
 
-    public boolean isSlow(final long sessionId)
+    public boolean isSlow(final Session session)
     {
-        return slowSessions.contains(sessionId);
+        return slowSessions.contains(session);
+    }
+
+    public boolean lastSessionWasSlow()
+    {
+        return lastSessionWasSlow;
     }
 }

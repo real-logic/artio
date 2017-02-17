@@ -60,7 +60,7 @@ public class GatewayPublication extends ClaimablePublication
     private static final int SLOW_STATUS_NOTIFICATION_LENGTH =
         HEADER_LENGTH + SlowStatusNotificationEncoder.BLOCK_LENGTH;
 
-    private final LogonEncoder logon = new LogonEncoder();
+    private final SessionExistsEncoder logon = new SessionExistsEncoder();
     private final ManageConnectionEncoder manageConnection = new ManageConnectionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
     private final RequestDisconnectEncoder requestDisconnect = new RequestDisconnectEncoder();
@@ -145,12 +145,12 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveLogon(
+    public long saveSessionExists(
         final int libraryId,
         final long connectionId,
         final long sessionId)
     {
-        return saveLogon(
+        return saveSessionExists(
             libraryId,
             connectionId,
             sessionId,
@@ -164,10 +164,11 @@ public class GatewayPublication extends ClaimablePublication
             null,
             null,
             null,
-            LogonStatus.NEW);
+            LogonStatus.NEW,
+            SlowStatus.NOT_SLOW);
     }
 
-    public long saveLogon(
+    public long saveSessionExists(
         final int libraryId,
         final long connectionId,
         final long sessionId,
@@ -181,7 +182,8 @@ public class GatewayPublication extends ClaimablePublication
         final String remoteLocationId,
         final String username,
         final String password,
-        final LogonStatus status)
+        final LogonStatus logonstatus,
+        final SlowStatus slowStatus)
     {
         final byte[] localCompIdBytes = bytes(localCompId);
         final byte[] localSubIdBytes = bytes(localSubId);
@@ -194,8 +196,8 @@ public class GatewayPublication extends ClaimablePublication
 
         final long position = claim(
             header.encodedLength() +
-                LogonEncoder.BLOCK_LENGTH +
-                LogonEncoder.localSubIdHeaderLength() * 8 +
+                SessionExistsEncoder.BLOCK_LENGTH +
+                SessionExistsEncoder.localSubIdHeaderLength() * 8 +
                 localCompIdBytes.length +
                 localSubIdBytes.length +
                 localLocationIdBytes.length +
@@ -229,7 +231,8 @@ public class GatewayPublication extends ClaimablePublication
             .session(sessionId)
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
-            .status(status)
+            .logonStatus(logonstatus)
+            .slowStatus(slowStatus)
             .putLocalCompId(localCompIdBytes, 0, localCompIdBytes.length)
             .putLocalSubId(localSubIdBytes, 0, localSubIdBytes.length)
             .putLocalLocationId(localLocationIdBytes, 0, localLocationIdBytes.length)

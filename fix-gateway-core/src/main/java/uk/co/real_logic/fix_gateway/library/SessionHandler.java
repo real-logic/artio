@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.library;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
+import uk.co.real_logic.fix_gateway.session.Session;
 
 /**
  * Interface to implement to accept callbacks for FIX
@@ -32,7 +33,7 @@ public interface SessionHandler
      * @param offset the offset in the buffer where the message starts.
      * @param length the length of the message within the buffer.
      * @param libraryId the id of library which has received this message.
-     * @param sessionId the id of the session which has received this message.
+     * @param session the session which has received this message.
      * @param messageType the FIX msgType field, encoded as an int.
      * @param timestampInNs the time of the message in nanoseconds.
      * @param position the position in the Aeron stream at the end of the message.
@@ -43,7 +44,7 @@ public interface SessionHandler
         int offset,
         int length,
         int libraryId,
-        long sessionId,
+        Session session,
         int sequenceIndex,
         int messageType,
         long timestampInNs,
@@ -52,29 +53,27 @@ public interface SessionHandler
     /**
      * This session has timed out on this library. It is still connected, but will
      * be managed by the gateway.
-     *
-     * @param libraryId the id of library which the session used to owned by.
-     * @param sessionId the id of the session.
+     *  @param libraryId the id of library which the session used to owned by.
+     * @param session the session that has timed out.
      */
-    void onTimeout(int libraryId, long sessionId);
+    void onTimeout(int libraryId, Session session);
 
     /**
      * Invoked if a session has been detected as being, or no longer being demarcated as a slow
      * session.
-     *
-     * @param libraryId the id of library which the session used to owned by.
-     * @param sessionId the id of the session.
+     *  @param libraryId the id of library which the session used to owned by.
+     * @param session the session that has become slow.
      * @param hasBecomeSlow true iff the session has been detected as slow, false if it is no longer slow.
      */
-    void onSlowStatus(int libraryId, long sessionId, boolean hasBecomeSlow);
+    void onSlowStatus(int libraryId, Session session, boolean hasBecomeSlow);
 
     /**
      * The session has disconnected.
      *
      * @param libraryId the id of library which the session used to owned by.
-     * @param sessionId the id of the session.
+     * @param session the session that has disconnected.
      * @param reason the reason for the disconnection happening.
      * @return an action to indicate the correct back pressure behaviour.
      */
-    Action onDisconnect(int libraryId, long sessionId, DisconnectReason reason);
+    Action onDisconnect(int libraryId, Session session, DisconnectReason reason);
 }

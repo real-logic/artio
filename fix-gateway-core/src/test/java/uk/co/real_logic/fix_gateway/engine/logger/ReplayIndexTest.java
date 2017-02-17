@@ -19,7 +19,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.fix_gateway.messages.LogonEncoder;
+import uk.co.real_logic.fix_gateway.messages.SessionExistsEncoder;
 import uk.co.real_logic.fix_gateway.storage.messages.ReplayIndexRecordDecoder;
 
 import java.io.File;
@@ -40,7 +40,7 @@ public class ReplayIndexTest extends AbstractLogTest
     private IndexedPositionConsumer positionConsumer = mock(IndexedPositionConsumer.class);
     private IndexedPositionReader positionReader = new IndexedPositionReader(replayBuffer);
 
-    private LogonEncoder logon = new LogonEncoder();
+    private SessionExistsEncoder logon = new SessionExistsEncoder();
     private ReplayIndex replayIndex = new ReplayIndex(
         DEFAULT_LOG_FILE_DIR,
         STREAM_ID,

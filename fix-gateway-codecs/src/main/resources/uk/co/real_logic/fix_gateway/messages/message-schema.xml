@@ -245,21 +245,22 @@
     <sbe:message name="ResetSessionIds" id="36" description="All session ids have been reset">
     </sbe:message>
 
-    <sbe:message name="Logon" id="9" description="A logon has occurred">
+    <sbe:message name="SessionExists" id="9" description="A session exists at the gateway">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="connection" id="2" type="ConnectionId"/>
         <field name="session" id="3" type="FixSessionId"/>
         <field name="lastSentSequenceNumber" id="4" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
-        <field name="status" id="6" type="LogonStatus"/>
-        <data name="localCompId" id="7" type="varDataEncoding"/>
-        <data name="localSubId" id="8" type="varDataEncoding"/>
-        <data name="localLocationId" id="9" type="varDataEncoding"/>
-        <data name="remoteCompId" id="10" type="varDataEncoding"/>
-        <data name="remoteSubId" id="11" type="varDataEncoding"/>
-        <data name="remoteLocationId" id="12" type="varDataEncoding"/>
-        <data name="username" id="13" type="varDataEncoding"/>
-        <data name="password" id="14" type="varDataEncoding"/>
+        <field name="logonStatus" id="6" type="LogonStatus"/>
+        <field name="slowStatus" id="7" type="SlowStatus"/>
+        <data name="localCompId" id="8" type="varDataEncoding"/>
+        <data name="localSubId" id="9" type="varDataEncoding"/>
+        <data name="localLocationId" id="10" type="varDataEncoding"/>
+        <data name="remoteCompId" id="11" type="varDataEncoding"/>
+        <data name="remoteSubId" id="12" type="varDataEncoding"/>
+        <data name="remoteLocationId" id="13" type="varDataEncoding"/>
+        <data name="username" id="14" type="varDataEncoding"/>
+        <data name="password" id="15" type="varDataEncoding"/>
     </sbe:message>
 
     <sbe:message name="Error" id="13" description="An error has occurred">

@@ -51,9 +51,9 @@ public class FixMessage extends Int2ObjectHashMap<String>
         return get(Constants.POSS_DUP_FLAG);
     }
 
-    String getMessageSequenceNumber()
+    int getMessageSequenceNumber()
     {
-        return get(Constants.MSG_SEQ_NUM);
+        return Integer.parseInt(get(Constants.MSG_SEQ_NUM));
     }
 
     public Session session()
@@ -86,6 +86,6 @@ public class FixMessage extends Int2ObjectHashMap<String>
         return hasResult(
             "messageSequenceNumber",
             FixMessage::getMessageSequenceNumber,
-            equalTo(String.valueOf(sequenceNumber)));
+            equalTo(sequenceNumber));
     }
 }

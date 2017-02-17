@@ -104,7 +104,7 @@ final class LiveLibraryInfo implements LibraryInfo
         acquireAtPosition = libraryPosition;
     }
 
-    public long acquireAtPosition()
+    long acquireAtPosition()
     {
         return acquireAtPosition;
     }

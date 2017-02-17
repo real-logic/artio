@@ -433,7 +433,7 @@ public class FramerTest
 
         libraryConnects();
 
-        verifyLogonSaved(times(1), LogonStatus.LIBRARY_NOTIFICATION);
+        verifySessionExistsSaved(times(1), LogonStatus.LIBRARY_NOTIFICATION);
     }
 
     @Test
@@ -443,13 +443,13 @@ public class FramerTest
 
         givenAGatewayToManage();
 
-        backPressureSaveLogon();
+        backPressureSaveSessionExists();
 
         assertEquals(ABORT, onLibraryConnect());
 
         libraryConnects();
 
-        verifyLogonSaved(times(2), LogonStatus.LIBRARY_NOTIFICATION);
+        verifySessionExistsSaved(times(2), LogonStatus.LIBRARY_NOTIFICATION);
     }
 
     @Test
@@ -707,16 +707,16 @@ public class FramerTest
             anyLong(),
             anyInt()))
             .thenReturn(BACK_PRESSURED, POSITION);
-        backPressureSaveLogon();
+        backPressureSaveSessionExists();
     }
 
-    private void backPressureSaveLogon()
+    private void backPressureSaveSessionExists()
     {
-        when(inboundPublication.saveLogon(
+        when(inboundPublication.saveSessionExists(
             eq(LIBRARY_ID), anyLong(), anyLong(),
             anyInt(), anyInt(),
             any(), any(), any(), any(), any(), any(),
-            any(), any(), any()))
+            any(), any(), any(), eq(SlowStatus.NOT_SLOW)))
             .thenReturn(BACK_PRESSURED, POSITION);
     }
 
@@ -823,16 +823,16 @@ public class FramerTest
             anyInt(),
             anyLong(),
             anyInt());
-        verifyLogonSaved(times, LogonStatus.NEW);
+        verifySessionExistsSaved(times, LogonStatus.NEW);
     }
 
-    private void verifyLogonSaved(final VerificationMode times, final LogonStatus status)
+    private void verifySessionExistsSaved(final VerificationMode times, final LogonStatus status)
     {
-        verify(inboundPublication, times).saveLogon(
+        verify(inboundPublication, times).saveSessionExists(
             eq(LIBRARY_ID), eq(connectionId.getValue()), anyLong(),
             anyInt(), anyInt(),
             any(), any(), any(), any(), any(), any(),
-            any(), any(), eq(status));
+            any(), any(), eq(status), eq(SlowStatus.NOT_SLOW));
     }
 
     private void aClientSendsData() throws IOException

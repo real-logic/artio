@@ -23,20 +23,21 @@ import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
-import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.io.File;
 import java.io.IOException;
 
-import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
+import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+import static uk.co.real_logic.fix_gateway.system_tests.FixMessage.hasMessageSequenceNumber;
+import static uk.co.real_logic.fix_gateway.system_tests.FixMessage.hasSequenceIndex;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.REPLICATED;
 
@@ -44,6 +45,13 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 {
     private static final long TEST_TIMEOUT = 10_000L;
     private File backupLocation = null;
+
+    private Runnable acquireSessionTask = () ->
+    {
+        final long sessionId = getAcceptingSessionId();
+
+        acquireSession(sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
+    };
 
     @Before
     public void setUp() throws IOException
@@ -65,6 +73,34 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT)
     public void sequenceNumbersCanPersistOverRestarts()
     {
+        sequenceNumbersCanPersistOverRestarts(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
+
+        assertSequenceIndicesAre(0);
+    }
+
+    @Test(timeout = TEST_TIMEOUT)
+    public void previousMessagesAreReplayed()
+    {
+        acquireSessionTask = () ->
+        {
+            final long sessionId = getAcceptingSessionId();
+
+            if (acceptingSession != null)
+            {
+                final int lastReceivedMsgSeqNum = acceptingSession.lastReceivedMsgSeqNum();
+                final int sequenceIndex = acceptingSession.sequenceIndex();
+                acquireSession(sessionId, lastReceivedMsgSeqNum, sequenceIndex);
+
+                final FixMessage firstReplayedMessage = acceptingOtfAcceptor.messages().get(0);
+                assertThat(firstReplayedMessage, hasMessageSequenceNumber(lastReceivedMsgSeqNum + 1));
+                assertThat(firstReplayedMessage, hasSequenceIndex(sequenceIndex));
+            }
+            else
+            {
+                acquireSession(sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
+            }
+        };
+
         sequenceNumbersCanPersistOverRestarts(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
 
         assertSequenceIndicesAre(0);
@@ -115,24 +151,56 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT)
     public void sessionsCanBeReset()
     {
-        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, true, false, false);
+        exchangeMessagesAroundARestart(
+            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, this::resetSessions, false);
 
         // Different sessions themselves, so we start again at 0
         assertSequenceIndicesAre(0);
     }
 
+    private void resetSessions()
+    {
+        acceptingEngine.resetSessionIds(backupLocation, ADMIN_IDLE_STRATEGY);
+        initiatingEngine.resetSessionIds(backupLocation, ADMIN_IDLE_STRATEGY);
+    }
+
     @Test(timeout = TEST_TIMEOUT)
     public void sequenceNumbersCanBeReset()
     {
-        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 2, false, true, false);
+        exchangeMessagesAroundARestart(
+            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 2, this::resetSequenceNumbers, false);
 
         assertSequenceIndicesAre(1);
+    }
+
+    private void resetSequenceNumbers()
+    {
+        final Reply<?> initiatingReply =
+            initiatingEngine.resetSequenceNumber(initiatingSession.id());
+        final Reply<?> acceptingReply =
+            acceptingEngine.resetSequenceNumber(acceptingSession.id());
+
+        assertNotNull(initiatingReply);
+        assertNotNull(acceptingReply);
+
+        assertEventuallyTrue(
+            "Failed to reset sequence numbers",
+            () ->
+            {
+                initiatingLibrary.poll(LIBRARY_LIMIT);
+                acceptingLibrary.poll(LIBRARY_LIMIT);
+                return (!initiatingReply.isExecuting() && !acceptingReply.isExecuting());
+            });
+
+        assertEquals(COMPLETED, initiatingReply.state());
+        assertEquals(COMPLETED, acceptingReply.state());
     }
 
     @Test(timeout = TEST_TIMEOUT)
     public void sequenceNumbersCanBeResetOnLogon()
     {
-        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, false, false, true);
+        exchangeMessagesAroundARestart(
+            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, this::nothing, true);
 
         acceptingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
         initiatingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
@@ -141,8 +209,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private void launch(
         final int initialSequenceNumber,
-        final boolean resetAll,
-        final boolean resetSequenceNumbers,
+        final Runnable beforeConnect,
         final boolean resetSequenceNumbersOnLogon)
     {
         mediaDriver = launchMediaDriver();
@@ -153,39 +220,10 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         acceptingEngine = FixEngine.launch(config);
         initiatingEngine = launchInitiatingEngineWithSameLogs(libraryAeronPort);
 
-        final LibraryConfiguration acceptingLibraryConfig =
-            acceptingLibraryConfig(acceptingHandler, ACCEPTOR_ID, INITIATOR_ID, IPC_CHANNEL);
-        acceptingLibrary = connect(acceptingLibraryConfig);
+        acceptingLibrary = newAcceptingLibrary(acceptingHandler);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
 
-        if (resetAll)
-        {
-            acceptingEngine.resetSessionIds(backupLocation, ADMIN_IDLE_STRATEGY);
-            initiatingEngine.resetSessionIds(backupLocation, ADMIN_IDLE_STRATEGY);
-        }
-
-        if (resetSequenceNumbers)
-        {
-            final Reply<?> initiatingReply =
-                initiatingEngine.resetSequenceNumber(initiatingSession.id());
-            final Reply<?> acceptingReply =
-                acceptingEngine.resetSequenceNumber(acceptingSession.id());
-
-            assertNotNull(initiatingReply);
-            assertNotNull(acceptingReply);
-
-            assertEventuallyTrue(
-                "Failed to reset sequence numbers",
-                () ->
-                {
-                    initiatingLibrary.poll(LIBRARY_LIMIT);
-                    acceptingLibrary.poll(LIBRARY_LIMIT);
-                    return (!initiatingReply.isExecuting() && !acceptingReply.isExecuting());
-                });
-
-            assertEquals(COMPLETED, initiatingReply.state());
-            assertEquals(COMPLETED, acceptingReply.state());
-        }
+        beforeConnect.run();
 
         connectPersistingSessions(initialSequenceNumber, resetSequenceNumbersOnLogon);
     }
@@ -208,22 +246,22 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         assertConnected(initiatingSession);
         sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
-        acceptingSession = acquireSession(acceptingHandler, acceptingLibrary);
+
+        acquireSessionTask.run();
     }
 
     private void sequenceNumbersCanPersistOverRestarts(final int initialSequenceNumber)
     {
-        exchangeMessagesAroundARestart(initialSequenceNumber, 4, false, false, false);
+        exchangeMessagesAroundARestart(initialSequenceNumber, 4, this::nothing, false);
     }
 
     private void exchangeMessagesAroundARestart(
         final int initialSequenceNumber,
         final int sequNumAfter,
-        final boolean resetAll,
-        final boolean resetSequenceNumbers,
+        final Runnable beforeConnect,
         final boolean resetSequenceNumbersOnLogon)
     {
-        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false, false, resetSequenceNumbersOnLogon);
+        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, this::nothing, resetSequenceNumbersOnLogon);
 
         assertSequenceIndicesAre(0);
 
@@ -241,7 +279,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         clearMessages();
         close();
 
-        launch(initialSequenceNumber, resetAll, resetSequenceNumbers, resetSequenceNumbersOnLogon);
+        launch(initialSequenceNumber, beforeConnect, resetSequenceNumbersOnLogon);
 
         assertEquals("initiatedSessionId not stable over restarts", initiatedSessionId, initiatingSession.id());
         assertEquals("acceptingSessionId not stable over restarts", acceptingSessionId, acceptingSession.id());
@@ -249,5 +287,21 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         sendTestRequest(initiatingSession);
         assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+    }
+
+    private void nothing()
+    {
+
+    }
+
+    private long getAcceptingSessionId()
+    {
+        return acceptingHandler.awaitSessionId(() -> acceptingLibrary.poll(LIBRARY_LIMIT));
+    }
+
+    private void acquireSession(final long sessionId, final int lastReceivedMsgSeqNum, final int sequenceIndex)
+    {
+        acceptingSession = SystemTestUtil.acquireSession(
+            acceptingHandler, acceptingLibrary, sessionId, lastReceivedMsgSeqNum, sequenceIndex);
     }
 }

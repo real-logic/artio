@@ -44,7 +44,7 @@ public final class FixBenchmarkServer
             System.out.printf("Using %s idle strategy\n", idleStrategy.getClass().getSimpleName());
             while (true)
             {
-                final boolean notConnected = library.isConnected();
+                final boolean notConnected = !library.isConnected();
 
                 idleStrategy.idle(library.poll(10));
 
@@ -94,7 +94,7 @@ public final class FixBenchmarkServer
 
         return configuration
             .libraryAeronChannels(singletonList(AERON_CHANNEL))
-            .sessionAcquireHandler(session -> new BenchmarkSessionHandler())
+            .sessionAcquireHandler((session, isSlow) -> new BenchmarkSessionHandler())
             .sessionExistsHandler(new AcquiringSessionExistsHandler());
     }
 

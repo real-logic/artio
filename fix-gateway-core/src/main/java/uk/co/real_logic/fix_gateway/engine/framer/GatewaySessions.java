@@ -92,8 +92,7 @@ class GatewaySessions
             customisationStrategy,
             clock,
             connectionId,
-            FixEngine.ENGINE_LIBRARY_ID
-        );
+            FixEngine.ENGINE_LIBRARY_ID);
 
         final Session session = new Session(
             heartbeatIntervalInS,
@@ -117,8 +116,7 @@ class GatewaySessions
             session,
             sessionIdStrategy,
             authenticationStrategy,
-            validationStrategy
-        );
+            validationStrategy);
 
         sessions.add(gatewaySession);
         gatewaySession.manage(sessionParser, session);

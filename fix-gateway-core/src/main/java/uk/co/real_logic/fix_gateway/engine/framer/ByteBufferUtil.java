@@ -13,18 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.library;
+package uk.co.real_logic.fix_gateway.engine.framer;
 
-import uk.co.real_logic.fix_gateway.session.Session;
+import java.nio.ByteBuffer;
 
 /**
- * Callback that gets invoked when a new session comes under the control of
- * the library interface that its associated with.
- *
- * @see LibraryConfiguration#sessionAcquireHandler(SessionAcquireHandler)
+ * Modify a ByteBuffer whilst providing better illegal argument exceptions.
  */
-@FunctionalInterface
-public interface SessionAcquireHandler
+class ByteBufferUtil
 {
-    SessionHandler onSessionAcquired(Session session, boolean isSlow);
+    public static void position(final ByteBuffer byteBuffer, final int newPosition)
+    {
+        try
+        {
+            byteBuffer.position(newPosition);
+        }
+        catch (IllegalArgumentException e)
+        {
+            throw new IllegalArgumentException(
+                "limit = " + byteBuffer.limit() + ", position = " + newPosition, e);
+        }
+    }
 }

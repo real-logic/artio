@@ -3,5 +3,5 @@
 set -eu
 
 cp /dev/shm/fix-engine/histograms engine-histograms
-cp /dev/shm/fix-library-1/histograms library-histograms
+cp /dev/shm/fix-library-*/histograms library-histograms
 

@@ -773,7 +773,7 @@ public class Session implements AutoCloseable
     {
         if (resendSaveLogon)
         {
-            final long position = publication.saveLogon(libraryId, connectionId, sessionId);
+            final long position = publication.saveSessionExists(libraryId, connectionId, sessionId);
             if (position < 0)
             {
                 return true;

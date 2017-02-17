@@ -88,7 +88,7 @@ public class LibraryPollerTest
         when(counters.receivedMsgSeqNo(anyLong())).thenReturn(mock(AtomicCounter.class));
         when(counters.sentMsgSeqNo(anyLong())).thenReturn(mock(AtomicCounter.class));
 
-        when(sessionAcquireHandler.onSessionAcquired(session.capture())).thenReturn(sessionHandler);
+        when(sessionAcquireHandler.onSessionAcquired(session.capture(), anyBoolean())).thenReturn(sessionHandler);
     }
 
     @Test
@@ -100,7 +100,7 @@ public class LibraryPollerTest
 
         library.onControlNotification(libraryId(), noSessionIds());
 
-        verify(sessionHandler).onTimeout(libraryId(), SESSION_ID);
+        verify(sessionHandler).onTimeout(libraryId(), session.getValue());
     }
 
     @Test
@@ -113,7 +113,8 @@ public class LibraryPollerTest
 
         library.onControlNotification(libraryId(), hasOtherSessionId());
 
-        verify(sessionHandler).onTimeout(libraryId(), SESSION_ID);
+        final Session firstSession = session.getAllValues().get(0);
+        verify(sessionHandler).onTimeout(libraryId(), firstSession);
     }
 
     @Test
@@ -314,13 +315,14 @@ public class LibraryPollerTest
             REPLY_TO_ID,
             SEQUENCE_INDEX);
 
-        library.onLogon(
+        library.onSessionExists(
             libraryId(),
             connectionId,
             sessionId,
             LAST_SENT_SEQUENCE_NUMBER,
             LAST_RECEIVED_SEQUENCE_NUMBER,
             LogonStatus.NEW,
+            false,
             "",
             "",
             "",
