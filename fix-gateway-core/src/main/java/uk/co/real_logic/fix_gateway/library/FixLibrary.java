@@ -48,6 +48,7 @@ public class FixLibrary extends GatewayProcess
 
     private final LibraryPoller poller;
     private final LibraryConfiguration configuration;
+    private boolean isPolling = false;
 
     FixLibrary(final LibraryConfiguration configuration)
     {
@@ -99,7 +100,15 @@ public class FixLibrary extends GatewayProcess
      */
     public int poll(final int fragmentLimit)
     {
-        return poller.poll(fragmentLimit);
+        isPolling = true;
+        try
+        {
+            return poller.poll(fragmentLimit);
+        }
+        finally
+        {
+            isPolling = false;
+        }
     }
 
     /**
@@ -148,6 +157,16 @@ public class FixLibrary extends GatewayProcess
      * Close the Library. This will also remove all files associated with the library.
      */
     public void close()
+    {
+        if (isPolling)
+        {
+            throw new IllegalArgumentException("You cannot close the library in the middle of a poll");
+        }
+
+        internalClose();
+    }
+
+    void internalClose()
     {
         closeAll(poller, super::close, this::deleteFiles);
     }
@@ -248,4 +267,5 @@ public class FixLibrary extends GatewayProcess
     {
         return poller.currentAeronChannel();
     }
+
 }

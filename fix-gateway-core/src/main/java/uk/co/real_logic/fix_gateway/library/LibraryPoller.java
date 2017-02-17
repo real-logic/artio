@@ -121,7 +121,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private GatewayPublication outboundPublication;
     private String currentAeronChannel;
     private long nextAttemptTime;
-    private long completeFailureTime;
 
     // Combined with Library Id, uniquely identifies library connection
     private long connectCorrelationId = NO_CORRELATION_ID;
@@ -315,8 +314,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             initStreams();
             newLivenessDetector();
 
-            completeFailureTime = configuration.replyTimeoutInMs() + timeInMs;
-
             sendLibraryConnect(timeInMs);
         }
         catch (final Exception ex)
@@ -344,11 +341,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             state = State.CONNECTED;
             onConnect();
         }
-        else if (timeInMs > completeFailureTime)
-        {
-            closeWithParent();
-            throw illegalStateDueToFailingToConnect();
-        }
         else if (timeInMs > nextAttemptTime)
         {
             attemptNextEngine();
@@ -374,13 +366,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             DebugLogger.log(
                 LIBRARY_CONNECT, "Attempting connect to next engine (%s) in round-robin\n", currentAeronChannel);
         }
-    }
-
-    private IllegalStateException illegalStateDueToFailingToConnect()
-    {
-        return new IllegalStateException(String.format(
-            "Failed to receive a reply from the engine within %dms, are you sure its running?",
-            this.configuration.replyTimeoutInMs()));
     }
 
     private void initStreams()
@@ -1020,7 +1005,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         try
         {
-            fixLibrary.close();
+            fixLibrary.internalClose();
         }
         finally
         {

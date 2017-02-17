@@ -21,6 +21,7 @@ import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -44,6 +45,8 @@ import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
+    private FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
+
     @Before
     public void launch()
     {
@@ -54,7 +57,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         launchAcceptingEngine();
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 
-        acceptingLibrary = newAcceptingLibrary(acceptingHandler);
+        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
+        acceptingLibraryConfig.libraryConnectHandler(fakeConnectHandler);
+        acceptingLibrary = connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
 
         connectSessions();
@@ -454,6 +459,27 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertEquals(DISABLED, acceptingSession.state());
 
         acceptingEngineHasSessionAndLibraryIsNotified();
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void shouldNotAllowClosingMidPoll()
+    {
+        fakeConnectHandler.shouldCloseOnDisconnect();
+
+        acceptingEngine.close();
+
+        awaitIsConnected();
+    }
+
+    private void awaitIsConnected()
+    {
+        assertEventuallyTrue(
+            "isConnect never became: " + false,
+            () ->
+            {
+                acceptingLibrary.poll(LIBRARY_LIMIT);
+                return !acceptingLibrary.isConnected();
+            });
     }
 
     private void releaseSessionToEngine(

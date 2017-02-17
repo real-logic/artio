@@ -73,12 +73,6 @@ public class LibraryAndGatewayRandomTimeoutTest
         initiateResultsInError();
     }
 
-    @Test(expected = IllegalStateException.class)
-    public void libraryShouldRefuseConnectionWhenEngineNotStarted()
-    {
-        launchLibrary();
-    }
-
     @Test
     public void libraryShouldRefuseConnectionWhenEngineClosed()
     {
