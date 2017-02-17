@@ -468,17 +468,29 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         acceptingEngine.close();
 
-        awaitIsConnected();
+        awaitIsConnected(false);
     }
 
-    private void awaitIsConnected()
+    @Test
+    public void shouldReconnectToBouncedGateway()
+    {
+        acceptingEngine.close();
+
+        awaitIsConnected(false);
+
+        launchAcceptingEngine();
+
+        awaitIsConnected(true);
+    }
+
+    private void awaitIsConnected(final boolean connected)
     {
         assertEventuallyTrue(
             "isConnect never became: " + false,
             () ->
             {
                 acceptingLibrary.poll(LIBRARY_LIMIT);
-                return !acceptingLibrary.isConnected();
+                return acceptingLibrary.isConnected() == connected;
             });
     }
 
