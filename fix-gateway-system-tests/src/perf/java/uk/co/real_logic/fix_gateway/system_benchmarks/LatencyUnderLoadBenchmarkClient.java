@@ -15,29 +15,32 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
+import org.HdrHistogram.Histogram;
 import org.agrona.LangUtil;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
+import uk.co.real_logic.fix_gateway.timing.HistogramLogReader;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 
-import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.MAX_MESSAGES_IN_FLIGHT;
 import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.MESSAGES_EXCHANGED;
+import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.SEND_RATE_PER_SECOND;
 
-public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
+public final class LatencyUnderLoadBenchmarkClient extends AbstractBenchmarkClient
 {
     public static void main(final String[] args) throws Exception
     {
-        new ThroughputBenchmarkClient().runBenchmark();
+        new LatencyUnderLoadBenchmarkClient().runBenchmark();
     }
 
-    private final AtomicInteger messagesReceived = new AtomicInteger();
-    private final CyclicBarrier barrier = new CyclicBarrier(2, () -> messagesReceived.set(0));
+    private final CyclicBarrier barrier = new CyclicBarrier(2);
+    private final long[] sendTimes = new long[MESSAGES_EXCHANGED];
 
     private final class ReaderThread extends Thread
     {
@@ -50,8 +53,11 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
 
         public void run()
         {
+            final Histogram histogram = new Histogram(3);
+            final long scaleToMicros = TimeUnit.MICROSECONDS.toNanos(1);
             final SocketChannel socketChannel = this.socketChannel;
-            final MutableAsciiBuffer readFlyweight = ThroughputBenchmarkClient.this.readFlyweight;
+            final MutableAsciiBuffer readFlyweight = LatencyUnderLoadBenchmarkClient.this.readFlyweight;
+            final long[] sendTimes = LatencyUnderLoadBenchmarkClient.this.sendTimes;
 
             while (true)
             {
@@ -62,8 +68,14 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
                     try
                     {
                         final int length = read(socketChannel);
-                        lastMessagesReceived = messagesReceived.addAndGet(
-                            scanForReceivesMessages(readFlyweight, length));
+                        final long time = System.nanoTime();
+                        final int received = scanForReceivesMessages(readFlyweight, length);
+                        for (int j = 0; j < received; j++)
+                        {
+                            final long duration = time - sendTimes[lastMessagesReceived + j];
+                            histogram.recordValue(duration);
+                        }
+                        lastMessagesReceived += received;
                     }
                     catch (final IOException ex)
                     {
@@ -73,7 +85,10 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
                 }
 
                 printThroughput(startTime);
+                HistogramLogReader.prettyPrint(
+                    System.currentTimeMillis(), histogram, "Benchmark", scaleToMicros);
 
+                histogram.reset();
                 await();
             }
         }
@@ -81,36 +96,32 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
 
     public void runBenchmark() throws Exception
     {
+        final long pauseInNs = getPauseInNs();
+        System.out.println(pauseInNs);
+
         try (SocketChannel socketChannel = open())
         {
+            final ReaderThread readerThread = new ReaderThread(socketChannel);
+            readerThread.start();
+
             logon(socketChannel);
 
             final TestRequestEncoder testRequest = setupTestRequest();
             final HeaderEncoder header = testRequest.header();
-
-            final ReaderThread readerThread = new ReaderThread(socketChannel);
-            readerThread.start();
+            final long[] sendTimes = this.sendTimes;
 
             int seqNo = 2;
 
             while (true)
             {
-                int senderLimit = senderLimit();
-
                 for (int i = 0; i < MESSAGES_EXCHANGED; i++)
                 {
                     final int length = encode(testRequest, header, seqNo);
+                    sendTimes[i] = System.nanoTime();
                     write(socketChannel, length);
                     seqNo++;
 
-                    if (i > senderLimit)
-                    {
-                        while (i > (senderLimit = senderLimit()))
-                        {
-                            IDLE_STRATEGY.idle();
-                        }
-                        IDLE_STRATEGY.reset();
-                    }
+                    LockSupport.parkNanos(pauseInNs);
                 }
 
                 await();
@@ -118,9 +129,10 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
         }
     }
 
-    private int senderLimit()
+    private long getPauseInNs()
     {
-        return messagesReceived.get() + MAX_MESSAGES_IN_FLIGHT;
+        final double nanosInSecond = TimeUnit.SECONDS.toNanos(1);
+        return (long) (nanosInSecond / (double) SEND_RATE_PER_SECOND);
     }
 
     private void await()

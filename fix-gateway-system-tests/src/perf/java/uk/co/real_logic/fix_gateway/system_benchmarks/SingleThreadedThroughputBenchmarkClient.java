@@ -57,7 +57,7 @@ public final class SingleThreadedThroughputBenchmarkClient extends AbstractBench
                 }
                 while (messagesReceived < MESSAGES_EXCHANGED);
 
-                printTimes(startTime);
+                printThroughput(startTime);
             }
         }
     }

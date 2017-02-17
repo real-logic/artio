@@ -139,12 +139,11 @@ public abstract class AbstractBenchmarkClient
         return socketChannel;
     }
 
-    protected static void printTimes(final long startTime)
+    protected static void printThroughput(final long startTime)
     {
         final long duration = System.currentTimeMillis() - startTime;
         final double rate = (double) MESSAGES_EXCHANGED / duration;
         System.out.printf("%d messages in %d ms\n", MESSAGES_EXCHANGED, duration);
-        System.out.printf("%G messages / ms\n", rate);
         System.out.printf("%G messages / s\n", rate * 1000.0);
     }
 
