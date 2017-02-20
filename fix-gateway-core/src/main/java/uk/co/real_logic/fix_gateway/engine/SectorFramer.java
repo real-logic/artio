@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
+import org.agrona.ErrorHandler;
 import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 
 import static org.agrona.BitUtil.SIZE_OF_INT;
@@ -79,12 +80,14 @@ public class SectorFramer
         final int start,
         final int end,
         final int savedChecksum,
-        final int calculatedChecksum)
+        final int calculatedChecksum,
+        final ErrorHandler errorHandler)
     {
         if (calculatedChecksum != savedChecksum)
         {
-            throw new FileSystemCorruptionException(
+            final FileSystemCorruptionException exception = new FileSystemCorruptionException(
                 fileName, start, end, savedChecksum, calculatedChecksum);
+            errorHandler.onError(exception);
         }
     }
 }

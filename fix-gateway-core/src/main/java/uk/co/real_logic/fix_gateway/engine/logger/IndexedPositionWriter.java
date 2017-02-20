@@ -47,11 +47,11 @@ class IndexedPositionWriter
     private final ErrorHandler errorHandler;
     private final ChecksumFramer checksumFramer;
 
-    IndexedPositionWriter(final AtomicBuffer buffer, final ErrorHandler errorHandler)
+    IndexedPositionWriter(final AtomicBuffer buffer, final ErrorHandler errorHandler, final int errorReportingOffset)
     {
         this.buffer = buffer;
         this.errorHandler = errorHandler;
-        checksumFramer = new ChecksumFramer(buffer, buffer.capacity());
+        checksumFramer = new ChecksumFramer(buffer, buffer.capacity(), errorHandler, errorReportingOffset);
         setupHeader();
     }
 

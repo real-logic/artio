@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
+import org.agrona.ErrorHandler;
 import org.agrona.concurrent.AtomicBuffer;
 
 import java.nio.ByteBuffer;
@@ -26,13 +27,21 @@ public class ChecksumFramer extends SectorFramer
     private final CRC32 crc32 = new CRC32();
     private final AtomicBuffer buffer;
     private final ChecksumConsumer saveChecksumFunc;
+    private final ErrorHandler errorHandler;
+    private final int errorReportingOffset;
     private final ChecksumConsumer validateChecksumFunc;
 
-    public ChecksumFramer(final AtomicBuffer buffer, final int capacity)
+    public ChecksumFramer(
+        final AtomicBuffer buffer,
+        final int capacity,
+        final ErrorHandler errorHandler,
+        final int errorReportingOffset)
     {
         super(capacity);
         this.buffer = buffer;
         saveChecksumFunc = buffer::putInt;
+        this.errorHandler = errorHandler;
+        this.errorReportingOffset = errorReportingOffset;
         validateChecksumFunc = this::validateChecksum;
     }
 
@@ -49,20 +58,22 @@ public class ChecksumFramer extends SectorFramer
     private void validateChecksum(final int checksumOffset, final int calculatedChecksum)
     {
         final int savedChecksum = buffer.getInt(checksumOffset);
-        final int start = checksumOffset - SECTOR_DATA_LENGTH;
-        final int end = checksumOffset + CHECKSUM_SIZE;
-        validateCheckSum("sequence numbers", start, end, savedChecksum, calculatedChecksum);
+        final int start = errorReportingOffset + checksumOffset - SECTOR_DATA_LENGTH;
+        final int end = errorReportingOffset + checksumOffset + CHECKSUM_SIZE;
+        validateCheckSum(
+            "sequence numbers", start, end, savedChecksum, calculatedChecksum, errorHandler);
     }
 
     private void withChecksums(final ChecksumConsumer consumer)
     {
         final byte[] inMemoryBytes = buffer.byteArray();
         final ByteBuffer inMemoryByteBuffer = buffer.byteBuffer();
+        final int wrapAdjustment = buffer.wrapAdjustment();
         final int capacity = this.capacity;
 
         for (int sectorEnd = SECTOR_SIZE; sectorEnd <= capacity; sectorEnd += SECTOR_SIZE)
         {
-            final int sectorStart = sectorEnd - SECTOR_SIZE;
+            final int sectorStart = sectorEnd - SECTOR_SIZE + wrapAdjustment;
             final int checksumOffset = sectorEnd - CHECKSUM_SIZE;
 
             crc32.reset();
@@ -72,7 +83,9 @@ public class ChecksumFramer extends SectorFramer
             }
             else
             {
-                inMemoryByteBuffer.limit(sectorStart + SECTOR_DATA_LENGTH).position(sectorStart);
+                inMemoryByteBuffer
+                    .limit(sectorStart + SECTOR_DATA_LENGTH)
+                    .position(sectorStart);
                 crc32.update(inMemoryByteBuffer);
             }
             final int sectorChecksum = (int) crc32.getValue();

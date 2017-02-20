@@ -41,7 +41,7 @@ public class SequenceNumberIndexWriter implements Index
 
     private static final long MISSING_RECORD = -1L;
     private static final long UNINITIALISED = -1;
-    private static final int SEQUENCE_NUMBER_OFFSET = 8;
+    static final int SEQUENCE_NUMBER_OFFSET = 8;
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
@@ -63,7 +63,7 @@ public class SequenceNumberIndexWriter implements Index
     private final File passingPlacePath;
     private final int fileCapacity;
     private final int streamId;
-    private final int positionTableOffset;
+    private final int indexedPositionsOffset;
     private final IndexedPositionWriter positions;
 
     private MappedFile writableFile;
@@ -89,14 +89,15 @@ public class SequenceNumberIndexWriter implements Index
         writableFile = MappedFile.map(writablePath, fileCapacity);
 
         // TODO: Fsync parent directory
-        positionTableOffset = positionTableOffset(fileCapacity);
-        checksumFramer = new ChecksumFramer(inMemoryBuffer, positionTableOffset);
+        indexedPositionsOffset = positionTableOffset(fileCapacity);
+        checksumFramer = new ChecksumFramer(inMemoryBuffer, indexedPositionsOffset, errorHandler, 0);
         try
         {
             initialiseBuffer();
             positions = new IndexedPositionWriter(
-                positionsBuffer(inMemoryBuffer, positionTableOffset),
-                errorHandler);
+                positionsBuffer(inMemoryBuffer, indexedPositionsOffset),
+                errorHandler,
+                indexedPositionsOffset);
         }
         catch (final Exception e)
         {
@@ -163,7 +164,7 @@ public class SequenceNumberIndexWriter implements Index
 
     void resetSequenceNumbers()
     {
-        inMemoryBuffer.setMemory(0, positionTableOffset, (byte)0);
+        inMemoryBuffer.setMemory(0, indexedPositionsOffset, (byte)0);
         initialiseBlankBuffer();
     }
 

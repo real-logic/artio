@@ -19,9 +19,12 @@ import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
@@ -30,9 +33,11 @@ import java.io.File;
 
 import static org.agrona.IoUtil.deleteIfExists;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.SECTOR_SIZE;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.*;
+import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexWriter.SEQUENCE_NUMBER_OFFSET;
 
 public class SequenceNumberIndexTest extends AbstractLogTest
 {
@@ -141,23 +146,47 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER, newReader);
     }
 
-    @Test(expected = FileSystemCorruptionException.class)
+    @Test
     public void shouldChecksumFileToDetectCorruption()
     {
         indexFixMessage();
 
         writer.close();
 
-        corruptIndexFile();
+        corruptIndexFile(SEQUENCE_NUMBER_OFFSET);
 
         newInstanceAfterRestart();
+
+        final ArgumentCaptor<FileSystemCorruptionException> exception =
+            ArgumentCaptor.forClass(FileSystemCorruptionException.class);
+        verify(errorHandler).onError(exception.capture());
+        assertThat(
+            exception.getValue().getMessage(),
+            Matchers.containsString(
+                "The sequence numbers file is corrupted between bytes 0 and 4096, saved checksum is "));
+        reset(errorHandler);
     }
 
-    private void corruptIndexFile()
+    @Ignore
+    @Test
+    public void shouldValidateHeader()
+    {
+        indexFixMessage();
+
+        writer.close();
+
+        corruptIndexFile(0);
+
+        newInstanceAfterRestart();
+
+        verify(errorHandler).onError(any(FileSystemCorruptionException.class));
+    }
+
+    private void corruptIndexFile(final int from)
     {
         try (MappedFile mappedFile = newIndexFile())
         {
-            mappedFile.buffer().putBytes(0, new byte[SECTOR_SIZE / 2]);
+            mappedFile.buffer().putBytes(from, new byte[SECTOR_SIZE / 2]);
         }
     }
 

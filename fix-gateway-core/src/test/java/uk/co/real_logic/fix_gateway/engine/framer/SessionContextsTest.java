@@ -42,8 +42,7 @@ public class SessionContextsTest
 {
     private static final int BUFFER_SIZE = 8 * 1024;
     private static final int SEQUENCE_INDEX = 1;
-
-    public static final int FILE_POSITION = 0;
+    private static final int FILE_POSITION = 0;
 
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(BUFFER_SIZE));
@@ -106,7 +105,7 @@ public class SessionContextsTest
         assertNotEquals("C is a duplicate of B", bContext, cContext);
     }
 
-    @Test(expected = FileSystemCorruptionException.class)
+    @Test
     public void checksFileCorruption()
     {
         sessionContexts.onLogon(bSession);
@@ -116,6 +115,8 @@ public class SessionContextsTest
         buffer.putBytes(8, new byte[1024]);
 
         newSessionContexts(buffer);
+
+        verify(errorHandler).onError(any(FileSystemCorruptionException.class));
     }
 
     @Test(expected = IllegalArgumentException.class)

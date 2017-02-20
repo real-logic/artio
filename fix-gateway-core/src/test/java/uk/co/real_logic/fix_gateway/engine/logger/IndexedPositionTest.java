@@ -108,7 +108,7 @@ public class IndexedPositionTest
         assertEquals(position, new IndexedPositionReader(buffer).indexedPosition(SESSION_ID));
     }
 
-    @Test(expected = FileSystemCorruptionException.class)
+    @Test
     public void shouldDetectFileSystemCorruption()
     {
         final int position = 10;
@@ -120,6 +120,9 @@ public class IndexedPositionTest
         buffer.putBytes(5, new byte[300]);
 
         newWriter();
+
+        verify(errorHandler).onError(any(FileSystemCorruptionException.class));
+        reset(errorHandler);
     }
 
     private void indexed(final int position, final int sessionId)
@@ -134,6 +137,6 @@ public class IndexedPositionTest
 
     private IndexedPositionWriter newWriter()
     {
-        return new IndexedPositionWriter(buffer, errorHandler);
+        return new IndexedPositionWriter(buffer, errorHandler, 0);
     }
 }
