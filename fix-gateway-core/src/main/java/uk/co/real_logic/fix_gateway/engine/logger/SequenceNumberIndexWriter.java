@@ -262,6 +262,7 @@ public class SequenceNumberIndexWriter implements Index
 
     public void readLastPosition(final IndexedPositionConsumer consumer)
     {
+        // Inefficient, but only run once on startup, so not a big deal.
         new IndexedPositionReader(positions.buffer()).readLastPosition(consumer);
     }
 
@@ -353,7 +354,8 @@ public class SequenceNumberIndexWriter implements Index
             lastKnownEncoder.sbeSchemaId(),
             lastKnownEncoder.sbeTemplateId(),
             lastKnownEncoder.sbeSchemaVersion(),
-            lastKnownEncoder.sbeBlockLength());
+            lastKnownEncoder.sbeBlockLength(),
+            errorHandler);
     }
 
     private boolean fileHasBeenInitialized(final AtomicBuffer fileBuffer)

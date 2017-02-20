@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.SECTOR_SIZE;
+import static uk.co.real_logic.fix_gateway.engine.logger.ErrorHandlerVerifier.verify;
 import static uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionReader.UNKNOWN_POSITION;
 
 public class IndexedPositionTest
@@ -40,7 +41,7 @@ public class IndexedPositionTest
     @After
     public void noErrors()
     {
-        verify(errorHandler, never()).onError(any());
+        verifyNoMoreInteractions(errorHandler);
     }
 
     @Test
@@ -121,8 +122,7 @@ public class IndexedPositionTest
 
         newWriter();
 
-        verify(errorHandler).onError(any(FileSystemCorruptionException.class));
-        reset(errorHandler);
+        verify(errorHandler, times(1), FileSystemCorruptionException.class);
     }
 
     private void indexed(final int position, final int sessionId)

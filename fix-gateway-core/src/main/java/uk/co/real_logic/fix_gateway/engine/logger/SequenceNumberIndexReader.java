@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import org.agrona.ErrorHandler;
 import org.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.engine.SectorFramer;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
@@ -34,10 +35,12 @@ public class SequenceNumberIndexReader
     private final AtomicBuffer inMemoryBuffer;
     private final SectorFramer sectorFramer;
     private final IndexedPositionReader positions;
+    private final ErrorHandler errorHandler;
 
-    public SequenceNumberIndexReader(final AtomicBuffer inMemoryBuffer)
+    public SequenceNumberIndexReader(final AtomicBuffer inMemoryBuffer, final ErrorHandler errorHandler)
     {
         this.inMemoryBuffer = inMemoryBuffer;
+        this.errorHandler = errorHandler;
         final int positionTableOffset = positionTableOffset(inMemoryBuffer.capacity());
         sectorFramer = new SectorFramer(positionTableOffset);
         validateBuffer();
@@ -77,7 +80,6 @@ public class SequenceNumberIndexReader
             inMemoryBuffer,
             fileHeaderDecoder,
             LastKnownSequenceNumberEncoder.SCHEMA_ID,
-            SCHEMA_VERSION,
-            BLOCK_LENGTH);
+            errorHandler);
     }
 }

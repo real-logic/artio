@@ -22,9 +22,9 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
@@ -36,6 +36,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.SectorFramer.SECTOR_SIZE;
+import static uk.co.real_logic.fix_gateway.engine.logger.ErrorHandlerVerifier.verify;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexWriter.SEQUENCE_NUMBER_OFFSET;
 
@@ -58,7 +59,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         deleteIfExists(passingPath(INDEX_FILE_PATH));
 
         writer = newWriter(inMemoryBuffer);
-        reader = new SequenceNumberIndexReader(inMemoryBuffer);
+        reader = new SequenceNumberIndexReader(inMemoryBuffer, errorHandler);
     }
 
     @Test
@@ -97,12 +98,14 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         assertLastKnownSequenceNumberIs(SESSION_ID, updatedSequenceNumber);
     }
 
-    @Test(expected = IllegalStateException.class)
+    @Test
     public void shouldValidateBufferItReadsFrom()
     {
         final AtomicBuffer tableBuffer = newBuffer();
 
-        new SequenceNumberIndexReader(tableBuffer);
+        new SequenceNumberIndexReader(tableBuffer, errorHandler);
+
+        verify(errorHandler, times(1), IllegalStateException.class);
     }
 
     @Test
@@ -153,13 +156,13 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         writer.close();
 
-        corruptIndexFile(SEQUENCE_NUMBER_OFFSET);
+        corruptIndexFile(SEQUENCE_NUMBER_OFFSET, SECTOR_SIZE / 2);
 
         newInstanceAfterRestart();
 
         final ArgumentCaptor<FileSystemCorruptionException> exception =
             ArgumentCaptor.forClass(FileSystemCorruptionException.class);
-        verify(errorHandler).onError(exception.capture());
+        Mockito.verify(errorHandler).onError(exception.capture());
         assertThat(
             exception.getValue().getMessage(),
             Matchers.containsString(
@@ -167,7 +170,6 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         reset(errorHandler);
     }
 
-    @Ignore
     @Test
     public void shouldValidateHeader()
     {
@@ -175,18 +177,18 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         writer.close();
 
-        corruptIndexFile(0);
+        corruptIndexFile(0, SequenceNumberIndexDescriptor.HEADER_SIZE);
 
         newInstanceAfterRestart();
 
-        verify(errorHandler).onError(any(FileSystemCorruptionException.class));
+        verify(errorHandler, times(2), IllegalStateException.class);
     }
 
-    private void corruptIndexFile(final int from)
+    private void corruptIndexFile(final int from, final int length)
     {
         try (MappedFile mappedFile = newIndexFile())
         {
-            mappedFile.buffer().putBytes(from, new byte[SECTOR_SIZE / 2]);
+            mappedFile.buffer().putBytes(from, new byte[length]);
         }
     }
 
@@ -202,7 +204,8 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         try (MappedFile mappedFile = newIndexFile())
         {
-            final SequenceNumberIndexReader newReader = new SequenceNumberIndexReader(mappedFile.buffer());
+            final SequenceNumberIndexReader newReader = new SequenceNumberIndexReader(
+                mappedFile.buffer(), errorHandler);
 
             assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER + requiredMessagesToRoll, newReader);
         }
@@ -243,14 +246,14 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     public void verifyNoErrors()
     {
         writer.close();
-        verify(errorHandler, never()).onError(any());
+        Mockito.verify(errorHandler, never()).onError(any());
     }
 
     private SequenceNumberIndexReader newInstanceAfterRestart()
     {
         final AtomicBuffer inMemoryBuffer = newBuffer();
         newWriter(inMemoryBuffer).close();
-        return new SequenceNumberIndexReader(inMemoryBuffer);
+        return new SequenceNumberIndexReader(inMemoryBuffer, errorHandler);
     }
 
     private SequenceNumberIndexWriter newWriter(final AtomicBuffer inMemoryBuffer)

@@ -100,8 +100,10 @@ public class FramerContext
             configuration.sendingTimeWindowInMs(),
             configuration.reasonableTransmissionTimeInMs());
 
-        sentSequenceNumberIndex = new SequenceNumberIndexReader(configuration.sentSequenceNumberBuffer());
-        receivedSequenceNumberIndex = new SequenceNumberIndexReader(configuration.receivedSequenceNumberBuffer());
+        sentSequenceNumberIndex = new SequenceNumberIndexReader(
+            configuration.sentSequenceNumberBuffer(), errorHandler);
+        receivedSequenceNumberIndex = new SequenceNumberIndexReader(
+            configuration.receivedSequenceNumberBuffer(), errorHandler);
         outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy);
         inboundLibraryPublication = engineContext.inboundLibraryPublication();
 

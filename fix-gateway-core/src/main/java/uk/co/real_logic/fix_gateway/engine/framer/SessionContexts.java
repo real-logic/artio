@@ -177,7 +177,8 @@ public class SessionContexts
             sessionIdEncoder.sbeSchemaId(),
             sessionIdEncoder.sbeTemplateId(),
             actingVersion,
-            actingBlockLength))
+            actingBlockLength,
+            errorHandler))
         {
             updateChecksum(0, FIRST_CHECKSUM_LOCATION);
             mappedFile.force();

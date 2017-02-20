@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
@@ -59,52 +60,80 @@ public final class LoggerUtil
         final int sbeSchemaId,
         final int sbeTemplateId,
         final int actingVersion,
-        final int actingBlockLength)
+        final int actingBlockLength, final ErrorHandler errorHandler)
     {
         headerDecoder.wrap(buffer, 0);
         if (headerDecoder.blockLength() == 0)
         {
-            headerEncoder
-                .wrap(buffer, 0)
-                .blockLength(actingBlockLength)
-                .templateId(sbeTemplateId)
-                .schemaId(sbeSchemaId)
-                .version(actingVersion);
+            writeHeader(buffer, headerEncoder, sbeSchemaId, sbeTemplateId, actingVersion, actingBlockLength);
 
             return true;
         }
         else
         {
-            validateBuffer(
+            if (!validateBuffer(
                 buffer,
                 headerDecoder,
                 sbeSchemaId,
-                actingVersion,
-                actingBlockLength);
+                errorHandler))
+            {
+                writeHeader(
+                    buffer, headerEncoder, sbeSchemaId, sbeTemplateId, actingVersion, actingBlockLength);
+
+                final int offset = headerEncoder.encodedLength();
+                final int length = buffer.capacity() - offset;
+                buffer.setMemory(
+                    offset,
+                    length,
+                    (byte) 0);
+            }
 
             return false;
         }
     }
 
-    public static void validateBuffer(
+    private static void writeHeader(
         final AtomicBuffer buffer,
-        final MessageHeaderDecoder headerDecoder,
+        final MessageHeaderEncoder headerEncoder,
         final int sbeSchemaId,
+        final int sbeTemplateId,
         final int actingVersion,
         final int actingBlockLength)
     {
-        headerDecoder.wrap(buffer, 0);
-        validateField(sbeSchemaId, headerDecoder.schemaId(), "Schema Id");
-        validateField(actingVersion, headerDecoder.version(), "Schema Version");
-        validateField(actingBlockLength, headerDecoder.blockLength(), "Block Length");
+        headerEncoder
+            .wrap(buffer, 0)
+            .blockLength(actingBlockLength)
+            .templateId(sbeTemplateId)
+            .schemaId(sbeSchemaId)
+            .version(actingVersion);
     }
 
-    private static void validateField(final int expected, final int read, final String name)
+    // Returns false if not valid
+    public static boolean validateBuffer(
+        final AtomicBuffer buffer,
+        final MessageHeaderDecoder headerDecoder,
+        final int sbeSchemaId,
+        final ErrorHandler errorHandler)
+    {
+        headerDecoder.wrap(buffer, 0);
+        return validateField(sbeSchemaId, headerDecoder.schemaId(), "Schema Id", errorHandler);
+    }
+
+    private static boolean validateField(
+        final int expected,
+        final int read,
+        final String name,
+        final ErrorHandler errorHandler)
     {
         if (read != expected)
         {
-            throw new IllegalStateException(
+            final IllegalStateException exception = new IllegalStateException(
                 String.format("Wrong %s: expected %d and got %d", name, expected, read));
+            errorHandler.onError(exception);
+
+            return false;
         }
+
+        return true;
     }
 }
