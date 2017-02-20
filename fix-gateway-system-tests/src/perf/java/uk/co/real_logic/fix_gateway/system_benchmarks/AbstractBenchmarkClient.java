@@ -68,8 +68,7 @@ public abstract class AbstractBenchmarkClient
 
     protected void logon(final SocketChannel socketChannel) throws IOException
     {
-        final LogonDecoder logonDecoder = logon(socketChannel, INITIATOR_ID, 10);
-        //System.out.println("Authenticated: " + logonDecoder);
+        logon(socketChannel, INITIATOR_ID, 10);
     }
 
     protected LogonDecoder logon(final SocketChannel socketChannel, final String initiatorId, final int heartBtInt)
@@ -108,6 +107,7 @@ public abstract class AbstractBenchmarkClient
             remaining -= socketChannel.write(writeBuffer);
         }
         while (remaining > 0);
+        // System.out.println(writeFlyweight.getAscii(0, amount));
     }
 
     protected int read(final SocketChannel socketChannel) throws IOException
@@ -117,10 +117,8 @@ public abstract class AbstractBenchmarkClient
         do
         {
             length = socketChannel.read(readBuffer);
-            IDLE_STRATEGY.idle();
         }
         while (length == 0);
-        IDLE_STRATEGY.reset();
         return length;
     }
 

@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.system_benchmarks;
 import org.agrona.LangUtil;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
@@ -26,49 +25,50 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.MAX_MESSAGES_IN_FLIGHT;
-import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.MESSAGES_EXCHANGED;
+import static uk.co.real_logic.fix_gateway.system_benchmarks.BenchmarkConfiguration.*;
 
 public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
 {
+
+    public static final int INITIAL_SEQ_NO = 2;
+    public static final int TOTAL_MESSAGES = NUMBER_OF_SESSIONS * MESSAGES_EXCHANGED;
+
     public static void main(final String[] args) throws Exception
     {
         new ThroughputBenchmarkClient().runBenchmark();
     }
 
-    private final AtomicInteger messagesReceived = new AtomicInteger();
-    private final CyclicBarrier barrier = new CyclicBarrier(2, () -> messagesReceived.set(0));
+    private final BenchmarkSession[] sessions = new BenchmarkSession[NUMBER_OF_SESSIONS];
+    private final CyclicBarrier barrier = new CyclicBarrier(2);
 
     private final class ReaderThread extends Thread
     {
-        private final SocketChannel socketChannel;
-
-        ReaderThread(final SocketChannel socketChannel)
+        ReaderThread()
         {
-            this.socketChannel = socketChannel;
+            super("ReaderThread");
         }
 
         public void run()
         {
-            final SocketChannel socketChannel = this.socketChannel;
-            final MutableAsciiBuffer readFlyweight = ThroughputBenchmarkClient.this.readFlyweight;
+            final BenchmarkSession[] sessions = ThroughputBenchmarkClient.this.sessions;
 
             while (true)
             {
                 final long startTime = System.currentTimeMillis();
-                int lastMessagesReceived = 0;
-                while (lastMessagesReceived < MESSAGES_EXCHANGED)
+                int remainingMessages = TOTAL_MESSAGES;
+                while (remainingMessages > 0)
                 {
-                    try
+                    for (int i = 0; i < NUMBER_OF_SESSIONS; i++)
                     {
-                        final int length = read(socketChannel);
-                        lastMessagesReceived = messagesReceived.addAndGet(
-                            scanForReceivesMessages(readFlyweight, length));
-                    }
-                    catch (final IOException ex)
-                    {
-                        ex.printStackTrace();
-                        System.exit(-1);
+                        try
+                        {
+                            remainingMessages -= sessions[i].attemptRead();
+                        }
+                        catch (final IOException ex)
+                        {
+                            ex.printStackTrace();
+                            System.exit(-1);
+                        }
                     }
                 }
 
@@ -81,46 +81,101 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
 
     public void runBenchmark() throws Exception
     {
-        try (SocketChannel socketChannel = open())
+        final BenchmarkSession[] sessions = this.sessions;
+        for (int i = 0; i < NUMBER_OF_SESSIONS; i++)
         {
-            logon(socketChannel);
+            sessions[i] = new BenchmarkSession(i);
+        }
 
-            final TestRequestEncoder testRequest = setupTestRequest();
-            final HeaderEncoder header = testRequest.header();
+        final ReaderThread readerThread = new ReaderThread();
+        readerThread.start();
 
-            final ReaderThread readerThread = new ReaderThread(socketChannel);
-            readerThread.start();
-
-            int seqNo = 2;
-
-            while (true)
+        while (true)
+        {
+            int remainingMessages = TOTAL_MESSAGES;
+            while (remainingMessages > 0)
             {
-                int senderLimit = senderLimit();
-
-                for (int i = 0; i < MESSAGES_EXCHANGED; i++)
+                for (int i = 0; i < NUMBER_OF_SESSIONS; i++)
                 {
-                    final int length = encode(testRequest, header, seqNo);
-                    write(socketChannel, length);
-                    seqNo++;
-
-                    if (i > senderLimit)
-                    {
-                        while (i > (senderLimit = senderLimit()))
-                        {
-                            IDLE_STRATEGY.idle();
-                        }
-                        IDLE_STRATEGY.reset();
-                    }
+                    remainingMessages -= sessions[i].attemptWrite();
                 }
-
-                await();
             }
+
+            await();
         }
     }
 
-    private int senderLimit()
+    private final class BenchmarkSession implements AutoCloseable
     {
-        return messagesReceived.get() + MAX_MESSAGES_IN_FLIGHT;
+        private final AtomicInteger totalMessagesReceived = new AtomicInteger(INITIAL_SEQ_NO);
+        private final SocketChannel socketChannel;
+        private final TestRequestEncoder testRequest;
+        private final HeaderEncoder header;
+
+        private int seqNo = INITIAL_SEQ_NO;
+        private int senderLimit = senderLimit();
+
+        private BenchmarkSession(final int i) throws IOException
+        {
+            socketChannel = open();
+            final String initiatorId = INITIATOR_ID + i;
+            testRequest = setupTestRequest(initiatorId);
+            header = testRequest.header();
+            logon(socketChannel, initiatorId, 10);
+        }
+
+        private int attemptWrite() throws IOException
+        {
+            if (seqNo > senderLimit)
+            {
+                if (seqNo > (senderLimit = senderLimit()))
+                {
+                    return 0;
+                }
+            }
+
+            final int length = encode(testRequest, header, seqNo);
+            write(socketChannel, length);
+            seqNo++;
+            return 1;
+        }
+
+        private int attemptRead() throws IOException
+        {
+            readBuffer.clear();
+            final int length = socketChannel.read(readBuffer);
+            if (length == 0)
+            {
+                return 0;
+            }
+
+            if (length < 0)
+            {
+                System.err.println("Disconnected by server");
+                System.exit(-1);
+            }
+
+            final int receivedMessages = scanForReceivesMessages(readFlyweight, length);
+            // System.out.println("Read: " + readFlyweight.getAscii(0, length));
+
+            if (receivedMessages > 0)
+            {
+                final int i = totalMessagesReceived.addAndGet(receivedMessages);
+                // System.out.println("receivedMessages = " + receivedMessages);
+                // System.out.println("i = " + i);
+            }
+            return receivedMessages;
+        }
+
+        private int senderLimit()
+        {
+            return totalMessagesReceived.get() + MAX_MESSAGES_IN_FLIGHT;
+        }
+
+        public void close() throws Exception
+        {
+            socketChannel.close();
+        }
     }
 
     private void await()
