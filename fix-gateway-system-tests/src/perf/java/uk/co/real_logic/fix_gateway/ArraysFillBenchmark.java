@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway;
 
+import org.agrona.BitUtil;
 import org.agrona.BufferUtil;
 import org.openjdk.jmh.annotations.*;
 
@@ -36,17 +37,20 @@ public class ArraysFillBenchmark
 
     @Param({"2", "8", "32", "128", "256", "512", "1024"})
     int size;
+    int sizeInBytes;
     int[] values;
 
     @Setup
     public void setup()
     {
         values = new int[size];
+        sizeInBytes = size * BitUtil.SIZE_OF_INT;
     }
 
     @Benchmark
     public int[] arraysFill()
     {
+        final int[] values = this.values;
         Arrays.fill(values, MISSING_VALUE);
         return values;
     }
@@ -54,15 +58,8 @@ public class ArraysFillBenchmark
     @Benchmark
     public int[] memset()
     {
-        UNSAFE.setMemory(values, BufferUtil.ARRAY_BASE_OFFSET, values.length, MISSING_BYTE);
-        return values;
-    }
-
-    @Benchmark
-    public int[] memsetLocal()
-    {
         final int[] values = this.values;
-        UNSAFE.setMemory(values, BufferUtil.ARRAY_BASE_OFFSET, values.length, MISSING_BYTE);
+        UNSAFE.setMemory(values, BufferUtil.ARRAY_BASE_OFFSET, sizeInBytes, MISSING_BYTE);
         return values;
     }
 
@@ -71,7 +68,7 @@ public class ArraysFillBenchmark
     {
         final int[] values = this.values;
         UNSAFE.putByte(values, BufferUtil.ARRAY_BASE_OFFSET, MISSING_BYTE);
-        UNSAFE.setMemory(values, BufferUtil.ARRAY_BASE_OFFSET + 1, values.length - 1, MISSING_BYTE);
+        UNSAFE.setMemory(values, BufferUtil.ARRAY_BASE_OFFSET + 1, sizeInBytes - 1, MISSING_BYTE);
         return values;
     }
 
