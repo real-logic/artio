@@ -45,3 +45,7 @@ acceptor_logs/
 
 *.jar
 *.pem
+
+# Honest Profiler
+liblagent.so
+*.hpl
