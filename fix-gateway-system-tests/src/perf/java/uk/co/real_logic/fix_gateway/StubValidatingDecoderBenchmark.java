@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway;
 
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
+import uk.co.real_logic.fix_gateway.builder.Validation;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
@@ -27,13 +28,22 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
-@Warmup(iterations = 3)
-@Measurement(iterations = 5)
+@Warmup(iterations = 5)
+@Measurement(iterations = 10)
 @Fork(1)
 public class StubValidatingDecoderBenchmark
 {
     private LogonDecoder logonDecoder = new LogonDecoder();
     private AsciiBuffer asciiBuffer = new MutableAsciiBuffer(TestData.LOGON);
+
+    @Setup
+    public void setup()
+    {
+        if (!Validation.CODEC_VALIDATION_ENABLED)
+        {
+            throw new IllegalStateException("Benchmark cannot run without validation enabled");
+        }
+    }
 
     @Benchmark
     public void decodeLogon(final Blackhole bh)
@@ -48,6 +58,29 @@ public class StubValidatingDecoderBenchmark
 
         bh.consume(logonDecoder.hasUsername());
         bh.consume(logonDecoder.username());
+
+        bh.consume(logonDecoder.validate());
+
+        bh.consume(logonDecoder.validate());
+    }
+
+    @Benchmark
+    public void resetAndDecodeLogon(final Blackhole bh)
+    {
+        logonDecoder.reset();
+
+        bh.consume(logonDecoder.decode(asciiBuffer, 0, asciiBuffer.capacity()));
+
+        final HeaderDecoder header = logonDecoder.header();
+        bh.consume(header.msgSeqNum());
+
+        bh.consume(logonDecoder.hasPassword());
+        bh.consume(logonDecoder.password());
+
+        bh.consume(logonDecoder.hasUsername());
+        bh.consume(logonDecoder.username());
+
+        bh.consume(logonDecoder.validate());
 
         bh.consume(logonDecoder.validate());
     }

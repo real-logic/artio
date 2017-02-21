@@ -26,8 +26,8 @@ import java.util.concurrent.TimeUnit;
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
-@Warmup(iterations = 3)
-@Measurement(iterations = 5)
+@Warmup(iterations = 5)
+@Measurement(iterations = 10)
 @Fork(1)
 public class StubEncoderBenchmark
 {
