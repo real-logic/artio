@@ -52,7 +52,7 @@ class NodeHandler implements ClusterFragmentHandler
     void checkConsistencyOfReplicatedPositions()
     {
         int position = 0;
-        for (ReplicatedMessage replicatedMessage : replicatedMessages)
+        for (final ReplicatedMessage replicatedMessage : replicatedMessages)
         {
             final int messageLength = DataHeaderFlyweight.HEADER_LENGTH + replicatedMessage.length;
             position = ArchiveDescriptor.alignTerm(position + messageLength);
@@ -90,5 +90,4 @@ class NodeHandler implements ClusterFragmentHandler
         final ReplicatedMessage lastMessage = replicatedMessages.get(replicatedMessages.size() - 1);
         return lastMessage.position;
     }
-
 }
