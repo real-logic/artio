@@ -84,7 +84,7 @@ public final class LatencyUnderLoadBenchmarkClient extends AbstractBenchmarkClie
                     }
                 }
 
-                printThroughput(startTime);
+                printThroughput(startTime, MESSAGES_EXCHANGED);
                 HistogramLogReader.prettyPrint(
                     System.currentTimeMillis(), histogram, "Benchmark", scaleToMicros);
 

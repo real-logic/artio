@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
-import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
@@ -38,7 +37,6 @@ import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 
 public abstract class AbstractBenchmarkClient
 {
-    protected static final IdleStrategy IDLE_STRATEGY = idleStrategy();
     protected static final String HOST = System.getProperty("fix.benchmark.host", "localhost");
     protected static final int BUFFER_SIZE = 16 * 1024;
     protected static final byte NINE = (byte) '9';
@@ -137,11 +135,11 @@ public abstract class AbstractBenchmarkClient
         return socketChannel;
     }
 
-    protected static void printThroughput(final long startTime)
+    protected static void printThroughput(final long startTime, final int messagesExchanged)
     {
         final long duration = System.currentTimeMillis() - startTime;
-        final double rate = (double) MESSAGES_EXCHANGED / duration;
-        System.out.printf("%d messages in %d ms\n", MESSAGES_EXCHANGED, duration);
+        final double rate = (double) messagesExchanged / duration;
+        System.out.printf("%d messages in %d ms\n", messagesExchanged, duration);
         System.out.printf("%G messages / s\n", rate * 1000.0);
     }
 
@@ -192,9 +190,18 @@ public abstract class AbstractBenchmarkClient
 
     protected int encode(final MessageEncoder testRequest, final HeaderEncoder header, final int seqNum)
     {
+        return encode(testRequest, header, seqNum, 0);
+    }
+
+    protected int encode(
+        final MessageEncoder testRequest,
+        final HeaderEncoder header,
+        final int seqNum,
+        final int offset)
+    {
         header.msgSeqNum(seqNum);
         timestampEncoder.encode(System.currentTimeMillis());
 
-        return testRequest.encode(writeFlyweight, 0);
+        return testRequest.encode(writeFlyweight, offset);
     }
 }

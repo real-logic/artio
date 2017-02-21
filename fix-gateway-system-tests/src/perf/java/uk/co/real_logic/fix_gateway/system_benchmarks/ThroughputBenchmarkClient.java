@@ -15,13 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
-import org.agrona.LangUtil;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
-import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -72,9 +70,7 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
                     }
                 }
 
-                printThroughput(startTime);
-
-                await();
+                printThroughput(startTime, TOTAL_MESSAGES);
             }
         }
     }
@@ -100,8 +96,6 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
                     remainingMessages -= sessions[i].attemptWrite();
                 }
             }
-
-            await();
         }
     }
 
@@ -134,9 +128,14 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
                 }
             }
 
-            final int length = encode(testRequest, header, seqNo);
-            write(socketChannel, length);
-            seqNo++;
+            int offset = 0;
+            for (int i = 0; i < BURST; i++)
+            {
+                offset += encode(testRequest, header, seqNo, offset);
+                seqNo++;
+            }
+
+            write(socketChannel, offset);
             return 1;
         }
 
@@ -175,18 +174,6 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
         public void close() throws Exception
         {
             socketChannel.close();
-        }
-    }
-
-    private void await()
-    {
-        try
-        {
-            barrier.await();
-        }
-        catch (InterruptedException | BrokenBarrierException e)
-        {
-            LangUtil.rethrowUnchecked(e);
         }
     }
 }
