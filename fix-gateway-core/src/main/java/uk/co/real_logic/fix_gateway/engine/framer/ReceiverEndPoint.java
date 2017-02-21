@@ -21,6 +21,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
+import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
@@ -178,7 +179,7 @@ class ReceiverEndPoint
         catch (final Exception ex)
         {
             // Regular disconnects aren't errors
-            if (!ex.getMessage().contains("Connection reset by peer"))
+            if (!Exceptions.isJustDisconnect(ex))
             {
                 errorHandler.onError(ex);
             }

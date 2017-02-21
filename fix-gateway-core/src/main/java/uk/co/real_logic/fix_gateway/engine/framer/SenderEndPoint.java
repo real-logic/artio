@@ -159,7 +159,8 @@ class SenderEndPoint implements AutoCloseable
 
     private void onError(final Exception ex)
     {
-        errorHandler.onError(ex);
+        errorHandler.onError(new Exception(
+            String.format("Exception reported for sessionId=%d,connectionId=%d", sessionId, connectionId), ex));
         removeEndpoint(EXCEPTION);
     }
 

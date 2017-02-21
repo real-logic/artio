@@ -122,4 +122,9 @@ public final class Exceptions
             e.printStackTrace(System.out);
         }
     }
+
+    public static boolean isJustDisconnect(final Exception ex)
+    {
+        return ex.getMessage().contains("Connection reset by peer");
+    }
 }
