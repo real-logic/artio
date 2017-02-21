@@ -34,7 +34,7 @@ public class ArraysFillBenchmark
     private static final int MISSING_VALUE = 0;
     private static final byte MISSING_BYTE = 0;
 
-    @Param({"2", "8", "32", "128", "512", "1024"})
+    @Param({"2", "8", "32", "128", "256", "512", "1024"})
     int size;
     int[] values;
 
