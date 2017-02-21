@@ -109,7 +109,10 @@ public class DecoderGenerator extends Generator
         return intHashSetCopy(hashMapSize, ALL_FIELDS, "Constants.ALL_FIELDS");
     }
 
-    private String intHashSetCopy(final int hashMapSize, final String name, final String from)
+    private String intHashSetCopy(
+        final int hashMapSize,
+        final String name,
+        final String from)
     {
         return String.format(
             "    public final IntHashSet %2$s = new IntHashSet(%1$d, -1);\n" +
@@ -221,11 +224,14 @@ public class DecoderGenerator extends Generator
     private String resetValidation()
     {
         return
-            "        invalidTagId = NO_ERROR;\n" +
-            "        rejectReason = NO_ERROR;\n" +
-            "        missingRequiredFields.clear();\n" +
-            "        unknownFields.clear();\n" +
-            "        alreadyVisitedFields.clear();\n";
+            "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
+            "        {\n" +
+            "            invalidTagId = NO_ERROR;\n" +
+            "            rejectReason = NO_ERROR;\n" +
+            "            missingRequiredFields.clear();\n" +
+            "            unknownFields.clear();\n" +
+            "            alreadyVisitedFields.clear();\n" +
+            "        }\n";
     }
 
     private void validation(final Writer out, final Aggregate aggregate, final AggregateType type)
@@ -321,7 +327,10 @@ public class DecoderGenerator extends Generator
         return String.format(
             "    public final IntHashSet %3$s = new IntHashSet(%1$d, -1);\n" +
             "    {\n" +
+            "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
+            "        {\n" +
             "%2$s" +
+            "        }\n" +
             "    }\n\n",
             hashMapSize,
             addFields,
