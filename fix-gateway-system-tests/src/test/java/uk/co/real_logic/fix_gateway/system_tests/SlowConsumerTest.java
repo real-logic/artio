@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import io.aeron.driver.MediaDriver;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.Timing;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
@@ -44,12 +43,12 @@ import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_SENDER_MAX_BYTES_IN_BUFFER;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class SlowConsumerTest
 {
-    private static final int MAX_BYTES_IN_BUFFER = 4 * 1024;
     private static final int BUFFER_CAPACITY = 8 * 1024;
     private static final int TEST_TIMEOUT = 20_000;
 
@@ -68,23 +67,12 @@ public class SlowConsumerTest
     private SocketChannel socket;
     private Session session;
 
-    @Before
-    public void setUp() throws IOException
-    {
-        mediaDriver = launchMediaDriver(8 * 1024 * 1024);
-        delete(ACCEPTOR_LOGS);
-        final EngineConfiguration config = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID)
-            .framerIdleStrategy(framerIdleStrategy);
-        config.senderMaxBytesInBuffer(MAX_BYTES_IN_BUFFER);
-        engine = FixEngine.launch(config);
-        final LibraryConfiguration libraryConfiguration = acceptingLibraryConfig(handler);
-        libraryConfiguration.outboundMaxClaimAttempts(1);
-        library = connect(libraryConfiguration);
-    }
-
     @Test(timeout = TEST_TIMEOUT)
     public void shouldQuarantineThenDisconnectASlowConsumer() throws IOException
     {
+        final int senderMaxBytesInBuffer = 8 * 1024;
+        setup(senderMaxBytesInBuffer);
+
         initiateConnection();
 
         session = acquireSession(handler, library);
@@ -109,7 +97,7 @@ public class SlowConsumerTest
             framerIdleStrategy.step();
         }
 
-        bytesInBufferAtLeast(sessionInfo, (long)MAX_BYTES_IN_BUFFER);
+        bytesInBufferAtLeast(sessionInfo, (long) senderMaxBytesInBuffer);
 
         framerIdleStrategy.stopStepping();
     }
@@ -160,6 +148,8 @@ public class SlowConsumerTest
 
     private SessionInfo sessionBecomesSlow() throws IOException
     {
+        setup(DEFAULT_SENDER_MAX_BYTES_IN_BUFFER);
+
         initiateConnection();
 
         session = acquireSession(handler, library);
@@ -256,5 +246,18 @@ public class SlowConsumerTest
         close(engine);
         cleanupMediaDriver(mediaDriver);
         close(socket);
+    }
+
+    private void setup(final int senderMaxBytesInBuffer) throws IOException
+    {
+        mediaDriver = launchMediaDriver(8 * 1024 * 1024);
+        delete(ACCEPTOR_LOGS);
+        final EngineConfiguration config = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID)
+            .framerIdleStrategy(framerIdleStrategy);
+        config.senderMaxBytesInBuffer(senderMaxBytesInBuffer);
+        engine = FixEngine.launch(config);
+        final LibraryConfiguration libraryConfiguration = acceptingLibraryConfig(handler);
+        libraryConfiguration.outboundMaxClaimAttempts(1);
+        library = connect(libraryConfiguration);
     }
 }
