@@ -23,8 +23,8 @@ import static org.junit.Assert.assertTrue;
 
 public class CharArraySetTest
 {
-
-    public static final String[] EXAMPLES = {
+    public static final String[] EXAMPLES =
+    {
         "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F", "G", "H", "J", "K", "L", "M",
         "N", "P", "Q", "R", "S", "T", "V", "W", "X", "Y", "Z", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k",
         "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "AA", "AB", "AC", "AD", "AE", "AF",
@@ -37,7 +37,7 @@ public class CharArraySetTest
     @Test
     public void shouldContainAllMembersInitialisedWith()
     {
-        for (String example : EXAMPLES)
+        for (final String example : EXAMPLES)
         {
             final char[] value = Arrays.copyOf(example.toCharArray(), example.length());
             assertTrue(example + " isn't a member of the char array set", CHAR_ARRAY_SET.contains(value, value.length));
