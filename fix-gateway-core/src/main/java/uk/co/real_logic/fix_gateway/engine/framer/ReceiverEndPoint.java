@@ -263,7 +263,7 @@ class ReceiverEndPoint
 
                 final int messageType = getMessageType(endOfBodyLength, endOfMessage);
                 final int length = (endOfMessage + 1) - offset;
-                if (checksumInvalid(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
+                if (validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
                 {
                     if (saveInvalidChecksumMessage(offset, messageType, length))
                     {
@@ -302,10 +302,11 @@ class ReceiverEndPoint
         return offset;
     }
 
-    private boolean checksumInvalid(final int endOfMessage,
-                                    final int startOfChecksumValue,
-                                    final int offset,
-                                    final int startOfChecksumTag)
+    private boolean validateChecksum(
+        final int endOfMessage,
+        final int startOfChecksumValue,
+        final int offset,
+        final int startOfChecksumTag)
     {
         final int expectedChecksum = buffer.getInt(startOfChecksumValue - 1, endOfMessage);
         final int computedChecksum = buffer.computeChecksum(offset, startOfChecksumTag + 1);
