@@ -20,6 +20,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
+import org.agrona.collections.ArrayUtil;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.EpochClock;
@@ -42,14 +43,13 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 
-import java.util.ArrayList;
+import java.util.AbstractList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static java.util.Collections.unmodifiableList;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.LogTag.*;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -82,8 +82,19 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private static final long NO_CORRELATION_ID = 0;
 
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
-    private final ArrayList<Session> sessions = new ArrayList<>();
-    private final List<Session> unmodifiableSessions = unmodifiableList(sessions);
+    private Session[] sessions = new Session[0];
+    private final List<Session> unmodifiableSessions = new AbstractList<Session>()
+    {
+        public Session get(final int index)
+        {
+            return sessions[index];
+        }
+
+        public int size()
+        {
+            return sessions.length;
+        }
+    };
 
     // Used when checking the consistency of the session ids
     private final LongHashSet sessionIds = new LongHashSet(MISSING_SESSION_ID);
@@ -203,7 +214,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     void disableSession(final Session session)
     {
-        sessions.remove(session);
+        sessions = ArrayUtil.remove(sessions, session);
         accessor.disable(session);
     }
 
@@ -455,10 +466,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private void setLibraryConnected(final boolean libraryConnected)
     {
-        final ArrayList<Session> sessions = this.sessions;
-        for (int i = 0, size = sessions.size(); i < size; i++)
+        final Session[] sessions = this.sessions;
+        for (int i = 0, size = sessions.length; i < size; i++)
         {
-            final Session session = sessions.get(i);
+            final Session session = sessions[i];
             accessor.libraryConnected(session, libraryConnected);
         }
     }
@@ -474,12 +485,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private int pollSessions(final long timeInMs)
     {
-        final ArrayList<Session> sessions = this.sessions;
+        final Session[] sessions = this.sessions;
         int total = 0;
 
-        for (int i = 0, size = sessions.size(); i < size; i++)
+        for (int i = 0, size = sessions.length; i < size; i++)
         {
-            final Session session = sessions.get(i);
+            final Session session = sessions[i];
             total += session.poll(timeInMs);
         }
 
@@ -693,7 +704,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 {
                     final Session session = subscriber.session();
                     session.close();
-                    sessions.remove(session);
+                    sessions = ArrayUtil.remove(sessions, session);
                 }
 
                 return action;
@@ -803,7 +814,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 LIBRARY_CONNECT, "%d: Received Control Notification from engine at timeInMs %d\n", libraryId, timeInMs);
 
             final LongHashSet sessionIds = this.sessionIds;
-            final ArrayList<Session> sessions = this.sessions;
+            Session[] sessions = this.sessions;
 
             // copy session ids.
             sessionIds.clear();
@@ -813,9 +824,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 sessionIds.add(sessionsDecoder.sessionId());
             }
 
-            for (int i = 0, size = sessions.size(); i < size; )
+            for (int i = 0, size = sessions.length; i < size; i++)
             {
-                final Session session = sessions.get(i);
+                final Session session = sessions[i];
                 final long sessionId = session.id();
                 if (!sessionIds.remove(sessionId))
                 {
@@ -825,7 +836,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                         subscriber.onTimeout(libraryId);
                     }
                     session.close();
-                    sessions.remove(i);
+                    sessions = ArrayUtil.remove(sessions, i);
                     size--;
                 }
                 else
@@ -833,6 +844,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     i++;
                 }
             }
+            this.sessions = sessions;
 
             // sessions that the gateway thinks you have, that you don't
             if (!sessionIds.isEmpty())
@@ -875,7 +887,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             session, sessionIdStrategy, authenticationStrategy, validationStrategy);
         final SessionSubscriber subscriber = new SessionSubscriber(parser, session, receiveTimer, sessionTimer);
         connectionIdToSession.put(connectionId, subscriber);
-        sessions.add(session);
+        sessions = ArrayUtil.add(sessions, session);
     }
 
     private Session initiateSession(
