@@ -82,6 +82,13 @@ public class Session implements AutoCloseable
     public static final long NO_OPERATION = MIN_VALUE;
     public static final long LIBRARY_DISCONNECTED = NO_OPERATION + 1;
 
+    static final short ACTIVE_VALUE = 3;
+    static final short AWAITING_RESEND_VALUE = 4;
+    static final short LOGGING_OUT_VALUE = 5;
+    static final short LOGGING_OUT_AND_DISCONNECTING_VALUE = 6;
+    static final short AWAITING_LOGOUT_VALUE = 7;
+    static final short DISCONNECTING_VALUE = 8;
+
     /**
      * The proportion of the maximum heartbeat interval before you send your heartbeat
      */
@@ -406,7 +413,7 @@ public class Session implements AutoCloseable
      */
     public boolean canSendMessage()
     {
-        return state() == ACTIVE;
+        return state == ACTIVE;
     }
 
     /**
@@ -464,81 +471,89 @@ public class Session implements AutoCloseable
      */
     public int poll(final long time)
     {
-        final SessionState state = state();
+        final short state = state().value();
 
-        if (state == DISCONNECTING)
+        switch (state)
         {
-            if (incorrectBeginString)
+            case DISCONNECTING_VALUE:
             {
-                final int sentMsgSeqNum = newSentSeqNum();
-                final long position = proxy.incorrectBeginStringLogout(sentMsgSeqNum, sequenceIndex());
-                if (position < 0)
+                if (incorrectBeginString)
                 {
-                    return 1;
+                    final int sentMsgSeqNum = newSentSeqNum();
+                    final long position = proxy.incorrectBeginStringLogout(sentMsgSeqNum, sequenceIndex());
+                    if (position < 0)
+                    {
+                        return 1;
+                    }
+                    lastSentMsgSeqNum(sentMsgSeqNum);
+                    requestDisconnect(INCORRECT_BEGIN_STRING);
                 }
-                lastSentMsgSeqNum(sentMsgSeqNum);
-                requestDisconnect(INCORRECT_BEGIN_STRING);
-            }
-            else
-            {
-                requestDisconnect();
-            }
-
-            return 1;
-        }
-
-        if (state == LOGGING_OUT)
-        {
-            startLogout();
-
-            return 1;
-        }
-
-        if (state == LOGGING_OUT_AND_DISCONNECTING)
-        {
-            final long position = sendLogout();
-
-            state(position < 0 ? LOGGING_OUT_AND_DISCONNECTING : DISCONNECTING);
-
-            return 1;
-        }
-
-        int actions = 0;
-        if (isActive() && time >= nextRequiredHeartbeatTimeInMs)
-        {
-            // Drop when back pressured: retried on duty cycle
-            final int sentSeqNum = newSentSeqNum();
-            final long position = proxy.heartbeat(sentSeqNum, sequenceIndex());
-            lastSentMsgSeqNum(sentSeqNum, position);
-            actions++;
-        }
-
-        if (time >= nextRequiredInboundMessageTimeInMs)
-        {
-            if (state == AWAITING_LOGOUT || state == AWAITING_RESEND)
-            {
-                // Drop when back pressured: retried on duty cycle
-                requestDisconnect();
-            }
-            else if (isActive())
-            {
-                final int sentSeqNum = newSentSeqNum();
-                if (proxy.testRequest(sentSeqNum, TEST_REQ_ID, sequenceIndex()) >= 0)
+                else
                 {
-                    lastSentMsgSeqNum(sentSeqNum);
-                    state(AWAITING_RESEND);
-                    incNextReceivedInboundMessageTime(time);
+                    requestDisconnect();
                 }
-            }
-            actions++;
-        }
 
-        return actions;
+                return 1;
+            }
+
+            case LOGGING_OUT_VALUE:
+            {
+                startLogout();
+
+                return 1;
+            }
+
+            case LOGGING_OUT_AND_DISCONNECTING_VALUE:
+            {
+                final long position = sendLogout();
+
+                state(position < 0 ? LOGGING_OUT_AND_DISCONNECTING : DISCONNECTING);
+
+                return 1;
+            }
+
+            default:
+            {
+                int actions = 0;
+                final boolean isActive = state == ACTIVE_VALUE || state == AWAITING_RESEND_VALUE;
+                if (isActive && time >= nextRequiredHeartbeatTimeInMs)
+                {
+                    // Drop when back pressured: retried on duty cycle
+                    final int sentSeqNum = newSentSeqNum();
+                    final long position = proxy.heartbeat(sentSeqNum, sequenceIndex());
+                    lastSentMsgSeqNum(sentSeqNum, position);
+                    actions++;
+                }
+
+                if (time >= nextRequiredInboundMessageTimeInMs)
+                {
+                    if (state == AWAITING_LOGOUT_VALUE || state == AWAITING_RESEND_VALUE)
+                    {
+                        // Drop when back pressured: retried on duty cycle
+                        requestDisconnect();
+                    }
+                    else if (isActive)
+                    {
+                        final int sentSeqNum = newSentSeqNum();
+                        if (proxy.testRequest(sentSeqNum, TEST_REQ_ID, sequenceIndex()) >= 0)
+                        {
+                            lastSentMsgSeqNum(sentSeqNum);
+                            state(AWAITING_RESEND);
+                            incNextReceivedInboundMessageTime(time);
+                        }
+                    }
+                    actions++;
+                }
+
+                return actions;
+            }
+        }
     }
 
     public boolean isActive()
     {
-        return state == ACTIVE || state == AWAITING_RESEND;
+        final short state = this.state.value();
+        return state == ACTIVE_VALUE || state == AWAITING_RESEND_VALUE;
     }
 
 

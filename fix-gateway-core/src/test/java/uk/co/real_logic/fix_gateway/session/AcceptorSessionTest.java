@@ -27,6 +27,8 @@ import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_SESSION_B
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.SENDINGTIME_ACCURACY_PROBLEM;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
+import static uk.co.real_logic.fix_gateway.session.Session.ACTIVE_VALUE;
+import static uk.co.real_logic.fix_gateway.session.Session.AWAITING_RESEND_VALUE;
 import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 
 public class AcceptorSessionTest extends AbstractSessionTest
@@ -51,6 +53,17 @@ public class AcceptorSessionTest extends AbstractSessionTest
             SEQUENCE_INDEX,
             CONNECTED,
             DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS);
+    }
+
+    @Test
+    public void shouldHaveConstantsInSyncWithMessageSchema()
+    {
+        assertEquals(ACTIVE.value(), ACTIVE_VALUE);
+        assertEquals(AWAITING_RESEND.value(), AWAITING_RESEND_VALUE);
+        assertEquals(LOGGING_OUT.value(), Session.LOGGING_OUT_VALUE);
+        assertEquals(LOGGING_OUT_AND_DISCONNECTING.value(), Session.LOGGING_OUT_AND_DISCONNECTING_VALUE);
+        assertEquals(AWAITING_LOGOUT.value(), Session.AWAITING_LOGOUT_VALUE);
+        assertEquals(DISCONNECTING.value(), Session.DISCONNECTING_VALUE);
     }
 
     @Test
