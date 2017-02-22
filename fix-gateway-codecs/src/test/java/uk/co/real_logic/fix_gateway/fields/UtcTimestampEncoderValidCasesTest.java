@@ -21,6 +21,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoderValidCasesTest.toEpochMillis;
@@ -30,7 +31,11 @@ import static uk.co.real_logic.fix_gateway.util.CustomMatchers.sequenceEqualsAsc
 public class UtcTimestampEncoderValidCasesTest
 {
 
-    private final String timestamp;
+    private static final UtcTimestampEncoder encoder = new UtcTimestampEncoder();
+
+    private final String expectedTimestamp;
+    private final long epochMillis;
+    private final int expectedLength;
 
     @Parameters
     public static Iterable<Object> data()
@@ -40,20 +45,29 @@ public class UtcTimestampEncoderValidCasesTest
 
     public UtcTimestampEncoderValidCasesTest(final String timestamp)
     {
-        this.timestamp = timestamp;
+        this.expectedTimestamp = timestamp;
+        epochMillis = toEpochMillis(expectedTimestamp);
+        expectedLength = expectedTimestamp.length();
     }
 
     @Test
-    public void canEncodeTimestamp()
+    public void canStaticEncodeTimestamp()
     {
-        final long epochMillis = toEpochMillis(timestamp);
-        final int expectedLength = timestamp.length();
         final MutableAsciiBuffer string = new MutableAsciiBuffer(new byte[expectedLength + 2]);
 
         final int length = UtcTimestampEncoder.encode(epochMillis, string, 1);
 
         assertEquals("encoded wrong length", expectedLength, length);
-        assertThat(string, sequenceEqualsAscii(timestamp, 1, length));
+        assertThat(string, sequenceEqualsAscii(expectedTimestamp, 1, length));
+    }
+
+    @Test
+    public void canInstanceEncodeTimestamp()
+    {
+        final int length = encoder.encode(epochMillis);
+
+        assertEquals("encoded wrong length", expectedLength, length);
+        assertEquals(new String(encoder.buffer(), 0, length, US_ASCII), expectedTimestamp);
     }
 
 }

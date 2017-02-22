@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.fields;
 
-import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.fix_gateway.fields.CalendricalUtil.*;
@@ -27,14 +26,15 @@ public final class UtcTimestampEncoder
 
     public static final int LENGTH_WITH_MILLISECONDS = 21;
     public static final int LENGTH_WITHOUT_MILLISECONDS = 17;
+    public static final int LENGTH_OF_DATE = 8;
+    public static final int LENGTH_OF_DATE_AND_DASH = LENGTH_OF_DATE + 1;
 
     private final byte[] bytes = new byte[LENGTH_WITH_MILLISECONDS];
-    private final UnsafeBuffer buffer = new UnsafeBuffer(bytes);
-    private final MutableAsciiBuffer flyweight = new MutableAsciiBuffer(buffer);
+    private final MutableAsciiBuffer flyweight = new MutableAsciiBuffer(bytes);
 
     public int encode(final long epochMillis)
     {
-        buffer.wrap(bytes);
+        flyweight.wrap(bytes);
         return encode(epochMillis, flyweight, 0);
     }
 
@@ -55,8 +55,8 @@ public final class UtcTimestampEncoder
         final int fractionOfSecond = (int)(Math.floorMod(epochMillis, MILLIS_IN_SECOND));
 
         encodeDate(epochDay, string, offset);
-        string.putChar(offset + 8, '-');
-        UtcTimeOnlyEncoder.encode(localSecond, fractionOfSecond, string, offset + 9);
+        string.putChar(offset + LENGTH_OF_DATE, '-');
+        UtcTimeOnlyEncoder.encode(localSecond, fractionOfSecond, string, offset + LENGTH_OF_DATE_AND_DASH);
 
         return fractionOfSecond > 0 ? LENGTH_WITH_MILLISECONDS : LENGTH_WITHOUT_MILLISECONDS;
     }

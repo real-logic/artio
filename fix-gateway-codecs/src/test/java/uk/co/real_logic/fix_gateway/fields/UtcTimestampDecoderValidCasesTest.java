@@ -29,6 +29,7 @@ import java.util.Arrays;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.time.temporal.ChronoField.MILLI_OF_SECOND;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoder.LONG_LENGTH;
 
@@ -41,7 +42,7 @@ public class UtcTimestampDecoderValidCasesTest
     {
         final LocalDateTime parsedDate = LocalDateTime.parse(timestamp, FORMATTER);
         final ZonedDateTime utc = ZonedDateTime.of(parsedDate, ZoneId.of("UTC"));
-        return utc.toEpochSecond() * 1000 + utc.getLong(MILLI_OF_SECOND);
+        return SECONDS.toMillis(utc.toEpochSecond()) + utc.getLong(MILLI_OF_SECOND);
     }
 
     private final String timestamp;
