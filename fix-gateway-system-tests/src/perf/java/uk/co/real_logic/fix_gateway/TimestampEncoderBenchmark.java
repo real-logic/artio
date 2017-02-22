@@ -17,9 +17,7 @@ package uk.co.real_logic.fix_gateway;
 
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
-import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.util.concurrent.TimeUnit;
 
@@ -29,41 +27,40 @@ import java.util.concurrent.TimeUnit;
 @Warmup(iterations = 5)
 @Measurement(iterations = 10)
 @Fork(1)
-public class StubEncoderBenchmark
+public class TimestampEncoderBenchmark
 {
     private UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
-    private LogonEncoder logonEncoder = new LogonEncoder();
-    private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
-
-    // deliberately not static/final
-    private int sequenceNumber = 10;
-    private char[] password = "password".toCharArray();
-    private char[] username = "username".toCharArray();
 
     @Setup
-    public void setup()
+    public void initialiseTimestamp()
     {
-        logonEncoder
-            .header()
-            .senderCompID("ABC_DEFG01")
-            .targetCompID("CCG");
+        timestampEncoder.initialise(System.currentTimeMillis());
     }
 
     @Benchmark
-    public void encodeLogon(final Blackhole bh)
+    public void encodeTimestamp(final Blackhole bh)
     {
         final UtcTimestampEncoder timestampEncoder = this.timestampEncoder;
 
-        logonEncoder
-            .password(password)
-            .username(username)
-            .maxMessageSize(512)
-            .heartBtInt(10)
-            .header()
-            .msgSeqNum(sequenceNumber)
-            .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(System.currentTimeMillis()));
+        bh.consume(timestampEncoder.encode(System.currentTimeMillis()));
+        bh.consume(timestampEncoder.buffer());
+    }
 
-        bh.consume(logonEncoder.encode(buffer, 0));
+    @Benchmark
+    public void updateTimestamp(final Blackhole bh)
+    {
+        final UtcTimestampEncoder timestampEncoder = this.timestampEncoder;
+
+        bh.consume(timestampEncoder.update(System.currentTimeMillis()));
+        bh.consume(timestampEncoder.buffer());
+    }
+
+    @Benchmark
+    public void noise(final Blackhole bh)
+    {
+        bh.consume(this.timestampEncoder);
+
+        bh.consume(System.currentTimeMillis());
     }
 
 }

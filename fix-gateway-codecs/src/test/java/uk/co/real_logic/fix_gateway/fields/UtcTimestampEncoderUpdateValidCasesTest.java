@@ -19,54 +19,53 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
+
+import java.util.stream.Collectors;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoderValidCasesTest.toEpochMillis;
-import static uk.co.real_logic.fix_gateway.util.CustomMatchers.sequenceEqualsAscii;
 
 @RunWith(Parameterized.class)
-public class UtcTimestampEncoderValidCasesTest
+public class UtcTimestampEncoderUpdateValidCasesTest
 {
 
     private final UtcTimestampEncoder encoder = new UtcTimestampEncoder();
     private final String expectedTimestamp;
+    private final long otherEpochMillis;
     private final long epochMillis;
     private final int expectedLength;
 
-    @Parameters(name = "{0}")
-    public static Iterable<String[]> data()
+    @Parameters(name = "{0}, {1}")
+    public static Iterable<Object[]> data()
     {
-        return UtcTimestampDecoderValidCasesTest.data();
+        return UtcTimestampDecoderValidCasesTest
+            .data()
+            .stream()
+            .flatMap(x -> UtcTimestampDecoderValidCasesTest
+                .data()
+                .stream()
+                .map(y -> new Object[]{x[0], toEpochMillis(y[0])}))
+            .collect(Collectors.toList());
     }
 
-    public UtcTimestampEncoderValidCasesTest(final String timestamp)
+    public UtcTimestampEncoderUpdateValidCasesTest(final String timestamp, final long otherEpochMillis)
     {
         this.expectedTimestamp = timestamp;
+        this.otherEpochMillis = otherEpochMillis;
         epochMillis = toEpochMillis(expectedTimestamp);
         expectedLength = expectedTimestamp.length();
     }
 
     @Test
-    public void canStaticEncodeTimestamp()
+    public void canUpdateTimestamp()
     {
-        final MutableAsciiBuffer string = new MutableAsciiBuffer(new byte[expectedLength + 2]);
+        encoder.initialise(otherEpochMillis);
 
-        final int length = UtcTimestampEncoder.encode(epochMillis, string, 1);
+        final int length = encoder.update(epochMillis);
 
         assertEquals("encoded wrong length", expectedLength, length);
-        assertThat(string, sequenceEqualsAscii(expectedTimestamp, 1, length));
-    }
-
-    @Test
-    public void canInstanceEncodeTimestamp()
-    {
-        final int length = encoder.encode(epochMillis);
-
-        assertEquals("encoded wrong length", expectedLength, length);
-        assertEquals(new String(encoder.buffer(), 0, length, US_ASCII), expectedTimestamp);
+        assertEquals(expectedTimestamp, new String(encoder.buffer(), 0, length, US_ASCII));
     }
 
 }

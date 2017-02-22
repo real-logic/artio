@@ -113,6 +113,7 @@ public class SessionProxy
         buffer = new UnsafeBuffer(new byte[bufferSize]);
         string = new MutableAsciiBuffer(buffer);
         lowSequenceNumber = new AsciiFormatter("MsgSeqNum too low, expecting %s but received %s");
+        timestampEncoder.initialise(clock.time());
     }
 
     public SessionProxy setupSession(final long sessionId, final CompositeKey sessionKey)
@@ -353,7 +354,8 @@ public class SessionProxy
 
     private void setupHeader(final HeaderEncoder header, final int msgSeqNo)
     {
-        header.sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(clock.time()));
+        final UtcTimestampEncoder timestampEncoder = this.timestampEncoder;
+        header.sendingTime(timestampEncoder.buffer(), timestampEncoder.update(clock.time()));
         header.msgSeqNum(msgSeqNo);
     }
 

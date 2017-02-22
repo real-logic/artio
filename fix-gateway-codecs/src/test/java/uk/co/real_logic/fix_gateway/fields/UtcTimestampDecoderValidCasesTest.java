@@ -26,6 +26,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Arrays;
+import java.util.Collection;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.time.temporal.ChronoField.MILLI_OF_SECOND;
@@ -48,7 +49,7 @@ public class UtcTimestampDecoderValidCasesTest
     private final String timestamp;
 
     @Parameters(name = "{0}")
-    public static Iterable<Object> data()
+    public static Collection<String[]> data()
     {
         return Arrays.asList(
             new String[] {"00010101-00:00:00"},
