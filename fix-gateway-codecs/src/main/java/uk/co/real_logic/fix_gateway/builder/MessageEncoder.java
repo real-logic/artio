@@ -20,4 +20,6 @@ public interface MessageEncoder extends Encoder
     int messageType();
 
     Object header();
+
+    void resetMessage();
 }

@@ -164,24 +164,40 @@ public abstract class Generator
 
         final String resetEntries = resetEntries(entries, methods);
 
-        final String resetHeaderAndTrailer = isMessage
-            ? "        header.reset();\n" +
-            "        trailer.reset();\n"
-            : "";
-
-        return String.format(
-            "    public void reset()\n" +
-            "    {\n" +
-            "%s" +
-            "%s" +
-            "%s" +
-            "    }\n\n" +
-            "%s",
-            resetHeaderAndTrailer,
-            resetEntries,
-            additionalReset,
-            methods
-        );
+        if (isMessage)
+        {
+            return String.format(
+                "    public void reset()\n" +
+                "    {\n" +
+                "        header.reset();\n" +
+                "        trailer.reset();\n" +
+                "        resetMessage();\n" +
+                "%2$s" +
+                "    }\n\n" +
+                "    public void resetMessage()\n" +
+                "    {\n" +
+                "%1$s" +
+                "    }\n\n" +
+                "%3$s",
+                resetEntries,
+                additionalReset,
+                methods
+            );
+        }
+        else
+        {
+            return String.format(
+                "    public void reset()\n" +
+                "    {\n" +
+                "%s" +
+                "%s" +
+                "    }\n\n" +
+                "%s",
+                resetEntries,
+                additionalReset,
+                methods
+            );
+        }
     }
 
     protected String resetEntries(final List<Entry> entries, final StringBuilder methods)

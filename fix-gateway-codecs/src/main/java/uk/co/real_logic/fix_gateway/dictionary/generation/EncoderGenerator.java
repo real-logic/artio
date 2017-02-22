@@ -36,8 +36,6 @@ import static uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer.LONGEST_INT_L
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatClassName;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
-// TODO: optimisations
-// 1. Implement a reset method that doesn't reset the header to avoid having to set header information on every send.
 // TODO: stop trailers and groups from implementing the encoder interface
 public class EncoderGenerator extends Generator
 {

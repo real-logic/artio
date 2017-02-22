@@ -26,7 +26,10 @@ import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiFormatter;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
+import java.util.List;
+
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.VALUE_IS_INCORRECT;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
@@ -76,6 +79,9 @@ public class SessionProxy
     private final RejectEncoder reject = new RejectEncoder();
     private final TestRequestEncoder testRequest = new TestRequestEncoder();
     private final SequenceResetEncoder sequenceReset = new SequenceResetEncoder();
+    private final List<HeaderEncoder> headers = asList(
+        logon.header(), resendRequest.header(), logout.header(), heartbeat.header(), reject.header(),
+        testRequest.header(), sequenceReset.header());
 
     private final AsciiFormatter lowSequenceNumber;
     private final UnsafeBuffer buffer;
@@ -87,7 +93,6 @@ public class SessionProxy
     private final long connectionId;
     private final int libraryId;
     private long sessionId;
-    private CompositeKey sessionKey;
     private boolean libraryConnected = true;
 
     public SessionProxy(
@@ -115,7 +120,11 @@ public class SessionProxy
         requireNonNull(sessionKey, "sessionKey");
 
         this.sessionId = sessionId;
-        this.sessionKey = sessionKey;
+        for (final HeaderEncoder header : headers)
+        {
+            sessionIdStrategy.setupSession(sessionKey, header);
+        }
+
         return this;
     }
 
@@ -344,15 +353,11 @@ public class SessionProxy
 
     private void setupHeader(final HeaderEncoder header, final int msgSeqNo)
     {
-        if (!header.hasSenderCompID())
-        {
-            sessionIdStrategy.setupSession(sessionKey, header);
-        }
         header.sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(clock.time()));
         header.msgSeqNum(msgSeqNo);
     }
 
-    private long send(final int length, final int messageType, final int sequenceIndex, final Encoder encoder)
+    private long send(final int length, final int messageType, final int sequenceIndex, final MessageEncoder encoder)
     {
         if (!libraryConnected)
         {
@@ -361,7 +366,7 @@ public class SessionProxy
 
         final long position = gatewayPublication.saveMessage(
             buffer, 0, length, libraryId, messageType, sessionId, sequenceIndex, connectionId, OK);
-        encoder.reset();
+        encoder.resetMessage();
         return position;
     }
 

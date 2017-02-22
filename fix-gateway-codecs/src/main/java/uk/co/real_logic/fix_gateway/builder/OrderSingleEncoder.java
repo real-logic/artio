@@ -118,4 +118,9 @@ public class OrderSingleEncoder implements MessageEncoder
     {
         return null;
     }
+
+    public void resetMessage()
+    {
+
+    }
 }
