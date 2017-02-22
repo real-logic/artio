@@ -26,10 +26,7 @@ import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.AsciiFormatter;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
-import java.util.List;
-
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.VALUE_IS_INCORRECT;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
@@ -79,9 +76,6 @@ public class SessionProxy
     private final RejectEncoder reject = new RejectEncoder();
     private final TestRequestEncoder testRequest = new TestRequestEncoder();
     private final SequenceResetEncoder sequenceReset = new SequenceResetEncoder();
-    private final List<HeaderEncoder> headers = asList(
-        logon.header(), resendRequest.header(), logout.header(), heartbeat.header(), reject.header(),
-        testRequest.header(), sequenceReset.header());
 
     private final AsciiFormatter lowSequenceNumber;
     private final UnsafeBuffer buffer;
@@ -350,7 +344,10 @@ public class SessionProxy
 
     private void setupHeader(final HeaderEncoder header, final int msgSeqNo)
     {
-        sessionIdStrategy.setupSession(sessionKey, header);
+        if (!header.hasSenderCompID())
+        {
+            sessionIdStrategy.setupSession(sessionKey, header);
+        }
         header.sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(clock.time()));
         header.msgSeqNum(msgSeqNo);
     }
