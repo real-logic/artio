@@ -37,7 +37,7 @@ public class UtcTimestampEncoderValidCasesTest
     private final long epochMillis;
     private final int expectedLength;
 
-    @Parameters
+    @Parameters(name = "{0}")
     public static Iterable<Object> data()
     {
         return UtcTimestampDecoderValidCasesTest.data();

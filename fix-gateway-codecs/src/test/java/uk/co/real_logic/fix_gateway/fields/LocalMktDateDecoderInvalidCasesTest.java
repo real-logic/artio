@@ -29,7 +29,7 @@ public class LocalMktDateDecoderInvalidCasesTest
 {
     private final String timestamp;
 
-    @Parameters
+    @Parameters(name = "{0}")
     public static Iterable<Object> data()
     {
         return Arrays.asList(
