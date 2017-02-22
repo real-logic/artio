@@ -18,8 +18,6 @@ package uk.co.real_logic.fix_gateway;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.NotConnectedException;
 
-import static uk.co.real_logic.fix_gateway.LivenessDetector.LivenessState.*;
-
 /**
  * Bidirection application level liveness detector.
  *
@@ -31,12 +29,9 @@ public final class LivenessDetector
     private static final int SEND_INTERVAL_FRACTION = 4;
     private static final Runnable NONE = () -> {};
 
-    enum LivenessState
-    {
-        AWAITING_CONNECT,
-        CONNECTED,
-        DISCONNECTED
-    }
+    private static final int AWAITING_CONNECT = 0;
+    private static final int CONNECTED = 1;
+    private static final int DISCONNECTED = 2;
 
     private final GatewayPublication publication;
     private final Runnable onDisconnect;
@@ -46,7 +41,7 @@ public final class LivenessDetector
 
     private long latestNextReceiveTimeInMs;
     private long nextSendTimeInMs;
-    private LivenessState state;
+    private int state;
 
     public static LivenessDetector forEngine(
         final GatewayPublication publication,
@@ -75,7 +70,7 @@ public final class LivenessDetector
         final GatewayPublication publication,
         final int libraryId,
         final long replyTimeoutInMs,
-        final LivenessState state,
+        final int state,
         final Runnable onDisconnect)
     {
         this.publication = publication;

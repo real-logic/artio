@@ -59,23 +59,25 @@ import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICA
 
 final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, AutoCloseable
 {
-    private enum State
-    {
-        /**
-         * Has connected to an engine instance
-         */
-        CONNECTED,
+    /**
+     * Has connected to an engine instance
+     */
+    private static final int CONNECTED = 0;
 
-        /**
-         * Currently connecting to an engine instance
-         */
-        CONNECTING,
+    /**
+     * Currently connecting to an engine instance
+     */
+    private static final int ATTEMPT_CONNECT = 1;
 
-        /**
-         * Was explicitly closed
-         */
-        CLOSED
-    }
+    /**
+     * Currently connecting to an engine instance
+     */
+    private static final int CONNECTING = 2;
+
+    /**
+     * Was explicitly closed
+     */
+    private static final int CLOSED = 3;
 
     private static final long NO_CORRELATION_ID = 0;
 
@@ -113,7 +115,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private String errorMessage;
 
-    private State state = State.CONNECTING;
+    private int state = CONNECTING;
 
     // State changed upon connect/reconnect
     private LivenessDetector livenessDetector;
@@ -152,12 +154,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     boolean isConnected()
     {
-        return state == State.CONNECTED;
+        return state == CONNECTED;
     }
 
     boolean isClosed()
     {
-        return state == State.CLOSED;
+        return state == CLOSED;
     }
 
     int libraryId()
@@ -265,16 +267,15 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long timeInMs = timeInMs();
         switch (state)
         {
-            case CONNECTING:
-                nextConnectingStep(timeInMs);
-
+            case CONNECTED:
                 return pollWithoutReconnect(timeInMs, fragmentLimit);
 
-            case CONNECTED:
-                if (livenessDetector.hasDisconnected())
-                {
-                    connect(timeInMs);
-                }
+            case ATTEMPT_CONNECT:
+                connect();
+                return pollWithoutReconnect(timeInMs, fragmentLimit);
+
+            case CONNECTING:
+                nextConnectingStep(timeInMs);
 
                 return pollWithoutReconnect(timeInMs, fragmentLimit);
 
@@ -286,11 +287,17 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private int pollWithoutReconnect(final long timeInMs, final int fragmentLimit)
     {
+        final LivenessDetector livenessDetector = this.livenessDetector;
+
         final int messagesRead = inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit);
-        return messagesRead +
-            pollSessions(timeInMs) +
-            livenessDetector.poll(timeInMs) +
-            checkReplies(timeInMs);
+        final int operations = messagesRead + pollSessions(timeInMs) + livenessDetector.poll(timeInMs);
+
+        if (livenessDetector.hasDisconnected())
+        {
+            state = ATTEMPT_CONNECT;
+        }
+
+        return operations + checkReplies(timeInMs);
     }
 
     // -----------------------------------------------------------------------
@@ -307,7 +314,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         try
         {
-            state = State.CONNECTING;
+            state = CONNECTING;
             currentAeronChannel = configuration.libraryAeronChannels().get(0);
             DebugLogger.log(LIBRARY_CONNECT, "Attempting to connect to %s\n", currentAeronChannel);
 
@@ -338,7 +345,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (livenessDetector.isConnected())
         {
-            state = State.CONNECTED;
+            state = CONNECTED;
             onConnect();
         }
         else if (timeInMs > nextAttemptTime)
@@ -994,7 +1001,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private void checkState()
     {
         // TODO: ban connecting from everything but library connect
-        if (state == State.CLOSED)
+        if (state == CLOSED)
         {
             throw new IllegalStateException("Library has been closed");
         }
@@ -1014,10 +1021,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public void close()
     {
-        if (state != State.CLOSED)
+        if (state != CLOSED)
         {
             connectionIdToSession.values().forEach(subscriber -> accessor.disable(subscriber.session()));
-            state = State.CLOSED;
+            state = CLOSED;
         }
     }
 }

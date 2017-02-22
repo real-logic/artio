@@ -51,7 +51,13 @@ public final class FixBenchmarkServer
                 if (notConnected && library.isConnected())
                 {
                     System.out.println("Connected");
+                    break;
                 }
+            }
+
+            while (true)
+            {
+                idleStrategy.idle(library.poll(10));
             }
         }
     }
