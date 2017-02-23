@@ -52,7 +52,7 @@ public class FixEngineRunner implements AutoCloseable
         frameDropper = new FrameDropper(ourId);
 
         final MediaDriver.Context context =
-            mediaDriverContext(TestFixtures.TERM_BUFFER_LENGTH)
+            mediaDriverContext(TestFixtures.TERM_BUFFER_LENGTH, true)
                 .aeronDirectoryName(aeronDirName(ourId))
                 .termBufferSparseFile(true)
                 .publicationUnblockTimeoutNs(TimeUnit.SECONDS.toNanos(100))

@@ -49,7 +49,7 @@ public final class TestFixtures
 
     public static MediaDriver launchMediaDriver(final int termBufferLength)
     {
-        final MediaDriver.Context context = mediaDriverContext(termBufferLength);
+        final MediaDriver.Context context = mediaDriverContext(termBufferLength, true);
 
         final MediaDriver mediaDriver = MediaDriver.launch(context);
         final String aeronDirectoryName = context.aeronDirectoryName();
@@ -58,11 +58,12 @@ public final class TestFixtures
         return mediaDriver;
     }
 
-    public static MediaDriver.Context mediaDriverContext(final int termBufferLength)
+    public static MediaDriver.Context mediaDriverContext(
+        final int termBufferLength, final boolean dirsDeleteOnStart)
     {
         return new MediaDriver.Context()
             .threadingMode(SHARED)
-            .dirsDeleteOnStart(true)
+            .dirsDeleteOnStart(dirsDeleteOnStart)
             .publicationTermBufferLength(termBufferLength)
             .ipcTermBufferLength(termBufferLength);
     }
