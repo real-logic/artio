@@ -21,6 +21,7 @@ import org.hamcrest.Matcher;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.FixMatchers;
 import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
@@ -31,17 +32,15 @@ import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 
 import java.util.Arrays;
-import java.util.List;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasFluentProperty;
 
 public class EngineAndLibraryIntegrationTest
 {
@@ -95,9 +94,9 @@ public class EngineAndLibraryIntegrationTest
     {
         library = connectLibrary();
 
-        assertHasLibraries(
-            matchesLibrary(library.libraryId()),
-            matchesLibrary(ENGINE_LIBRARY_ID));
+        assertEventuallyHasLibraries(
+            FixMatchers.matchesLibrary(library.libraryId()),
+            FixMatchers.matchesLibrary(ENGINE_LIBRARY_ID));
     }
 
     @Test
@@ -116,10 +115,10 @@ public class EngineAndLibraryIntegrationTest
     {
         setupTwoLibraries();
 
-        assertHasLibraries(
-            matchesLibrary(library.libraryId()),
-            matchesLibrary(library2.libraryId()),
-            matchesLibrary(ENGINE_LIBRARY_ID));
+        assertEventuallyHasLibraries(
+            FixMatchers.matchesLibrary(library.libraryId()),
+            FixMatchers.matchesLibrary(library2.libraryId()),
+            FixMatchers.matchesLibrary(ENGINE_LIBRARY_ID));
     }
 
     @Test
@@ -136,9 +135,9 @@ public class EngineAndLibraryIntegrationTest
 
         assertLibrariesDisconnect(1, library2, engine);
 
-        assertHasLibraries(
-            matchesLibrary(library2.libraryId()),
-            matchesLibrary(ENGINE_LIBRARY_ID));
+        assertEventuallyHasLibraries(
+            FixMatchers.matchesLibrary(library2.libraryId()),
+            FixMatchers.matchesLibrary(ENGINE_LIBRARY_ID));
 
         return library2;
     }
@@ -181,21 +180,10 @@ public class EngineAndLibraryIntegrationTest
         );
     }
 
-    private Matcher<LibraryInfo> matchesLibrary(final int libraryId)
-    {
-        return hasFluentProperty("libraryId", is(libraryId));
-    }
-
     @SafeVarargs
-    private final void assertHasLibraries(final Matcher<LibraryInfo>... libraryMatchers)
+    private final void assertEventuallyHasLibraries(final Matcher<LibraryInfo>... libraryMatchers)
     {
-        assertEventuallyTrue("Could not find libraries: " + Arrays.toString(libraryMatchers),
-            () ->
-            {
-                poll(library, library2);
-                final List<LibraryInfo> libraries = libraries(engine);
-                assertThat(libraries, containsInAnyOrder(libraryMatchers));
-            });
+        SystemTestUtil.assertEventuallyHasLibraries(library, library2, engine, libraryMatchers);
     }
 
     private void assertNumActiveLibraries(final int count)

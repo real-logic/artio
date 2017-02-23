@@ -72,9 +72,7 @@ public final class TestFixtures
     {
         if (mediaDriver != null)
         {
-            final String aeronDirectoryName = mediaDriver.aeronDirectoryName();
-            CloseChecker.onClose(aeronDirectoryName, mediaDriver);
-            mediaDriver.close();
+            final String aeronDirectoryName = closeMediaDriver(mediaDriver);
 
             final File directory = new File(aeronDirectoryName);
             if (directory.exists())
@@ -83,6 +81,14 @@ public final class TestFixtures
                 IoUtil.delete(directory, false);
             }
         }
+    }
+
+    public static String closeMediaDriver(final MediaDriver mediaDriver)
+    {
+        final String aeronDirectoryName = mediaDriver.aeronDirectoryName();
+        CloseChecker.onClose(aeronDirectoryName, mediaDriver);
+        mediaDriver.close();
+        return aeronDirectoryName;
     }
 
     public static String clusteredAeronChannel()

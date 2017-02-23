@@ -17,10 +17,13 @@ package uk.co.real_logic.fix_gateway;
 
 import org.hamcrest.Matcher;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
+import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.session.Session;
 
 import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
+import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasFluentProperty;
 import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasResult;
 
 public final class FixMatchers
@@ -47,5 +50,10 @@ public final class FixMatchers
     public static Matcher<Session> hasSequenceIndex(final int sequenceIndex)
     {
         return hasResult("sequenceIndex", Session::sequenceIndex, equalTo(sequenceIndex));
+    }
+
+    public static Matcher<LibraryInfo> matchesLibrary(final int libraryId)
+    {
+        return hasFluentProperty("libraryId", is(libraryId));
     }
 }

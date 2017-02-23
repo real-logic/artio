@@ -483,6 +483,42 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         awaitIsConnected(true);
     }
 
+    @Test
+    public void shouldReconnectToBouncedGatewayWithoutTimeout()
+    {
+        acquireAcceptingSession();
+
+        messagesCanBeExchanged();
+
+        assertTrue("Session not active", acceptingSession.isActive());
+
+        acceptingEngine.close();
+
+        launchAcceptingEngine();
+
+        // Hasn't initially detected the library that was previously connected.
+        assertThat(SystemTestUtil.libraries(acceptingEngine), hasSize(1));
+
+        assertEventuallyTrue(
+            "Session never disconnects",
+            () ->
+            {
+                pollLibraries();
+                return !acceptingSession.isActive();
+            });
+
+        SystemTestUtil.assertEventuallyHasLibraries(
+            initiatingLibrary,
+            acceptingLibrary,
+            acceptingEngine,
+            matchesLibrary(acceptingLibrary.libraryId()),
+            matchesLibrary(ENGINE_LIBRARY_ID));
+
+        connectSessions();
+
+        messagesCanBeExchanged();
+    }
+
     private void awaitIsConnected(final boolean connected)
     {
         assertEventuallyTrue(

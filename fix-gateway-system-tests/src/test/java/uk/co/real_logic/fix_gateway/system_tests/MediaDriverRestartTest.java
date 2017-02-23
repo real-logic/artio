@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 
 import static java.util.Collections.singletonList;
+import static uk.co.real_logic.fix_gateway.TestFixtures.closeMediaDriver;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class MediaDriverRestartTest extends AbstractGatewayToGatewaySystemTest
@@ -47,7 +48,7 @@ public class MediaDriverRestartTest extends AbstractGatewayToGatewaySystemTest
         initiatingLibrary.close();
         acceptingEngine.close();
         initiatingEngine.close();
-        mediaDriver.close();
+        closeMediaDriver(mediaDriver);
 
         Thread.sleep(DRIVER_TIMEOUT_MS);
 
