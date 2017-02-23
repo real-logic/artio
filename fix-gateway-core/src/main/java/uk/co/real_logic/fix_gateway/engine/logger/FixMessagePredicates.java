@@ -78,7 +78,7 @@ public final class FixMessagePredicates
      */
     public static FixMessagePredicate messageTypeOf(final String ... messageTypes)
     {
-        final IntHashSet hashSet = new IntHashSet(-1);
+        final IntHashSet hashSet = new IntHashSet();
         Stream.of(messageTypes)
             .mapToInt(GenerationUtil::packMessageType)
             .forEach(hashSet::add);
@@ -93,7 +93,7 @@ public final class FixMessagePredicates
      */
     public static FixMessagePredicate messageTypeOf(final int ... messageTypes)
     {
-        final IntHashSet hashSet = new IntHashSet(-1);
+        final IntHashSet hashSet = new IntHashSet();
         IntStream.of(messageTypes)
                  .forEach(hashSet::add);
         return messageTypeOf(hashSet);

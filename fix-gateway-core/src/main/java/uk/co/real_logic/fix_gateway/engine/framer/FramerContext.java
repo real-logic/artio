@@ -75,7 +75,7 @@ public class FramerContext
         final Streams inboundLibraryStreams = engineContext.inboundLibraryStreams();
 
         final SystemEpochClock clock = new SystemEpochClock();
-        final LongHashSet replicatedConnectionIds = new LongHashSet(SessionContexts.MISSING_SESSION_ID);
+        final LongHashSet replicatedConnectionIds = new LongHashSet();
 
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,

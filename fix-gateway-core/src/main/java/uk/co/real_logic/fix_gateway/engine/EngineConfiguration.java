@@ -127,7 +127,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private MappedFile sessionIdBuffer;
     private String clusterAeronChannel = null;
     private short nodeId = NO_NODE_ID;
-    private IntHashSet otherNodes = new IntHashSet(-1);
+    private IntHashSet otherNodes = new IntHashSet();
     private long clusterTimeoutIntervalInMs = DEFAULT_CLUSTER_TIMEOUT_IN_MS;
 
     private int outboundLibraryFragmentLimit =

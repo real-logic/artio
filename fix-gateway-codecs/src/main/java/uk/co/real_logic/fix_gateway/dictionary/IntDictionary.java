@@ -85,7 +85,7 @@ public final class IntDictionary
 
     private IntHashSet valuesOrDefault(final int key)
     {
-        return map.computeIfAbsent(key, ignore -> new IntHashSet(CAPACITY, MISSING_FIELD));
+        return map.computeIfAbsent(key, ignore -> new IntHashSet(CAPACITY));
     }
 
     public IntHashSet values(final int key)

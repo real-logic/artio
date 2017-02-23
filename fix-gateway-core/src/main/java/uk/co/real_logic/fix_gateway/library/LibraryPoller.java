@@ -53,7 +53,6 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.LogTag.*;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
-import static uk.co.real_logic.fix_gateway.engine.framer.SessionContexts.MISSING_SESSION_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
 
@@ -97,7 +96,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     };
 
     // Used when checking the consistency of the session ids
-    private final LongHashSet sessionIds = new LongHashSet(MISSING_SESSION_ID);
+    private final LongHashSet sessionIds = new LongHashSet();
 
     private final SessionAccessor accessor = new SessionAccessor(LibraryPoller.class);
 

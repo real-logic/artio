@@ -552,8 +552,8 @@ public class Session implements AutoCloseable
 
     public boolean isActive()
     {
-        final short state = this.state.value();
-        return state == ACTIVE_VALUE || state == AWAITING_RESEND_VALUE;
+        final SessionState state = this.state;
+        return state == ACTIVE || state == AWAITING_RESEND;
     }
 
 

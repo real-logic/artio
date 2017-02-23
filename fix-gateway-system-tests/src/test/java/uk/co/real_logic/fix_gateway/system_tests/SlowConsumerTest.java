@@ -95,6 +95,7 @@ public class SlowConsumerTest
 
             library.poll(1);
             framerIdleStrategy.step();
+            framerIdleStrategy.step();
         }
 
         bytesInBufferAtLeast(sessionInfo, (long) senderMaxBytesInBuffer);

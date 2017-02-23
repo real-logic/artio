@@ -62,7 +62,7 @@ public class LeaderTest
     private Leader leader = new Leader(
         ID,
         new EntireClusterAcknowledgementStrategy(),
-        new IntHashSet(40, -1),
+        new IntHashSet(40),
         clusterNode,
         0,
         HEARTBEAT_INTERVAL_IN_MS,

@@ -31,7 +31,7 @@ public final class OtfValidator implements OtfMessageAcceptor
 {
     private static final int UNKNOWN = -1;
 
-    private final IntHashSet fieldsForMessage = new IntHashSet(1024, UNKNOWN);
+    private final IntHashSet fieldsForMessage = new IntHashSet(1024);
     private final AsciiFieldFlyweight stringField = new AsciiFieldFlyweight();
 
     private final OtfMessageAcceptor delegate;

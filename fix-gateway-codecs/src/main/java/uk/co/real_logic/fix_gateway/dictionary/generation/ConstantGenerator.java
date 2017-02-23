@@ -92,7 +92,7 @@ public class ConstantGenerator
                             .collect(joining());
 
                     out.append(String.format(
-                        "    public static final IntHashSet %1$s = new IntHashSet(%3$s, -1);\n" +
+                        "    public static final IntHashSet %1$s = new IntHashSet(%3$s);\n" +
                         "%2$s",
                         valuesField,
                         optionalStaticInit(addValues),
@@ -139,7 +139,7 @@ public class ConstantGenerator
 
         final int hashMapSize = sizeHashSet(fields);
         return String.format(
-            "    public static final IntHashSet %3$s = new IntHashSet(%1$d, -1);\n" +
+            "    public static final IntHashSet %3$s = new IntHashSet(%1$d);\n" +
             "    static\n" +
             "    {\n" +
             "%2$s" +

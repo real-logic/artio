@@ -76,7 +76,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     {
         buffer.putInt(OFFSET, VALUE);
 
-        final IntHashSet followers = new IntHashSet(10, -1);
+        final IntHashSet followers = new IntHashSet(10);
         followers.add(2);
         followers.add(3);
 

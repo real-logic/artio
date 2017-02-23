@@ -249,7 +249,7 @@ public class ScenariosTest
         final Leader leader = new Leader(
             ID,
             new QuorumAcknowledgementStrategy(),
-            new IntHashSet(40, -1),
+            new IntHashSet(40),
             clusterNode,
             0,
             HEARTBEAT_INTERVAL_IN_MS,

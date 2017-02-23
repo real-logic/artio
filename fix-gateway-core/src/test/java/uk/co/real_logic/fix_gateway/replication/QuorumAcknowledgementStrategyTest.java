@@ -114,7 +114,7 @@ public class QuorumAcknowledgementStrategyTest
 
     private IntHashSet votedFor()
     {
-        return new IntHashSet(6, -1);
+        return new IntHashSet(6);
     }
 
 }

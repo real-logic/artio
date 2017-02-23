@@ -79,7 +79,7 @@ class NodeRunner implements AutoCloseable
             .publicationTermBufferLength(termBufferLength)
             .ipcTermBufferLength(termBufferLength);
 
-        final IntHashSet otherNodeIds = new IntHashSet(40, -1);
+        final IntHashSet otherNodeIds = new IntHashSet(40);
         for (final int node : otherNodes)
         {
             otherNodeIds.add(node);

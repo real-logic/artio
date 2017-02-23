@@ -76,8 +76,8 @@ public class SessionContexts
     private final int actingVersion = sessionIdEncoder.sbeSchemaVersion();
 
     private final Function<CompositeKey, SessionContext> onNewLogonFunc = this::onNewLogon;
-    private final LongHashSet currentlyAuthenticatedSessionIds = new LongHashSet(MISSING_SESSION_ID);
-    private final LongHashSet recordedSessions = new LongHashSet(MISSING_SESSION_ID);
+    private final LongHashSet currentlyAuthenticatedSessionIds = new LongHashSet();
+    private final LongHashSet recordedSessions = new LongHashSet();
     private final Map<CompositeKey, SessionContext> compositeToContext = new HashMap<>();
 
     private final CRC32 crc32 = new CRC32();

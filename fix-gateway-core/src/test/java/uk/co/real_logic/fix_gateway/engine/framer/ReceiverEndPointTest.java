@@ -74,7 +74,7 @@ public class ReceiverEndPointTest
     private SequenceNumberIndexReader receivedSequenceNumbers = mock(SequenceNumberIndexReader.class);
     private Framer framer = mock(Framer.class);
     private GatewaySession gatewaySession = mock(GatewaySession.class);
-    private final LongHashSet replicatedConnectionIds = new LongHashSet(SessionContexts.MISSING_SESSION_ID);
+    private final LongHashSet replicatedConnectionIds = new LongHashSet();
 
     private ReceiverEndPoint endPoint = new ReceiverEndPoint(
         mockChannel, BUFFER_SIZE, clusterablePublication, libraryPublication, sessionReplicationStrategy,

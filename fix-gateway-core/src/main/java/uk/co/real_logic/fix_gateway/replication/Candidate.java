@@ -74,7 +74,7 @@ class Candidate implements Role, RaftHandler
         this.voteTimeout = new RandomTimeout(voteTimeout, 0);
         this.termState = termState;
         this.consensusPosition = termState.consensusPosition();
-        votesFor = new IntHashSet(2 * clusterSize, -1);
+        votesFor = new IntHashSet(2 * clusterSize);
         raftSubscription = new RaftSubscription(DebugRaftHandler.wrap(nodeId, this));
         this.nodeState = nodeState;
         this.nodeStateHandler = nodeStateHandler;

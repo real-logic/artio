@@ -115,7 +115,7 @@ public class DecoderGenerator extends Generator
         final String from)
     {
         return String.format(
-            "    public final IntHashSet %2$s = new IntHashSet(%1$d, -1);\n" +
+            "    public final IntHashSet %2$s = new IntHashSet(%1$d);\n" +
             "    {\n" +
             "        %2$s.copy(%3$s);\n" +
             "    }\n\n",
@@ -278,9 +278,9 @@ public class DecoderGenerator extends Generator
             : "";
 
         out.append(String.format(
-            "    private final IntHashSet alreadyVisitedFields = new IntHashSet(%4$d, -1);\n\n" +
-            "    private final IntHashSet missingRequiredFields = new IntHashSet(%1$d, -1);\n\n" +
-            "    private final IntHashSet unknownFields = new IntHashSet(10, -1);\n\n" +
+            "    private final IntHashSet alreadyVisitedFields = new IntHashSet(%4$d);\n\n" +
+            "    private final IntHashSet missingRequiredFields = new IntHashSet(%1$d);\n\n" +
+            "    private final IntHashSet unknownFields = new IntHashSet(10);\n\n" +
             "    private int invalidTagId = NO_ERROR;\n\n" +
             "    public int invalidTagId()\n" +
             "    {\n" +
@@ -325,7 +325,7 @@ public class DecoderGenerator extends Generator
 
         final int hashMapSize = sizeHashSet(fields);
         return String.format(
-            "    public final IntHashSet %3$s = new IntHashSet(%1$d, -1);\n" +
+            "    public final IntHashSet %3$s = new IntHashSet(%1$d);\n" +
             "    {\n" +
             "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
             "        {\n" +
@@ -509,7 +509,7 @@ public class DecoderGenerator extends Generator
                 "    {\n" +
                 "        return next;\n" +
                 "    }\n\n" +
-                "    private IntHashSet seenFields = new IntHashSet(%2$d, -1);\n\n",
+                "    private IntHashSet seenFields = new IntHashSet(%2$d);\n\n",
                 decoderClassName(aggregate),
                 sizeHashSet(aggregate.entries())));
         }

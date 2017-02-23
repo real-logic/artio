@@ -171,7 +171,7 @@ public class FramerTest
             mock(GatewayPublication.class),
             node,
             mock(EngineDescriptorStore.class),
-            new LongHashSet(SessionContexts.MISSING_SESSION_ID),
+            new LongHashSet(),
             inboundPublication,
             DEFAULT_NAME_PREFIX,
             mock(CompletionPosition.class),
