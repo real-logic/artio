@@ -46,4 +46,10 @@ class SoloPublication extends ClusterablePublication
     {
         return dataPublication.position();
     }
+
+    @Override
+    public String toString()
+    {
+        return "SoloPublication: " + dataPublication.channel() + "/" + dataPublication.streamId() + "/" + dataPublication.sessionId();
+    }
 }
