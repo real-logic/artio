@@ -84,19 +84,19 @@ public class AbstractGatewayToGatewaySystemTest
         assertEquals(expectedInitToAccSeqNum, initiatingSession.lastSentMsgSeqNum());
         assertEquals(expectedInitToAccSeqNum, acceptingSession.lastReceivedMsgSeqNum());
 
-        awaitMessage(expectedAccToInitSeqNum, initiatingSession, initiatingLibrary);
+        awaitMessage(expectedAccToInitSeqNum, initiatingSession);
 
         assertEquals(expectedAccToInitSeqNum, initiatingSession.lastReceivedMsgSeqNum());
         assertEquals(expectedAccToInitSeqNum, acceptingSession.lastSentMsgSeqNum());
     }
 
-    private void awaitMessage(final int sequenceNumber, final Session session, final FixLibrary library)
+    private void awaitMessage(final int sequenceNumber, final Session session)
     {
         assertEventuallyTrue(
             "Library Never reaches " + sequenceNumber,
             () ->
             {
-                library.poll(LIBRARY_LIMIT);
+                testSystem.poll();
                 return session.lastReceivedMsgSeqNum() >= sequenceNumber;
             });
     }
@@ -198,7 +198,7 @@ public class AbstractGatewayToGatewaySystemTest
         assertEventuallyTrue("position never catches up",
             () ->
             {
-                initiatingLibrary.poll(LIBRARY_LIMIT);
+                testSystem.poll();
 
                 return initiatingHandler.sentPosition() >= position;
             });
@@ -256,11 +256,6 @@ public class AbstractGatewayToGatewaySystemTest
     {
         assertThat(initiatingSession, hasSequenceIndex(sequenceIndex));
 
-    }
-
-    protected void pollLibraries()
-    {
-        poll(initiatingLibrary, acceptingLibrary);
     }
 
     protected void assertAllMessagesHaveSequenceIndex(final int sequenceIndex)

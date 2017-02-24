@@ -249,7 +249,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertEventuallyTrue("Acceptor Disconnected",
             () ->
             {
-                acceptingLibrary.poll(1);
+                testSystem.poll();
                 return acceptingHandler.hasDisconnected();
             });
 
@@ -504,7 +504,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             "Session never disconnects",
             () ->
             {
-                pollLibraries();
+                testSystem.poll();
                 return !acceptingSession.isActive();
             });
 
@@ -526,7 +526,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             "isConnect never became: " + false,
             () ->
             {
-                acceptingLibrary.poll(LIBRARY_LIMIT);
+                testSystem.poll();
                 return acceptingLibrary.isConnected() == connected;
             });
     }
@@ -569,7 +569,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             "library manages session",
             () ->
             {
-                pollLibraries();
+                testSystem.poll();
                 assertContainsOnlySession(session, library);
             });
 
@@ -648,7 +648,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
     private void libraryNotifiedThatGatewayOwnsSession(final FakeHandler handler, final long expectedSessionId)
     {
-        final long sessionId = handler.awaitSessionId(this::pollLibraries);
+        final long sessionId = handler.awaitSessionId(() -> testSystem.poll());
 
         assertEquals(sessionId, expectedSessionId);
     }

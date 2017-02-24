@@ -58,6 +58,7 @@ public class SlowConsumerTest
     private FixLibrary library;
     private FakeOtfAcceptor acceptingOtfAcceptor = new FakeOtfAcceptor();
     private FakeHandler handler = new FakeHandler(acceptingOtfAcceptor);
+    private TestSystem testSystem;
 
     private TestRequestEncoder testRequest = newTestRequest();
     private LogonEncoder logon = new LogonEncoder();
@@ -80,7 +81,7 @@ public class SlowConsumerTest
 
         while (!socketIsConnected())
         {
-            library.poll(1);
+            testSystem.poll();
         }
 
         assertNotSlow(session);
@@ -93,7 +94,7 @@ public class SlowConsumerTest
                 session.send(testRequest);
             }
 
-            library.poll(1);
+            testSystem.poll();
             framerIdleStrategy.step();
             framerIdleStrategy.step();
         }
@@ -122,7 +123,7 @@ public class SlowConsumerTest
 
             session.send(testRequest);
 
-            library.poll(1);
+            testSystem.poll();
             framerIdleStrategy.step();
         }
 
@@ -168,7 +169,7 @@ public class SlowConsumerTest
                 session.send(testRequest);
             }
 
-            library.poll(1);
+            testSystem.poll();
             framerIdleStrategy.step();
         }
 
@@ -260,5 +261,6 @@ public class SlowConsumerTest
         final LibraryConfiguration libraryConfiguration = acceptingLibraryConfig(handler);
         libraryConfiguration.outboundMaxClaimAttempts(1);
         library = connect(libraryConfiguration);
+        testSystem = new TestSystem(library);
     }
 }

@@ -120,7 +120,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             "Unable to send resend request",
             () ->
             {
-                pollLibraries();
+                testSystem.poll();
                 return initiatingSession.send(resendRequest) > 0;
             });
 
@@ -128,7 +128,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             "Failed to receive reply",
             () ->
             {
-                pollLibraries();
+                testSystem.poll();
                 return initiatingOtfAcceptor.hasReceivedMessage("A");
             },
             2_000);
