@@ -32,10 +32,10 @@ import static uk.co.real_logic.fix_gateway.FixMatchers.hasConnectionId;
 import static uk.co.real_logic.fix_gateway.FixMatchers.hasSequenceIndex;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
-import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class AbstractGatewayToGatewaySystemTest
@@ -103,15 +103,25 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void assertSessionsDisconnected()
     {
-        assertSessionDisconnected(initiatingLibrary, acceptingLibrary, initiatingSession);
-        assertSessionDisconnected(acceptingLibrary, initiatingLibrary, acceptingSession);
+        assertSessionDisconnected(initiatingSession);
+        assertSessionDisconnected(acceptingSession);
 
         assertEventuallyTrue("libraries receive disconnect messages",
             () ->
             {
-                poll(initiatingLibrary, acceptingLibrary);
+                testSystem.poll();
                 assertNotSession(acceptingHandler, acceptingSession);
                 assertNotSession(initiatingHandler, initiatingSession);
+            });
+    }
+
+    private void assertSessionDisconnected(final Session session)
+    {
+        assertEventuallyTrue("Session is still connected",
+            () ->
+            {
+                testSystem.poll();
+                return session.state() == DISCONNECTED;
             });
     }
 
@@ -145,7 +155,7 @@ public class AbstractGatewayToGatewaySystemTest
 
         assertEquals(State.COMPLETED, reply.state());
         assertConnected(initiatingSession);
-        sessionLogsOn(testSystem, initiatingSession, DEFAULT_TIMEOUT_IN_MS);
+        sessionLogsOn(testSystem, initiatingSession);
     }
 
     protected void assertMessageResent(final int sequenceNumber)
@@ -154,8 +164,7 @@ public class AbstractGatewayToGatewaySystemTest
         assertEventuallyTrue("Failed to receive the reply",
             () ->
             {
-                acceptingLibrary.poll(LIBRARY_LIMIT);
-                initiatingLibrary.poll(LIBRARY_LIMIT);
+                testSystem.poll();
 
                 final FixMessage message = acceptingOtfAcceptor.lastMessage();
                 final String messageType = message.getMsgType();

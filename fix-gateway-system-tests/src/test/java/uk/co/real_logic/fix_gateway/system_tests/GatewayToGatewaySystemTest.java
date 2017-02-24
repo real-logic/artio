@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
@@ -182,28 +183,27 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final FakeOtfAcceptor initiatingOtfAcceptor2 = new FakeOtfAcceptor();
         final FakeHandler initiatingSessionHandler2 = new FakeHandler(initiatingOtfAcceptor2);
-        try (FixLibrary library2 = newInitiatingLibrary(libraryAeronPort, initiatingSessionHandler2))
+        try (FixLibrary library2 = testSystem.add(newInitiatingLibrary(libraryAeronPort, initiatingSessionHandler2)))
         {
             acceptingHandler.clearSessions();
-            final Session session2 = initiateAndAwait(library2, port, INITIATOR_ID2, ACCEPTOR_ID).resultIfPresent();
+            final Reply<Session> reply = initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID);
+            awaitLibraryReply(testSystem, reply);
+
+            final Session session2 = reply.resultIfPresent();
 
             assertConnected(session2);
-            sessionLogsOn(library2, acceptingLibrary, session2);
+            sessionLogsOn(testSystem, session2);
 
             final long sessionId = acceptingHandler.awaitSessionIdFor(
                 INITIATOR_ID2,
                 ACCEPTOR_ID,
-                () ->
-                {
-                    acceptingLibrary.poll(1);
-                    library2.poll(1);
-                    initiatingLibrary.poll(1);
-                }, 1000);
+                testSystem::poll,
+                1000);
 
             final Session acceptingSession2 = acquireSession(acceptingHandler, acceptingLibrary, sessionId);
 
             sendTestRequest(acceptingSession2);
-            assertReceivedTestRequest(library2, acceptingLibrary, initiatingOtfAcceptor2);
+            assertReceivedTestRequest(testSystem, initiatingOtfAcceptor2);
 
             assertThat(session2, hasSequenceIndex(0));
 

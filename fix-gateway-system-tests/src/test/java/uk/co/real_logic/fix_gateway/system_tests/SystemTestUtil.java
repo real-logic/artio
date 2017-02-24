@@ -113,6 +113,17 @@ public final class SystemTestUtil
             });
     }
 
+    public static void assertReceivedTestRequest(
+        final TestSystem testSystem, final FakeOtfAcceptor acceptor)
+    {
+        assertEventuallyTrue("Failed to receive a test request message",
+            () ->
+            {
+                testSystem.poll();
+                return acceptor.hasReceivedMessage("1").isPresent();
+            });
+    }
+
     public static void poll(final FixLibrary library1, final FixLibrary library2)
     {
         library1.poll(LIBRARY_LIMIT);
@@ -129,18 +140,6 @@ public final class SystemTestUtil
         {
             assertThat(library2, isConnected());
         }
-    }
-
-    public static Reply<Session> initiateAndAwait(
-        final FixLibrary library,
-        final int port,
-        final String initiatorId,
-        final String acceptorId)
-    {
-        final Reply<Session> reply = initiate(library, port, initiatorId, acceptorId);
-        awaitLibraryReply(library, reply);
-
-        return reply;
     }
 
     public static Reply<Session> initiate(
@@ -351,8 +350,7 @@ public final class SystemTestUtil
 
     static void sessionLogsOn(
         final TestSystem testSystem,
-        final Session session,
-        final long timeoutInMs)
+        final Session session)
     {
         assertEventuallyTrue("Session has failed to logon",
             () ->
@@ -362,7 +360,7 @@ public final class SystemTestUtil
 
                 assertEquals(ACTIVE, session.state());
             },
-            timeoutInMs);
+            DEFAULT_TIMEOUT_IN_MS);
     }
 
     public static FixLibrary newInitiatingLibrary(final int libraryAeronPort, final FakeHandler sessionHandler)
