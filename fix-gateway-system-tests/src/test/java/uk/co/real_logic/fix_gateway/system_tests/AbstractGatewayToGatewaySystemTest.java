@@ -32,6 +32,7 @@ import static uk.co.real_logic.fix_gateway.FixMatchers.hasConnectionId;
 import static uk.co.real_logic.fix_gateway.FixMatchers.hasSequenceIndex;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
+import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -55,6 +56,8 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
     protected FakeHandler initiatingHandler = new FakeHandler(initiatingOtfAcceptor);
+
+    protected TestSystem testSystem;
 
     @After
     public void close()
@@ -137,17 +140,12 @@ public class AbstractGatewayToGatewaySystemTest
     {
         final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
 
-        pollUntilReply(reply);
+        awaitLibraryReply(testSystem, reply);
         initiatingSession = reply.resultIfPresent();
 
         assertEquals(State.COMPLETED, reply.state());
         assertConnected(initiatingSession);
-        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
-    }
-
-    protected void pollUntilReply(final Reply<?> reply)
-    {
-        awaitLibraryReply(initiatingLibrary, acceptingLibrary, reply);
+        sessionLogsOn(testSystem, initiatingSession, DEFAULT_TIMEOUT_IN_MS);
     }
 
     protected void assertMessageResent(final int sequenceNumber)
@@ -186,8 +184,7 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void messagesCanBeExchanged()
     {
-        final long position = messagesCanBeExchanged(
-            initiatingSession, initiatingLibrary, acceptingLibrary, initiatingOtfAcceptor);
+        final long position = messagesCanBeExchanged(initiatingSession, initiatingOtfAcceptor);
 
         assertEventuallyTrue("position never catches up",
             () ->
@@ -200,13 +197,11 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected long messagesCanBeExchanged(
         final Session sendingSession,
-        final FixLibrary library,
-        final FixLibrary library2,
         final FakeOtfAcceptor receivingAcceptor)
     {
         final long position = sendTestRequest(sendingSession);
 
-        assertReceivedHeartbeat(library, library2, receivingAcceptor);
+        assertReceivedHeartbeat(testSystem, receivingAcceptor);
 
         return position;
     }

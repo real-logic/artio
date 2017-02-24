@@ -43,6 +43,7 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
 
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);
+        testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
     }
 
     @Test

@@ -61,6 +61,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acceptingLibraryConfig.libraryConnectHandler(fakeConnectHandler);
         acceptingLibrary = connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         connectSessions();
     }
@@ -102,7 +103,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
-        messagesCanBeExchanged(acceptingSession, acceptingLibrary, initiatingLibrary, acceptingOtfAcceptor);
+        messagesCanBeExchanged(acceptingSession, acceptingOtfAcceptor);
 
         assertSequenceIndicesAre(0);
     }
@@ -349,8 +350,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acceptingHandler.resetSession();
 
         // Send messages both ways to ensure that the session is setup
-        messagesCanBeExchanged(acceptingSession, acceptingLibrary, initiatingLibrary, acceptingOtfAcceptor);
-        messagesCanBeExchanged(initiatingSession, initiatingLibrary, acceptingLibrary, initiatingOtfAcceptor);
+        messagesCanBeExchanged(acceptingSession, acceptingOtfAcceptor);
+        messagesCanBeExchanged(initiatingSession, initiatingOtfAcceptor);
 
         assertSequenceIndicesAre(1);
     }
@@ -397,13 +398,13 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         messagesCanBeExchanged();
 
-        acceptingLibrary.close();
+        testSystem.close(acceptingLibrary);
         acceptingEngine.close();
         assertSequenceIndicesAre(0);
         clearMessages();
 
         launchAcceptingEngine();
-        acceptingLibrary = newAcceptingLibrary(acceptingHandler);
+        acceptingLibrary = testSystem.add(newAcceptingLibrary(acceptingHandler));
 
         wireSessions();
         messagesCanBeExchanged();
@@ -431,9 +432,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         launchAcceptingEngine();
 
-        acceptingLibrary.close();
+        testSystem.close(acceptingLibrary);
 
-        acceptingLibrary = newAcceptingLibrary(acceptingHandler);
+        acceptingLibrary = testSystem.add(newAcceptingLibrary(acceptingHandler));
 
         wireSessions();
 
@@ -615,12 +616,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         releaseToGateway(library, session);
 
-        messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
+        messagesCanBeExchanged(otherSession, otherAcceptor);
 
         final SessionReplyStatus status = requestSession(library, sessionId, lastReceivedMsgSeqNum, sequenceIndex);
         assertEquals(OK, status);
 
-        messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
+        messagesCanBeExchanged(otherSession, otherAcceptor);
 
         // Callbacks for the missing messages whilst the gateway managed them
         final String expectedSeqNum = String.valueOf(lastReceivedMsgSeqNum + 1);

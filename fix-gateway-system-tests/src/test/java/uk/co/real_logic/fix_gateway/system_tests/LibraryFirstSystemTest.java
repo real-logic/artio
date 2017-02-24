@@ -48,6 +48,7 @@ public class LibraryFirstSystemTest extends AbstractGatewayToGatewaySystemTest
 
         acceptingLibrary = acceptingLibraryFuture.get();
         initiatingLibrary = initiatingLibraryFuture.get();
+        testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         connectSessions();
     }

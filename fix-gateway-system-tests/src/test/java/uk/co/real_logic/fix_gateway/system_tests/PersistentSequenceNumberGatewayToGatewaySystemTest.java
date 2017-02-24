@@ -222,6 +222,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         beforeConnect.run();
 

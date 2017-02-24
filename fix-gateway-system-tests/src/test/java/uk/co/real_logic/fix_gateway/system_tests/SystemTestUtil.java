@@ -176,6 +176,18 @@ public final class SystemTestUtil
             });
     }
 
+    static void awaitLibraryReply(final TestSystem testSystem, final Reply<?> reply)
+    {
+        assertEventuallyTrue(
+            "No reply from: " + reply,
+            () ->
+            {
+                testSystem.poll();
+
+                return !reply.isExecuting();
+            });
+    }
+
     public static SessionReplyStatus releaseToGateway(final FixLibrary library, final Session session)
     {
         final Reply<SessionReplyStatus> reply = library.releaseToGateway(session, DEFAULT_REPLY_TIMEOUT_IN_MS);
@@ -337,6 +349,22 @@ public final class SystemTestUtil
             timeoutInMs);
     }
 
+    static void sessionLogsOn(
+        final TestSystem testSystem,
+        final Session session,
+        final long timeoutInMs)
+    {
+        assertEventuallyTrue("Session has failed to logon",
+            () ->
+            {
+                testSystem.poll();
+                testSystem.assertConnected();
+
+                assertEquals(ACTIVE, session.state());
+            },
+            timeoutInMs);
+    }
+
     public static FixLibrary newInitiatingLibrary(final int libraryAeronPort, final FakeHandler sessionHandler)
     {
         final LibraryConfiguration configuration = new LibraryConfiguration()
@@ -443,6 +471,21 @@ public final class SystemTestUtil
             () ->
             {
                 poll(library, library2);
+
+                return acceptor
+                    .hasReceivedMessage("0")
+                    .filter((message) -> HI_ID.equals(message.get(Constants.TEST_REQ_ID)))
+                    .isPresent();
+            });
+    }
+
+    public static void assertReceivedHeartbeat(
+        final TestSystem testSystem, final FakeOtfAcceptor acceptor)
+    {
+        assertEventuallyTrue("Failed to received heartbeat",
+            () ->
+            {
+                testSystem.poll();
 
                 return acceptor
                     .hasReceivedMessage("0")

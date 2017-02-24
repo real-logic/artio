@@ -27,6 +27,7 @@ public class MultipleLibrarySystemTest extends AbstractGatewayToGatewaySystemTes
         launchAcceptingEngine();
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         connectSessions();
     }
