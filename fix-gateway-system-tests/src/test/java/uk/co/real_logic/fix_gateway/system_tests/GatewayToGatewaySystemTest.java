@@ -34,6 +34,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.FixMatchers.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -192,7 +193,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             final Session session2 = reply.resultIfPresent();
 
             assertConnected(session2);
-            sessionLogsOn(testSystem, session2);
+            sessionLogsOn(testSystem, session2, DEFAULT_TIMEOUT_IN_MS);
 
             final long sessionId = acceptingHandler.awaitSessionIdFor(
                 INITIATOR_ID2,
@@ -232,7 +233,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertSequenceFromInitToAcceptAt(1, 1);
 
         sendTestRequest(initiatingSession);
-        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+        assertReceivedTestRequest(testSystem, acceptingOtfAcceptor);
 
         assertSequenceIndicesAre(1);
     }
@@ -509,8 +510,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             });
 
         SystemTestUtil.assertEventuallyHasLibraries(
-            initiatingLibrary,
-            acceptingLibrary,
+            testSystem,
             acceptingEngine,
             matchesLibrary(acceptingLibrary.libraryId()),
             matchesLibrary(ENGINE_LIBRARY_ID));

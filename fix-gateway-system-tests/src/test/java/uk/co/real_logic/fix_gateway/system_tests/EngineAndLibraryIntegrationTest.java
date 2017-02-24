@@ -51,8 +51,9 @@ public class EngineAndLibraryIntegrationTest
     private FixLibrary library;
     private FixLibrary library2;
 
-    private FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
-    private FakeHandler sessionHandler = new FakeHandler(otfAcceptor);
+    private final FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
+    private final FakeHandler sessionHandler = new FakeHandler(otfAcceptor);
+    private final TestSystem testSystem = new TestSystem();
 
     @Before
     public void launch()
@@ -105,9 +106,9 @@ public class EngineAndLibraryIntegrationTest
         library = connectLibrary();
         awaitLibraryConnect(library);
 
-        library.close();
+        testSystem.close(library);
 
-        assertLibrariesDisconnect(0, null, engine);
+        assertLibrariesDisconnect(0, engine);
     }
 
     @Test
@@ -131,9 +132,9 @@ public class EngineAndLibraryIntegrationTest
     {
         setupTwoLibraries();
 
-        library.close();
+        testSystem.close(library);
 
-        assertLibrariesDisconnect(1, library2, engine);
+        assertLibrariesDisconnect(1, engine);
 
         assertEventuallyHasLibraries(
             FixMatchers.matchesLibrary(library2.libraryId()),
@@ -183,7 +184,7 @@ public class EngineAndLibraryIntegrationTest
     @SafeVarargs
     private final void assertEventuallyHasLibraries(final Matcher<LibraryInfo>... libraryMatchers)
     {
-        SystemTestUtil.assertEventuallyHasLibraries(library, library2, engine, libraryMatchers);
+        SystemTestUtil.assertEventuallyHasLibraries(testSystem, engine, libraryMatchers);
     }
 
     private void assertNumActiveLibraries(final int count)
@@ -207,6 +208,22 @@ public class EngineAndLibraryIntegrationTest
             .messageValidationStrategy(validationStrategy)
             .replyTimeoutInMs(TIMEOUT_IN_MS);
 
-        return connect(config);
+        return testSystem.add(connect(config));
+    }
+
+    private void assertLibrariesDisconnect(final int count, final FixEngine engine)
+    {
+        assertEventuallyTrue(
+            () -> "libraries haven't disconnected yet",
+            () ->
+            {
+                testSystem.poll();
+                return libraries(engine).size() == count + 1;
+            },
+            AWAIT_TIMEOUT,
+            () ->
+            {
+            }
+        );
     }
 }

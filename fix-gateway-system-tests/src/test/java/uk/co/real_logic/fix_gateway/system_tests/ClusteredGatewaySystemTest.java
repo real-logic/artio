@@ -86,6 +86,7 @@ public class ClusteredGatewaySystemTest
     private Session initiatingSession;
     private Session acceptingSession;
     private FixEngineRunner leader;
+    private TestSystem testSystem;
 
     @Before
     public void setUp()
@@ -115,6 +116,7 @@ public class ClusteredGatewaySystemTest
         assertNotNull("Unable to connect to any cluster members", acceptingLibrary);
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        testSystem = new TestSystem(initiatingLibrary, acceptingLibrary);
 
         configuration
             .libraryAeronChannels()
@@ -280,7 +282,7 @@ public class ClusteredGatewaySystemTest
         initiatingSession = reply.resultIfPresent();
 
         assertConnected(initiatingSession);
-        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession, 10_000);
+        sessionLogsOn(testSystem, initiatingSession, 10_000);
         final long sessionId = acceptingHandler.awaitSessionIdFor(INITIATOR_ID, ACCEPTOR_ID,
             () ->
             {
@@ -299,7 +301,7 @@ public class ClusteredGatewaySystemTest
     {
         final long position = sendTestRequest(sendingSession);
 
-        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, receivingHandler);
+        assertReceivedTestRequest(testSystem, receivingHandler);
 
         return position;
     }
