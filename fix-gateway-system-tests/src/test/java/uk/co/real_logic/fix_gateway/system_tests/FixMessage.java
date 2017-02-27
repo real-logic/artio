@@ -21,6 +21,7 @@ import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.session.Session;
 
 import static org.hamcrest.Matchers.equalTo;
+import static uk.co.real_logic.fix_gateway.decoder.Constants.LOGON_AS_STR;
 import static uk.co.real_logic.fix_gateway.util.CustomMatchers.hasResult;
 
 /**
@@ -48,7 +49,7 @@ public class FixMessage extends Int2ObjectHashMap<String>
 
     boolean isLogon()
     {
-        return "A".equals(getMsgType());
+        return LOGON_AS_STR.equals(getMsgType());
     }
 
     String getPossDup()

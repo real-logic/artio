@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.util.Reflection;
 
 import java.util.Map;
 
@@ -58,11 +59,24 @@ public class ConstantGeneratorTest
     }
 
     @Test
+    public void shouldContainStringConstantsForMessageTypes() throws Exception
+    {
+        final String heartbeatString = String.valueOf((char) HEARTBEAT_TYPE);
+        assertEquals(heartbeatString, getField(constants, "HEARTBEAT_AS_STR"));
+    }
+
+    @Test
     public void shouldGenerateBeginString() throws Exception
     {
         final Object version = getField(constants, ConstantGenerator.VERSION);
 
         assertEquals("FIX.4.4", version);
+    }
+
+    @Test(expected = NoSuchFieldException.class)
+    public void shouldNotGenerateUnnecessaryValuesOfMethods() throws Exception
+    {
+        Reflection.field(constants, "VALUES_OF_TestReqID");
     }
 
 }

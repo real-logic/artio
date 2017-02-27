@@ -35,6 +35,7 @@ import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
+import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQUEST_AS_STR;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
@@ -169,7 +170,7 @@ public class AbstractGatewayToGatewaySystemTest
 
                 final FixMessage message = acceptingOtfAcceptor.lastMessage();
                 final String messageType = message.getMsgType();
-                assertEquals("1", messageType);
+                assertEquals(TEST_REQUEST_AS_STR, messageType);
                 assertEquals("Y", message.getPossDup());
                 assertEquals(String.valueOf(sequenceNumber), message.get(MSG_SEQ_NUM));
                 assertEquals(INITIATOR_ID, acceptingOtfAcceptor.lastSenderCompId());

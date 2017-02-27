@@ -74,48 +74,51 @@ public class ConstantGenerator
     {
         for (final Field field : dictionary.fields().values())
         {
-            final String name = field.name();
-            final String valuesField = constantValuesOfField(name);
-            final Field.Type type = field.type();
-            final boolean isChar = type == Field.Type.CHAR;
-            final boolean isPrimitive = type.isIntBased() || isChar;
-            try
+            if (field.isEnum())
             {
-                if (isPrimitive)
+                final String name = field.name();
+                final String valuesField = constantValuesOfField(name);
+                final Field.Type type = field.type();
+                final boolean isChar = type == Field.Type.CHAR;
+                final boolean isPrimitive = type.isIntBased() || isChar;
+                try
                 {
-                    final String addValues =
-                        field.values()
-                            .stream()
-                            .map(Field.Value::representation)
-                            .map(repr -> isChar ? "'" + repr + "'" : repr)
-                            .map(repr -> String.format("        %1$s.add(%2$s);\n", valuesField, repr))
-                            .collect(joining());
+                    if (isPrimitive)
+                    {
+                        final String addValues =
+                            field.values()
+                                .stream()
+                                .map(Field.Value::representation)
+                                .map(repr -> isChar ? "'" + repr + "'" : repr)
+                                .map(repr -> String.format("        %1$s.add(%2$s);\n", valuesField, repr))
+                                .collect(joining());
 
-                    out.append(String.format(
-                        "    public static final IntHashSet %1$s = new IntHashSet(%3$s);\n" +
-                        "%2$s",
-                        valuesField,
-                        optionalStaticInit(addValues),
-                        sizeHashSet(field.values())
-                    ));
+                        out.append(String.format(
+                            "    public static final IntHashSet %1$s = new IntHashSet(%3$s);\n" +
+                                "%2$s",
+                            valuesField,
+                            optionalStaticInit(addValues),
+                            sizeHashSet(field.values())
+                        ));
+                    }
+                    else if (type.isStringBased())
+                    {
+                        final String addValues =
+                            field.values()
+                                .stream()
+                                .map(value -> "\"" + value.representation() + '"')
+                                .collect(joining(", "));
+
+                        out.append(String.format(
+                            "    public static final CharArraySet %1$s = new CharArraySet(%2$s);\n",
+                            valuesField,
+                            addValues));
+                    }
                 }
-                else if (type.isStringBased())
+                catch (final IOException ex)
                 {
-                    final String addValues =
-                        field.values()
-                            .stream()
-                            .map(value -> "\"" + value.representation() + '"')
-                            .collect(joining(", "));
-
-                    out.append(String.format(
-                        "    public static final CharArraySet %1$s = new CharArraySet(%2$s);\n",
-                        valuesField,
-                        addValues));
+                    LangUtil.rethrowUnchecked(ex);
                 }
-            }
-            catch (final IOException ex)
-            {
-                LangUtil.rethrowUnchecked(ex);
             }
         }
     }
@@ -171,7 +174,9 @@ public class ConstantGenerator
             .map(message ->
             {
                 final int type = message.packedType();
-                return generateMessageTypeConstant(type) + generateIntConstant(message.name(), type);
+                final String constantName = constantName(message.name());
+                final String stringConstantName = constantName + "_AS_STR";
+                return generateMessageTypeConstant(stringConstantName, type) + generateIntConstant(constantName, type);
             })
             .collect(joining());
     }
@@ -180,7 +185,7 @@ public class ConstantGenerator
     {
         return fields()
             .stream()
-            .map(field -> generateIntConstant(field.name(), field.number()))
+            .map(field -> generateIntConstant(constantName(field.name()), field.number()))
             .collect(joining());
     }
 
@@ -191,7 +196,7 @@ public class ConstantGenerator
             .values();
     }
 
-    private String generateMessageTypeConstant(final int messageType)
+    private String generateMessageTypeConstant(final String stringConstantName, final int messageType)
     {
         final char[] chars;
         if (messageType > Byte.MAX_VALUE)
@@ -203,15 +208,18 @@ public class ConstantGenerator
             chars = new char[]{ (char)(byte)messageType };
         }
 
-        return String.format("    /** In Ascii - %1$s */\n", new String(chars));
+        return String.format(
+            "    public static final String %1$s = \"%2$s\";\n",
+            stringConstantName,
+            new String(chars));
     }
 
     private String generateIntConstant(final String name, final int number)
     {
         return String.format(
-            "    public static final int %2$s = %1$d;\n\n",
-            number,
-            constantName(name));
+            "    public static final int %1$s = %2$d;\n\n",
+            name,
+            number);
     }
 
     private String constantName(final String name)

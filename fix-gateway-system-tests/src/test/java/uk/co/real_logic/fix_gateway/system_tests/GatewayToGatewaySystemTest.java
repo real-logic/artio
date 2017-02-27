@@ -37,6 +37,7 @@ import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
+import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQUEST_AS_STR;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
@@ -630,7 +631,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final String expectedSeqNum = String.valueOf(lastReceivedMsgSeqNum + 1);
         assertEquals(messages.toString(), 1, messages
             .stream()
-            .filter(msg -> msg.getMsgType().equals("1") && msg.get(MSG_SEQ_NUM).equals(expectedSeqNum))
+            .filter(msg -> msg.getMsgType().equals(TEST_REQUEST_AS_STR) && msg.get(MSG_SEQ_NUM).equals(expectedSeqNum))
             .count());
     }
 
