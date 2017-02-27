@@ -1218,6 +1218,8 @@ public class Session implements AutoCloseable
             ", sessionId=" + id +
             ", state=" + state +
             ", sequenceIndex=" + sequenceIndex +
+            ", lastReceivedMsgSeqNum=" + lastReceivedMsgSeqNum +
+            ", lastSentMsgSeqNum=" + lastSentMsgSeqNum +
             '}';
     }
 

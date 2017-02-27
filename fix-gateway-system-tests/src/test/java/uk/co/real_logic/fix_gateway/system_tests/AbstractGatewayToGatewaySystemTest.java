@@ -209,9 +209,10 @@ public class AbstractGatewayToGatewaySystemTest
         final Session sendingSession,
         final FakeOtfAcceptor receivingAcceptor)
     {
-        final long position = sendTestRequest(sendingSession);
+        final String testReqID = testReqId();
+        final long position = sendTestRequest(sendingSession, testReqID);
 
-        assertReceivedHeartbeat(testSystem, receivingAcceptor);
+        assertReceivedSingleHeartbeat(testSystem, receivingAcceptor, testReqID);
 
         return position;
     }

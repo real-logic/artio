@@ -27,8 +27,8 @@ import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.function.Predicate;
+import java.util.stream.Stream;
 
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_TEST;
@@ -143,12 +143,11 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         return messages.get(messages.size() - 1);
     }
 
-    public Optional<FixMessage> hasReceivedMessage(final String messageType)
+    public Stream<FixMessage> hasReceivedMessage(final String messageType)
     {
         return messages()
             .stream()
-            .filter((fixMessage) -> fixMessage.get(MSG_TYPE).equals(messageType))
-            .findFirst();
+            .filter((fixMessage) -> fixMessage.get(MSG_TYPE).equals(messageType));
     }
 
     void allMessagesHaveSequenceIndex(final int sequenceIndex)

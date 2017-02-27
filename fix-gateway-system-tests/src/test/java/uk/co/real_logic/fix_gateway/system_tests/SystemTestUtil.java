@@ -38,6 +38,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
@@ -78,12 +79,32 @@ public final class SystemTestUtil
         }
     }
 
-    public static long sendTestRequest(final Session session)
+    private static final AtomicLong TEST_REQ_COUNTER = new AtomicLong();
+
+    static String testReqId()
+    {
+        return HI_ID + TEST_REQ_COUNTER.incrementAndGet();
+    }
+
+    public static long assertTestRequestSentAndReceived(
+        final Session sendingSession,
+        final TestSystem testSystem,
+        final FakeOtfAcceptor receivingHandler)
+    {
+        final String testReqID = testReqId();
+        final long position = sendTestRequest(sendingSession, testReqID);
+
+        assertReceivedTestRequest(testSystem, receivingHandler, testReqID);
+
+        return position;
+    }
+
+    public static long sendTestRequest(final Session session, final String testReqID)
     {
         assertEventuallyTrue("Session not connected", session::isConnected);
 
         final TestRequestEncoder testRequest = new TestRequestEncoder();
-        testRequest.testReqID(HI_ID);
+        testRequest.testReqID(testReqID);
 
         final long position = session.send(testRequest);
         assertThat(position, greaterThan(0L));
@@ -91,13 +112,16 @@ public final class SystemTestUtil
     }
 
     public static void assertReceivedTestRequest(
-        final TestSystem testSystem, final FakeOtfAcceptor acceptor)
+        final TestSystem testSystem, final FakeOtfAcceptor acceptor, final String testReqId)
     {
         assertEventuallyTrue("Failed to receive a test request message",
             () ->
             {
                 testSystem.poll();
-                return acceptor.hasReceivedMessage("1").isPresent();
+                return acceptor
+                    .hasReceivedMessage("1")
+                    .filter(msg -> testReqId.equals(msg.getTestReqId()))
+                    .count() > 0;
             });
     }
 
@@ -399,8 +423,8 @@ public final class SystemTestUtil
         );
     }
 
-    public static void assertReceivedHeartbeat(
-        final TestSystem testSystem, final FakeOtfAcceptor acceptor)
+    static void assertReceivedSingleHeartbeat(
+        final TestSystem testSystem, final FakeOtfAcceptor acceptor, final String testReqId)
     {
         assertEventuallyTrue("Failed to received heartbeat",
             () ->
@@ -409,8 +433,8 @@ public final class SystemTestUtil
 
                 return acceptor
                     .hasReceivedMessage("0")
-                    .filter((message) -> HI_ID.equals(message.get(Constants.TEST_REQ_ID)))
-                    .isPresent();
+                    .filter((message) -> testReqId.equals(message.get(Constants.TEST_REQ_ID)))
+                    .count() > 0;
             });
     }
 

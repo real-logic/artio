@@ -299,11 +299,7 @@ public class ClusteredGatewaySystemTest
 
     private long roundTripOneMessage(final Session sendingSession, final FakeOtfAcceptor receivingHandler)
     {
-        final long position = sendTestRequest(sendingSession);
-
-        assertReceivedTestRequest(testSystem, receivingHandler);
-
-        return position;
+        return assertTestRequestSentAndReceived(sendingSession, testSystem, receivingHandler);
     }
 
     private void assertAllClusterNodesHaveArchivedTestRequestMessage(

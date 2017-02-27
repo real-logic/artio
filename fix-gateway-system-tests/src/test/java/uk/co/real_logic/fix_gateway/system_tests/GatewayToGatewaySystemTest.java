@@ -203,8 +203,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
             final Session acceptingSession2 = acquireSession(acceptingHandler, acceptingLibrary, sessionId);
 
-            sendTestRequest(acceptingSession2);
-            assertReceivedTestRequest(testSystem, initiatingOtfAcceptor2);
+            assertTestRequestSentAndReceived(acceptingSession2, testSystem, initiatingOtfAcceptor2);
 
             assertThat(session2, hasSequenceIndex(0));
 
@@ -232,8 +231,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertSequenceFromInitToAcceptAt(1, 1);
 
-        sendTestRequest(initiatingSession);
-        assertReceivedTestRequest(testSystem, acceptingOtfAcceptor);
+        assertTestRequestSentAndReceived(initiatingSession, testSystem, acceptingOtfAcceptor);
 
         assertSequenceIndicesAre(1);
     }
@@ -364,7 +362,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         engineShouldManageSession(
             acceptingSession, acceptingLibrary, acceptingOtfAcceptor,
-            initiatingSession, initiatingLibrary, initiatingOtfAcceptor);
+            initiatingSession, initiatingOtfAcceptor);
     }
 
     @Test
@@ -374,7 +372,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         engineShouldManageSession(
             initiatingSession, initiatingLibrary, initiatingOtfAcceptor,
-            acceptingSession, acceptingLibrary, acceptingOtfAcceptor);
+            acceptingSession, acceptingOtfAcceptor);
     }
 
     @Test
@@ -606,7 +604,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final FixLibrary library,
         final FakeOtfAcceptor otfAcceptor,
         final Session otherSession,
-        final FixLibrary otherLibrary,
         final FakeOtfAcceptor otherAcceptor)
     {
         final long sessionId = session.id();
@@ -620,6 +617,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final SessionReplyStatus status = requestSession(library, sessionId, lastReceivedMsgSeqNum, sequenceIndex);
         assertEquals(OK, status);
+
+        final List<Session> sessions = library.sessions();
+        assertThat(sessions, hasSize(1));
+
+        final Session newSession = sessions.get(0);
+        assertNotSame(session, newSession);
 
         messagesCanBeExchanged(otherSession, otherAcceptor);
 

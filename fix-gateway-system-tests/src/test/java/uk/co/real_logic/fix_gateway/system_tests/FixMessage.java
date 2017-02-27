@@ -41,6 +41,11 @@ public class FixMessage extends Int2ObjectHashMap<String>
         return get(Constants.MSG_TYPE);
     }
 
+    String getTestReqId()
+    {
+        return get(Constants.TEST_REQ_ID);
+    }
+
     boolean isLogon()
     {
         return "A".equals(getMsgType());
