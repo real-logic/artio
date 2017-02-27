@@ -170,7 +170,7 @@ public class AbstractReplicationTest
         return new ArchiveMetaData(descriptor);
     }
 
-    private static String logFileDir(final short id)
+    static String logFileDir(final short id)
     {
         return IoUtil.tmpDirName() + "/node" + id;
     }

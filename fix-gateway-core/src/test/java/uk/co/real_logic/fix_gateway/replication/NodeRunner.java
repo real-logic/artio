@@ -19,8 +19,10 @@ import io.aeron.Aeron;
 import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
+import org.agrona.IoUtil;
 import org.agrona.collections.Int2IntHashMap;
 import org.agrona.collections.IntHashSet;
+import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.YieldingIdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
@@ -30,6 +32,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.ArchiveMetaData;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
+import java.io.File;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.aeron.CommonContext.AERON_DIR_PROP_DEFAULT;
@@ -41,6 +44,7 @@ import static org.mockito.Mockito.mock;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
+import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.logFileDir;
 import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
@@ -60,11 +64,18 @@ class NodeRunner implements AutoCloseable
     private final ClusterAgent clusterAgent;
     private final NodeHandler handler;
     private final ClusterSubscription subscription;
+    private final CompletionPosition completionPosition = new CompletionPosition();
 
     private final AtomicBoolean guard = new AtomicBoolean();
 
     NodeRunner(final int nodeId, final int... otherNodes)
     {
+        final File logFileDir = new File(logFileDir((short) nodeId));
+        if (logFileDir.exists())
+        {
+            IoUtil.delete(logFileDir, true);
+        }
+
         this.handler = new NodeHandler(nodeId);
         this.frameDropper = new FrameDropper(nodeId);
 
@@ -97,7 +108,7 @@ class NodeRunner implements AutoCloseable
             metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream, NO_FILTER);
         final Archiver archiver = new Archiver(
             metaData, DEFAULT_LOGGER_CACHE_NUM_SETS, DEFAULT_LOGGER_CACHE_SET_SIZE, dataStream, nodeId + "-",
-            mock(CompletionPosition.class));
+            completionPosition);
         final UnsafeBuffer nodeState = new UnsafeBuffer(new byte[SIZE_OF_SHORT]);
         nodeState.putShort(0, (short)nodeId);
 
@@ -121,11 +132,14 @@ class NodeRunner implements AutoCloseable
 
     public void close()
     {
+        completionPosition.complete(new Long2LongHashMap(-1));
+
         while (!guard.compareAndSet(false, true))
         {
             Thread.yield();
         }
 
+        clusterAgent.onClose();
         CloseHelper.close(aeron);
         cleanupMediaDriver(mediaDriver);
     }
