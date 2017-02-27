@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
@@ -33,6 +34,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.FixMatchers.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -61,6 +63,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acceptingLibraryConfig.libraryConnectHandler(fakeConnectHandler);
         acceptingLibrary = connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         connectSessions();
     }
@@ -102,7 +105,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
-        messagesCanBeExchanged(acceptingSession, acceptingLibrary, initiatingLibrary, acceptingOtfAcceptor);
+        messagesCanBeExchanged(acceptingSession, acceptingOtfAcceptor);
 
         assertSequenceIndicesAre(0);
     }
@@ -181,28 +184,26 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final FakeOtfAcceptor initiatingOtfAcceptor2 = new FakeOtfAcceptor();
         final FakeHandler initiatingSessionHandler2 = new FakeHandler(initiatingOtfAcceptor2);
-        try (FixLibrary library2 = newInitiatingLibrary(libraryAeronPort, initiatingSessionHandler2))
+        try (FixLibrary library2 = testSystem.add(newInitiatingLibrary(libraryAeronPort, initiatingSessionHandler2)))
         {
             acceptingHandler.clearSessions();
-            final Session session2 = initiateAndAwait(library2, port, INITIATOR_ID2, ACCEPTOR_ID).resultIfPresent();
+            final Reply<Session> reply = initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID);
+            awaitLibraryReply(testSystem, reply);
+
+            final Session session2 = reply.resultIfPresent();
 
             assertConnected(session2);
-            sessionLogsOn(library2, acceptingLibrary, session2);
+            sessionLogsOn(testSystem, session2, DEFAULT_TIMEOUT_IN_MS);
 
             final long sessionId = acceptingHandler.awaitSessionIdFor(
                 INITIATOR_ID2,
                 ACCEPTOR_ID,
-                () ->
-                {
-                    acceptingLibrary.poll(1);
-                    library2.poll(1);
-                    initiatingLibrary.poll(1);
-                }, 1000);
+                testSystem::poll,
+                1000);
 
             final Session acceptingSession2 = acquireSession(acceptingHandler, acceptingLibrary, sessionId);
 
-            sendTestRequest(acceptingSession2);
-            assertReceivedTestRequest(library2, acceptingLibrary, initiatingOtfAcceptor2);
+            assertTestRequestSentAndReceived(acceptingSession2, testSystem, initiatingOtfAcceptor2);
 
             assertThat(session2, hasSequenceIndex(0));
 
@@ -230,8 +231,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertSequenceFromInitToAcceptAt(1, 1);
 
-        sendTestRequest(initiatingSession);
-        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+        assertTestRequestSentAndReceived(initiatingSession, testSystem, acceptingOtfAcceptor);
 
         assertSequenceIndicesAre(1);
     }
@@ -248,7 +248,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertEventuallyTrue("Acceptor Disconnected",
             () ->
             {
-                acceptingLibrary.poll(1);
+                testSystem.poll();
                 return acceptingHandler.hasDisconnected();
             });
 
@@ -349,8 +349,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acceptingHandler.resetSession();
 
         // Send messages both ways to ensure that the session is setup
-        messagesCanBeExchanged(acceptingSession, acceptingLibrary, initiatingLibrary, acceptingOtfAcceptor);
-        messagesCanBeExchanged(initiatingSession, initiatingLibrary, acceptingLibrary, initiatingOtfAcceptor);
+        messagesCanBeExchanged(acceptingSession, acceptingOtfAcceptor);
+        messagesCanBeExchanged(initiatingSession, initiatingOtfAcceptor);
 
         assertSequenceIndicesAre(1);
     }
@@ -362,7 +362,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         engineShouldManageSession(
             acceptingSession, acceptingLibrary, acceptingOtfAcceptor,
-            initiatingSession, initiatingLibrary, initiatingOtfAcceptor);
+            initiatingSession, initiatingOtfAcceptor);
     }
 
     @Test
@@ -372,7 +372,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         engineShouldManageSession(
             initiatingSession, initiatingLibrary, initiatingOtfAcceptor,
-            acceptingSession, acceptingLibrary, acceptingOtfAcceptor);
+            acceptingSession, acceptingOtfAcceptor);
     }
 
     @Test
@@ -397,13 +397,13 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         messagesCanBeExchanged();
 
-        acceptingLibrary.close();
+        testSystem.close(acceptingLibrary);
         acceptingEngine.close();
         assertSequenceIndicesAre(0);
         clearMessages();
 
         launchAcceptingEngine();
-        acceptingLibrary = newAcceptingLibrary(acceptingHandler);
+        acceptingLibrary = testSystem.add(newAcceptingLibrary(acceptingHandler));
 
         wireSessions();
         messagesCanBeExchanged();
@@ -431,9 +431,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         launchAcceptingEngine();
 
-        acceptingLibrary.close();
+        testSystem.close(acceptingLibrary);
 
-        acceptingLibrary = newAcceptingLibrary(acceptingHandler);
+        acceptingLibrary = testSystem.add(newAcceptingLibrary(acceptingHandler));
 
         wireSessions();
 
@@ -503,13 +503,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             "Session never disconnects",
             () ->
             {
-                pollLibraries();
+                testSystem.poll();
                 return !acceptingSession.isActive();
             });
 
         SystemTestUtil.assertEventuallyHasLibraries(
-            initiatingLibrary,
-            acceptingLibrary,
+            testSystem,
             acceptingEngine,
             matchesLibrary(acceptingLibrary.libraryId()),
             matchesLibrary(ENGINE_LIBRARY_ID));
@@ -525,7 +524,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             "isConnect never became: " + false,
             () ->
             {
-                acceptingLibrary.poll(LIBRARY_LIMIT);
+                testSystem.poll();
                 return acceptingLibrary.isConnected() == connected;
             });
     }
@@ -568,7 +567,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             "library manages session",
             () ->
             {
-                pollLibraries();
+                testSystem.poll();
                 assertContainsOnlySession(session, library);
             });
 
@@ -605,7 +604,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final FixLibrary library,
         final FakeOtfAcceptor otfAcceptor,
         final Session otherSession,
-        final FixLibrary otherLibrary,
         final FakeOtfAcceptor otherAcceptor)
     {
         final long sessionId = session.id();
@@ -615,12 +613,18 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         releaseToGateway(library, session);
 
-        messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
+        messagesCanBeExchanged(otherSession, otherAcceptor);
 
         final SessionReplyStatus status = requestSession(library, sessionId, lastReceivedMsgSeqNum, sequenceIndex);
         assertEquals(OK, status);
 
-        messagesCanBeExchanged(otherSession, otherLibrary, library, otherAcceptor);
+        final List<Session> sessions = library.sessions();
+        assertThat(sessions, hasSize(1));
+
+        final Session newSession = sessions.get(0);
+        assertNotSame(session, newSession);
+
+        messagesCanBeExchanged(otherSession, otherAcceptor);
 
         // Callbacks for the missing messages whilst the gateway managed them
         final String expectedSeqNum = String.valueOf(lastReceivedMsgSeqNum + 1);
@@ -647,7 +651,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
     private void libraryNotifiedThatGatewayOwnsSession(final FakeHandler handler, final long expectedSessionId)
     {
-        final long sessionId = handler.awaitSessionId(this::pollLibraries);
+        final long sessionId = handler.awaitSessionId(() -> testSystem.poll());
 
         assertEquals(sessionId, expectedSessionId);
     }

@@ -38,6 +38,7 @@ import java.io.File;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
@@ -53,7 +54,6 @@ import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
-import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 
 public final class SystemTestUtil
 {
@@ -79,23 +79,32 @@ public final class SystemTestUtil
         }
     }
 
-    public static void assertSessionDisconnected(
-        final FixLibrary library1, final FixLibrary library2, final Session session)
+    private static final AtomicLong TEST_REQ_COUNTER = new AtomicLong();
+
+    static String testReqId()
     {
-        assertEventuallyTrue("Session is still connected",
-            () ->
-            {
-                poll(library1, library2);
-                return session.state() == DISCONNECTED;
-            });
+        return HI_ID + TEST_REQ_COUNTER.incrementAndGet();
     }
 
-    public static long sendTestRequest(final Session session)
+    public static long assertTestRequestSentAndReceived(
+        final Session sendingSession,
+        final TestSystem testSystem,
+        final FakeOtfAcceptor receivingHandler)
+    {
+        final String testReqID = testReqId();
+        final long position = sendTestRequest(sendingSession, testReqID);
+
+        assertReceivedTestRequest(testSystem, receivingHandler, testReqID);
+
+        return position;
+    }
+
+    public static long sendTestRequest(final Session session, final String testReqID)
     {
         assertEventuallyTrue("Session not connected", session::isConnected);
 
         final TestRequestEncoder testRequest = new TestRequestEncoder();
-        testRequest.testReqID(HI_ID);
+        testRequest.testReqID(testReqID);
 
         final long position = session.send(testRequest);
         assertThat(position, greaterThan(0L));
@@ -103,13 +112,16 @@ public final class SystemTestUtil
     }
 
     public static void assertReceivedTestRequest(
-        final FixLibrary library1, final FixLibrary library2, final FakeOtfAcceptor acceptor)
+        final TestSystem testSystem, final FakeOtfAcceptor acceptor, final String testReqId)
     {
         assertEventuallyTrue("Failed to receive a test request message",
             () ->
             {
-                poll(library1, library2);
-                return acceptor.hasReceivedMessage("1").isPresent();
+                testSystem.poll();
+                return acceptor
+                    .hasReceivedMessage("1")
+                    .filter(msg -> testReqId.equals(msg.getTestReqId()))
+                    .count() > 0;
             });
     }
 
@@ -129,18 +141,6 @@ public final class SystemTestUtil
         {
             assertThat(library2, isConnected());
         }
-    }
-
-    public static Reply<Session> initiateAndAwait(
-        final FixLibrary library,
-        final int port,
-        final String initiatorId,
-        final String acceptorId)
-    {
-        final Reply<Session> reply = initiate(library, port, initiatorId, acceptorId);
-        awaitLibraryReply(library, reply);
-
-        return reply;
     }
 
     public static Reply<Session> initiate(
@@ -171,6 +171,18 @@ public final class SystemTestUtil
             () ->
             {
                 poll(library, library2);
+
+                return !reply.isExecuting();
+            });
+    }
+
+    static void awaitLibraryReply(final TestSystem testSystem, final Reply<?> reply)
+    {
+        assertEventuallyTrue(
+            "No reply from: " + reply,
+            () ->
+            {
+                testSystem.poll();
 
                 return !reply.isExecuting();
             });
@@ -315,23 +327,17 @@ public final class SystemTestUtil
         return reply.resultIfPresent();
     }
 
-    public static void sessionLogsOn(
-        final FixLibrary library1, final FixLibrary library2, final Session session)
-    {
-        sessionLogsOn(library1, library2, session, DEFAULT_TIMEOUT_IN_MS);
-    }
-
     static void sessionLogsOn(
-        final FixLibrary library1,
-        final FixLibrary library2,
+        final TestSystem testSystem,
         final Session session,
         final long timeoutInMs)
     {
         assertEventuallyTrue("Session has failed to logon",
             () ->
             {
-                poll(library1, library2);
-                assertConnected(library1, library2);
+                testSystem.poll();
+                testSystem.assertConnected();
+
                 assertEquals(ACTIVE, session.state());
             },
             timeoutInMs);
@@ -376,25 +382,6 @@ public final class SystemTestUtil
         assertTrue("Session has failed to connect", session.isConnected());
     }
 
-    public static void assertLibrariesDisconnect(final int count, final FixLibrary library, final FixEngine engine)
-    {
-        assertEventuallyTrue(
-            () -> "libraries haven't disconnected yet",
-            () ->
-            {
-                if (library != null)
-                {
-                    library.poll(1);
-                }
-                return libraries(engine).size() == count + 1;
-            },
-            AWAIT_TIMEOUT,
-            () ->
-            {
-            }
-        );
-    }
-
     public static List<LibraryInfo> libraries(final FixEngine engine)
     {
         final Reply<List<LibraryInfo>> reply = engine.libraries();
@@ -436,18 +423,18 @@ public final class SystemTestUtil
         );
     }
 
-    public static void assertReceivedHeartbeat(
-        final FixLibrary library, final FixLibrary library2, final FakeOtfAcceptor acceptor)
+    static void assertReceivedSingleHeartbeat(
+        final TestSystem testSystem, final FakeOtfAcceptor acceptor, final String testReqId)
     {
         assertEventuallyTrue("Failed to received heartbeat",
             () ->
             {
-                poll(library, library2);
+                testSystem.poll();
 
                 return acceptor
                     .hasReceivedMessage("0")
-                    .filter((message) -> HI_ID.equals(message.get(Constants.TEST_REQ_ID)))
-                    .isPresent();
+                    .filter((message) -> testReqId.equals(message.get(Constants.TEST_REQ_ID)))
+                    .count() > 0;
             });
     }
 
@@ -462,15 +449,14 @@ public final class SystemTestUtil
 
     @SafeVarargs
     public static void assertEventuallyHasLibraries(
-        final FixLibrary library1,
-        final FixLibrary library2,
+        final TestSystem testSystem,
         final FixEngine engine,
-        final Matcher<LibraryInfo>... libraryMatchers)
+        final Matcher<LibraryInfo> ... libraryMatchers)
     {
         assertEventuallyTrue("Could not find libraries: " + Arrays.toString(libraryMatchers),
             () ->
             {
-                poll(library1, library2);
+                testSystem.poll();
                 final List<LibraryInfo> libraries = libraries(engine);
                 assertThat(libraries, containsInAnyOrder(libraryMatchers));
             });

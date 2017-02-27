@@ -27,6 +27,7 @@ public class MultipleLibrarySystemTest extends AbstractGatewayToGatewaySystemTes
         launchAcceptingEngine();
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        testSystem = new TestSystem(initiatingLibrary);
 
         connectSessions();
     }
@@ -38,11 +39,11 @@ public class MultipleLibrarySystemTest extends AbstractGatewayToGatewaySystemTes
         {
             DebugLogger.log(LogTag.FIX_TEST, "Iteration: " + i);
 
-            acceptingLibrary = newAcceptingLibrary(acceptingHandler);
+            acceptingLibrary = testSystem.add(newAcceptingLibrary(acceptingHandler));
 
             while (!acceptingLibrary.isConnected())
             {
-                pollLibraries();
+                testSystem.poll();
 
                 Thread.yield();
             }
@@ -51,7 +52,7 @@ public class MultipleLibrarySystemTest extends AbstractGatewayToGatewaySystemTes
 
             final Reply<SessionReplyStatus> reply = acceptingLibrary.releaseToGateway(
                 acceptingSession, DEFAULT_REPLY_TIMEOUT_IN_MS);
-            awaitLibraryReply(acceptingLibrary, initiatingLibrary, reply);
+            awaitLibraryReply(testSystem, reply);
 
             assertEquals(SessionReplyStatus.OK, reply.resultIfPresent());
             acceptingLibrary.close();

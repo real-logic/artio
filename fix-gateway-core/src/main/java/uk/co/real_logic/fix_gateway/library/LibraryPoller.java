@@ -891,7 +891,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private Session initiateSession(
         final long connectionId,
-        final int lastSequenceNumber,
+        final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
         final SessionState state,
         final SessionConfiguration sessionConfiguration,
@@ -913,13 +913,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             fixCounters.sentMsgSeqNo(connectionId),
             libraryId,
             configuration.sessionBufferSize(),
-            initiatorInitialSequenceNumber(sessionConfiguration, lastSequenceNumber),
+            initiatorNewSequenceNumber(sessionConfiguration, lastSentSequenceNumber),
             sequenceIndex,
             state,
             sessionConfiguration != null && sessionConfiguration.resetSeqNum(),
             configuration.reasonableTransmissionTimeInMs())
             .lastReceivedMsgSeqNum(
-                initiatorInitialSequenceNumber(sessionConfiguration, lastReceivedSequenceNumber) - 1);
+                initiatorNewSequenceNumber(sessionConfiguration, lastReceivedSequenceNumber) - 1);
 
         if (sessionConfiguration != null)
         {
@@ -940,12 +940,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return session;
     }
 
-    private int initiatorInitialSequenceNumber(
+    private int initiatorNewSequenceNumber(
         final SessionConfiguration sessionConfiguration, final int lastSequenceNumber)
     {
+        final int newSequenceNumber = lastSequenceNumber + 1;
         if (sessionConfiguration == null)
         {
-            return 1;
+            return newSequenceNumber;
         }
 
         if (sessionConfiguration.hasCustomInitialSequenceNumber())
@@ -955,7 +956,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
         if (sessionConfiguration.sequenceNumbersPersistent() && lastSequenceNumber != SessionInfo.UNK_SESSION)
         {
-            return lastSequenceNumber + 1;
+            return newSequenceNumber;
         }
 
         return 1;

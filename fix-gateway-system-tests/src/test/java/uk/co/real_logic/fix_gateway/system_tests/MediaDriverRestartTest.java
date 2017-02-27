@@ -91,6 +91,7 @@ public class MediaDriverRestartTest extends AbstractGatewayToGatewaySystemTest
         configuration.aeronContext().driverTimeoutMs(DRIVER_TIMEOUT_MS);
 
         initiatingLibrary = connect(configuration);
+        testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         connectSessions();
     }

@@ -32,9 +32,11 @@ import static uk.co.real_logic.fix_gateway.FixMatchers.hasConnectionId;
 import static uk.co.real_logic.fix_gateway.FixMatchers.hasSequenceIndex;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
+import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class AbstractGatewayToGatewaySystemTest
@@ -55,6 +57,8 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
     protected FakeHandler initiatingHandler = new FakeHandler(initiatingOtfAcceptor);
+
+    protected TestSystem testSystem;
 
     @After
     public void close()
@@ -81,34 +85,44 @@ public class AbstractGatewayToGatewaySystemTest
         assertEquals(expectedInitToAccSeqNum, initiatingSession.lastSentMsgSeqNum());
         assertEquals(expectedInitToAccSeqNum, acceptingSession.lastReceivedMsgSeqNum());
 
-        awaitMessage(expectedAccToInitSeqNum, initiatingSession, initiatingLibrary);
+        awaitMessage(expectedAccToInitSeqNum, initiatingSession);
 
         assertEquals(expectedAccToInitSeqNum, initiatingSession.lastReceivedMsgSeqNum());
         assertEquals(expectedAccToInitSeqNum, acceptingSession.lastSentMsgSeqNum());
     }
 
-    private void awaitMessage(final int sequenceNumber, final Session session, final FixLibrary library)
+    private void awaitMessage(final int sequenceNumber, final Session session)
     {
         assertEventuallyTrue(
             "Library Never reaches " + sequenceNumber,
             () ->
             {
-                library.poll(LIBRARY_LIMIT);
+                testSystem.poll();
                 return session.lastReceivedMsgSeqNum() >= sequenceNumber;
             });
     }
 
     protected void assertSessionsDisconnected()
     {
-        assertSessionDisconnected(initiatingLibrary, acceptingLibrary, initiatingSession);
-        assertSessionDisconnected(acceptingLibrary, initiatingLibrary, acceptingSession);
+        assertSessionDisconnected(initiatingSession);
+        assertSessionDisconnected(acceptingSession);
 
         assertEventuallyTrue("libraries receive disconnect messages",
             () ->
             {
-                poll(initiatingLibrary, acceptingLibrary);
+                testSystem.poll();
                 assertNotSession(acceptingHandler, acceptingSession);
                 assertNotSession(initiatingHandler, initiatingSession);
+            });
+    }
+
+    private void assertSessionDisconnected(final Session session)
+    {
+        assertEventuallyTrue("Session is still connected",
+            () ->
+            {
+                testSystem.poll();
+                return session.state() == DISCONNECTED;
             });
     }
 
@@ -137,17 +151,12 @@ public class AbstractGatewayToGatewaySystemTest
     {
         final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
 
-        pollUntilReply(reply);
+        awaitLibraryReply(testSystem, reply);
         initiatingSession = reply.resultIfPresent();
 
         assertEquals(State.COMPLETED, reply.state());
         assertConnected(initiatingSession);
-        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
-    }
-
-    protected void pollUntilReply(final Reply<?> reply)
-    {
-        awaitLibraryReply(initiatingLibrary, acceptingLibrary, reply);
+        sessionLogsOn(testSystem, initiatingSession, DEFAULT_TIMEOUT_IN_MS);
     }
 
     protected void assertMessageResent(final int sequenceNumber)
@@ -156,8 +165,7 @@ public class AbstractGatewayToGatewaySystemTest
         assertEventuallyTrue("Failed to receive the reply",
             () ->
             {
-                acceptingLibrary.poll(LIBRARY_LIMIT);
-                initiatingLibrary.poll(LIBRARY_LIMIT);
+                testSystem.poll();
 
                 final FixMessage message = acceptingOtfAcceptor.lastMessage();
                 final String messageType = message.getMsgType();
@@ -186,13 +194,12 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void messagesCanBeExchanged()
     {
-        final long position = messagesCanBeExchanged(
-            initiatingSession, initiatingLibrary, acceptingLibrary, initiatingOtfAcceptor);
+        final long position = messagesCanBeExchanged(initiatingSession, initiatingOtfAcceptor);
 
         assertEventuallyTrue("position never catches up",
             () ->
             {
-                initiatingLibrary.poll(LIBRARY_LIMIT);
+                testSystem.poll();
 
                 return initiatingHandler.sentPosition() >= position;
             });
@@ -200,13 +207,12 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected long messagesCanBeExchanged(
         final Session sendingSession,
-        final FixLibrary library,
-        final FixLibrary library2,
         final FakeOtfAcceptor receivingAcceptor)
     {
-        final long position = sendTestRequest(sendingSession);
+        final String testReqID = testReqId();
+        final long position = sendTestRequest(sendingSession, testReqID);
 
-        assertReceivedHeartbeat(library, library2, receivingAcceptor);
+        assertReceivedSingleHeartbeat(testSystem, receivingAcceptor, testReqID);
 
         return position;
     }
@@ -252,11 +258,6 @@ public class AbstractGatewayToGatewaySystemTest
     {
         assertThat(initiatingSession, hasSequenceIndex(sequenceIndex));
 
-    }
-
-    protected void pollLibraries()
-    {
-        poll(initiatingLibrary, acceptingLibrary);
     }
 
     protected void assertAllMessagesHaveSequenceIndex(final int sequenceIndex)

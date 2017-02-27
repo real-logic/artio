@@ -49,3 +49,5 @@ acceptor_logs/
 # Honest Profiler
 liblagent.so
 *.hpl
+
+*attach_pid*

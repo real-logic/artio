@@ -48,6 +48,7 @@ public class LibraryFirstSystemTest extends AbstractGatewayToGatewaySystemTest
 
         acceptingLibrary = acceptingLibraryFuture.get();
         initiatingLibrary = initiatingLibraryFuture.get();
+        testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         connectSessions();
     }
@@ -58,7 +59,7 @@ public class LibraryFirstSystemTest extends AbstractGatewayToGatewaySystemTest
     {
         messagesCanBeExchanged();
 
-        acceptingLibrary.close();
+        testSystem.close(acceptingLibrary);
         acceptingEngine.close();
         clearMessages();
 
@@ -67,7 +68,7 @@ public class LibraryFirstSystemTest extends AbstractGatewayToGatewaySystemTest
         waitLessThanReplyTimeout();
 
         launchAcceptingEngine();
-        acceptingLibrary = acceptingLibraryFuture.get();
+        acceptingLibrary = testSystem.add(acceptingLibraryFuture.get());
 
         wireSessions();
         messagesCanBeExchanged();

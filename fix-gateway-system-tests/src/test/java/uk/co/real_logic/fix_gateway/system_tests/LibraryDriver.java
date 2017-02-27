@@ -18,23 +18,25 @@ package uk.co.real_logic.fix_gateway.system_tests;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 
 import java.util.List;
 
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.LIBRARY_LIMIT;
-import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.libraries;
-import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.libraryInfoById;
+import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 class LibraryDriver implements AutoCloseable
 {
+    private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
     private final FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
     private final FakeHandler handler = new FakeHandler(otfAcceptor);
     private final FixLibrary library;
 
     LibraryDriver()
     {
-        library = SystemTestUtil.newAcceptingLibrary(handler);
+        final LibraryConfiguration configuration = SystemTestUtil.acceptingLibraryConfig(handler);
+        configuration.libraryConnectHandler(fakeConnectHandler);
+        library = SystemTestUtil.connect(configuration);
     }
 
     long awaitSessionId()
@@ -67,5 +69,10 @@ class LibraryDriver implements AutoCloseable
     private int poll()
     {
         return library.poll(LIBRARY_LIMIT);
+    }
+
+    void clearSesssions()
+    {
+        handler.clearSessions();
     }
 }

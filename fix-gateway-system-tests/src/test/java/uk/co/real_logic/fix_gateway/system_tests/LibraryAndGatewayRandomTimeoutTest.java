@@ -80,13 +80,19 @@ public class LibraryAndGatewayRandomTimeoutTest
         launchLibrary();
         initiatingEngine.close();
 
-        final Reply<Session> reply = initiateAndAwait(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+        final Reply<Session> reply1 = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+        awaitLibraryReply(initiatingLibrary, reply1);
+
+        final Reply<Session> reply = reply1;
         assertEquals(TIMED_OUT, reply.state());
     }
 
     private void initiateResultsInError()
     {
-        final Reply<Session> reply = initiateAndAwait(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+        final Reply<Session> reply1 = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+        awaitLibraryReply(initiatingLibrary, reply1);
+
+        final Reply<Session> reply = reply1;
         assertEquals(ERRORED, reply.state());
         assertThat(reply.error(), instanceOf(FixGatewayException.class));
     }

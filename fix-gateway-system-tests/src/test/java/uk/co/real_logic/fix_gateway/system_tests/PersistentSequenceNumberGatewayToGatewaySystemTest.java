@@ -32,8 +32,7 @@ import java.io.IOException;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
+import static uk.co.real_logic.fix_gateway.Timing.*;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.fix_gateway.system_tests.FixMessage.hasMessageSequenceNumber;
@@ -120,7 +119,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             "Unable to send resend request",
             () ->
             {
-                pollLibraries();
+                testSystem.poll();
                 return initiatingSession.send(resendRequest) > 0;
             });
 
@@ -128,8 +127,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             "Failed to receive reply",
             () ->
             {
-                pollLibraries();
-                return initiatingOtfAcceptor.hasReceivedMessage("A");
+                testSystem.poll();
+                return initiatingOtfAcceptor.hasReceivedMessage("A").findFirst();
             },
             2_000);
 
@@ -222,6 +221,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         acceptingLibrary = newAcceptingLibrary(acceptingHandler);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         beforeConnect.run();
 
@@ -245,7 +245,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         initiatingSession = reply.resultIfPresent();
 
         assertConnected(initiatingSession);
-        sessionLogsOn(initiatingLibrary, acceptingLibrary, initiatingSession);
+        sessionLogsOn(testSystem, initiatingSession, DEFAULT_TIMEOUT_IN_MS);
 
         acquireSessionTask.run();
     }
@@ -265,8 +265,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         assertSequenceIndicesAre(0);
 
-        sendTestRequest(initiatingSession);
-        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+        assertTestRequestSentAndReceived(initiatingSession, testSystem, acceptingOtfAcceptor);
         assertSequenceFromInitToAcceptAt(2, 2);
 
         final long initiatedSessionId = initiatingSession.id();
@@ -285,8 +284,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertEquals("acceptingSessionId not stable over restarts", acceptingSessionId, acceptingSession.id());
         assertSequenceFromInitToAcceptAt(sequNumAfter, sequNumAfter);
 
-        sendTestRequest(initiatingSession);
-        assertReceivedTestRequest(initiatingLibrary, acceptingLibrary, acceptingOtfAcceptor);
+        assertTestRequestSentAndReceived(initiatingSession, testSystem, acceptingOtfAcceptor);
     }
 
     private void nothing()

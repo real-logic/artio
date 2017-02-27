@@ -42,7 +42,7 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
         acceptingEngine = FixEngine.launch(acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID));
 
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
-        acceptingLibrary = newAcceptingLibrary(acceptingHandler);
+        testSystem = new TestSystem(initiatingLibrary);
     }
 
     @Test
@@ -58,7 +58,7 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
             .build();
 
         final Reply<Session> reply = initiatingLibrary.initiate(config);
-        awaitLibraryReply(initiatingLibrary, reply);
+        awaitLibraryReply(testSystem, reply);
 
         final Session session = reply.resultIfPresent();
         assertConnected(session);
