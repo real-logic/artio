@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.AtomicBuffer;
@@ -54,12 +55,17 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Before
     public void setUp()
     {
-        deleteIfExists(new File(INDEX_FILE_PATH));
-        deleteIfExists(writablePath(INDEX_FILE_PATH));
-        deleteIfExists(passingPath(INDEX_FILE_PATH));
+        deleteFiles();
 
         writer = newWriter(inMemoryBuffer);
         reader = new SequenceNumberIndexReader(inMemoryBuffer, errorHandler);
+    }
+
+    @After
+    public void tearDown()
+    {
+        CloseHelper.quietClose(writer);
+        deleteFiles();
     }
 
     @Test
@@ -300,5 +306,12 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         final int number = reader.lastKnownSequenceNumber(sessionId);
         assertEquals(expectedSequenceNumber, number);
+    }
+
+    private void deleteFiles()
+    {
+        deleteIfExists(new File(INDEX_FILE_PATH));
+        deleteIfExists(writablePath(INDEX_FILE_PATH));
+        deleteIfExists(passingPath(INDEX_FILE_PATH));
     }
 }
