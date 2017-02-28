@@ -22,7 +22,6 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.replication.ClusterablePublication;
 
 import static io.aeron.Publication.CLOSED;
-import static io.aeron.Publication.NOT_CONNECTED;
 
 /**
  * A publication designed for deterministic claiming.
@@ -80,7 +79,7 @@ class ClaimablePublication implements AutoCloseable
 
         idleStrategy.reset();
 
-        if (position == NOT_CONNECTED || position == CLOSED)
+        if (position == CLOSED)
         {
             throw new NotConnectedException(position);
         }
