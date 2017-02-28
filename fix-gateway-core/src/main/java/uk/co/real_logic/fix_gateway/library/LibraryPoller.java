@@ -419,7 +419,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             final long correlationId = ++currentCorrelationId;
             final int maxClaimAttempts = configuration.outboundMaxClaimAttempts();
             long position = Long.MIN_VALUE;
-            for (int i = 0; i < maxClaimAttempts && position < 0; i++)
+            for (int i = 0; i < maxClaimAttempts; i++)
             {
                 position = outboundPublication.saveLibraryConnect(libraryId, correlationId);
                 if (position >= 0)
@@ -430,6 +430,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 idleStrategy.idle();
             }
             idleStrategy.reset();
+
+            System.out.println("position = " + position);
 
             if (position > 0)
             {
@@ -460,7 +462,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         configuration.libraryConnectHandler().onDisconnect(fixLibrary);
         setLibraryConnected(false);
 
-        connect();
+        state = ATTEMPT_CONNECT;
     }
 
     private void setLibraryConnected(final boolean libraryConnected)
