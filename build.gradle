@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 - 2016 Real Logic Ltd.
+ * Copyright 2015-2017 Real Logic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ apply plugin: 'signing'
 apply plugin: 'net.researchgate.release'
 apply plugin: 'com.github.johnrengelman.shadow'
 
-def aeronVersion = '1.2.0'
+def aeronVersion = '1.2.1'
 def agronaVersion = '0.9.3'
 
 defaultTasks 'clean', 'build', 'install'
@@ -122,7 +122,7 @@ subprojects {
 
     javadoc {
         title = '<h1>Fix Gateway</h1>'
-        options.bottom = '<i>Copyright &#169; 2015 - 2016 Real Logic Ltd. All Rights Reserved.</i>'
+        options.bottom = '<i>Copyright &#169; 2015-2017 Real Logic Ltd. All Rights Reserved.</i>'
     }
 
     task sourcesJar(type: Jar) {
