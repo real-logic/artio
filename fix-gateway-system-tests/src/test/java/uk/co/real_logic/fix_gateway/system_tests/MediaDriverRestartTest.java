@@ -62,14 +62,14 @@ public class MediaDriverRestartTest extends AbstractGatewayToGatewaySystemTest
         final MediaDriver.Context context = TestFixtures.mediaDriverContext(
             TestFixtures.TERM_BUFFER_LENGTH, dirsDeleteOnStart);
         context.driverTimeoutMs(DRIVER_TIMEOUT_MS);
+        context.warnIfDirectoriesExist(false);
 
-        final MediaDriver mediaDriver1 = MediaDriver.launch(context);
+        mediaDriver = MediaDriver.launch(context);
         final String aeronDirectoryName = context.aeronDirectoryName();
-        CloseChecker.onOpen(aeronDirectoryName, mediaDriver1);
+        CloseChecker.onOpen(aeronDirectoryName, mediaDriver);
 
-        mediaDriver = mediaDriver1;
-
-        final EngineConfiguration acceptingConfig = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
+        final EngineConfiguration acceptingConfig = acceptingConfig(
+            port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
         acceptingConfig.aeronContext().driverTimeoutMs(DRIVER_TIMEOUT_MS);
 
         acceptingEngine = FixEngine.launch(acceptingConfig);
