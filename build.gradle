@@ -141,6 +141,8 @@ subprojects {
         from javadoc.destinationDir
     }
 
+    task allDeps(type: DependencyReportTask) {}
+
     configurations {
         tests
     }
