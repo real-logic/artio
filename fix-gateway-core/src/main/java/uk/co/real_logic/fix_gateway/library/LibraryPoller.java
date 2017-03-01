@@ -353,12 +353,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     // NB: not a reconnect, an nth attempt at a connect
     private void nextConnectingStep(final long timeInMs)
     {
-        if (livenessDetector.isConnected())
-        {
-            state = CONNECTED;
-            onConnect();
-        }
-        else if (timeInMs > nextAttemptTime)
+        if (timeInMs > nextAttemptTime)
         {
             attemptNextEngine();
 
@@ -419,7 +414,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             final long correlationId = ++currentCorrelationId;
             final int maxClaimAttempts = configuration.outboundMaxClaimAttempts();
             long position = Long.MIN_VALUE;
-            for (int i = 0; i < maxClaimAttempts; i++)
+            for (int i = 0; i < maxClaimAttempts && position < 0; i++)
             {
                 position = outboundPublication.saveLibraryConnect(libraryId, correlationId);
                 if (position >= 0)
@@ -744,6 +739,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             DebugLogger.log(
                 APPLICATION_HEARTBEAT, "%d: Received Heartbeat from engine at timeInMs %d\n", libraryId, timeInMs);
             livenessDetector.onHeartbeat(timeInMs);
+
+            if (!isConnected() && livenessDetector.isConnected())
+            {
+                state = CONNECTED;
+                onConnect();
+            }
         }
 
         return CONTINUE;

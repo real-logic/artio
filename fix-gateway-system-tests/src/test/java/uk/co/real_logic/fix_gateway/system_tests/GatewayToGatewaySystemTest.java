@@ -469,19 +469,31 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         acceptingEngine.close();
 
-        awaitIsConnected(false);
+        awaitIsConnected(false, acceptingLibrary);
     }
 
     @Test
-    public void shouldReconnectToBouncedGateway()
+    public void shouldReconnectToBouncedGatewayViaIpc()
     {
         acceptingEngine.close();
 
-        awaitIsConnected(false);
+        awaitIsConnected(false, acceptingLibrary);
 
         launchAcceptingEngine();
 
-        awaitIsConnected(true);
+        awaitIsConnected(true, acceptingLibrary);
+    }
+
+    @Test
+    public void shouldReconnectToBouncedGatewayViaUdp()
+    {
+        initiatingEngine.close();
+
+        awaitIsConnected(false, initiatingLibrary);
+
+        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
+
+        awaitIsConnected(true, initiatingLibrary);
     }
 
     @Test
@@ -519,14 +531,14 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         messagesCanBeExchanged();
     }
 
-    private void awaitIsConnected(final boolean connected)
+    private void awaitIsConnected(final boolean connected, final FixLibrary library)
     {
         assertEventuallyTrue(
-            "isConnect never became: " + false,
+            "isConnect never became: " + connected,
             () ->
             {
                 testSystem.poll();
-                return acceptingLibrary.isConnected() == connected;
+                return library.isConnected() == connected;
             });
     }
 
