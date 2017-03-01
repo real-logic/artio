@@ -431,8 +431,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             }
             idleStrategy.reset();
 
-            System.out.println("position = " + position);
-
             if (position > 0)
             {
                 this.connectCorrelationId = correlationId;
