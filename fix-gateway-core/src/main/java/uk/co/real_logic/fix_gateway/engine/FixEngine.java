@@ -22,6 +22,7 @@ import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
 import uk.co.real_logic.fix_gateway.Reply;
+import uk.co.real_logic.fix_gateway.StreamInformation;
 import uk.co.real_logic.fix_gateway.engine.framer.FramerContext;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
@@ -168,7 +169,10 @@ public final class FixEngine extends GatewayProcess
 
     private Subscription replaySubscription()
     {
-        return aeron.addSubscription(configuration.libraryAeronChannel(), OUTBOUND_REPLAY_STREAM);
+        final Subscription subscription = aeron.addSubscription(
+            configuration.libraryAeronChannel(), OUTBOUND_REPLAY_STREAM);
+        StreamInformation.print("replay", subscription, configuration);
+        return subscription;
     }
 
     private FixEngine launch()

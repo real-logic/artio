@@ -32,7 +32,8 @@ class OutboundPipe implements ClusterFragmentHandler
     {
         this.publication = publication;
         this.streams = streams;
-        this.subscription = publication != null ? streams.subscription(publication.streamId()) : null;
+        this.subscription = publication != null ?
+            streams.subscription(publication.streamId(), "outboundPipe") : null;
     }
 
     public int poll(final int fragmentLimit)

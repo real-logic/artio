@@ -60,8 +60,8 @@ public final class Streams
         return node.publication(streamId);
     }
 
-    public ClusterableSubscription subscription()
+    public ClusterableSubscription subscription(final String name)
     {
-        return node.subscription(streamId);
+        return node.subscription(streamId, name);
     }
 }

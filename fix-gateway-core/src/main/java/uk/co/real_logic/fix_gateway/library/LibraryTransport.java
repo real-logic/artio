@@ -21,6 +21,7 @@ import org.agrona.concurrent.NanoClock;
 import org.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.FixCounters;
+import uk.co.real_logic.fix_gateway.StreamInformation;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
@@ -54,7 +55,8 @@ class LibraryTransport
     void initStreams(final String aeronChannel)
     {
         final NanoClock nanoClock = new SystemNanoClock();
-        final ClusterableStreams soloNode = ClusterableStreams.solo(aeron, aeronChannel);
+        final ClusterableStreams soloNode = ClusterableStreams.solo(
+            aeron, aeronChannel, configuration.printAeronStreamIdentifiers());
         DebugLogger.log(LIBRARY_CONNECT, "Directed streams at %s\n", aeronChannel);
 
         outboundLibraryStreams = new Streams(
@@ -67,6 +69,8 @@ class LibraryTransport
             outboundPublication.close();
         }
         inboundSubscription = aeron.addSubscription(aeronChannel, INBOUND_LIBRARY_STREAM);
+        StreamInformation.print(
+            "library " + configuration.libraryId() + " inboundSubscription", inboundSubscription, configuration);
         outboundPublication = outboundLibraryStreams.gatewayPublication(configuration.libraryIdleStrategy());
     }
 

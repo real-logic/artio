@@ -127,7 +127,7 @@ class NodeRunner implements AutoCloseable
             .idleStrategy(new YieldingIdleStrategy());
 
         clusterAgent = new ClusterAgent(configuration, System.currentTimeMillis());
-        subscription = clusterAgent.clusterStreams().subscription(1);
+        subscription = clusterAgent.clusterStreams().subscription(1, "nodeRunner");
     }
 
     public void close()

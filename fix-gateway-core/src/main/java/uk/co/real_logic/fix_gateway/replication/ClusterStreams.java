@@ -61,7 +61,7 @@ class ClusterStreams extends ClusterableStreams
         return new ClusterPublication(dataPublication, leaderSessionId, ourSessionId, clusterStreamId);
     }
 
-    public ClusterSubscription subscription(final int clusterStreamId)
+    public ClusterSubscription subscription(final int clusterStreamId, final String name)
     {
         final ArchiveReader archiveReader = archiveReaderSupplier.get();
         return new ClusterSubscription(

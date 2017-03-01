@@ -25,6 +25,7 @@ import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.NanoClock;
 import org.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
+import uk.co.real_logic.fix_gateway.StreamInformation;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
@@ -217,7 +218,7 @@ public abstract class EngineContext implements AutoCloseable
             configuration.loggerIdleStrategy(),
             errorHandler,
             configuration.outboundMaxClaimAttempts(),
-            inboundLibraryStreams.subscription(),
+            inboundLibraryStreams.subscription("replayer"),
             configuration.agentNamePrefix());
     }
 
@@ -235,7 +236,7 @@ public abstract class EngineContext implements AutoCloseable
                 newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, INBOUND_LIBRARY_STREAM),
                 receivedSequenceNumberIndex),
             inboundArchiveReader,
-            inboundLibraryStreams.subscription(),
+            inboundLibraryStreams.subscription("inboundIndexer"),
             configuration.agentNamePrefix(),
             inboundcompletionPosition);
 
@@ -249,7 +250,7 @@ public abstract class EngineContext implements AutoCloseable
         outboundIndexer = new Indexer(
             outboundIndices,
             outboundArchiveReader,
-            outboundLibraryStreams.subscription(),
+            outboundLibraryStreams.subscription("outboundIndexer"),
             configuration.agentNamePrefix(),
             outboundLibraryCompletionPosition);
     }
@@ -261,9 +262,12 @@ public abstract class EngineContext implements AutoCloseable
     public abstract ClusterSubscription outboundClusterSubscription();
 
     // Each invocation should return a new instance of the subscription
-    public Subscription outboundLibrarySubscription()
+    public Subscription outboundLibrarySubscription(final String name)
     {
-        return aeron.addSubscription(configuration.libraryAeronChannel(), OUTBOUND_LIBRARY_STREAM);
+        final Subscription subscription = aeron.addSubscription(
+            configuration.libraryAeronChannel(), OUTBOUND_LIBRARY_STREAM);
+        StreamInformation.print(name, subscription, configuration);
+        return subscription;
     }
 
     public abstract ReplayQuery inboundReplayQuery();

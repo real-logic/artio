@@ -80,7 +80,7 @@ class ClusterContext extends EngineContext
                 aeron.addSubscription(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
 
             final ClusterPositionSender positionSender = new ClusterPositionSender(
-                outboundLibrarySubscription(),
+                outboundLibrarySubscription("positionSender"),
                 outboundClusterSubscription(),
                 inboundLibraryPublication(),
                 configuration.agentNamePrefix());
@@ -192,7 +192,7 @@ class ClusterContext extends EngineContext
 
     public ClusterSubscription outboundClusterSubscription()
     {
-        return (ClusterSubscription) outboundLibraryStreams().subscription();
+        return (ClusterSubscription) outboundLibraryStreams().subscription("outboundClusterSubscription");
     }
 
     public void close()

@@ -17,11 +17,13 @@ package uk.co.real_logic.fix_gateway.engine;
 
 import io.aeron.Aeron;
 import io.aeron.Publication;
+import io.aeron.Subscription;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.CompositeAgent;
 import org.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
+import uk.co.real_logic.fix_gateway.StreamInformation;
 import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
@@ -85,7 +87,8 @@ class SoloContext extends EngineContext
 
     private ClusterableStreams initNode()
     {
-        return ClusterableStreams.solo(aeron, configuration.libraryAeronChannel());
+        return ClusterableStreams.solo(
+            aeron, configuration.libraryAeronChannel(), configuration.printAeronStreamIdentifiers());
     }
 
     private void newLoggingRunner()
@@ -99,10 +102,8 @@ class SoloContext extends EngineContext
 
             final Replayer replayer = newReplayer(replayPublication, outboundArchiveReader);
 
-            inboundArchiver.subscription(
-                aeron.addSubscription(inboundStreamId.channel(), inboundStreamId.streamId()));
-            outboundArchiver.subscription(
-                aeron.addSubscription(outboundStreamId.channel(), outboundStreamId.streamId()));
+            archiverSubscription(inboundArchiver, inboundStreamId);
+            archiverSubscription(outboundArchiver, outboundStreamId);
 
             final List<Agent> agents = new ArrayList<>(archivers);
             agents.add(inboundIndexer);
@@ -124,11 +125,19 @@ class SoloContext extends EngineContext
                     configuration.outboundMaxClaimAttempts()
                 );
             final GapFiller gapFiller = new GapFiller(
-                inboundLibraryStreams.subscription(),
+                inboundLibraryStreams.subscription("replayer"),
                 replayGatewayPublication,
                 configuration.agentNamePrefix());
             loggingRunner = newRunner(gapFiller);
         }
+    }
+
+    private void archiverSubscription(final Archiver archiver, final StreamIdentifier streamId)
+    {
+
+        final Subscription subscription = aeron.addSubscription(streamId.channel(), streamId.streamId());
+        StreamInformation.print("Archiver", subscription, configuration);
+        archiver.subscription(subscription);
     }
 
     public void newArchival()

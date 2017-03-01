@@ -19,9 +19,13 @@ import io.aeron.Aeron;
 
 public abstract class ClusterableStreams
 {
-    public static SoloStreams solo(final Aeron aeron, final String aeronChannel)
+
+    public static SoloStreams solo(
+        final Aeron aeron,
+        final String aeronChannel,
+        final boolean printAeronStreamIdentifiers)
     {
-        return new SoloStreams(aeron, aeronChannel);
+        return new SoloStreams(aeron, aeronChannel, printAeronStreamIdentifiers);
     }
 
     public abstract boolean isLeader();
@@ -38,7 +42,8 @@ public abstract class ClusterableStreams
      * Get the subscription for this stream id, new object every time.
      *
      * @param clusterStreamId a unique identifier for the stream
+     * @param name
      * @return the subscription for this stream id.
      */
-    public abstract ClusterableSubscription subscription(int clusterStreamId);
+    public abstract ClusterableSubscription subscription(int clusterStreamId, String name);
 }

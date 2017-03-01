@@ -109,8 +109,10 @@ public class CommonConfiguration
     public static final int DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S = 3;
     public static final long DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS =
         SECONDS.toMillis(DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S);
+    public static final boolean DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS = false;
 
     private long reasonableTransmissionTimeInMs = DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
+    private boolean printAeronStreamIdentifiers = DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS;
 
     public static void validateTimeout(final long timeoutInMs)
     {
@@ -459,6 +461,12 @@ public class CommonConfiguration
         return this;
     }
 
+    public CommonConfiguration printAeronStreamIdentifiers(final boolean printAeronStreamIdentifiers)
+    {
+        this.printAeronStreamIdentifiers = printAeronStreamIdentifiers;
+        return this;
+    }
+
     public Aeron.Context aeronContext()
     {
         return aeronContext;
@@ -547,6 +555,11 @@ public class CommonConfiguration
     public String agentNamePrefix()
     {
         return agentNamePrefix;
+    }
+
+    public boolean printAeronStreamIdentifiers()
+    {
+        return printAeronStreamIdentifiers;
     }
 
     protected void conclude(final String fixSuffix)

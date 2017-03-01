@@ -16,16 +16,20 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Aeron;
+import io.aeron.Subscription;
+import uk.co.real_logic.fix_gateway.StreamInformation;
 
 class SoloStreams extends ClusterableStreams
 {
     private final Aeron aeron;
     private final String aeronChannel;
+    private final boolean printAeronStreamIdentifiers;
 
-    SoloStreams(final Aeron aeron, final String aeronChannel)
+    SoloStreams(final Aeron aeron, final String aeronChannel, final boolean printAeronStreamIdentifiers)
     {
         this.aeron = aeron;
         this.aeronChannel = aeronChannel;
+        this.printAeronStreamIdentifiers = printAeronStreamIdentifiers;
     }
 
     public boolean isLeader()
@@ -38,8 +42,10 @@ class SoloStreams extends ClusterableStreams
         return ClusterablePublication.solo(aeron.addPublication(aeronChannel, clusterStreamId));
     }
 
-    public SoloSubscription subscription(final int clusterStreamId)
+    public SoloSubscription subscription(final int clusterStreamId, final String name)
     {
-        return new SoloSubscription(aeron.addSubscription(aeronChannel, clusterStreamId));
+        final Subscription subscription = aeron.addSubscription(aeronChannel, clusterStreamId);
+        StreamInformation.print(name, subscription, printAeronStreamIdentifiers);
+        return new SoloSubscription(subscription);
     }
 }
