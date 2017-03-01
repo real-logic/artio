@@ -82,6 +82,7 @@ public final class FixBenchmarkServer
         }
 
         final EngineConfiguration configuration = new EngineConfiguration();
+        configuration.printAeronStreamIdentifiers(true);
         setupAuthentication(configuration);
 
         return configuration
@@ -96,6 +97,7 @@ public final class FixBenchmarkServer
     private static LibraryConfiguration libraryConfiguration()
     {
         final LibraryConfiguration configuration = new LibraryConfiguration();
+        configuration.printAeronStreamIdentifiers(true);
         setupAuthentication(configuration);
 
         return configuration
