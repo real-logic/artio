@@ -36,15 +36,20 @@ public class ErrorPrinter implements Agent
     }
 
     private final ErrorConsumer errorConsumer =
-        (observationCount, firstObservationTimestamp, lastObservationTimestamp, encodedException) ->
+        (observationCount, firstObservationTimestampInMs, lastObservationTimestampInMs, encodedException) ->
         {
             System.err.println(encodedException);
-            System.err.println();
+            System.err.printf(
+                "count=%d,firstTime=%d,lastTime=%d\n\n",
+                observationCount,
+                firstObservationTimestampInMs,
+                lastObservationTimestampInMs);
         };
+
     private final AtomicBuffer errorBuffer;
     private final String agentNamePrefix;
 
-    private long lastSeenErrorTime = 0L;
+    private long lastSeenErrorTimeInMs = 0L;
 
     public ErrorPrinter(final AtomicBuffer errorBuffer, final String agentNamePrefix)
     {
@@ -54,13 +59,13 @@ public class ErrorPrinter implements Agent
 
     public int doWork() throws Exception
     {
-        final long time = System.nanoTime();
-        if (time > lastSeenErrorTime)
+        final long timeInMs = System.currentTimeMillis();
+        if (timeInMs > lastSeenErrorTimeInMs)
         {
-            final int errors = ErrorLogReader.read(errorBuffer, errorConsumer, lastSeenErrorTime);
+            final int errors = ErrorLogReader.read(errorBuffer, errorConsumer, lastSeenErrorTimeInMs);
             if (errors > 0)
             {
-                lastSeenErrorTime = time;
+                lastSeenErrorTimeInMs = timeInMs;
             }
             return errors;
         }

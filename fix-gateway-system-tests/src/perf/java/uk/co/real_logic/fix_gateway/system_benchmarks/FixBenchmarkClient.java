@@ -25,10 +25,6 @@ public final class FixBenchmarkClient
         {
             ThroughputBenchmarkClient.main(args);
         }
-        else if (TYPE.equalsIgnoreCase("single-throughput"))
-        {
-            SingleThreadedThroughputBenchmarkClient.main(args);
-        }
         else if (TYPE.equalsIgnoreCase("many-connections"))
         {
             ManyConnectionsBenchmarkClient.main(args);
