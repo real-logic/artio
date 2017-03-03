@@ -286,7 +286,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
             case CONNECTING:
                 nextConnectingStep(timeInMs);
-
                 return pollWithoutReconnect(timeInMs, fragmentLimit);
 
             case CLOSED:

@@ -23,7 +23,7 @@ import java.io.IOException;
 
 import static java.util.Collections.singletonList;
 
-public final class SoleLibrary
+public final class ConstantlyRestartingLibrary
 {
     public static void main(final String[] args) throws IOException
     {
