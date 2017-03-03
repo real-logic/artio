@@ -30,18 +30,21 @@ public class ChecksumFramer extends SectorFramer
     private final ErrorHandler errorHandler;
     private final int errorReportingOffset;
     private final ChecksumConsumer validateChecksumFunc;
+    private final String fileName;
 
     public ChecksumFramer(
         final AtomicBuffer buffer,
         final int capacity,
         final ErrorHandler errorHandler,
-        final int errorReportingOffset)
+        final int errorReportingOffset,
+        final String fileName)
     {
         super(capacity);
         this.buffer = buffer;
         saveChecksumFunc = buffer::putInt;
         this.errorHandler = errorHandler;
         this.errorReportingOffset = errorReportingOffset;
+        this.fileName = fileName;
         validateChecksumFunc = this::validateChecksum;
     }
 
@@ -61,7 +64,7 @@ public class ChecksumFramer extends SectorFramer
         final int start = errorReportingOffset + checksumOffset - SECTOR_DATA_LENGTH;
         final int end = errorReportingOffset + checksumOffset + CHECKSUM_SIZE;
         validateCheckSum(
-            "sequence numbers", start, end, savedChecksum, calculatedChecksum, errorHandler);
+            fileName, start, end, savedChecksum, calculatedChecksum, errorHandler);
     }
 
     private void withChecksums(final ChecksumConsumer consumer)

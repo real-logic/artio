@@ -90,7 +90,8 @@ public class SequenceNumberIndexWriter implements Index
 
         // TODO: Fsync parent directory
         indexedPositionsOffset = positionTableOffset(fileCapacity);
-        checksumFramer = new ChecksumFramer(inMemoryBuffer, indexedPositionsOffset, errorHandler, 0);
+        checksumFramer = new ChecksumFramer(
+            inMemoryBuffer, indexedPositionsOffset, errorHandler, 0, "SequenceNumberIndex");
         try
         {
             initialiseBuffer();

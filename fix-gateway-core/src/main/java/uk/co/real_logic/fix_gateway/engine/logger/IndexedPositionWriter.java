@@ -51,7 +51,8 @@ class IndexedPositionWriter
     {
         this.buffer = buffer;
         this.errorHandler = errorHandler;
-        checksumFramer = new ChecksumFramer(buffer, buffer.capacity(), errorHandler, errorReportingOffset);
+        checksumFramer = new ChecksumFramer(
+            buffer, buffer.capacity(), errorHandler, errorReportingOffset, "IndexedPosition");
         setupHeader();
     }
 
