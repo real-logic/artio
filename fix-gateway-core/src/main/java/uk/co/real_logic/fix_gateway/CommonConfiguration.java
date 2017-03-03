@@ -37,6 +37,7 @@ import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toCollection;
+import static uk.co.real_logic.fix_gateway.LivenessDetector.SEND_INTERVAL_FRACTION;
 
 /**
  * Common configuration for both the Fix Engine and Library. Some options are configurable via
@@ -204,7 +205,6 @@ public class CommonConfiguration
         MONITORING_BUFFERS_LENGTH_PROPERTY, DEFAULT_MONITORING_BUFFER_LENGTH);
     private String monitoringFile = null;
     private long replyTimeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
-    private long connectAttemptTimeoutInMs = DEFAULT_CONNECT_ATTEMPT_TIMEOUT_IN_MS;
     private final Aeron.Context aeronContext = new Aeron.Context();
     private int sessionBufferSize = DEFAULT_SESSION_BUFFER_SIZE;
     private int inboundMaxClaimAttempts =
@@ -391,12 +391,6 @@ public class CommonConfiguration
         return this;
     }
 
-    public CommonConfiguration connectAttemptTimeoutInMs(final long connectAttemptTimeoutInMs)
-    {
-        this.connectAttemptTimeoutInMs = connectAttemptTimeoutInMs;
-        return this;
-    }
-
     /**
      * Sets the inbound max claim attempts.
      *
@@ -519,7 +513,7 @@ public class CommonConfiguration
 
     public long connectAttemptTimeoutInMs()
     {
-        return connectAttemptTimeoutInMs;
+        return replyTimeoutInMs() / SEND_INTERVAL_FRACTION;
     }
 
     public long histogramPollPeriodInMs()
