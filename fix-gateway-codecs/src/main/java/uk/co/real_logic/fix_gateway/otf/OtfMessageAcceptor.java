@@ -15,10 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.otf;
 
-import uk.co.real_logic.fix_gateway.ErrorAcceptor;
+import uk.co.real_logic.fix_gateway.ValidationError;
+import uk.co.real_logic.fix_gateway.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
-public interface OtfMessageAcceptor extends ErrorAcceptor
+public interface OtfMessageAcceptor
 {
     MessageControl onNext();
 
@@ -51,4 +52,6 @@ public interface OtfMessageAcceptor extends ErrorAcceptor
      * @param index
      */
     MessageControl onGroupEnd(int tag, int numInGroup, int index);
+
+    boolean onError(ValidationError error, int messageType, int tagNumber, AsciiFieldFlyweight value);
 }
