@@ -15,9 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.otf;
 
+import org.junit.Rule;
 import org.junit.experimental.theories.DataPoint;
 import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
+import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.InOrder;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
@@ -48,6 +50,9 @@ public class OtfParserTest
 
     private InOrder inOrder = inOrder(mockAcceptor);
 
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+
     @Theory
     public void notifiesAcceptorOfMessageStart(final int offset)
     {
@@ -56,6 +61,20 @@ public class OtfParserTest
         parser.onMessage(buffer, offset, MSG_LEN);
 
         verify(mockAcceptor).onNext();
+    }
+
+    @Theory
+    public void doesNotSwallowExceptionsFromCallbacks(final int offset)
+    {
+        final String errorMessage = "err";
+        putMessage(offset);
+
+        when(mockAcceptor.onNext()).thenThrow(new IllegalArgumentException(errorMessage));
+
+        thrown.expect(IllegalArgumentException.class);
+        thrown.expectMessage(errorMessage);
+
+        parser.onMessage(buffer, offset, MSG_LEN);
     }
 
     @Theory

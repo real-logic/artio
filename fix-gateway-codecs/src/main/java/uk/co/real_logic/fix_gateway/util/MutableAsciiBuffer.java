@@ -156,7 +156,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     {
         if (value < 0x30 || value > 0x39)
         {
-            throw new IllegalArgumentException("'" + ((char)value) + "' isn't a valid digit @ " + index);
+            throw new AsciiEncodingException("'" + ((char)value) + "' isn't a valid digit @ " + index);
         }
 
         return value - 0x30;
@@ -401,7 +401,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
         if (remainder != 0)
         {
-            throw new IllegalArgumentException(String.format("Cannot write %d in %d bytes", value, length));
+            throw new AsciiEncodingException(String.format("Cannot write %d in %d bytes", value, length));
         }
     }
 

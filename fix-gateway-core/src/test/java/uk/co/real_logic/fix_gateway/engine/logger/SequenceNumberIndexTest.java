@@ -172,7 +172,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         assertThat(
             exception.getValue().getMessage(),
             Matchers.containsString(
-                "The sequence numbers file is corrupted between bytes 0 and 4096, saved checksum is "));
+                "The SequenceNumberIndex file is corrupted between bytes 0 and 4096, saved checksum is "));
         reset(errorHandler);
     }
 
