@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
@@ -473,7 +472,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         awaitIsConnected(false, acceptingLibrary);
     }
 
-    @Ignore
     @Test
     public void shouldReconnectToBouncedGatewayViaIpc()
     {
