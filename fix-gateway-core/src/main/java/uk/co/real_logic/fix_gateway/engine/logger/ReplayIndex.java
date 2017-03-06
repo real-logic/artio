@@ -34,6 +34,8 @@ import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 
 /**
  * Builds an index of a composite key of session id and sequence number for a given stream.
+ *
+ * Written Positions are stored in a separate file at {@link ReplayIndex#replayPositionPath(String, int)}.
  */
 public class ReplayIndex implements Index
 {
@@ -44,10 +46,15 @@ public class ReplayIndex implements Index
         return new File(String.format(logFileDir + File.separator + "replay-index-%d-%d", fixSessionId, streamId));
     }
 
-    public static UnsafeBuffer replayBuffer(final String logFileDir, final int streamId)
+    public static UnsafeBuffer replayPositionBuffer(final String logFileDir, final int streamId)
     {
-        final String pathname = logFileDir + File.separator + "replay-positions-"  + streamId;
+        final String pathname = replayPositionPath(logFileDir, streamId);
         return new UnsafeBuffer(LoggerUtil.map(new File(pathname), REPLAY_BUFFER_SIZE));
+    }
+
+    private static String replayPositionPath(final String logFileDir, final int streamId)
+    {
+        return logFileDir + File.separator + "replay-positions-"  + streamId;
     }
 
     private final LongFunction<SessionIndex> newSessionIndex = SessionIndex::new;
@@ -84,7 +91,8 @@ public class ReplayIndex implements Index
         this.bufferFactory = bufferFactory;
         this.positionBuffer = positionBuffer;
         fixSessionIdToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
-        positionWriter = new IndexedPositionWriter(positionBuffer, errorHandler, 0, "ReplayIndex");
+        positionWriter = new IndexedPositionWriter(
+            positionBuffer, errorHandler, 0, replayPositionPath(logFileDir, requiredStreamId));
         positionReader = new IndexedPositionReader(positionBuffer);
     }
 
