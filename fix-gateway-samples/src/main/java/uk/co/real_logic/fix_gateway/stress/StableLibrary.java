@@ -34,6 +34,8 @@ public final class StableLibrary
 
         try (FixLibrary library = SampleUtil.blockingConnect(libraryConfiguration))
         {
+            System.out.println("Connected");
+
             while (library.isConnected())
             {
                 library.poll(1);
