@@ -98,7 +98,7 @@ public class SequenceNumberIndexWriter implements Index
             positions = new IndexedPositionWriter(
                 positionsBuffer(inMemoryBuffer, indexedPositionsOffset),
                 errorHandler,
-                indexedPositionsOffset);
+                indexedPositionsOffset, "SequenceNumberIndex");
         }
         catch (final Exception e)
         {

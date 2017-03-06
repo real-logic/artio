@@ -84,7 +84,7 @@ public class ReplayIndex implements Index
         this.bufferFactory = bufferFactory;
         this.positionBuffer = positionBuffer;
         fixSessionIdToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
-        positionWriter = new IndexedPositionWriter(positionBuffer, errorHandler, 0);
+        positionWriter = new IndexedPositionWriter(positionBuffer, errorHandler, 0, "ReplayIndex");
         positionReader = new IndexedPositionReader(positionBuffer);
     }
 

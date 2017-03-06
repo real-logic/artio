@@ -137,6 +137,6 @@ public class IndexedPositionTest
 
     private IndexedPositionWriter newWriter()
     {
-        return new IndexedPositionWriter(buffer, errorHandler, 0);
+        return new IndexedPositionWriter(buffer, errorHandler, 0, "IndexedPosition");
     }
 }
