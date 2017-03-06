@@ -49,7 +49,7 @@ public class ErrorPrinter implements Agent
     private final AtomicBuffer errorBuffer;
     private final String agentNamePrefix;
 
-    private long lastSeenErrorTimeInMs = 0;
+    private long lastSeenErrorTimeInMs;
 
     public ErrorPrinter(final AtomicBuffer errorBuffer, final String agentNamePrefix, final long startTimeInMs)
     {
