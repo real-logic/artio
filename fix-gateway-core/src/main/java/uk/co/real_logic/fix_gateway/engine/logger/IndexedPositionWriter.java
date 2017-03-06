@@ -74,6 +74,8 @@ class IndexedPositionWriter
                 .schemaId(encoder.sbeSchemaId())
                 .blockLength(actingBlockLength)
                 .version(actingVersion);
+
+            checksumFramer.updateChecksums();
         }
         else
         {

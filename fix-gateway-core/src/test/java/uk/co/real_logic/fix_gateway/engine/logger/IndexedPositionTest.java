@@ -125,6 +125,14 @@ public class IndexedPositionTest
         verify(errorHandler, times(1), FileSystemCorruptionException.class);
     }
 
+    @Test
+    public void shouldNotReportFileSystemCorruptionWithNoWrittenRecords()
+    {
+        newWriter();
+
+        noErrors();
+    }
+
     private void indexed(final int position, final int sessionId)
     {
         writer.indexedUpTo(sessionId, position);
