@@ -29,7 +29,7 @@ public class ErrorPrinter implements Agent
         final EngineConfiguration configuration = new EngineConfiguration();
         configuration.libraryAeronChannel("").conclude();
         final MonitoringFile monitoringFile = new MonitoringFile(false, configuration);
-        final ErrorPrinter printer = new ErrorPrinter(monitoringFile.errorBuffer(), DEFAULT_NAME_PREFIX);
+        final ErrorPrinter printer = new ErrorPrinter(monitoringFile.errorBuffer(), DEFAULT_NAME_PREFIX, 0);
         final IdleStrategy idleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
         final AgentRunner runner = new AgentRunner(idleStrategy, Throwable::printStackTrace, null, printer);
         runner.run();
@@ -49,12 +49,13 @@ public class ErrorPrinter implements Agent
     private final AtomicBuffer errorBuffer;
     private final String agentNamePrefix;
 
-    private long lastSeenErrorTimeInMs = System.currentTimeMillis();
+    private long lastSeenErrorTimeInMs = 0;
 
-    public ErrorPrinter(final AtomicBuffer errorBuffer, final String agentNamePrefix)
+    public ErrorPrinter(final AtomicBuffer errorBuffer, final String agentNamePrefix, final long startTimeInMs)
     {
         this.errorBuffer = errorBuffer;
         this.agentNamePrefix = agentNamePrefix;
+        lastSeenErrorTimeInMs = startTimeInMs;
     }
 
     public int doWork() throws Exception
