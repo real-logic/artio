@@ -35,6 +35,10 @@ import static uk.co.real_logic.fix_gateway.engine.SectorFramer.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexDescriptor.*;
 import static uk.co.real_logic.fix_gateway.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
+/**
+ * Writes updates into an in-memory buffer. This buffer is then flushed down to disk. A passing place
+ * file is used to ensure that there's a recoverable option if it fails.
+ */
 public class SequenceNumberIndexWriter implements Index
 {
     private static final boolean RUNNING_ON_WINDOWS = System.getProperty("os.name").startsWith("Windows");
@@ -98,7 +102,8 @@ public class SequenceNumberIndexWriter implements Index
             positions = new IndexedPositionWriter(
                 positionsBuffer(inMemoryBuffer, indexedPositionsOffset),
                 errorHandler,
-                indexedPositionsOffset, "SequenceNumberIndex");
+                indexedPositionsOffset,
+                "SequenceNumberIndex");
         }
         catch (final Exception e)
         {

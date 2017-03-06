@@ -60,7 +60,8 @@ public final class LoggerUtil
         final int sbeSchemaId,
         final int sbeTemplateId,
         final int actingVersion,
-        final int actingBlockLength, final ErrorHandler errorHandler)
+        final int actingBlockLength,
+        final ErrorHandler errorHandler)
     {
         headerDecoder.wrap(buffer, 0);
         if (headerDecoder.blockLength() == 0)
