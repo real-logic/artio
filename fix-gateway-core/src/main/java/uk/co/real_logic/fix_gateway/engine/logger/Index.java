@@ -26,6 +26,7 @@ import org.agrona.DirectBuffer;
  * Extends {@link FragmentHandler} so that it can be easily used to replay/catchup
  * a Stream.
  */
+// TODO: potential optimisation to enable batching of position updates/writes over batches of messages.
 public interface Index extends ControlledFragmentHandler, AutoCloseable
 {
     default Action onFragment(DirectBuffer buffer, int offset, int length, Header header)
@@ -51,12 +52,13 @@ public interface Index extends ControlledFragmentHandler, AutoCloseable
      * @param aeronSessionId the Aeron session id.
      * @param endPosition the position to which the image has advanced on reading this message.
      */
-    void indexRecord(DirectBuffer buffer,
-                     int offset,
-                     int length,
-                     int streamId,
-                     int aeronSessionId,
-                     long endPosition);
+    void indexRecord(
+        DirectBuffer buffer,
+        int offset,
+        int length,
+        int streamId,
+        int aeronSessionId,
+        long endPosition);
 
     default String getName()
     {
