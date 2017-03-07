@@ -43,6 +43,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.IntStream;
 
@@ -57,7 +58,7 @@ import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQUEST;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.closeAll;
-import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_SESSION_ID_FILE;
 import static uk.co.real_logic.fix_gateway.engine.logger.FixMessagePredicates.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
@@ -344,14 +345,28 @@ public class ClusteredGatewaySystemTest
     {
         final FixEngineRunner firstNode = acceptingCluster.get(0);
         final String logFileDir = firstNode.configuration().logFileDir();
+        final Map<Long, Integer> firstReceivedSequenceNumberIndex = firstNode.readReceivedSequenceNumberIndex();
+        final Map<Long, Integer> firstSentSequenceNumberIndex = firstNode.readSentSequenceNumberIndex();
+
         acceptingCluster.stream().skip(1).forEach(
             (runner) ->
             {
                 final String otherLogFileDir = runner.configuration().logFileDir();
 
                 assertFilesEqual(logFileDir, otherLogFileDir, DEFAULT_SESSION_ID_FILE);
-                assertFilesEqual(logFileDir, otherLogFileDir, DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE);
-                assertFilesEqual(logFileDir, otherLogFileDir, DEFAULT_SEQUENCE_NUMBERS_SENT_FILE);
+
+                final Map<Long, Integer> receivedSequenceNumberIndex = runner.readReceivedSequenceNumberIndex();
+                final Map<Long, Integer> sentSequenceNumberIndex = runner.readSentSequenceNumberIndex();
+
+                assertEquals(
+                    firstNode.nodeId() + " and " + runner.nodeId() + " disagree on received sequence numbers",
+                    receivedSequenceNumberIndex,
+                    firstReceivedSequenceNumberIndex);
+
+                assertEquals(
+                    firstNode.nodeId() + " and " + runner.nodeId() + " disagree on sent sequence numbers",
+                    firstSentSequenceNumberIndex,
+                    sentSequenceNumberIndex);
             });
     }
 

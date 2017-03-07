@@ -22,12 +22,17 @@ import uk.co.real_logic.fix_gateway.CloseChecker;
 import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.MappedFile;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.replication.FrameDropper;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
+import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class FixEngineRunner implements AutoCloseable
@@ -136,5 +141,38 @@ public class FixEngineRunner implements AutoCloseable
     public int nodeId()
     {
         return nodeId;
+    }
+
+    Map<Long, Integer> readReceivedSequenceNumberIndex()
+    {
+        return readSequenceNumbersIndex(configuration().receivedSequenceNumberIndex());
+    }
+
+    Map<Long, Integer> readSentSequenceNumberIndex()
+    {
+        return readSequenceNumbersIndex(configuration().sentSequenceNumberIndex());
+    }
+
+    private Map<Long, Integer> readSequenceNumbersIndex(final MappedFile sequenceNumberIndexFile)
+    {
+        sequenceNumberIndexFile.remap();
+
+        final Map<Long, Integer> sessionIdToSequenceNumber = new HashMap<>();
+        final SequenceNumberIndexReader reader = new SequenceNumberIndexReader(
+            sequenceNumberIndexFile.buffer(), Throwable::printStackTrace);
+
+        for (long sessionId = 0; sessionId < Long.MAX_VALUE; sessionId++)
+        {
+            final int sequenceNumber = reader.lastKnownSequenceNumber(sessionId);
+
+            if (sequenceNumber == UNK_SESSION)
+            {
+                break;
+            }
+
+            sessionIdToSequenceNumber.put(sessionId, sequenceNumber);
+        }
+
+        return sessionIdToSequenceNumber;
     }
 }

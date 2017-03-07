@@ -13,7 +13,7 @@ import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNK_SESSION;
 public class EngineIndexPrinter
 {
 
-    public static void main(String[] args)
+    public static void main(final String[] args)
     {
         for (final String engineLogDir : args)
         {
