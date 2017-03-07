@@ -117,15 +117,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final int version)
     {
         libraryConnect.wrap(buffer, offset, blockLength, version);
-        final int libraryId = libraryConnect.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
-        if (action == ABORT)
-        {
-            return action;
-        }
+        // Deliberately don't keepalive the heartbeat
 
         return handler.onNotLeader(
-            libraryId,
+            libraryConnect.libraryId(),
             libraryConnect.replyToId(),
             libraryConnect.libraryChannel());
     }
@@ -234,15 +229,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         newSentPosition.wrap(buffer, offset, blockLength, version);
-        final int libraryId = newSentPosition.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
-        if (action == ABORT)
-        {
-            return action;
-        }
+        // Deliberately don't keepalive the heartbeat
 
         return handler.onNewSentPosition(
-            libraryId,
+            newSentPosition.libraryId(),
             newSentPosition.position());
     }
 
