@@ -117,7 +117,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final int version)
     {
         libraryConnect.wrap(buffer, offset, blockLength, version);
-        // Deliberately don't keepalive the heartbeat
+        // Deliberately don't keepalive the heartbeat - may not be a cluster leader
 
         return handler.onNotLeader(
             libraryConnect.libraryId(),
@@ -229,7 +229,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
         newSentPosition.wrap(buffer, offset, blockLength, version);
-        // Deliberately don't keepalive the heartbeat
+        // Deliberately don't keepalive the heartbeat - may not be a cluster leader
 
         return handler.onNewSentPosition(
             newSentPosition.libraryId(),
