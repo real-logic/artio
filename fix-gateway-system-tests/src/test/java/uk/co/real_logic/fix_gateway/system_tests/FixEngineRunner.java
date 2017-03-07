@@ -42,7 +42,8 @@ public class FixEngineRunner implements AutoCloseable
     private final int tcpPort;
     private final String libraryChannel;
     private final MediaDriver mediaDriver;
-    private final FixEngine engine;
+    private final EngineConfiguration configuration;
+    private FixEngine engine;
 
     private final DebugTcpChannelSupplier tcpChannelSupplier;
     private final FrameDropper frameDropper;
@@ -54,6 +55,7 @@ public class FixEngineRunner implements AutoCloseable
         tcpPort = unusedPort();
         final int libraryPort = unusedPort();
         libraryChannel = "aeron:udp?endpoint=224.0.1.1:" + libraryPort;
+        System.out.println(nodeId + " -> " + libraryChannel);
         frameDropper = new FrameDropper(ourId);
 
         final MediaDriver.Context context =
@@ -72,7 +74,7 @@ public class FixEngineRunner implements AutoCloseable
 
         final String acceptorLogs = ACCEPTOR_LOGS + ourId;
         delete(acceptorLogs);
-        final EngineConfiguration configuration = new EngineConfiguration();
+        configuration = new EngineConfiguration();
 
         setupAuthentication(ACCEPTOR_ID, INITIATOR_ID, configuration);
 
@@ -91,7 +93,10 @@ public class FixEngineRunner implements AutoCloseable
         configuration.channelSupplierFactory(config -> tcpChannelSupplier);
 
         configuration.aeronContext().aeronDirectoryName(aeronDirName(ourId));
+    }
 
+    void launch()
+    {
         engine = FixEngine.launch(configuration);
     }
 

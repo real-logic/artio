@@ -93,9 +93,15 @@ public class ClusteredGatewaySystemTest
         acceptingCluster = new ArrayList<>();
         // Put them in the collection one by one, because if there's an error initializing
         // a latter runner, this ensures that the earlier ones get closed
-        final List<Integer> ids = ids().boxed().collect(toList());
-        Collections.shuffle(ids);
-        ids.forEach((ourId) -> acceptingCluster.add(new FixEngineRunner(ourId, ids())));
+        ids().forEach((ourId) -> acceptingCluster.add(new FixEngineRunner(ourId, ids())));
+
+        // Start the cluster in a random order, ensuring that the node that is first in order
+        // of library aeron channel order isn't started first.
+        // This ensures that any failures in the Library's round-robin logic get tested regularly.
+        final List<FixEngineRunner> randomOrderCluster = new ArrayList<>(acceptingCluster.subList(1, CLUSTER_SIZE));
+        Collections.shuffle(randomOrderCluster);
+        randomOrderCluster.forEach(FixEngineRunner::launch);
+        acceptingCluster.get(0).launch();
 
         final LibraryConfiguration configuration = acceptingLibraryConfig(acceptingHandler)
             .replyTimeoutInMs(5_000);
