@@ -67,7 +67,7 @@ public class FixLibrary extends GatewayProcess
 
     private FixLibrary connect()
     {
-        poller.connect();
+        poller.startConnecting();
         start();
         return this;
     }

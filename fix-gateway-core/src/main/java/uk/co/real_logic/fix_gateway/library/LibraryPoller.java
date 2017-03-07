@@ -281,7 +281,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 return pollWithoutReconnect(timeInMs, fragmentLimit);
 
             case ATTEMPT_CONNECT:
-                connect();
+                startConnecting();
                 return pollWithoutReconnect(timeInMs, fragmentLimit);
 
             case CONNECTING:
@@ -301,11 +301,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int messagesRead = inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit);
         final int operations = messagesRead + pollSessions(timeInMs) + livenessDetector.poll(timeInMs);
 
-        if (livenessDetector.hasDisconnected())
-        {
-            state = ATTEMPT_CONNECT;
-        }
-
         return operations + checkReplies(timeInMs);
     }
 
@@ -313,13 +308,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     //                     BEGIN CONNECTION LOGIC
     // -----------------------------------------------------------------------
 
-    void connect()
+    void startConnecting()
     {
-        connect(timeInMs());
+        startConnecting(timeInMs());
     }
 
     // Called when you first connect or try to start a reconnect attempt
-    private void connect(final long timeInMs)
+    private void startConnecting(final long timeInMs)
     {
         try
         {

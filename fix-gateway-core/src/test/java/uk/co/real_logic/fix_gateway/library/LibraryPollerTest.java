@@ -217,7 +217,7 @@ public class LibraryPollerTest
 
         newLibraryPoller(CLUSTER_CHANNELS);
 
-        library.connect();
+        library.startConnecting();
 
         library.poll(1);
 
@@ -249,7 +249,7 @@ public class LibraryPollerTest
 
         newLibraryPoller(singletonList(IPC_CHANNEL));
 
-        library.connect();
+        library.startConnecting();
 
         library.poll(1);
 
