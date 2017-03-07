@@ -41,10 +41,7 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
@@ -62,7 +59,6 @@ import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_SE
 import static uk.co.real_logic.fix_gateway.engine.logger.FixMessagePredicates.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
-@Ignore
 public class ClusteredGatewaySystemTest
 {
     private static final int CLUSTER_SIZE = 3;
@@ -97,7 +93,9 @@ public class ClusteredGatewaySystemTest
         acceptingCluster = new ArrayList<>();
         // Put them in the collection one by one, because if there's an error initializing
         // a latter runner, this ensures that the earlier ones get closed
-        ids().forEach((ourId) -> acceptingCluster.add(new FixEngineRunner(ourId, ids())));
+        final List<Integer> ids = ids().boxed().collect(toList());
+        Collections.shuffle(ids);
+        ids.forEach((ourId) -> acceptingCluster.add(new FixEngineRunner(ourId, ids())));
 
         final LibraryConfiguration configuration = acceptingLibraryConfig(acceptingHandler)
             .replyTimeoutInMs(5_000);
@@ -132,6 +130,7 @@ public class ClusteredGatewaySystemTest
         cleanupMediaDriver(initiatingMediaDriver);
     }
 
+    @Ignore
     @Test
     public void shouldExchangeMessagesInCluster()
     {
@@ -213,6 +212,12 @@ public class ClusteredGatewaySystemTest
 
     private Optional<FixEngineRunner> findNewLeader()
     {
+        final long count = acceptingCluster.stream().filter(FixEngineRunner::isLeader).count();
+        if (count > 1)
+        {
+            System.out.println(count);
+        }
+
         return acceptingCluster
             .stream()
             .filter((leader) -> leader != this.leader)
@@ -227,7 +232,10 @@ public class ClusteredGatewaySystemTest
 
     private void assertConnectedToLeader()
     {
-        assertTrue("Disconnected from Leader", connectedToLeader());
+        final String leaderLibraryChannel = leader.libraryChannel();
+        final String currentAcceptingAeronChannel = acceptingLibrary.currentAeronChannel();
+        assertTrue("Accepting Library not connected", acceptingLibrary.isConnected());
+        assertEquals("Library channel differs", leaderLibraryChannel, currentAcceptingAeronChannel);
     }
 
     private void assertOldSessionDisconnected(final FixEngine engine)

@@ -127,7 +127,7 @@ public class FixEngineRunner implements AutoCloseable
         frameDropper.dropFrames(false);
     }
 
-    public boolean isLeader()
+    boolean isLeader()
     {
         return engine.isLeader();
     }
@@ -138,7 +138,7 @@ public class FixEngineRunner implements AutoCloseable
         cleanupMediaDriver(mediaDriver);
     }
 
-    public int nodeId()
+    int nodeId()
     {
         return nodeId;
     }
