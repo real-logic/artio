@@ -157,10 +157,14 @@ public final class FixEngine extends GatewayProcess
     }
 
     /**
-     * Check whether you're the leader of a cluster. NB: if you aren't running in a cluster
+     * Check whether this node believes itself to bethe leader of a cluster. NB: if you aren't running in a cluster
      * this will always return true.
      *
-     * @return true if you're a cluster leader, false otherwise
+     * NB: This is provided on a "best effort" basis. If this node has become netsplit from other members in a cluster
+     * and they have timed it out, and elected a new leader, this method may return true when another node is actually
+     * considered the leader by a quorum of members.
+     *
+     * @return true if this node believes itself to be a cluster leader, false otherwise
      */
     public boolean isLeader()
     {
