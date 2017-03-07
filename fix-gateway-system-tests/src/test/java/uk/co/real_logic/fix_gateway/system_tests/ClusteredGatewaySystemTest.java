@@ -371,7 +371,7 @@ public class ClusteredGatewaySystemTest
             final byte[] bytes = Files.readAllBytes(file.toPath());
             final byte[] otherBytes = Files.readAllBytes(otherFile.toPath());
 
-            assertArrayEquals(bytes, otherBytes);
+            assertArrayEquals("For file: " + path, bytes, otherBytes);
         }
         catch (final IOException ex)
         {
