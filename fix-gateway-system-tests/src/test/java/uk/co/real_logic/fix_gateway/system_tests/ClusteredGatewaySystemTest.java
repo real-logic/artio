@@ -139,7 +139,6 @@ public class ClusteredGatewaySystemTest
         cleanupMediaDriver(initiatingMediaDriver);
     }
 
-    @Ignore
     @Test
     public void shouldExchangeMessagesInCluster()
     {
