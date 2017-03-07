@@ -24,6 +24,7 @@ import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.LogTag;
 import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
@@ -110,6 +111,8 @@ public class ClusteredGatewaySystemTest
             .stream()
             .map(FixEngineRunner::libraryChannel)
             .collect(toList()));
+
+        DebugLogger.log(LogTag.GATEWAY_CLUSTER_TEST, "Accepting Library id = %d%n", configuration.libraryId());
 
         this.leader = withTimeout(
             "Cluster failed to elect a leader",
