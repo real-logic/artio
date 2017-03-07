@@ -296,8 +296,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private int pollWithoutReconnect(final long timeInMs, final int fragmentLimit)
     {
-        final LivenessDetector livenessDetector = this.livenessDetector;
-
         final int messagesRead = inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit);
         final int operations = messagesRead + pollSessions(timeInMs) + livenessDetector.poll(timeInMs);
 
@@ -320,7 +318,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         {
             state = CONNECTING;
             currentAeronChannel = configuration.libraryAeronChannels().get(0);
-            DebugLogger.log(LIBRARY_CONNECT, "Attempting to connect to %s\n", currentAeronChannel);
+            DebugLogger.log(
+                LIBRARY_CONNECT,
+                "%d: Attempting to connect to %s%n",
+                libraryId,
+                currentAeronChannel);
 
             initStreams();
             newLivenessDetector();
@@ -358,6 +360,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private void connectToNewEngine(final long timeInMs)
     {
         initStreams();
+        newLivenessDetector();
 
         sendLibraryConnect(timeInMs);
     }
@@ -370,7 +373,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             final int nextIndex = (aeronChannels.indexOf(currentAeronChannel) + 1) % aeronChannels.size();
             currentAeronChannel = aeronChannels.get(nextIndex);
             DebugLogger.log(
-                LIBRARY_CONNECT, "Attempting connect to next engine (%s) in round-robin\n", currentAeronChannel);
+                LIBRARY_CONNECT,
+                "%d: Attempting connect to next engine (%s) in round-robin%n",
+                libraryId,
+                currentAeronChannel);
         }
     }
 
@@ -438,14 +444,22 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private void onConnect()
     {
-        DebugLogger.log(LIBRARY_CONNECT, "Connected to [%s]\n", currentAeronChannel);
+        DebugLogger.log(
+            LIBRARY_CONNECT,
+            "%d: Connected to [%s]%n",
+            libraryId,
+            currentAeronChannel);
         configuration.libraryConnectHandler().onConnect(fixLibrary);
         setLibraryConnected(true);
     }
 
     private void onDisconnect()
     {
-        DebugLogger.log(LIBRARY_CONNECT, "Disconnected from [%s]\n", currentAeronChannel);
+        DebugLogger.log(
+            LIBRARY_CONNECT,
+            "%d: Disconnected from [%s]%n",
+            libraryId,
+            currentAeronChannel);
         configuration.libraryConnectHandler().onDisconnect(fixLibrary);
         setLibraryConnected(false);
 
@@ -788,7 +802,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             else
             {
                 currentAeronChannel = libraryChannel;
-                DebugLogger.log(LIBRARY_CONNECT, "Attempting connect to (%s) claimed leader\n", currentAeronChannel);
+                DebugLogger.log(
+                    LIBRARY_CONNECT,
+                    "%d: Attempting connect to (%s) claimed leader\n",
+                    libraryId,
+                    currentAeronChannel);
             }
 
             connectToNewEngine(timeInMs());
@@ -805,7 +823,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             final long timeInMs = timeInMs();
             livenessDetector.onHeartbeat(timeInMs);
             DebugLogger.log(
-                LIBRARY_CONNECT, "%d: Received Control Notification from engine at timeInMs %d\n", libraryId, timeInMs);
+                LIBRARY_CONNECT,
+                "%d: Received Control Notification from engine at timeInMs %d%n",
+                libraryId,
+                timeInMs);
 
             final LongHashSet sessionIds = this.sessionIds;
             Session[] sessions = this.sessions;
