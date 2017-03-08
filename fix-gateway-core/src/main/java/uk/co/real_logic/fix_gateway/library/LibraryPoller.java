@@ -412,21 +412,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         try
         {
             final long correlationId = ++currentCorrelationId;
-            final int maxClaimAttempts = configuration.outboundMaxClaimAttempts();
-            long position = Long.MIN_VALUE;
-            for (int i = 0; i < maxClaimAttempts && position < 0; i++)
-            {
-                position = outboundPublication.saveLibraryConnect(libraryId, correlationId);
-                if (position >= 0)
-                {
-                    break;
-                }
-
-                idleStrategy.idle();
-            }
-            idleStrategy.reset();
-
-            if (position > 0)
+            if (outboundPublication.saveLibraryConnect(libraryId, correlationId) > 0)
             {
                 this.connectCorrelationId = correlationId;
                 nextAttemptTime = configuration.connectAttemptTimeoutInMs() + timeInMs;
