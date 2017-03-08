@@ -34,9 +34,10 @@ public abstract class ClusterableStreams
      * Get the publication for this stream id, new object every time.
      *
      * @param clusterStreamId a unique identifier for the stream
+     * @param name
      * @return the publication for this stream id.
      */
-    public abstract ClusterablePublication publication(int clusterStreamId);
+    public abstract ClusterablePublication publication(int clusterStreamId, String name);
 
     /**
      * Get the subscription for this stream id, new object every time.

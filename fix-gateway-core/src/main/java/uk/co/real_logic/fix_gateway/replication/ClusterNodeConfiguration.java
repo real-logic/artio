@@ -27,6 +27,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import java.util.function.Supplier;
 
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 
 public class ClusterNodeConfiguration
@@ -70,6 +71,7 @@ public class ClusterNodeConfiguration
     private NodeStateHandler nodeStateHandler;
     private RoleHandler roleHandler = DEFAULT_NODE_HANDLER;
     private String agentNamePrefix = DEFAULT_NAME_PREFIX;
+    private boolean printAeronStreamIdentifiers = DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS;
 
     /**
      * Sets the control, data and acknowledge streams to all this aeron
@@ -200,6 +202,12 @@ public class ClusterNodeConfiguration
         return this;
     }
 
+    public ClusterNodeConfiguration printAeronStreamIdentifiers(final boolean printAeronStreamIdentifiers)
+    {
+        this.printAeronStreamIdentifiers = printAeronStreamIdentifiers;
+        return this;
+    }
+
     public StreamIdentifier controlStream()
     {
         return controlStream;
@@ -306,5 +314,10 @@ public class ClusterNodeConfiguration
     public String agentNamePrefix()
     {
         return agentNamePrefix;
+    }
+
+    public boolean printAeronStreamIdentifiers()
+    {
+        return printAeronStreamIdentifiers;
     }
 }

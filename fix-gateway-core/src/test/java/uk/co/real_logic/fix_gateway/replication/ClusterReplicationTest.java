@@ -377,7 +377,8 @@ public class ClusterReplicationTest
 
     private long sendMessageTo(final NodeRunner leader)
     {
-        final ClusterablePublication publication = leader.clusterAgent().clusterStreams().publication(1);
+        final ClusterablePublication publication = leader
+            .clusterAgent().clusterStreams().publication(1, "publication");
 
         return withTimeout(
             "Failed to send message",

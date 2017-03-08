@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Aeron;
+import io.aeron.Publication;
 import io.aeron.Subscription;
 import uk.co.real_logic.fix_gateway.StreamInformation;
 
@@ -37,9 +38,11 @@ class SoloStreams extends ClusterableStreams
         return true;
     }
 
-    public SoloPublication publication(final int clusterStreamId)
+    public SoloPublication publication(final int clusterStreamId, final String name)
     {
-        return ClusterablePublication.solo(aeron.addPublication(aeronChannel, clusterStreamId));
+        final Publication publication = aeron.addPublication(aeronChannel, clusterStreamId);
+        StreamInformation.print(name, publication, printAeronStreamIdentifiers);
+        return ClusterablePublication.solo(publication);
     }
 
     public SoloSubscription subscription(final int clusterStreamId, final String name)

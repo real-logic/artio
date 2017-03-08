@@ -44,10 +44,10 @@ public final class Streams
         this.maxClaimAttempts = maxClaimAttempts;
     }
 
-    public GatewayPublication gatewayPublication(final IdleStrategy idleStrategy)
+    public GatewayPublication gatewayPublication(final IdleStrategy idleStrategy, final String name)
     {
         return new GatewayPublication(
-            dataPublication(),
+            dataPublication(name),
             failedPublications,
             idleStrategy,
             nanoClock,
@@ -55,9 +55,9 @@ public final class Streams
         );
     }
 
-    public ClusterablePublication dataPublication()
+    private ClusterablePublication dataPublication(final String name)
     {
-        return node.publication(streamId);
+        return node.publication(streamId, name);
     }
 
     public ClusterableSubscription subscription(final String name)

@@ -139,7 +139,10 @@ public final class FixEngine extends GatewayProcess
 
     private Publication replayPublication()
     {
-        return aeron.addPublication(configuration.libraryAeronChannel(), OUTBOUND_REPLAY_STREAM);
+        final Publication publication = aeron.addPublication(
+            configuration.libraryAeronChannel(), OUTBOUND_REPLAY_STREAM);
+        StreamInformation.print("replayPublication", publication, configuration);
+        return publication;
     }
 
     private void initFramer(final EngineConfiguration configuration, final FixCounters fixCounters)

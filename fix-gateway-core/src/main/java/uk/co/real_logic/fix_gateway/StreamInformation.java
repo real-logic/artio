@@ -15,7 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway;
 
+import io.aeron.Publication;
 import io.aeron.Subscription;
+import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 
 public final class StreamInformation
 {
@@ -35,6 +37,27 @@ public final class StreamInformation
                 name,
                 subscription.registrationId(),
                 subscription.streamId());
+        }
+    }
+
+    public static void print(
+        final String name, final Publication publication, final EngineConfiguration configuration)
+    {
+        print(name, publication, configuration.printAeronStreamIdentifiers());
+    }
+
+    public static void print(
+        final String name,
+        final Publication publication,
+        final boolean printAeronStreamIdentifiers)
+    {
+        if (printAeronStreamIdentifiers)
+        {
+            System.out.printf(
+                "%-40s - registrationId=%d,streamId=%d\n",
+                name,
+                publication.registrationId(),
+                publication.streamId());
         }
     }
 }

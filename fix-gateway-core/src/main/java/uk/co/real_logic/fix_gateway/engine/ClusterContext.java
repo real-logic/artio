@@ -17,9 +17,11 @@ package uk.co.real_logic.fix_gateway.engine;
 
 import io.aeron.Aeron;
 import io.aeron.Publication;
+import io.aeron.Subscription;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.FixCounters;
+import uk.co.real_logic.fix_gateway.StreamInformation;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
@@ -62,6 +64,7 @@ class ClusterContext extends EngineContext
             dataStream = new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID);
             final String libraryAeronChannel = configuration.libraryAeronChannel();
             inboundPublication = aeron.addPublication(libraryAeronChannel, INBOUND_LIBRARY_STREAM);
+            StreamInformation.print("inboundPublication", inboundPublication, configuration);
             clusterAgent = node(configuration, fixCounters, aeron, channel, engineDescriptorStore);
             newStreams(clusterAgent.clusterStreams());
             newIndexers(inboundArchiveReader(), outboundArchiveReader(), null);
@@ -71,13 +74,17 @@ class ClusterContext extends EngineContext
             localInboundArchiver = archiver(
                 new StreamIdentifier(libraryAeronChannel, INBOUND_LIBRARY_STREAM),
                 inboundCompletionPosition());
-            localInboundArchiver.subscription(
-                aeron.addSubscription(libraryAeronChannel, INBOUND_LIBRARY_STREAM));
+            final Subscription localInboundSubscription = aeron.addSubscription(
+                libraryAeronChannel, INBOUND_LIBRARY_STREAM);
+            StreamInformation.print("localInboundSubscription", localInboundSubscription, configuration);
+            localInboundArchiver.subscription(localInboundSubscription);
             localOutboundArchiver = archiver(
                 new StreamIdentifier(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM),
                 outboundLibraryCompletionPosition());
-            localOutboundArchiver.subscription(
-                aeron.addSubscription(libraryAeronChannel, OUTBOUND_LIBRARY_STREAM));
+            final Subscription localOutboundSubscription = aeron.addSubscription(
+                libraryAeronChannel, OUTBOUND_LIBRARY_STREAM);
+            StreamInformation.print("localOutboundSubscription", localOutboundSubscription, configuration);
+            localOutboundArchiver.subscription(localOutboundSubscription);
 
             final ClusterPositionSender positionSender = new ClusterPositionSender(
                 outboundLibrarySubscription("positionSender"),
@@ -139,7 +146,8 @@ class ClusterContext extends EngineContext
             .nodeState(EngineDescriptorFactory.make(configuration.libraryAeronChannel()))
             .nodeStateHandler(engineDescriptorStore)
             .nodeHandler(configuration.roleHandler())
-            .agentNamePrefix(configuration.agentNamePrefix());
+            .agentNamePrefix(configuration.agentNamePrefix())
+            .printAeronStreamIdentifiers(configuration.printAeronStreamIdentifiers());
 
         return new ClusterAgent(clusterNodeConfiguration, System.currentTimeMillis());
     }

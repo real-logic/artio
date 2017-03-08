@@ -56,7 +56,7 @@ class ClusterStreams extends ClusterableStreams
         return leaderSessionId.get() == ourSessionId;
     }
 
-    public ClusterPublication publication(final int clusterStreamId)
+    public ClusterPublication publication(final int clusterStreamId, final String name)
     {
         return new ClusterPublication(dataPublication, leaderSessionId, ourSessionId, clusterStreamId);
     }

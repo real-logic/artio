@@ -71,7 +71,8 @@ class LibraryTransport
         inboundSubscription = aeron.addSubscription(aeronChannel, INBOUND_LIBRARY_STREAM);
         StreamInformation.print(
             "library " + configuration.libraryId() + " inboundSubscription", inboundSubscription, configuration);
-        outboundPublication = outboundLibraryStreams.gatewayPublication(configuration.libraryIdleStrategy());
+        outboundPublication = outboundLibraryStreams.gatewayPublication(
+            configuration.libraryIdleStrategy(), "outboundPublication");
     }
 
     Subscription inboundSubscription()

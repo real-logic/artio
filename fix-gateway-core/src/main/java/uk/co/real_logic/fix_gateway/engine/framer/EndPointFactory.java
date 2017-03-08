@@ -78,7 +78,7 @@ class EndPointFactory
         return new ReceiverEndPoint(
             channel,
             configuration.receiverBufferSize(),
-            inboundPublication(),
+            inboundPublication("receiverInboundPublication"),
             inboundLibraryPublication,
             configuration.sessionPersistenceStrategy(),
             connectionId,
@@ -98,9 +98,9 @@ class EndPointFactory
         );
     }
 
-    GatewayPublication inboundPublication()
+    GatewayPublication inboundPublication(final String name)
     {
-        return inboundStreams.gatewayPublication(idleStrategy);
+        return inboundStreams.gatewayPublication(idleStrategy, name);
     }
 
     SenderEndPoint senderEndPoint(

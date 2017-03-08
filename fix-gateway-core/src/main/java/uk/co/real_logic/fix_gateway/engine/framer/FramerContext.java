@@ -90,7 +90,7 @@ public class FramerContext
 
         gatewaySessions = new GatewaySessions(
             clock,
-            outboundLibraryStreams.gatewayPublication(idleStrategy),
+            outboundLibraryStreams.gatewayPublication(idleStrategy, "gatewaySessionsToLibrary"),
             sessionIdStrategy,
             configuration.sessionCustomisationStrategy(),
             fixCounters,
@@ -104,7 +104,7 @@ public class FramerContext
             configuration.sentSequenceNumberBuffer(), errorHandler);
         receivedSequenceNumberIndex = new SequenceNumberIndexReader(
             configuration.receivedSequenceNumberBuffer(), errorHandler);
-        outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy);
+        outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "dataPublication");
         inboundLibraryPublication = engineContext.inboundLibraryPublication();
 
         framer = new Framer(
@@ -131,7 +131,7 @@ public class FramerContext
             streams,
             engineDescriptorStore,
             replicatedConnectionIds,
-            endPointFactory.inboundPublication(),
+            endPointFactory.inboundPublication("framerInboundPublication"),
             configuration.agentNamePrefix(),
             engineContext.inboundCompletionPosition(),
             engineContext.outboundLibraryCompletionPosition(),

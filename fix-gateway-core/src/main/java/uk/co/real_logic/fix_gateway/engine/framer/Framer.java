@@ -220,7 +220,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             outboundLibrarySubscriber = new SubscriptionSplitter(
                 clusterableStreams,
                 new EngineProtocolSubscription(this),
-                clusterableStreams.publication(OUTBOUND_LIBRARY_STREAM),
+                clusterableStreams.publication(OUTBOUND_LIBRARY_STREAM, "outboundLibraryStream"),
                 replyPublication,
                 engineDescriptorStore,
                 configuration.bindAddress().toString(),

@@ -205,7 +205,8 @@ class SoloContext extends EngineContext
 
     public GatewayPublication inboundLibraryPublication()
     {
-        return inboundLibraryStreams.gatewayPublication(configuration.framerIdleStrategy());
+        return inboundLibraryStreams.gatewayPublication(
+            configuration.framerIdleStrategy(), "inboundLibraryPublication");
     }
 
     public void close()

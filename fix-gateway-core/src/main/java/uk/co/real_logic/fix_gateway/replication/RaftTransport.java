@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Publication;
 import io.aeron.Subscription;
+import uk.co.real_logic.fix_gateway.StreamInformation;
 
 class RaftTransport
 {
@@ -29,9 +30,10 @@ class RaftTransport
 
     void initialiseRoles(final Leader leader, final Candidate candidate, final Follower follower)
     {
-        final RaftPublication acknowledgementPublication = raftPublication(configuration.acknowledgementStream());
+        final RaftPublication acknowledgementPublication = raftPublication(
+            configuration.acknowledgementStream(), "acknowledgementPublication");
         final StreamIdentifier controlStream = configuration.controlStream();
-        final RaftPublication controlPublication = raftPublication(controlStream);
+        final RaftPublication controlPublication = raftPublication(controlStream, "controlStream");
         final Subscription controlSubscription = controlSubscription();
 
         leader
@@ -53,20 +55,24 @@ class RaftTransport
         final StreamIdentifier data = configuration.dataStream();
         final StreamIdentifier acknowledgement = configuration.acknowledgementStream();
         leader
-            .acknowledgementSubscription(subscription(acknowledgement.channel(), acknowledgement.streamId()))
-            .dataSubscription(subscription(data.spyChannel(), data.streamId()));
+            .acknowledgementSubscription(
+                subscription(
+                    acknowledgement.channel(), acknowledgement.streamId(), "leaderAcknowledgementSubscription"))
+            .dataSubscription(
+                subscription(
+                    data.spyChannel(), data.streamId(), "leaderDataSubscription"));
     }
 
     Subscription dataSubscription()
     {
         final StreamIdentifier dataStream = configuration.dataStream();
-        return subscription(dataStream.channel(), dataStream.streamId());
+        return subscription(dataStream.channel(), dataStream.streamId(), "dataSubscription");
     }
 
     Subscription controlSubscription()
     {
         final StreamIdentifier controlStream = configuration.controlStream();
-        return subscription(controlStream.channel(), controlStream.streamId());
+        return subscription(controlStream.channel(), controlStream.streamId(), "controlSubscription");
     }
 
     void injectFollowerSubscriptions(final Follower follower)
@@ -74,31 +80,35 @@ class RaftTransport
         follower.dataSubscription(dataSubscription());
     }
 
-    private Publication publication(final StreamIdentifier id)
+    private Publication publication(final StreamIdentifier id, final String name)
     {
-        return configuration
+        final Publication publication = configuration
             .aeron()
             .addPublication(id.channel(), id.streamId());
+        StreamInformation.print(name, publication, configuration.printAeronStreamIdentifiers());
+        return publication;
     }
 
-    private Subscription subscription(final String channel, final int streamId)
+    private Subscription subscription(final String channel, final int streamId, final String name)
     {
-        return configuration
+        final Subscription subscription = configuration
             .aeron()
             .addSubscription(channel, streamId);
+        StreamInformation.print(name, subscription, configuration.printAeronStreamIdentifiers());
+        return subscription;
     }
 
-    private RaftPublication raftPublication(final StreamIdentifier id)
+    private RaftPublication raftPublication(final StreamIdentifier id, final String name)
     {
         return new RaftPublication(
             configuration.maxClaimAttempts(),
             configuration.idleStrategy(),
             configuration.failCounter(),
-            publication(id));
+            publication(id, name));
     }
 
     Publication leaderPublication()
     {
-        return publication(configuration.dataStream());
+        return publication(configuration.dataStream(), "leaderPublication");
     }
 }
