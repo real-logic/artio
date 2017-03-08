@@ -33,7 +33,10 @@ import org.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.Pressure;
-import uk.co.real_logic.fix_gateway.engine.*;
+import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
+import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
+import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
@@ -53,6 +56,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
@@ -798,6 +802,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
             return Pressure.apply(
                 inboundPublication.saveControlNotification(libraryId, existingLibrary.sessions()));
+        }
+
+        // Send an empty control notification if you've never seen this library before
+        // Since it may have connected to another gateway node if you're clustered.
+        if (Pressure.isBackPressured(
+            inboundPublication.saveControlNotification(libraryId, Collections.emptyList())))
+        {
+            return ABORT;
         }
 
         final LivenessDetector livenessDetector = LivenessDetector.forEngine(

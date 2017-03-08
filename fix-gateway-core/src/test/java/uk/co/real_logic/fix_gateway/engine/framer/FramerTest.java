@@ -570,7 +570,7 @@ public class FramerTest
     }
 
     @Test
-    public void shouldNotNotifyLibraryOfControlledSessionsUponDuplicateConnectAfterTimeout() throws Exception
+    public void shouldNotifyLibraryOfControlledSessionsUponDuplicateConnectAfterTimeout() throws Exception
     {
         aClientConnects();
 
@@ -584,7 +584,7 @@ public class FramerTest
 
         duplicateLibraryConnect();
 
-        saveControlNotification(never());
+        saveControlNotification(times(1));
     }
 
     @Test
@@ -614,7 +614,7 @@ public class FramerTest
     private void verifyLibraryControlNotified(final Matcher<? super Collection<?>> sessionMatcher)
     {
         verify(inboundPublication).saveApplicationHeartbeat(LIBRARY_ID);
-        saveControlNotification(times(1));
+        saveControlNotification(times(2));
 
         final List<SessionInfo> sessions = sessionCaptor.getValue();
         assertThat(sessions, sessionMatcher);
