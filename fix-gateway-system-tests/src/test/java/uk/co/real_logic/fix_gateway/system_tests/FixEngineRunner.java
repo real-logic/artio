@@ -55,7 +55,6 @@ public class FixEngineRunner implements AutoCloseable
         tcpPort = unusedPort();
         final int libraryPort = unusedPort();
         libraryChannel = "aeron:udp?endpoint=224.0.1.1:" + libraryPort;
-        System.out.println(nodeId + " -> " + libraryChannel);
         frameDropper = new FrameDropper(ourId);
 
         final MediaDriver.Context context =
