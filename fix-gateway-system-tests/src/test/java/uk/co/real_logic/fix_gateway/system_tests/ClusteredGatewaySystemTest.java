@@ -116,7 +116,7 @@ public class ClusteredGatewaySystemTest
 
         this.leader = withTimeout(
             "Cluster failed to elect a leader",
-            this::findNewLeader,
+            () -> findNewLeader(acceptingCluster),
             5000);
 
         acceptingLibrary = connect(configuration);
@@ -170,14 +170,19 @@ public class ClusteredGatewaySystemTest
         oldLeader.disable();
         logLeader(oldLeader, "Disabled old old leader (%s) [%s]\n");
 
-        withTimeout(
+        final List<FixEngineRunner> otherNodes = new ArrayList<>(acceptingCluster);
+        otherNodes.remove(oldLeader);
+
+        leader = withTimeout(
             "Cluster failed to elect a leader",
             () ->
             {
                 pollLibraries();
-                return findNewLeader();
+                return findNewLeader(otherNodes);
             },
             2000);
+
+        assertNotEquals("Failed to change leader", oldLeader, leader);
 
         logLeader(leader, "Elected new leader: (%s) [%s]\n");
 
@@ -197,7 +202,7 @@ public class ClusteredGatewaySystemTest
         initiatingHandler.clearSessions();
 
         assertEventuallyTrue(
-            "Old library state flushed out",
+            "Old library state not flushed out",
             () ->
             {
                 pollLibraries();
@@ -218,17 +223,10 @@ public class ClusteredGatewaySystemTest
         DebugLogger.log(GATEWAY_CLUSTER_TEST, "Message Roundtrip\n");
     }
 
-    private Optional<FixEngineRunner> findNewLeader()
+    private Optional<FixEngineRunner> findNewLeader(final List<FixEngineRunner> nodes)
     {
-        final long count = acceptingCluster.stream().filter(FixEngineRunner::isLeader).count();
-        if (count > 1)
-        {
-            System.out.println(count);
-        }
-
-        return acceptingCluster
+        return nodes
             .stream()
-            .filter((leader) -> leader != this.leader)
             .filter(FixEngineRunner::isLeader)
             .findFirst();
     }
