@@ -26,6 +26,7 @@ import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.LogTag;
 import uk.co.real_logic.fix_gateway.Reply;
+import uk.co.real_logic.fix_gateway.Timing;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
@@ -104,8 +105,7 @@ public class ClusteredGatewaySystemTest
         randomOrderCluster.forEach(FixEngineRunner::launch);
         acceptingCluster.get(0).launch();
 
-        final LibraryConfiguration configuration = acceptingLibraryConfig(acceptingHandler)
-            .replyTimeoutInMs(5_000);
+        final LibraryConfiguration configuration = acceptingLibraryConfig(acceptingHandler);
 
         configuration.libraryAeronChannels(acceptingCluster
             .stream()
@@ -180,18 +180,25 @@ public class ClusteredGatewaySystemTest
                 pollLibraries();
                 return findNewLeader(otherNodes);
             },
-            2000);
+            5000);
 
         assertNotEquals("Failed to change leader", oldLeader, leader);
 
         logLeader(leader, "Elected new leader: (%s) [%s]\n");
 
         assertEventuallyTrue(
-            "Library Failed to connect to Engine",
+            () ->
+                "Library Failed to connect, isConnected=" +
+                acceptingLibrary.isConnected() +
+                ", channel=" + acceptingLibrary.currentAeronChannel(),
             () ->
             {
                 pollLibraries();
                 return connectedToLeader();
+            },
+            Timing.DEFAULT_TIMEOUT_IN_MS,
+            () ->
+            {
             });
 
         DebugLogger.log(GATEWAY_CLUSTER_TEST, "Library has connected to new leader\n");
