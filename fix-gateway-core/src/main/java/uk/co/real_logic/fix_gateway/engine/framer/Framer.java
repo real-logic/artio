@@ -627,10 +627,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     work(
                         this::checkLoggerUpToDate,
                         this::saveManageConnection,
-                        this::saveLogon);
+                        this::saveSessionExists);
                 }
 
-                private long saveLogon()
+                private long saveSessionExists()
                 {
                     return inboundPublication.saveSessionExists(
                         libraryId, connectionId, sessionId,
