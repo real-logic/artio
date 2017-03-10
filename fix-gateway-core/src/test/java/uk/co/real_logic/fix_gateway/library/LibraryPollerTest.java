@@ -94,7 +94,7 @@ public class LibraryPollerTest
     @Test
     public void shouldNotifyClientOfSessionTimeouts()
     {
-        connect();
+        connectToSingleEngine();
 
         manageConnection(CONNECTION_ID, SESSION_ID);
 
@@ -106,7 +106,7 @@ public class LibraryPollerTest
     @Test
     public void shouldNotifyClientsOfRelevantSessionTimeouts()
     {
-        connect();
+        connectToSingleEngine();
 
         manageConnection(CONNECTION_ID, SESSION_ID);
         manageConnection(OTHER_CONNECTION_ID, OTHER_SESSION_ID);
@@ -120,7 +120,7 @@ public class LibraryPollerTest
     @Test
     public void shouldDisconnectAfterTimeout()
     {
-        connect();
+        connectToSingleEngine();
 
         disconnectDueToTimeout();
     }
@@ -161,6 +161,56 @@ public class LibraryPollerTest
     public void shouldNotAttemptAnotherEngineWithDifferentLibraryId()
     {
         shouldReplyToOnNotLeaderWith(() -> ENGINE_LIBRARY_ID, this::connectCorrelationId, FIRST_CHANNEL);
+    }
+
+    @Test
+    public void shouldAttemptNextEngineWhenConnectionTimesOut()
+    {
+        attemptsConnectToFirstClusterNode();
+
+        library.poll(1);
+
+        library.poll(1);
+
+        clock.advanceMilliSeconds(DEFAULT_REPLY_TIMEOUT_IN_MS + 1);
+
+        library.poll(1);
+
+        attemptToConnectTo(LEADER_CHANNEL);
+    }
+
+    @Test
+    public void shouldNotAttemptNextEngineUntilConnectionTimesOut()
+    {
+        attemptsConnectToFirstClusterNode();
+
+        library.poll(1);
+
+        library.poll(1);
+
+        clock.advanceMilliSeconds((DEFAULT_REPLY_TIMEOUT_IN_MS / 4) - 1);
+
+        library.poll(1);
+
+        library.poll(1);
+
+        doesNotConnectTo(LEADER_CHANNEL);
+    }
+
+    private void doesNotConnectTo(final String channel)
+    {
+        verify(transport, never()).initStreams(channel);
+    }
+
+    private void attemptsConnectToFirstClusterNode()
+    {
+        newLibraryPoller(CLUSTER_CHANNELS);
+
+        library.startConnecting();
+
+        library.poll(1);
+
+        attemptToConnectTo(FIRST_CHANNEL);
     }
 
     private void disconnectDueToTimeout()
@@ -243,7 +293,7 @@ public class LibraryPollerTest
         verifyNoMoreInteractions(transport);
     }
 
-    private void connect()
+    private void connectToSingleEngine()
     {
         receiveOneApplicationHeartbeat();
 

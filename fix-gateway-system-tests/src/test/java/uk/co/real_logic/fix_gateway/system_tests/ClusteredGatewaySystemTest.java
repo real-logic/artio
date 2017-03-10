@@ -26,7 +26,6 @@ import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.LogTag;
 import uk.co.real_logic.fix_gateway.Reply;
-import uk.co.real_logic.fix_gateway.Timing;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
@@ -196,7 +195,7 @@ public class ClusteredGatewaySystemTest
                 pollLibraries();
                 return connectedToLeader();
             },
-            Timing.DEFAULT_TIMEOUT_IN_MS,
+            10_000,
             () ->
             {
             });

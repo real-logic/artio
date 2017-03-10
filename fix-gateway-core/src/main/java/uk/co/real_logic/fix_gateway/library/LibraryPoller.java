@@ -412,14 +412,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         try
         {
             final long correlationId = ++currentCorrelationId;
-            if (outboundPublication.saveLibraryConnect(libraryId, correlationId) > 0)
+            if (outboundPublication.saveLibraryConnect(libraryId, correlationId) < 0)
             {
-                this.connectCorrelationId = correlationId;
-                nextAttemptTime = configuration.connectAttemptTimeoutInMs() + timeInMs;
+                nextAttemptTime = timeInMs;
             }
             else
             {
-                nextAttemptTime = timeInMs;
+                this.connectCorrelationId = correlationId;
+                nextAttemptTime = configuration.connectAttemptTimeoutInMs() + timeInMs;
             }
         }
         catch (final NotConnectedException e)
