@@ -24,15 +24,45 @@ package uk.co.real_logic.fix_gateway.session;
  */
 public interface CompositeKey
 {
+    /**
+     * Gets the Local Comp Id. This is the senderCompId of messages sent by this session.
+     *
+     * @return the Local Comp Id.
+     */
     String localCompId();
 
+    /**
+     * Gets the Local Sub Id. This is the senderSubId of messages sent by this session.
+     *
+     * @return the Local Sub Id.
+     */
     String localSubId();
 
+    /**
+     * Gets the Local Location Id. This is the senderLocationId of messages sent by this session.
+     *
+     * @return the Local Location Id.
+     */
     String localLocationId();
 
+    /**
+     * Gets the Remote Comp Id. This is the targetCompId of messages sent by this session.
+     *
+     * @return the Remote Comp Id.
+     */
     String remoteCompId();
 
+    /**
+     * Gets the Remote Sub Id. This is the targetSubId of messages sent by this session.
+     *
+     * @return the Remote Sub Id.
+     */
     String remoteSubId();
 
+    /**
+     * Gets the Remote Location Id. This is the targetLocationId of messages sent by this session.
+     *
+     * @return the Remote Location Id.
+     */
     String remoteLocationId();
 }

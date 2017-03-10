@@ -289,6 +289,17 @@ public class Session implements AutoCloseable
     }
 
     /**
+     * Get the uniquely identifying key of the session. This contains any comp, sub or location
+     * ids used to uniquely identify the session.
+     *
+     * @return the uniquely identifying key of the session
+     */
+    public CompositeKey compositeKey()
+    {
+        return sessionKey;
+    }
+
+    /**
      * Get the port of the remote host that your session is connected to.
      *
      * @return the port of the remote host that your session is connected to.
