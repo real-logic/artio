@@ -132,7 +132,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private Subscription inboundSubscription;
     private GatewayPublication outboundPublication;
     private String currentAeronChannel;
-    private long nextAttemptTime;
+    private long nextSendLibraryConnectTime;
+    private long nextEngineAttemptTime;
 
     // Combined with Library Id, uniquely identifies library connection
     private long connectCorrelationId = NO_CORRELATION_ID;
@@ -326,6 +327,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
             initStreams();
             newLivenessDetector();
+            resetNextEngineTimer(timeInMs);
 
             sendLibraryConnect(timeInMs);
         }
@@ -349,11 +351,15 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     // NB: not a reconnect, an nth attempt at a connect
     private void nextConnectingStep(final long timeInMs)
     {
-        if (timeInMs > nextAttemptTime)
+        if (timeInMs > nextEngineAttemptTime)
         {
-            attemptNextEngine();
+            attemptNextEngine(timeInMs);
 
             connectToNewEngine(timeInMs);
+        }
+        else if (timeInMs > nextSendLibraryConnectTime)
+        {
+            sendLibraryConnect(timeInMs);
         }
     }
 
@@ -365,7 +371,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         sendLibraryConnect(timeInMs);
     }
 
-    private void attemptNextEngine()
+    private void attemptNextEngine(final long timeInMs)
     {
         if (enginesAreClustered)
         {
@@ -378,6 +384,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 libraryId,
                 currentAeronChannel);
         }
+    }
+
+    private void resetNextEngineTimer(final long timeInMs)
+    {
+        nextEngineAttemptTime = configuration.replyTimeoutInMs() + timeInMs;
     }
 
     private void initStreams()
@@ -414,18 +425,23 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             final long correlationId = ++currentCorrelationId;
             if (outboundPublication.saveLibraryConnect(libraryId, correlationId) < 0)
             {
-                nextAttemptTime = timeInMs;
+                connectToNextEngineNow(timeInMs);
             }
             else
             {
                 this.connectCorrelationId = correlationId;
-                nextAttemptTime = configuration.connectAttemptTimeoutInMs() + timeInMs;
+                nextSendLibraryConnectTime = configuration.connectAttemptTimeoutInMs() + timeInMs;
             }
         }
         catch (final NotConnectedException e)
         {
-            nextAttemptTime = timeInMs;
+            connectToNextEngineNow(timeInMs);
         }
+    }
+
+    private void connectToNextEngineNow(final long timeInMs)
+    {
+        nextEngineAttemptTime = timeInMs;
     }
 
     private void onConnect()
@@ -781,9 +797,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId && replyToId >= connectCorrelationId)
         {
+            final long timeInMs = timeInMs();
             if (libraryChannel.isEmpty())
             {
-                attemptNextEngine();
+                attemptNextEngine(timeInMs);
             }
             else
             {
@@ -793,9 +810,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     "%d: Attempting connect to (%s) claimed leader\n",
                     libraryId,
                     currentAeronChannel);
+                connectToNextEngineNow(timeInMs);
             }
 
-            connectToNewEngine(timeInMs());
+            connectToNewEngine(timeInMs);
         }
 
         return CONTINUE;

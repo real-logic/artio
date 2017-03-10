@@ -24,6 +24,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 import org.mockito.stubbing.Answer;
 import org.mockito.stubbing.OngoingStubbing;
+import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.framer.FakeEpochClock;
 import uk.co.real_logic.fix_gateway.messages.ControlNotificationDecoder.SessionsDecoder;
@@ -43,6 +44,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS;
+import static uk.co.real_logic.fix_gateway.LivenessDetector.SEND_INTERVAL_FRACTION;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
@@ -53,6 +55,7 @@ public class LibraryPollerTest
     private static final long SESSION_ID = 3;
     private static final long OTHER_CONNECTION_ID = 4;
     private static final long OTHER_SESSION_ID = 5;
+    private static final long CONNECT_ATTEMPT_TIMEOUT = DEFAULT_REPLY_TIMEOUT_IN_MS / SEND_INTERVAL_FRACTION;
 
     private static final int LAST_SENT_SEQUENCE_NUMBER = 1;
     private static final int LAST_RECEIVED_SEQUENCE_NUMBER = 1;
@@ -118,7 +121,7 @@ public class LibraryPollerTest
     }
 
     @Test
-    public void shouldDisconnectAfterTimeout()
+    public void shouldDisconnectSingleEngineAfterTimeout()
     {
         connectToSingleEngine();
 
@@ -126,17 +129,17 @@ public class LibraryPollerTest
     }
 
     @Test
-    public void shouldReconnectAfterTimeoutOnHeartbeat()
+    public void shouldReconnectToSingleEngineAfterTimeoutOnHeartbeat()
     {
-        shouldDisconnectAfterTimeout();
+        shouldDisconnectSingleEngineAfterTimeout();
 
         reconnectAfterTimeout();
     }
 
     @Test
-    public void shouldRepeatedlyReconnectAfterTimeoutOnHeartbeat()
+    public void shouldRepeatedlyReconnectToSingleEngineAfterTimeoutOnHeartbeat()
     {
-        shouldReconnectAfterTimeoutOnHeartbeat();
+        shouldReconnectToSingleEngineAfterTimeoutOnHeartbeat();
 
         disconnectDueToTimeout();
 
@@ -164,51 +167,95 @@ public class LibraryPollerTest
     }
 
     @Test
-    public void shouldAttemptNextEngineWhenConnectionTimesOut()
+    public void shouldResendConnectToSameEngineWhenConnectionTimesOut()
     {
-        attemptsConnectToFirstClusterNode();
+        setupAndConnectToFirstChannel();
 
-        library.poll(1);
+        pollTwice();
 
-        library.poll(1);
+        clock.advanceMilliSeconds(CONNECT_ATTEMPT_TIMEOUT + 1);
+
+        poll();
+
+        sendsLibraryConnect(times(1));
+
+        doesNotAttemptConnectTo(LEADER_CHANNEL);
+    }
+
+    @Test
+    public void shouldStopResendingConnectToSameEngineAfterHeartbeat()
+    {
+        shouldResendConnectToSameEngineWhenConnectionTimesOut();
+
+        reset(outboundPublication);
+
+        reconnectAfterTimeout();
+
+        clock.advanceMilliSeconds(CONNECT_ATTEMPT_TIMEOUT + 1);
+
+        pollTwice();
+
+        sendsLibraryConnect(never());
+    }
+
+    @Test
+    public void shouldAttemptNextEngineWhenEngineTimesOut()
+    {
+        setupAndConnectToFirstChannel();
+
+        pollTwice();
 
         clock.advanceMilliSeconds(DEFAULT_REPLY_TIMEOUT_IN_MS + 1);
 
-        library.poll(1);
+        poll();
 
         attemptToConnectTo(LEADER_CHANNEL);
     }
 
     @Test
-    public void shouldNotAttemptNextEngineUntilConnectionTimesOut()
+    public void shouldNotAttemptNextEngineUntilEngineTimesOut()
     {
-        attemptsConnectToFirstClusterNode();
+        setupAndConnectToFirstChannel();
 
-        library.poll(1);
+        pollTwice();
 
-        library.poll(1);
+        clock.advanceMilliSeconds(DEFAULT_REPLY_TIMEOUT_IN_MS - 1);
 
-        clock.advanceMilliSeconds((DEFAULT_REPLY_TIMEOUT_IN_MS / 4) - 1);
+        pollTwice();
 
-        library.poll(1);
-
-        library.poll(1);
-
-        doesNotConnectTo(LEADER_CHANNEL);
+        doesNotAttemptConnectTo(LEADER_CHANNEL);
     }
 
-    private void doesNotConnectTo(final String channel)
+    private void sendsLibraryConnect(final VerificationMode times)
+    {
+        verify(outboundPublication, times)
+            .saveLibraryConnect(eq(libraryId()), anyLong());
+    }
+
+    private void pollTwice()
+    {
+        poll();
+
+        poll();
+    }
+
+    private void poll()
+    {
+        library.poll(1);
+    }
+
+    private void doesNotAttemptConnectTo(final String channel)
     {
         verify(transport, never()).initStreams(channel);
     }
 
-    private void attemptsConnectToFirstClusterNode()
+    private void setupAndConnectToFirstChannel()
     {
         newLibraryPoller(CLUSTER_CHANNELS);
 
         library.startConnecting();
 
-        library.poll(1);
+        poll();
 
         attemptToConnectTo(FIRST_CHANNEL);
     }
@@ -217,9 +264,7 @@ public class LibraryPollerTest
     {
         advanceBeyondReplyTimeout();
 
-        library.poll(1);
-
-        library.poll(1);
+        pollTwice();
 
         assertFalse("Library failed to timeout", library.isConnected());
     }
@@ -228,9 +273,7 @@ public class LibraryPollerTest
     {
         receiveOneApplicationHeartbeat();
 
-        library.poll(1);
-
-        library.poll(1);
+        pollTwice();
 
         assertTrue("Library still timed out", library.isConnected());
     }
@@ -269,11 +312,9 @@ public class LibraryPollerTest
 
         library.startConnecting();
 
-        library.poll(1);
+        pollTwice();
 
-        library.poll(1);
-
-        library.poll(1);
+        poll();
 
         attemptToConnectTo(channels);
         verify(connectHandler).onConnect(fixLibrary);
@@ -291,6 +332,7 @@ public class LibraryPollerTest
                 .saveLibraryConnect(eq(libraryId()), anyLong());
         }
         verifyNoMoreInteractions(transport);
+        reset(outboundPublication);
     }
 
     private void connectToSingleEngine()
@@ -301,9 +343,7 @@ public class LibraryPollerTest
 
         library.startConnecting();
 
-        library.poll(1);
-
-        library.poll(1);
+        pollTwice();
 
         assertTrue("Failed to connect", library.isConnected());
     }
