@@ -451,7 +451,7 @@ public final class SystemTestUtil
     public static void assertEventuallyHasLibraries(
         final TestSystem testSystem,
         final FixEngine engine,
-        final Matcher<LibraryInfo> ... libraryMatchers)
+        final Matcher<LibraryInfo>... libraryMatchers)
     {
         assertEventuallyTrue("Could not find libraries: " + Arrays.toString(libraryMatchers),
             () ->

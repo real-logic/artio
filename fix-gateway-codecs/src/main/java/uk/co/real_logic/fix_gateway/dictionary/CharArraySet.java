@@ -26,7 +26,7 @@ public final class CharArraySet
     private final CharArrayWrapper wrapper = new CharArrayWrapper();
     private final Set<CharArrayWrapper> values;
 
-    public CharArraySet(final String ... values)
+    public CharArraySet(final String... values)
     {
         this(Arrays.asList(values));
     }
@@ -52,5 +52,4 @@ public final class CharArraySet
         wrapper.wrap(value, length);
         return values.contains(wrapper);
     }
-
 }

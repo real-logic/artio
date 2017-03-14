@@ -33,7 +33,6 @@ import java.util.stream.Stream;
  */
 public final class FixMessagePredicates
 {
-
     private FixMessagePredicates()
     {
     }
@@ -41,7 +40,7 @@ public final class FixMessagePredicates
     /**
      * Filter messages passed to consumer, only passing through messages that pass the predicate.
      *
-     * @param consumer the consumer to receive filtered messages.
+     * @param consumer  the consumer to receive filtered messages.
      * @param predicate the predicate to filter messages.
      * @return a new composed consumer.
      */
@@ -63,7 +62,7 @@ public final class FixMessagePredicates
      */
     public static FixMessagePredicate between(final long beginTimestampInclusive, final long endTimestampExclusive)
     {
-        return message ->
+        return (message) ->
         {
             final long timestamp = message.timestamp();
             return timestamp >= beginTimestampInclusive && timestamp < endTimestampExclusive;
@@ -76,7 +75,7 @@ public final class FixMessagePredicates
      * @param messageTypes the fix message type strings that you see in the message.
      * @return the resulting predicate
      */
-    public static FixMessagePredicate messageTypeOf(final String ... messageTypes)
+    public static FixMessagePredicate messageTypeOf(final String... messageTypes)
     {
         final IntHashSet hashSet = new IntHashSet();
         Stream.of(messageTypes)
@@ -91,17 +90,17 @@ public final class FixMessagePredicates
      * @param messageTypes the fix message types encoded as packed ints.
      * @return the resulting predicate.
      */
-    public static FixMessagePredicate messageTypeOf(final int ... messageTypes)
+    public static FixMessagePredicate messageTypeOf(final int... messageTypes)
     {
         final IntHashSet hashSet = new IntHashSet();
         IntStream.of(messageTypes)
-                 .forEach(hashSet::add);
+            .forEach(hashSet::add);
         return messageTypeOf(hashSet);
     }
 
     private static FixMessagePredicate messageTypeOf(final IntHashSet hashSet)
     {
-        return message -> hashSet.contains(message.messageType());
+        return (message) -> hashSet.contains(message.messageType());
     }
 
     /**
@@ -140,7 +139,7 @@ public final class FixMessagePredicates
      */
     public static FixMessagePredicate sessionOf(final long sessionId)
     {
-        return message -> message.session() == sessionId;
+        return (message) -> message.session() == sessionId;
     }
 
     public static FixMessagePredicate bodyMatches(final Pattern pattern)

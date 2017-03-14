@@ -29,7 +29,7 @@ public class TestSystem
 {
     private final List<FixLibrary> libraries;
 
-    public TestSystem(final FixLibrary ... libraries)
+    public TestSystem(final FixLibrary... libraries)
     {
         this.libraries = new ArrayList<>();
         Collections.addAll(this.libraries, libraries);
@@ -37,12 +37,12 @@ public class TestSystem
 
     public void poll()
     {
-        libraries.forEach(library -> library.poll(LIBRARY_LIMIT));
+        libraries.forEach((library) -> library.poll(LIBRARY_LIMIT));
     }
 
     public void assertConnected()
     {
-        libraries.forEach(library -> assertThat(library, isConnected()));
+        libraries.forEach((library) -> assertThat(library, isConnected()));
     }
 
     public void close(final FixLibrary library)

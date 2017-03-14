@@ -158,7 +158,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
-     * <p>
+     *
      * Optional.
      *
      * @param host the hostname to bind to.
@@ -295,10 +295,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     /**
      * Sets logging of outbound messages.
-     * <p>
+     *
      * Switch off if you don't want the logging system to store all outbound messages.
      * <b>NB:</b> take care if you switch this off as message replay won't work.
-     * <p>
+     *
      * Default: true.
      *
      * @param logOutboundMessages logging of outbound messages.
@@ -428,7 +428,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * @param otherNodes the ids to be added
      * @return this
      */
-    public EngineConfiguration addOtherNodes(final int ... otherNodes)
+    public EngineConfiguration addOtherNodes(final int... otherNodes)
     {
         for (final int otherNode : otherNodes)
         {

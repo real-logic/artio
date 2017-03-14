@@ -277,7 +277,7 @@ public final class DebugLogger
 
     private static void printf(
         final String formatString,
-        final Object ... args)
+        final Object... args)
     {
         final String threadName = threadName();
         if (isThreadEnabled(threadName))
@@ -385,5 +385,4 @@ public final class DebugLogger
     {
         return DEBUG_PRINT_THREAD == null || DEBUG_PRINT_THREAD.equals(threadName);
     }
-
 }
