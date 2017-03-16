@@ -124,11 +124,8 @@ class SessionSubscriber implements AutoCloseable
         final int lastReceivedSequenceNumber,
         final CompositeKey compositeKey,
         final String username,
-        final String password,
-        final SessionHandler handler)
+        final String password)
     {
-        this.handler = handler;
-
         if (compositeKey != null)
         {
             session.setupSession(sessionId, compositeKey);
@@ -171,5 +168,10 @@ class SessionSubscriber implements AutoCloseable
     Session session()
     {
         return session;
+    }
+
+    void handler(final SessionHandler handler)
+    {
+        this.handler = handler;
     }
 }

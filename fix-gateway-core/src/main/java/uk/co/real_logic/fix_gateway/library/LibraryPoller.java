@@ -24,7 +24,6 @@ import org.agrona.collections.ArrayUtil;
 import org.agrona.collections.Long2ObjectHashMap;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.EpochClock;
-import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -108,7 +107,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final Timer sessionTimer;
     private final Timer receiveTimer;
     private final SessionExistsHandler sessionExistsHandler;
-    private final IdleStrategy idleStrategy;
     private final SentPositionHandler sentPositionHandler;
     private final boolean enginesAreClustered;
     private final FixCounters fixCounters;
@@ -157,7 +155,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         this.configuration = configuration;
         this.sessionIdStrategy = configuration.sessionIdStrategy();
         sessionExistsHandler = configuration.sessionExistsHandler();
-        idleStrategy = configuration.libraryIdleStrategy();
         sentPositionHandler = configuration.sentPositionHandler();
         this.clock = clock;
         enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
@@ -622,16 +619,16 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                         remoteCompId,
                         remoteSubId,
                         remoteLocationId);
-                final SessionHandler handler =
-                    configuration.sessionAcquireHandler().onSessionAcquired(subscriber.session(), isSlow);
                 subscriber.onLogon(
                     sessionId,
                     lastSentSequenceNumber,
                     lastReceivedSequenceNumber,
                     compositeKey,
                     username,
-                    password,
-                    handler);
+                    password);
+                final SessionHandler handler =
+                    configuration.sessionAcquireHandler().onSessionAcquired(subscriber.session(), isSlow);
+                subscriber.handler(handler);
             }
         }
         else if (libraryId == ENGINE_LIBRARY_ID || thisLibrary && logonstatus == LIBRARY_NOTIFICATION)
