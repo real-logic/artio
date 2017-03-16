@@ -75,7 +75,7 @@ public class FixEngineRunner implements AutoCloseable
         delete(acceptorLogs);
         configuration = new EngineConfiguration();
 
-        setupAuthentication(ACCEPTOR_ID, INITIATOR_ID, configuration);
+        setupCommonConfig(ACCEPTOR_ID, INITIATOR_ID, configuration);
 
         configuration
             .bindTo("localhost", tcpPort)

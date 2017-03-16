@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
@@ -27,6 +28,7 @@ import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.session.Session;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.IntSupplier;
 
@@ -529,6 +531,21 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         connectSessions();
 
         messagesCanBeExchanged();
+    }
+
+    @Ignore
+    @Test
+    public void shouldExchangeLargeMessages()
+    {
+        acquireAcceptingSession();
+
+        final char[] testReqIDChars = new char[SESSION_BUFFER_SIZE_IN_BYTES - 100];
+        Arrays.fill(testReqIDChars, 'A');
+        final String testReqID = new String(testReqIDChars);
+
+        sendTestRequest(acceptingSession, testReqID);
+
+        assertReceivedSingleHeartbeat(testSystem, initiatingOtfAcceptor, testReqID);
     }
 
     private void awaitIsConnected(final boolean connected, final FixLibrary library)

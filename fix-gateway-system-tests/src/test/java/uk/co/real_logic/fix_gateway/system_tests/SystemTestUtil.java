@@ -70,6 +70,8 @@ public final class SystemTestUtil
     public static final String USERNAME = "bob";
     public static final String PASSWORD = "Uv1aegoh";
 
+    public static final int SESSION_BUFFER_SIZE_IN_BYTES = 15000;
+
     static
     {
         final File parentDirectory = new File(optimalTmpDirName());
@@ -244,7 +246,7 @@ public final class SystemTestUtil
         final String acceptorLogs)
     {
         final EngineConfiguration configuration = new EngineConfiguration();
-        setupAuthentication(acceptorId, initiatorId, configuration);
+        setupCommonConfig(acceptorId, initiatorId, configuration);
 
         return configuration
             .bindTo("localhost", port)
@@ -262,7 +264,7 @@ public final class SystemTestUtil
         final FakeHandler sessionHandler)
     {
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
-        setupAuthentication(ACCEPTOR_ID, INITIATOR_ID, libraryConfiguration);
+        setupCommonConfig(ACCEPTOR_ID, INITIATOR_ID, libraryConfiguration);
 
         libraryConfiguration
             .sessionExistsHandler(sessionHandler)
@@ -273,7 +275,7 @@ public final class SystemTestUtil
         return libraryConfiguration;
     }
 
-    public static void setupAuthentication(
+    public static void setupCommonConfig(
         final String acceptorId, final String initiatorId, final CommonConfiguration configuration)
     {
         final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(acceptorId)
@@ -283,7 +285,8 @@ public final class SystemTestUtil
 
         configuration
             .authenticationStrategy(authenticationStrategy)
-            .messageValidationStrategy(validationStrategy);
+            .messageValidationStrategy(validationStrategy)
+            .sessionBufferSize(SESSION_BUFFER_SIZE_IN_BYTES);
     }
 
     public static Session acquireSession(final FakeHandler sessionHandler, final FixLibrary library)
