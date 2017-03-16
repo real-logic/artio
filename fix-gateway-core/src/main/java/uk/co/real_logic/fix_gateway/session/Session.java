@@ -19,6 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.Verify;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
@@ -380,6 +381,8 @@ public class Session implements AutoCloseable
      * Send a message on this session.
      *
      * @param encoder the encoder of the message to be sent
+     * @throws IndexOutOfBoundsException if the encoded message is too large, if this happens consider
+     *                                   increasing {@link CommonConfiguration#sessionBufferSize(int)}
      * @return the position in the stream that corresponds to the end of this message.
      */
     public long send(final MessageEncoder encoder)
