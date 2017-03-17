@@ -186,7 +186,7 @@ public class CommonConfiguration
     public static final int DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS = BACKOFF_SPINS + BACKOFF_YIELDS + 1000;
     public static final int DEFAULT_OUTBOUND_MAX_CLAIM_ATTEMPTS = DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS;
 
-    public static final int DEFAULT_SESSION_BUFFER_SIZE = 8 * 1024;
+    public static final int DEFAULT_SESSION_BUFFER_SIZE = 16 * 1024;
     public static final long DEFAULT_SENDING_TIME_WINDOW = MINUTES.toMillis(2);
     public static final int DEFAULT_HEARTBEAT_INTERVAL_IN_S = 10;
 
