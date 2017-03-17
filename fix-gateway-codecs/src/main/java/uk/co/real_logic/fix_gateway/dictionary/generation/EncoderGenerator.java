@@ -29,6 +29,7 @@ import java.util.function.Function;
 import java.util.stream.IntStream;
 
 import static java.util.Collections.emptyList;
+import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.AggregateType.GROUP;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.GenerationUtil.fileHeader;
@@ -44,20 +45,12 @@ public class EncoderGenerator extends Generator
         "        position++;\n" +
         "%s";
 
-    private static final String TRAILER_PREFIX =
-        "    public int encode(final MutableAsciiBuffer buffer, final int offset)\n" +
-        "    {\n" +
-        "        throw new UnsupportedOperationException();\n" +
-        "    }\n\n" +
+    private static final String TRAILER_ENCODE_PREFIX =
         "    public int encode(final MutableAsciiBuffer buffer, final int offset, final int bodyStart)\n" +
         "    {\n" +
         "        int position = offset;\n\n";
 
-    private static final String GROUP_PREFIX =
-        "    public int encode(final MutableAsciiBuffer buffer, final int offset)\n" +
-        "    {\n" +
-        "        throw new UnsupportedOperationException();\n" +
-        "    }\n\n" +
+    private static final String GROUP_ENCODE_PREFIX =
         "    public int encode(final MutableAsciiBuffer buffer, final int offset, final int remainingElements)\n" +
         "    {\n" +
         "        if (remainingElements == 0)\n" +
@@ -66,16 +59,29 @@ public class EncoderGenerator extends Generator
         "        }\n\n" +
         "        int position = offset;\n\n";
 
+    // returns (offset, length) as long
+    private static final String MESSAGE_ENCODE_PREFIX =
+        "    public static int MAX_HEADER_PREFIX_LENGTH = %d;\n" +
+        "    public long encode(final MutableAsciiBuffer buffer, final int offset)\n" +
+        "    {\n" +
+        "        int start = offset + MAX_HEADER_PREFIX_LENGTH;\n\n" +
+        "        int position = start;\n\n" +
+        "        position += header.encode(buffer, position);\n"; // TODO
+
+    // returns length as int
+    private static final String OTHER_ENCODE_PREFIX =
+        "    public int encode(final MutableAsciiBuffer buffer, final int offset)\n" +
+        "    {\n" +
+        "        int position = offset;\n\n";
+
     private static final String RESET_NEXT_GROUP =
         "        if (next != null)" +
         "        {\n" +
         "            next.reset();\n" +
         "        }\n";
 
-    private static final String OTHER_PREFIX =
-        "    public int encode(final MutableAsciiBuffer buffer, final int offset)\n" +
-        "    {\n" +
-        "        int position = offset;\n\n";
+    private static final int MAX_BODY_LENGTH_FIELD_LENGTH = String.valueOf(Integer.MAX_VALUE).length();
+    private static final int HEADER_TAG_LENGTH = "8=9=".length();
 
     private static String encoderClassName(final String name)
     {
@@ -88,6 +94,9 @@ public class EncoderGenerator extends Generator
 
     private final int initialArraySize;
 
+    private final String beginString;
+    private final int maxHeaderPrefixLength;
+
     public EncoderGenerator(
         final Dictionary dictionary,
         final int initialArraySize,
@@ -97,6 +106,8 @@ public class EncoderGenerator extends Generator
     {
         super(dictionary, builderPackage, outputManager, validationClass);
         this.initialArraySize = initialArraySize;
+        beginString = String.format("FIX.%d.%d", dictionary.majorVersion(), dictionary.minorVersion());
+        maxHeaderPrefixLength = beginString.length() + MAX_BODY_LENGTH_FIELD_LENGTH + HEADER_TAG_LENGTH;
     }
 
     protected void generateAggregateFile(final Aggregate aggregate, final AggregateType aggregateType)
@@ -123,7 +134,8 @@ public class EncoderGenerator extends Generator
         final Writer out) throws IOException
     {
         final boolean isMessage = type == AggregateType.MESSAGE;
-        out.append(classDeclaration(className, emptyList(), topType(type), type == GROUP));
+        final List<String> interfaces = isMessage ? singletonList(MessageEncoder.class.getSimpleName()) : emptyList();
+        out.append(classDeclaration(className, interfaces, type == GROUP));
         out.append(constructor(aggregate, dictionary));
         if (isMessage)
         {
@@ -183,10 +195,9 @@ public class EncoderGenerator extends Generator
                 header.hasField(MSG_TYPE)
                     ? String.format("        header.msgType(\"%s\");\n", fullType) : "";
 
-            final String beginString =
+            final String setBeginString =
                 header.hasField("BeginString")
-                    ? String.format("        header.beginString(\"FIX.%d.%d\");\n",
-                    dictionary.majorVersion(), dictionary.minorVersion()) : "";
+                    ? String.format("        header.beginString(\"%s\");\n", beginString) : "";
 
             return String.format(
                 "    public int messageType()\n" +
@@ -201,7 +212,7 @@ public class EncoderGenerator extends Generator
                 packedType,
                 message.name(),
                 msgType,
-                beginString
+                setBeginString
             );
         }
 
@@ -393,16 +404,19 @@ public class EncoderGenerator extends Generator
         switch (aggregateType)
         {
             case TRAILER:
-                prefix = TRAILER_PREFIX;
+                prefix = TRAILER_ENCODE_PREFIX;
                 break;
 
             case GROUP:
-                prefix = GROUP_PREFIX;
+                prefix = GROUP_ENCODE_PREFIX;
+                break;
+
+            case MESSAGE:
+                prefix = String.format(MESSAGE_ENCODE_PREFIX, maxHeaderPrefixLength);
                 break;
 
             default:
-                prefix = OTHER_PREFIX +
-                    (hasCommonCompounds ? "        position += header.encode(buffer, position);\n" : "");
+                prefix = OTHER_ENCODE_PREFIX;
                 break;
         }
 
@@ -411,21 +425,28 @@ public class EncoderGenerator extends Generator
                    .map(this::encodeEntry)
                    .collect(joining("\n"));
 
-        String suffix = "";
+        String suffix;
         if (hasCommonCompounds)
         {
-            suffix = "        position += trailer.encode(buffer, position, header.bodyLength);\n";
+            suffix = "        position += trailer.encode(buffer, position, header.bodyLength);\n" +
+                     "        return Encoder.result(position - start, start);\n" +
+                     "    }\n\n";
         }
-        else if (aggregateType == GROUP)
+        else
         {
             suffix =
-                "        if (next != null)\n" +
-                "        {\n" +
-                "            position += next.encode(buffer, position, remainingElements - 1);\n" +
-                "        }\n";
+                "        return position - offset;\n" +
+                "    }\n\n";
+
+            if (aggregateType == GROUP)
+            {
+                suffix =
+                    "        if (next != null)\n" +
+                        "        {\n" +
+                        "            position += next.encode(buffer, position, remainingElements - 1);\n" +
+                        "        }\n" + suffix;
+            }
         }
-        suffix += "        return position - offset;\n" +
-                  "    }\n\n";
 
         return prefix + body + suffix;
     }
@@ -587,6 +608,7 @@ public class EncoderGenerator extends Generator
 
     private String encodeComponent(final Entry entry)
     {
+        // TODO: make component return int, split encode prefix
         return String.format(
             "            position += %1$s.encode(buffer, position);\n",
             formatPropertyName(entry.name())

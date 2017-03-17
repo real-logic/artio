@@ -19,14 +19,31 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 public interface Encoder
 {
+    int BITS_IN_INT = 32;
+
+    static int length(final long result)
+    {
+        return (int) result;
+    }
+
+    static int offset(final long result)
+    {
+        return (int) (result >> BITS_IN_INT);
+    }
+
+    static long result(final int length, final int offset)
+    {
+        return length | ((long) offset) << BITS_IN_INT;
+    }
+
     /**
      * Encode the message onto a buffer in FIX tag=value\001 format.
      *
      * @param buffer the buffer to encode the message to.
      * @param offset the offset within the buffer to start encoding the message at.
-     * @return the length of the encoded message on the buffer
+     * @return the offset and length of the encoded message on the buffer packed into a long
      */
-    int encode(MutableAsciiBuffer buffer, int offset);
+    long encode(MutableAsciiBuffer buffer, int offset);
 
     /**
      * Resets the encoder. Sets all the fields back to their uninitialized state.

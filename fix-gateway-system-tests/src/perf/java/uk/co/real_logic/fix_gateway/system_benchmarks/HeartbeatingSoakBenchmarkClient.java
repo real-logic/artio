@@ -44,9 +44,7 @@ public final class HeartbeatingSoakBenchmarkClient extends AbstractBenchmarkClie
             {
                 read(socketChannel);
 
-                final int length = encode(heartbeat, heartbeat.header(), seqNum);
-
-                write(socketChannel, length);
+                write(socketChannel, encode(heartbeat, heartbeat.header(), seqNum));
 
                 System.out.println("Sent " + seqNum);
             }

@@ -111,9 +111,11 @@ class FixConnection implements AutoCloseable
     {
         try
         {
-            final int length = encoder.encode(writeAsciiBuffer, OFFSET);
+            final long result = encoder.encode(writeAsciiBuffer, OFFSET);
+            final int offset = Encoder.offset(result);
+            final int length = Encoder.length(result);
             encoder.reset();
-            writeBuffer.position(OFFSET).limit(length);
+            writeBuffer.position(offset).limit(offset + length);
             final int written = socket.write(writeBuffer);
             assertEquals(length, written);
             DebugLogger.log(FIX_TEST, "> [" + writeAsciiBuffer.getAscii(OFFSET, length) + "]");

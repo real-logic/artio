@@ -57,12 +57,14 @@ public abstract class Generator
         final String headerParameter = headerWrapsTrailer ? "trailer" : "";
         return String.format(
             "    private Trailer%1$s trailer = new Trailer%1$s();\n\n" +
-            "    public Trailer%1$s trailer() {\n" +
+            "    public Trailer%1$s trailer()\n" +
+            "    {\n" +
             "        return trailer;\n" +
             "    }\n\n" +
 
             "    private Header%1$s header = new Header%1$s(%2$s);\n\n" +
-            "    public Header%1$s header() {\n" +
+            "    public Header%1$s header()\n" +
+            "    {\n" +
             "        return header;\n" +
             "    }\n\n",
             form,
@@ -139,18 +141,16 @@ public abstract class Generator
     protected String classDeclaration(
         final String className,
         final List<String> interfaces,
-        final Class<?> topType,
         final boolean isStatic)
     {
-        final String interfaceList = interfaces.isEmpty() ? "" : (", " + String.join(", ", interfaces));
+        final String interfaceList = interfaces.isEmpty() ? "" : " implements " + String.join(", ", interfaces);
 
         return String.format(
             "\n\n@Generated(\"%1$s\")\n" +
-            "public %5$sclass %2$s implements %3$s%4$s\n" +
+            "public %4$sclass %2$s%3$s\n" +
             "{\n",
             getClass().getName(),
             className,
-            topType.getSimpleName(),
             interfaceList,
             isStatic ? "static " : "");
     }

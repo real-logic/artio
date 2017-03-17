@@ -159,7 +159,9 @@ public class DecoderGenerator extends Generator
             .map((comp) -> decoderClassName((Aggregate)comp.element()))
             .collect(toList());
 
-        out.append(classDeclaration(className, interfaces, Decoder.class, false));
+        interfaces.add(Decoder.class.getSimpleName());
+
+        out.append(classDeclaration(className, interfaces, false));
         validation(out, aggregate, type);
         if (isMessage)
         {

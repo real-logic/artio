@@ -15,10 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
-import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
-import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
-import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
-import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
+import uk.co.real_logic.fix_gateway.builder.*;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
@@ -95,11 +92,14 @@ public abstract class AbstractBenchmarkClient
             .targetCompID(ACCEPTOR_ID);
     }
 
-    protected void write(final SocketChannel socketChannel, final int amount) throws IOException
+    protected void write(final SocketChannel socketChannel, final long result) throws IOException
     {
-        writeBuffer.position(0);
-        writeBuffer.limit(amount);
-        int remaining = amount;
+        final int offset = Encoder.offset(result);
+        final int length = Encoder.length(result);
+
+        writeBuffer.position(offset);
+        writeBuffer.limit(offset + length);
+        int remaining = length;
         do
         {
             remaining -= socketChannel.write(writeBuffer);
@@ -188,12 +188,12 @@ public abstract class AbstractBenchmarkClient
         return readFlyweight.getChar(index) == '\001';
     }
 
-    protected int encode(final MessageEncoder testRequest, final HeaderEncoder header, final int seqNum)
+    protected long encode(final MessageEncoder testRequest, final HeaderEncoder header, final int seqNum)
     {
         return encode(testRequest, header, seqNum, 0);
     }
 
-    protected int encode(
+    protected long encode(
         final MessageEncoder testRequest,
         final HeaderEncoder header,
         final int seqNum,

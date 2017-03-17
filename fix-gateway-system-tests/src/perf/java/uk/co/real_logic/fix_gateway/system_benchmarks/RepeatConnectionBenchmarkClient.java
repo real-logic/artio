@@ -42,9 +42,7 @@ public final class RepeatConnectionBenchmarkClient extends AbstractBenchmarkClie
 
                 timestampEncoder.encode(System.currentTimeMillis());
 
-                final int length = testRequest.encode(writeFlyweight, 0);
-
-                write(socketChannel, length);
+                write(socketChannel, testRequest.encode(writeFlyweight, 0));
 
                 read(socketChannel);
             }

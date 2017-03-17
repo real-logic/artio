@@ -128,14 +128,7 @@ public final class ThroughputBenchmarkClient extends AbstractBenchmarkClient
                 }
             }
 
-            int offset = 0;
-            for (int i = 0; i < BURST; i++)
-            {
-                offset += encode(testRequest, header, seqNo, offset);
-                seqNo++;
-            }
-
-            write(socketChannel, offset);
+            write(socketChannel, encode(testRequest, header, seqNo, 0));
             return 1;
         }
 

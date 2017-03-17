@@ -116,9 +116,9 @@ public final class LatencyUnderLoadBenchmarkClient extends AbstractBenchmarkClie
             {
                 for (int i = 0; i < MESSAGES_EXCHANGED; i++)
                 {
-                    final int length = encode(testRequest, header, seqNo);
+                    final long result = encode(testRequest, header, seqNo);
                     sendTimes[i] = System.nanoTime();
-                    write(socketChannel, length);
+                    write(socketChannel, result);
                     seqNo++;
 
                     LockSupport.parkNanos(pauseInNs);

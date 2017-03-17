@@ -46,9 +46,7 @@ public final class ManyConnectionsBenchmarkClient extends AbstractBenchmarkClien
 
                 timestampEncoder.encode(System.currentTimeMillis());
 
-                final int length = testRequest.encode(writeFlyweight, 0);
-
-                write(socketChannel, length);
+                write(socketChannel, testRequest.encode(writeFlyweight, 0));
 
                 read(socketChannel);
 

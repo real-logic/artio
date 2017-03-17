@@ -20,6 +20,7 @@ import org.agrona.concurrent.IdleStrategy;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
@@ -75,8 +76,8 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldParseResendRequest()
     {
-        final int length = bufferHasResendRequest(END_SEQ_NO);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, length);
+        final long result = bufferHasResendRequest(END_SEQ_NO);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
 
         verifyQueriedService(END_SEQ_NO);
         verifyNoMoreInteractions(publication);
@@ -85,8 +86,8 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldPublishAllRemainingMessages()
     {
-        final int length = bufferHasResendRequest(MOST_RECENT_MESSAGE);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, length);
+        final long result = bufferHasResendRequest(MOST_RECENT_MESSAGE);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
 
         verifyQueriedService(MOST_RECENT_MESSAGE);
         verifyNoMoreInteractions(publication);
@@ -175,8 +176,8 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldValidateResendRequestMessageSequenceNumbers()
     {
-        final int length = bufferHasResendRequest(BEGIN_SEQ_NO - 1);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, length);
+        final long result = bufferHasResendRequest(BEGIN_SEQ_NO - 1);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
 
         verify(errorHandler).onError(any());
         verifyNoMoreInteractions(replayQuery, publication);
@@ -205,10 +206,12 @@ public class ReplayerTest extends AbstractLogTest
         assertNotEquals("Unable to find poss dup index", UNKNOWN_INDEX, possDupIndex);
     }
 
-    private void onMessage(final int messageType, final int length)
+    private void onMessage(final int messageType, final long result)
     {
+        final int length = Encoder.length(result);
+        final int offset = Encoder.offset(result);
         replayer.onMessage(
-            buffer, ENCODE_OFFSET, length,
+            buffer, offset, length,
             LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX, messageType, 0L, OK, 0L);
     }
 

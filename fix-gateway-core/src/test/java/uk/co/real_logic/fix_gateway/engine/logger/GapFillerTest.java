@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
@@ -36,9 +37,11 @@ public class GapFillerTest extends AbstractLogTest
     @Test
     public void shouldGapFillInResponseToResendRequest()
     {
-        final int length = bufferHasResendRequest(END_SEQ_NO);
+        final long result = bufferHasResendRequest(END_SEQ_NO);
+        final int encodedLength = Encoder.length(result);
+        final int encodedOffset = Encoder.offset(result);
         gapFiller.onMessage(
-            buffer, ENCODE_OFFSET, length,
+            buffer, encodedOffset, encodedLength,
             LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX,
             ResendRequestDecoder.MESSAGE_TYPE, 0L, OK, 0L);
 

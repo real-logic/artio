@@ -21,6 +21,7 @@ import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.Pressure;
+import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
@@ -404,9 +405,11 @@ public class Session implements AutoCloseable
             sessionIdStrategy.setupSession(sessionKey, header);
         }
 
-        final int length = encoder.encode(asciiBuffer, 0);
+        final long result = encoder.encode(asciiBuffer, 0);
+        final int length = Encoder.length(result);
+        final int offset = Encoder.offset(result);
         final long position = publication.saveMessage(
-            asciiBuffer, 0, length, libraryId, encoder.messageType(), id(), sequenceIndex(), connectionId, OK);
+            asciiBuffer, offset, length, libraryId, encoder.messageType(), id(), sequenceIndex(), connectionId, OK);
         lastSentMsgSeqNum(sentSeqNum, position);
 
         return position;

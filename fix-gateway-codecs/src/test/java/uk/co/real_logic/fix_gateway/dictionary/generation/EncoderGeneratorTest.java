@@ -51,8 +51,11 @@ public class EncoderGeneratorTest
     public static void generate() throws Exception
     {
         sources = generateSources(true);
-        // System.out.println(sources);
         heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
+        if (heartbeat == null)
+        {
+            System.out.println(sources);
+        }
         headerClass = compileInMemory(HEADER_ENCODER, sources);
         otherMessage = compileInMemory(OTHER_MESSAGE_ENCODER, sources);
 
@@ -158,20 +161,6 @@ public class EncoderGeneratorTest
         setTestReqId(encoder);
 
         assertTrue("hasTestReqId not updated", hasTestReqId(encoder));
-    }
-
-    @Test
-    public void shouldGenerateHeader() throws Exception
-    {
-        assertNotNull(headerClass);
-        assertTrue(Encoder.class.isAssignableFrom(headerClass));
-
-        final Encoder header = (Encoder)headerClass.newInstance();
-
-        setCharSequence(header, "beginString", "abc");
-        setCharSequence(header, MSG_TYPE, "abc");
-
-        assertEncodesTo(header, "8=abc\0019=0000\00135=abc\001");
     }
 
     @Test
@@ -689,8 +678,10 @@ public class EncoderGeneratorTest
 
     private void assertEncodesTo(final Encoder encoder, final String expectedValue)
     {
-        final int length = encoder.encode(buffer, 1);
-        assertEquals(expectedValue, buffer.getAscii(1, expectedValue.length()));
+        final long result = encoder.encode(buffer, 1);
+        final int length = Encoder.length(result);
+        final int offset = Encoder.offset(result);
+        assertEquals(expectedValue, buffer.getAscii(offset, expectedValue.length()));
         assertEquals(expectedValue.length(), length);
     }
 

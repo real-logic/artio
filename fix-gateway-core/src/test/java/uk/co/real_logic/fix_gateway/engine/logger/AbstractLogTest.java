@@ -19,6 +19,7 @@ import io.aeron.Publication;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.BitUtil;
 import org.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
@@ -88,10 +89,10 @@ public class AbstractLogTest
                 .possDupFlag(false); // NB: set to false to check that it gets flipped upon resend
         }
 
-        logEntryLength = testRequest.encode(asciiBuffer, 0);
-        // encode twice in test to ensure length limits
-        asciiBuffer = new MutableAsciiBuffer(new byte[logEntryLength]);
-        testRequest.encode(asciiBuffer, 0);
+        final long result = testRequest.encode(asciiBuffer, 0);
+        logEntryLength = Encoder.length(result);
+        final int encodedOffset = Encoder.offset(result);
+        asciiBuffer = new MutableAsciiBuffer(asciiBuffer, encodedOffset, logEntryLength);
 
         bufferContainsMessage(sessionId, sequenceIndex, asciiBuffer);
     }
@@ -137,7 +138,7 @@ public class AbstractLogTest
         return BitUtil.align(endPosition(), FRAME_ALIGNMENT);
     }
 
-    protected int bufferHasResendRequest(final int endSeqNo)
+    protected long bufferHasResendRequest(final int endSeqNo)
     {
         final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
         timestampEncoder.encode(System.currentTimeMillis());

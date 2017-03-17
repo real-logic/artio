@@ -135,8 +135,8 @@ public class SessionProxy
         setupHeader(header, msgSeqNo);
         resendRequest.beginSeqNo(beginSeqNo)
                      .endSeqNo(endSeqNo);
-        final int length = resendRequest.encode(string, 0);
-        return send(length, ResendRequestDecoder.MESSAGE_TYPE, sequenceIndex, resendRequest);
+        final long result = resendRequest.encode(string, 0);
+        return send(result, ResendRequestDecoder.MESSAGE_TYPE, sequenceIndex, resendRequest);
     }
 
     public long requestDisconnect(final long connectionId, final DisconnectReason reason)
@@ -170,8 +170,8 @@ public class SessionProxy
         }
         customisationStrategy.configureLogon(logon, sessionId);
 
-        final int length = logon.encode(string, 0);
-        return send(length, LogonDecoder.MESSAGE_TYPE, sequenceIndex, logon);
+        final long result = logon.encode(string, 0);
+        return send(result, LogonDecoder.MESSAGE_TYPE, sequenceIndex, logon);
     }
 
     private boolean nullOrEmpty(final String string)
@@ -359,15 +359,17 @@ public class SessionProxy
         header.msgSeqNum(msgSeqNo);
     }
 
-    private long send(final int length, final int messageType, final int sequenceIndex, final MessageEncoder encoder)
+    private long send(final long result, final int messageType, final int sequenceIndex, final MessageEncoder encoder)
     {
         if (!libraryConnected)
         {
             return LIBRARY_DISCONNECTED;
         }
 
+        final int length = Encoder.length(result);
+        final int offset = Encoder.offset(result);
         final long position = gatewayPublication.saveMessage(
-            buffer, 0, length, libraryId, messageType, sessionId, sequenceIndex, connectionId, OK);
+            buffer, offset, length, libraryId, messageType, sessionId, sequenceIndex, connectionId, OK);
         encoder.resetMessage();
         return position;
     }

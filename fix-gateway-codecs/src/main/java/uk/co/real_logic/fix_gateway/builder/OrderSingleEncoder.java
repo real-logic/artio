@@ -41,7 +41,7 @@ public class OrderSingleEncoder implements MessageEncoder
     {
     }
 
-    public int encode(final MutableAsciiBuffer buffer, final int offset)
+    public long encode(final MutableAsciiBuffer buffer, final int offset)
     {
         return 0;
     }

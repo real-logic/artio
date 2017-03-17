@@ -19,6 +19,7 @@ import io.aeron.driver.MediaDriver;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.Timing;
+import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
@@ -222,8 +223,11 @@ public class SlowConsumerTest
             .senderCompID(INITIATOR_ID)
             .targetCompID(ACCEPTOR_ID);
 
-        final int length = logon.encode(buffer, 0);
-        byteBuffer.limit(length);
+        final long result = logon.encode(buffer, 0);
+        final int offset = Encoder.offset(result);
+        final int length = Encoder.length(result);
+        byteBuffer.position(offset);
+        byteBuffer.limit(offset + length);
         assertEquals(length, socket.write(byteBuffer));
     }
 

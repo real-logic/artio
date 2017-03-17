@@ -19,6 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.Agent;
 import uk.co.real_logic.fix_gateway.Pressure;
+import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.SequenceResetEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
@@ -109,9 +110,11 @@ public class GapFiller implements ProtocolHandler, Agent
             respHeader.msgSeqNum(resendRequest.beginSeqNo());
             sequenceResetEncoder.newSeqNo(resendRequest.endSeqNo());
 
-            final int encodedLength = sequenceResetEncoder.encode(encodeBuffer, 0);
+            final long result = sequenceResetEncoder.encode(encodeBuffer, 0);
+            final int encodedLength = Encoder.length(result);
+            final int encodedOffset = Encoder.offset(result);
             final long sentPosition = publication.saveMessage(
-                encodeBuffer, 0, encodedLength,
+                encodeBuffer, encodedOffset, encodedLength,
                 libraryId, SequenceResetDecoder.MESSAGE_TYPE, sessionId, sequenceIndex, connectionId,
                 MessageStatus.OK);
 

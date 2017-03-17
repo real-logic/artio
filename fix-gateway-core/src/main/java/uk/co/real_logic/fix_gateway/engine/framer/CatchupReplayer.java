@@ -21,6 +21,7 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.SequenceResetEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
@@ -221,9 +222,11 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         sequenceResetEncoder.header().sendingTime(
             timestampEncoder.buffer(), timestampEncoder.encode(System.currentTimeMillis()));
 
-        final int encodedLength = sequenceResetEncoder.encode(encodeBuffer, 0);
+        final long result = sequenceResetEncoder.encode(encodeBuffer, 0);
+        final int encodedLength = Encoder.length(result);
+        final int encodedOffset = Encoder.offset(result);
         final boolean sent = inboundPublication.saveMessage(
-            encodeBuffer, 0, encodedLength,
+            encodeBuffer, encodedOffset, encodedLength,
             libraryId, SequenceResetDecoder.MESSAGE_TYPE,
             messageDecoder.session(), replayFromSequenceIndex, libraryId,
             CATCHUP_REPLAY) > 0;
