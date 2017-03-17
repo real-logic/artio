@@ -108,6 +108,18 @@ public class EncoderGenerator extends Generator
         this.initialArraySize = initialArraySize;
         beginString = String.format("FIX.%d.%d", dictionary.majorVersion(), dictionary.minorVersion());
         maxHeaderPrefixLength = beginString.length() + MAX_BODY_LENGTH_FIELD_LENGTH + HEADER_TAG_LENGTH;
+
+        final Component header = dictionary.header();
+        validateHasField(header, "BeginString");
+        validateHasField(header, "BodyLength");
+    }
+
+    private void validateHasField(final Component header, final String fieldName)
+    {
+        if (!header.hasField(fieldName))
+        {
+            throw new IllegalArgumentException("Header does not contain needed field : " + fieldName);
+        }
     }
 
     protected void generateAggregateFile(final Aggregate aggregate, final AggregateType aggregateType)
