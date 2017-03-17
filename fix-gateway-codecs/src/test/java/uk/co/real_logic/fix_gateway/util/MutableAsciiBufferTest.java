@@ -15,12 +15,13 @@
  */
 package uk.co.real_logic.fix_gateway.util;
 
-import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
 import org.junit.experimental.theories.DataPoints;
 import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
 import org.junit.runner.RunWith;
+
+import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -30,8 +31,7 @@ import static uk.co.real_logic.fix_gateway.util.CustomMatchers.sequenceEqualsAsc
 public class MutableAsciiBufferTest
 {
 
-    private UnsafeBuffer buffer = new UnsafeBuffer(new byte[8 * 1024]);
-    private MutableAsciiBuffer string = new MutableAsciiBuffer(buffer);
+    private MutableAsciiBuffer string = new MutableAsciiBuffer(new byte[8 * 1024]);
 
     @Test
     public void shouldWriteIntZero()
@@ -144,6 +144,21 @@ public class MutableAsciiBufferTest
         final int value = valueAndLength[0];
         final int length = valueAndLength[1];
         assertEquals("Wrong length for " + value, length, MutableAsciiBuffer.lengthInAscii(value));
+    }
+
+    @Theory
+    public void shouldPutNaturalFromEnd(final int[] valueAndLength)
+    {
+        final int value = valueAndLength[0];
+        final int length = valueAndLength[1];
+
+        final int start = string.putNaturalFromEnd(value, length);
+        assertEquals("for " + Arrays.toString(valueAndLength), 0, start);
+
+        assertEquals(
+            "for " + Arrays.toString(valueAndLength),
+            String.valueOf(value),
+            string.getAscii(0, length));
     }
 
 }

@@ -37,7 +37,6 @@ import static uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer.LONGEST_INT_L
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatClassName;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
-// TODO: stop trailers and groups from implementing the encoder interface
 public class EncoderGenerator extends Generator
 {
     private static final String SUFFIX =
@@ -46,29 +45,9 @@ public class EncoderGenerator extends Generator
         "%s";
 
     private static final String TRAILER_ENCODE_PREFIX =
+        "    public static final byte[] HEADER_PREFIX_STRING = \"%s\".getBytes(US_ASCII);\n\n" +
+        "    int realStart;" +
         "    public int encode(final MutableAsciiBuffer buffer, final int offset, final int bodyStart)\n" +
-        "    {\n" +
-        "        int position = offset;\n\n";
-
-    private static final String HEADER_ENCODE_PREFIX =
-        "    public int encodeInitialFields(final MutableAsciiBuffer buffer, final int offset)\n" +
-        "    {\n" +
-        "        int position = offset;\n\n" +
-        "        buffer.putBytes(position, beginStringHeader, 0, beginStringHeaderLength);\n" +
-        "        position += beginStringHeaderLength;\n" +
-        "        buffer.putBytes(position, beginString, 0, beginStringLength);\n" +
-        "        position += beginStringLength;\n" +
-        "        buffer.putSeparator(position);\n" +
-        "        position++;\n\n" +
-
-        "        buffer.putBytes(position, BODY_LENGTH);\n" +
-        "        position += BODY_LENGTH.length;\n" +
-        "        bodyLength(position);\n\n" +
-
-        "        return position - offset;\n" +
-        "    }\n\n" +
-
-        "    public int encode(final MutableAsciiBuffer buffer, final int offset)\n" +
         "    {\n" +
         "        int position = offset;\n\n";
 
@@ -88,8 +67,7 @@ public class EncoderGenerator extends Generator
         "    {\n" +
         "        int start = offset + MAX_HEADER_PREFIX_LENGTH;\n\n" +
         "        int position = start;\n\n" +
-        "        position += header.encodeInitialFields(buffer, position);\n" +
-        "        position += header.encode(buffer, position);\n"; // TODO
+        "        position += header.encode(buffer, position);\n";
 
     // returns length as int
     private static final String OTHER_ENCODE_PREFIX =
@@ -104,7 +82,6 @@ public class EncoderGenerator extends Generator
         "        }\n";
 
     private static final int MAX_BODY_LENGTH_FIELD_LENGTH = String.valueOf(Integer.MAX_VALUE).length();
-    private static final int HEADER_TAG_LENGTH = "8=9=".length();
 
     private static String encoderClassName(final String name)
     {
@@ -117,7 +94,8 @@ public class EncoderGenerator extends Generator
 
     private final int initialArraySize;
 
-    private final String beginString;
+    // Header prefix strings are of the form: "8=FIX.4.49="
+    private final String headerPrefixString;
     private final int maxHeaderPrefixLength;
 
     public EncoderGenerator(
@@ -128,13 +106,14 @@ public class EncoderGenerator extends Generator
         final Class<?> validationClass)
     {
         super(dictionary, builderPackage, outputManager, validationClass);
-        this.initialArraySize = initialArraySize;
-        beginString = String.format("FIX.%d.%d", dictionary.majorVersion(), dictionary.minorVersion());
-        maxHeaderPrefixLength = beginString.length() + MAX_BODY_LENGTH_FIELD_LENGTH + HEADER_TAG_LENGTH;
 
         final Component header = dictionary.header();
         validateHasField(header, BEGIN_STRING);
         validateHasField(header, BODY_LENGTH);
+
+        this.initialArraySize = initialArraySize;
+        headerPrefixString = String.format("8=FIX.%d.%d\0019=", dictionary.majorVersion(), dictionary.minorVersion());
+        maxHeaderPrefixLength = headerPrefixString.length() + MAX_BODY_LENGTH_FIELD_LENGTH;
     }
 
     private void validateHasField(final Component header, final String fieldName)
@@ -230,10 +209,6 @@ public class EncoderGenerator extends Generator
                 header.hasField(MSG_TYPE)
                     ? String.format("        header.msgType(\"%s\");\n", fullType) : "";
 
-            final String setBeginString =
-                header.hasField("BeginString")
-                    ? String.format("        header.beginString(\"%s\");\n", beginString) : "";
-
             return String.format(
                 "    public int messageType()\n" +
                 "    {\n" +
@@ -242,12 +217,10 @@ public class EncoderGenerator extends Generator
                 "    public %sEncoder()\n" +
                 "    {\n" +
                 "%s" +
-                "%s" +
                 "    }\n\n",
                 packedType,
                 message.name(),
-                msgType,
-                setBeginString
+                msgType
             );
         }
 
@@ -438,12 +411,8 @@ public class EncoderGenerator extends Generator
         final String prefix;
         switch (aggregateType)
         {
-            case HEADER:
-                prefix = HEADER_ENCODE_PREFIX;
-                break;
-
             case TRAILER:
-                prefix = TRAILER_ENCODE_PREFIX;
+                prefix = String.format(TRAILER_ENCODE_PREFIX, headerPrefixString);
                 break;
 
             case GROUP:
@@ -467,8 +436,9 @@ public class EncoderGenerator extends Generator
         String suffix;
         if (hasCommonCompounds)
         {
-            suffix = "        position += trailer.encode(buffer, position, header.bodyLength);\n" +
-                     "        return Encoder.result(position - start, start);\n" +
+            suffix = "        position += trailer.encode(buffer, position, start);\n" +
+                     "        final int realStart = trailer.realStart;" +
+                     "        return Encoder.result(position - realStart, realStart);\n" +
                      "    }\n\n";
         }
         else
@@ -506,25 +476,23 @@ public class EncoderGenerator extends Generator
         }
     }
 
-    private String encodeBodyLength()
-    {
-        return "        buffer.putBytes(position, BODY_LENGTH);\n" +
-               "        position += BODY_LENGTH.length;\n" +
-               "        bodyLength(position);\n";
-    }
-
     private String encodeChecksum()
     {
-        return "        final int bodyLength = position - bodyStart;\n" +
-               "        buffer.putNatural(bodyStart - BODY_LENGTH_SIZE, BODY_LENGTH_GAP, bodyLength);\n" +
-               formatTag("checkSum", "") +
-               // 17 to account for the common sized prefix size before bodyStart.
-               // position - 3, to get back to the point before the checksum, ie skip behind (10)
-               "        final int checkSum = buffer.computeChecksum(bodyStart - 17, position - 3);\n" +
-               "        buffer.putNatural(position, 3, checkSum);\n" +
-               "        position += 3;\n" +
-               "        buffer.putSeparator(position);\n" +
-               "        position++;\n";
+        return
+            "        final int bodyLength = position - bodyStart;\n" +
+            "        buffer.putSeparator(bodyStart - 1);\n" +
+            "        final int bodyLengthStart = buffer.putNaturalFromEnd(bodyLength, bodyStart - 1);\n" +
+            "        final int realStart = bodyLengthStart - HEADER_PREFIX_STRING.length;\n" +
+            "        this.realStart = realStart;" +
+            "        buffer.putBytes(realStart, HEADER_PREFIX_STRING);\n" +
+            formatTag("checkSum", "") +
+            // 17 to account for the common sized prefix size before bodyStart.
+            // position - 3, to get back to the point before the checksum, ie skip behind (10)
+            "        final int checkSum = buffer.computeChecksum(realStart, position - 3);\n" +
+            "        buffer.putNatural(position, 3, checkSum);\n" +
+            "        position += 3;\n" +
+            "        buffer.putSeparator(position);\n" +
+            "        position++;\n";
     }
 
     private String encodeField(final Entry entry)

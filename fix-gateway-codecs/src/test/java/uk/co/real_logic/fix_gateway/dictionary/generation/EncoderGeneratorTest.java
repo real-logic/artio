@@ -559,7 +559,7 @@ public class EncoderGeneratorTest
         final Encoder encoder = (Encoder)otherMessage.newInstance();
 
         assertThat(encoder.toString(), containsString("\"MsgType\": \"" + OTHER_MESSAGE_TYPE + "\""));
-        assertEncodesTo(encoder, "8=FIX.4.4\0019=0011\00135=AB\00199=0\00110=099\001");
+        assertEncodesTo(encoder, "8=FIX.4.4\0019=11\00135=AB\00199=0\00110=003\001");
     }
 
     private void setNestedField(final Object group) throws Exception

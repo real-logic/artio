@@ -20,6 +20,7 @@ import org.agrona.generation.StringWriterOutputManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
+import uk.co.real_logic.fix_gateway.dictionary.ExampleDictionary;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
@@ -194,7 +195,7 @@ public class DecoderGeneratorTest
         assertEquals(75, getBodyLength(header));
 
         final Decoder trailer = getTrailer(decoder);
-        assertEquals("039", getChecksum(trailer));
+        assertEquals("199", getChecksum(trailer));
     }
 
     @Test
@@ -923,7 +924,7 @@ public class DecoderGeneratorTest
 
     private int getBodyLength(final Decoder header) throws Exception
     {
-        return (int) get(header, BODY_LENGTH);
+        return (int) get(header, ExampleDictionary.BODY_LENGTH);
     }
 
     private Decoder getTrailer(final Decoder trailer) throws Exception

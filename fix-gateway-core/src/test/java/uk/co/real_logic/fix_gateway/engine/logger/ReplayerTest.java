@@ -150,10 +150,10 @@ public class ReplayerTest extends AbstractLogTest
 
         final int afterOffset = this.offset + 1;
         assertThat(resultAsciiBuffer,
-            sequenceEqualsAscii("8=FIX.4.4\0019=0068\001", afterOffset));
+            sequenceEqualsAscii("8=FIX.4.4\0019=68\001", afterOffset));
 
         assertThat(resultAsciiBuffer,
-            sequenceEqualsAscii("8=FIX.4.4\0019=0068\001", afterOffset));
+            sequenceEqualsAscii("8=FIX.4.4\0019=68\001", afterOffset));
 
         assertEndsInValidChecksum(afterOffset);
     }
