@@ -48,7 +48,10 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 public abstract class Generator
 {
-    protected static final String MSG_TYPE = "MsgType";
+    public static final String MSG_TYPE = "MsgType";
+    public static final String BEGIN_STRING = "BeginString";
+    public static final String BODY_LENGTH = "BodyLength";
+
     public static final String EXPAND_INDENT = ".toString().replace(\"\\n\", \"\\n  \")";
     public static final String CODEC_VALIDATION_ENABLED = "CODEC_VALIDATION_ENABLED";
 
@@ -382,7 +385,7 @@ public abstract class Generator
 
     private boolean isPreCalculatedField(final String name)
     {
-        return "MessageName".equals(name) || "BeginString".equals(name) || "MsgType".equals(name);
+        return "MessageName".equals(name) || BEGIN_STRING.equals(name) || MSG_TYPE.equals(name);
     }
 
     private boolean isDerivedField(final String name)
@@ -574,9 +577,14 @@ public abstract class Generator
         return entry != null && isBodyLength(entry.name());
     }
 
+    protected boolean isBeginString(final Entry entry)
+    {
+        return entry != null && BEGIN_STRING.equals(entry.name());
+    }
+
     protected boolean isBodyLength(final String name)
     {
-        return "BodyLength".equals(name);
+        return BODY_LENGTH.equals(name);
     }
 
     protected abstract String stringToString(String fieldName);

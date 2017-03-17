@@ -50,6 +50,28 @@ public class EncoderGenerator extends Generator
         "    {\n" +
         "        int position = offset;\n\n";
 
+    private static final String HEADER_ENCODE_PREFIX =
+        "    public int encodeInitialFields(final MutableAsciiBuffer buffer, final int offset)\n" +
+        "    {\n" +
+        "        int position = offset;\n\n" +
+        "        buffer.putBytes(position, beginStringHeader, 0, beginStringHeaderLength);\n" +
+        "        position += beginStringHeaderLength;\n" +
+        "        buffer.putBytes(position, beginString, 0, beginStringLength);\n" +
+        "        position += beginStringLength;\n" +
+        "        buffer.putSeparator(position);\n" +
+        "        position++;\n\n" +
+
+        "        buffer.putBytes(position, BODY_LENGTH);\n" +
+        "        position += BODY_LENGTH.length;\n" +
+        "        bodyLength(position);\n\n" +
+
+        "        return position - offset;\n" +
+        "    }\n\n" +
+
+        "    public int encode(final MutableAsciiBuffer buffer, final int offset)\n" +
+        "    {\n" +
+        "        int position = offset;\n\n";
+
     private static final String GROUP_ENCODE_PREFIX =
         "    public int encode(final MutableAsciiBuffer buffer, final int offset, final int remainingElements)\n" +
         "    {\n" +
@@ -66,6 +88,7 @@ public class EncoderGenerator extends Generator
         "    {\n" +
         "        int start = offset + MAX_HEADER_PREFIX_LENGTH;\n\n" +
         "        int position = start;\n\n" +
+        "        position += header.encodeInitialFields(buffer, position);\n" +
         "        position += header.encode(buffer, position);\n"; // TODO
 
     // returns length as int
@@ -110,8 +133,8 @@ public class EncoderGenerator extends Generator
         maxHeaderPrefixLength = beginString.length() + MAX_BODY_LENGTH_FIELD_LENGTH + HEADER_TAG_LENGTH;
 
         final Component header = dictionary.header();
-        validateHasField(header, "BeginString");
-        validateHasField(header, "BodyLength");
+        validateHasField(header, BEGIN_STRING);
+        validateHasField(header, BODY_LENGTH);
     }
 
     private void validateHasField(final Component header, final String fieldName)
@@ -415,6 +438,10 @@ public class EncoderGenerator extends Generator
         final String prefix;
         switch (aggregateType)
         {
+            case HEADER:
+                prefix = HEADER_ENCODE_PREFIX;
+                break;
+
             case TRAILER:
                 prefix = TRAILER_ENCODE_PREFIX;
                 break;
@@ -465,9 +492,9 @@ public class EncoderGenerator extends Generator
 
     private String encodeEntry(final Entry entry)
     {
-        if (isBodyLength(entry))
+        if (isBodyLength(entry) || isBeginString(entry))
         {
-            return encodeBodyLength();
+            return "";
         }
         else if (isCheckSum(entry))
         {
