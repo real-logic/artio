@@ -37,7 +37,6 @@ public final class BenchmarkConfiguration
     public static final int MAX_MESSAGES_IN_FLIGHT = Integer.getInteger("fix.benchmark.max_messages_in_flight", 20);
     public static final int SEND_RATE_PER_SECOND = Integer.getInteger("fix.benchmark.send_rate_sec", 1_000);
     public static final int NUMBER_OF_SESSIONS = Integer.getInteger("fix.benchmark.num_sessions", 1);
-    public static final int BURST = Integer.getInteger("fix.benchmark.burst", 5);
 
     static IdleStrategy idleStrategy()
     {
