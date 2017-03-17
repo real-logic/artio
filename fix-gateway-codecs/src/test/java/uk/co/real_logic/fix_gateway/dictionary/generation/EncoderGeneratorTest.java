@@ -41,7 +41,6 @@ public class EncoderGeneratorTest
 {
     private static Map<String, CharSequence> sources;
     private static Class<?> heartbeat;
-    private static Class<?> headerClass;
     private static Class<?> otherMessage;
     private static Class<?> heartbeatWithoutValidation;
 
@@ -56,7 +55,6 @@ public class EncoderGeneratorTest
         {
             System.out.println(sources);
         }
-        headerClass = compileInMemory(HEADER_ENCODER, sources);
         otherMessage = compileInMemory(OTHER_MESSAGE_ENCODER, sources);
 
         final Map<String, CharSequence> sourcesWithoutValidation = generateSources(false);
