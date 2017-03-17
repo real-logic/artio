@@ -359,7 +359,7 @@ public class SessionProxy
         header.msgSeqNum(msgSeqNo);
     }
 
-    private long send(final long result, final int messageType, final int sequenceIndex, final MessageEncoder encoder)
+    private long send(final long result, final int messageType, final int sequenceIndex, final Encoder encoder)
     {
         if (!libraryConnected)
         {

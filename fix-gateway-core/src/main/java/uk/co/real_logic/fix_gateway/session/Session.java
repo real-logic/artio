@@ -23,7 +23,6 @@ import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
-import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
 import uk.co.real_logic.fix_gateway.fields.RejectReason;
@@ -386,7 +385,7 @@ public class Session implements AutoCloseable
      *                                   increasing {@link CommonConfiguration#sessionBufferSize(int)}
      * @return the position in the stream that corresponds to the end of this message.
      */
-    public long send(final MessageEncoder encoder)
+    public long send(final Encoder encoder)
     {
         if (!canSendMessage())
         {

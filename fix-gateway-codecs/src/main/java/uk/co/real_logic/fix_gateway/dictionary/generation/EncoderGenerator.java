@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.dictionary.generation;
 
 import org.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
-import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
@@ -138,7 +137,7 @@ public class EncoderGenerator extends Generator
 
     protected Class<?> topType(final AggregateType aggregateType)
     {
-        return aggregateType == AggregateType.MESSAGE ? MessageEncoder.class : Encoder.class;
+        return Encoder.class;
     }
 
     private void generateAggregateClass(
@@ -148,7 +147,7 @@ public class EncoderGenerator extends Generator
         final Writer out) throws IOException
     {
         final boolean isMessage = type == AggregateType.MESSAGE;
-        final List<String> interfaces = isMessage ? singletonList(MessageEncoder.class.getSimpleName()) : emptyList();
+        final List<String> interfaces = isMessage ? singletonList(Encoder.class.getSimpleName()) : emptyList();
         out.append(classDeclaration(className, interfaces, type == GROUP));
         out.append(constructor(aggregate, dictionary));
         if (isMessage)

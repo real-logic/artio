@@ -24,7 +24,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
  *
  * This can be correlated against the position returned by the session's send method.
  *
- * @see uk.co.real_logic.fix_gateway.session.Session#send(uk.co.real_logic.fix_gateway.builder.MessageEncoder)
+ * @see uk.co.real_logic.fix_gateway.session.Session#send(uk.co.real_logic.fix_gateway.builder.Encoder)
  */
 @FunctionalInterface
 public interface SentPositionHandler

@@ -23,7 +23,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 /**
  * .
  */
-public class OrderSingleEncoder implements MessageEncoder
+public class OrderSingleEncoder implements Encoder
 {
     private AsciiBuffer clOrdID;
     private char handlInst;

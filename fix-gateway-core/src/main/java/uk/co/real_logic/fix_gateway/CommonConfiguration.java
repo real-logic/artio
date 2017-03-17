@@ -420,7 +420,7 @@ public class CommonConfiguration
     /**
      * Sets the session's encoding buffer size. The session buffer is a buffer used by each Session to encode messages
      * via
-     * {@link uk.co.real_logic.fix_gateway.session.Session#send(uk.co.real_logic.fix_gateway.builder.MessageEncoder)}.
+     * {@link uk.co.real_logic.fix_gateway.session.Session#send(uk.co.real_logic.fix_gateway.builder.Encoder)}.
      *
      * @param bufferSize the session's encoding buffer size
      * @return this

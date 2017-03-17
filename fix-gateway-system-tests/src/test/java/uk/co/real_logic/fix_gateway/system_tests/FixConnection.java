@@ -107,7 +107,7 @@ class FixConnection implements AutoCloseable
         }
     }
 
-    private void send(final MessageEncoder encoder)
+    private void send(final Encoder encoder)
     {
         try
         {

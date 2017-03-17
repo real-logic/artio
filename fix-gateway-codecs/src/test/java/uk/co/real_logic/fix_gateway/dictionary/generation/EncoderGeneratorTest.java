@@ -21,7 +21,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.EncodingException;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
-import uk.co.real_logic.fix_gateway.builder.MessageEncoder;
 import uk.co.real_logic.fix_gateway.fields.DecimalFloat;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
@@ -76,7 +75,7 @@ public class EncoderGeneratorTest
     {
         assertNotNull("Not generated anything", heartbeat);
         assertNotNull(heartbeat);
-        assertTrue(MessageEncoder.class.isAssignableFrom(heartbeat));
+        assertTrue(Encoder.class.isAssignableFrom(heartbeat));
 
         final int modifiers = heartbeat.getModifiers();
         assertFalse("Not instantiable", isAbstract(modifiers));

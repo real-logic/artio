@@ -49,4 +49,10 @@ public interface Encoder
      * Resets the encoder. Sets all the fields back to their uninitialized state.
      */
     void reset();
+
+    int messageType();
+
+    Object header();
+
+    void resetMessage();
 }

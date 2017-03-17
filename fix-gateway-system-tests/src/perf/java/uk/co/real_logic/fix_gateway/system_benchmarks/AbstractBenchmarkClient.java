@@ -188,13 +188,13 @@ public abstract class AbstractBenchmarkClient
         return readFlyweight.getChar(index) == '\001';
     }
 
-    protected long encode(final MessageEncoder testRequest, final HeaderEncoder header, final int seqNum)
+    protected long encode(final Encoder encoder, final HeaderEncoder header, final int seqNum)
     {
-        return encode(testRequest, header, seqNum, 0);
+        return encode(encoder, header, seqNum, 0);
     }
 
     protected long encode(
-        final MessageEncoder testRequest,
+        final Encoder encoder,
         final HeaderEncoder header,
         final int seqNum,
         final int offset)
@@ -202,6 +202,6 @@ public abstract class AbstractBenchmarkClient
         header.msgSeqNum(seqNum);
         timestampEncoder.encode(System.currentTimeMillis());
 
-        return testRequest.encode(writeFlyweight, offset);
+        return encoder.encode(writeFlyweight, offset);
     }
 }
