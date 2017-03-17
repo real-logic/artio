@@ -72,8 +72,9 @@ public abstract class AbstractSessionTest
     AtomicCounter mockReceivedMsgSeqNo = mock(AtomicCounter.class);
     AtomicCounter mockSentMsgSeqNo = mock(AtomicCounter.class);
     SessionIdStrategy idStrategy = mock(SessionIdStrategy.class);
-    ArgumentCaptor<DirectBuffer> buffer = ArgumentCaptor.forClass(DirectBuffer.class);
-    ArgumentCaptor<Integer> length = ArgumentCaptor.forClass(Integer.class);
+    ArgumentCaptor<DirectBuffer> bufferCaptor = ArgumentCaptor.forClass(DirectBuffer.class);
+    ArgumentCaptor<Integer> offsetCaptor = ArgumentCaptor.forClass(Integer.class);
+    ArgumentCaptor<Integer> lengthCaptor = ArgumentCaptor.forClass(Integer.class);
     TestRequestEncoder testRequest = new TestRequestEncoder();
 
     AbstractSessionTest()
@@ -87,9 +88,9 @@ public abstract class AbstractSessionTest
             }).when(idStrategy).setupSession(any(), any());
 
         when(mockPublication.saveMessage(
-            buffer.capture(),
-            anyInt(),
-            length.capture(),
+            bufferCaptor.capture(),
+            offsetCaptor.capture(),
+            lengthCaptor.capture(),
             anyInt(),
             anyInt(),
             anyLong(),
@@ -667,8 +668,8 @@ public abstract class AbstractSessionTest
 
     private String getSentMessage()
     {
-        final MutableAsciiBuffer buffer = (MutableAsciiBuffer)this.buffer.getValue();
-        return buffer.getAscii(0, length.getValue());
+        final MutableAsciiBuffer buffer = (MutableAsciiBuffer)this.bufferCaptor.getValue();
+        return buffer.getAscii(offsetCaptor.getValue(), lengthCaptor.getValue());
     }
 
     private void verifySetupSession()
