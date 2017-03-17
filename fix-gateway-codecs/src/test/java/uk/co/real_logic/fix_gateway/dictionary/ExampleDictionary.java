@@ -89,7 +89,6 @@ public final class ExampleDictionary
         "  \"header\": {\n" +
         "    \"MessageName\": \"Header\",\n" +
         "    \"BeginString\": \"FIX.4.4\",\n" +
-        "    \"BodyLength\": \"%s\",\n" +
         "    \"MsgType\": \"0\",\n" +
         "  }\n";
 

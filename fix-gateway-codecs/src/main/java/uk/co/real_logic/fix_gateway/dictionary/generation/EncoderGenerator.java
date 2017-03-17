@@ -236,10 +236,13 @@ public class EncoderGenerator extends Generator
 
     private void setter(final String className, final Entry entry, final Writer out) throws IOException
     {
-        entry.forEach(
-            (field) -> out.append(fieldSetter(className, field)),
-            (group) -> generateGroup(className, group, out),
-            (component) -> componentField(encoderClassName(entry.name()), component, out));
+        if (!isBodyLength(entry))
+        {
+            entry.forEach(
+                (field) -> out.append(fieldSetter(className, field)),
+                (group) -> generateGroup(className, group, out),
+                (component) -> componentField(encoderClassName(entry.name()), component, out));
+        }
     }
 
     private String fieldSetter(final String className, final Field field)
@@ -647,15 +650,18 @@ public class EncoderGenerator extends Generator
     {
         for (final Entry entry : entries)
         {
-            final Element element = entry.element();
-            if (element instanceof Field)
+            if (!isBodyLength(entry))
             {
-                precomputedFieldHeader(out, (Field) element);
-            }
-            else if (element instanceof Group)
-            {
-                final Group group = (Group) element;
-                precomputedFieldHeader(out, (Field) group.numberField().element());
+                final Element element = entry.element();
+                if (element instanceof Field)
+                {
+                    precomputedFieldHeader(out, (Field) element);
+                }
+                else if (element instanceof Group)
+                {
+                    final Group group = (Group) element;
+                    precomputedFieldHeader(out, (Field) group.numberField().element());
+                }
             }
         }
     }

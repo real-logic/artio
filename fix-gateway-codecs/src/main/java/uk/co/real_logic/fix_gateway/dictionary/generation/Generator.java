@@ -491,6 +491,11 @@ public abstract class Generator
     {
         //"  \"OnBehalfOfCompID\": \"abc\",\n" +
 
+        if (isBodyLength(entry))
+        {
+            return "\"\"";
+        }
+
         final Element element = entry.element();
         final String name = entry.name();
         if (element instanceof Field)
