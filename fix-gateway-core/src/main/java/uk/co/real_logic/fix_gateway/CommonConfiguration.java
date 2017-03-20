@@ -191,7 +191,6 @@ public class CommonConfiguration
     public static final int DEFAULT_HEARTBEAT_INTERVAL_IN_S = 10;
 
     public static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 2_000L;
-    public static final long DEFAULT_CONNECT_ATTEMPT_TIMEOUT_IN_MS = 200L;
     public static final long DEFAULT_HISTOGRAM_POLL_PERIOD_IN_MS = MINUTES.toMillis(1);
 
     private boolean printErrorMessages = true;
