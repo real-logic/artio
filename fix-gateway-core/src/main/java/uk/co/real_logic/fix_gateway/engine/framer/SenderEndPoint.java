@@ -324,7 +324,7 @@ class SenderEndPoint implements AutoCloseable
         return sessionId;
     }
 
-    void poll(final long timeInMs)
+    boolean checkTimeouts(final long timeInMs)
     {
         if (isSlowConsumer() && timeInMs > sendingTimeoutTimeInMs)
         {
@@ -335,6 +335,10 @@ class SenderEndPoint implements AutoCloseable
                 timeInMs,
                 sendingTimeoutTimeInMs - slowConsumerTimeoutInMs)));
             removeEndpoint(SLOW_CONSUMER);
+
+            return true;
         }
+
+        return false;
     }
 }

@@ -116,7 +116,7 @@ public class SenderEndPointTest
 
         timeInMs += DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  + 1;
 
-        endPoint.poll(timeInMs);
+        endPoint.checkTimeouts(timeInMs);
 
         verifySlowConsumerDisconnect(times(1));
     }
@@ -131,7 +131,7 @@ public class SenderEndPointTest
 
         timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1);
 
-        endPoint.poll(timeInMs);
+        endPoint.checkTimeouts(timeInMs);
 
         verifySlowConsumerDisconnect(never());
         verifyNoMoreErrors();
@@ -142,7 +142,7 @@ public class SenderEndPointTest
     {
         final long timeInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1;
 
-        endPoint.poll(timeInMs);
+        endPoint.checkTimeouts(timeInMs);
 
         verifySlowConsumerDisconnect(never());
         verifyNoMoreErrors();

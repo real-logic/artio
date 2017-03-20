@@ -289,6 +289,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             pollNewConnections(timeInMs) +
             pollLibraries(timeInMs) +
             gatewaySessions.pollSessions(timeInMs) +
+            senderEndPoints.checkTimeouts(timeInMs) +
             adminCommands.drain(onAdminCommand) +
             checkDutyCycle();
     }

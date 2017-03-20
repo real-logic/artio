@@ -140,4 +140,17 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
     {
         this.timeInMs = timeInMs;
     }
+
+    public int checkTimeouts(final long timeInMs)
+    {
+        for (final SenderEndPoint senderEndPoint : connectionIdToSenderEndpoint.values())
+        {
+            if (senderEndPoint.checkTimeouts(timeInMs))
+            {
+                return 1;
+            }
+        }
+
+        return 0;
+    }
 }
