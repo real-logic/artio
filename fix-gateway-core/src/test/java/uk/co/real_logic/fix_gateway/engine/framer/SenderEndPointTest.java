@@ -77,7 +77,7 @@ public class SenderEndPointTest
 
         onSlowConsumerMessageFragment(CONTINUE);
         byteBufferWritten();
-        bytesInBuffer(0);
+        assertBytesInBuffer(0);
     }
 
     @Test
@@ -91,12 +91,12 @@ public class SenderEndPointTest
         channelWillWrite(firstWrites);
         onSlowConsumerMessageFragment(ABORT);
         byteBufferWritten();
-        bytesInBuffer(remaining);
+        assertBytesInBuffer(remaining);
 
         channelWillWrite(remaining);
         onSlowConsumerMessageFragment(CONTINUE);
         byteBufferWritten();
-        bytesInBuffer(0);
+        assertBytesInBuffer(0);
         verifyNoMoreErrors();
     }
 
@@ -119,6 +119,7 @@ public class SenderEndPointTest
         endPoint.checkTimeouts(timeInMs);
 
         verifySlowConsumerDisconnect(times(1));
+        errorLogged();
     }
 
     @Test
@@ -147,8 +148,44 @@ public class SenderEndPointTest
         verifyNoMoreErrors();
     }
 
-    // TODO: shouldNotDisconnectNonRegularConsumerDueToTimeout
-    // TODO: shouldDisconnectSlowConsumerAfterTimeoutAfterFragment
+    @Test
+    public void shouldNotDisconnectRegularConsumerDueToTimeout() throws IOException
+    {
+        long timeInMs = 100;
+        channelWillWrite(BODY_LENGTH);
+        onNormalMessage(timeInMs, POSITION);
+
+        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  + 1);
+
+        endPoint.checkTimeouts(timeInMs);
+
+        verifySlowConsumerDisconnect(never());
+        verifyNoMoreErrors();
+    }
+
+    @Test
+    public void shouldDisconnectSlowConsumerAfterTimeoutAfterFragment() throws IOException
+    {
+        becomeSlowConsumer();
+
+        final int firstWrites = 41;
+
+        channelWillWrite(firstWrites);
+        onSlowConsumerMessageFragment(ABORT);
+
+        channelWillWrite(0);
+        onSlowConsumerMessageFragment(ABORT);
+
+        endPoint.checkTimeouts(DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  + 101);
+
+        verifySlowConsumerDisconnect(times(1));
+        errorLogged();
+    }
+
+    private void errorLogged()
+    {
+        verify(errorHandler).onError(any(IllegalStateException.class));
+    }
 
     public void verifyNoMoreErrors()
     {
@@ -171,7 +208,7 @@ public class SenderEndPointTest
         reset(tcpChannel);
     }
 
-    private void bytesInBuffer(final int bytes)
+    private void assertBytesInBuffer(final int bytes)
     {
         assertEquals(bytes, bytesInBuffer.get());
     }
@@ -185,7 +222,7 @@ public class SenderEndPointTest
             POSITION,
             BODY_LENGTH,
             LIBRARY_ID,
-            0);
+            100);
         assertEquals(expected, action);
     }
 
