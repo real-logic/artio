@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import io.aeron.ControlledFragmentAssembler;
 import io.aeron.Image;
 import io.aeron.Publication;
 import io.aeron.Subscription;
@@ -43,6 +44,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.protocol.*;
+import uk.co.real_logic.fix_gateway.replication.ClusterFragmentAssembler;
 import uk.co.real_logic.fix_gateway.replication.ClusterFragmentHandler;
 import uk.co.real_logic.fix_gateway.replication.ClusterSubscription;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;
@@ -221,19 +223,20 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         if (isClustered())
         {
-            outboundLibrarySubscriber = new SubscriptionSplitter(
+            outboundLibrarySubscriber = new ControlledFragmentAssembler(new SubscriptionSplitter(
                 clusterableStreams,
                 new EngineProtocolSubscription(this),
                 clusterableStreams.publication(OUTBOUND_LIBRARY_STREAM, "outboundLibraryStream"),
                 replyPublication,
                 engineDescriptorStore,
                 configuration.bindAddress().toString(),
-                replicatedConnectionIds);
-            outboundClusterSubscriber = ProtocolSubscription.of(this);
+                replicatedConnectionIds));
+            outboundClusterSubscriber = new ClusterFragmentAssembler(ProtocolSubscription.of(this));
         }
         else
         {
-            outboundLibrarySubscriber = ProtocolSubscription.of(this, new EngineProtocolSubscription(this));
+            outboundLibrarySubscriber = new ControlledFragmentAssembler(
+                ProtocolSubscription.of(this, new EngineProtocolSubscription(this)));
             outboundClusterSubscriber = null;
         }
 

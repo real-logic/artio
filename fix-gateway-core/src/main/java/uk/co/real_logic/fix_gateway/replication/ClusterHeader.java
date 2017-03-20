@@ -25,6 +25,7 @@ public class ClusterHeader
     private final int streamId;
     private long position;
     private int sessionId;
+    private byte flags;
 
     ClusterHeader(final int streamId)
     {
@@ -41,15 +42,21 @@ public class ClusterHeader
         return streamId;
     }
 
-    void update(final long position, final int sessionId)
+    void update(final long position, final int sessionId, final byte flags)
     {
         this.position = position;
         this.sessionId = sessionId;
+        this.flags = flags;
     }
 
     // TODO: what does this mean?
     public int sessionId()
     {
         return sessionId;
+    }
+
+    public byte flags()
+    {
+        return flags;
     }
 }

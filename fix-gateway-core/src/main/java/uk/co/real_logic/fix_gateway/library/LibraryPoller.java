@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import io.aeron.ControlledFragmentAssembler;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
@@ -537,7 +538,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     // -----------------------------------------------------------------------
 
     private final ControlledFragmentHandler outboundSubscription =
-        ProtocolSubscription.of(this, new LibraryProtocolSubscription(this));
+        new ControlledFragmentAssembler(
+            ProtocolSubscription.of(this, new LibraryProtocolSubscription(this)));
 
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 

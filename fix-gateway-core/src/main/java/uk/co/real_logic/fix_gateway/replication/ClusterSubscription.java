@@ -161,7 +161,7 @@ public class ClusterSubscription extends ClusterableSubscription
 
     private Action onArchiveHandler(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        clusterHeader.update(header.position(), header.sessionId());
+        clusterHeader.update(header.position(), header.sessionId(), header.flags());
         return handler.onFragment(buffer, offset, length, clusterHeader);
     }
 
@@ -327,7 +327,8 @@ public class ClusterSubscription extends ClusterableSubscription
             // If next chunk needed then just commit the thing immediately
 
             // TODO: correct session id
-            clusterHeader.update(position, leaderSessionId);
+            // TODO: correct header flags
+            clusterHeader.update(position, leaderSessionId, (byte) 0);
             action = handler.onFragment(bodyBuffer, bodyOffset, bodyLength, clusterHeader);
             if (action == ABORT)
             {
@@ -478,7 +479,7 @@ public class ClusterSubscription extends ClusterableSubscription
                 messageHeader.wrap(buffer, offset);
                 if (messageHeader.templateId() != ConsensusHeartbeatDecoder.TEMPLATE_ID)
                 {
-                    clusterHeader.update(headerPosition + positionDelta, header.sessionId());
+                    clusterHeader.update(headerPosition + positionDelta, header.sessionId(), header.flags());
                     final Action action = handler.onFragment(buffer, offset, length, clusterHeader);
                     if (action != ABORT)
                     {

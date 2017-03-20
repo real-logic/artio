@@ -50,7 +50,7 @@ class SoloSubscription extends ClusterableSubscription implements ControlledFrag
 
     public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        clusterHeader.update(header.position(), header.sessionId());
+        clusterHeader.update(header.position(), header.sessionId(), header.flags());
         return fragmentHandler.onFragment(buffer, offset, length, clusterHeader);
     }
 }
