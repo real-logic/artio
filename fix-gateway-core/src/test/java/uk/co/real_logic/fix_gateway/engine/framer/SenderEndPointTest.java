@@ -125,9 +125,8 @@ public class SenderEndPointTest
     public void shouldNotDisconnectSlowConsumerBeforeTimeout() throws IOException
     {
         long timeInMs = 100;
-        final long position = POSITION;
         channelWillWrite(BODY_LENGTH);
-        onNormalMessage(timeInMs, position);
+        onNormalMessage(timeInMs, POSITION);
 
         timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1);
 
@@ -148,7 +147,6 @@ public class SenderEndPointTest
         verifyNoMoreErrors();
     }
 
-    // TODO: add a poll to check the timeout
     // TODO: shouldNotDisconnectNonRegularConsumerDueToTimeout
     // TODO: shouldDisconnectSlowConsumerAfterTimeoutAfterFragment
 
