@@ -19,7 +19,6 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
-import org.junit.After;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
@@ -98,6 +97,7 @@ public class SenderEndPointTest
         onSlowConsumerMessageFragment(CONTINUE);
         byteBufferWritten();
         bytesInBuffer(0);
+        verifyNoMoreErrors();
     }
 
     @Test
@@ -134,6 +134,7 @@ public class SenderEndPointTest
         endPoint.poll(timeInMs);
 
         verifySlowConsumerDisconnect(never());
+        verifyNoMoreErrors();
     }
 
     @Test
@@ -144,15 +145,14 @@ public class SenderEndPointTest
         endPoint.poll(timeInMs);
 
         verifySlowConsumerDisconnect(never());
+        verifyNoMoreErrors();
     }
 
     // TODO: add a poll to check the timeout
-    // TODO: add an error for the timeout based slow consumer disconnect
     // TODO: shouldNotDisconnectNonRegularConsumerDueToTimeout
     // TODO: shouldDisconnectSlowConsumerAfterTimeoutAfterFragment
 
-    @After
-    public void stateOk()
+    public void verifyNoMoreErrors()
     {
         verifyNoMoreInteractions(errorHandler);
     }

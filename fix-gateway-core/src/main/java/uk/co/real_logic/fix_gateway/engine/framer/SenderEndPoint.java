@@ -328,6 +328,12 @@ class SenderEndPoint implements AutoCloseable
     {
         if (isSlowConsumer() && timeInMs > sendingTimeoutTimeInMs)
         {
+            errorHandler.onError(new IllegalStateException(String.format(
+                "Slow Consumer Disconnected conn=%d,sess=%d @ time %d, Due to not being able to write since %d",
+                connectionId,
+                sessionId,
+                timeInMs,
+                sendingTimeoutTimeInMs - slowConsumerTimeoutInMs)));
             removeEndpoint(SLOW_CONSUMER);
         }
     }
