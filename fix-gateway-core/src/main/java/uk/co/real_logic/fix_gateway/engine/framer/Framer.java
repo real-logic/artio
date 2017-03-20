@@ -242,7 +242,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         // We lookup replayed message by session id, since the connection id may have changed
         // if it's a persistent session.
-        outboundReplaySubscriber = ProtocolSubscription.of(new ProtocolHandler()
+        outboundReplaySubscriber = new ControlledFragmentAssembler(ProtocolSubscription.of(new ProtocolHandler()
         {
             public Action onMessage(
                 final DirectBuffer buffer,
@@ -264,7 +264,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 // Should never be replayed.
                 return Action.CONTINUE;
             }
-        });
+        }));
 
         try
         {
