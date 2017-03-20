@@ -109,6 +109,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final String DEFAULT_SEQUENCE_NUMBERS_SENT_FILE = "sequence_numbers_sent";
     public static final String DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE = "sequence_numbers_received";
     public static final short NO_NODE_ID = -1;
+    public static final long DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS = 10_000;
 
     private String host = null;
     private int port;
@@ -155,6 +156,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private Function<EngineConfiguration, TcpChannelSupplier> channelSupplierFactory = TcpChannelSupplier::new;
     private RoleHandler roleHandler = ClusterNodeConfiguration.DEFAULT_NODE_HANDLER;
     private SessionPersistenceStrategy sessionPersistenceStrategy;
+    private long slowConsumerTimeoutInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -468,6 +470,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration slowConsumerTimeoutInMs(final long slowConsumerTimeoutInMs)
+    {
+        this.slowConsumerTimeoutInMs = slowConsumerTimeoutInMs;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -716,5 +724,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public TcpChannelSupplier channelSupplier() throws IOException
     {
         return channelSupplierFactory.apply(this);
+    }
+
+    public long slowConsumerTimeoutInMs()
+    {
+        return slowConsumerTimeoutInMs;
     }
 }

@@ -281,6 +281,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     public int doWork() throws Exception
     {
         final long timeInMs = clock.time();
+        senderEndPoints.timeInMs(timeInMs);
         return retryManager.attemptSteps() +
             sendOutboundMessages() +
             sendReplayMessages() +

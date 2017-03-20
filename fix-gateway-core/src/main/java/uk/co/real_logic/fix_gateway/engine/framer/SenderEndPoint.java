@@ -42,10 +42,12 @@ class SenderEndPoint implements AutoCloseable
     private final ErrorHandler errorHandler;
     private final Framer framer;
     private final int maxBytesInBuffer;
+    private final long slowConsumerTimeoutInMs;
 
     private long sentPosition;
     private int libraryId;
     private long sessionId;
+    private long sendingTimeoutTimeInMs;
 
     SenderEndPoint(
         final long connectionId,
@@ -55,7 +57,9 @@ class SenderEndPoint implements AutoCloseable
         final AtomicCounter invalidLibraryAttempts,
         final ErrorHandler errorHandler,
         final Framer framer,
-        final int maxBytesInBuffer)
+        final int maxBytesInBuffer,
+        final long slowConsumerTimeoutInMs,
+        final long timeInMs)
     {
         this.connectionId = connectionId;
         this.libraryId = libraryId;
@@ -65,6 +69,8 @@ class SenderEndPoint implements AutoCloseable
         this.errorHandler = errorHandler;
         this.framer = framer;
         this.maxBytesInBuffer = maxBytesInBuffer;
+        this.slowConsumerTimeoutInMs = slowConsumerTimeoutInMs;
+        sendingTimeoutTimeInMs = timeInMs + slowConsumerTimeoutInMs;
     }
 
     void onNormalFramedMessage(
@@ -72,7 +78,8 @@ class SenderEndPoint implements AutoCloseable
         final DirectBuffer directBuffer,
         final int offset,
         final int bodyLength,
-        final long position)
+        final long position,
+        final long timeInMs)
     {
         if (isWrongLibraryId(libraryId))
         {
@@ -95,7 +102,7 @@ class SenderEndPoint implements AutoCloseable
 
         try
         {
-            final int written = writeFramedMessage(directBuffer, offset, bodyLength);
+            final int written = writeFramedMessage(directBuffer, offset, bodyLength, timeInMs);
 
             if (written != bodyLength)
             {
@@ -115,11 +122,12 @@ class SenderEndPoint implements AutoCloseable
     Action onReplayFramedMessage(
         final DirectBuffer directBuffer,
         final int offset,
-        final int length)
+        final int length,
+        final long timeInMs)
     {
         try
         {
-            final int written = writeFramedMessage(directBuffer, offset, length);
+            final int written = writeFramedMessage(directBuffer, offset, length, timeInMs);
             if (written == 0)
             {
                 return ABORT;
@@ -144,7 +152,8 @@ class SenderEndPoint implements AutoCloseable
     private int writeFramedMessage(
         final DirectBuffer directBuffer,
         final int offset,
-        final int length)
+        final int length,
+        final long timeInMs)
         throws IOException
     {
         final int wrapAdjustment = directBuffer.wrapAdjustment();
@@ -154,6 +163,10 @@ class SenderEndPoint implements AutoCloseable
 
         final int written = channel.write(buffer);
         DebugLogger.log(FIX_MESSAGE, "Written  %s\n", buffer, written);
+        if (written > 0)
+        {
+            sendingTimeoutTimeInMs = timeInMs + slowConsumerTimeoutInMs;
+        }
         return written;
     }
 
@@ -204,7 +217,8 @@ class SenderEndPoint implements AutoCloseable
         final int length,
         final long position,
         final int bodyLength,
-        final int libraryId)
+        final int libraryId,
+        final long timeInMs)
     {
         if (isWrongLibraryId(libraryId))
         {
@@ -300,13 +314,21 @@ class SenderEndPoint implements AutoCloseable
         return bytesInBuffer.getWeak();
     }
 
-    void onLogon(final long sessionId)
+    void sessionId(final long sessionId)
     {
         this.sessionId = sessionId;
     }
 
-    public long onLogon()
+    long sessionId()
     {
         return sessionId;
+    }
+
+    void poll(final long timeInMs)
+    {
+        if (isSlowConsumer() && timeInMs > sendingTimeoutTimeInMs)
+        {
+            removeEndpoint(SLOW_CONSUMER);
+        }
     }
 }

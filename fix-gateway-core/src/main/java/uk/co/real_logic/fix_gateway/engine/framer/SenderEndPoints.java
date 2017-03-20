@@ -35,6 +35,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
     private final Long2ObjectHashMap<SenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
     private final ErrorHandler errorHandler;
+    private long timeInMs;
 
     SenderEndPoints(final ErrorHandler errorHandler)
     {
@@ -66,7 +67,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
         final SenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
-            endPoint.onNormalFramedMessage(libraryId, buffer, offset, length, position);
+            endPoint.onNormalFramedMessage(libraryId, buffer, offset, length, position, timeInMs);
         }
     }
 
@@ -75,9 +76,9 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
     {
         for (final SenderEndPoint endPoint : connectionIdToSenderEndpoint.values())
         {
-            if (endPoint.onLogon() == sessionId)
+            if (endPoint.sessionId() == sessionId)
             {
-                return endPoint.onReplayFramedMessage(buffer, offset, length);
+                return endPoint.onReplayFramedMessage(buffer, offset, length, timeInMs);
             }
         }
 
@@ -121,7 +122,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
                 final int bodyLength = fixMessage.bodyLength();
                 final int libraryId = fixMessage.libraryId();
                 return senderEndPoint.onSlowConsumerMessageFragment(
-                    buffer, offset, length - HEADER_LENGTH, position, bodyLength, libraryId);
+                    buffer, offset, length - HEADER_LENGTH, position, bodyLength, libraryId, timeInMs);
             }
         }
 
@@ -133,5 +134,10 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
         connectionIdToSenderEndpoint
             .values()
             .forEach(SenderEndPoint::close);
+    }
+
+    void timeInMs(final long timeInMs)
+    {
+        this.timeInMs = timeInMs;
     }
 }

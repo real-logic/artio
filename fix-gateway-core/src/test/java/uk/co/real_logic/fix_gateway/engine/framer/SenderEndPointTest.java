@@ -20,9 +20,9 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
+import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 
 import java.io.IOException;
@@ -34,6 +34,8 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
+import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.SLOW_CONSUMER;
 import static uk.co.real_logic.fix_gateway.protocol.GatewayPublication.FRAME_SIZE;
 
 public class SenderEndPointTest
@@ -63,17 +65,15 @@ public class SenderEndPointTest
         invalidLibraryAttempts,
         errorHandler,
         framer,
-        MAX_BYTES_IN_BUFFER);
-
-    @Before
-    public void setUp()
-    {
-        becomeSlowConsumer();
-    }
+        MAX_BYTES_IN_BUFFER,
+        DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS,
+        0);
 
     @Test
-    public void shouldResendSlowConsumerMessage() throws IOException
+    public void shouldRetrySlowConsumerMessage() throws IOException
     {
+        becomeSlowConsumer();
+
         channelWillWrite(BODY_LENGTH);
 
         onSlowConsumerMessageFragment(CONTINUE);
@@ -82,8 +82,10 @@ public class SenderEndPointTest
     }
 
     @Test
-    public void shouldBeAbleToFragmentResends() throws IOException
+    public void shouldBeAbleToFragmentSlowConsumerRetries() throws IOException
     {
+        becomeSlowConsumer();
+
         final int firstWrites = 41;
         final int remaining = BODY_LENGTH - firstWrites;
 
@@ -98,10 +100,71 @@ public class SenderEndPointTest
         bytesInBuffer(0);
     }
 
+    @Test
+    public void shouldDisconnectSlowConsumerAfterTimeout() throws IOException
+    {
+        long timeInMs = 100;
+        long position = POSITION;
+        channelWillWrite(BODY_LENGTH);
+        onNormalMessage(timeInMs, position);
+
+        timeInMs += 100;
+        position += BODY_LENGTH;
+
+        channelWillWrite(0);
+        onNormalMessage(timeInMs, position);
+
+        timeInMs += DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  + 1;
+
+        endPoint.poll(timeInMs);
+
+        verifySlowConsumerDisconnect(times(1));
+    }
+
+    @Test
+    public void shouldNotDisconnectSlowConsumerBeforeTimeout() throws IOException
+    {
+        long timeInMs = 100;
+        final long position = POSITION;
+        channelWillWrite(BODY_LENGTH);
+        onNormalMessage(timeInMs, position);
+
+        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1);
+
+        endPoint.poll(timeInMs);
+
+        verifySlowConsumerDisconnect(never());
+    }
+
+    @Test
+    public void shouldNotDisconnectAtStartDueToTimeout()
+    {
+        final long timeInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1;
+
+        endPoint.poll(timeInMs);
+
+        verifySlowConsumerDisconnect(never());
+    }
+
+    // TODO: add a poll to check the timeout
+    // TODO: add an error for the timeout based slow consumer disconnect
+    // TODO: shouldNotDisconnectNonRegularConsumerDueToTimeout
+    // TODO: shouldDisconnectSlowConsumerAfterTimeoutAfterFragment
+
     @After
     public void stateOk()
     {
         verifyNoMoreInteractions(errorHandler);
+    }
+
+    private void onNormalMessage(final long timeInMs, final long position)
+    {
+        endPoint.onNormalFramedMessage(LIBRARY_ID, buffer, 0, BODY_LENGTH, position, timeInMs);
+    }
+
+    private void verifySlowConsumerDisconnect(final VerificationMode times)
+    {
+        verify(framer, times).onDisconnect(LIBRARY_ID, CONNECTION_ID, SLOW_CONSUMER);
     }
 
     private void byteBufferWritten() throws IOException
@@ -123,7 +186,8 @@ public class SenderEndPointTest
             LENGTH,
             POSITION,
             BODY_LENGTH,
-            LIBRARY_ID);
+            LIBRARY_ID,
+            0);
         assertEquals(expected, action);
     }
 

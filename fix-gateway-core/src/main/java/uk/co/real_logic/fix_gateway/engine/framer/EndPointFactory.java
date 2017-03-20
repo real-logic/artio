@@ -118,7 +118,9 @@ class EndPointFactory
             fixCounters.invalidLibraryAttempts(connectionId, remoteAddress),
             errorHandler,
             framer,
-            configuration.senderMaxBytesInBuffer());
+            configuration.senderMaxBytesInBuffer(),
+            configuration.slowConsumerTimeoutInMs(),
+            System.currentTimeMillis());
     }
 
 }
