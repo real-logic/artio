@@ -270,7 +270,24 @@ public class SenderEndPointTest
     @Test
     public void shouldBeAbleToFragmentReplaySlowConsumerRetries()
     {
-        // TODO
+        final int firstWrites = 41;
+        final int remaining = BODY_LENGTH - firstWrites;
+
+        final long position = 0;
+        channelWillWrite(0);
+        onReplayMessage(0, position);
+        byteBufferWritten();
+
+        channelWillWrite(firstWrites);
+        onSlowReplayMessage(0, position);
+        byteBufferWritten();
+        assertBytesInBuffer(remaining);
+
+        channelWillWrite(remaining);
+        onSlowReplayMessage(0, position);
+        byteBufferWritten();
+        assertBytesInBuffer(0);
+        verifyNoMoreErrors();
     }
 
     @Test
