@@ -152,7 +152,8 @@ public final class FixEngine extends GatewayProcess
             fixCounters,
             engineContext,
             errorHandler,
-            replaySubscription(),
+            replaySubscription("replay"),
+            replaySubscription("slow-replay"),
             engineDescriptorStore,
             timers);
         framerRunner = new AgentRunner(
@@ -174,11 +175,11 @@ public final class FixEngine extends GatewayProcess
         return streams.isLeader();
     }
 
-    private Subscription replaySubscription()
+    private Subscription replaySubscription(final String name)
     {
         final Subscription subscription = aeron.addSubscription(
             configuration.libraryAeronChannel(), OUTBOUND_REPLAY_STREAM);
-        StreamInformation.print("replay", subscription, configuration);
+        StreamInformation.print(name, subscription, configuration);
         return subscription;
     }
 

@@ -159,6 +159,7 @@ public class FramerTest
             outboundLibrarySubscription,
             mock(Subscription.class),
             mock(Subscription.class),
+            mock(Subscription.class),
             mock(QueuedPipe.class),
             mockSessionIdStrategy,
             sessionContexts,

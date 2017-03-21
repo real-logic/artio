@@ -67,27 +67,61 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
         final SenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
-            endPoint.onNormalFramedMessage(libraryId, buffer, offset, length, position, timeInMs);
+            endPoint.onOutboundMessage(libraryId, buffer, offset, length, position, timeInMs);
         }
     }
 
     Action onReplayMessage(
-        final long sessionId, final DirectBuffer buffer, final int offset, final int length)
+        final long sessionId, final DirectBuffer buffer, final int offset, final int length, final long position)
+    {
+        final SenderEndPoint endPoint = endPointBySessionId(sessionId);
+        if (endPoint != null)
+        {
+            return endPoint.onReplayMessage(buffer, offset, length, timeInMs, position);
+        }
+        else
+        {
+            logReplayError(sessionId, buffer, offset, length);
+
+            return CONTINUE;
+        }
+    }
+
+    Action onSlowReplayMessage(
+        final long sessionId, final DirectBuffer buffer, final int offset, final int length, final long position)
+    {
+        final SenderEndPoint endPoint = endPointBySessionId(sessionId);
+        if (endPoint != null)
+        {
+            return endPoint.onSlowReplayMessage(buffer, offset, length, timeInMs, position);
+        }
+        else
+        {
+            logReplayError(sessionId, buffer, offset, length);
+
+            return CONTINUE;
+        }
+    }
+
+    private SenderEndPoint endPointBySessionId(final long sessionId)
     {
         for (final SenderEndPoint endPoint : connectionIdToSenderEndpoint.values())
         {
             if (endPoint.sessionId() == sessionId)
             {
-                return endPoint.onReplayFramedMessage(buffer, offset, length, timeInMs);
+                return endPoint;
             }
         }
 
+        return null;
+    }
+
+    private void logReplayError(final long sessionId, final DirectBuffer buffer, final int offset, final int length)
+    {
         errorHandler.onError(new IllegalArgumentException(String.format(
             "Failed to replay message on %1$d [%2$s]",
             sessionId,
             buffer.getStringWithoutLengthUtf8(offset, length))));
-
-        return CONTINUE;
     }
 
     @SuppressWarnings("FinalParameters")
@@ -121,7 +155,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
             {
                 final int bodyLength = fixMessage.bodyLength();
                 final int libraryId = fixMessage.libraryId();
-                return senderEndPoint.onSlowConsumerMessageFragment(
+                return senderEndPoint.onSlowOutboundMessage(
                     buffer, offset, length - HEADER_LENGTH, position, bodyLength, libraryId, timeInMs);
             }
         }
@@ -141,7 +175,7 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
         this.timeInMs = timeInMs;
     }
 
-    public int checkTimeouts(final long timeInMs)
+    int checkTimeouts(final long timeInMs)
     {
         int count = 0;
         for (final SenderEndPoint senderEndPoint : connectionIdToSenderEndpoint.values())

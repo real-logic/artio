@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.ErrorHandler;
+import org.agrona.LangUtil;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Test;
@@ -34,6 +35,7 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
+import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor.alignTerm;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.SLOW_CONSUMER;
 import static uk.co.real_logic.fix_gateway.protocol.GatewayPublication.FRAME_SIZE;
 
@@ -41,12 +43,13 @@ public class SenderEndPointTest
 {
     private static final long CONNECTION_ID = 1;
     private static final int LIBRARY_ID = 2;
-    private static final int MAX_BYTES_IN_BUFFER = 1024;
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
 
     private static final long POSITION = 8 * 1024;
     private static final int BODY_LENGTH = 84;
     private static final int LENGTH = FRAME_SIZE + BODY_LENGTH;
+    private static final int FRAGMENT_LENGTH = alignTerm(HEADER_LENGTH + FRAME_SIZE + BODY_LENGTH);
+    private static final int MAX_BYTES_IN_BUFFER = 3 * BODY_LENGTH;
 
     private TcpChannel tcpChannel = mock(TcpChannel.class);
     private AtomicCounter bytesInBuffer = fakeCounter();
@@ -138,6 +141,28 @@ public class SenderEndPointTest
     }
 
     @Test
+    public void shouldNotDisconnectSlowConsumerBeforeTimeoutOnSlowChannel() throws IOException
+    {
+        final int replayWrites = 41;
+
+        long timeInMs = 100;
+        channelWillWrite(0);
+        onNormalMessage(timeInMs, POSITION);
+
+        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1);
+
+        channelWillWrite(replayWrites);
+        onSlowConsumerMessageFragment(ABORT, timeInMs);
+
+        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1);
+
+        endPoint.checkTimeouts(timeInMs);
+
+        verifySlowConsumerDisconnect(never());
+        verifyNoMoreErrors();
+    }
+
+    @Test
     public void shouldNotDisconnectAtStartDueToTimeout()
     {
         final long timeInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1;
@@ -182,6 +207,84 @@ public class SenderEndPointTest
         errorLogged();
     }
 
+    @Test
+    public void shouldBecomeReplaySlowConsumer()
+    {
+        final long position = 0;
+        channelWillWrite(0);
+        onReplayMessage(0, position);
+
+        assertBytesInBuffer(BODY_LENGTH);
+    }
+
+    @Test
+    public void shouldNotSendFurtherMessagesBeforeReplayRetry()
+    {
+        long position = 0;
+        channelWillWrite(0);
+        onReplayMessage(0, position);
+        byteBufferWritten();
+
+        position += BODY_LENGTH;
+
+        onReplayMessage(0, position);
+        byteBufferWritten(never());
+
+        assertBytesInBuffer(BODY_LENGTH + BODY_LENGTH);
+    }
+
+    @Test
+    public void shouldRetryReplaySlowConsumer()
+    {
+        final long position = 0;
+        channelWillWrite(0);
+        onReplayMessage(0, position);
+        byteBufferWritten();
+
+        channelWillWrite(BODY_LENGTH);
+        onSlowReplayMessage(0, position);
+        byteBufferWritten();
+
+        assertBytesInBuffer(0);
+    }
+
+    @Test
+    public void shouldDisconnectReplaySlowConsumer()
+    {
+        long position = 0;
+        channelWillWrite(0);
+        onReplayMessage(0, position);
+
+        position += FRAGMENT_LENGTH;
+        onReplayMessage(0, position);
+
+        position += FRAGMENT_LENGTH;
+        onReplayMessage(0, position);
+
+        position += FRAGMENT_LENGTH;
+        onReplayMessage(0, position);
+
+        verifySlowConsumerDisconnect(times(1));
+    }
+
+    @Test
+    public void shouldBeAbleToFragmentReplaySlowConsumerRetries()
+    {
+        // TODO
+    }
+
+    @Test
+    public void shouldNotSendSlowConsumerMessageUntilReplayComplete()
+    {
+        // TODO
+    }
+
+    @Test
+    public void shouldNotSendReplayMessageUntilSlowConsumerComplete()
+    {
+        // TODO
+    }
+
     private void errorLogged()
     {
         verify(errorHandler).onError(any(IllegalStateException.class));
@@ -194,7 +297,17 @@ public class SenderEndPointTest
 
     private void onNormalMessage(final long timeInMs, final long position)
     {
-        endPoint.onNormalFramedMessage(LIBRARY_ID, buffer, 0, BODY_LENGTH, position, timeInMs);
+        endPoint.onOutboundMessage(LIBRARY_ID, buffer, 0, BODY_LENGTH, position, timeInMs);
+    }
+
+    private void onReplayMessage(final long timeInMs, final long position)
+    {
+        endPoint.onReplayMessage(buffer, 0, BODY_LENGTH, timeInMs, position);
+    }
+
+    private void onSlowReplayMessage(final long timeInMs, final long position)
+    {
+        endPoint.onSlowReplayMessage(buffer, 0, BODY_LENGTH, timeInMs, position);
     }
 
     private void verifySlowConsumerDisconnect(final VerificationMode times)
@@ -202,10 +315,22 @@ public class SenderEndPointTest
         verify(framer, times).onDisconnect(LIBRARY_ID, CONNECTION_ID, SLOW_CONSUMER);
     }
 
-    private void byteBufferWritten() throws IOException
+    private void byteBufferWritten()
     {
-        verify(tcpChannel).write(byteBuffer);
-        reset(tcpChannel);
+        byteBufferWritten(times(1));
+    }
+
+    private void byteBufferWritten(final VerificationMode times)
+    {
+        try
+        {
+            verify(tcpChannel, times).write(byteBuffer);
+            reset(tcpChannel);
+        }
+        catch (final IOException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+        }
     }
 
     private void assertBytesInBuffer(final int bytes)
@@ -215,25 +340,37 @@ public class SenderEndPointTest
 
     private void onSlowConsumerMessageFragment(final Action expected)
     {
-        final Action action = endPoint.onSlowConsumerMessageFragment(
+        onSlowConsumerMessageFragment(expected, 100);
+    }
+
+    private void onSlowConsumerMessageFragment(final Action expected, final long timeInMs)
+    {
+        final Action action = endPoint.onSlowOutboundMessage(
             buffer,
             HEADER_LENGTH,
             LENGTH,
             POSITION,
             BODY_LENGTH,
             LIBRARY_ID,
-            100);
+            timeInMs);
         assertEquals(expected, action);
     }
 
     private void becomeSlowConsumer()
     {
-        endPoint.becomeSlowConsumer(0, BODY_LENGTH, POSITION);
+        endPoint.becomeSlowConsumer(0, BODY_LENGTH, POSITION, true);
     }
 
-    private void channelWillWrite(final int bodyLength) throws IOException
+    private void channelWillWrite(final int bodyLength)
     {
-        when(tcpChannel.write(byteBuffer)).thenReturn(bodyLength);
+        try
+        {
+            when(tcpChannel.write(byteBuffer)).thenReturn(bodyLength);
+        }
+        catch (final IOException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+        }
     }
 
     private AtomicCounter fakeCounter()

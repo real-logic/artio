@@ -63,6 +63,7 @@ public class FramerContext
         final EngineContext engineContext,
         final ErrorHandler errorHandler,
         final Subscription replaySubscription,
+        final Subscription slowReplaySubscription,
         final EngineDescriptorStore engineDescriptorStore,
         final EngineTimers timers)
     {
@@ -118,6 +119,7 @@ public class FramerContext
             engineContext.outboundLibrarySubscription("outboundLibrarySubscription"),
             engineContext.outboundLibrarySubscription("outboundSlowSubscription"),
             replaySubscription,
+            slowReplaySubscription,
             adminCommands,
             sessionIdStrategy,
             sessionContexts,

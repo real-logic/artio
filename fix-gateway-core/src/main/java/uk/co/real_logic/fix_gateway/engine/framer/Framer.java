@@ -121,6 +121,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private final ControlledFragmentHandler outboundLibrarySubscriber;
     private final ControlledFragmentHandler outboundReplaySubscriber;
+    private final ControlledFragmentHandler outboundReplaySlowSubscriber;
     private final ClusterFragmentHandler outboundClusterSubscriber;
 
     private final ReceiverEndPoints receiverEndPoints = new ReceiverEndPoints();
@@ -133,6 +134,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Subscription outboundLibrarySubscription;
     private final Subscription outboundSlowSubscription;
     private final Subscription replaySubscription;
+    private final Subscription replaySlowSubscription;
     private final GatewayPublication inboundPublication;
     private final ClusterableStreams clusterableStreams;
     private final String agentNamePrefix;
@@ -171,6 +173,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final Subscription outboundLibrarySubscription,
         final Subscription outboundSlowSubscription,
         final Subscription replaySubscription,
+        final Subscription replaySlowSubscription,
         final QueuedPipe<AdminCommand> adminCommands,
         final SessionIdStrategy sessionIdStrategy,
         final SessionContexts sessionContexts,
@@ -200,6 +203,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundLibrarySubscription = outboundLibrarySubscription;
         this.outboundSlowSubscription = outboundSlowSubscription;
         this.replaySubscription = replaySubscription;
+        this.replaySlowSubscription = replaySlowSubscription;
         this.gatewaySessions = gatewaySessions;
         this.inboundMessages = inboundMessages;
         this.errorHandler = errorHandler;
@@ -254,9 +258,35 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 final int sequenceIndex,
                 final int messageType,
                 final long timestamp,
-                final MessageStatus status, final long position)
+                final MessageStatus status,
+                final long position)
             {
-                return senderEndPoints.onReplayMessage(sessionId, buffer, offset, length);
+                return senderEndPoints.onReplayMessage(sessionId, buffer, offset, length, position);
+            }
+
+            public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
+            {
+                // Should never be replayed.
+                return Action.CONTINUE;
+            }
+        }));
+
+        outboundReplaySlowSubscriber = new ControlledFragmentAssembler(ProtocolSubscription.of(new ProtocolHandler()
+        {
+            public Action onMessage(
+                final DirectBuffer buffer,
+                final int offset,
+                final int length,
+                final int libraryId,
+                final long connectionId,
+                final long sessionId,
+                final int sequenceIndex,
+                final int messageType,
+                final long timestamp,
+                final MessageStatus status,
+                final long position)
+            {
+                return senderEndPoints.onSlowReplayMessage(sessionId, buffer, offset, length, position);
             }
 
             public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
@@ -328,7 +358,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private int sendReplayMessages()
     {
-        return replaySubscription.controlledPoll(outboundReplaySubscriber, replayFragmentLimit);
+        return replaySubscription.controlledPoll(outboundReplaySubscriber, replayFragmentLimit) +
+               replaySlowSubscription.controlledPoll(outboundReplaySlowSubscriber, replayFragmentLimit);
     }
 
     private int sendOutboundMessages()

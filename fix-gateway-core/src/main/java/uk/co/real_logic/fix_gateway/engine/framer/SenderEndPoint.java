@@ -73,7 +73,7 @@ class SenderEndPoint implements AutoCloseable
         sendingTimeoutTimeInMs = timeInMs + slowConsumerTimeoutInMs;
     }
 
-    void onNormalFramedMessage(
+    void onOutboundMessage(
         final int libraryId,
         final DirectBuffer directBuffer,
         final int offset,
@@ -87,6 +87,42 @@ class SenderEndPoint implements AutoCloseable
             return;
         }
 
+        attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, position, true);
+    }
+
+    Action onReplayMessage(
+        final DirectBuffer directBuffer,
+        final int offset,
+        final int bodyLength,
+        final long timeInMs,
+        final long position)
+    {
+        attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, position, false);
+
+        return CONTINUE;
+    }
+
+    Action onSlowReplayMessage(
+        final DirectBuffer buffer,
+        final int offset,
+        final int bodyLength,
+        final long timeInMs,
+        final long position)
+    {
+        final int offsetAfterHeader = offset - FRAME_SIZE;
+        final int length = bodyLength + FRAME_SIZE;
+
+        return attemptSlowMessage(buffer, offsetAfterHeader, length, position, bodyLength, timeInMs);
+    }
+
+    private void attemptFramedMessage(
+        final DirectBuffer directBuffer,
+        final int offset,
+        final int bodyLength,
+        final long timeInMs,
+        final long position,
+        final boolean outbound)
+    {
         if (isSlowConsumer())
         {
             final long bytesInBuffer = bytesInBufferWeak() + bodyLength;
@@ -106,7 +142,7 @@ class SenderEndPoint implements AutoCloseable
 
             if (written != bodyLength)
             {
-                becomeSlowConsumer(written, bodyLength, position);
+                becomeSlowConsumer(written, bodyLength, position, outbound);
             }
             else
             {
@@ -117,36 +153,6 @@ class SenderEndPoint implements AutoCloseable
         {
             onError(ex);
         }
-    }
-
-    Action onReplayFramedMessage(
-        final DirectBuffer directBuffer,
-        final int offset,
-        final int length,
-        final long timeInMs)
-    {
-        try
-        {
-            final int written = writeFramedMessage(directBuffer, offset, length, timeInMs);
-            if (written == 0)
-            {
-                return ABORT;
-            }
-            else if (written != length)
-            {
-                onError(new IllegalArgumentException(String.format(
-                    "Failed to replay to (%2$d, %2$d) message writing down TCP connection, dropped [%3$s]",
-                    connectionId,
-                    sessionId,
-                    directBuffer.getStringWithoutLengthUtf8(offset + written, length - written))));
-            }
-        }
-        catch (final IOException ex)
-        {
-            onError(ex);
-        }
-
-        return CONTINUE;
     }
 
     private int writeFramedMessage(
@@ -163,11 +169,16 @@ class SenderEndPoint implements AutoCloseable
 
         final int written = channel.write(buffer);
         DebugLogger.log(FIX_MESSAGE, "Written  %s\n", buffer, written);
+        updateSendingTimeoutTimeInMs(timeInMs, written);
+        return written;
+    }
+
+    private void updateSendingTimeoutTimeInMs(final long timeInMs, final int written)
+    {
         if (written > 0)
         {
             sendingTimeoutTimeInMs = timeInMs + slowConsumerTimeoutInMs;
         }
-        return written;
     }
 
     private void onError(final Exception ex)
@@ -177,12 +188,13 @@ class SenderEndPoint implements AutoCloseable
         removeEndpoint(EXCEPTION);
     }
 
-    void becomeSlowConsumer(final int written, final int bodyLength, final long position)
+    void becomeSlowConsumer(
+        final int written, final int bodyLength, final long position, final boolean outbound)
     {
         final int remainingBytes = bodyLength - written;
         bytesInBuffer.setOrdered(remainingBytes);
-        sentPosition = position - remainingBytes;
         sendSlowStatus(true);
+        sentPosition = position - remainingBytes;
     }
 
     private void sendSlowStatus(final boolean hasBecomeSlow)
@@ -211,7 +223,7 @@ class SenderEndPoint implements AutoCloseable
         invalidLibraryAttempts.close();
     }
 
-    Action onSlowConsumerMessageFragment(
+    Action onSlowOutboundMessage(
         final DirectBuffer directBuffer,
         final int offsetAfterHeader,
         final int length,
@@ -226,6 +238,17 @@ class SenderEndPoint implements AutoCloseable
             return CONTINUE;
         }
 
+        return attemptSlowMessage(directBuffer, offsetAfterHeader, length, position, bodyLength, timeInMs);
+    }
+
+    private Action attemptSlowMessage(
+        final DirectBuffer directBuffer,
+        final int offsetAfterHeader,
+        final int length,
+        final long position,
+        final int bodyLength,
+        final long timeInMs)
+    {
         if (!isSlowConsumer())
         {
             return CONTINUE;
@@ -266,6 +289,8 @@ class SenderEndPoint implements AutoCloseable
 
             final int written = channel.write(buffer);
             bytesInBuffer.addOrdered(-written);
+
+            updateSendingTimeoutTimeInMs(timeInMs, written);
 
             if (bodyLength > (written + bytesPreviouslySent))
             {
