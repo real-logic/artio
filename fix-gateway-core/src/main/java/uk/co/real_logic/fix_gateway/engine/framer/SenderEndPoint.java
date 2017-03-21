@@ -44,7 +44,9 @@ class SenderEndPoint implements AutoCloseable
     private final int maxBytesInBuffer;
     private final long slowConsumerTimeoutInMs;
 
-    private long sentPosition;
+    private long sentOutboundPosition;
+    private long sentReplayPosition;
+
     private int libraryId;
     private long sessionId;
     private long sendingTimeoutTimeInMs;
@@ -112,7 +114,7 @@ class SenderEndPoint implements AutoCloseable
         final int offsetAfterHeader = offset - FRAME_SIZE;
         final int length = bodyLength + FRAME_SIZE;
 
-        return attemptSlowMessage(buffer, offsetAfterHeader, length, position, bodyLength, timeInMs);
+        return attemptSlowMessage(buffer, offsetAfterHeader, length, position, bodyLength, timeInMs, false);
     }
 
     private void attemptFramedMessage(
@@ -146,7 +148,7 @@ class SenderEndPoint implements AutoCloseable
             }
             else
             {
-                sentPosition = position;
+                setPosition(outbound, position);
             }
         }
         catch (final IOException ex)
@@ -194,7 +196,19 @@ class SenderEndPoint implements AutoCloseable
         final int remainingBytes = bodyLength - written;
         bytesInBuffer.setOrdered(remainingBytes);
         sendSlowStatus(true);
-        sentPosition = position - remainingBytes;
+        setPosition(outbound, position - remainingBytes);
+    }
+
+    private void setPosition(final boolean outbound, final long newPosition)
+    {
+        if (outbound)
+        {
+            sentOutboundPosition = newPosition;
+        }
+        else
+        {
+            sentReplayPosition = newPosition;
+        }
     }
 
     private void sendSlowStatus(final boolean hasBecomeSlow)
@@ -238,7 +252,7 @@ class SenderEndPoint implements AutoCloseable
             return CONTINUE;
         }
 
-        return attemptSlowMessage(directBuffer, offsetAfterHeader, length, position, bodyLength, timeInMs);
+        return attemptSlowMessage(directBuffer, offsetAfterHeader, length, position, bodyLength, timeInMs, true);
     }
 
     private Action attemptSlowMessage(
@@ -247,7 +261,8 @@ class SenderEndPoint implements AutoCloseable
         final int length,
         final long position,
         final int bodyLength,
-        final long timeInMs)
+        final long timeInMs,
+        final boolean outbound)
     {
         if (!isSlowConsumer())
         {
@@ -256,6 +271,7 @@ class SenderEndPoint implements AutoCloseable
 
         // Skip messages where the end point has become a slow consumer, but
         // the slow consumer stream hasn't polled up to update with the regular stream
+        final long sentPosition = getPosition(outbound);
         if (position <= sentPosition)
         {
             return CONTINUE;
@@ -294,12 +310,12 @@ class SenderEndPoint implements AutoCloseable
 
             if (bodyLength > (written + bytesPreviouslySent))
             {
-                sentPosition += written;
+                movePosition(outbound, written);
                 return ABORT;
             }
             else
             {
-                sentPosition = position;
+                setPosition(outbound, position);
 
                 if (!isSlowConsumer())
                 {
@@ -313,6 +329,23 @@ class SenderEndPoint implements AutoCloseable
         }
 
         return CONTINUE;
+    }
+
+    private long getPosition(final boolean outbound)
+    {
+        return outbound ? sentOutboundPosition : sentReplayPosition;
+    }
+
+    private void movePosition(final boolean outbound, final int by)
+    {
+        if (outbound)
+        {
+            sentOutboundPosition += by;
+        }
+        else
+        {
+            sentReplayPosition += by;
+        }
     }
 
     private boolean isWrongLibraryId(final int libraryId)
