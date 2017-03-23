@@ -78,7 +78,7 @@ public class SenderEndPointTest
 
         channelWillWrite(BODY_LENGTH);
 
-        onSlowConsumerMessageFragment(CONTINUE);
+        onSlowOutboundMessage(CONTINUE);
         byteBufferWritten();
         assertBytesInBuffer(0);
     }
@@ -92,12 +92,12 @@ public class SenderEndPointTest
         final int remaining = BODY_LENGTH - firstWrites;
 
         channelWillWrite(firstWrites);
-        onSlowConsumerMessageFragment(ABORT);
+        onSlowOutboundMessage(ABORT);
         byteBufferWritten();
         assertBytesInBuffer(remaining);
 
         channelWillWrite(remaining);
-        onSlowConsumerMessageFragment(CONTINUE);
+        onSlowOutboundMessage(CONTINUE);
         byteBufferWritten();
         assertBytesInBuffer(0);
         verifyNoMoreErrors();
@@ -109,13 +109,13 @@ public class SenderEndPointTest
         long timeInMs = 100;
         long position = POSITION;
         channelWillWrite(BODY_LENGTH);
-        onNormalMessage(timeInMs, position);
+        onOutboundMessage(timeInMs, position);
 
         timeInMs += 100;
         position += BODY_LENGTH;
 
         channelWillWrite(0);
-        onNormalMessage(timeInMs, position);
+        onOutboundMessage(timeInMs, position);
 
         timeInMs += DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  + 1;
 
@@ -130,7 +130,7 @@ public class SenderEndPointTest
     {
         long timeInMs = 100;
         channelWillWrite(BODY_LENGTH);
-        onNormalMessage(timeInMs, POSITION);
+        onOutboundMessage(timeInMs, POSITION);
 
         timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1);
 
@@ -147,12 +147,12 @@ public class SenderEndPointTest
 
         long timeInMs = 100;
         channelWillWrite(0);
-        onNormalMessage(timeInMs, POSITION);
+        onOutboundMessage(timeInMs, POSITION);
 
         timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1);
 
         channelWillWrite(replayWrites);
-        onSlowConsumerMessageFragment(ABORT, timeInMs);
+        onSlowOutboundMessage(ABORT, timeInMs);
 
         timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1);
 
@@ -178,7 +178,7 @@ public class SenderEndPointTest
     {
         long timeInMs = 100;
         channelWillWrite(BODY_LENGTH);
-        onNormalMessage(timeInMs, POSITION);
+        onOutboundMessage(timeInMs, POSITION);
 
         timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  + 1);
 
@@ -196,10 +196,10 @@ public class SenderEndPointTest
         final int firstWrites = 41;
 
         channelWillWrite(firstWrites);
-        onSlowConsumerMessageFragment(ABORT);
+        onSlowOutboundMessage(ABORT);
 
         channelWillWrite(0);
-        onSlowConsumerMessageFragment(ABORT);
+        onSlowOutboundMessage(ABORT);
 
         endPoint.checkTimeouts(DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  + 101);
 
@@ -228,7 +228,7 @@ public class SenderEndPointTest
         position += BODY_LENGTH;
 
         onReplayMessage(0, position);
-        byteBufferWritten(never());
+        byteBufferNotWritten();
 
         assertBytesInBuffer(BODY_LENGTH + BODY_LENGTH);
     }
@@ -293,13 +293,79 @@ public class SenderEndPointTest
     @Test
     public void shouldNotSendSlowConsumerMessageUntilReplayComplete()
     {
-        // TODO
+        final int firstWrites = 41;
+        final int remaining = BODY_LENGTH - firstWrites;
+
+        final long position = 0;
+        channelWillWrite(0);
+        onReplayMessage(0, position);
+        byteBufferWritten();
+
+        channelWillWrite(firstWrites);
+        onSlowReplayMessage(0, position);
+        byteBufferWritten();
+        assertBytesInBuffer(remaining);
+
+        onOutboundMessage(0, position);
+        byteBufferNotWritten();
+        assertBytesInBuffer(remaining + BODY_LENGTH);
+
+        onSlowOutboundMessage(ABORT);
+        byteBufferNotWritten();
+        assertBytesInBuffer(remaining + BODY_LENGTH);
+
+        channelWillWrite(remaining);
+        onSlowReplayMessage(0, position);
+        byteBufferWritten();
+        assertBytesInBuffer(BODY_LENGTH);
+
+        channelWillWrite(BODY_LENGTH);
+        onSlowOutboundMessage(CONTINUE);
+        byteBufferWritten();
+        assertBytesInBuffer(0);
+
+        verifyNoMoreErrors();
     }
 
     @Test
     public void shouldNotSendReplayMessageUntilSlowConsumerComplete()
     {
-        // TODO
+        final int firstWrites = 41;
+        final int remaining = BODY_LENGTH - firstWrites;
+        final long position = FRAGMENT_LENGTH;
+
+        becomeSlowConsumer();
+
+        channelWillWrite(firstWrites);
+        onSlowOutboundMessage(ABORT);
+        byteBufferWritten();
+        assertBytesInBuffer(remaining);
+
+        channelWillWrite(0);
+        onReplayMessage(0, position);
+        byteBufferNotWritten();
+        assertBytesInBuffer(remaining + BODY_LENGTH);
+
+        onSlowReplayMessage(0, position);
+        byteBufferNotWritten();
+        assertBytesInBuffer(remaining + BODY_LENGTH);
+
+        channelWillWrite(remaining);
+        onSlowOutboundMessage(CONTINUE);
+        byteBufferWritten();
+        assertBytesInBuffer(BODY_LENGTH);
+
+        channelWillWrite(BODY_LENGTH);
+        onSlowReplayMessage(0, BODY_LENGTH);
+        byteBufferWritten();
+        assertBytesInBuffer(0);
+
+        verifyNoMoreErrors();
+    }
+
+    private void byteBufferNotWritten()
+    {
+        byteBufferWritten(never());
     }
 
     private void errorLogged()
@@ -307,12 +373,12 @@ public class SenderEndPointTest
         verify(errorHandler).onError(any(IllegalStateException.class));
     }
 
-    public void verifyNoMoreErrors()
+    private void verifyNoMoreErrors()
     {
         verifyNoMoreInteractions(errorHandler);
     }
 
-    private void onNormalMessage(final long timeInMs, final long position)
+    private void onOutboundMessage(final long timeInMs, final long position)
     {
         endPoint.onOutboundMessage(LIBRARY_ID, buffer, 0, BODY_LENGTH, position, timeInMs);
     }
@@ -355,12 +421,12 @@ public class SenderEndPointTest
         assertEquals(bytes, bytesInBuffer.get());
     }
 
-    private void onSlowConsumerMessageFragment(final Action expected)
+    private void onSlowOutboundMessage(final Action expected)
     {
-        onSlowConsumerMessageFragment(expected, 100);
+        onSlowOutboundMessage(expected, 100);
     }
 
-    private void onSlowConsumerMessageFragment(final Action expected, final long timeInMs)
+    private void onSlowOutboundMessage(final Action expected, final long timeInMs)
     {
         final Action action = endPoint.onSlowOutboundMessage(
             buffer,

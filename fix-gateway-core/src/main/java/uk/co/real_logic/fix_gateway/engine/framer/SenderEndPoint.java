@@ -46,6 +46,8 @@ class SenderEndPoint implements AutoCloseable
 
     private long sentOutboundPosition;
     private long sentReplayPosition;
+    private boolean partiallySentOutboundMessage = false;
+    private boolean partiallySentReplayMessage = false;
 
     private int libraryId;
     private long sessionId;
@@ -197,6 +199,19 @@ class SenderEndPoint implements AutoCloseable
         bytesInBuffer.setOrdered(remainingBytes);
         sendSlowStatus(true);
         setPosition(outbound, position - remainingBytes);
+        setPartiallySent(outbound, true);
+    }
+
+    private void setPartiallySent(final boolean outbound, final boolean value)
+    {
+        if (outbound)
+        {
+            partiallySentOutboundMessage = value;
+        }
+        else
+        {
+            partiallySentReplayMessage = value;
+        }
     }
 
     private void setPosition(final boolean outbound, final long newPosition)
@@ -277,6 +292,11 @@ class SenderEndPoint implements AutoCloseable
             return CONTINUE;
         }
 
+        if (partiallySentOtherStream(outbound))
+        {
+            return ABORT;
+        }
+
         try
         {
             final long startOfMessage = position - length;
@@ -316,6 +336,7 @@ class SenderEndPoint implements AutoCloseable
             else
             {
                 setPosition(outbound, position);
+                setPartiallySent(outbound, false);
 
                 if (!isSlowConsumer())
                 {
@@ -329,6 +350,11 @@ class SenderEndPoint implements AutoCloseable
         }
 
         return CONTINUE;
+    }
+
+    private boolean partiallySentOtherStream(final boolean outbound)
+    {
+        return outbound && partiallySentReplayMessage || !outbound && partiallySentOutboundMessage;
     }
 
     private long getPosition(final boolean outbound)
