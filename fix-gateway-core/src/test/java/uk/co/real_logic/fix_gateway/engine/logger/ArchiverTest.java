@@ -50,11 +50,13 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static io.aeron.driver.Configuration.MTU_LENGTH;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
 import static io.aeron.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
 import static io.aeron.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
+import static java.lang.Integer.min;
 import static java.lang.Integer.numberOfTrailingZeros;
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static org.agrona.BitUtil.SIZE_OF_INT;
@@ -73,7 +75,7 @@ import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 @RunWith(Parameterized.class)
 public class ArchiverTest
 {
-    private static final int TERM_LENGTH = 65536;
+    private static final int TERM_LENGTH = 131072;
     private static final int STREAM_ID = 1;
     private static final int OFFSET_WITHIN_MESSAGE = 42;
     private static final int INITIAL_VALUE = 43;
@@ -87,7 +89,7 @@ public class ArchiverTest
     {
         // TODO: enable more comprehensive testing in a CI environment
         return IntStream
-            .of(1337/*, 129, 128, 4097*/)
+            .of(1337 /*, 6003*//*, 129, 128, 4097*/)
             .boxed()
             .flatMap((size) ->
                 Stream.of(
@@ -105,6 +107,7 @@ public class ArchiverTest
     private final Long2LongHashMap completedPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
 
     private final int size;
+    private final double fragments;
     private final UnsafeBuffer buffer;
     private final BufferClaim bufferClaim = new BufferClaim();
 
@@ -123,6 +126,7 @@ public class ArchiverTest
     {
         this.buffer = buffer;
         size = buffer.capacity();
+        fragments = (double) size / MTU_LENGTH;
     }
 
     @Before
@@ -326,16 +330,32 @@ public class ArchiverTest
         when(fragmentHandler.onFragment(any(), anyInt(), anyInt(), any()))
             .thenReturn(BREAK);
 
-        final long oneMessageIn = HEADER_LENGTH + alignTerm(size) + HEADER_LENGTH;
+        final int maxFragmentSize = min(alignTerm(size) + HEADER_LENGTH, MTU_LENGTH);
+        final long oneMessageIn = HEADER_LENGTH + maxFragmentSize;
 
         readUpTo(0, oneMessageIn, times(1));
     }
 
     private void shouldReadFragmentsUpToAPosition(final int offsetIntoNextMessage)
     {
-        final long twoMessagesIn = HEADER_LENGTH + lengthOfTwoMessages() + HEADER_LENGTH;
+        final long endOfFirstMessage = HEADER_LENGTH + alignTerm(size);
+        final long twoMessagesIn =
+            endOfFirstMessage + min(alignTerm(size), MTU_LENGTH) + HEADER_LENGTH + HEADER_LENGTH;
 
-        readUpTo(offsetIntoNextMessage, twoMessagesIn, times(2));
+        readUpTo(offsetIntoNextMessage, twoMessagesIn, fragmentScaledTimes2());
+    }
+
+    private VerificationMode fragmentScaledTimes2()
+    {
+        if (fragments > 1)
+        {
+            // If the message is over MTU length then you need to scale the number of callbacks up by that ratio
+            return times((int) Math.ceil((2 * fragments)));
+        }
+        else
+        {
+            return times(2);
+        }
     }
 
     private void readUpTo(
@@ -347,11 +367,11 @@ public class ArchiverTest
 
         final long begin = HEADER_LENGTH;
         final long end = begin + lengthOfTwoMessages() + offsetIntoNextMessage;
-        final long res = archiveReader.readUpTo(sessionId(), begin, end, fragmentHandler);
+        final long resultPosition = archiveReader.readUpTo(sessionId(), begin, end, fragmentHandler);
 
         verify(fragmentHandler, times).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
 
-        assertEquals("Failed to return new position", expectedPosition, res);
+        assertEquals("Failed to return new position", expectedPosition, resultPosition);
     }
 
     @Test
