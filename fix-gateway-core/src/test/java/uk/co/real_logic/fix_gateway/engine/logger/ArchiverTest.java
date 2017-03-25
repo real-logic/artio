@@ -19,7 +19,6 @@ import io.aeron.Aeron;
 import io.aeron.Publication;
 import io.aeron.driver.MediaDriver;
 import io.aeron.logbuffer.BlockHandler;
-import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.protocol.DataHeaderFlyweight;
 import io.aeron.protocol.HeaderFlyweight;
@@ -89,7 +88,7 @@ public class ArchiverTest
     {
         // TODO: enable more comprehensive testing in a CI environment
         return IntStream
-            .of(1337 /*, 6003*//*, 129, 128, 4097*/)
+            .of(1337, 6003/*, 129, 128, 4097*/)
             .boxed()
             .flatMap((size) ->
                 Stream.of(
@@ -109,7 +108,7 @@ public class ArchiverTest
     private final int size;
     private final double fragments;
     private final UnsafeBuffer buffer;
-    private final BufferClaim bufferClaim = new BufferClaim();
+    private final UnsafeBuffer writeBuffer;
 
     private LogDirectoryDescriptor logDirectoryDescriptor;
     private MediaDriver mediaDriver;
@@ -126,6 +125,7 @@ public class ArchiverTest
     {
         this.buffer = buffer;
         size = buffer.capacity();
+        writeBuffer = new UnsafeBuffer(new byte[size]);
         fragments = (double) size / MTU_LENGTH;
     }
 
@@ -736,24 +736,20 @@ public class ArchiverTest
         return endPosition;
     }
 
-    private void writeAndArchiveBuffer(final int value, final int reservedValue)
+    private void writeAndArchiveBuffer(final int value, final int clusterStreamId)
     {
+        final long reservedValue = ReservedValue.ofClusterStreamId(clusterStreamId);
+        writeBuffer.putInt(OFFSET_WITHIN_MESSAGE, value);
+
         long endPosition;
-        while (true)
+        do
         {
-            endPosition = publication.tryClaim(size, bufferClaim);
-            if (endPosition >= 0)
-            {
-                break;
-            }
+            endPosition = publication.offer(
+                writeBuffer, 0, size, (termBuffer, termOffset, frameLength) -> reservedValue);
 
             Thread.yield();
         }
-
-        final int index = bufferClaim.offset() + OFFSET_WITHIN_MESSAGE;
-        bufferClaim.reservedValue(ReservedValue.ofClusterStreamId(reservedValue));
-        bufferClaim.buffer().putInt(index, value);
-        bufferClaim.commit();
+        while (endPosition < 0);
 
         assertDataPublished(endPosition);
 
