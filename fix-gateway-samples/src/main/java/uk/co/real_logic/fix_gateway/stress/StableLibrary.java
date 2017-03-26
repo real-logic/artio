@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.stress;
 
+import org.agrona.concurrent.YieldingIdleStrategy;
 import uk.co.real_logic.fix_gateway.SampleUtil;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
@@ -28,7 +29,8 @@ public final class StableLibrary
     public static void main(final String[] args) throws IOException
     {
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration()
-            .libraryAeronChannels(singletonList(SoleEngine.AERON_CHANNEL));
+            .libraryAeronChannels(singletonList(SoleEngine.AERON_CHANNEL))
+            .libraryIdleStrategy(new YieldingIdleStrategy());
 
         libraryConfiguration.replyTimeoutInMs(1000);
 
