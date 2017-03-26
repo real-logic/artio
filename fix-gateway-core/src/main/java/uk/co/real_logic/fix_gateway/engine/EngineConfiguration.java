@@ -31,7 +31,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
@@ -158,7 +157,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private RoleHandler roleHandler = ClusterNodeConfiguration.DEFAULT_NODE_HANDLER;
     private SessionPersistenceStrategy sessionPersistenceStrategy;
     private long slowConsumerTimeoutInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
-    private Supplier<EngineScheduler> schedulerSupplier = DefaultEngineScheduler::new;
+    private EngineScheduler scheduler = new DefaultEngineScheduler();
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -478,9 +477,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
-    public EngineConfiguration schedulerSupplier(final Supplier<EngineScheduler> scheduler)
+    public EngineConfiguration scheduler(final EngineScheduler scheduler)
     {
-        this.schedulerSupplier = scheduler;
+        this.scheduler = scheduler;
         return this;
     }
 
@@ -634,9 +633,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return sessionPersistenceStrategy;
     }
 
-    public Supplier<EngineScheduler> schedulerSupplier()
+    public EngineScheduler scheduler()
     {
-        return schedulerSupplier;
+        return scheduler;
     }
 
     /**

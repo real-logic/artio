@@ -23,6 +23,9 @@ import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 
+/**
+ * NB: Ensure that a new instance is created for each engine.
+ */
 public class DefaultEngineScheduler implements EngineScheduler
 {
     private AgentRunner framerRunner;
@@ -36,6 +39,11 @@ public class DefaultEngineScheduler implements EngineScheduler
         final Agent archivingAgent,
         final Agent monitoringAgent)
     {
+        if (framerRunner != null)
+        {
+            EngineScheduler.fail();
+        }
+
         framerRunner = new AgentRunner(
             configuration.framerIdleStrategy(), errorHandler, null, framer);
         archivingRunner = new AgentRunner(

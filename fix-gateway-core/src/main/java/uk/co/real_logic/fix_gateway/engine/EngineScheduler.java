@@ -31,4 +31,9 @@ public interface EngineScheduler extends AutoCloseable
         Agent monitoringAgent);
 
     void close();
+
+    static void fail()
+    {
+        throw new IllegalStateException("Cannot re-use scheduler for multiple launch attempts");
+    }
 }

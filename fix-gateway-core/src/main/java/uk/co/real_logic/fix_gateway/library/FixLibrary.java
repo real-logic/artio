@@ -54,7 +54,7 @@ public class FixLibrary extends GatewayProcess
     FixLibrary(final LibraryConfiguration configuration)
     {
         this.configuration = configuration;
-        scheduler = configuration.schedulerSupplier().get();
+        scheduler = configuration.scheduler();
         configuration.conclude();
 
         init(configuration);

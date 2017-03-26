@@ -109,7 +109,7 @@ public final class FixEngine extends GatewayProcess
         {
             init(configuration);
             this.configuration = configuration;
-            scheduler = configuration.schedulerSupplier().get();
+            scheduler = configuration.scheduler();
             engineDescriptorStore = new EngineDescriptorStore(errorHandler);
 
             engineContext = EngineContext.of(

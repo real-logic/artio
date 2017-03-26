@@ -19,6 +19,7 @@ import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
+import uk.co.real_logic.fix_gateway.engine.EngineScheduler;
 
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
@@ -32,6 +33,11 @@ public class DefaultLibraryScheduler implements LibraryScheduler
         final ErrorHandler errorHandler,
         final Agent monitoringAgent)
     {
+        if (monitoringRunner != null)
+        {
+            EngineScheduler.fail();
+        }
+
         if (monitoringAgent != null)
         {
             monitoringRunner = new AgentRunner(
