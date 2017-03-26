@@ -28,9 +28,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.aeron.driver.Configuration.ERROR_BUFFER_LENGTH_PROP_NAME;
-import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.closeAll;
 
 public class GatewayProcess implements AutoCloseable
@@ -48,7 +46,6 @@ public class GatewayProcess implements AutoCloseable
     protected DistinctErrorLog distinctErrorLog;
     protected Aeron aeron;
     protected Agent monitoringAgent;
-    protected AgentRunner monitoringRunner;
 
     protected void init(final CommonConfiguration configuration)
     {
@@ -95,17 +92,6 @@ public class GatewayProcess implements AutoCloseable
         return ctx;
     }
 
-    // TODO: remove this
-    protected void start()
-    {
-        if (monitoringAgent != null)
-        {
-            monitoringRunner = new AgentRunner(
-                backoffIdleStrategy(), errorHandler, null, monitoringAgent);
-            startOnThread(monitoringRunner);
-        }
-    }
-
     protected void initMonitoringAgent(final List<Timer> timers, final CommonConfiguration configuration)
     {
         final List<Agent> agents = new ArrayList<>();
@@ -135,7 +121,6 @@ public class GatewayProcess implements AutoCloseable
     public void close()
     {
         closeAll(
-            monitoringRunner,
             () ->
             {
                 aeron.close();

@@ -22,6 +22,7 @@ import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Supplier;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -83,6 +84,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private SentPositionHandler sentPositionHandler = DEFAULT_SENT_POSITION_HANDLER;
     private List<String> libraryAeronChannels = new ArrayList<>();
     private LibraryConnectHandler libraryConnectHandler = DEFAULT_LIBRARY_CONNECT_HANDLER;
+    private Supplier<LibraryScheduler> schedulerSupplier = DefaultLibraryScheduler::new;
 
     /**
      * When a new session connects to the gateway you register a callback handler to find
@@ -148,6 +150,12 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    public LibraryConfiguration schedulerSupplier(final Supplier<LibraryScheduler> schedulerSupplier)
+    {
+        this.schedulerSupplier = schedulerSupplier;
+        return this;
+    }
+
     public int encoderBufferSize()
     {
         return encoderBufferSize;
@@ -181,6 +189,11 @@ public final class LibraryConfiguration extends CommonConfiguration
     public LibraryConnectHandler libraryConnectHandler()
     {
         return libraryConnectHandler;
+    }
+
+    public Supplier<LibraryScheduler> schedulerSupplier()
+    {
+        return schedulerSupplier;
     }
 
     /**

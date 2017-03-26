@@ -46,13 +46,15 @@ public class FixLibrary extends GatewayProcess
 {
     public static final int NO_MESSAGE_REPLAY = -1;
 
-    private final LibraryPoller poller;
     private final LibraryConfiguration configuration;
+    private final LibraryScheduler scheduler;
+    private final LibraryPoller poller;
     private boolean isPolling = false;
 
     FixLibrary(final LibraryConfiguration configuration)
     {
         this.configuration = configuration;
+        scheduler = configuration.schedulerSupplier().get();
         configuration.conclude();
 
         init(configuration);
@@ -68,7 +70,7 @@ public class FixLibrary extends GatewayProcess
     private FixLibrary connect()
     {
         poller.startConnecting();
-        start();
+        scheduler.launch(configuration, errorHandler, monitoringAgent);
         return this;
     }
 
@@ -168,7 +170,7 @@ public class FixLibrary extends GatewayProcess
 
     void internalClose()
     {
-        closeAll(poller, super::close, this::deleteFiles);
+        closeAll(poller, scheduler, super::close, this::deleteFiles);
     }
 
     private void deleteFiles()

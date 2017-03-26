@@ -13,37 +13,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.engine;
+package uk.co.real_logic.fix_gateway.library;
 
+import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
-import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
 
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
 
-public class DefaultEngineScheduler implements EngineScheduler
+public class DefaultLibraryScheduler implements LibraryScheduler
 {
-    private AgentRunner framerRunner;
-    private AgentRunner archivingRunner;
     private AgentRunner monitoringRunner;
 
     public void launch(
-        final EngineConfiguration configuration,
+        final LibraryConfiguration configuration,
         final ErrorHandler errorHandler,
-        final Agent framer,
-        final Agent archivingAgent,
         final Agent monitoringAgent)
     {
-        framerRunner = new AgentRunner(
-            configuration.framerIdleStrategy(), errorHandler, null, framer);
-        archivingRunner = new AgentRunner(
-            configuration.archiverIdleStrategy(), errorHandler, null, archivingAgent);
-
-        startOnThread(framerRunner);
-        startOnThread(archivingRunner);
-
         if (monitoringAgent != null)
         {
             monitoringRunner = new AgentRunner(
@@ -54,6 +42,6 @@ public class DefaultEngineScheduler implements EngineScheduler
 
     public void close()
     {
-        Exceptions.closeAll(framerRunner, archivingRunner, monitoringRunner);
+        CloseHelper.close(monitoringRunner);
     }
 }
