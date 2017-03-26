@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Objects;
 import java.util.function.Function;
+import java.util.function.Supplier;
 
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
@@ -120,7 +121,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private boolean logInboundMessages = true;
     private boolean logOutboundMessages = true;
     private IdleStrategy framerIdleStrategy = backoffIdleStrategy();
-    private IdleStrategy loggerIdleStrategy = backoffIdleStrategy();
+    private IdleStrategy archiverIdleStrategy = backoffIdleStrategy();
     private AtomicBuffer sentSequenceNumberBuffer;
     private AtomicBuffer receivedSequenceNumberBuffer;
     private MappedFile sentSequenceNumberIndex;
@@ -157,6 +158,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private RoleHandler roleHandler = ClusterNodeConfiguration.DEFAULT_NODE_HANDLER;
     private SessionPersistenceStrategy sessionPersistenceStrategy;
     private long slowConsumerTimeoutInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
+    private Supplier<EngineScheduler> schedulerSupplier = DefaultEngineScheduler::new;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -327,12 +329,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * Sets the idle strategy for the Logger thread.
      *
-     * @param loggerIdleStrategy the idle strategy for the Logger thread.
+     * @param archiverIdleStrategy the idle strategy for the Logger thread.
      * @return this
      */
-    public EngineConfiguration loggerIdleStrategy(final IdleStrategy loggerIdleStrategy)
+    public EngineConfiguration archiverIdleStrategy(final IdleStrategy archiverIdleStrategy)
     {
-        this.loggerIdleStrategy = loggerIdleStrategy;
+        this.archiverIdleStrategy = archiverIdleStrategy;
         return this;
     }
 
@@ -476,6 +478,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration schedulerSupplier(final Supplier<EngineScheduler> scheduler)
+    {
+        this.schedulerSupplier = scheduler;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -536,9 +544,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return framerIdleStrategy;
     }
 
-    public IdleStrategy loggerIdleStrategy()
+    public IdleStrategy archiverIdleStrategy()
     {
-        return loggerIdleStrategy;
+        return archiverIdleStrategy;
     }
 
     public int outboundLibraryFragmentLimit()
@@ -624,6 +632,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public SessionPersistenceStrategy sessionPersistenceStrategy()
     {
         return sessionPersistenceStrategy;
+    }
+
+    public Supplier<EngineScheduler> schedulerSupplier()
+    {
+        return schedulerSupplier;
     }
 
     /**

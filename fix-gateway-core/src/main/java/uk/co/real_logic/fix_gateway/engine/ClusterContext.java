@@ -30,7 +30,6 @@ import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.replication.*;
 
-import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.closeAll;
@@ -94,15 +93,14 @@ class ClusterContext extends EngineContext
 
             localOutboundArchiver.positionHandler(positionSender);
 
-            loggingRunner = newRunner(
-                new CompositeAgent(
-                    inboundIndexer,
-                    outboundIndexer,
-                    clusterAgent,
-                    replayer,
-                    localInboundArchiver,
-                    localOutboundArchiver,
-                    positionSender));
+            archivingAgent = new CompositeAgent(
+                inboundIndexer,
+                outboundIndexer,
+                clusterAgent,
+                replayer,
+                localInboundArchiver,
+                localOutboundArchiver,
+                positionSender);
         }
         catch (final Exception e)
         {
@@ -172,11 +170,6 @@ class ClusterContext extends EngineContext
         return clusterAgent.clusterStreams();
     }
 
-    public void start()
-    {
-        startOnThread(loggingRunner);
-    }
-
     public GatewayPublication inboundLibraryPublication()
     {
         return new GatewayPublication(
@@ -205,6 +198,6 @@ class ClusterContext extends EngineContext
 
     public void close()
     {
-        closeAll(loggingRunner, super::close);
+        super.close();
     }
 }

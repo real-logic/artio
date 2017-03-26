@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.engine;
 
 import io.aeron.Publication;
 import io.aeron.Subscription;
-import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
@@ -31,7 +30,6 @@ import uk.co.real_logic.fix_gateway.timing.EngineTimers;
 import java.io.File;
 import java.util.List;
 
-import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.closeAll;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.suppressingClose;
 
@@ -53,7 +51,7 @@ public final class FixEngine extends GatewayProcess
     private final EngineConfiguration configuration;
     private final EngineDescriptorStore engineDescriptorStore;
 
-    private AgentRunner framerRunner;
+    private EngineScheduler scheduler;
     private FramerContext framerContext;
     private EngineContext engineContext;
     private ClusterableStreams streams;
@@ -111,6 +109,7 @@ public final class FixEngine extends GatewayProcess
         {
             init(configuration);
             this.configuration = configuration;
+            scheduler = configuration.schedulerSupplier().get();
             engineDescriptorStore = new EngineDescriptorStore(errorHandler);
 
             engineContext = EngineContext.of(
@@ -156,8 +155,6 @@ public final class FixEngine extends GatewayProcess
             replaySubscription("slow-replay"),
             engineDescriptorStore,
             timers);
-        framerRunner = new AgentRunner(
-            configuration.framerIdleStrategy(), errorHandler, null, framerContext.framer());
     }
 
     /**
@@ -185,9 +182,13 @@ public final class FixEngine extends GatewayProcess
 
     private FixEngine launch()
     {
-        startOnThread(framerRunner);
-        engineContext.start();
-        start();
+        scheduler.launch(
+            configuration,
+            errorHandler,
+            framerContext.framer(),
+            engineContext.archivingAgent(),
+            monitoringAgent);
+
         return this;
     }
 
@@ -199,7 +200,7 @@ public final class FixEngine extends GatewayProcess
      */
     public synchronized void close()
     {
-        closeAll(framerRunner, engineContext, configuration, super::close);
+        closeAll(scheduler, engineContext, configuration, super::close);
     }
 
     public EngineConfiguration configuration()

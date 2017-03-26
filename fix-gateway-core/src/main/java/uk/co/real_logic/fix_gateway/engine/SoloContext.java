@@ -36,7 +36,6 @@ import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.suppressingClose;
@@ -70,10 +69,10 @@ class SoloContext extends EngineContext
             this.inboundStreamId = new StreamIdentifier(channel, INBOUND_LIBRARY_STREAM);
             this.outboundStreamId = new StreamIdentifier(channel, OUTBOUND_LIBRARY_STREAM);
 
-            node = initNode();
+            node = newNode();
             newStreams(node);
             newArchival();
-            newLoggingRunner();
+            newArchivingAgent();
         }
         catch (final Exception e)
         {
@@ -85,13 +84,13 @@ class SoloContext extends EngineContext
         }
     }
 
-    private ClusterableStreams initNode()
+    private ClusterableStreams newNode()
     {
         return ClusterableStreams.solo(
             aeron, configuration.libraryAeronChannel(), configuration.printAeronStreamIdentifiers());
     }
 
-    private void newLoggingRunner()
+    private void newArchivingAgent()
     {
         if (configuration.logOutboundMessages())
         {
@@ -110,9 +109,7 @@ class SoloContext extends EngineContext
             agents.add(outboundIndexer);
             agents.add(replayer);
 
-            final Agent loggingAgent = new CompositeAgent(agents);
-
-            loggingRunner = newRunner(loggingAgent);
+            archivingAgent = new CompositeAgent(agents);
         }
         else
         {
@@ -120,15 +117,14 @@ class SoloContext extends EngineContext
                 new GatewayPublication(
                     ClusterablePublication.solo(replayPublication),
                     fixCounters.failedReplayPublications(),
-                    configuration.loggerIdleStrategy(),
+                    configuration.archiverIdleStrategy(),
                     new SystemNanoClock(),
                     configuration.outboundMaxClaimAttempts()
                 );
-            final GapFiller gapFiller = new GapFiller(
+            archivingAgent = new GapFiller(
                 inboundLibraryStreams.subscription("replayer"),
                 replayGatewayPublication,
                 configuration.agentNamePrefix());
-            loggingRunner = newRunner(gapFiller);
         }
     }
 
@@ -193,16 +189,6 @@ class SoloContext extends EngineContext
         return newReplayQuery(archiveReader);
     }
 
-    public void start()
-    {
-        if (loggingRunner == null)
-        {
-            loggingRunner = newRunner(new CompositeAgent(archivers));
-        }
-
-        startOnThread(loggingRunner);
-    }
-
     public GatewayPublication inboundLibraryPublication()
     {
         return inboundLibraryStreams.gatewayPublication(
@@ -211,15 +197,6 @@ class SoloContext extends EngineContext
 
     public void close()
     {
-        if (loggingRunner != null)
-        {
-            loggingRunner.close();
-        }
-        else
-        {
-            archivers.forEach(Archiver::onClose);
-        }
-
         Exceptions.closeAll(super::close, inboundArchiveReader, outboundArchiveReader);
     }
 }

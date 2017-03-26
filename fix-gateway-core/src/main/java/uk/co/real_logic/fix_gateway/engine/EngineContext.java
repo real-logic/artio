@@ -21,7 +21,6 @@ import io.aeron.Subscription;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.NanoClock;
 import org.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
@@ -60,7 +59,7 @@ public abstract class EngineContext implements AutoCloseable
     protected Streams outboundLibraryStreams;
     protected Indexer inboundIndexer;
     protected Indexer outboundIndexer;
-    protected AgentRunner loggingRunner;
+    protected Agent archivingAgent;
 
     public static EngineContext of(
         final EngineConfiguration configuration,
@@ -193,11 +192,6 @@ public abstract class EngineContext implements AutoCloseable
         );
     }
 
-    protected AgentRunner newRunner(final Agent loggingAgent)
-    {
-        return new AgentRunner(configuration.loggerIdleStrategy(), errorHandler, null, loggingAgent);
-    }
-
     protected Archiver archiver(final StreamIdentifier streamId, final CompletionPosition completionPosition)
     {
         return new Archiver(
@@ -215,7 +209,7 @@ public abstract class EngineContext implements AutoCloseable
             newReplayQuery(outboundArchiveReader),
             replayPublication,
             new BufferClaim(),
-            configuration.loggerIdleStrategy(),
+            configuration.archiverIdleStrategy(),
             errorHandler,
             configuration.outboundMaxClaimAttempts(),
             inboundLibraryStreams.subscription("replayer"),
@@ -274,8 +268,6 @@ public abstract class EngineContext implements AutoCloseable
 
     public abstract ClusterableStreams streams();
 
-    public abstract void start();
-
     public abstract GatewayPublication inboundLibraryPublication();
 
     public CompletionPosition inboundCompletionPosition()
@@ -293,10 +285,15 @@ public abstract class EngineContext implements AutoCloseable
         return outboundClusterCompletionPosition;
     }
 
-    public void completeDuringStartup()
+    void completeDuringStartup()
     {
         inboundcompletionPosition.completeDuringStartup();
         outboundLibraryCompletionPosition.completeDuringStartup();
         outboundClusterCompletionPosition.completeDuringStartup();
+    }
+
+    Agent archivingAgent()
+    {
+        return archivingAgent;
     }
 }

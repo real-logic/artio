@@ -47,6 +47,7 @@ public class GatewayProcess implements AutoCloseable
     protected ErrorHandler errorHandler;
     protected DistinctErrorLog distinctErrorLog;
     protected Aeron aeron;
+    protected Agent monitoringAgent;
     protected AgentRunner monitoringRunner;
 
     protected void init(final CommonConfiguration configuration)
@@ -94,10 +95,13 @@ public class GatewayProcess implements AutoCloseable
         return ctx;
     }
 
+    // TODO: remove this
     protected void start()
     {
-        if (monitoringRunner != null)
+        if (monitoringAgent != null)
         {
+            monitoringRunner = new AgentRunner(
+                backoffIdleStrategy(), errorHandler, null, monitoringAgent);
             startOnThread(monitoringRunner);
         }
     }
@@ -124,8 +128,7 @@ public class GatewayProcess implements AutoCloseable
 
         if (!agents.isEmpty())
         {
-            monitoringRunner = new AgentRunner(
-                backoffIdleStrategy(), errorHandler, null, new CompositeAgent(agents));
+            monitoringAgent = new CompositeAgent(agents);
         }
     }
 
