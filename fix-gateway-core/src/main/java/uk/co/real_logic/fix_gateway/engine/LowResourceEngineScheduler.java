@@ -49,7 +49,7 @@ public class LowResourceEngineScheduler implements EngineScheduler
         startOnThread(runner);
     }
 
-    public synchronized void close()
+    public void close()
     {
         runner.close();
     }
