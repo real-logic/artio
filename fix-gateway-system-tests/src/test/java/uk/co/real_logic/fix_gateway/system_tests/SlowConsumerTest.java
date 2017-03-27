@@ -22,6 +22,7 @@ import uk.co.real_logic.fix_gateway.Timing;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
+import uk.co.real_logic.fix_gateway.engine.DefaultEngineScheduler;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
@@ -259,6 +260,8 @@ public class SlowConsumerTest
         mediaDriver = launchMediaDriver(8 * 1024 * 1024);
         delete(ACCEPTOR_LOGS);
         final EngineConfiguration config = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID)
+            // Use default scheduler for now to avoid causing timing problems
+            .scheduler(new DefaultEngineScheduler())
             .framerIdleStrategy(framerIdleStrategy);
         config.senderMaxBytesInBuffer(senderMaxBytesInBuffer);
         engine = FixEngine.launch(config);

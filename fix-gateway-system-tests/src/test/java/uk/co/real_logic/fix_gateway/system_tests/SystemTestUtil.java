@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.LowResourceEngineScheduler;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
@@ -215,7 +216,8 @@ public final class SystemTestUtil
         final EngineConfiguration configuration = new EngineConfiguration()
             .libraryAeronChannel("aeron:udp?endpoint=localhost:" + libraryAeronPort)
             .monitoringFile(optimalTmpDirName() + File.separator + "fix-client" + File.separator + countersSuffix)
-            .logFileDir(CLIENT_LOGS);
+            .logFileDir(CLIENT_LOGS)
+            .scheduler(new LowResourceEngineScheduler());
         configuration.agentNamePrefix("init-");
         return configuration;
     }
@@ -252,7 +254,8 @@ public final class SystemTestUtil
             .bindTo("localhost", port)
             .libraryAeronChannel("aeron:ipc")
             .monitoringFile(acceptorMonitoringFile(countersSuffix))
-            .logFileDir(acceptorLogs);
+            .logFileDir(acceptorLogs)
+            .scheduler(new LowResourceEngineScheduler());
     }
 
     public static String acceptorMonitoringFile(final String countersSuffix)
