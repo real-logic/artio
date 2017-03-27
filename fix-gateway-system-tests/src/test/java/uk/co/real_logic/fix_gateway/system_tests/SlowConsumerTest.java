@@ -22,10 +22,7 @@ import uk.co.real_logic.fix_gateway.Timing;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
-import uk.co.real_logic.fix_gateway.engine.DefaultEngineScheduler;
-import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.engine.FixEngine;
-import uk.co.real_logic.fix_gateway.engine.SessionInfo;
+import uk.co.real_logic.fix_gateway.engine.*;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -66,7 +63,7 @@ public class SlowConsumerTest
     private LogonEncoder logon = new LogonEncoder();
     private ByteBuffer byteBuffer = ByteBuffer.allocateDirect(BUFFER_CAPACITY);
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(byteBuffer);
-    private SteppingIdleStrategy framerIdleStrategy = new SteppingIdleStrategy();
+    private LockStepFramerEngineScheduler scheduler = new LockStepFramerEngineScheduler();
     private SocketChannel socket;
     private Session session;
 
@@ -78,7 +75,8 @@ public class SlowConsumerTest
 
         initiateConnection();
 
-        session = acquireSession(handler, library);
+        final long sessionId = handler.awaitSessionId(testSystem::poll);
+        session = acquireSession(handler, library, sessionId, testSystem);
         final SessionInfo sessionInfo = getSessionInfo();
 
         while (!socketIsConnected())
@@ -87,7 +85,7 @@ public class SlowConsumerTest
         }
 
         assertNotSlow(session);
-        framerIdleStrategy.startStepping();
+        // startStepping();
 
         while (socketIsConnected())
         {
@@ -97,13 +95,11 @@ public class SlowConsumerTest
             }
 
             testSystem.poll();
-            framerIdleStrategy.step();
-            framerIdleStrategy.step();
         }
 
         bytesInBufferAtLeast(sessionInfo, (long) senderMaxBytesInBuffer);
 
-        framerIdleStrategy.stopStepping();
+        // stopStepping();
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -126,11 +122,10 @@ public class SlowConsumerTest
             session.send(testRequest);
 
             testSystem.poll();
-            framerIdleStrategy.step();
         }
 
         assertNotSlow(session);
-        framerIdleStrategy.stopStepping();
+        // stopStepping();
 
         assertEquals(ACTIVE, session.state());
         assertTrue(socketIsConnected());
@@ -141,11 +136,11 @@ public class SlowConsumerTest
     {
         sessionBecomesSlow();
 
-        framerIdleStrategy.stopStepping();
+        // stopStepping();
 
-        assertEquals(SessionReplyStatus.OK, releaseToGateway(library, session));
+        assertEquals(SessionReplyStatus.OK, releaseToGateway(library, session, testSystem));
 
-        session = acquireSession(handler, library, session.id());
+        session = acquireSession(handler, library, session.id(), testSystem);
 
         assertTrue("Session not slow", handler.lastSessionWasSlow());
     }
@@ -156,12 +151,13 @@ public class SlowConsumerTest
 
         initiateConnection();
 
-        session = acquireSession(handler, library);
+        final long sessionId = handler.awaitSessionId(testSystem::poll);
+        session = acquireSession(handler, library, sessionId, testSystem);
         final SessionInfo sessionInfo = getSessionInfo();
 
         assertNotSlow(session);
 
-        framerIdleStrategy.startStepping();
+        // startStepping();
 
         // Get into a slow state
         while (sessionInfo.bytesInBuffer() == 0 || !handler.isSlow(session))
@@ -172,7 +168,6 @@ public class SlowConsumerTest
             }
 
             testSystem.poll();
-            framerIdleStrategy.step();
         }
 
         assertTrue(handler.isSlow(session));
@@ -189,7 +184,7 @@ public class SlowConsumerTest
         Timing.assertEventuallyTrue("Buffer doesn't have enough bytes in", () ->
         {
             assertThat(sessionInfo.bytesInBuffer(), greaterThanOrEqualTo(bytesInBuffer));
-            framerIdleStrategy.step();
+            testSystem.poll();
         });
     }
 
@@ -202,7 +197,7 @@ public class SlowConsumerTest
 
     private SessionInfo getSessionInfo()
     {
-        final List<LibraryInfo> libraries = libraries(engine);
+        final List<LibraryInfo> libraries = libraries(engine, testSystem);
         assertThat(libraries, hasSize(2));
         final LibraryInfo libraryInfo = libraries.get(0);
         final List<SessionInfo> sessions = libraryInfo.sessions();
@@ -260,14 +255,12 @@ public class SlowConsumerTest
         mediaDriver = launchMediaDriver(8 * 1024 * 1024);
         delete(ACCEPTOR_LOGS);
         final EngineConfiguration config = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID)
-            // Use default scheduler for now to avoid causing timing problems
-            .scheduler(new DefaultEngineScheduler())
-            .framerIdleStrategy(framerIdleStrategy);
+            .scheduler(scheduler);
         config.senderMaxBytesInBuffer(senderMaxBytesInBuffer);
         engine = FixEngine.launch(config);
+        testSystem = new TestSystem(scheduler);
         final LibraryConfiguration libraryConfiguration = acceptingLibraryConfig(handler);
         libraryConfiguration.outboundMaxClaimAttempts(1);
-        library = connect(libraryConfiguration);
-        testSystem = new TestSystem(library);
+        library = testSystem.connect(libraryConfiguration);
     }
 }

@@ -15,7 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
+import uk.co.real_logic.fix_gateway.engine.LockStepFramerEngineScheduler;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
+import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,20 +25,34 @@ import java.util.List;
 
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.FixMatchers.isConnected;
+import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
+import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.LIBRARY_LIMIT;
 
 public class TestSystem
 {
     private final List<FixLibrary> libraries;
+    private final LockStepFramerEngineScheduler scheduler;
 
-    public TestSystem(final FixLibrary... libraries)
+    public TestSystem(final LockStepFramerEngineScheduler scheduler, final FixLibrary... libraries)
     {
+        this.scheduler = scheduler;
         this.libraries = new ArrayList<>();
         Collections.addAll(this.libraries, libraries);
     }
 
+    public TestSystem(final FixLibrary... libraries)
+    {
+        this(null, libraries);
+    }
+
     public void poll()
     {
+        if (scheduler != null)
+        {
+            scheduler.doFramerWork();
+            scheduler.doFramerWork();
+        }
         libraries.forEach((library) -> library.poll(LIBRARY_LIMIT));
     }
 
@@ -54,6 +70,24 @@ public class TestSystem
     public FixLibrary add(final FixLibrary library)
     {
         libraries.add(library);
+        return library;
+    }
+
+    public FixLibrary connect(final LibraryConfiguration configuration)
+    {
+        final FixLibrary library = FixLibrary.connect(configuration);
+        add(library);
+        assertEventuallyTrue(
+            () -> "Unable to connect to engine",
+            () ->
+            {
+                poll();
+
+                return library.isConnected();
+            },
+            DEFAULT_TIMEOUT_IN_MS,
+            () -> close(library));
+
         return library;
     }
 }

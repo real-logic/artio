@@ -199,6 +199,15 @@ public final class SystemTestUtil
         return reply.resultIfPresent();
     }
 
+    public static SessionReplyStatus releaseToGateway(
+        final FixLibrary library, final Session session, final TestSystem testSystem)
+    {
+        final Reply<SessionReplyStatus> reply = library.releaseToGateway(session, DEFAULT_REPLY_TIMEOUT_IN_MS);
+        awaitLibraryReply(testSystem, reply);
+
+        return reply.resultIfPresent();
+    }
+
     public static FixEngine launchInitiatingEngine(final int libraryAeronPort)
     {
         delete(CLIENT_LOGS);
@@ -333,6 +342,20 @@ public final class SystemTestUtil
         return reply.resultIfPresent();
     }
 
+    public static Session acquireSession(
+        final FakeHandler sessionHandler, final FixLibrary library, final long sessionId, final TestSystem testSystem)
+    {
+        final Reply<SessionReplyStatus> reply = library.requestSession(
+            sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, DEFAULT_REPLY_TIMEOUT_IN_MS);
+        awaitLibraryReply(testSystem, reply);
+        assertEquals(COMPLETED, reply.state());
+
+        assertEquals(SessionReplyStatus.OK, reply.resultIfPresent());
+        final Session session = sessionHandler.lastSession();
+        sessionHandler.resetSession();
+        return session;
+    }
+
     static void sessionLogsOn(
         final TestSystem testSystem,
         final Session session,
@@ -398,6 +421,23 @@ public final class SystemTestUtil
         assertEventuallyTrue(
             "No reply from: " + reply,
             () -> !reply.isExecuting());
+
+        assertEquals(COMPLETED, reply.state());
+
+        return reply.resultIfPresent();
+    }
+
+    public static List<LibraryInfo> libraries(final FixEngine engine, final TestSystem testSystem)
+    {
+        final Reply<List<LibraryInfo>> reply = engine.libraries();
+        assertEventuallyTrue(
+            "No reply from: " + reply,
+            () ->
+            {
+                testSystem.poll();
+
+                return !reply.isExecuting();
+            });
 
         assertEquals(COMPLETED, reply.state());
 
