@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
+import uk.co.real_logic.fix_gateway.library.SharedLibraryScheduler;
 import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.io.File;
@@ -219,8 +220,12 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         acceptingEngine = FixEngine.launch(config);
         initiatingEngine = launchInitiatingEngineWithSameLogs(libraryAeronPort);
 
-        acceptingLibrary = newAcceptingLibrary(acceptingHandler);
-        initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
+        final SharedLibraryScheduler libraryScheduler = new SharedLibraryScheduler(2);
+
+        acceptingLibrary = connect(
+            acceptingLibraryConfig(acceptingHandler).scheduler(libraryScheduler));
+        initiatingLibrary = connect(
+            initiatingLibraryConfig(libraryAeronPort, initiatingHandler).scheduler(libraryScheduler));
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         beforeConnect.run();

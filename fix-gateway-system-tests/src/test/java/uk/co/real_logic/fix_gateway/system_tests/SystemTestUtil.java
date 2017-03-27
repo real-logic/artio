@@ -351,13 +351,17 @@ public final class SystemTestUtil
 
     public static FixLibrary newInitiatingLibrary(final int libraryAeronPort, final FakeHandler sessionHandler)
     {
-        final LibraryConfiguration configuration = new LibraryConfiguration()
-            .sessionAcquireHandler(sessionHandler)
-            .sentPositionHandler(sessionHandler)
-            .sessionExistsHandler(sessionHandler)
-            .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort));
+        return connect(initiatingLibraryConfig(libraryAeronPort, sessionHandler));
+    }
 
-        return connect(configuration);
+    public static LibraryConfiguration initiatingLibraryConfig(
+        final int libraryAeronPort, final FakeHandler sessionHandler)
+    {
+        return new LibraryConfiguration()
+                .sessionAcquireHandler(sessionHandler)
+                .sentPositionHandler(sessionHandler)
+                .sessionExistsHandler(sessionHandler)
+                .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort));
     }
 
     public static FixLibrary connect(final LibraryConfiguration configuration)

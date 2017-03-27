@@ -194,7 +194,7 @@ public class CommonConfiguration
     public static final long DEFAULT_HISTOGRAM_POLL_PERIOD_IN_MS = MINUTES.toMillis(1);
 
     private boolean printErrorMessages = true;
-    private IdleStrategy errorPrinterIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
+    private IdleStrategy monitoringThreadIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
     private long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
     private SessionIdStrategy sessionIdStrategy = SessionIdStrategy.senderAndTarget();
     private AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.none();
@@ -370,9 +370,9 @@ public class CommonConfiguration
      * @param errorPrinterIdleStrategy the idle strategy for the Error Printer thread.
      * @return this
      */
-    public CommonConfiguration errorPrinterIdleStrategy(final IdleStrategy errorPrinterIdleStrategy)
+    public CommonConfiguration monitoringThreadIdleStrategy(final IdleStrategy errorPrinterIdleStrategy)
     {
-        this.errorPrinterIdleStrategy = errorPrinterIdleStrategy;
+        this.monitoringThreadIdleStrategy = errorPrinterIdleStrategy;
         return this;
     }
 
@@ -470,9 +470,9 @@ public class CommonConfiguration
         return printErrorMessages;
     }
 
-    public IdleStrategy errorPrinterIdleStrategy()
+    public IdleStrategy monitoringThreadIdleStrategy()
     {
-        return errorPrinterIdleStrategy;
+        return monitoringThreadIdleStrategy;
     }
 
     public SessionIdStrategy sessionIdStrategy()
