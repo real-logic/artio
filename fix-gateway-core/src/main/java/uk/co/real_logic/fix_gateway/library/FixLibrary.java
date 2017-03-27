@@ -57,14 +57,21 @@ public class FixLibrary extends GatewayProcess
         scheduler = configuration.scheduler();
         configuration.conclude();
 
-        init(configuration);
-        final LibraryTimers timers = new LibraryTimers();
-        initMonitoringAgent(timers.all(), configuration);
+        try
+        {
+            init(configuration);
+            final LibraryTimers timers = new LibraryTimers();
+            initMonitoringAgent(timers.all(), configuration);
 
-        final LibraryTransport transport = new LibraryTransport(
-            configuration, fixCounters, aeron);
-        poller = new LibraryPoller(
-            configuration, timers, fixCounters, transport, this, new SystemEpochClock());
+            final LibraryTransport transport = new LibraryTransport(configuration, fixCounters, aeron);
+            poller = new LibraryPoller(
+                configuration, timers, fixCounters, transport, this, new SystemEpochClock());
+        }
+        catch (final Exception e)
+        {
+            deleteFiles();
+            throw e;
+        }
     }
 
     private FixLibrary connect()
