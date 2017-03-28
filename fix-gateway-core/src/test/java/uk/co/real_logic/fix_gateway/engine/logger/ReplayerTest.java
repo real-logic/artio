@@ -23,8 +23,6 @@ import org.junit.Test;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
-import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -47,8 +45,6 @@ public class ReplayerTest extends AbstractLogTest
         ("8=FIX.4.4\0019=99\00135=1\00134=1\00149=LEH_LZJ02\00152=19700101-00:00:00.000\00156=CCG\001" +
             "112=a12345678910123456789101234567891012345\00110=005\001").getBytes(US_ASCII);
 
-    private static final int SIZE_OF_FRAME =
-        FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength() + MessageHeaderDecoder.ENCODED_LENGTH;
     private static final int MAX_CLAIM_ATTEMPTS = 100;
 
     private ReplayQuery replayQuery = mock(ReplayQuery.class);
