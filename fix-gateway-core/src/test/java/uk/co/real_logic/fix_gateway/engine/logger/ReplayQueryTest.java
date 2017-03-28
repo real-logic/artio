@@ -76,7 +76,7 @@ public class ReplayQueryTest extends AbstractLogTest
         when(mockReader.session(anyInt())).thenReturn(mockSessionReader);
         readPositions(100L, (long)UNKNOWN_SESSION);
 
-        bufferContainsMessage(true);
+        bufferContainsExampleMessage(true);
         indexRecord();
     }
 
@@ -132,7 +132,7 @@ public class ReplayQueryTest extends AbstractLogTest
         {
             newReplayIndex();
 
-            bufferContainsMessage(false, SESSION_ID, SEQUENCE_NUMBER + 1, SEQUENCE_INDEX);
+            bufferContainsExampleMessage(false, SESSION_ID, SEQUENCE_NUMBER + 1, SEQUENCE_INDEX);
             indexSecondRecord();
 
             final int msgCount = query();
@@ -205,7 +205,7 @@ public class ReplayQueryTest extends AbstractLogTest
         final int nextSequenceIndex = SEQUENCE_INDEX + 1;
         final int endSequenceNumber = 1;
 
-        bufferContainsMessage(true, SESSION_ID, endSequenceNumber, nextSequenceIndex);
+        bufferContainsExampleMessage(true, SESSION_ID, endSequenceNumber, nextSequenceIndex);
         indexSecondRecord();
 
         final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, endSequenceNumber, nextSequenceIndex);

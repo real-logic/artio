@@ -21,6 +21,7 @@ import org.junit.After;
 import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.Reply.State;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
+import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
@@ -34,11 +35,12 @@ import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
-import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQUEST_AS_STR;
+import static uk.co.real_logic.fix_gateway.decoder.Constants.*;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
+import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.PASSWORD;
+import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.USERNAME;
 
 public class AbstractGatewayToGatewaySystemTest
 {
@@ -169,11 +171,11 @@ public class AbstractGatewayToGatewaySystemTest
                 testSystem.poll();
 
                 final FixMessage message = acceptingOtfAcceptor.lastMessage();
-                final String messageType = message.getMsgType();
-                assertEquals(TEST_REQUEST_AS_STR, messageType);
+                assertEquals(SEQUENCE_RESET_AS_STR, message.getMsgType());
+                assertEquals("Y", message.get(GAP_FILL_FLAG));
                 assertEquals("Y", message.getPossDup());
                 assertEquals(String.valueOf(sequenceNumber), message.get(MSG_SEQ_NUM));
-                assertEquals(INITIATOR_ID, acceptingOtfAcceptor.lastSenderCompId());
+                assertEquals(INITIATOR_ID, message.get(Constants.SENDER_COMP_ID));
                 assertNull("Detected Error", acceptingOtfAcceptor.lastError());
                 assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());
             });

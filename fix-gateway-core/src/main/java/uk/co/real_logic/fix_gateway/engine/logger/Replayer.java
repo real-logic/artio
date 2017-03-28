@@ -21,22 +21,24 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
+import org.agrona.MutableDirectBuffer;
+import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.Pressure;
-import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
+import uk.co.real_logic.fix_gateway.builder.Encoder;
+import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.engine.PossDupEnabler;
-import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
-import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
-import uk.co.real_logic.fix_gateway.messages.MessageStatus;
+import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.ProtocolHandler;
 import uk.co.real_logic.fix_gateway.protocol.ProtocolSubscription;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 
 /**
@@ -54,9 +56,29 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     public static final int POLL_LIMIT = 10;
     public static final int MOST_RECENT_MESSAGE = 0;
 
-    private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
+    private static final IntHashSet ADMIN_MESSAGE_TYPES = new IntHashSet();
+    private static final int NONE = -1;
 
-    // Used in onMessage
+    static
+    {
+        ADMIN_MESSAGE_TYPES.add(LogonDecoder.MESSAGE_TYPE);
+        ADMIN_MESSAGE_TYPES.add(LogoutDecoder.MESSAGE_TYPE);
+        ADMIN_MESSAGE_TYPES.add(ResendRequestDecoder.MESSAGE_TYPE);
+        ADMIN_MESSAGE_TYPES.add(HeartbeatDecoder.MESSAGE_TYPE);
+        ADMIN_MESSAGE_TYPES.add(TestRequestDecoder.MESSAGE_TYPE);
+        ADMIN_MESSAGE_TYPES.add(SequenceResetDecoder.MESSAGE_TYPE);
+    }
+
+    private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
+    private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
+    private final FixMessageDecoder fixMessage = new FixMessageDecoder();
+    private final HeaderDecoder fixHeader = new HeaderDecoder();
+    private final GapFillEncoder gapFillEncoder = new GapFillEncoder();
+
+    private final MessageHeaderEncoder messageHeaderEncoder = new MessageHeaderEncoder();
+    private final FixMessageEncoder fixMessageEncoder = new FixMessageEncoder();
+
+    // Used in onMessage and onFragment
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
     private final BufferClaim bufferClaim;
@@ -73,6 +95,9 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
     private int currentMessageOffset;
     private int currentMessageLength;
+
+    private int firstGapFillMessage = NONE;
+    private int lastGapFillMessage = NONE;
 
     public Replayer(
         final ReplayQuery replayQuery,
@@ -159,10 +184,68 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     public Action onFragment(
         final DirectBuffer srcBuffer, final int srcOffset, final int srcLength, final Header header)
     {
-        final int messageOffset = srcOffset + MESSAGE_FRAME_BLOCK_LENGTH;
+        messageHeader.wrap(srcBuffer, srcOffset);
+        final int actingBlockLength = messageHeader.blockLength();
+
+        final int offset = srcOffset + MessageHeaderDecoder.ENCODED_LENGTH;
+
+        fixMessage.wrap(
+            srcBuffer,
+            offset,
+            actingBlockLength,
+            messageHeader.version());
+
+        final int messageOffset = srcOffset + MESSAGE_FRAME_BLOCK_LENGTH; // TODO
         final int messageLength = srcLength - MESSAGE_FRAME_BLOCK_LENGTH;
 
-        return possDupEnabler.enablePossDupFlag(srcBuffer, messageOffset, messageLength, srcOffset, srcLength);
+        if (ADMIN_MESSAGE_TYPES.contains(fixMessage.messageType()))
+        {
+            asciiBuffer.wrap(srcBuffer);
+            fixHeader.decode(asciiBuffer, messageOffset, messageLength);
+            final int msgSeqNum = fixHeader.msgSeqNum();
+
+            final long result = gapFillEncoder.encode(resendRequest.header(), msgSeqNum, msgSeqNum);
+            final int gapFillLength = Encoder.length(result);
+            final int gapFillOffset = Encoder.offset(result);
+
+            if (claimBuffer(MESSAGE_FRAME_BLOCK_LENGTH + gapFillLength))
+            {
+                int destOffset = bufferClaim.offset();
+                final MutableDirectBuffer destBuffer = bufferClaim.buffer();
+
+                messageHeaderEncoder
+                    .wrap(destBuffer, destOffset)
+                    .blockLength(fixMessage.sbeBlockLength())
+                    .templateId(fixMessage.sbeTemplateId())
+                    .schemaId(fixMessage.sbeSchemaId())
+                    .version(fixMessage.sbeSchemaVersion());
+
+                destOffset += MessageHeaderEncoder.ENCODED_LENGTH;
+
+                fixMessageEncoder
+                    .wrap(destBuffer, destOffset)
+                    .libraryId(ENGINE_LIBRARY_ID)
+                    .messageType(SequenceResetDecoder.MESSAGE_TYPE)
+                    .session(fixMessage.session())
+                    .sequenceIndex(fixMessage.sequenceIndex())
+                    .connection(fixMessage.connection())
+                    .timestamp(0)
+                    .status(MessageStatus.OK)
+                    .putBody(gapFillEncoder.buffer(), gapFillOffset, gapFillLength);
+
+                bufferClaim.commit();
+
+                return CONTINUE;
+            }
+            else
+            {
+                return ABORT;
+            }
+        }
+        else
+        {
+            return possDupEnabler.enablePossDupFlag(srcBuffer, messageOffset, messageLength, srcOffset, srcLength);
+        }
     }
 
     public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)

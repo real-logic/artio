@@ -60,7 +60,7 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldRecordIndexEntryForFixMessage()
     {
-        bufferContainsMessage(true);
+        bufferContainsExampleMessage(true);
 
         indexRecord();
 
@@ -78,7 +78,7 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldUpdatePositionForIndexedRecord()
     {
-        bufferContainsMessage(true);
+        bufferContainsExampleMessage(true);
 
         indexRecord();
 
@@ -90,7 +90,7 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldOnlyMapSessionFileOnce()
     {
-        bufferContainsMessage(true);
+        bufferContainsExampleMessage(true);
 
         indexRecord();
         indexRecord();
@@ -101,10 +101,10 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldRecordIndexesForMultipleSessions()
     {
-        bufferContainsMessage(true, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX);
+        bufferContainsExampleMessage(true, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX);
         indexRecord();
 
-        bufferContainsMessage(true, SESSION_ID_2, SEQUENCE_NUMBER, SEQUENCE_INDEX);
+        bufferContainsExampleMessage(true, SESSION_ID_2, SEQUENCE_NUMBER, SEQUENCE_INDEX);
         indexRecord();
 
         verifyMappedFile(SESSION_ID);

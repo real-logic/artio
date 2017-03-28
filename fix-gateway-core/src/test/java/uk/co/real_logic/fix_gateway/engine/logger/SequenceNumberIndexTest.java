@@ -97,7 +97,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         indexFixMessage();
 
-        bufferContainsMessage(true, SESSION_ID, updatedSequenceNumber, SEQUENCE_INDEX);
+        bufferContainsExampleMessage(true, SESSION_ID, updatedSequenceNumber, SEQUENCE_INDEX);
 
         indexRecord(alignedEndPosition() + fragmentLength());
 
@@ -204,7 +204,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         final int requiredMessagesToRoll = 3;
         for (int i = 0; i <= requiredMessagesToRoll; i++)
         {
-            bufferContainsMessage(true, SESSION_ID, SEQUENCE_NUMBER + i, SEQUENCE_INDEX);
+            bufferContainsExampleMessage(true, SESSION_ID, SEQUENCE_NUMBER + i, SEQUENCE_INDEX);
             indexRecord(alignedEndPosition() + (i * fragmentLength()));
         }
 
@@ -225,7 +225,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         final int recordsOverlappingABlock = SECTOR_SIZE / RECORD_SIZE + 1;
         for (int i = initialSequenceNumber; i <= recordsOverlappingABlock; i++)
         {
-            bufferContainsMessage(true, i, i + sequenceNumberDiff, SEQUENCE_INDEX);
+            bufferContainsExampleMessage(true, i, i + sequenceNumberDiff, SEQUENCE_INDEX);
             indexRecord(alignedEndPosition() + (i * fragmentLength()));
         }
 
@@ -285,7 +285,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
     private void indexFixMessage()
     {
-        bufferContainsMessage(true);
+        bufferContainsExampleMessage(true);
         indexRecord(alignedEndPosition());
     }
 

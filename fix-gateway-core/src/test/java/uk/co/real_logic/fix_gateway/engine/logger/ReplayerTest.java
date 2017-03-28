@@ -21,8 +21,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
-import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
-import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
+import uk.co.real_logic.fix_gateway.decoder.*;
+import uk.co.real_logic.fix_gateway.fields.RejectReason;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -34,6 +34,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
 import static uk.co.real_logic.fix_gateway.engine.PossDupEnabler.POSS_DUP_FIELD;
+import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
@@ -92,7 +93,7 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldPublishMessagesWithSetPossDupFlag()
     {
-        bufferContainsMessage(true);
+        bufferContainsExampleMessage(true);
 
         final int srcLength = fragmentLength();
         setupMessage(srcLength);
@@ -103,6 +104,26 @@ public class ReplayerTest extends AbstractLogTest
         assertHasSetPossDupFlag();
         verifyCommit();
     }
+
+    @Test
+    public void shouldGapFillAdminMessages()
+    {
+        final long result = bufferHasResendRequest(END_SEQ_NO);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
+
+        bufferContainsTestRequest(SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX);
+        final int offset = setupCapturingClaim();
+        replayer.onFragment(buffer, START, fragmentLength(), null);
+
+        verify(publication).tryClaim(anyInt(), eq(claim));
+
+        assertSendsGapFillMessage(resultBuffer.capacity() - offset);
+        verifyCommit();
+    }
+
+    // TODO: two admin messages
+    // TODO: two admin messages followed by an application message
+    // TODO: gapfill missing messages
 
     @Test
     public void shouldReplayMessageWithExpandingBodyLength()
@@ -124,16 +145,10 @@ public class ReplayerTest extends AbstractLogTest
         assertEndsInValidChecksum(offset + 1);
     }
 
-    private void hasNotOverwrittenSeperatorChar()
-    {
-        final String lengthSection = resultAsciiBuffer.getAscii(offset + 11, 11);
-        assertEquals("9=104\00135=1\001", lengthSection);
-    }
-
     @Test
     public void shouldPublishMessagesWithoutSetPossDupFlag()
     {
-        bufferContainsMessage(false);
+        bufferContainsExampleMessage(false);
         final int srcLength = fragmentLength();
         final int lengthAfterPossDupFlag = srcLength + POSS_DUP_FIELD.length;
         setupMessage(lengthAfterPossDupFlag);
@@ -152,13 +167,6 @@ public class ReplayerTest extends AbstractLogTest
             sequenceEqualsAscii("8=FIX.4.4\0019=68\001", afterOffset));
 
         assertEndsInValidChecksum(afterOffset);
-    }
-
-    private void assertEndsInValidChecksum(final int afterOffset)
-    {
-        final String message = resultAsciiBuffer.getAscii(afterOffset, resultAsciiBuffer.capacity() - afterOffset);
-        final Matcher matcher = Pattern.compile("10=\\d+\001").matcher(message);
-        assertTrue(message, matcher.find());
     }
 
     @Test
@@ -183,6 +191,39 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldHaveNoMoreErrors()
     {
         verifyNoMoreInteractions(errorHandler);
+    }
+
+    private void assertEndsInValidChecksum(final int afterOffset)
+    {
+        final String message = resultAsciiBuffer.getAscii(afterOffset, resultAsciiBuffer.capacity() - afterOffset);
+        final Matcher matcher = Pattern.compile("10=\\d+\001").matcher(message);
+        assertTrue(message, matcher.find());
+    }
+
+    private void hasNotOverwrittenSeperatorChar()
+    {
+        final String lengthSection = resultAsciiBuffer.getAscii(offset + 11, 11);
+        assertEquals("9=104\00135=1\001", lengthSection);
+    }
+
+    private void assertSendsGapFillMessage(final int claimedLength)
+    {
+        final int offset = offset() + MESSAGE_FRAME_BLOCK_LENGTH;
+        final int length = claimedLength - MESSAGE_FRAME_BLOCK_LENGTH;
+        final String message = resultAsciiBuffer.getAscii(offset, length);
+        final SequenceResetDecoder sequenceReset = new SequenceResetDecoder();
+        sequenceReset.decode(resultAsciiBuffer, offset, length);
+        final HeaderDecoder header = sequenceReset.header();
+
+        if (!sequenceReset.validate())
+        {
+            fail(message + "\n" + sequenceReset.invalidTagId() + " " +
+                RejectReason.decode(sequenceReset.rejectReason()));
+        }
+
+        assertTrue(message, sequenceReset.gapFillFlag());
+        assertEquals(message, SEQUENCE_NUMBER, header.msgSeqNum());
+        assertTrue(message, header.possDupFlag());
     }
 
     private void setupMessage(final int length)
@@ -215,6 +256,6 @@ public class ReplayerTest extends AbstractLogTest
     {
         logEntryLength = message.length;
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(message);
-        bufferContainsMessage(SESSION_ID, SEQUENCE_NUMBER, asciiBuffer);
+        bufferContainsMessage(SESSION_ID, SEQUENCE_NUMBER, asciiBuffer, ExampleMessageDecoder.MESSAGE_TYPE);
     }
 }

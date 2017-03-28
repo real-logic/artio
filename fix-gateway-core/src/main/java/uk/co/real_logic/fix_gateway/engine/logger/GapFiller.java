@@ -20,12 +20,9 @@ import org.agrona.DirectBuffer;
 import org.agrona.concurrent.Agent;
 import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
-import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
-import uk.co.real_logic.fix_gateway.builder.SequenceResetEncoder;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.decoder.ResendRequestDecoder;
 import uk.co.real_logic.fix_gateway.decoder.SequenceResetDecoder;
-import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.MessageStatus;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
@@ -38,14 +35,11 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 public class GapFiller implements ProtocolHandler, Agent
 {
     private static final int FRAGMENT_LIMIT = 10;
-    private static final int ENCODE_BUFFER_SIZE = 8 * 1024;
 
     private final AsciiBuffer decoderBuffer = new MutableAsciiBuffer();
     private final ProtocolSubscription protocolSubscription = ProtocolSubscription.of(this);
 
-    private final SequenceResetEncoder sequenceResetEncoder = new SequenceResetEncoder();
-    private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
-    private final MutableAsciiBuffer encodeBuffer = new MutableAsciiBuffer(new byte[ENCODE_BUFFER_SIZE]);
+    private final GapFillEncoder encoder = new GapFillEncoder();
 
     private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
     private final ClusterableSubscription subscription;
@@ -60,7 +54,6 @@ public class GapFiller implements ProtocolHandler, Agent
         this.subscription = subscription;
         this.publication = publication;
         this.agentNamePrefix = agentNamePrefix;
-        sequenceResetEncoder.gapFillFlag(true);
     }
 
     public int doWork() throws Exception
@@ -87,34 +80,14 @@ public class GapFiller implements ProtocolHandler, Agent
             resendRequest.decode(decoderBuffer, offset, length);
 
             final HeaderDecoder reqHeader = resendRequest.header();
-            final HeaderEncoder respHeader = sequenceResetEncoder.header();
-            respHeader.targetCompID(reqHeader.senderCompID(), reqHeader.senderCompIDLength());
-            respHeader.senderCompID(reqHeader.targetCompID(), reqHeader.targetCompIDLength());
-            if (reqHeader.hasSenderLocationID())
-            {
-                respHeader.targetLocationID(reqHeader.senderLocationID(), reqHeader.senderLocationIDLength());
-            }
-            if (reqHeader.hasSenderSubID())
-            {
-                respHeader.targetSubID(reqHeader.senderSubID(), reqHeader.senderSubIDLength());
-            }
-            if (reqHeader.hasTargetLocationID())
-            {
-                respHeader.senderLocationID(reqHeader.targetLocationID(), reqHeader.targetLocationIDLength());
-            }
-            if (reqHeader.hasTargetSubID())
-            {
-                respHeader.senderSubID(reqHeader.targetSubID(), reqHeader.targetSubIDLength());
-            }
-            respHeader.sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(System.currentTimeMillis()));
-            respHeader.msgSeqNum(resendRequest.beginSeqNo());
-            sequenceResetEncoder.newSeqNo(resendRequest.endSeqNo());
+            final int beginSeqNo = resendRequest.beginSeqNo();
+            final int endSeqNo = resendRequest.endSeqNo();
 
-            final long result = sequenceResetEncoder.encode(encodeBuffer, 0);
+            final long result = encoder.encode(reqHeader, beginSeqNo, endSeqNo);
             final int encodedLength = Encoder.length(result);
             final int encodedOffset = Encoder.offset(result);
             final long sentPosition = publication.saveMessage(
-                encodeBuffer, encodedOffset, encodedLength,
+                encoder.buffer(), encodedOffset, encodedLength,
                 libraryId, SequenceResetDecoder.MESSAGE_TYPE, sessionId, sequenceIndex, connectionId,
                 MessageStatus.OK);
 

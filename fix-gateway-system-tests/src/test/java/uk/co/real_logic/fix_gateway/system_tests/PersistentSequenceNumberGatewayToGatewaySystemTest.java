@@ -34,6 +34,7 @@ import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.Timing.*;
+import static uk.co.real_logic.fix_gateway.decoder.Constants.SEQUENCE_RESET_AS_STR;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.fix_gateway.system_tests.FixMessage.hasMessageSequenceNumber;
@@ -129,7 +130,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             () ->
             {
                 testSystem.poll();
-                return initiatingOtfAcceptor.hasReceivedMessage("A").findFirst();
+                return initiatingOtfAcceptor.hasReceivedMessage(SEQUENCE_RESET_AS_STR).findFirst();
             },
             2_000);
 
