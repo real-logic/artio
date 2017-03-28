@@ -26,6 +26,9 @@
         <message name="TestRequest" msgtype="1" msgcat="admin">
             <field name="TestReqID" required="Y"/>
         </message>
+        <message name="ExampleMessage" msgtype="B" msgcat="app">
+            <field name="TestReqID" required="Y"/>
+        </message>
         <message name="ResendRequest" msgtype="2" msgcat="admin">
             <field name="BeginSeqNo" required="Y"/>
             <field name="EndSeqNo" required="Y"/>
