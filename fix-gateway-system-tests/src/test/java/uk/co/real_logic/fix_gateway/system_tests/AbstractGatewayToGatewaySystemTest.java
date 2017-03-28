@@ -227,7 +227,7 @@ public class AbstractGatewayToGatewaySystemTest
     protected void launchAcceptingEngine()
     {
         acceptingEngine = FixEngine.launch(
-            acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID));
+            acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID));
     }
 
     protected void acceptingEngineHasSessionAndLibraryIsNotified()

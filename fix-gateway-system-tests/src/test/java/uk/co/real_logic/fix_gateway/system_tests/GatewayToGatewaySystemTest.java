@@ -539,7 +539,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
-        final char[] testReqIDChars = new char[SESSION_BUFFER_SIZE_IN_BYTES - 100];
+        final char[] testReqIDChars = new char[MESSAGE_BUFFER_SIZE_IN_BYTES - 100];
         Arrays.fill(testReqIDChars, 'A');
         final String testReqID = new String(testReqIDChars);
 

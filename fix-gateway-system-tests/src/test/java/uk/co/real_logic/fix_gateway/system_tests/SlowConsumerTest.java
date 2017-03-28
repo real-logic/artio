@@ -254,7 +254,7 @@ public class SlowConsumerTest
     {
         mediaDriver = launchMediaDriver(8 * 1024 * 1024);
         delete(ACCEPTOR_LOGS);
-        final EngineConfiguration config = acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID)
+        final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
             .scheduler(scheduler);
         config.senderMaxBytesInBuffer(senderMaxBytesInBuffer);
         engine = FixEngine.launch(config);

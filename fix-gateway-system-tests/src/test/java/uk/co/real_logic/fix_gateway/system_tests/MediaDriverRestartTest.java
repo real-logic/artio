@@ -69,13 +69,13 @@ public class MediaDriverRestartTest extends AbstractGatewayToGatewaySystemTest
         CloseChecker.onOpen(aeronDirectoryName, mediaDriver);
 
         final EngineConfiguration acceptingConfig = acceptingConfig(
-            port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
+            port, ACCEPTOR_ID, INITIATOR_ID);
         acceptingConfig.aeronContext().driverTimeoutMs(DRIVER_TIMEOUT_MS);
 
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
         delete(CLIENT_LOGS);
-        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, "engineCounters");
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
         initiatingConfig.aeronContext().driverTimeoutMs(DRIVER_TIMEOUT_MS);
         initiatingEngine = FixEngine.launch(initiatingConfig);
 

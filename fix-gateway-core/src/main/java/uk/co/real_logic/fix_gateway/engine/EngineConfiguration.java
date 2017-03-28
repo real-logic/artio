@@ -97,7 +97,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT = 100;
     public static final int DEFAULT_REPLAY_FRAGMENT_LIMIT = 5;
     public static final int DEFAULT_INBOUND_BYTES_RECEIVED_LIMIT = 8 * 1024;
-    public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 8 * 1024;
+    public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 16 * 1024;
     public static final int DEFAULT_RECEIVER_SOCKET_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_SENDER_SOCKET_BUFFER_SIZE = 1024 * 1024;
     public static final int DEFAULT_SEQUENCE_NUMBER_INDEX_SIZE = 8 * 1024 * 1024;
@@ -177,11 +177,13 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * Sets the receiver buffer size.
+     * Sets the receiver buffer size. This determines the maximum size of message that can be
+     * received over the wire.
      *
      * @param receiverBufferSize the receiver buffer size.
      * @return this
      *
+     * @see CommonConfiguration#sessionBufferSize(int)
      * @see EngineConfiguration#RECEIVER_BUFFER_SIZE_PROP
      */
     public EngineConfiguration receiverBufferSize(final int receiverBufferSize)
@@ -681,6 +683,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         if (libraryAeronChannel() == null)
         {
             throw new IllegalArgumentException("Missing required configuration: library aeron channel");
+        }
+
+        if (receiverBufferSize() < sessionBufferSize())
+        {
+            throw new IllegalArgumentException(String.format(
+                "You cannot set the receiverBufferSize(%d) < sessionBufferSize(%d)." +
+                "this would allow you to encode messages that are larger than you can read.",
+                receiverBufferSize(),
+                sessionBufferSize()));
         }
 
         if (sentSequenceNumberIndex() == null)

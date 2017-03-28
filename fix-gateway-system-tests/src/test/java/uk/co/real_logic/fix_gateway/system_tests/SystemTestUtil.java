@@ -71,7 +71,7 @@ public final class SystemTestUtil
     public static final String USERNAME = "bob";
     public static final String PASSWORD = "Uv1aegoh";
 
-    public static final int SESSION_BUFFER_SIZE_IN_BYTES = 15000;
+    public static final int MESSAGE_BUFFER_SIZE_IN_BYTES = 15000;
 
     static
     {
@@ -216,15 +216,15 @@ public final class SystemTestUtil
 
     public static FixEngine launchInitiatingEngineWithSameLogs(final int libraryAeronPort)
     {
-        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort, "engineCounters");
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
         return FixEngine.launch(initiatingConfig);
     }
 
-    public static EngineConfiguration initiatingConfig(final int libraryAeronPort, final String countersSuffix)
+    public static EngineConfiguration initiatingConfig(final int libraryAeronPort)
     {
         final EngineConfiguration configuration = new EngineConfiguration()
             .libraryAeronChannel("aeron:udp?endpoint=localhost:" + libraryAeronPort)
-            .monitoringFile(optimalTmpDirName() + File.separator + "fix-client" + File.separator + countersSuffix)
+            .monitoringFile(optimalTmpDirName() + File.separator + "fix-client" + File.separator + "engineCounters")
             .logFileDir(CLIENT_LOGS)
             .scheduler(new LowResourceEngineScheduler());
         configuration.agentNamePrefix("init-");
@@ -242,16 +242,14 @@ public final class SystemTestUtil
 
     public static EngineConfiguration acceptingConfig(
         final int port,
-        final String countersSuffix,
         final String acceptorId,
         final String initiatorId)
     {
-        return acceptingConfig(port, countersSuffix, acceptorId, initiatorId, ACCEPTOR_LOGS);
+        return acceptingConfig(port, acceptorId, initiatorId, ACCEPTOR_LOGS);
     }
 
     public static EngineConfiguration acceptingConfig(
         final int port,
-        final String countersSuffix,
         final String acceptorId,
         final String initiatorId,
         final String acceptorLogs)
@@ -262,7 +260,7 @@ public final class SystemTestUtil
         return configuration
             .bindTo("localhost", port)
             .libraryAeronChannel("aeron:ipc")
-            .monitoringFile(acceptorMonitoringFile(countersSuffix))
+            .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(acceptorLogs)
             .scheduler(new LowResourceEngineScheduler());
     }
@@ -297,8 +295,7 @@ public final class SystemTestUtil
 
         configuration
             .authenticationStrategy(authenticationStrategy)
-            .messageValidationStrategy(validationStrategy)
-            .sessionBufferSize(SESSION_BUFFER_SIZE_IN_BYTES);
+            .messageValidationStrategy(validationStrategy);
     }
 
     public static Session acquireSession(final FakeHandler sessionHandler, final FixLibrary library)

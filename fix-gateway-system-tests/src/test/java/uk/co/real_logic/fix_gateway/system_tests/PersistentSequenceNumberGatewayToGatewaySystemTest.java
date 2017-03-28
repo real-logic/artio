@@ -215,7 +215,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         mediaDriver = launchMediaDriver();
 
         final EngineConfiguration config =
-            acceptingConfig(port, "engineCounters", ACCEPTOR_ID, INITIATOR_ID);
+            acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
         config.sessionPersistenceStrategy(logon -> REPLICATED);
         acceptingEngine = FixEngine.launch(config);
         initiatingEngine = launchInitiatingEngineWithSameLogs(libraryAeronPort);
