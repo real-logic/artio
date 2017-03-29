@@ -20,6 +20,7 @@ import org.agrona.concurrent.IdleStrategy;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.stubbing.Answer;
 import org.mockito.stubbing.OngoingStubbing;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
@@ -100,99 +101,86 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldPublishMessagesWithSetPossDupFlag()
     {
-        whenReplayQueried().then(inv ->
+        uponReplay(END_SEQ_NO, inv ->
         {
             bufferContainsExampleMessage(true);
 
             final int srcLength = fragmentLength();
             setupMessage(srcLength);
 
-            replayer.onFragment(buffer, START, srcLength, null);
+            onFragment(srcLength);
 
             assertHasResentWithPossDupFlag(srcLength, times(1));
 
             return 1;
         });
-
-        final long result = bufferHasResendRequest(END_SEQ_NO);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
     }
 
     @Test
     public void shouldGapFillAdminMessages()
     {
         final int offset = setupCapturingClaim();
-        whenReplayQueried().then(inv ->
+        uponReplay(END_SEQ_NO, inv ->
         {
-            bufferContainsTestRequest(SEQUENCE_NUMBER);
-            replayer.onFragment(buffer, START, fragmentLength(), null);
+            onTestRequest(SEQUENCE_NUMBER);
 
             return 1;
         });
 
-        final long result = bufferHasResendRequest(END_SEQ_NO);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
-
-        assertSentGapFill(END_SEQ_NO, offset, times(1));
+        assertReSentGapFill(END_SEQ_NO, offset, times(1));
     }
 
     @Test
     public void shouldGapFillOnceForTwoConsecutiveAdminMessages()
     {
-        final int endSeqNo = BEGIN_SEQ_NO + 1; // inclusive numbering
-
+        final int endSeqNo = replayTwoMessages();
         final int offset = setupCapturingClaim();
-        whenReplayQueried().then(inv ->
-        {
-            bufferContainsTestRequest(SEQUENCE_NUMBER);
-            replayer.onFragment(buffer, START, fragmentLength(), null);
 
-            bufferContainsTestRequest(SEQUENCE_NUMBER + 1);
-            replayer.onFragment(buffer, START, fragmentLength(), null);
+        uponReplay(endSeqNo, inv ->
+        {
+            onTestRequest(SEQUENCE_NUMBER);
+
+            onTestRequest(SEQUENCE_NUMBER + 1);
 
             return 2;
         });
 
-        final long result = bufferHasResendRequest(endSeqNo);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
-
-        assertSentGapFill(endSeqNo, offset, times(1));
+        assertReSentGapFill(endSeqNo, offset, times(1));
     }
 
     @Test
     public void shouldGapFillForAdminMessagesFollowedByAppMessage()
     {
-        final int endSeqNo = BEGIN_SEQ_NO + 1; // inclusive numbering
+        final int endSeqNo = replayTwoMessages();
+        final int offset = setupCapturingClaim();
 
-        whenReplayQueried().then(inv ->
+        uponReplay(endSeqNo, inv ->
         {
-            final int offset = setupCapturingClaim();
-            bufferContainsTestRequest(BEGIN_SEQ_NO);
-            replayer.onFragment(buffer, START, fragmentLength(), null);
+            onTestRequest(BEGIN_SEQ_NO);
 
-            bufferContainsExampleMessage(true, SESSION_ID, endSeqNo, SEQUENCE_INDEX);
-            final int srcLength = fragmentLength();
-            replayer.onFragment(buffer, START, srcLength, null);
+            final int srcLength = onExampleMessage(endSeqNo);
 
-            doAnswer(commitInv ->
-            {
-                assertSentGapFill(endSeqNo, offset, times(2));
-                return null;
-            }).when(claim).commit();
-
-            assertHasResentWithPossDupFlag(srcLength, times(2));
+            assertResentGapFillThenMessage(endSeqNo, offset, srcLength);
 
             return 2;
         });
+    }
 
-        final long result = bufferHasResendRequest(endSeqNo);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
+    private void assertResentGapFillThenMessage(final int endSeqNo, final int offset, final int srcLength)
+    {
+        doAnswer(commitInv ->
+        {
+            assertReSentGapFill(endSeqNo, offset, times(2));
+            return null;
+        }).when(claim).commit();
+
+        assertHasResentWithPossDupFlag(srcLength, times(2));
     }
 
     @Test
     public void shouldGapFillMissingMesages()
     {
-        final int endSeqNo = BEGIN_SEQ_NO + 1; // inclusive numbering
+        final int endSeqNo = replayTwoMessages();
 
         final int offset = setupCapturingClaim();
         whenReplayQueried().thenReturn(0);
@@ -200,36 +188,25 @@ public class ReplayerTest extends AbstractLogTest
         final long result = bufferHasResendRequest(endSeqNo);
         onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
 
-        assertSentGapFill(endSeqNo + 1, offset, times(1));
+        assertReSentGapFill(endSeqNo + 1, offset, times(1));
         verifyIllegalStateException();
     }
 
     @Test
     public void shouldGapFillMissingMesagesFollowedByApplicationMessage()
     {
-        final int endSeqNo = BEGIN_SEQ_NO + 1; // inclusive numbering
+        final int endSeqNo = replayTwoMessages();
 
-        whenReplayQueried().then(inv ->
+        uponReplay(endSeqNo, inv ->
         {
             final int offset = setupCapturingClaim();
 
-            bufferContainsExampleMessage(true, SESSION_ID, endSeqNo, SEQUENCE_INDEX);
-            final int srcLength = fragmentLength();
-            replayer.onFragment(buffer, START, srcLength, null);
+            final int srcLength = onExampleMessage(endSeqNo);
 
-            doAnswer(commitInv ->
-            {
-                assertSentGapFill(BEGIN_SEQ_NO, offset, times(2));
-                return null;
-            }).when(claim).commit();
-
-            assertHasResentWithPossDupFlag(srcLength, times(2));
+            assertResentGapFillThenMessage(BEGIN_SEQ_NO, offset, srcLength);
 
             return 1;
         });
-
-        final long result = bufferHasResendRequest(endSeqNo);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
 
         verifyIllegalStateException();
     }
@@ -241,7 +218,7 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldReplayMessageWithExpandingBodyLength()
     {
-        whenReplayQueried().then(inv ->
+        uponReplay(END_SEQ_NO, inv ->
         {
             bufferContainsMessage(MESSAGE_REQUIRING_LONGER_BODY_LENGTH);
 
@@ -250,7 +227,7 @@ public class ReplayerTest extends AbstractLogTest
             final int newLength = srcLength + 6;
             setupMessage(newLength);
 
-            replayer.onFragment(buffer, START, srcLength, null);
+            onFragment(srcLength);
 
             assertHasResentWithPossDupFlag(newLength, times(1));
             hasNotOverwrittenSeperatorChar();
@@ -259,22 +236,19 @@ public class ReplayerTest extends AbstractLogTest
 
             return 1;
         });
-
-        final long result = bufferHasResendRequest(END_SEQ_NO);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
     }
 
     @Test
     public void shouldPublishMessagesWithoutSetPossDupFlag()
     {
-        whenReplayQueried().then(inv ->
+        uponReplay(END_SEQ_NO, inv ->
         {
             bufferContainsExampleMessage(false);
             final int srcLength = fragmentLength();
             final int lengthAfterPossDupFlag = srcLength + POSS_DUP_FIELD.length;
             setupMessage(lengthAfterPossDupFlag);
 
-            replayer.onFragment(buffer, START, srcLength, null);
+            onFragment(srcLength);
 
             assertHasResentWithPossDupFlag(lengthAfterPossDupFlag, times(1));
 
@@ -289,9 +263,6 @@ public class ReplayerTest extends AbstractLogTest
 
             return 1;
         });
-
-        final long result = bufferHasResendRequest(END_SEQ_NO);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
     }
 
     @Test
@@ -318,6 +289,39 @@ public class ReplayerTest extends AbstractLogTest
         verifyNoMoreInteractions(errorHandler);
     }
 
+    private int onExampleMessage(final int endSeqNo)
+    {
+        bufferContainsExampleMessage(true, SESSION_ID, endSeqNo, SEQUENCE_INDEX);
+        final int srcLength = fragmentLength();
+        onFragment(srcLength);
+        return srcLength;
+    }
+
+    private void onTestRequest(final int sequenceNumber)
+    {
+        bufferContainsTestRequest(sequenceNumber);
+        onFragment(fragmentLength());
+    }
+
+    private int replayTwoMessages()
+    {
+        // inclusive numbering
+        return BEGIN_SEQ_NO + 1;
+    }
+
+    private void onFragment(final int length)
+    {
+        replayer.onFragment(buffer, START, length, null);
+    }
+
+    private void uponReplay(final int endSeqNo, final Answer<?> answer)
+    {
+        whenReplayQueried().then(answer);
+
+        final long result = bufferHasResendRequest(endSeqNo);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
+    }
+
     private void verifyIllegalStateException()
     {
         verify(errorHandler).onError(any(IllegalStateException.class));
@@ -330,7 +334,7 @@ public class ReplayerTest extends AbstractLogTest
         verifyCommit(times);
     }
 
-    private void assertSentGapFill(final int newSeqNo, final int offset, final VerificationMode times)
+    private void assertReSentGapFill(final int newSeqNo, final int offset, final VerificationMode times)
     {
         verifyClaim();
         assertResultBufferHasGapFillMessage(resultBuffer.capacity() - offset, newSeqNo);
