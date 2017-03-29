@@ -183,7 +183,11 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
             if (beginGapFillSeqNum != NONE)
             {
-                sendGapFill(beginGapFillSeqNum, endSeqNo);
+                final Action action = sendGapFill(beginGapFillSeqNum, endSeqNo);
+                if (action == ABORT)
+                {
+                    return action;
+                }
             }
 
             if (endSeqNo != MOST_RECENT_MESSAGE)
@@ -191,14 +195,18 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
                 final int expectedCount = endSeqNo - beginSeqNo + 1;
                 if (count != expectedCount)
                 {
+                    if (count == 0)
+                    {
+                        final Action action = sendGapFill(beginSeqNo, endSeqNo + 1);
+                        if (action == ABORT)
+                        {
+                            return action;
+                        }
+                    }
+
                     onIllegalState(
                         "[%s] Error in resend request, count(%d) < expectedCount (%d)",
                         message(), count, expectedCount);
-
-                    if (count == 0)
-                    {
-                        sendGapFill(beginSeqNo, endSeqNo + 1);
-                    }
                 }
             }
         }

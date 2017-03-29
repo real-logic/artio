@@ -34,6 +34,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -84,7 +85,7 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldParseResendRequest()
     {
         final long result = bufferHasResendRequest(END_SEQ_NO);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
+        onContinuedRequestResendMessage(result);
 
         verifyQueriedService(END_SEQ_NO);
         verifyNoMoreInteractions(publication);
@@ -94,7 +95,7 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldPublishAllRemainingMessages()
     {
         final long result = bufferHasResendRequest(MOST_RECENT_MESSAGE);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
+        onContinuedRequestResendMessage(result);
 
         verifyQueriedService(MOST_RECENT_MESSAGE);
         verifyNoMoreInteractions(publication);
@@ -103,7 +104,7 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldPublishMessagesWithSetPossDupFlag()
     {
-        uponReplay(END_SEQ_NO, inv ->
+        onReplay(END_SEQ_NO, inv ->
         {
             bufferContainsExampleMessage(true);
 
@@ -122,7 +123,7 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldGapFillAdminMessages()
     {
         final int offset = setupCapturingClaim();
-        uponReplay(END_SEQ_NO, inv ->
+        onReplay(END_SEQ_NO, inv ->
         {
             onTestRequest(SEQUENCE_NUMBER);
 
@@ -138,7 +139,7 @@ public class ReplayerTest extends AbstractLogTest
         final int endSeqNo = replayTwoMessages();
         final int offset = setupCapturingClaim();
 
-        uponReplay(endSeqNo, inv ->
+        onReplay(endSeqNo, inv ->
         {
             onTestRequest(SEQUENCE_NUMBER);
 
@@ -151,12 +152,33 @@ public class ReplayerTest extends AbstractLogTest
     }
 
     @Test
+    public void shouldGapFillOnceForTwoConsecutiveAdminMessagesWhenBackPressured()
+    {
+        final int endSeqNo = replayTwoMessages();
+
+        backpressureTryClaim();
+
+        onReplay(endSeqNo, ABORT, inv ->
+        {
+            onTestRequest(SEQUENCE_NUMBER);
+
+            onTestRequest(SEQUENCE_NUMBER + 1);
+
+            return 2;
+        });
+
+        claimedNothingMore();
+
+        shouldGapFillOnceForTwoConsecutiveAdminMessages();
+    }
+
+    @Test
     public void shouldGapFillForAdminMessagesFollowedByAppMessage()
     {
         final int endSeqNo = replayTwoMessages();
         final int offset = setupCapturingClaim();
 
-        uponReplay(endSeqNo, inv ->
+        onReplay(endSeqNo, inv ->
         {
             onTestRequest(BEGIN_SEQ_NO);
 
@@ -177,10 +199,26 @@ public class ReplayerTest extends AbstractLogTest
         whenReplayQueried().thenReturn(0);
 
         final long result = bufferHasResendRequest(endSeqNo);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
+        onContinuedRequestResendMessage(result);
 
         assertReSentGapFill(endSeqNo + 1, offset, times(1));
         verifyIllegalStateException();
+    }
+
+    @Test
+    public void shouldGapFillMissingMesagesWhenBackPressured()
+    {
+        final int endSeqNo = replayTwoMessages();
+
+        backpressureTryClaim();
+        whenReplayQueried().thenReturn(0);
+
+        final long result = bufferHasResendRequest(endSeqNo);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, ABORT);
+
+        claimedNothingMore();
+
+        shouldGapFillMissingMesages();
     }
 
     @Test
@@ -188,7 +226,7 @@ public class ReplayerTest extends AbstractLogTest
     {
         final int endSeqNo = replayTwoMessages();
 
-        uponReplay(endSeqNo, inv ->
+        onReplay(endSeqNo, inv ->
         {
             final int offset = setupCapturingClaim();
 
@@ -209,7 +247,7 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldReplayMessageWithExpandingBodyLength()
     {
-        uponReplay(END_SEQ_NO, inv ->
+        onReplay(END_SEQ_NO, inv ->
         {
             bufferContainsMessage(MESSAGE_REQUIRING_LONGER_BODY_LENGTH);
 
@@ -232,13 +270,13 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldReplayMessageWithExpandingBodyLengthWhenBackPressured()
     {
-        uponReplay(END_SEQ_NO, ABORT, inv ->
+        onReplay(END_SEQ_NO, ABORT, inv ->
         {
             bufferContainsMessage(MESSAGE_REQUIRING_LONGER_BODY_LENGTH);
 
             backpressureTryClaim();
 
-            onFragment(fragmentLength());
+            onFragment(fragmentLength(), ABORT);
 
             verifyClaim();
 
@@ -254,7 +292,7 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldPublishMessagesWithoutSetPossDupFlag()
     {
-        uponReplay(END_SEQ_NO, inv ->
+        onReplay(END_SEQ_NO, inv ->
         {
             bufferContainsExampleMessage(false);
             final int srcLength = fragmentLength();
@@ -281,7 +319,7 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldIgnoreIrrelevantFixMessages()
     {
-        onMessage(LogonDecoder.MESSAGE_TYPE, buffer.capacity());
+        onMessage(LogonDecoder.MESSAGE_TYPE, buffer.capacity(), CONTINUE);
 
         verifyNoMoreInteractions(replayQuery, publication);
     }
@@ -290,7 +328,7 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldValidateResendRequestMessageSequenceNumbers()
     {
         final long result = bufferHasResendRequest(BEGIN_SEQ_NO - 1);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
+        onContinuedRequestResendMessage(result);
 
         verify(errorHandler).onError(any());
         verifyNoMoreInteractions(replayQuery, publication);
@@ -300,6 +338,13 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldHaveNoMoreErrors()
     {
         verifyNoMoreInteractions(errorHandler);
+    }
+
+    private void claimedNothingMore()
+    {
+        verifyClaim();
+        verifyNoMoreInteractions(publication, claim);
+        reset(publication);
     }
 
     private void assertResentGapFillThenMessage(final int endSeqNo, final int offset, final int srcLength)
@@ -323,8 +368,13 @@ public class ReplayerTest extends AbstractLogTest
 
     private void onTestRequest(final int sequenceNumber)
     {
+        onTestRequest(sequenceNumber, CONTINUE);
+    }
+
+    private void onTestRequest(final int sequenceNumber, final Action expectedAction)
+    {
         bufferContainsTestRequest(sequenceNumber);
-        onFragment(fragmentLength());
+        onFragment(fragmentLength(), expectedAction);
     }
 
     private int replayTwoMessages()
@@ -335,15 +385,21 @@ public class ReplayerTest extends AbstractLogTest
 
     private void onFragment(final int length)
     {
-        replayer.onFragment(buffer, START, length, null);
+        onFragment(length, CONTINUE);
     }
 
-    private void uponReplay(final int endSeqNo, final Answer<?> answer)
+    private void onFragment(final int length, final Action expectedAction)
     {
-        uponReplay(endSeqNo, Action.CONTINUE, answer);
+        final Action action = replayer.onFragment(buffer, START, length, null);
+        assertEquals(expectedAction, action);
     }
 
-    private void uponReplay(
+    private void onReplay(final int endSeqNo, final Answer<?> answer)
+    {
+        onReplay(endSeqNo, Action.CONTINUE, answer);
+    }
+
+    private void onReplay(
         final int endSeqNo,
         final Action expectedAction,
         final Answer<?> answer)
@@ -351,8 +407,7 @@ public class ReplayerTest extends AbstractLogTest
         whenReplayQueried().then(answer);
 
         final long result = bufferHasResendRequest(endSeqNo);
-        final Action action = onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
-        assertEquals(expectedAction, action);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, expectedAction);
     }
 
     private void verifyIllegalStateException()
@@ -430,13 +485,19 @@ public class ReplayerTest extends AbstractLogTest
         assertNotEquals("Unable to find poss dup index", UNKNOWN_INDEX, possDupIndex);
     }
 
-    private Action onMessage(final int messageType, final long result)
+    private void onContinuedRequestResendMessage(final long result)
+    {
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, CONTINUE);
+    }
+
+    private void onMessage(final int messageType, final long result, final Action expectedAction)
     {
         final int length = Encoder.length(result);
         final int offset = Encoder.offset(result);
-        return replayer.onMessage(
+        final Action action = replayer.onMessage(
             buffer, offset, length,
             LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX, messageType, 0L, OK, 0L);
+        assertEquals(expectedAction, action);
     }
 
     private void bufferContainsMessage(final byte[] message)
