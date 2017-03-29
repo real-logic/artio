@@ -181,6 +181,22 @@ public class ReplayerTest extends AbstractLogTest
         onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
     }
 
+    @Test
+    public void shouldGapFillMissingMesages()
+    {
+        final int endSeqNo = BEGIN_SEQ_NO + 1; // inclusive numbering
+
+        final int offset = setupCapturingClaim();
+        whenReplayQueried().thenReturn(0);
+
+        final long result = bufferHasResendRequest(endSeqNo);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
+
+        assertSentGapFill(endSeqNo, offset, times(1));
+        verify(errorHandler).onError(any(IllegalStateException.class));
+    }
+
+    // TODO: handle missing log entries better
     // TODO: gapfill missing messages
     // TODO: implications of back pressure
     //          failure to commit the gapfill (retry gapfill on abort?)
