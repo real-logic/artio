@@ -152,7 +152,23 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
             currentMessageLength = limit;
             resendRequest.decode(asciiBuffer, srcOffset, limit);
 
-            final int beginSeqNo = resendRequest.beginSeqNo();
+            final int beginSeqNo;
+            if (backpressured)
+            {
+                if (beginGapFillSeqNum != NONE)
+                {
+                    beginSeqNo = beginGapFillSeqNum;
+                }
+                else
+                {
+                    beginSeqNo = lastSeqNo + 1;
+                }
+            }
+            else
+            {
+                beginSeqNo = resendRequest.beginSeqNo();
+            }
+
             final int endSeqNo = resendRequest.endSeqNo();
             if (endSeqNo != MOST_RECENT_MESSAGE && endSeqNo < beginSeqNo)
             {
@@ -165,7 +181,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
             this.connectionId = connectionId;
             this.sessionId = sessionId;
             this.sequenceIndex = sequenceIndex;
-            this.lastSeqNo = beginSeqNo;
+            this.lastSeqNo = beginSeqNo - 1;
 
             backpressured = false;
             final int count = replayQuery.query(
@@ -186,6 +202,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
                 final Action action = sendGapFill(beginGapFillSeqNum, endSeqNo);
                 if (action == ABORT)
                 {
+                    backpressured = true;
                     return action;
                 }
             }
@@ -238,7 +255,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         {
             if (beginGapFillSeqNum == NONE)
             {
-                beginGapFillSeqNum = lastSeqNo;
+                beginGapFillSeqNum = lastSeqNo + 1;
             }
 
             lastSeqNo = msgSeqNum;
@@ -250,7 +267,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
             {
                 sendGapFill(beginGapFillSeqNum, msgSeqNum);
             }
-            else if (msgSeqNum > lastSeqNo)
+            else if (msgSeqNum > lastSeqNo + 1)
             {
                 sendGapFill(lastSeqNo, msgSeqNum);
             }

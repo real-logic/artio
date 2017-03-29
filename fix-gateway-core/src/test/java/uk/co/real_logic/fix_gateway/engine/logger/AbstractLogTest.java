@@ -228,11 +228,6 @@ public class AbstractLogTest
         return START + 1;
     }
 
-    protected void verifyClaim(final int srcLength)
-    {
-        verify(publication).tryClaim(srcLength, claim);
-    }
-
     protected void verifyCommit(final VerificationMode times)
     {
         verify(claim, times).commit();
