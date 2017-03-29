@@ -96,8 +96,8 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     private int currentMessageOffset;
     private int currentMessageLength;
 
-    private int firstGapFillMessage = NONE;
-    private int lastGapFillMessage = NONE;
+    private int beginGapFillSeqNum = NONE;
+    private int endGapFillSeqNum = NONE;
 
     public Replayer(
         final ReplayQuery replayQuery,
@@ -166,6 +166,11 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
                 endSeqNo,
                 sequenceIndex);
 
+            if (beginGapFillSeqNum != NONE)
+            {
+                sendGapFill();
+            }
+
             if (endSeqNo != MOST_RECENT_MESSAGE)
             {
                 final int expectedCount = endSeqNo - beginSeqNo + 1;
@@ -186,7 +191,6 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     {
         messageHeader.wrap(srcBuffer, srcOffset);
         final int actingBlockLength = messageHeader.blockLength();
-
         final int offset = srcOffset + MessageHeaderDecoder.ENCODED_LENGTH;
 
         fixMessage.wrap(
@@ -203,48 +207,61 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
             asciiBuffer.wrap(srcBuffer);
             fixHeader.decode(asciiBuffer, messageOffset, messageLength);
             final int msgSeqNum = fixHeader.msgSeqNum();
-
-            final long result = gapFillEncoder.encode(resendRequest.header(), msgSeqNum, msgSeqNum);
-            final int gapFillLength = Encoder.length(result);
-            final int gapFillOffset = Encoder.offset(result);
-
-            if (claimBuffer(MESSAGE_FRAME_BLOCK_LENGTH + gapFillLength))
+            if (beginGapFillSeqNum == NONE)
             {
-                int destOffset = bufferClaim.offset();
-                final MutableDirectBuffer destBuffer = bufferClaim.buffer();
-
-                messageHeaderEncoder
-                    .wrap(destBuffer, destOffset)
-                    .blockLength(fixMessage.sbeBlockLength())
-                    .templateId(fixMessage.sbeTemplateId())
-                    .schemaId(fixMessage.sbeSchemaId())
-                    .version(fixMessage.sbeSchemaVersion());
-
-                destOffset += MessageHeaderEncoder.ENCODED_LENGTH;
-
-                fixMessageEncoder
-                    .wrap(destBuffer, destOffset)
-                    .libraryId(ENGINE_LIBRARY_ID)
-                    .messageType(SequenceResetDecoder.MESSAGE_TYPE)
-                    .session(fixMessage.session())
-                    .sequenceIndex(fixMessage.sequenceIndex())
-                    .connection(fixMessage.connection())
-                    .timestamp(0)
-                    .status(MessageStatus.OK)
-                    .putBody(gapFillEncoder.buffer(), gapFillOffset, gapFillLength);
-
-                bufferClaim.commit();
-
-                return CONTINUE;
+                beginGapFillSeqNum = msgSeqNum;
             }
-            else
-            {
-                return ABORT;
-            }
+            endGapFillSeqNum = msgSeqNum;
+
+            return CONTINUE;
         }
         else
         {
             return possDupEnabler.enablePossDupFlag(srcBuffer, messageOffset, messageLength, srcOffset, srcLength);
+        }
+    }
+
+    private Action sendGapFill()
+    {
+        final long result = gapFillEncoder.encode(resendRequest.header(), beginGapFillSeqNum, endGapFillSeqNum);
+        final int gapFillLength = Encoder.length(result);
+        final int gapFillOffset = Encoder.offset(result);
+
+        if (claimBuffer(MESSAGE_FRAME_BLOCK_LENGTH + gapFillLength))
+        {
+            int destOffset = bufferClaim.offset();
+            final MutableDirectBuffer destBuffer = bufferClaim.buffer();
+
+            messageHeaderEncoder
+                .wrap(destBuffer, destOffset)
+                .blockLength(fixMessage.sbeBlockLength())
+                .templateId(fixMessage.sbeTemplateId())
+                .schemaId(fixMessage.sbeSchemaId())
+                .version(fixMessage.sbeSchemaVersion());
+
+            destOffset += MessageHeaderEncoder.ENCODED_LENGTH;
+
+            fixMessageEncoder
+                .wrap(destBuffer, destOffset)
+                .libraryId(ENGINE_LIBRARY_ID)
+                .messageType(SequenceResetDecoder.MESSAGE_TYPE)
+                .session(fixMessage.session())
+                .sequenceIndex(fixMessage.sequenceIndex())
+                .connection(fixMessage.connection())
+                .timestamp(0)
+                .status(MessageStatus.OK)
+                .putBody(gapFillEncoder.buffer(), gapFillOffset, gapFillLength);
+
+            bufferClaim.commit();
+
+            beginGapFillSeqNum = NONE;
+            endGapFillSeqNum = NONE;
+
+            return CONTINUE;
+        }
+        else
+        {
+            return ABORT;
         }
     }
 

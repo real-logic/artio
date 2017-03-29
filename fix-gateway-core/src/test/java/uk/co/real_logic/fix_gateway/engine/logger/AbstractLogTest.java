@@ -39,7 +39,7 @@ public class AbstractLogTest
     protected static final long CONNECTION_ID = 1;
     protected static final int STREAM_ID = OUTBOUND_LIBRARY_STREAM;
     protected static final int START = FRAME_ALIGNMENT;
-    protected static final int SEQUENCE_NUMBER = 5;
+    protected static final int SEQUENCE_NUMBER = 2;
     protected static final int AERON_SESSION_ID = -10;
     protected static final int LIBRARY_ID = 7;
     protected static final int BEGIN_SEQ_NO = 2;
@@ -86,8 +86,7 @@ public class AbstractLogTest
             sessionId, sequenceNumber, sequenceIndex, exampleMessage, header, ExampleMessageDecoder.MESSAGE_TYPE);
     }
 
-    protected void bufferContainsTestRequest(
-        final long sessionId, final int sequenceNumber, final int sequenceIndex)
+    protected void bufferContainsTestRequest(final int sequenceNumber)
     {
         final TestRequestEncoder testRequestEncoder = new TestRequestEncoder();
         final HeaderEncoder header = testRequestEncoder.header();
@@ -95,7 +94,7 @@ public class AbstractLogTest
         header.possDupFlag(false);
 
         bufferContainsMessage(
-            sessionId, sequenceNumber, sequenceIndex, testRequestEncoder, header, TestRequestDecoder.MESSAGE_TYPE);
+            SESSION_ID, sequenceNumber, SEQUENCE_INDEX, testRequestEncoder, header, TestRequestDecoder.MESSAGE_TYPE);
     }
 
     private void bufferContainsMessage(

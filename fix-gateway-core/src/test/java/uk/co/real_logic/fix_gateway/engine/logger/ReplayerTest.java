@@ -20,6 +20,7 @@ import org.agrona.concurrent.IdleStrategy;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.stubbing.OngoingStubbing;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.fields.RejectReason;
@@ -67,7 +68,12 @@ public class ReplayerTest extends AbstractLogTest
     public void setUp()
     {
         when(publication.tryClaim(anyInt(), any())).thenReturn(1L);
-        when(replayQuery.query(eq(replayer), anyLong(), anyInt(), anyInt(), anyInt(), anyInt())).thenReturn(1);
+        whenReplayQueried().thenReturn(1);
+    }
+
+    private OngoingStubbing<Integer> whenReplayQueried()
+    {
+        return when(replayQuery.query(eq(replayer), anyLong(), anyInt(), anyInt(), anyInt(), anyInt()));
     }
 
     @Test
@@ -108,22 +114,53 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldGapFillAdminMessages()
     {
+        final int offset = setupCapturingClaim();
+        whenReplayQueried().then(inv ->
+        {
+            bufferContainsTestRequest(SEQUENCE_NUMBER);
+            replayer.onFragment(buffer, START, fragmentLength(), null);
+
+            return 1;
+        });
+
         final long result = bufferHasResendRequest(END_SEQ_NO);
         onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
 
-        bufferContainsTestRequest(SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX);
-        final int offset = setupCapturingClaim();
-        replayer.onFragment(buffer, START, fragmentLength(), null);
-
-        verify(publication).tryClaim(anyInt(), eq(claim));
-
-        assertSendsGapFillMessage(resultBuffer.capacity() - offset);
+        verifyClaim();
+        assertSendsGapFillMessage(resultBuffer.capacity() - offset, END_SEQ_NO);
         verifyCommit();
     }
 
-    // TODO: two admin messages
+    @Test
+    public void shouldGapFillOnceForTwoConsecutiveAdminMessages()
+    {
+        final int endSeqNo = BEGIN_SEQ_NO + 1; // inclusive numbering
+
+        final int offset = setupCapturingClaim();
+        whenReplayQueried().then(inv ->
+        {
+            bufferContainsTestRequest(SEQUENCE_NUMBER);
+            replayer.onFragment(buffer, START, fragmentLength(), null);
+
+            bufferContainsTestRequest(SEQUENCE_NUMBER + 1);
+            replayer.onFragment(buffer, START, fragmentLength(), null);
+
+            return 2;
+        });
+
+        final long result = bufferHasResendRequest(endSeqNo);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
+
+        verifyClaim();
+        assertSendsGapFillMessage(resultBuffer.capacity() - offset, endSeqNo);
+        verifyCommit();
+    }
+
     // TODO: two admin messages followed by an application message
     // TODO: gapfill missing messages
+    // TODO: implications of back pressure
+    //          failure to commit the gapfill (retry gapfill on abort?)
+    //          failure to commit the messages
 
     @Test
     public void shouldReplayMessageWithExpandingBodyLength()
@@ -193,6 +230,11 @@ public class ReplayerTest extends AbstractLogTest
         verifyNoMoreInteractions(errorHandler);
     }
 
+    private void verifyClaim()
+    {
+        verify(publication).tryClaim(anyInt(), eq(claim));
+    }
+
     private void assertEndsInValidChecksum(final int afterOffset)
     {
         final String message = resultAsciiBuffer.getAscii(afterOffset, resultAsciiBuffer.capacity() - afterOffset);
@@ -206,7 +248,7 @@ public class ReplayerTest extends AbstractLogTest
         assertEquals("9=104\00135=1\001", lengthSection);
     }
 
-    private void assertSendsGapFillMessage(final int claimedLength)
+    private void assertSendsGapFillMessage(final int claimedLength, final int endSeqNo)
     {
         final int offset = offset() + MESSAGE_FRAME_BLOCK_LENGTH;
         final int length = claimedLength - MESSAGE_FRAME_BLOCK_LENGTH;
@@ -223,6 +265,7 @@ public class ReplayerTest extends AbstractLogTest
 
         assertTrue(message, sequenceReset.gapFillFlag());
         assertEquals(message, SEQUENCE_NUMBER, header.msgSeqNum());
+        assertEquals(endSeqNo, sequenceReset.newSeqNo());
         assertTrue(message, header.possDupFlag());
     }
 
