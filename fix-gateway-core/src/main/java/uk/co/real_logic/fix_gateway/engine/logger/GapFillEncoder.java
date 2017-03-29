@@ -20,7 +20,7 @@ class GapFillEncoder
         sequenceResetEncoder.gapFillFlag(true);
     }
 
-    long encode(final HeaderDecoder reqHeader, final int beginSeqNo, final int endSeqNo)
+    long encode(final HeaderDecoder reqHeader, final int msgSeqNum, final int newSeqNo)
     {
         final HeaderEncoder respHeader = sequenceResetEncoder.header();
         respHeader.targetCompID(reqHeader.senderCompID(), reqHeader.senderCompIDLength());
@@ -42,8 +42,8 @@ class GapFillEncoder
             respHeader.senderSubID(reqHeader.targetSubID(), reqHeader.targetSubIDLength());
         }
         respHeader.sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(System.currentTimeMillis()));
-        respHeader.msgSeqNum(beginSeqNo);
-        sequenceResetEncoder.newSeqNo(endSeqNo);
+        respHeader.msgSeqNum(msgSeqNum);
+        sequenceResetEncoder.newSeqNo(newSeqNo);
 
         return sequenceResetEncoder.encode(buffer, 0);
     }

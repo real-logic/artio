@@ -97,8 +97,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     private int currentMessageLength;
 
     private int beginGapFillSeqNum = NONE;
-    private int endGapFillSeqNum = NONE;
-    private int lastSeenSeqNum = NONE;
+    private int lastSeqNo = NONE;
     private long connectionId;
     private long sessionId;
     private int sequenceIndex;
@@ -162,11 +161,10 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
                 return CONTINUE;
             }
 
-
             this.connectionId = connectionId;
             this.sessionId = sessionId;
             this.sequenceIndex = sequenceIndex;
-            this.lastSeenSeqNum = beginSeqNo - 1;
+            this.lastSeqNo = beginSeqNo;
 
             final int count = replayQuery.query(
                 this,
@@ -178,7 +176,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
             if (beginGapFillSeqNum != NONE)
             {
-                sendGapFillForAdminMessage();
+                sendGapFill(beginGapFillSeqNum, endSeqNo);
             }
 
             if (endSeqNo != MOST_RECENT_MESSAGE)
@@ -190,7 +188,10 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
                         "[%s] Error in resend request, count(%d) < expectedCount (%d)",
                         message(), count, expectedCount);
 
-                    sendGapFill(lastSeenSeqNum + 1, endSeqNo);
+                    if (count == 0)
+                    {
+                        sendGapFill(beginSeqNo, endSeqNo + 1);
+                    }
                 }
             }
         }
@@ -214,38 +215,39 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         final int messageOffset = srcOffset + MESSAGE_FRAME_BLOCK_LENGTH; // TODO
         final int messageLength = srcLength - MESSAGE_FRAME_BLOCK_LENGTH;
 
+        asciiBuffer.wrap(srcBuffer);
+        fixHeader.decode(asciiBuffer, messageOffset, messageLength);
+        final int msgSeqNum = fixHeader.msgSeqNum();
+
         if (ADMIN_MESSAGE_TYPES.contains(fixMessage.messageType()))
         {
-            asciiBuffer.wrap(srcBuffer);
-            fixHeader.decode(asciiBuffer, messageOffset, messageLength);
-            final int msgSeqNum = fixHeader.msgSeqNum();
             if (beginGapFillSeqNum == NONE)
             {
-                beginGapFillSeqNum = msgSeqNum;
+                beginGapFillSeqNum = lastSeqNo;
             }
-            endGapFillSeqNum = msgSeqNum;
 
+            lastSeqNo = msgSeqNum;
             return CONTINUE;
         }
         else
         {
             if (beginGapFillSeqNum != NONE)
             {
-                sendGapFillForAdminMessage();
+                sendGapFill(beginGapFillSeqNum, msgSeqNum);
+            }
+            else if (msgSeqNum > lastSeqNo)
+            {
+                sendGapFill(lastSeqNo, msgSeqNum);
             }
 
+            lastSeqNo = msgSeqNum;
             return possDupEnabler.enablePossDupFlag(srcBuffer, messageOffset, messageLength, srcOffset, srcLength);
         }
     }
 
-    private Action sendGapFillForAdminMessage()
+    private Action sendGapFill(final int msgSeqNo, final int newSeqNo)
     {
-        return sendGapFill(beginGapFillSeqNum, endGapFillSeqNum);
-    }
-
-    private Action sendGapFill(int beginGapFillSeqNum, int endGapFillSeqNum)
-    {
-        final long result = gapFillEncoder.encode(resendRequest.header(), beginGapFillSeqNum, endGapFillSeqNum);
+        final long result = gapFillEncoder.encode(resendRequest.header(), msgSeqNo, newSeqNo);
         final int gapFillLength = Encoder.length(result);
         final int gapFillOffset = Encoder.offset(result);
 
@@ -277,7 +279,6 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
             bufferClaim.commit();
 
             this.beginGapFillSeqNum = NONE;
-            this.endGapFillSeqNum = NONE;
 
             return CONTINUE;
         }
