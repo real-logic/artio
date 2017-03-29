@@ -33,11 +33,6 @@ public final class Pressure
         return Action.CONTINUE;
     }
 
-    public static boolean isNotBackPressured(final Action action)
-    {
-        return action != ABORT;
-    }
-
     public static boolean isBackPressured(final long position)
     {
         return position == BACK_PRESSURED || position == ADMIN_ACTION;

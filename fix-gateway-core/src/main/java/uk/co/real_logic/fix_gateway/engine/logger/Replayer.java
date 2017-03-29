@@ -101,6 +101,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     private long connectionId;
     private long sessionId;
     private int sequenceIndex;
+    private boolean backpressured;
 
     public Replayer(
         final ReplayQuery replayQuery,
@@ -166,6 +167,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
             this.sequenceIndex = sequenceIndex;
             this.lastSeqNo = beginSeqNo;
 
+            backpressured = false;
             final int count = replayQuery.query(
                 this,
                 sessionId,
@@ -173,6 +175,11 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
                 sequenceIndex,
                 endSeqNo,
                 sequenceIndex);
+
+            if (backpressured)
+            {
+                return ABORT;
+            }
 
             if (beginGapFillSeqNum != NONE)
             {
@@ -240,8 +247,18 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
                 sendGapFill(lastSeqNo, msgSeqNum);
             }
 
-            lastSeqNo = msgSeqNum;
-            return possDupEnabler.enablePossDupFlag(srcBuffer, messageOffset, messageLength, srcOffset, srcLength);
+            final Action action = possDupEnabler.enablePossDupFlag(
+                srcBuffer, messageOffset, messageLength, srcOffset, srcLength);
+            if (action == ABORT)
+            {
+                backpressured = true;
+            }
+            else
+            {
+                lastSeqNo = msgSeqNum;
+            }
+
+            return action;
         }
     }
 

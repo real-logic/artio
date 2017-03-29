@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.IdleStrategy;
 import org.junit.After;
@@ -32,6 +33,7 @@ import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -166,17 +168,6 @@ public class ReplayerTest extends AbstractLogTest
         });
     }
 
-    private void assertResentGapFillThenMessage(final int endSeqNo, final int offset, final int srcLength)
-    {
-        doAnswer(commitInv ->
-        {
-            assertReSentGapFill(endSeqNo, offset, times(2));
-            return null;
-        }).when(claim).commit();
-
-        assertHasResentWithPossDupFlag(srcLength, times(2));
-    }
-
     @Test
     public void shouldGapFillMissingMesages()
     {
@@ -232,10 +223,32 @@ public class ReplayerTest extends AbstractLogTest
             assertHasResentWithPossDupFlag(newLength, times(1));
             hasNotOverwrittenSeperatorChar();
 
-            assertEndsInValidChecksum(offset + 1);
+            assertEndsWithValidChecksum(offset + 1);
 
             return 1;
         });
+    }
+
+    @Test
+    public void shouldReplayMessageWithExpandingBodyLengthWhenBackPressured()
+    {
+        uponReplay(END_SEQ_NO, ABORT, inv ->
+        {
+            bufferContainsMessage(MESSAGE_REQUIRING_LONGER_BODY_LENGTH);
+
+            backpressureTryClaim();
+
+            onFragment(fragmentLength());
+
+            verifyClaim();
+
+            return 1;
+        });
+
+        verifyNoMoreInteractions(publication, claim);
+        reset(publication, claim);
+
+        shouldReplayMessageWithExpandingBodyLength();
     }
 
     @Test
@@ -259,7 +272,7 @@ public class ReplayerTest extends AbstractLogTest
             assertThat(resultAsciiBuffer,
                 sequenceEqualsAscii("8=FIX.4.4\0019=68\001", afterOffset));
 
-            assertEndsInValidChecksum(afterOffset);
+            assertEndsWithValidChecksum(afterOffset);
 
             return 1;
         });
@@ -289,6 +302,17 @@ public class ReplayerTest extends AbstractLogTest
         verifyNoMoreInteractions(errorHandler);
     }
 
+    private void assertResentGapFillThenMessage(final int endSeqNo, final int offset, final int srcLength)
+    {
+        doAnswer(commitInv ->
+        {
+            assertReSentGapFill(endSeqNo, offset, times(2));
+            return null;
+        }).when(claim).commit();
+
+        assertHasResentWithPossDupFlag(srcLength, times(2));
+    }
+
     private int onExampleMessage(final int endSeqNo)
     {
         bufferContainsExampleMessage(true, SESSION_ID, endSeqNo, SEQUENCE_INDEX);
@@ -316,10 +340,19 @@ public class ReplayerTest extends AbstractLogTest
 
     private void uponReplay(final int endSeqNo, final Answer<?> answer)
     {
+        uponReplay(endSeqNo, Action.CONTINUE, answer);
+    }
+
+    private void uponReplay(
+        final int endSeqNo,
+        final Action expectedAction,
+        final Answer<?> answer)
+    {
         whenReplayQueried().then(answer);
 
         final long result = bufferHasResendRequest(endSeqNo);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
+        final Action action = onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
+        assertEquals(expectedAction, action);
     }
 
     private void verifyIllegalStateException()
@@ -346,7 +379,7 @@ public class ReplayerTest extends AbstractLogTest
         verify(publication, atLeastOnce()).tryClaim(anyInt(), eq(claim));
     }
 
-    private void assertEndsInValidChecksum(final int afterOffset)
+    private void assertEndsWithValidChecksum(final int afterOffset)
     {
         final String message = resultAsciiBuffer.getAscii(afterOffset, resultAsciiBuffer.capacity() - afterOffset);
         final Matcher matcher = Pattern.compile("10=\\d+\001").matcher(message);
@@ -397,11 +430,11 @@ public class ReplayerTest extends AbstractLogTest
         assertNotEquals("Unable to find poss dup index", UNKNOWN_INDEX, possDupIndex);
     }
 
-    private void onMessage(final int messageType, final long result)
+    private Action onMessage(final int messageType, final long result)
     {
         final int length = Encoder.length(result);
         final int offset = Encoder.offset(result);
-        replayer.onMessage(
+        return replayer.onMessage(
             buffer, offset, length,
             LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX, messageType, 0L, OK, 0L);
     }

@@ -191,6 +191,11 @@ public class AbstractLogTest
         when(publication.tryClaim(srcLength, claim)).thenReturn((long)srcLength);
     }
 
+    protected void backpressureTryClaim()
+    {
+        when(publication.tryClaim(anyInt(), any())).thenReturn(Publication.BACK_PRESSURED);
+    }
+
     protected void setupClaim(final int srcLength)
     {
         final int offset = offset();
