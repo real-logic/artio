@@ -19,6 +19,7 @@ import io.aeron.Publication;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.BitUtil;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.builder.*;
 import uk.co.real_logic.fix_gateway.decoder.ExampleMessageDecoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
@@ -227,8 +228,8 @@ public class AbstractLogTest
         verify(publication).tryClaim(srcLength, claim);
     }
 
-    protected void verifyCommit()
+    protected void verifyCommit(final VerificationMode times)
     {
-        verify(claim).commit();
+        verify(claim, times).commit();
     }
 }

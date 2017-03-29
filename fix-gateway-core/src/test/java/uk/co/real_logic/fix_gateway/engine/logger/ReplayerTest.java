@@ -21,6 +21,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.OngoingStubbing;
+import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.fields.RejectReason;
@@ -106,9 +107,7 @@ public class ReplayerTest extends AbstractLogTest
 
         replayer.onFragment(buffer, START, srcLength, null);
 
-        verifyClaim(srcLength);
-        assertHasSetPossDupFlag();
-        verifyCommit();
+        assertHasResentWithPossDupFlag(srcLength, times(1));
     }
 
     @Test
@@ -126,9 +125,7 @@ public class ReplayerTest extends AbstractLogTest
         final long result = bufferHasResendRequest(END_SEQ_NO);
         onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
 
-        verifyClaim();
-        assertSendsGapFillMessage(resultBuffer.capacity() - offset, END_SEQ_NO);
-        verifyCommit();
+        assertSentGapFill(END_SEQ_NO, offset, times(1));
     }
 
     @Test
@@ -151,12 +148,39 @@ public class ReplayerTest extends AbstractLogTest
         final long result = bufferHasResendRequest(endSeqNo);
         onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
 
-        verifyClaim();
-        assertSendsGapFillMessage(resultBuffer.capacity() - offset, endSeqNo);
-        verifyCommit();
+        assertSentGapFill(endSeqNo, offset, times(1));
     }
 
-    // TODO: two admin messages followed by an application message
+    @Test
+    public void shouldGapFillForAdminMessagesFollowedByAppMessage()
+    {
+        final int endSeqNo = BEGIN_SEQ_NO + 1; // inclusive numbering
+
+        whenReplayQueried().then(inv ->
+        {
+            final int offset = setupCapturingClaim();
+            bufferContainsTestRequest(SEQUENCE_NUMBER);
+            replayer.onFragment(buffer, START, fragmentLength(), null);
+
+            bufferContainsExampleMessage(true);
+            final int srcLength = fragmentLength();
+            replayer.onFragment(buffer, START, srcLength, null);
+
+            doAnswer(commitInv ->
+            {
+                assertSentGapFill(endSeqNo, offset, times(2));
+                return null;
+            }).when(claim).commit();
+
+            assertHasResentWithPossDupFlag(srcLength, times(2));
+
+            return 2;
+        });
+
+        final long result = bufferHasResendRequest(endSeqNo);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result);
+    }
+
     // TODO: gapfill missing messages
     // TODO: implications of back pressure
     //          failure to commit the gapfill (retry gapfill on abort?)
@@ -174,9 +198,7 @@ public class ReplayerTest extends AbstractLogTest
 
         replayer.onFragment(buffer, START, srcLength, null);
 
-        verifyClaim(newLength);
-        assertHasSetPossDupFlag();
-        verifyCommit();
+        assertHasResentWithPossDupFlag(newLength, times(1));
         hasNotOverwrittenSeperatorChar();
 
         assertEndsInValidChecksum(offset + 1);
@@ -192,9 +214,7 @@ public class ReplayerTest extends AbstractLogTest
 
         replayer.onFragment(buffer, START, srcLength, null);
 
-        verifyClaim(lengthAfterPossDupFlag);
-        assertHasSetPossDupFlag();
-        verifyCommit();
+        assertHasResentWithPossDupFlag(lengthAfterPossDupFlag, times(1));
 
         final int afterOffset = this.offset + 1;
         assertThat(resultAsciiBuffer,
@@ -230,9 +250,23 @@ public class ReplayerTest extends AbstractLogTest
         verifyNoMoreInteractions(errorHandler);
     }
 
+    private void assertHasResentWithPossDupFlag(final int srcLength, final VerificationMode times)
+    {
+        verifyClaim(srcLength);
+        assertResultBufferHasSetPossDupFlag();
+        verifyCommit(times);
+    }
+
+    private void assertSentGapFill(final int endSeqNo, final int offset, final VerificationMode times)
+    {
+        verifyClaim();
+        assertResultBufferHasGapFillMessage(resultBuffer.capacity() - offset, endSeqNo);
+        verifyCommit(times);
+    }
+
     private void verifyClaim()
     {
-        verify(publication).tryClaim(anyInt(), eq(claim));
+        verify(publication, atLeastOnce()).tryClaim(anyInt(), eq(claim));
     }
 
     private void assertEndsInValidChecksum(final int afterOffset)
@@ -248,7 +282,7 @@ public class ReplayerTest extends AbstractLogTest
         assertEquals("9=104\00135=1\001", lengthSection);
     }
 
-    private void assertSendsGapFillMessage(final int claimedLength, final int endSeqNo)
+    private void assertResultBufferHasGapFillMessage(final int claimedLength, final int endSeqNo)
     {
         final int offset = offset() + MESSAGE_FRAME_BLOCK_LENGTH;
         final int length = claimedLength - MESSAGE_FRAME_BLOCK_LENGTH;
@@ -280,7 +314,7 @@ public class ReplayerTest extends AbstractLogTest
         verify(replayQuery).query(replayer, SESSION_ID, BEGIN_SEQ_NO, SEQUENCE_INDEX, endSeqNo, SEQUENCE_INDEX);
     }
 
-    private void assertHasSetPossDupFlag()
+    private void assertResultBufferHasSetPossDupFlag()
     {
         final int possDupIndex = resultAsciiBuffer.scan(0, resultAsciiBuffer.capacity() - 1, 'Y');
         assertNotEquals("Unable to find poss dup index", UNKNOWN_INDEX, possDupIndex);

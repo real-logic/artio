@@ -217,6 +217,11 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         }
         else
         {
+            if (beginGapFillSeqNum != NONE)
+            {
+                sendGapFill();
+            }
+
             return possDupEnabler.enablePossDupFlag(srcBuffer, messageOffset, messageLength, srcOffset, srcLength);
         }
     }
