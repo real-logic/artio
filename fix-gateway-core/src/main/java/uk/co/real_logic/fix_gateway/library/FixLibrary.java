@@ -69,8 +69,21 @@ public class FixLibrary extends GatewayProcess
         }
         catch (final Exception e)
         {
+            closeAnythingHoldingFileHandles();
             deleteFiles();
             throw e;
+        }
+    }
+
+    private void closeAnythingHoldingFileHandles()
+    {
+        if (monitoringAgent == null)
+        {
+            monitoringFile.close();
+        }
+        else
+        {
+            monitoringAgent.onClose();
         }
     }
 
