@@ -89,9 +89,11 @@ public class FramerContext
             errorHandler,
             replicatedConnectionIds);
 
+        final GatewayPublication gatewaySessionsOutbound = outboundLibraryStreams.gatewayPublication(
+            idleStrategy, "gatewaySessionsOutbound");
         gatewaySessions = new GatewaySessions(
             clock,
-            outboundLibraryStreams.gatewayPublication(idleStrategy, "gatewaySessionsToLibrary"),
+            gatewaySessionsOutbound,
             sessionIdStrategy,
             configuration.sessionCustomisationStrategy(),
             fixCounters,
@@ -118,6 +120,7 @@ public class FramerContext
             engineContext.outboundClusterSubscription(),
             engineContext.outboundLibrarySubscription("outboundLibrarySubscription"),
             engineContext.outboundLibrarySubscription("outboundSlowSubscription"),
+            gatewaySessionsOutbound.id(),
             replaySubscription,
             slowReplaySubscription,
             adminCommands,

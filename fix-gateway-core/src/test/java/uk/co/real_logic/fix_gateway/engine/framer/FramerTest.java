@@ -35,6 +35,7 @@ import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
+import uk.co.real_logic.fix_gateway.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
@@ -87,6 +88,7 @@ public class FramerTest
     private static final int CORR_ID = 1;
     private static final long POSITION = 1024;
     private static final int AERON_SESSION_ID = 234;
+    private static final int OUTBOUND_ENGINE_AERON_SESSION_ID = 235;
     private static final long SESSION_ID = 123;
 
     private ServerSocketChannel server;
@@ -109,6 +111,9 @@ public class FramerTest
     private final GatewaySession gatewaySession = mock(GatewaySession.class);
     private final Session session = mock(Session.class);
     private final Subscription outboundLibrarySubscription = mock(Subscription.class);
+    private final Subscription outboundSlowSubscription = mock(Subscription.class);
+    private final Image slowImage = mock(Image.class);
+    private final Subscription replaySlowSubscription = mock(Subscription.class);
     private final ClusterableStreams node = mock(ClusterableStreams.class);
 
     @SuppressWarnings("unchecked")
@@ -132,12 +137,16 @@ public class FramerTest
 
         clientBuffer.putInt(10, 5);
 
+        when(outboundSlowSubscription.imageCount()).thenReturn(1);
+        when(outboundSlowSubscription.imageBySessionId(anyInt())).thenReturn(slowImage);
+        when(replaySlowSubscription.getImage(0)).thenReturn(slowImage);
+
         when(mockEndPointFactory.receiverEndPoint(
             any(), connectionId.capture(), anyLong(), anyInt(), anyInt(), any(),
             eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any(), any()))
             .thenReturn(mockReceiverEndPoint);
 
-        when(mockEndPointFactory.senderEndPoint(any(), anyLong(), anyInt(), any()))
+        when(mockEndPointFactory.senderEndPoint(any(), anyLong(), anyInt(), any(), any()))
             .thenReturn(mockSenderEndPoint);
 
         when(mockReceiverEndPoint.connectionId()).then((inv) -> connectionId.getValue());
@@ -157,9 +166,10 @@ public class FramerTest
             mock(ClusterSubscription.class),
             mock(ClusterSubscription.class),
             outboundLibrarySubscription,
+            outboundSlowSubscription,
+            OUTBOUND_ENGINE_AERON_SESSION_ID,
             mock(Subscription.class),
-            mock(Subscription.class),
-            mock(Subscription.class),
+            replaySlowSubscription,
             mock(QueuedPipe.class),
             mockSessionIdStrategy,
             sessionContexts,
@@ -735,8 +745,8 @@ public class FramerTest
             anyInt(),
             anyInt(),
             any(),
-            any()
-        );
+            any(),
+            any());
     }
 
     private void verifyEndPointsDisconnected(final DisconnectReason reason)
@@ -849,7 +859,7 @@ public class FramerTest
             eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any(), any());
 
         verify(mockEndPointFactory).senderEndPoint(
-            notNull(), anyLong(), eq(ENGINE_LIBRARY_ID), eq(framer));
+            notNull(), anyLong(), eq(ENGINE_LIBRARY_ID), any(LibrarySlowPeeker.class), eq(framer));
     }
 
     private void verifyLibraryTimeout()

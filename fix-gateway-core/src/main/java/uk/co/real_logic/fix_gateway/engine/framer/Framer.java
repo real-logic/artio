@@ -38,6 +38,7 @@ import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
+import uk.co.real_logic.fix_gateway.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.fix_gateway.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
@@ -132,9 +133,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ClusterSubscription outboundClusterSubscription;
     private final ClusterSubscription outboundClusterSlowSubscription;
     private final Subscription outboundLibrarySubscription;
-    private final Subscription outboundSlowSubscription;
+    private final SubscriptionSlowPeeker outboundSlowSubscription;
     private final Subscription replaySubscription;
-    private final Subscription replaySlowSubscription;
+    private final SlowPeeker replaySlowSubscription;
+    private final LibrarySlowPeeker outboundSlowEnginePeeker;
     private final GatewayPublication inboundPublication;
     private final ClusterableStreams clusterableStreams;
     private final String agentNamePrefix;
@@ -172,6 +174,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final ClusterSubscription outboundClusterSlowSubscription,
         final Subscription outboundLibrarySubscription,
         final Subscription outboundSlowSubscription,
+        final int gatewaySessionsOutboundId,
         final Subscription replaySubscription,
         final Subscription replaySlowSubscription,
         final QueuedPipe<AdminCommand> adminCommands,
@@ -201,9 +204,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundClusterSubscription = outboundClusterSubscription;
         this.outboundClusterSlowSubscription = outboundClusterSlowSubscription;
         this.outboundLibrarySubscription = outboundLibrarySubscription;
-        this.outboundSlowSubscription = outboundSlowSubscription;
+        this.outboundSlowSubscription = new SubscriptionSlowPeeker(outboundSlowSubscription);
         this.replaySubscription = replaySubscription;
-        this.replaySlowSubscription = replaySlowSubscription;
         this.gatewaySessions = gatewaySessions;
         this.inboundMessages = inboundMessages;
         this.errorHandler = errorHandler;
@@ -221,9 +223,19 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
 
+        while (outboundSlowSubscription.imageCount() == 0)
+        {
+            Thread.yield();
+        }
+
+        this.outboundSlowEnginePeeker = this.outboundSlowSubscription.addLibrary(gatewaySessionsOutboundId);
+        this.replaySlowSubscription = new SlowPeeker(replaySlowSubscription.getImage(0));
+
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
         this.replayFragmentLimit = configuration.replayFragmentLimit();
         this.inboundBytesReceivedLimit = configuration.inboundBytesReceivedLimit();
+
+        endPointFactory.replaySlowPeeker(this.replaySlowSubscription);
 
         if (isClustered())
         {
@@ -359,7 +371,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private int sendReplayMessages()
     {
         return replaySubscription.controlledPoll(outboundReplaySubscriber, replayFragmentLimit) +
-               replaySlowSubscription.controlledPoll(outboundReplaySlowSubscriber, replayFragmentLimit);
+               replaySlowSubscription.peek(outboundReplaySlowSubscriber, replayFragmentLimit);
     }
 
     private int sendOutboundMessages()
@@ -367,7 +379,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int newMessagesRead =
             outboundLibrarySubscription.controlledPoll(outboundLibrarySubscriber, outboundLibraryFragmentLimit);
         int messagesRead = newMessagesRead +
-            outboundSlowSubscription.controlledPoll(senderEndPoints, outboundLibraryFragmentLimit);
+            outboundSlowSubscription.peek(senderEndPoints, outboundLibraryFragmentLimit);
 
         if (isClustered())
         {
@@ -458,7 +470,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 sentSequenceNumber,
                 receivedSequenceNumber,
                 session.username(),
-                session.password());
+                session.password(), outboundSlowEnginePeeker);
 
             schedule(() -> saveSessionExists(
                 ENGINE_LIBRARY_ID,
@@ -507,7 +519,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 UNK_SESSION,
                 UNK_SESSION,
                 null,
-                null);
+                null,
+                outboundSlowEnginePeeker);
 
             final String address = channel.remoteAddress();
             // In this case the save connect is simply logged for posterities sake
@@ -780,8 +793,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 sentSequenceNumberIndex, receivedSequenceNumberIndex, sequenceNumberType, connectionType);
         receiverEndPoints.add(receiverEndPoint);
 
+        final LibrarySlowPeeker librarySlowPeeker = getLibrarySlowPeeker(libraryId);
         final SenderEndPoint senderEndPoint =
-            endPointFactory.senderEndPoint(channel, connectionId, libraryId, this);
+            endPointFactory.senderEndPoint(channel, connectionId, libraryId, librarySlowPeeker, this);
         senderEndPoints.add(senderEndPoint);
 
         final GatewaySession gatewaySession = new GatewaySession(
@@ -796,6 +810,18 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         receiverEndPoint.gatewaySession(gatewaySession);
 
         return gatewaySession;
+    }
+
+    private LibrarySlowPeeker getLibrarySlowPeeker(final int libraryId)
+    {
+        if (libraryId == ENGINE_LIBRARY_ID)
+        {
+            return outboundSlowEnginePeeker;
+        }
+        else
+        {
+            return idToLibrary.get(libraryId).librarySlowPeeker();
+        }
     }
 
     public Action onRequestDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
@@ -854,7 +880,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             configuration.replyTimeoutInMs(),
             clock.time());
 
-        final LiveLibraryInfo library = new LiveLibraryInfo(libraryId, livenessDetector, aeronSessionId);
+        final LibrarySlowPeeker librarySlowPeeker = outboundSlowSubscription.addLibrary(aeronSessionId);
+        final LiveLibraryInfo library = new LiveLibraryInfo(
+            libraryId, livenessDetector, aeronSessionId, librarySlowPeeker);
         idToLibrary.put(libraryId, library);
 
         final UnitOfWork unitOfWork = new UnitOfWork(
@@ -935,7 +963,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 lastSentSequenceNumber,
                 lastReceivedSequenceNumber,
                 username,
-                password);
+                password,
+                outboundSlowEnginePeeker);
 
             schedule(() -> saveSessionExists(
                 ENGINE_LIBRARY_ID,
@@ -989,7 +1018,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int lastSentSeqNum = session.lastSentMsgSeqNum();
         final int lastRecvSeqNum = session.lastReceivedMsgSeqNum();
         final SessionState sessionState = session.state();
-        gatewaySession.handoverManagementTo(libraryId);
+        gatewaySession.handoverManagementTo(libraryId, libraryInfo.librarySlowPeeker());
         libraryInfo.addSession(gatewaySession);
 
         final List<Continuation> continuations = new ArrayList<>();

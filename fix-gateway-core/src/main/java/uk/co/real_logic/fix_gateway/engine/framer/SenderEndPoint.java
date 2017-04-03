@@ -16,16 +16,18 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -48,6 +50,10 @@ class SenderEndPoint implements AutoCloseable
     private long sentReplayPosition;
     private boolean partiallySentOutboundMessage = false;
     private boolean partiallySentReplayMessage = false;
+    private SlowPeeker outboundSlowPeeker;
+    private final SlowPeeker replaySlowPeeker;
+    private long skipOutboundPosition = Long.MAX_VALUE;
+    private long skipReplayPosition = Long.MAX_VALUE;
 
     private int libraryId;
     private long sessionId;
@@ -56,6 +62,7 @@ class SenderEndPoint implements AutoCloseable
     SenderEndPoint(
         final long connectionId,
         final int libraryId,
+        final SlowPeeker outboundSlowPeeker,
         final TcpChannel channel,
         final AtomicCounter bytesInBuffer,
         final AtomicCounter invalidLibraryAttempts,
@@ -63,10 +70,12 @@ class SenderEndPoint implements AutoCloseable
         final Framer framer,
         final int maxBytesInBuffer,
         final long slowConsumerTimeoutInMs,
-        final long timeInMs)
+        final long timeInMs,
+        final SlowPeeker replaySlowPeeker)
     {
         this.connectionId = connectionId;
         this.libraryId = libraryId;
+        this.outboundSlowPeeker = outboundSlowPeeker;
         this.channel = channel;
         this.bytesInBuffer = bytesInBuffer;
         this.invalidLibraryAttempts = invalidLibraryAttempts;
@@ -74,6 +83,8 @@ class SenderEndPoint implements AutoCloseable
         this.framer = framer;
         this.maxBytesInBuffer = maxBytesInBuffer;
         this.slowConsumerTimeoutInMs = slowConsumerTimeoutInMs;
+        this.replaySlowPeeker = replaySlowPeeker;
+
         sendingTimeoutTimeInMs = timeInMs + slowConsumerTimeoutInMs;
     }
 
@@ -202,6 +213,11 @@ class SenderEndPoint implements AutoCloseable
         setPartiallySent(outbound, true);
     }
 
+    private void becomeNormalConsumer()
+    {
+        sendSlowStatus(false);
+    }
+
     private void setPartiallySent(final boolean outbound, final boolean value)
     {
         if (outbound)
@@ -241,9 +257,10 @@ class SenderEndPoint implements AutoCloseable
         return connectionId;
     }
 
-    public void libraryId(final int libraryId)
+    public void libraryId(final int libraryId, final LibrarySlowPeeker librarySlowPeeker)
     {
         this.libraryId = libraryId;
+        this.outboundSlowPeeker = librarySlowPeeker;
     }
 
     public void close()
@@ -284,6 +301,14 @@ class SenderEndPoint implements AutoCloseable
             return CONTINUE;
         }
 
+        // Skip all messages beyond the skip position, since this endpoint has been blocked but others
+        // Scanning forward.
+        final long skipPosition = getSkipPosition(outbound);
+        if (position > skipPosition)
+        {
+            return CONTINUE;
+        }
+
         // Skip messages where the end point has become a slow consumer, but
         // the slow consumer stream hasn't polled up to update with the regular stream
         final long sentPosition = getPosition(outbound);
@@ -294,7 +319,7 @@ class SenderEndPoint implements AutoCloseable
 
         if (partiallySentOtherStream(outbound))
         {
-            return ABORT;
+            return blockPosition(position, length, outbound);
         }
 
         try
@@ -331,16 +356,17 @@ class SenderEndPoint implements AutoCloseable
             if (bodyLength > (written + bytesPreviouslySent))
             {
                 movePosition(outbound, written);
-                return ABORT;
+                return blockPosition(position, length, outbound);
             }
             else
             {
                 setPosition(outbound, position);
                 setPartiallySent(outbound, false);
+                setSkipPosition(Long.MAX_VALUE, outbound);
 
                 if (!isSlowConsumer())
                 {
-                    sendSlowStatus(false);
+                    becomeNormalConsumer();
                 }
             }
         }
@@ -352,6 +378,16 @@ class SenderEndPoint implements AutoCloseable
         return CONTINUE;
     }
 
+    private Action blockPosition(final long position, final int length, final boolean outbound)
+    {
+        final SlowPeeker slowPeeker = outbound ? outboundSlowPeeker : replaySlowPeeker;
+        final int alignedLength = ArchiveDescriptor.alignTerm(length);
+        final long startPosition = position - (alignedLength + DataHeaderFlyweight.HEADER_LENGTH);
+        slowPeeker.blockPosition(startPosition);
+        setSkipPosition(position, outbound);
+        return Action.CONTINUE;
+    }
+
     private boolean partiallySentOtherStream(final boolean outbound)
     {
         return outbound && partiallySentReplayMessage || !outbound && partiallySentOutboundMessage;
@@ -360,6 +396,23 @@ class SenderEndPoint implements AutoCloseable
     private long getPosition(final boolean outbound)
     {
         return outbound ? sentOutboundPosition : sentReplayPosition;
+    }
+
+    private long getSkipPosition(final boolean outbound)
+    {
+        return outbound ? skipOutboundPosition : skipReplayPosition;
+    }
+
+    private void setSkipPosition(final long position, final boolean outbound)
+    {
+        if (outbound)
+        {
+            skipOutboundPosition = position;
+        }
+        else
+        {
+            skipReplayPosition = position;
+        }
     }
 
     private void movePosition(final boolean outbound, final int by)

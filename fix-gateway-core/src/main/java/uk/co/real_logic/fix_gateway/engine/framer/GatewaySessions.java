@@ -20,6 +20,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.*;
@@ -79,7 +80,8 @@ class GatewaySessions
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
         final String username,
-        final String password)
+        final String password,
+        final LibrarySlowPeeker outboundSlowEnginePeeker)
     {
         final long connectionId = gatewaySession.connectionId();
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
@@ -119,7 +121,7 @@ class GatewaySessions
             validationStrategy);
 
         sessions.add(gatewaySession);
-        gatewaySession.manage(sessionParser, session);
+        gatewaySession.manage(sessionParser, session, outboundSlowEnginePeeker);
 
         final CompositeKey sessionKey = gatewaySession.sessionKey();
         DebugLogger.log(FIX_MESSAGE, "Gateway Acquired Session %d\n", connectionId);

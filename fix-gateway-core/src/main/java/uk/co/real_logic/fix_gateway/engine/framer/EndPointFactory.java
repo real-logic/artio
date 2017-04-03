@@ -20,6 +20,7 @@ import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
+import uk.co.real_logic.fix_gateway.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.SequenceNumberType;
@@ -40,6 +41,8 @@ class EndPointFactory
     private final FixCounters fixCounters;
     private final ErrorHandler errorHandler;
     private final LongHashSet replicatedConnectionIds;
+
+    private SlowPeeker replaySlowPeeker;
 
     EndPointFactory(
         final EngineConfiguration configuration,
@@ -107,12 +110,14 @@ class EndPointFactory
         final TcpChannel channel,
         final long connectionId,
         final int libraryId,
+        final LibrarySlowPeeker librarySlowPeeker,
         final Framer framer) throws IOException
     {
         final String remoteAddress = channel.remoteAddress();
         return new SenderEndPoint(
             connectionId,
             libraryId,
+            librarySlowPeeker,
             channel,
             fixCounters.bytesInBuffer(connectionId, remoteAddress),
             fixCounters.invalidLibraryAttempts(connectionId, remoteAddress),
@@ -120,7 +125,12 @@ class EndPointFactory
             framer,
             configuration.senderMaxBytesInBuffer(),
             configuration.slowConsumerTimeoutInMs(),
-            System.currentTimeMillis());
+            System.currentTimeMillis(),
+            replaySlowPeeker);
     }
 
+    void replaySlowPeeker(final SlowPeeker replaySlowPeeker)
+    {
+        this.replaySlowPeeker = replaySlowPeeker;
+    }
 }

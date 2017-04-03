@@ -112,10 +112,11 @@ public final class FixEngine extends GatewayProcess
             scheduler = configuration.scheduler();
             engineDescriptorStore = new EngineDescriptorStore(errorHandler);
 
+            final Publication replayPublication = replayPublication();
             engineContext = EngineContext.of(
                 configuration,
                 errorHandler,
-                replayPublication(),
+                replayPublication,
                 fixCounters,
                 aeron,
                 engineDescriptorStore);
@@ -177,6 +178,13 @@ public final class FixEngine extends GatewayProcess
         final Subscription subscription = aeron.addSubscription(
             configuration.libraryAeronChannel(), OUTBOUND_REPLAY_STREAM);
         StreamInformation.print(name, subscription, configuration);
+
+        // Await replay publication
+        while (subscription.imageCount() == 0)
+        {
+            Thread.yield();
+        }
+
         return subscription;
     }
 
