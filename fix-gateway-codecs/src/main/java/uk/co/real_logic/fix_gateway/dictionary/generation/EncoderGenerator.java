@@ -524,7 +524,16 @@ public class EncoderGenerator extends Generator
             enablingPrefix = "";
         }
         String enablingSuffix = mustCheckFlag || mustCheckLength ? "        }\n" : "";
-        if (needsMissingThrow)
+
+        if ("MsgSeqNum".equals(fieldName))
+        {
+            enablingSuffix = enablingSuffix +
+                "        else\n" +
+                "        {\n" +
+                "            throw new EncodingException(\"Missing Field: MsgSeqNum\");\n" +
+                "        }\n";
+        }
+        else if (needsMissingThrow)
         {
             enablingSuffix = enablingSuffix +
                 "        else if (" + CODEC_VALIDATION_ENABLED + ")\n" +
