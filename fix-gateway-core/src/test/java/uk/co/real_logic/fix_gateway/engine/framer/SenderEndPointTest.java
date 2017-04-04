@@ -48,6 +48,7 @@ public class SenderEndPointTest
     private static final int BODY_LENGTH = 84;
     private static final int LENGTH = FRAME_SIZE + BODY_LENGTH;
     private static final int FRAGMENT_LENGTH = alignTerm(HEADER_LENGTH + FRAME_SIZE + BODY_LENGTH);
+    private static final long BEGIN_POSITION = POSITION - FRAGMENT_LENGTH;
     private static final int MAX_BYTES_IN_BUFFER = 3 * BODY_LENGTH;
 
     private TcpChannel tcpChannel = mock(TcpChannel.class);
@@ -84,6 +85,7 @@ public class SenderEndPointTest
         onSlowOutboundMessage();
         byteBufferWritten();
         assertBytesInBuffer(0);
+        verifyDoesNotBlockLibrary();
     }
 
     @Test
@@ -95,12 +97,14 @@ public class SenderEndPointTest
         final int remaining = BODY_LENGTH - firstWrites;
 
         channelWillWrite(firstWrites);
-        onSlowOutboundMessage(); // ABORT
+        onSlowOutboundMessage();
+        verifyBlocksLibraryAt(BEGIN_POSITION);
         byteBufferWritten();
         assertBytesInBuffer(remaining);
 
         channelWillWrite(remaining);
         onSlowOutboundMessage();
+        verifyDoesNotBlockLibrary();
         byteBufferWritten();
         assertBytesInBuffer(0);
         verifyNoMoreErrors();
@@ -113,12 +117,14 @@ public class SenderEndPointTest
         long position = POSITION;
         channelWillWrite(BODY_LENGTH);
         onOutboundMessage(timeInMs, position);
+        // verifyDoesNotBlockLibrary();
 
         timeInMs += 100;
-        position += BODY_LENGTH;
+        position += FRAGMENT_LENGTH;
 
         channelWillWrite(0);
         onOutboundMessage(timeInMs, position);
+        // verifyBlocksLibraryAt(POSITION);
 
         timeInMs += DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  + 1;
 
@@ -483,6 +489,17 @@ public class SenderEndPointTest
         when(atomicCounter.addOrdered(anyLong())).then(add);
 
         return atomicCounter;
+    }
+
+    private void verifyDoesNotBlockLibrary()
+    {
+        verify(librarySlowPeeker, never()).blockPosition(anyLong());
+    }
+
+    private void verifyBlocksLibraryAt(final long position)
+    {
+        verify(librarySlowPeeker).blockPosition(position);
+        reset(librarySlowPeeker);
     }
 
 }
