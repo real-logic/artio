@@ -512,7 +512,7 @@ public class EncoderGenerator extends Generator
         final boolean mustCheckFlag = hasFlag(entry, field);
         final boolean mustCheckLength = type.hasLengthField();
         final boolean needsMissingThrow =
-            (mustCheckFlag || mustCheckLength) && entry.required();
+            (mustCheckFlag || mustCheckLength) && entry.required() && !"MsgSeqNum".equals(name);
 
         final String enablingPrefix;
         if (mustCheckFlag)
@@ -529,15 +529,7 @@ public class EncoderGenerator extends Generator
         }
         String enablingSuffix = mustCheckFlag || mustCheckLength ? "        }\n" : "";
 
-        if ("MsgSeqNum".equals(name))
-        {
-            enablingSuffix = enablingSuffix +
-                "        else\n" +
-                "        {\n" +
-                "            throw new EncodingException(\"Missing Field: MsgSeqNum\");\n" +
-                "        }\n";
-        }
-        else if (needsMissingThrow)
+        if (needsMissingThrow)
         {
             enablingSuffix = enablingSuffix +
                 "        else if (" + CODEC_VALIDATION_ENABLED + ")\n" +
