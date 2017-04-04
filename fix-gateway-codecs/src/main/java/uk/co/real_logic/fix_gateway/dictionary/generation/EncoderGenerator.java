@@ -19,6 +19,7 @@ import org.agrona.generation.OutputManager;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.dictionary.ir.*;
 import uk.co.real_logic.fix_gateway.dictionary.ir.Entry.Element;
+import uk.co.real_logic.fix_gateway.dictionary.ir.Field.Type;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import java.io.IOException;
@@ -506,7 +507,8 @@ public class EncoderGenerator extends Generator
         final Field.Type type = field.type();
         final boolean mustCheckFlag = hasFlag(entry, field);
         final boolean mustCheckLength = type.hasLengthField();
-        final boolean needsMissingThrow = (type.isFloatBased() || mustCheckLength) && entry.required();
+        final boolean needsMissingThrow =
+            (mustCheckFlag || mustCheckLength) && entry.required();
 
         final String enablingPrefix;
         if (mustCheckFlag)
@@ -733,7 +735,8 @@ public class EncoderGenerator extends Generator
 
     protected boolean hasFlag(final Entry entry, final Field field)
     {
-        return (!entry.required() && !field.type().hasLengthField()) || field.type().isFloatBased();
+        final Type type = field.type();
+        return (!entry.required() && !type.hasLengthField()) || type.isFloatBased() || type.isIntBased();
     }
 
     protected String resetTemporalValue(final String name)
