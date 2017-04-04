@@ -223,7 +223,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
 
-        while (subscriptionSlowPeeker.imageCount() == 0)
+        while (subscriptionSlowPeeker.hasNoImages())
         {
             Thread.yield();
         }

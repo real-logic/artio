@@ -17,21 +17,18 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import io.aeron.Image;
 import io.aeron.logbuffer.ControlledFragmentHandler;
-import org.agrona.collections.MutableLong;
 
 class SlowPeeker
 {
     private static final int DID_NOT_BLOCK = 0;
 
-    final Image image;
+    final Image imageToPoll;
 
-    private final MutableLong peekingPosition = new MutableLong();
     private long blockPosition;
 
-    SlowPeeker(final Image image)
+    SlowPeeker(final Image imageToPoll)
     {
-        this.image = image;
-        peekingPosition.value = image.position();
+        this.imageToPoll = imageToPoll;
     }
 
     int peek(
@@ -39,13 +36,12 @@ class SlowPeeker
         final int fragmentLimit)
     {
         blockPosition = DID_NOT_BLOCK;
-        final int fragmentsRead = image.peekingControlledPoll(peekingPosition, handler, fragmentLimit);
-        if (blockPosition != DID_NOT_BLOCK)
-        {
-            peekingPosition.value = blockPosition;
-            image.position(blockPosition);
-        }
-        return fragmentsRead;
+        final long oldPosition = imageToPoll.position();
+        final long endPosition = imageToPoll.controlledPeek(oldPosition, handler, fragmentLimit);
+        final long delta = endPosition - oldPosition;
+        imageToPoll.position(blockPosition != DID_NOT_BLOCK ? blockPosition : endPosition);
+
+        return (int) delta;
     }
 
     void blockPosition(final long blockPosition)

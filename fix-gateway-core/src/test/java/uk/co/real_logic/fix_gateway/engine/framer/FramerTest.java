@@ -137,7 +137,7 @@ public class FramerTest
 
         clientBuffer.putInt(10, 5);
 
-        when(outboundSlowSubscription.imageCount()).thenReturn(1);
+        when(outboundSlowSubscription.hasNoImages()).thenReturn(false);
         when(outboundSlowSubscription.imageBySessionId(anyInt())).thenReturn(slowImage);
         when(replaySlowSubscription.getImage(0)).thenReturn(slowImage);
 

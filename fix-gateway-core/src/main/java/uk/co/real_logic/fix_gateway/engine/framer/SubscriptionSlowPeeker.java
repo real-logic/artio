@@ -77,7 +77,7 @@ class SubscriptionSlowPeeker
             libraries--;
             if (libraries == 0)
             {
-                sessionIdToImagePeeker.remove(image.sessionId());
+                sessionIdToImagePeeker.remove(imageToPoll.sessionId());
             }
         }
     }

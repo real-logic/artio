@@ -180,7 +180,7 @@ public final class FixEngine extends GatewayProcess
         StreamInformation.print(name, subscription, configuration);
 
         // Await replay publication
-        while (subscription.imageCount() == 0)
+        while (subscription.hasNoImages())
         {
             Thread.yield();
         }
