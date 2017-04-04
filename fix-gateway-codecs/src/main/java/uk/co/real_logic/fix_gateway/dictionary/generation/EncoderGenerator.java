@@ -525,7 +525,7 @@ public class EncoderGenerator extends Generator
         }
         String enablingSuffix = mustCheckFlag || mustCheckLength ? "        }\n" : "";
 
-        if ("MsgSeqNum".equals(fieldName))
+        if ("MsgSeqNum".equals(name))
         {
             enablingSuffix = enablingSuffix +
                 "        else\n" +
