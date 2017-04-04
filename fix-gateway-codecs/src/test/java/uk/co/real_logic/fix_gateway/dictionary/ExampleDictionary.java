@@ -329,7 +329,7 @@ public final class ExampleDictionary
         trailer.requiredEntry(checkSum);
 
         final Message otherMessage = new Message("OtherMessage", OTHER_MESSAGE_TYPE, ADMIN);
-        otherMessage.requiredEntry(registerField(messageEgFields, 99, "OtherField", INT));
+        otherMessage.optionalEntry(registerField(messageEgFields, 99, "OtherField", INT));
 
         final Message fieldsMessage = new Message(FIELDS_MESSAGE, "Z", ADMIN);
         fieldsMessage.requiredEntry(registerField(messageEgFields, 1001, "CurrencyField", CURRENCY));

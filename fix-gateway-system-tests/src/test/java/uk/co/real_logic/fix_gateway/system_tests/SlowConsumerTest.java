@@ -213,6 +213,7 @@ public class SlowConsumerTest
         timestamp.encode(System.currentTimeMillis());
         logon
             .heartBtInt(10)
+            .encryptMethod(0)
             .header()
             .sendingTime(timestamp.buffer())
             .msgSeqNum(1)

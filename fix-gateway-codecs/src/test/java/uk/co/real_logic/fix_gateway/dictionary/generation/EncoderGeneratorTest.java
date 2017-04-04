@@ -449,6 +449,20 @@ public class EncoderGeneratorTest
     }
 
     @Test(expected = EncodingException.class)
+    public void shouldValidateMissingRequiredIntFields() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
+
+        setOnBehalfOfCompID(encoder);
+        setFloatField(encoder);
+        setSomeTimeField(encoder, 1);
+
+        final long result = encoder.encode(buffer, 1);
+
+        System.out.println(buffer.getAscii(Encoder.offset(result), Encoder.length(result)));
+    }
+
+    @Test(expected = EncodingException.class)
     public void shouldValidateMissingRequiredTemporalFields() throws Exception
     {
         final Encoder encoder = (Encoder)heartbeat.newInstance();
@@ -555,10 +569,10 @@ public class EncoderGeneratorTest
     @Test
     public void shouldGenerateTwoCharacterMessageTypes() throws Exception
     {
-        final Encoder encoder = (Encoder)otherMessage.newInstance();
+        final Encoder encoder = (Encoder) otherMessage.newInstance();
 
         assertThat(encoder.toString(), containsString("\"MsgType\": \"" + OTHER_MESSAGE_TYPE + "\""));
-        assertEncodesTo(encoder, "8=FIX.4.4\0019=11\00135=AB\00199=0\00110=003\001");
+        assertEncodesTo(encoder, "8=FIX.4.4\0019=6\00135=AB\00110=247\001");
     }
 
     private void setNestedField(final Object group) throws Exception
