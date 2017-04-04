@@ -46,7 +46,11 @@ public class EncoderGenerator extends Generator
 
     private static final String TRAILER_ENCODE_PREFIX =
         "    public static final byte[] HEADER_PREFIX_STRING = \"%s\".getBytes(US_ASCII);\n\n" +
-        "    int realStart;" +
+        "    int realStart;\n\n" +
+        "    public int realStart()\n" +
+        "    {\n" +
+        "        return realStart;\n" +
+        "    }\n\n" +
         "    public int encode(final MutableAsciiBuffer buffer, final int offset, final int bodyStart)\n" +
         "    {\n" +
         "        int position = offset;\n\n";
