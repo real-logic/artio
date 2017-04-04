@@ -43,12 +43,17 @@ class SlowPeeker
         if (blockPosition != DID_NOT_BLOCK)
         {
             peekingPosition.value = blockPosition;
+            image.position(blockPosition);
         }
         return fragmentsRead;
     }
 
-    void blockPosition(final long stopPosition)
+    void blockPosition(final long blockPosition)
     {
-        this.blockPosition = stopPosition;
+        // Pick the lowest (ie first) position to block at
+        if (this.blockPosition == DID_NOT_BLOCK)
+        {
+            this.blockPosition = blockPosition;
+        }
     }
 }
