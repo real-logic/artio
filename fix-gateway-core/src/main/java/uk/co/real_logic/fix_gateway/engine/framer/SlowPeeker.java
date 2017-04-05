@@ -22,24 +22,27 @@ class SlowPeeker
 {
     private static final int DID_NOT_BLOCK = 0;
 
-    final Image imageToPoll;
+    private final Image normalImage;
+
+    final Image peekImage;
 
     private long blockPosition;
 
-    SlowPeeker(final Image imageToPoll)
+    SlowPeeker(final Image peekImage, final Image normalImage)
     {
-        this.imageToPoll = imageToPoll;
+        this.peekImage = peekImage;
+        this.normalImage = normalImage;
     }
 
-    int peek(
-        final ControlledFragmentHandler handler,
-        final int fragmentLimit)
+    int peek(final ControlledFragmentHandler handler)
     {
         blockPosition = DID_NOT_BLOCK;
-        final long oldPosition = imageToPoll.position();
-        final long endPosition = imageToPoll.controlledPeek(oldPosition, handler, fragmentLimit);
-        final long delta = endPosition - oldPosition;
-        imageToPoll.position(blockPosition != DID_NOT_BLOCK ? blockPosition : endPosition);
+        final long limitPosition = normalImage.position();
+        final long initialPosition = peekImage.position();
+        final long resultingPosition = peekImage.controlledPeek(
+                initialPosition, handler, limitPosition);
+        final long delta = resultingPosition - initialPosition;
+        peekImage.position(blockPosition != DID_NOT_BLOCK ? blockPosition : resultingPosition);
 
         return (int) delta;
     }

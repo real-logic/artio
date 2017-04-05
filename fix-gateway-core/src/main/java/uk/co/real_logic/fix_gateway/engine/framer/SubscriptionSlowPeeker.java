@@ -20,30 +20,29 @@ import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.collections.Int2ObjectHashMap;
 
-import java.util.Iterator;
 import java.util.function.IntFunction;
 
 class SubscriptionSlowPeeker
 {
-    private final Subscription subscription;
+    private final Subscription peekSubscription;
+    private final Subscription normalSubscription;
     private final Int2ObjectHashMap<LibrarySlowPeeker> sessionIdToImagePeeker = new Int2ObjectHashMap<>();
     private final IntFunction<LibrarySlowPeeker> newLibraryPeeker = this::newLibraryPeeker;
 
-    SubscriptionSlowPeeker(final Subscription subscription)
+    SubscriptionSlowPeeker(final Subscription peekSubscription, final Subscription normalSubscription)
     {
-        this.subscription = subscription;
+        this.peekSubscription = peekSubscription;
+        this.normalSubscription = normalSubscription;
     }
 
-    int peek(final ControlledFragmentHandler handler, final int fragmentLimit)
+    int peek(final ControlledFragmentHandler handler)
     {
-        final Iterator<LibrarySlowPeeker> it = sessionIdToImagePeeker.values().iterator();
-        int fragmentsRead = 0;
-        while (it.hasNext() && fragmentsRead < fragmentLimit)
+        int bytesRead = 0;
+        for (final LibrarySlowPeeker slowPeeker : sessionIdToImagePeeker.values())
         {
-            final SlowPeeker imagePeeker = it.next();
-            fragmentsRead += imagePeeker.peek(handler, fragmentLimit - fragmentsRead);
+            bytesRead += slowPeeker.peek(handler);
         }
-        return fragmentsRead;
+        return bytesRead;
     }
 
     LibrarySlowPeeker addLibrary(final int aeronSessionId)
@@ -55,16 +54,18 @@ class SubscriptionSlowPeeker
 
     private LibrarySlowPeeker newLibraryPeeker(final int aeronSessionId)
     {
-        return new LibrarySlowPeeker(subscription.imageBySessionId(aeronSessionId));
+        return new LibrarySlowPeeker(
+                peekSubscription.imageBySessionId(aeronSessionId),
+                normalSubscription.imageBySessionId(aeronSessionId));
     }
 
     class LibrarySlowPeeker extends SlowPeeker
     {
         private int libraries;
 
-        LibrarySlowPeeker(final Image image)
+        LibrarySlowPeeker(final Image peekImage, final Image normalImage)
         {
-            super(image);
+            super(peekImage, normalImage);
         }
 
         void addLibrary()
@@ -77,7 +78,7 @@ class SubscriptionSlowPeeker
             libraries--;
             if (libraries == 0)
             {
-                sessionIdToImagePeeker.remove(imageToPoll.sessionId());
+                sessionIdToImagePeeker.remove(peekImage.sessionId());
             }
         }
     }

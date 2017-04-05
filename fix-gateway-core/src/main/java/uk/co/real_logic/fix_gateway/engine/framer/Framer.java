@@ -133,7 +133,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ClusterSubscription outboundClusterSubscription;
     private final ClusterSubscription outboundClusterSlowSubscription;
     private final Subscription outboundLibrarySubscription;
-    private final SubscriptionSlowPeeker subscriptionSlowPeeker;
+    private final SubscriptionSlowPeeker outboundSlowPeeker;
     private final Subscription replaySubscription;
     private final SlowPeeker replaySlowPeeker;
     private final LibrarySlowPeeker outboundSlowEnginePeeker;
@@ -173,10 +173,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final ClusterSubscription outboundClusterSubscription,
         final ClusterSubscription outboundClusterSlowSubscription,
         final Subscription outboundLibrarySubscription,
-        final Subscription subscriptionSlowPeeker,
+        final Subscription outboundSlowSubscription,
         final int gatewaySessionsOutboundId,
         final Subscription replaySubscription,
-        final Subscription replaySlowPeeker,
+        final Subscription replaySlowSubscription,
         final QueuedPipe<AdminCommand> adminCommands,
         final SessionIdStrategy sessionIdStrategy,
         final SessionContexts sessionContexts,
@@ -204,7 +204,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundClusterSubscription = outboundClusterSubscription;
         this.outboundClusterSlowSubscription = outboundClusterSlowSubscription;
         this.outboundLibrarySubscription = outboundLibrarySubscription;
-        this.subscriptionSlowPeeker = new SubscriptionSlowPeeker(subscriptionSlowPeeker);
+        this.outboundSlowPeeker = new SubscriptionSlowPeeker(outboundSlowSubscription, outboundLibrarySubscription);
         this.replaySubscription = replaySubscription;
         this.gatewaySessions = gatewaySessions;
         this.inboundMessages = inboundMessages;
@@ -223,13 +223,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
 
-        while (subscriptionSlowPeeker.hasNoImages())
+        while (outboundSlowSubscription.hasNoImages())
         {
             Thread.yield();
         }
 
-        this.outboundSlowEnginePeeker = this.subscriptionSlowPeeker.addLibrary(gatewaySessionsOutboundId);
-        this.replaySlowPeeker = new SlowPeeker(replaySlowPeeker.getImage(0));
+        this.outboundSlowEnginePeeker = this.outboundSlowPeeker.addLibrary(gatewaySessionsOutboundId);
+        this.replaySlowPeeker = new SlowPeeker(
+                replaySlowSubscription.getImage(0),
+                replaySubscription.getImage(0));
 
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
         this.replayFragmentLimit = configuration.replayFragmentLimit();
@@ -371,7 +373,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private int sendReplayMessages()
     {
         return replaySubscription.controlledPoll(outboundReplaySubscriber, replayFragmentLimit) +
-               replaySlowPeeker.peek(outboundReplaySlowSubscriber, replayFragmentLimit);
+               replaySlowPeeker.peek(outboundReplaySlowSubscriber);
     }
 
     private int sendOutboundMessages()
@@ -379,7 +381,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int newMessagesRead =
             outboundLibrarySubscription.controlledPoll(outboundLibrarySubscriber, outboundLibraryFragmentLimit);
         int messagesRead = newMessagesRead +
-            subscriptionSlowPeeker.peek(senderEndPoints, outboundLibraryFragmentLimit);
+            outboundSlowPeeker.peek(senderEndPoints);
 
         if (isClustered())
         {
@@ -880,7 +882,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             configuration.replyTimeoutInMs(),
             clock.time());
 
-        final LibrarySlowPeeker librarySlowPeeker = subscriptionSlowPeeker.addLibrary(aeronSessionId);
+        final LibrarySlowPeeker librarySlowPeeker = outboundSlowPeeker.addLibrary(aeronSessionId);
         final LiveLibraryInfo library = new LiveLibraryInfo(
             libraryId, livenessDetector, aeronSessionId, librarySlowPeeker);
         idToLibrary.put(libraryId, library);
