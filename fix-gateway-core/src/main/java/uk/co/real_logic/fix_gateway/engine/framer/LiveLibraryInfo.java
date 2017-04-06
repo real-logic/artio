@@ -99,11 +99,6 @@ final class LiveLibraryInfo implements LibraryInfo
         return GatewaySessions.removeSessionByConnectionId(connectionId, allSessions);
     }
 
-    void onReconnect(final long timeInMs)
-    {
-        livenessDetector.onReconnect(timeInMs);
-    }
-
     void acquireAtPosition(final long libraryPosition)
     {
         acquireAtPosition = libraryPosition;
@@ -114,7 +109,7 @@ final class LiveLibraryInfo implements LibraryInfo
         return acquireAtPosition;
     }
 
-    public LibrarySlowPeeker librarySlowPeeker()
+    LibrarySlowPeeker librarySlowPeeker()
     {
         return librarySlowPeeker;
     }
