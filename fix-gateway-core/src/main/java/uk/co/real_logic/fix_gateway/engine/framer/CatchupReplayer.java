@@ -339,7 +339,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private boolean replayIncomplete()
     {
         return replayFromSequenceIndex < currentSequenceIndex
-              || replayFromSequenceNumber <= lastReceivedSeqNum;
+            || replayFromSequenceNumber < lastReceivedSeqNum;
     }
 
     private boolean notLoggingInboundMessages()
