@@ -450,7 +450,9 @@ public class SenderEndPointTest
 
     private void becomeSlowConsumer()
     {
-        endPoint.becomeSlowConsumer(0, BODY_LENGTH, POSITION, true);
+        channelWillWrite(0);
+        onOutboundMessage(0, POSITION);
+        byteBufferWritten();
     }
 
     private void channelWillWrite(final int bodyLength)
