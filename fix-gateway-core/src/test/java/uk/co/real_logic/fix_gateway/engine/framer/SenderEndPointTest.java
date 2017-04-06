@@ -117,14 +117,12 @@ public class SenderEndPointTest
         long position = POSITION;
         channelWillWrite(BODY_LENGTH);
         onOutboundMessage(timeInMs, position);
-        // verifyDoesNotBlockLibrary();
 
         timeInMs += 100;
         position += FRAGMENT_LENGTH;
 
         channelWillWrite(0);
         onOutboundMessage(timeInMs, position);
-        // verifyBlocksLibraryAt(POSITION);
 
         timeInMs += DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  + 1;
 
@@ -161,7 +159,8 @@ public class SenderEndPointTest
         timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1);
 
         channelWillWrite(replayWrites);
-        onSlowOutboundMessage(timeInMs); // ABORT
+        onSlowOutboundMessage(timeInMs);
+        verifyBlocksLibraryAt(BEGIN_POSITION);
 
         timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1);
 
@@ -180,6 +179,7 @@ public class SenderEndPointTest
 
         verifySlowConsumerDisconnect(never());
         verifyNoMoreErrors();
+        verifyDoesNotBlockLibrary();
     }
 
     @Test
@@ -205,10 +205,12 @@ public class SenderEndPointTest
         final int firstWrites = 41;
 
         channelWillWrite(firstWrites);
-        onSlowOutboundMessage(); // ABORT
+        onSlowOutboundMessage();
+        verifyBlocksLibraryAt(BEGIN_POSITION);
 
         channelWillWrite(0);
-        onSlowOutboundMessage(); // ABORT
+        onSlowOutboundMessage();
+        verifyBlocksLibraryAt(BEGIN_POSITION);
 
         endPoint.checkTimeouts(DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  + 101);
 
@@ -253,6 +255,7 @@ public class SenderEndPointTest
         channelWillWrite(BODY_LENGTH);
         onSlowReplayMessage(0, position);
         byteBufferWritten();
+        verifyDoesNotBlockLibrary();
 
         assertBytesInBuffer(0);
     }
@@ -282,21 +285,24 @@ public class SenderEndPointTest
         final int firstWrites = 41;
         final int remaining = BODY_LENGTH - firstWrites;
 
-        final long position = 0;
+        final long position = POSITION;
         channelWillWrite(0);
         onReplayMessage(0, position);
         byteBufferWritten();
+        verifyDoesNotBlockLibrary();
 
         channelWillWrite(firstWrites);
         onSlowReplayMessage(0, position);
         byteBufferWritten();
         assertBytesInBuffer(remaining);
+        verifyBlocksReplayAt(BEGIN_POSITION);
 
         channelWillWrite(remaining);
         onSlowReplayMessage(0, position);
         byteBufferWritten();
         assertBytesInBuffer(0);
         verifyNoMoreErrors();
+        verifyDoesNotBlockLibrary();
     }
 
     @Test
@@ -305,7 +311,7 @@ public class SenderEndPointTest
         final int firstWrites = 41;
         final int remaining = BODY_LENGTH - firstWrites;
 
-        final long position = 0;
+        final long position = POSITION;
         channelWillWrite(0);
         onReplayMessage(0, position);
         byteBufferWritten();
@@ -319,9 +325,10 @@ public class SenderEndPointTest
         byteBufferNotWritten();
         assertBytesInBuffer(remaining + BODY_LENGTH);
 
-        onSlowOutboundMessage(); // ABORT
+        onSlowOutboundMessage();
         byteBufferNotWritten();
         assertBytesInBuffer(remaining + BODY_LENGTH);
+        verifyBlocksLibraryAt(BEGIN_POSITION);
 
         channelWillWrite(remaining);
         onSlowReplayMessage(0, position);
@@ -346,9 +353,10 @@ public class SenderEndPointTest
         becomeSlowConsumer();
 
         channelWillWrite(firstWrites);
-        onSlowOutboundMessage(); // ABORT
+        onSlowOutboundMessage();
         byteBufferWritten();
         assertBytesInBuffer(remaining);
+        verifyBlocksLibraryAt(BEGIN_POSITION);
 
         channelWillWrite(0);
         onReplayMessage(0, position);
@@ -496,12 +504,23 @@ public class SenderEndPointTest
     private void verifyDoesNotBlockLibrary()
     {
         verify(librarySlowPeeker, never()).blockPosition(anyLong());
+        verify(replaySlowPeeker, never()).blockPosition(anyLong());
     }
 
     private void verifyBlocksLibraryAt(final long position)
     {
-        verify(librarySlowPeeker).blockPosition(position);
-        reset(librarySlowPeeker);
+        verifyBlocksAt(position, librarySlowPeeker);
+    }
+
+    private void verifyBlocksReplayAt(final long position)
+    {
+        verifyBlocksAt(position, replaySlowPeeker);
+    }
+
+    private void verifyBlocksAt(final long position, final SlowPeeker slowPeeker)
+    {
+        verify(slowPeeker).blockPosition(position);
+        reset(slowPeeker);
     }
 
 }
