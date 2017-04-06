@@ -28,7 +28,7 @@ import static org.agrona.collections.CollectionUtil.removeIf;
 class RetryManager
 {
     private final Long2ObjectHashMap<UnitOfWork> correlationIdToTransactions = new Long2ObjectHashMap<>();
-    private List<Continuation> polledUnitOfWorks = new ArrayList<>();
+    private final List<Continuation> polledUnitOfWorks = new ArrayList<>();
 
     Action retry(final long correlationId)
     {
