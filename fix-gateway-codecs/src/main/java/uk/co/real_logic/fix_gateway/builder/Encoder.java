@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.builder;
 
+import uk.co.real_logic.fix_gateway.EncodingException;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 public interface Encoder
@@ -42,6 +43,8 @@ public interface Encoder
      * @param buffer the buffer to encode the message to.
      * @param offset the offset within the buffer to start encoding the message at.
      * @return the offset and length of the encoded message on the buffer packed into a long
+     * @throws EncodingException if a required field (other than the message sequence number)
+     *                           is missing and codec validation is enabled.
      */
     long encode(MutableAsciiBuffer buffer, int offset);
 

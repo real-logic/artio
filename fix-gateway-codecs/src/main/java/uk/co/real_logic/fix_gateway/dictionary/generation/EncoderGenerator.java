@@ -46,7 +46,11 @@ public class EncoderGenerator extends Generator
 
     private static final String TRAILER_ENCODE_PREFIX =
         "    public static final byte[] HEADER_PREFIX_STRING = \"%s\".getBytes(US_ASCII);\n\n" +
-        "    int realStart;" +
+        "    int realStart;\n\n" +
+        "    public int realStart()\n" +
+        "    {\n" +
+        "        return realStart;\n" +
+        "    }\n\n" +
         "    public int encode(final MutableAsciiBuffer buffer, final int offset, final int bodyStart)\n" +
         "    {\n" +
         "        int position = offset;\n\n";
@@ -508,7 +512,7 @@ public class EncoderGenerator extends Generator
         final boolean mustCheckFlag = hasFlag(entry, field);
         final boolean mustCheckLength = type.hasLengthField();
         final boolean needsMissingThrow =
-            (mustCheckFlag || mustCheckLength) && entry.required();
+            (mustCheckFlag || mustCheckLength) && entry.required() && !"MsgSeqNum".equals(name);
 
         final String enablingPrefix;
         if (mustCheckFlag)
@@ -524,6 +528,7 @@ public class EncoderGenerator extends Generator
             enablingPrefix = "";
         }
         String enablingSuffix = mustCheckFlag || mustCheckLength ? "        }\n" : "";
+
         if (needsMissingThrow)
         {
             enablingSuffix = enablingSuffix +

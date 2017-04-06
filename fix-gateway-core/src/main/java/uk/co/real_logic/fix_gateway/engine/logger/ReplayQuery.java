@@ -133,6 +133,13 @@ public class ReplayQuery implements AutoCloseable
                     sessionReader = archiveReader.session(aeronSessionId);
                 }
 
+                // You can't find the entry in the log file so treat the same as
+                // ArchiveReader.read() returning NO_MESSAGE.
+                if (sessionReader == null)
+                {
+                    return count;
+                }
+
                 final int sequenceIndex = indexRecord.sequenceIndex();
                 final int sequenceNumber = indexRecord.sequenceNumber();
 

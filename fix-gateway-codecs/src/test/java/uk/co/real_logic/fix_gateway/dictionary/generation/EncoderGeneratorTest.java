@@ -457,9 +457,7 @@ public class EncoderGeneratorTest
         setFloatField(encoder);
         setSomeTimeField(encoder, 1);
 
-        final long result = encoder.encode(buffer, 1);
-
-        System.out.println(buffer.getAscii(Encoder.offset(result), Encoder.length(result)));
+        encoder.encode(buffer, 1);
     }
 
     @Test(expected = EncodingException.class)
