@@ -47,7 +47,7 @@ public final class RepeatConnectionBenchmarkClient extends AbstractBenchmarkClie
                 read(socketChannel);
             }
 
-            System.out.printf("Finished Connection: %d\n", i + 1);
+            System.out.printf("Finished Connection: %d%n", i + 1);
         }
     }
 }

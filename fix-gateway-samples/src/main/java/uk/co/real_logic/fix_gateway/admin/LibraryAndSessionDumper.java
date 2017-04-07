@@ -51,20 +51,15 @@ public class LibraryAndSessionDumper
         for (final LibraryInfo library : reply.resultIfPresent())
         {
             System.out.println("--------------------------------");
-            System.out.printf("Library %d\n", library.libraryId());
-            System.out.println("--------------------------------\n");
-            System.out.println("| Id   | Remote Address ");
+            System.out.printf("Library %d%n", library.libraryId());
+            System.out.println("--------------------------------%n");
+            System.out.println("| Id   | Remote Address %n");
             for (final SessionInfo session : library.sessions())
             {
                 System.out.printf("| %4d | %s", session.connectionId(), session.address());
             }
-            System.out.println("--------------------------------\n");
+            System.out.println("--------------------------------%n");
         }
-    }
-
-    public String roleName()
-    {
-        return "Library and Session Dumper";
     }
 
 }

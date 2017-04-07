@@ -139,8 +139,8 @@ public abstract class AbstractBenchmarkClient
     {
         final long duration = System.currentTimeMillis() - startTime;
         final double rate = (double) messagesExchanged / duration;
-        System.out.printf("%d messages in %d ms\n", messagesExchanged, duration);
-        System.out.printf("%G messages / s\n", rate * 1000.0);
+        System.out.printf("%d messages in %d ms%n", messagesExchanged, duration);
+        System.out.printf("%G messages / s%n", rate * 1000.0);
     }
 
     protected int scanForReceivesMessages(

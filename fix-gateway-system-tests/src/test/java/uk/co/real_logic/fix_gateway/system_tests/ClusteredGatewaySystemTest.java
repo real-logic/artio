@@ -168,7 +168,7 @@ public class ClusteredGatewaySystemTest
 
         final FixEngineRunner oldLeader = leader;
         oldLeader.disable();
-        logLeader(oldLeader, "Disabled old old leader (%s) [%s]\n");
+        logLeader(oldLeader, "Disabled old old leader (%s) [%s]%n");
 
         final List<FixEngineRunner> otherNodes = new ArrayList<>(acceptingCluster);
         otherNodes.remove(oldLeader);
@@ -184,7 +184,7 @@ public class ClusteredGatewaySystemTest
 
         assertNotEquals("Failed to change leader", oldLeader, leader);
 
-        logLeader(leader, "Elected new leader: (%s) [%s]\n");
+        logLeader(leader, "Elected new leader: (%s) [%s]%n");
 
         assertEventuallyTrue(
             () ->
@@ -201,7 +201,7 @@ public class ClusteredGatewaySystemTest
             {
             });
 
-        DebugLogger.log(GATEWAY_CLUSTER_TEST, "Library has connected to new leader\n");
+        DebugLogger.log(GATEWAY_CLUSTER_TEST, "Library has connected to new leader%n");
 
         initiatingSession.close();
         acceptingSession.close();
@@ -223,11 +223,11 @@ public class ClusteredGatewaySystemTest
 
         connectFixSession();
 
-        DebugLogger.log(GATEWAY_CLUSTER_TEST, "Connected New Fix Session\n");
+        DebugLogger.log(GATEWAY_CLUSTER_TEST, "Connected New Fix Session%n");
 
         roundTripOneMessage(acceptingSession, initiatingOtfAcceptor);
 
-        DebugLogger.log(GATEWAY_CLUSTER_TEST, "Message Roundtrip\n");
+        DebugLogger.log(GATEWAY_CLUSTER_TEST, "Message Roundtrip%n");
     }
 
     private Optional<FixEngineRunner> findNewLeader(final List<FixEngineRunner> nodes)

@@ -173,17 +173,17 @@ public class HistogramLogReader implements AutoCloseable
         final double scalingFactor)
     {
         System.out.printf(
-            "%s Histogram @ %d millis\n" +
-            "----------\n" +
-            "Mean: %G\n" +
-            "1:    %G\n" +
-            "50:   %G\n" +
-            "90:   %G\n" +
-            "99:   %G\n" +
-            "99.9: %G\n" +
-            "99.99: %G\n" +
-            "100:  %G\n" +
-            "----------\n",
+            "%s Histogram @ %d millis%n" +
+            "----------%n" +
+            "Mean: %G%n" +
+            "1:    %G%n" +
+            "50:   %G%n" +
+            "90:   %G%n" +
+            "99:   %G%n" +
+            "99.9: %G%n" +
+            "99.99: %G%n" +
+            "100:  %G%n" +
+            "----------%n",
 
             name,
             timestampInMs,

@@ -562,7 +562,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         {
             if (type == INITIATOR)
             {
-                DebugLogger.log(FIX_MESSAGE, "Init Connect: %d, %d\n", connectionId, libraryId);
+                DebugLogger.log(FIX_MESSAGE, "Init Connect: %d, %d%n", connectionId, libraryId);
                 final boolean isInitiator = correlationIdToReply.get(replyToId) instanceof InitiateSessionReply;
                 final InitiateSessionReply reply =
                     isInitiator ? (InitiateSessionReply) correlationIdToReply.remove(replyToId) : null;
@@ -577,7 +577,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             }
             else
             {
-                DebugLogger.log(FIX_MESSAGE, "Acct Connect: %d, %d\n", connectionId, libraryId);
+                DebugLogger.log(FIX_MESSAGE, "Acct Connect: %d, %d%n", connectionId, libraryId);
                 asciiBuffer.wrap(buffer);
                 final String address = asciiBuffer.getAscii(addressOffset, addressLength);
                 final Session session = acceptSession(
@@ -609,7 +609,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final boolean thisLibrary = libraryId == this.libraryId;
         if (thisLibrary && logonstatus == LogonStatus.NEW)
         {
-            DebugLogger.log(FIX_MESSAGE, "Library Logon: %d, %d\n", connectionId, sessionId);
+            DebugLogger.log(FIX_MESSAGE, "Library Logon: %d, %d%n", connectionId, sessionId);
             final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
             if (subscriber != null)
             {
@@ -666,7 +666,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
-            DebugLogger.log(FIX_MESSAGE, "(%d) Received %s \n", libraryId, buffer, offset, length);
+            DebugLogger.log(FIX_MESSAGE, "(%d) Received %s %n", libraryId, buffer, offset, length);
             final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
             if (subscriber != null)
             {
@@ -690,7 +690,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     public Action onDisconnect(
         final int libraryId, final long connectionId, final DisconnectReason reason)
     {
-        DebugLogger.log(FIX_MESSAGE, "%2$d: Library Disconnect %3$d, %1$s\n", reason, libraryId, connectionId);
+        DebugLogger.log(FIX_MESSAGE, "%2$d: Library Disconnect %3$d, %1$s%n", reason, libraryId, connectionId);
         if (libraryId == this.libraryId)
         {
             final SessionSubscriber subscriber = connectionIdToSession.remove(connectionId);
@@ -746,7 +746,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         {
             final long timeInMs = timeInMs();
             DebugLogger.log(
-                APPLICATION_HEARTBEAT, "%d: Received Heartbeat from engine at timeInMs %d\n", libraryId, timeInMs);
+                APPLICATION_HEARTBEAT, "%d: Received Heartbeat from engine at timeInMs %d%n", libraryId, timeInMs);
             livenessDetector.onHeartbeat(timeInMs);
 
             if (!isConnected() && livenessDetector.isConnected())
@@ -806,7 +806,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 currentAeronChannel = libraryChannel;
                 DebugLogger.log(
                     LIBRARY_CONNECT,
-                    "%d: Attempting connect to (%s) claimed leader\n",
+                    "%d: Attempting connect to (%s) claimed leader%n",
                     libraryId,
                     currentAeronChannel);
                 connectToNextEngineNow(timeInMs);

@@ -10,7 +10,7 @@ import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNK_SESSION;
  * This example shows how to print out the state of index files stored by the engine. Currently
  * only supports sequence numbers.
  */
-public class EngineIndexPrinter
+public final class EngineIndexPrinter
 {
 
     public static void main(final String[] args)
@@ -24,7 +24,7 @@ public class EngineIndexPrinter
 
             final MappedFile receivedSequenceNumberIndex = engineConfiguration.receivedSequenceNumberIndex();
 
-            System.out.printf("Inspecting %s\n", receivedSequenceNumberIndex.file().getAbsolutePath());
+            System.out.printf("Inspecting %s%n", receivedSequenceNumberIndex.file().getAbsolutePath());
 
             final SequenceNumberIndexReader reader = new SequenceNumberIndexReader(
                 receivedSequenceNumberIndex.buffer(), Throwable::printStackTrace);
@@ -38,10 +38,8 @@ public class EngineIndexPrinter
                     break;
                 }
 
-                System.out.printf("Last seen sequence number for %d is %d\n", sessionId, sequenceNumber);
+                System.out.printf("Last seen sequence number for %d is %d%n", sessionId, sequenceNumber);
             }
         }
-
-
     }
 }

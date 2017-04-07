@@ -41,7 +41,7 @@ class NodeHandler implements ClusterFragmentHandler
     public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final ClusterHeader header)
     {
         final long position = header.position();
-        DebugLogger.log(RAFT, "%d: position %d\n", nodeId, position);
+        DebugLogger.log(RAFT, "%d: position %d%n", nodeId, position);
         replicatedMessages.add(new ReplicatedMessage(position, length));
 
         // Exceptions.printStackTrace();

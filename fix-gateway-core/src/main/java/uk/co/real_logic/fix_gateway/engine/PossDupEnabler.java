@@ -151,7 +151,7 @@ public class PossDupEnabler
     {
         DebugLogger.log(
             CATCHUP,
-            "Resending: %s\n",
+            "Resending: %s%n",
             bufferClaim.buffer(),
             bufferClaim.offset() + FRAME_LENGTH,
             bufferClaim.length() - FRAME_LENGTH);

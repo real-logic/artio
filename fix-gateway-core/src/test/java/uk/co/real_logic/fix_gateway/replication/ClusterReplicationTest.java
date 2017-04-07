@@ -63,7 +63,7 @@ public class ClusterReplicationTest
         assertEventuallyFindsLeaderIn(allNodes);
 
         final NodeRunner leader = leader();
-        DebugLogger.log(RAFT, "Leader elected: %d\n\n", leader.clusterAgent().nodeId());
+        DebugLogger.log(RAFT, "Leader elected: %d%n%n", leader.clusterAgent().nodeId());
     }
 
     @After
@@ -88,11 +88,11 @@ public class ClusterReplicationTest
     {
         final NodeRunner leader = leader();
 
-        DebugLogger.log(RAFT, "Leader is %s\n", leader.nodeId());
+        DebugLogger.log(RAFT, "Leader is %s%n", leader.nodeId());
 
         final long position = sendMessageTo(leader);
 
-        DebugLogger.log(RAFT, "Leader @ %s\n", position);
+        DebugLogger.log(RAFT, "Leader @ %s%n", position);
 
         assertMessageReceived();
     }
@@ -105,7 +105,7 @@ public class ClusterReplicationTest
         final NodeRunner leader = leader();
         final NodeRunner[] followers = followers();
 
-        DebugLogger.log(RAFT, "Pausing Leader: %s\n", leader.nodeId());
+        DebugLogger.log(RAFT, "Pausing Leader: %s%n", leader.nodeId());
 
         assertEventuallyTrue(
             "Failed to find leader",
@@ -542,7 +542,7 @@ public class ClusterReplicationTest
                         ourSessionId,
                         position);
                 })
-            .collect(Collectors.joining("\n", "\n", "\n"));
+            .collect(Collectors.joining("%n", "%n", "%n"));
     }
 
     private String state(final ClusterAgent agent)

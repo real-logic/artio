@@ -124,7 +124,7 @@ class GatewaySessions
         gatewaySession.manage(sessionParser, session, outboundSlowEnginePeeker);
 
         final CompositeKey sessionKey = gatewaySession.sessionKey();
-        DebugLogger.log(FIX_MESSAGE, "Gateway Acquired Session %d\n", connectionId);
+        DebugLogger.log(FIX_MESSAGE, "Gateway Acquired Session %d%n", connectionId);
         if (sessionKey != null)
         {
             gatewaySession.onLogon(

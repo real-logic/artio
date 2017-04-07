@@ -40,7 +40,7 @@ public class ErrorPrinter implements Agent
         {
             System.err.println(encodedException);
             System.err.printf(
-                "count=%d,firstTime=%d,lastTime=%d\n\n",
+                "count=%d,firstTime=%d,lastTime=%d%n%n",
                 observationCount,
                 firstObservationTimestampInMs,
                 lastObservationTimestampInMs);

@@ -33,7 +33,7 @@ public final class StreamInformation
         if (printAeronStreamIdentifiers)
         {
             System.out.printf(
-                "%-40s - registrationId=%d,streamId=%d\n",
+                "%-40s - registrationId=%d,streamId=%d%n",
                 name,
                 subscription.registrationId(),
                 subscription.streamId());
@@ -54,7 +54,7 @@ public final class StreamInformation
         if (printAeronStreamIdentifiers)
         {
             System.out.printf(
-                "%-40s - registrationId=%d,streamId=%d\n",
+                "%-40s - registrationId=%d,streamId=%d%n",
                 name,
                 publication.registrationId(),
                 publication.streamId());

@@ -84,7 +84,7 @@ class Candidate implements Role, RaftHandler
     {
         if (voteTimeout.hasTimedOut(timeInMs))
         {
-            DebugLogger.log(RAFT, "%d: restartElection @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
+            DebugLogger.log(RAFT, "%d: restartElection @ %d in %d%n", nodeId, timeInMs, termState.leadershipTerm());
 
             startElection(timeInMs);
 
@@ -263,7 +263,7 @@ class Candidate implements Role, RaftHandler
 
     Candidate startNewElection(final long timeInMs)
     {
-        DebugLogger.log(RAFT, "%d: startNewElection @ %d in %d\n", nodeId, timeInMs, termState.leadershipTerm());
+        DebugLogger.log(RAFT, "%d: startNewElection @ %d in %d%n", nodeId, timeInMs, termState.leadershipTerm());
 
         startElection(timeInMs);
         return this;

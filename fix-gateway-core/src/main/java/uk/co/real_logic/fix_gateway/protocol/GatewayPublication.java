@@ -140,7 +140,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        DebugLogger.log(FIX_MESSAGE, "Enqueued %s\n", srcBuffer, srcOffset, srcLength);
+        DebugLogger.log(FIX_MESSAGE, "Enqueued %s%n", srcBuffer, srcOffset, srcLength);
 
         return position;
     }

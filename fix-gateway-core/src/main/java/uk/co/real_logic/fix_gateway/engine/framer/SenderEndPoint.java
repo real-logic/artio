@@ -178,7 +178,7 @@ class SenderEndPoint implements AutoCloseable
         buffer.position(wrapAdjustment + offset);
 
         final int written = channel.write(buffer);
-        DebugLogger.log(FIX_MESSAGE, "Written  %s\n", buffer, written);
+        DebugLogger.log(FIX_MESSAGE, "Written  %s%n", buffer, written);
         updateSendingTimeoutTimeInMs(timeInMs, written);
         return written;
     }

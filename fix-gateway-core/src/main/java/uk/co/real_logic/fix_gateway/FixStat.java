@@ -47,7 +47,7 @@ public class FixStat
             while (running.get())
             {
                 System.out.print("\033[H\033[2J");
-                System.out.format("%1$tH:%1$tM:%1$tS - Fix Stat\n", LocalTime.now());
+                System.out.format("%1$tH:%1$tM:%1$tS - Fix Stat%n", LocalTime.now());
                 System.out.println("=========================");
 
                 countersManager.forEach(
@@ -56,7 +56,7 @@ public class FixStat
                         final int offset = CountersManager.counterOffset(id);
                         final long value = countersBuffer.getLongVolatile(offset);
 
-                        System.out.format("%3d: %,20d - %s\n", id, value, label);
+                        System.out.format("%3d: %,20d - %s%n", id, value, label);
                     });
 
                 Thread.sleep(1000);

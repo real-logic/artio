@@ -231,13 +231,13 @@ class ClusterPositionSender implements Agent, ArchivedPositionHandler
     void onClusteredLibraryPosition(final int libraryId, final long position, final int length)
     {
         final int alignedLength = ArchiveDescriptor.alignTerm(length);
-        DebugLogger.log(POSITION, "Clustered Position %d, len = %d\n", position, alignedLength);
+        DebugLogger.log(POSITION, "Clustered Position %d, len = %d%n", position, alignedLength);
         getPositions(libraryId).newPosition(position, alignedLength);
     }
 
     public void onArchivedPosition(final int aeronSessionId, final long endPosition, final int alignedLength)
     {
-        DebugLogger.log(POSITION, "Archived Position %d, len = %d\n", endPosition, alignedLength);
+        DebugLogger.log(POSITION, "Archived Position %d, len = %d%n", endPosition, alignedLength);
         final int libraryId = aeronSessionIdToLibraryId.get(aeronSessionId);
         if (libraryId != MISSING)
         {

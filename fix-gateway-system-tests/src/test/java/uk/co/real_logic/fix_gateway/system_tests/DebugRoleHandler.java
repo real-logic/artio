@@ -16,7 +16,7 @@ class DebugRoleHandler implements RoleHandler
 
     public void onTransitionToLeader(final int leadershipTerm)
     {
-        DebugLogger.log(GATEWAY_CLUSTER_TEST, "%d has become leader\n", nodeId);
+        DebugLogger.log(GATEWAY_CLUSTER_TEST, "%d has become leader%n", nodeId);
     }
 
     public void onTransitionToFollower(final int leadershipTerm)

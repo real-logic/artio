@@ -910,7 +910,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             final long timeInMs = clock.time();
             DebugLogger.log(
-                APPLICATION_HEARTBEAT, "Received Heartbeat from library %d at timeInMs %d\n", libraryId, timeInMs);
+                APPLICATION_HEARTBEAT, "Received Heartbeat from library %d at timeInMs %d%n", libraryId, timeInMs);
             library.onHeartbeat(timeInMs);
 
             return CONTINUE;

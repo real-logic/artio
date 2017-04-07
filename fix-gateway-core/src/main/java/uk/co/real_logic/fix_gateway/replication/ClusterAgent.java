@@ -160,7 +160,7 @@ public class ClusterAgent implements Agent
         void transitionToFollower(final Leader leader, final short votedFor, final long timeInMs)
         {
             final int leadershipTerm = termState.leadershipTerm();
-            DebugLogger.log(RAFT, "%d: L -> Follower @ %d in %d\n", nodeId, timeInMs, leadershipTerm);
+            DebugLogger.log(RAFT, "%d: L -> Follower @ %d in %d%n", nodeId, timeInMs, leadershipTerm);
 
             leader.closeStreams();
 
@@ -179,7 +179,7 @@ public class ClusterAgent implements Agent
         void transitionToCandidate(final Follower follower, final long timeInMs)
         {
             final int leadershipTerm = termState.leadershipTerm();
-            DebugLogger.log(RAFT, "%d: F -> Candidate @ %d in %d\n", nodeId, timeInMs, leadershipTerm);
+            DebugLogger.log(RAFT, "%d: F -> Candidate @ %d in %d%n", nodeId, timeInMs, leadershipTerm);
 
             follower.closeStreams();
 
@@ -194,7 +194,7 @@ public class ClusterAgent implements Agent
         void transitionToLeader(final Candidate candidate, final long timeInMs)
         {
             final int leadershipTerm = termState.leadershipTerm();
-            DebugLogger.log(RAFT, "%d: C -> Leader @ %d in %d\n", nodeId, timeInMs, leadershipTerm);
+            DebugLogger.log(RAFT, "%d: C -> Leader @ %d in %d%n", nodeId, timeInMs, leadershipTerm);
 
             candidate.closeStreams();
 
@@ -209,7 +209,7 @@ public class ClusterAgent implements Agent
         void transitionToFollower(final Candidate candidate, final short votedFor, final long timeInMs)
         {
             final int leadershipTerm = termState.leadershipTerm();
-            DebugLogger.log(RAFT, "%d: C -> Follower @ %d in %d\n", nodeId, timeInMs, leadershipTerm);
+            DebugLogger.log(RAFT, "%d: C -> Follower @ %d in %d%n", nodeId, timeInMs, leadershipTerm);
 
             candidate.closeStreams();
 

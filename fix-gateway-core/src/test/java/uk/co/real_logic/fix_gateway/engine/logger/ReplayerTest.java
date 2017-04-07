@@ -570,7 +570,7 @@ public class ReplayerTest extends AbstractLogTest
 
         if (!sequenceReset.validate())
         {
-            fail(message + "\n" + sequenceReset.invalidTagId() + " " +
+            fail(message + "%n" + sequenceReset.invalidTagId() + " " +
                 RejectReason.decode(sequenceReset.rejectReason()));
         }
 

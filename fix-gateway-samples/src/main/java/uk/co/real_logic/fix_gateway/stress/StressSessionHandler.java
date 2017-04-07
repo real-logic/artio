@@ -50,7 +50,7 @@ public class StressSessionHandler implements SessionHandler
         if (StressConfiguration.PRINT_EXCHANGE)
         {
             string.wrap(buffer);
-            System.out.printf("%d -> %s\n", session, printer.toString(string, offset, length, messageType));
+            System.out.printf("%d -> %s%n", session.id(), printer.toString(string, offset, length, messageType));
         }
 
         return CONTINUE;
@@ -69,7 +69,7 @@ public class StressSessionHandler implements SessionHandler
     {
         if (StressConfiguration.PRINT_EXCHANGE)
         {
-            System.out.printf("%d Disconnected: %s\n", session, reason);
+            System.out.printf("%d Disconnected: %s%n", session.id(), reason);
         }
 
         return CONTINUE;

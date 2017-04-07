@@ -41,7 +41,7 @@ public final class FixBenchmarkServer
              FixLibrary library = FixLibrary.connect(libraryConfiguration()))
         {
             final IdleStrategy idleStrategy = idleStrategy();
-            System.out.printf("Using %s idle strategy\n", idleStrategy.getClass().getSimpleName());
+            System.out.printf("Using %s idle strategy%n", idleStrategy.getClass().getSimpleName());
             while (true)
             {
                 final boolean notConnected = !library.isConnected();

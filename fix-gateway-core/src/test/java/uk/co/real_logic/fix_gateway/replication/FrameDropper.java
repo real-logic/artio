@@ -55,8 +55,8 @@ public class FrameDropper
 
     public void dropFrames(final boolean dropInboundFrames, final boolean dropOutboundFrames)
     {
-        DebugLogger.log(RAFT, "Dropping frames to %d: %b\n", nodeId, dropInboundFrames);
-        DebugLogger.log(RAFT, "Dropping frames from %d: %b\n", nodeId, dropOutboundFrames);
+        DebugLogger.log(RAFT, "Dropping frames to %d: %b%n", nodeId, dropInboundFrames);
+        DebugLogger.log(RAFT, "Dropping frames from %d: %b%n", nodeId, dropOutboundFrames);
         inboundLossGenerator.dropFrames(dropInboundFrames);
         outboundLossGenerator.dropFrames(dropOutboundFrames);
     }

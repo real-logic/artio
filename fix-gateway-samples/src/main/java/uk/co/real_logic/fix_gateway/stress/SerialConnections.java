@@ -127,6 +127,6 @@ public final class SerialConnections
 
         System.out.format("Sessions %d. Messages %d per session.%n", NUM_SESSIONS, MESSAGES_EXCHANGED);
 
-        System.out.format("Stress test executed in %dms\n", System.currentTimeMillis() - startTime);
+        System.out.format("Stress test executed in %dms%n", System.currentTimeMillis() - startTime);
     }
 }

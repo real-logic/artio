@@ -49,7 +49,7 @@ public class SampleSessionHandler implements SessionHandler
         final long position)
     {
         string.wrap(buffer);
-        System.out.printf("%d -> %s\n", session, printer.toString(string, offset, length, messageType));
+        System.out.printf("%d -> %s%n", session.id(), printer.toString(string, offset, length, messageType));
 
         return CONTINUE;
     }
@@ -64,7 +64,7 @@ public class SampleSessionHandler implements SessionHandler
 
     public Action onDisconnect(final int libraryId, final Session session, final DisconnectReason reason)
     {
-        System.out.printf("%d Disconnected: %s\n", session, reason);
+        System.out.printf("%d Disconnected: %s%n", session.id(), reason);
         return CONTINUE;
     }
 }

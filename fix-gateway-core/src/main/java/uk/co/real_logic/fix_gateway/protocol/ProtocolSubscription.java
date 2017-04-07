@@ -122,7 +122,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler, Cl
     {
         disconnect.wrap(buffer, offset, blockLength, version);
         final long connectionId = disconnect.connection();
-        DebugLogger.log(FIX_MESSAGE, "FixSubscription Disconnect: %d\n", connectionId);
+        DebugLogger.log(FIX_MESSAGE, "FixSubscription Disconnect: %d%n", connectionId);
         return protocolHandler.onDisconnect(disconnect.libraryId(), connectionId, disconnect.reason());
     }
 

@@ -68,7 +68,7 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
     public synchronized MessageControl onField(
         final int tag, final AsciiBuffer buffer, final int offset, final int length)
     {
-        DebugLogger.log(FIX_TEST, "Field: %s=%s\n", tag, buffer, offset, length);
+        DebugLogger.log(FIX_TEST, "Field: %s=%s%n", tag, buffer, offset, length);
         if (tag == Constants.SENDER_COMP_ID)
         {
             senderCompId = buffer.getAscii(offset, length);
