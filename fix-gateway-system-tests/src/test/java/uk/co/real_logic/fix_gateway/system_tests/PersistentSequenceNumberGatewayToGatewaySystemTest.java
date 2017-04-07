@@ -121,9 +121,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         exchangeMessagesAroundARestart(
                 AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER, this::nothing, true);
 
-        // TODO: fix this
-        acceptingSession = null;
-
         assertSequenceIndicesAre(1);
     }
 
@@ -148,6 +145,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             final int sequenceIndex = acceptingSession.sequenceIndex();
             final SessionReplyStatus reply = requestSession(acceptingLibrary, sessionId, lastReceivedMsgSeqNum, sequenceIndex);
             assertEquals(replyStatus, reply);
+
+            acceptingSession = acceptingHandler.lastSession();
+            acceptingHandler.resetSession();
         }
         else
         {
