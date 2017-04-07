@@ -250,12 +250,17 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void assertSequenceIndicesAre(final int sequenceIndex)
     {
+        assertAcceptingSessionHasSequenceIndex(sequenceIndex);
+        assertInitiatingSequenceIndexIs(sequenceIndex);
+        assertAllMessagesHaveSequenceIndex(sequenceIndex);
+    }
+
+    protected void assertAcceptingSessionHasSequenceIndex(final int sequenceIndex)
+    {
         if (acceptingSession != null)
         {
             assertThat(acceptingSession, hasSequenceIndex(sequenceIndex));
         }
-        assertInitiatingSequenceIndexIs(sequenceIndex);
-        assertAllMessagesHaveSequenceIndex(sequenceIndex);
     }
 
     protected void assertInitiatingSequenceIndexIs(final int sequenceIndex)
