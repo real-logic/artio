@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
+import uk.co.real_logic.fix_gateway.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -28,17 +29,21 @@ final class LiveLibraryInfo implements LibraryInfo
     private final int libraryId;
     private final LivenessDetector livenessDetector;
     private final int aeronSessionId;
+    private final LibrarySlowPeeker librarySlowPeeker;
     private final List<GatewaySession> allSessions = new CopyOnWriteArrayList<>();
     private final List<SessionInfo> unmodifiableAllSessions = unmodifiableList(allSessions);
     private long acquireAtPosition;
 
-    LiveLibraryInfo(final int libraryId,
-                    final LivenessDetector livenessDetector,
-                    final int aeronSessionId)
+    LiveLibraryInfo(
+        final int libraryId,
+        final LivenessDetector livenessDetector,
+        final int aeronSessionId,
+        final LibrarySlowPeeker librarySlowPeeker)
     {
         this.libraryId = libraryId;
         this.livenessDetector = livenessDetector;
         this.aeronSessionId = aeronSessionId;
+        this.librarySlowPeeker = librarySlowPeeker;
     }
 
     public int libraryId()
@@ -94,11 +99,6 @@ final class LiveLibraryInfo implements LibraryInfo
         return GatewaySessions.removeSessionByConnectionId(connectionId, allSessions);
     }
 
-    void onReconnect(final long timeInMs)
-    {
-        livenessDetector.onReconnect(timeInMs);
-    }
-
     void acquireAtPosition(final long libraryPosition)
     {
         acquireAtPosition = libraryPosition;
@@ -107,5 +107,10 @@ final class LiveLibraryInfo implements LibraryInfo
     long acquireAtPosition()
     {
         return acquireAtPosition;
+    }
+
+    LibrarySlowPeeker librarySlowPeeker()
+    {
+        return librarySlowPeeker;
     }
 }

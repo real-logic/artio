@@ -16,16 +16,18 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
+import uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -44,10 +46,8 @@ class SenderEndPoint implements AutoCloseable
     private final int maxBytesInBuffer;
     private final long slowConsumerTimeoutInMs;
 
-    private long sentOutboundPosition;
-    private long sentReplayPosition;
-    private boolean partiallySentOutboundMessage = false;
-    private boolean partiallySentReplayMessage = false;
+    private final StreamTracker outboundTracker;
+    private final StreamTracker replayTracker;
 
     private int libraryId;
     private long sessionId;
@@ -56,6 +56,7 @@ class SenderEndPoint implements AutoCloseable
     SenderEndPoint(
         final long connectionId,
         final int libraryId,
+        final SlowPeeker outboundSlowPeeker,
         final TcpChannel channel,
         final AtomicCounter bytesInBuffer,
         final AtomicCounter invalidLibraryAttempts,
@@ -63,7 +64,8 @@ class SenderEndPoint implements AutoCloseable
         final Framer framer,
         final int maxBytesInBuffer,
         final long slowConsumerTimeoutInMs,
-        final long timeInMs)
+        final long timeInMs,
+        final SlowPeeker replaySlowPeeker)
     {
         this.connectionId = connectionId;
         this.libraryId = libraryId;
@@ -74,6 +76,10 @@ class SenderEndPoint implements AutoCloseable
         this.framer = framer;
         this.maxBytesInBuffer = maxBytesInBuffer;
         this.slowConsumerTimeoutInMs = slowConsumerTimeoutInMs;
+
+        outboundTracker = new StreamTracker(outboundSlowPeeker);
+        replayTracker = new StreamTracker(replaySlowPeeker);
+
         sendingTimeoutTimeInMs = timeInMs + slowConsumerTimeoutInMs;
     }
 
@@ -91,7 +97,7 @@ class SenderEndPoint implements AutoCloseable
             return;
         }
 
-        attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, position, true);
+        attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, position, outboundTracker);
     }
 
     Action onReplayMessage(
@@ -101,7 +107,7 @@ class SenderEndPoint implements AutoCloseable
         final long timeInMs,
         final long position)
     {
-        attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, position, false);
+        attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, position, replayTracker);
 
         return CONTINUE;
     }
@@ -116,7 +122,7 @@ class SenderEndPoint implements AutoCloseable
         final int offsetAfterHeader = offset - FRAME_SIZE;
         final int length = bodyLength + FRAME_SIZE;
 
-        return attemptSlowMessage(buffer, offsetAfterHeader, length, position, bodyLength, timeInMs, false);
+        return attemptSlowMessage(buffer, offsetAfterHeader, length, position, bodyLength, timeInMs, replayTracker);
     }
 
     private void attemptFramedMessage(
@@ -125,7 +131,7 @@ class SenderEndPoint implements AutoCloseable
         final int bodyLength,
         final long timeInMs,
         final long position,
-        final boolean outbound)
+        final StreamTracker tracker)
     {
         if (isSlowConsumer())
         {
@@ -146,11 +152,11 @@ class SenderEndPoint implements AutoCloseable
 
             if (written != bodyLength)
             {
-                becomeSlowConsumer(written, bodyLength, position, outbound);
+                becomeSlowConsumer(written, bodyLength, position, tracker);
             }
             else
             {
-                setPosition(outbound, position);
+                tracker.sentPosition = position;
             }
         }
         catch (final IOException ex)
@@ -192,38 +198,19 @@ class SenderEndPoint implements AutoCloseable
         removeEndpoint(EXCEPTION);
     }
 
-    void becomeSlowConsumer(
-        final int written, final int bodyLength, final long position, final boolean outbound)
+    private void becomeSlowConsumer(
+        final int written, final int bodyLength, final long position, final StreamTracker tracker)
     {
         final int remainingBytes = bodyLength - written;
         bytesInBuffer.setOrdered(remainingBytes);
         sendSlowStatus(true);
-        setPosition(outbound, position - remainingBytes);
-        setPartiallySent(outbound, true);
+        tracker.sentPosition = position - remainingBytes;
+        tracker.partiallySentMessage = true;
     }
 
-    private void setPartiallySent(final boolean outbound, final boolean value)
+    private void becomeNormalConsumer()
     {
-        if (outbound)
-        {
-            partiallySentOutboundMessage = value;
-        }
-        else
-        {
-            partiallySentReplayMessage = value;
-        }
-    }
-
-    private void setPosition(final boolean outbound, final long newPosition)
-    {
-        if (outbound)
-        {
-            sentOutboundPosition = newPosition;
-        }
-        else
-        {
-            sentReplayPosition = newPosition;
-        }
+        sendSlowStatus(false);
     }
 
     private void sendSlowStatus(final boolean hasBecomeSlow)
@@ -241,9 +228,10 @@ class SenderEndPoint implements AutoCloseable
         return connectionId;
     }
 
-    public void libraryId(final int libraryId)
+    public void libraryId(final int libraryId, final LibrarySlowPeeker librarySlowPeeker)
     {
         this.libraryId = libraryId;
+        this.outboundTracker.slowPeeker = librarySlowPeeker;
     }
 
     public void close()
@@ -267,7 +255,8 @@ class SenderEndPoint implements AutoCloseable
             return CONTINUE;
         }
 
-        return attemptSlowMessage(directBuffer, offsetAfterHeader, length, position, bodyLength, timeInMs, true);
+        return attemptSlowMessage(
+                directBuffer, offsetAfterHeader, length, position, bodyLength, timeInMs, outboundTracker);
     }
 
     private Action attemptSlowMessage(
@@ -277,24 +266,32 @@ class SenderEndPoint implements AutoCloseable
         final long position,
         final int bodyLength,
         final long timeInMs,
-        final boolean outbound)
+        final StreamTracker tracker)
     {
         if (!isSlowConsumer())
         {
             return CONTINUE;
         }
 
+        // Skip all messages beyond the skip position, since this endpoint has been blocked but others
+        // Scanning forward.
+        final long skipPosition = tracker.skipPosition;
+        if (position > skipPosition)
+        {
+            return CONTINUE;
+        }
+
         // Skip messages where the end point has become a slow consumer, but
         // the slow consumer stream hasn't polled up to update with the regular stream
-        final long sentPosition = getPosition(outbound);
+        final long sentPosition = tracker.sentPosition;
         if (position <= sentPosition)
         {
             return CONTINUE;
         }
 
-        if (partiallySentOtherStream(outbound))
+        if (partiallySentOtherStream(tracker))
         {
-            return ABORT;
+            return blockPosition(position, length, tracker);
         }
 
         try
@@ -330,17 +327,18 @@ class SenderEndPoint implements AutoCloseable
 
             if (bodyLength > (written + bytesPreviouslySent))
             {
-                movePosition(outbound, written);
-                return ABORT;
+                tracker.moveSentPosition(written);
+                return blockPosition(position, length, tracker);
             }
             else
             {
-                setPosition(outbound, position);
-                setPartiallySent(outbound, false);
+                tracker.sentPosition = position;
+                tracker.partiallySentMessage = false;
+                tracker.skipPosition = Long.MAX_VALUE;
 
                 if (!isSlowConsumer())
                 {
-                    sendSlowStatus(false);
+                    becomeNormalConsumer();
                 }
             }
         }
@@ -352,26 +350,20 @@ class SenderEndPoint implements AutoCloseable
         return CONTINUE;
     }
 
-    private boolean partiallySentOtherStream(final boolean outbound)
+    private Action blockPosition(final long position, final int length, final StreamTracker tracker)
     {
-        return outbound && partiallySentReplayMessage || !outbound && partiallySentOutboundMessage;
+        final int alignedLength = ArchiveDescriptor.alignTerm(length);
+        final long startPosition = position - (alignedLength + DataHeaderFlyweight.HEADER_LENGTH);
+        tracker.slowPeeker.blockPosition(startPosition);
+        tracker.skipPosition = position;
+        return Action.CONTINUE;
     }
 
-    private long getPosition(final boolean outbound)
+    private boolean partiallySentOtherStream(final StreamTracker tracker)
     {
-        return outbound ? sentOutboundPosition : sentReplayPosition;
-    }
-
-    private void movePosition(final boolean outbound, final int by)
-    {
-        if (outbound)
-        {
-            sentOutboundPosition += by;
-        }
-        else
-        {
-            sentReplayPosition += by;
-        }
+        return tracker == outboundTracker ?
+               replayTracker.partiallySentMessage :
+               outboundTracker.partiallySentMessage;
     }
 
     private boolean isWrongLibraryId(final int libraryId)
@@ -424,5 +416,24 @@ class SenderEndPoint implements AutoCloseable
         }
 
         return false;
+    }
+
+    // Struct for tracking the slow state of the replay and outbound streams
+    private class StreamTracker
+    {
+        private SlowPeeker slowPeeker;
+        private long sentPosition;
+        private boolean partiallySentMessage = false;
+        private long skipPosition = Long.MAX_VALUE;
+
+        StreamTracker(final SlowPeeker slowPeeker)
+        {
+            this.slowPeeker = slowPeeker;
+        }
+
+        private void moveSentPosition(final int by)
+        {
+            sentPosition += by;
+        }
     }
 }
