@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
+import org.agrona.IoUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,6 +31,7 @@ import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
@@ -38,6 +40,8 @@ import static uk.co.real_logic.fix_gateway.Timing.*;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.SEQUENCE_RESET_AS_STR;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.MISSING_MESSAGES;
+import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
 import static uk.co.real_logic.fix_gateway.system_tests.FixMessage.hasMessageSequenceNumber;
 import static uk.co.real_logic.fix_gateway.system_tests.FixMessage.hasSequenceIndex;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
@@ -99,19 +103,41 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         duringRestartAction = this::deleteAcceptorLogs;
 
-        acquireSessionAction = this::assertSequenceNumberTooHighWhenReplayRequested;
+        acquireSessionAction = () -> assertFailStatusWhenReplayRequested(SEQUENCE_NUMBER_TOO_HIGH);
 
         exchangeMessagesAroundARestart(
                 AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER, this::nothing, true);
 
+        assertOnlyAcceptorSequenceReset();
+    }
+
+    @Test(timeout = TEST_TIMEOUT)
+    public void shouldCopeWithReplayOfMissingMessagesAfterPartialCleanout()
+    {
+        duringRestartAction = this::deleteArchiveOfAcceptorLogs;
+
+        acquireSessionAction = () -> assertFailStatusWhenReplayRequested(MISSING_MESSAGES);
+
+        exchangeMessagesAroundARestart(
+                AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER, this::nothing, true);
+
+        // TODO: fix this
+        acceptingSession = null;
+
+        assertSequenceIndicesAre(1);
+    }
+
+    private void assertOnlyAcceptorSequenceReset()
+    {
         // Only delected the acceptor logs so they have different sequence indices.
+
         assertAcceptingSessionHasSequenceIndex(0);
         acceptingOtfAcceptor.allMessagesHaveSequenceIndex(0);
         assertInitiatingSequenceIndexIs(1);
         initiatingOtfAcceptor.allMessagesHaveSequenceIndex(1);
     }
 
-    private void assertSequenceNumberTooHighWhenReplayRequested()
+    private void assertFailStatusWhenReplayRequested(final SessionReplyStatus replyStatus)
     {
         final long sessionId = getAcceptingSessionId();
 
@@ -121,7 +147,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             final int lastReceivedMsgSeqNum = acceptingSession.lastReceivedMsgSeqNum() - 1;
             final int sequenceIndex = acceptingSession.sequenceIndex();
             final SessionReplyStatus reply = requestSession(acceptingLibrary, sessionId, lastReceivedMsgSeqNum, sequenceIndex);
-            assertEquals(SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH, reply);
+            assertEquals(replyStatus, reply);
         }
         else
         {
@@ -132,6 +158,17 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     private void deleteAcceptorLogs()
     {
         delete(ACCEPTOR_LOGS);
+    }
+
+    private void deleteArchiveOfAcceptorLogs()
+    {
+        final File dir = new File(ACCEPTOR_LOGS);
+        if (dir.exists())
+        {
+            Arrays.stream(dir.list())
+                  .filter(name -> name.contains("archive"))
+                  .forEach(name -> IoUtil.delete(new File(dir, name), false));
+        }
     }
 
     @Test(timeout = TEST_TIMEOUT)

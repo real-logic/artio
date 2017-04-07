@@ -383,6 +383,8 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 replayFromSequenceNumber,
                 currentSequenceIndex,
                 lastReceivedSeqNum)));
+
+            session.play();
         }
         return position;
     }

@@ -155,11 +155,6 @@ class SessionSubscriber implements AutoCloseable
         handler.onSlowStatus(libraryId, session, hasBecomeSlow);
     }
 
-    int poll(final long time)
-    {
-        return session.poll(time);
-    }
-
     public void close()
     {
         session.requestDisconnect();
