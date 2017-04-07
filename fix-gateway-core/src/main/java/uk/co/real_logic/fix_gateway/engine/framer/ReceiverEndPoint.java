@@ -196,7 +196,7 @@ class ReceiverEndPoint
         {
             if (dataRead > 0)
             {
-                DebugLogger.log(FIX_MESSAGE, "Read     %s\n", buffer, 0, dataRead);
+                DebugLogger.log(FIX_MESSAGE, "Read     %s%n", buffer, 0, dataRead);
             }
             usedBufferData += dataRead;
         }
