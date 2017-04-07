@@ -20,6 +20,11 @@ import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.CompositeAgent;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Objects;
+
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 
 /**
@@ -41,11 +46,15 @@ public class LowResourceEngineScheduler implements EngineScheduler
             EngineScheduler.fail();
         }
 
+        final List<Agent> agents = new ArrayList<>();
+        Collections.addAll(agents, framer, archivingAgent, monitoringAgent);
+        agents.removeIf(Objects::isNull);
+
         runner = new AgentRunner(
             configuration.framerIdleStrategy(),
             errorHandler,
             null,
-            new CompositeAgent(framer, archivingAgent, monitoringAgent));
+                new CompositeAgent(agents));
         startOnThread(runner);
     }
 

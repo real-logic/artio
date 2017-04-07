@@ -61,6 +61,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     };
 
     private Runnable duringRestartAction = this::nothing;
+    private boolean printErrorMessages = true;
 
     @Before
     public void setUp() throws IOException
@@ -114,6 +115,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT)
     public void shouldCopeWithReplayOfMissingMessagesAfterPartialCleanout()
     {
+        // Avoid spamming the build log with error missing messages error message
+        printErrorMessages = false;
+
         duringRestartAction = this::deleteArchiveOfAcceptorLogs;
 
         acquireSessionAction = () -> assertFailStatusWhenReplayRequested(MISSING_MESSAGES);
@@ -283,6 +287,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final EngineConfiguration config =
             acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
         config.sessionPersistenceStrategy(logon -> REPLICATED);
+        config.printErrorMessages(printErrorMessages);
         acceptingEngine = FixEngine.launch(config);
         initiatingEngine = launchInitiatingEngineWithSameLogs(libraryAeronPort);
 
