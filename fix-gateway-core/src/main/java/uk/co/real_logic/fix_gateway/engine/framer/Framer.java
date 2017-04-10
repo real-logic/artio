@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import io.aeron.ControlledFragmentAssembler;
 import io.aeron.Image;
-import io.aeron.Publication;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
@@ -64,7 +63,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -203,7 +201,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundClusterSubscription = outboundClusterSubscription;
         this.outboundClusterSlowSubscription = outboundClusterSlowSubscription;
         this.outboundLibrarySubscription = outboundLibrarySubscription;
-        this.outboundSlowPeeker = new SubscriptionSlowPeeker(outboundSlowSubscription, outboundLibrarySubscription);
         this.replaySubscription = replaySubscription;
         this.gatewaySessions = gatewaySessions;
         this.inboundMessages = inboundMessages;
@@ -222,12 +219,24 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
 
-        while (outboundSlowSubscription.hasNoImages())
+        while (outboundSlowSubscription.hasNoImages() ||
+               outboundLibrarySubscription.hasNoImages() ||
+               replaySlowSubscription.hasNoImages() ||
+               replaySubscription.hasNoImages())
         {
             Thread.yield();
         }
 
-        this.outboundSlowEnginePeeker = this.outboundSlowPeeker.addLibrary(gatewaySessionsOutboundId);
+        this.outboundSlowPeeker = new SubscriptionSlowPeeker(
+                outboundSlowSubscription, outboundLibrarySubscription);
+
+        LibrarySlowPeeker outboundSlowPeeker;
+        while ((outboundSlowPeeker = this.outboundSlowPeeker.addLibrary(gatewaySessionsOutboundId)) == null)
+        {
+            Thread.yield();
+        }
+
+        this.outboundSlowEnginePeeker = outboundSlowPeeker;
         this.replaySlowPeeker = new SlowPeeker(
                 replaySlowSubscription.getImage(0),
                 replaySubscription.getImage(0));
@@ -712,7 +721,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         return 0;
                     }
 
-                    return Publication.BACK_PRESSURED;
+                    return BACK_PRESSURED;
                 }
             }
 
@@ -885,21 +894,29 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             configuration.replyTimeoutInMs(),
             clock.time());
 
-        final LibrarySlowPeeker librarySlowPeeker = outboundSlowPeeker.addLibrary(aeronSessionId);
-        final LiveLibraryInfo library = new LiveLibraryInfo(
-            libraryId, livenessDetector, aeronSessionId, librarySlowPeeker);
-        idToLibrary.put(libraryId, library);
+        final List<Continuation> unitsOfWork = new ArrayList<>();
+        unitsOfWork.add(() ->
+        {
+            final LibrarySlowPeeker librarySlowPeeker = outboundSlowPeeker.addLibrary(aeronSessionId);
+            if (librarySlowPeeker == null)
+            {
+                return BACK_PRESSURED;
+            }
 
-        final UnitOfWork unitOfWork = new UnitOfWork(
-            gatewaySessions
-                .sessions()
-                .stream()
-                .map((gatewaySession) ->
-                    (Continuation) () ->
-                        saveSessionExists(libraryId, gatewaySession, UNK_SESSION, UNK_SESSION, LIBRARY_NOTIFICATION))
-                .collect(Collectors.toList()));
+            final LiveLibraryInfo library = new LiveLibraryInfo(
+                    libraryId, livenessDetector, aeronSessionId, librarySlowPeeker);
+            idToLibrary.put(libraryId, library);
 
-        return retryManager.firstAttempt(correlationId, unitOfWork);
+            return COMPLETE;
+        });
+
+        for (final GatewaySession gatewaySession : gatewaySessions.sessions())
+        {
+            unitsOfWork.add(
+                () -> saveSessionExists(libraryId, gatewaySession, UNK_SESSION, UNK_SESSION, LIBRARY_NOTIFICATION));
+        }
+
+        return retryManager.firstAttempt(correlationId, new UnitOfWork(unitsOfWork));
     }
 
     public Action onApplicationHeartbeat(final int libraryId, final int aeronSessionId)

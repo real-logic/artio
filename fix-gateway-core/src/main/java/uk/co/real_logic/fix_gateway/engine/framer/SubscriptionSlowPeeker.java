@@ -48,15 +48,26 @@ class SubscriptionSlowPeeker
     LibrarySlowPeeker addLibrary(final int aeronSessionId)
     {
         final LibrarySlowPeeker imagePeeker = sessionIdToImagePeeker.computeIfAbsent(aeronSessionId, newLibraryPeeker);
+        if (imagePeeker == null)
+        {
+            return null;
+        }
+
         imagePeeker.addLibrary();
         return imagePeeker;
     }
 
     private LibrarySlowPeeker newLibraryPeeker(final int aeronSessionId)
     {
-        return new LibrarySlowPeeker(
-                peekSubscription.imageBySessionId(aeronSessionId),
-                normalSubscription.imageBySessionId(aeronSessionId));
+        final Image peekImage = peekSubscription.imageBySessionId(aeronSessionId);
+        final Image normalImage = normalSubscription.imageBySessionId(aeronSessionId);
+
+        if (peekImage == null || normalImage == null)
+        {
+            return null;
+        }
+
+        return new LibrarySlowPeeker(peekImage, normalImage);
     }
 
     class LibrarySlowPeeker extends SlowPeeker
