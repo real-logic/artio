@@ -25,10 +25,12 @@ import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 class EngineLibraryInfo implements LibraryInfo
 {
     private final ArrayList<SessionInfo> sessions;
+    private final GatewaySessions gatewaySessions;
 
     EngineLibraryInfo(final GatewaySessions gatewaySessions)
     {
         sessions = new ArrayList<>(gatewaySessions.sessions());
+        this.gatewaySessions = gatewaySessions;
     }
 
     public int libraryId()
@@ -46,5 +48,22 @@ class EngineLibraryInfo implements LibraryInfo
         return "EngineLibraryInfo{" +
             "sessions=" + sessions +
             '}';
+    }
+
+    @Override
+    public boolean equals(final Object o)
+    {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        final EngineLibraryInfo that = (EngineLibraryInfo) o;
+
+        return gatewaySessions != null ? gatewaySessions.equals(that.gatewaySessions) : that.gatewaySessions == null;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return gatewaySessions != null ? gatewaySessions.hashCode() : 0;
     }
 }
