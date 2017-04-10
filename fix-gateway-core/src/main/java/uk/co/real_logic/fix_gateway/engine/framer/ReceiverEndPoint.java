@@ -38,6 +38,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
+import java.util.Objects;
 
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
@@ -62,7 +63,7 @@ import static uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy
  */
 class ReceiverEndPoint
 {
-    public static final char INVALID_MESSAGE_TYPE = '-';
+    private static final char INVALID_MESSAGE_TYPE = '-';
 
     private static final byte BODY_LENGTH_FIELD = 9;
 
@@ -83,7 +84,7 @@ class ReceiverEndPoint
     private final TcpChannel channel;
     private final GatewayPublication libraryPublication;
     private final GatewayPublication clusterablePublication;
-    private final SessionPersistenceStrategy sessionReplicationStrategy;
+    private final SessionPersistenceStrategy sessionPersistenceStrategy;
     private final long connectionId;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionContexts sessionContexts;
@@ -111,7 +112,7 @@ class ReceiverEndPoint
         final int bufferSize,
         final GatewayPublication clusterablePublication,
         final GatewayPublication libraryPublication,
-        final SessionPersistenceStrategy sessionReplicationStrategy,
+        final SessionPersistenceStrategy sessionPersistenceStrategy,
         final long connectionId,
         final long sessionId,
         final int sequenceIndex,
@@ -127,10 +128,16 @@ class ReceiverEndPoint
         final ConnectionType connectionType,
         final LongHashSet replicatedConnectionIds)
     {
+        Objects.requireNonNull(clusterablePublication, "clusterablePublication");
+        Objects.requireNonNull(libraryPublication, "libraryPublication");
+        Objects.requireNonNull(sessionPersistenceStrategy, "sessionPersistenceStrategy");
+        Objects.requireNonNull(sessionIdStrategy, "sessionIdStrategy");
+        Objects.requireNonNull(sessionContexts, "sessionContexts");
+
         this.channel = channel;
         this.clusterablePublication = clusterablePublication;
         this.libraryPublication = libraryPublication;
-        this.sessionReplicationStrategy = sessionReplicationStrategy;
+        this.sessionPersistenceStrategy = sessionPersistenceStrategy;
         this.connectionId = connectionId;
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
@@ -346,7 +353,7 @@ class ReceiverEndPoint
             }
             else
             {
-                final PersistenceLevel persistenceLevel = sessionReplicationStrategy.getPersistenceLevel(logon);
+                final PersistenceLevel persistenceLevel = sessionPersistenceStrategy.getPersistenceLevel(logon);
                 final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
                 final boolean resetSeqNum = resetSequenceNumbersUponLogon(persistenceLevel) || resetSeqNumFlag;
                 final int sentSequenceNumber = sequenceNumber(sentSequenceNumberIndex, resetSeqNum, sessionId);
