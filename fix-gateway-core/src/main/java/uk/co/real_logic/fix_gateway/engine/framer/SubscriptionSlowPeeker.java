@@ -92,6 +92,27 @@ class SubscriptionSlowPeeker
                 sessionIdToImagePeeker.remove(peekImage.sessionId());
             }
         }
+
+        @Override
+        int peek(final ControlledFragmentHandler handler)
+        {
+            try
+            {
+                return super.peek(handler);
+            }
+            catch (final IllegalStateException e)
+            {
+                if (peekImage.isClosed() || normalImage.isClosed())
+                {
+                    removeLibrary();
+                    return 1;
+                }
+                else
+                {
+                    throw e;
+                }
+            }
+        }
     }
 
 }

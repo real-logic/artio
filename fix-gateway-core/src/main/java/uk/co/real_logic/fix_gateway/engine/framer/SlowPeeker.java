@@ -22,8 +22,7 @@ class SlowPeeker
 {
     private static final int DID_NOT_BLOCK = 0;
 
-    private final Image normalImage;
-
+    final Image normalImage;
     final Image peekImage;
 
     private long blockPosition;

@@ -413,6 +413,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             if (!library.isConnected())
             {
                 iterator.remove();
+                library.releaseSlowPeeker();
                 tryAcquireLibrarySessions(library);
                 saveLibraryTimeout(library);
             }
@@ -426,7 +427,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private void tryAcquireLibrarySessions(final LiveLibraryInfo library)
     {
         final int librarySessionId = library.aeronSessionId();
-        final long libraryPosition = outboundLibrarySubscription.imageBySessionId(librarySessionId).position();
+        final Image image = outboundLibrarySubscription.imageBySessionId(librarySessionId);
+        final long libraryPosition = image != null ? image.position() : 0;
         final boolean indexed = indexedPosition(librarySessionId, libraryPosition);
         if (indexed)
         {
@@ -483,8 +485,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 session.username(),
                 session.password(),
                 outboundSlowEnginePeeker);
-
-            outboundSlowEnginePeeker.removeLibrary();
 
             schedule(() -> saveSessionExists(
                 ENGINE_LIBRARY_ID,

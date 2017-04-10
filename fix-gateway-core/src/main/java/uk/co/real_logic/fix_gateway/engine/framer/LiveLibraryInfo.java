@@ -136,4 +136,9 @@ final class LiveLibraryInfo implements LibraryInfo
     {
         return libraryId;
     }
+
+    void releaseSlowPeeker()
+    {
+        librarySlowPeeker.removeLibrary();
+    }
 }
