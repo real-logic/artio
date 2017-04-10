@@ -153,6 +153,13 @@ subprojects {
         archives testJar
         tests testJar
     }
+
+    idea {
+        module {
+            downloadJavadoc = true
+            downloadSources = true
+        }
+    }
 }
 
 def validationXsdPath = project(':fix-gateway-codecs').projectDir.toString() + '/src/main/resources/fpl/sbe.xsd'
