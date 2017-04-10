@@ -29,6 +29,7 @@ import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
+import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.messages.MessageStatus;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
@@ -102,6 +103,18 @@ public class ReceiverEndPointTest
     {
         verifyNoMoreInteractions(clusterablePublication);
         assertThat(replicatedConnectionIds, hasSize(0));
+    }
+
+    @Test
+    public void shouldNotifyDuplicateSession()
+    {
+        givenADuplicateSession();
+
+        theEndpointReceivesACompleteMessage();
+
+        pollsData(MSG_LEN);
+
+        verifyDuplicateSession();
     }
 
     @Test
@@ -574,4 +587,16 @@ public class ReceiverEndPointTest
         theEndpointReceivesNothing();
         endPoint.pollForData();
     }
+
+    private void verifyDuplicateSession()
+    {
+        verify(libraryPublication).saveError(
+                eq(GatewayError.DUPLICATE_SESSION), eq(LIBRARY_ID), anyLong(), any());
+    }
+
+    private void givenADuplicateSession()
+    {
+        when(mockSessionContexts.onLogon(any())).thenReturn(SessionContexts.DUPLICATE_SESSION);
+    }
+
 }
