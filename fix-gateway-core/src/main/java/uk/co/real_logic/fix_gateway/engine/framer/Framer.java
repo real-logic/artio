@@ -34,6 +34,7 @@ import org.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.LivenessDetector;
 import uk.co.real_logic.fix_gateway.Pressure;
+import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
 import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.EngineDescriptorStore;
@@ -71,7 +72,6 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.agrona.CloseHelper.close;
 import static org.agrona.collections.CollectionUtil.removeIf;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.LogTag.APPLICATION_HEARTBEAT;
@@ -1212,12 +1212,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     public void onClose()
     {
-        quiesce();
-
-        close(inboundMessages);
-        receiverEndPoints.close();
-        senderEndPoints.close();
-        close(channelSupplier);
+        Exceptions.closeAll(
+            this::quiesce,
+            inboundMessages,
+            receiverEndPoints,
+            senderEndPoints,
+            channelSupplier);
     }
 
     private void quiesce()
@@ -1231,8 +1231,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             final int aeronSessionId = liveLibraryInfo.aeronSessionId();
             final Image image = outboundLibrarySubscription.imageBySessionId(aeronSessionId);
-            final long position = image.position();
-            outboundPositions.put(aeronSessionId, position);
+            if (image != null)
+            {
+                final long position = image.position();
+                outboundPositions.put(aeronSessionId, position);
+            }
         });
         outboundLibraryCompletionPosition.complete(outboundPositions);
 
