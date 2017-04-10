@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.replication;
 
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.Timing;
 
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.*;
@@ -53,9 +54,7 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
         node1.startNewElection(TIME);
         node2.startNewElection(TIME);
 
-        runElection();
-
-        electionResultsAre(clusterNode2, clusterNode1);
+        runElection(() -> electionResultsAre(clusterNode2, clusterNode1));
     }
 
     @Test
@@ -74,9 +73,7 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
         node1.startNewElection(TIME);
         node2.startNewElection(TIME);
 
-        runElection();
-
-        electionResultsAre(clusterNode2, clusterNode1);
+        runElection(() -> electionResultsAre(clusterNode2, clusterNode1));
     }
 
     @Test
@@ -89,9 +86,7 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
         node1.startNewElection(TIME);
         node2.startNewElection(TIME);
 
-        runElection();
-
-        electionResultsAre(clusterNode1, clusterNode2);
+        runElection(() -> electionResultsAre(clusterNode1, clusterNode2));
     }
 
     @Test
@@ -112,15 +107,18 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
         staysFollower(clusterNode3);
     }
 
-    private void runElection()
+    private void runElection(final Timing.Block block)
     {
-        poll1(node1);
-        poll1(node2);
-        poll1(node3);
-
         assertEventuallyTrue(
             "Timed out awaiting the end of the election",
-            () -> poll(node1) + poll(node2) + poll(node3) == 0);
+                () ->
+                {
+                    poll(node1);
+                    poll(node2);
+                    poll(node3);
+
+                    block.run();
+                });
     }
 
     private Candidate candidate(final short id, final ClusterAgent clusterNode, final TermState termState)
