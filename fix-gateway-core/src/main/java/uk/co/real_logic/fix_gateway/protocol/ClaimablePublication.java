@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.protocol;
 
-import io.aeron.logbuffer.BufferClaim;
+import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
@@ -33,7 +33,7 @@ class ClaimablePublication implements AutoCloseable
     private final long maxClaimAttempts;
     private final AtomicCounter fails;
     protected final MessageHeaderEncoder header = new MessageHeaderEncoder();
-    protected final BufferClaim bufferClaim = new BufferClaim();
+    protected final ExclusiveBufferClaim bufferClaim = new ExclusiveBufferClaim();
     protected final ClusterablePublication dataPublication;
 
     protected final IdleStrategy idleStrategy;
@@ -55,7 +55,7 @@ class ClaimablePublication implements AutoCloseable
         return claim(framedLength, bufferClaim);
     }
 
-    public long claim(final int framedLength, final BufferClaim bufferClaim)
+    public long claim(final int framedLength, final ExclusiveBufferClaim bufferClaim)
     {
         long position;
         long i = 0;

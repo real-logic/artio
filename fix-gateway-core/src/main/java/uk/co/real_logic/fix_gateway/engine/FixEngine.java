@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
-import io.aeron.Publication;
+import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
@@ -112,7 +112,7 @@ public final class FixEngine extends GatewayProcess
             scheduler = configuration.scheduler();
             engineDescriptorStore = new EngineDescriptorStore(errorHandler);
 
-            final Publication replayPublication = replayPublication();
+            final ExclusivePublication replayPublication = replayPublication();
             engineContext = EngineContext.of(
                 configuration,
                 errorHandler,
@@ -137,9 +137,9 @@ public final class FixEngine extends GatewayProcess
         }
     }
 
-    private Publication replayPublication()
+    private ExclusivePublication replayPublication()
     {
-        final Publication publication = aeron.addPublication(
+        final ExclusivePublication publication = aeron.addExclusivePublication(
             configuration.libraryAeronChannel(), OUTBOUND_REPLAY_STREAM);
         StreamInformation.print("replayPublication", publication, configuration);
         return publication;

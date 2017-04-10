@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.logbuffer.BufferClaim;
+import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.collections.Int2IntHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
@@ -49,7 +49,7 @@ public class ClusterReplicationTest
     private static final int BUFFER_SIZE = 1337;
     private static final int POSITION_AFTER_MESSAGE = BUFFER_SIZE + HEADER_LENGTH;
 
-    private BufferClaim bufferClaim = new BufferClaim();
+    private ExclusiveBufferClaim bufferClaim = new ExclusiveBufferClaim();
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[BUFFER_SIZE]);
 
     private final NodeRunner node1 = new NodeRunner(1, 2, 3);

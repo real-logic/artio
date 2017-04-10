@@ -26,7 +26,6 @@ import static uk.co.real_logic.fix_gateway.replication.ReplicationAsserts.*;
  */
 public class TwoCandidateElectionTest extends AbstractReplicationTest
 {
-    private static final long LOW_POSITION = 32;
     private static final long HIGH_POSITION = 40;
 
     private Candidate node1;

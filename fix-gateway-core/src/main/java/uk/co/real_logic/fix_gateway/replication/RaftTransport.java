@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.Publication;
+import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
 import uk.co.real_logic.fix_gateway.StreamInformation;
 
@@ -80,11 +80,11 @@ class RaftTransport
         follower.dataSubscription(dataSubscription());
     }
 
-    private Publication publication(final StreamIdentifier id, final String name)
+    private ExclusivePublication publication(final StreamIdentifier id, final String name)
     {
-        final Publication publication = configuration
+        final ExclusivePublication publication = configuration
             .aeron()
-            .addPublication(id.channel(), id.streamId());
+            .addExclusivePublication(id.channel(), id.streamId());
         StreamInformation.print(name, publication, configuration.printAeronStreamIdentifiers());
         return publication;
     }
@@ -107,7 +107,7 @@ class RaftTransport
             publication(id, name));
     }
 
-    Publication leaderPublication()
+    ExclusivePublication leaderPublication()
     {
         return publication(configuration.dataStream(), "leaderPublication");
     }

@@ -23,9 +23,7 @@ import org.agrona.collections.Int2ObjectHashMap;
 import java.util.function.IntFunction;
 
 import static io.aeron.BufferBuilder.INITIAL_CAPACITY;
-import static io.aeron.logbuffer.FrameDescriptor.BEGIN_FRAG_FLAG;
-import static io.aeron.logbuffer.FrameDescriptor.END_FRAG_FLAG;
-import static io.aeron.logbuffer.FrameDescriptor.UNFRAGMENTED;
+import static io.aeron.logbuffer.FrameDescriptor.*;
 
 /**
  * Equivalent of the {@link io.aeron.ControlledFragmentAssembler} for cluster subscriptions.

@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
-import io.aeron.Publication;
-import io.aeron.logbuffer.BufferClaim;
+import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.ExclusiveBufferClaim;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
@@ -81,12 +81,12 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     // Used in onMessage and onFragment
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
-    private final BufferClaim bufferClaim;
+    private final ExclusiveBufferClaim bufferClaim;
     private final PossDupEnabler possDupEnabler;
     private final ProtocolSubscription protocolSubscription = ProtocolSubscription.of(this);
 
     private final ReplayQuery replayQuery;
-    private final Publication publication;
+    private final ExclusivePublication publication;
     private final IdleStrategy idleStrategy;
     private final ErrorHandler errorHandler;
     private final int maxClaimAttempts;
@@ -105,8 +105,8 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
     public Replayer(
         final ReplayQuery replayQuery,
-        final Publication publication,
-        final BufferClaim bufferClaim,
+        final ExclusivePublication publication,
+        final ExclusiveBufferClaim bufferClaim,
         final IdleStrategy idleStrategy,
         final ErrorHandler errorHandler,
         final int maxClaimAttempts,

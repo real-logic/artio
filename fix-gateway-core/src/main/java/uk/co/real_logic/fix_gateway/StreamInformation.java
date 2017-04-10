@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import io.aeron.Publication;
+import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 
@@ -41,14 +41,14 @@ public final class StreamInformation
     }
 
     public static void print(
-        final String name, final Publication publication, final EngineConfiguration configuration)
+        final String name, final ExclusivePublication publication, final EngineConfiguration configuration)
     {
         print(name, publication, configuration.printAeronStreamIdentifiers());
     }
 
     public static void print(
         final String name,
-        final Publication publication,
+        final ExclusivePublication publication,
         final boolean printAeronStreamIdentifiers)
     {
         if (printAeronStreamIdentifiers)

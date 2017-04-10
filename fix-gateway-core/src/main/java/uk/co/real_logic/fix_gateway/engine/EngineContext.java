@@ -16,9 +16,9 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import io.aeron.Aeron;
-import io.aeron.Publication;
+import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
-import io.aeron.logbuffer.BufferClaim;
+import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.NanoClock;
@@ -64,7 +64,7 @@ public abstract class EngineContext implements AutoCloseable
     public static EngineContext of(
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
-        final Publication replayPublication,
+        final ExclusivePublication replayPublication,
         final FixCounters fixCounters,
         final Aeron aeron,
         final EngineDescriptorStore engineDescriptorStore)
@@ -203,12 +203,13 @@ public abstract class EngineContext implements AutoCloseable
             completionPosition);
     }
 
-    protected Replayer newReplayer(final Publication replayPublication, final ArchiveReader outboundArchiveReader)
+    protected Replayer newReplayer(
+            final ExclusivePublication replayPublication, final ArchiveReader outboundArchiveReader)
     {
         return new Replayer(
             newReplayQuery(outboundArchiveReader),
             replayPublication,
-            new BufferClaim(),
+            new ExclusiveBufferClaim(),
             configuration.archiverIdleStrategy(),
             errorHandler,
             configuration.outboundMaxClaimAttempts(),

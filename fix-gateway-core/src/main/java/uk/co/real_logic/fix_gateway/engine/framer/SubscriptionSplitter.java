@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.ExclusiveBufferClaim;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
@@ -41,7 +41,7 @@ class SubscriptionSplitter implements ControlledFragmentHandler
 {
     private static final int HEADER_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH;
 
-    private final BufferClaim bufferClaim = new BufferClaim();
+    private final ExclusiveBufferClaim bufferClaim = new ExclusiveBufferClaim();
 
     private final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();

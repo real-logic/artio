@@ -43,7 +43,6 @@ import uk.co.real_logic.fix_gateway.engine.framer.TcpChannelSupplier.NewChannelH
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
-import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.protocol.*;
 import uk.co.real_logic.fix_gateway.replication.ClusterFragmentAssembler;
 import uk.co.real_logic.fix_gateway.replication.ClusterFragmentHandler;

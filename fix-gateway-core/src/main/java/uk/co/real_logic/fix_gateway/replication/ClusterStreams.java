@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.Publication;
+import io.aeron.ExclusivePublication;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -29,14 +29,14 @@ class ClusterStreams extends ClusterableStreams
     private final RaftTransport transport;
     private final int ourSessionId;
     private final AtomicInteger leaderSessionId;
-    private final Publication dataPublication;
+    private final ExclusivePublication dataPublication;
     private final Supplier<ArchiveReader> archiveReaderSupplier;
 
     ClusterStreams(
         final RaftTransport transport,
         final int ourSessionId,
         final AtomicInteger leaderSessionId,
-        final Publication dataPublication,
+        final ExclusivePublication dataPublication,
         final Supplier<ArchiveReader> archiveReaderSupplier)
     {
         this.transport = transport;

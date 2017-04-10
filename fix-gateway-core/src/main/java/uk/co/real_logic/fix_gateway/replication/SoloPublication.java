@@ -15,19 +15,19 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.Publication;
-import io.aeron.logbuffer.BufferClaim;
+import io.aeron.ExclusivePublication;
+import io.aeron.logbuffer.ExclusiveBufferClaim;
 
 class SoloPublication extends ClusterablePublication
 {
-    private final Publication dataPublication;
+    private final ExclusivePublication dataPublication;
 
-    SoloPublication(final Publication dataPublication)
+    SoloPublication(final ExclusivePublication dataPublication)
     {
         this.dataPublication = dataPublication;
     }
 
-    public long tryClaim(final int length, final BufferClaim bufferClaim)
+    public long tryClaim(final int length, final ExclusiveBufferClaim bufferClaim)
     {
         return dataPublication.tryClaim(length, bufferClaim);
     }

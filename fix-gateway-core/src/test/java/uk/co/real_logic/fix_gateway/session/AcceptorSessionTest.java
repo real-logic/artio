@@ -27,9 +27,7 @@ import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_SESSION_B
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
 import static uk.co.real_logic.fix_gateway.fields.RejectReason.SENDINGTIME_ACCURACY_PROBLEM;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
-import static uk.co.real_logic.fix_gateway.session.Session.ACTIVE_VALUE;
-import static uk.co.real_logic.fix_gateway.session.Session.AWAITING_RESEND_VALUE;
-import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
+import static uk.co.real_logic.fix_gateway.session.Session.*;
 
 public class AcceptorSessionTest extends AbstractSessionTest
 {

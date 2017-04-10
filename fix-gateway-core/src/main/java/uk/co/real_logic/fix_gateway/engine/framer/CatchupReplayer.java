@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.ExclusiveBufferClaim;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
@@ -68,7 +68,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final HeaderDecoder headerDecoder = new HeaderDecoder();
-    private final BufferClaim bufferClaim = new BufferClaim();
+    private final ExclusiveBufferClaim bufferClaim = new ExclusiveBufferClaim();
 
     private final PossDupEnabler possDupEnabler;
     private final ReplayQuery inboundMessages;

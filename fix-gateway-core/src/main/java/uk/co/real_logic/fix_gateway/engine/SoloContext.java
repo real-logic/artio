@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import io.aeron.Aeron;
-import io.aeron.Publication;
+import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
@@ -42,7 +42,7 @@ import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.supp
 
 class SoloContext extends EngineContext
 {
-    private final Publication replayPublication;
+    private final ExclusivePublication replayPublication;
     private final List<Archiver> archivers = new ArrayList<>();
     private final StreamIdentifier inboundStreamId;
     private final StreamIdentifier outboundStreamId;
@@ -56,7 +56,7 @@ class SoloContext extends EngineContext
     SoloContext(
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
-        final Publication replayPublication,
+        final ExclusivePublication replayPublication,
         final FixCounters fixCounters,
         final Aeron aeron)
     {

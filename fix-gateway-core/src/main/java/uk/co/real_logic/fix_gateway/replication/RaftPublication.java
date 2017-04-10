@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.Publication;
-import io.aeron.logbuffer.BufferClaim;
+import io.aeron.ExclusivePublication;
+import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
@@ -40,7 +40,7 @@ class RaftPublication
 
     protected final MessageHeaderEncoder header = new MessageHeaderEncoder();
 
-    private final BufferClaim bufferClaim = new BufferClaim();
+    private final ExclusiveBufferClaim bufferClaim = new ExclusiveBufferClaim();
     private final MessageAcknowledgementEncoder messageAcknowledgement = new MessageAcknowledgementEncoder();
     private final RequestVoteEncoder requestVote = new RequestVoteEncoder();
     private final ReplyVoteEncoder replyVote = new ReplyVoteEncoder();
@@ -48,7 +48,7 @@ class RaftPublication
     private final ResendEncoder resend = new ResendEncoder();
 
     private final long maxClaimAttempts;
-    private final Publication dataPublication;
+    private final ExclusivePublication dataPublication;
     private final IdleStrategy idleStrategy;
     private final AtomicCounter fails;
 
@@ -56,7 +56,7 @@ class RaftPublication
         final int maxClaimAttempts,
         final IdleStrategy idleStrategy,
         final AtomicCounter fails,
-        final Publication dataPublication)
+        final ExclusivePublication dataPublication)
     {
         this.maxClaimAttempts = maxClaimAttempts;
         this.idleStrategy = idleStrategy;

@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.Publication;
+import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
-import io.aeron.logbuffer.BufferClaim;
+import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.AtomicBuffer;
@@ -80,7 +80,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         followers.add(2);
         followers.add(3);
 
-        final Publication dataPublication = dataPublication();
+        final ExclusivePublication dataPublication = dataPublication();
         final ClusterAgent leaderNode = mock(ClusterAgent.class);
         when(leaderNode.isLeader()).thenReturn(true);
         leaderSessionId = dataPublication.sessionId();
@@ -317,7 +317,7 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
 
     private int offerBuffer()
     {
-        final BufferClaim claim = new BufferClaim();
+        final ExclusiveBufferClaim claim = new ExclusiveBufferClaim();
         final long position = publication.tryClaim(buffer.capacity(), claim);
         assertThat(position, greaterThan(0L));
         claim.buffer().putBytes(claim.offset(), buffer, 0, buffer.capacity());

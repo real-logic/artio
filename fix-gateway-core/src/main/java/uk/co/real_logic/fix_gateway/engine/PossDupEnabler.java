@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
-import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
@@ -49,14 +49,14 @@ public class PossDupEnabler
     private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
     private final MutableAsciiBuffer mutableAsciiFlyweight = new MutableAsciiBuffer();
 
-    private final BufferClaim bufferClaim;
+    private final ExclusiveBufferClaim bufferClaim;
     private final IntPredicate claimer;
     private final Runnable onPreCommit;
     private final Consumer<String> onIllegalStateFunc;
     private final ErrorHandler errorHandler;
 
     public PossDupEnabler(
-        final BufferClaim bufferClaim,
+        final ExclusiveBufferClaim bufferClaim,
         final IntPredicate claimer,
         final Runnable onPreCommit,
         final Consumer<String> onIllegalStateFunc,

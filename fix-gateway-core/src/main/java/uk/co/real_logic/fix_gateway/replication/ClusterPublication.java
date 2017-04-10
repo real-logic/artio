@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.Publication;
-import io.aeron.logbuffer.BufferClaim;
+import io.aeron.ExclusivePublication;
+import io.aeron.logbuffer.ExclusiveBufferClaim;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -26,14 +26,14 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 class ClusterPublication extends ClusterablePublication
 {
-    private final Publication dataPublication;
+    private final ExclusivePublication dataPublication;
     private final AtomicInteger leaderSessionId;
     private final int ourSessionId;
     private final long reservedValue;
     private final int streamId;
 
     ClusterPublication(
-        final Publication dataPublication,
+        final ExclusivePublication dataPublication,
         final AtomicInteger leaderSessionId,
         final int ourSessionId,
         final int streamId)
@@ -45,7 +45,7 @@ class ClusterPublication extends ClusterablePublication
         this.streamId = streamId;
     }
 
-    public long tryClaim(final int length, final BufferClaim bufferClaim)
+    public long tryClaim(final int length, final ExclusiveBufferClaim bufferClaim)
     {
         if (!ClusterStreams.isLeader(ourSessionId, leaderSessionId))
         {

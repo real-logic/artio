@@ -39,7 +39,6 @@ import uk.co.real_logic.fix_gateway.engine.framer.SubscriptionSlowPeeker.Library
 import uk.co.real_logic.fix_gateway.engine.logger.ReplayQuery;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
-import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.replication.ClusterSubscription;
 import uk.co.real_logic.fix_gateway.replication.ClusterableStreams;

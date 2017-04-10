@@ -15,7 +15,10 @@
  */
 package uk.co.real_logic.fix_gateway.system_benchmarks;
 
-import uk.co.real_logic.fix_gateway.builder.*;
+import uk.co.real_logic.fix_gateway.builder.Encoder;
+import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
+import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
+import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;

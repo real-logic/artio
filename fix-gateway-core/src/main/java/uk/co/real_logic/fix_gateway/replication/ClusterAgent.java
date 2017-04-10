@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.Publication;
+import io.aeron.ExclusivePublication;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.Agent;
@@ -48,10 +48,9 @@ public class ClusterAgent implements Agent
     private final NodeStateHandler nodeStateHandler;
     private final RoleHandler roleHandler;
     private final String agentNamePrefix;
-    private final Supplier<ArchiveReader> archiveReaderSupplier;
     private final ArchiveReader agentArchiveReader;
     private final Archiver archiver;
-    private final Publication dataPublication;
+    private final ExclusivePublication dataPublication;
 
     private Role currentRole;
 
@@ -64,7 +63,10 @@ public class ClusterAgent implements Agent
         nodeStateHandler = configuration.nodeStateHandler();
         roleHandler = configuration.nodeHandler();
         agentNamePrefix = configuration.agentNamePrefix();
-        archiveReaderSupplier = configuration.archiveReaderSupplier();
+        final Supplier<ArchiveReader> archiveReaderSupplier = configuration.archiveReaderSupplier();
+
+        requireNonNull(archiveReaderSupplier, "archiveReader");
+
         agentArchiveReader = archiveReaderSupplier.get();
         archiver = configuration.archiver();
         dataPublication = transport.leaderPublication();
@@ -80,7 +82,6 @@ public class ClusterAgent implements Agent
 
         requireNonNull(otherNodes, "otherNodes");
         requireNonNull(acknowledgementStrategy, "acknowledgementStrategy");
-        requireNonNull(archiveReaderSupplier, "archiveReader");
         requireNonNull(archiver, "archiver");
 
         leader = new Leader(

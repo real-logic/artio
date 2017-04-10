@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import io.aeron.Aeron;
-import io.aeron.Publication;
+import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.CompositeAgent;
@@ -39,14 +39,14 @@ import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.
 
 class ClusterContext extends EngineContext
 {
-    private final Publication inboundPublication;
+    private final ExclusivePublication inboundPublication;
     private final StreamIdentifier dataStream;
     private final ClusterAgent clusterAgent;
 
     ClusterContext(
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
-        final Publication replayPublication,
+        final ExclusivePublication replayPublication,
         final FixCounters fixCounters,
         final Aeron aeron,
         final EngineDescriptorStore engineDescriptorStore)
@@ -62,7 +62,7 @@ class ClusterContext extends EngineContext
             final String channel = configuration.clusterAeronChannel();
             dataStream = new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID);
             final String libraryAeronChannel = configuration.libraryAeronChannel();
-            inboundPublication = aeron.addPublication(libraryAeronChannel, INBOUND_LIBRARY_STREAM);
+            inboundPublication = aeron.addExclusivePublication(libraryAeronChannel, INBOUND_LIBRARY_STREAM);
             StreamInformation.print("inboundPublication", inboundPublication, configuration);
             clusterAgent = node(configuration, fixCounters, aeron, channel, engineDescriptorStore);
             newStreams(clusterAgent.clusterStreams());

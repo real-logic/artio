@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Aeron;
-import io.aeron.Publication;
+import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
 import io.aeron.driver.MediaDriver;
 import org.agrona.DirectBuffer;
@@ -89,12 +89,12 @@ public class AbstractReplicationTest
             100,
             new NoOpIdleStrategy(),
             mock(AtomicCounter.class),
-            aeron.addPublication(IPC, streamId));
+            aeron.addExclusivePublication(IPC, streamId));
     }
 
-    protected Publication dataPublication()
+    protected ExclusivePublication dataPublication()
     {
-        return aeron.addPublication(IPC, ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID);
+        return aeron.addExclusivePublication(IPC, ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID);
     }
 
     @Before

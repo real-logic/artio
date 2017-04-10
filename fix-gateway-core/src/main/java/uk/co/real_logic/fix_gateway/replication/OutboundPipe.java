@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.Publication;
+import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 
@@ -24,11 +24,11 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 class OutboundPipe implements ClusterFragmentHandler
 {
-    private final Publication publication;
+    private final ExclusivePublication publication;
     private final ClusterStreams streams;
     private final ClusterableSubscription subscription;
 
-    OutboundPipe(final Publication publication, final ClusterStreams streams)
+    OutboundPipe(final ExclusivePublication publication, final ClusterStreams streams)
     {
         this.publication = publication;
         this.streams = streams;

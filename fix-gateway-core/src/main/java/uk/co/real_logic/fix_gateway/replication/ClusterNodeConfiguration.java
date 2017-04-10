@@ -16,7 +16,7 @@
 package uk.co.real_logic.fix_gateway.replication;
 
 import io.aeron.Aeron;
-import io.aeron.Publication;
+import io.aeron.ExclusivePublication;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.IdleStrategy;
@@ -26,9 +26,7 @@ import uk.co.real_logic.fix_gateway.engine.logger.Archiver;
 
 import java.util.function.Supplier;
 
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS;
-import static uk.co.real_logic.fix_gateway.CommonConfiguration.backoffIdleStrategy;
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.*;
 
 public class ClusterNodeConfiguration
 {
@@ -66,7 +64,7 @@ public class ClusterNodeConfiguration
     private Supplier<ArchiveReader> archiveReaderSupplier;
     private Archiver archiver;
     private RaftTransport raftTransport = new RaftTransport(this);
-    private Publication copyToPublication;
+    private ExclusivePublication copyToPublication;
     private DirectBuffer nodeState;
     private NodeStateHandler nodeStateHandler;
     private RoleHandler roleHandler = DEFAULT_NODE_HANDLER;
@@ -190,7 +188,7 @@ public class ClusterNodeConfiguration
         return this;
     }
 
-    public ClusterNodeConfiguration copyTo(final Publication publication)
+    public ClusterNodeConfiguration copyTo(final ExclusivePublication publication)
     {
         copyToPublication = publication;
         return this;
@@ -306,7 +304,7 @@ public class ClusterNodeConfiguration
         }
     }
 
-    public Publication copyToPublication()
+    public ExclusivePublication copyToPublication()
     {
         return copyToPublication;
     }

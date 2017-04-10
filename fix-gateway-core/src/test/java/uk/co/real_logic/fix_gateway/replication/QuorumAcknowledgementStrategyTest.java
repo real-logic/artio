@@ -19,9 +19,7 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.collections.Long2LongHashMap;
 import org.junit.Test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class QuorumAcknowledgementStrategyTest
 {
