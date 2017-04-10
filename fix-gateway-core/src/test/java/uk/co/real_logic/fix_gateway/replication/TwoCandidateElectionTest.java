@@ -111,23 +111,23 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
     {
         assertEventuallyTrue(
             "Timed out awaiting the end of the election",
-                () ->
-                {
-                    poll(node1);
-                    poll(node2);
-                    poll(node3);
+            () ->
+            {
+                poll(node1);
+                poll(node2);
+                poll(node3);
 
-                    block.run();
-                });
+                block.run();
+            });
     }
 
     private Candidate candidate(final short id, final ClusterAgent clusterNode, final TermState termState)
     {
         final QuorumAcknowledgementStrategy ackStrategy = new QuorumAcknowledgementStrategy();
         return new Candidate(
-            id, DATA_SESSION_ID, clusterNode, CLUSTER_SIZE, TIMEOUT, termState, ackStrategy,
-            NODE_STATE_BUFFER, nodeStateHandler)
-                    .controlSubscription(controlSubscription())
-                    .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID));
+                id, DATA_SESSION_ID, clusterNode, CLUSTER_SIZE, TIMEOUT, termState, ackStrategy,
+                NODE_STATE_BUFFER, nodeStateHandler)
+                .controlSubscription(controlSubscription())
+                .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID));
     }
 }
