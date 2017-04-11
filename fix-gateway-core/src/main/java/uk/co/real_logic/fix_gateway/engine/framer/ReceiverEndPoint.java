@@ -345,6 +345,7 @@ class ReceiverEndPoint
                     connectionId + ": Duplicate Session: " + compositeKey);
                 if (Pressure.isBackPressured(position))
                 {
+                    sessionId = UNKNOWN;
                     moveRemainingDataToBufferStart(offset);
                     return true;
                 }

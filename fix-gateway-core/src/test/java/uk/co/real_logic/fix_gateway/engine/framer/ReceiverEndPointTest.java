@@ -114,7 +114,26 @@ public class ReceiverEndPointTest
 
         pollsData(MSG_LEN);
 
-        verifyDuplicateSession();
+        verifyDuplicateSession(times(1));
+    }
+
+    @Test
+    public void shouldNotifyDuplicateSessionWhenBackPressured()
+    {
+        when(libraryPublication.saveError(any(), anyInt(), anyLong(), anyString()))
+                .thenReturn(BACK_PRESSURED, POSITION);
+
+        givenADuplicateSession();
+
+        theEndpointReceivesACompleteMessage();
+
+        pollsData(MSG_LEN);
+
+        theEndpointReceivesNothing();
+
+        pollsData(0);
+
+        verifyDuplicateSession(times(2));
     }
 
     @Test
@@ -588,9 +607,9 @@ public class ReceiverEndPointTest
         endPoint.pollForData();
     }
 
-    private void verifyDuplicateSession()
+    private void verifyDuplicateSession(final VerificationMode times)
     {
-        verify(libraryPublication).saveError(
+        verify(libraryPublication, times).saveError(
                 eq(GatewayError.DUPLICATE_SESSION), eq(LIBRARY_ID), anyLong(), any());
     }
 
