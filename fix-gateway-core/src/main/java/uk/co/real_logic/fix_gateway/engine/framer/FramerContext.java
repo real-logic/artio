@@ -111,6 +111,7 @@ public class FramerContext
         outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "dataPublication");
         inboundLibraryPublication = engineContext.inboundLibraryPublication();
 
+        final FinalImagePositions finalImagePositions = new FinalImagePositions();
         framer = new Framer(
             clock,
             timers.outboundTimer(),
@@ -119,8 +120,10 @@ public class FramerContext
             endPointFactory,
             engineContext.outboundClusterSubscription(),
             engineContext.outboundClusterSubscription(),
-            engineContext.outboundLibrarySubscription("outboundLibrarySubscription"),
-            engineContext.outboundLibrarySubscription("outboundSlowSubscription"),
+            engineContext.outboundLibrarySubscription(
+                    "outboundLibrarySubscription", finalImagePositions),
+            engineContext.outboundLibrarySubscription(
+                    "outboundSlowSubscription", null),
             gatewaySessionsOutbound.id(),
             replaySubscription,
             slowReplaySubscription,
@@ -141,7 +144,8 @@ public class FramerContext
             configuration.agentNamePrefix(),
             engineContext.inboundCompletionPosition(),
             engineContext.outboundLibraryCompletionPosition(),
-            engineContext.outboundClusterCompletionPosition());
+            engineContext.outboundClusterCompletionPosition(),
+            finalImagePositions);
     }
 
     public Agent framer()

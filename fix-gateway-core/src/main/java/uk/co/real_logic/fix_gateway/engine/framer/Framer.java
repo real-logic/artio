@@ -145,6 +145,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final QueuedPipe<AdminCommand> adminCommands;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
+    private FinalImagePositions finalImagePositions;
     private final int inboundBytesReceivedLimit;
     private final int outboundLibraryFragmentLimit;
     private final int replayFragmentLimit;
@@ -162,36 +163,37 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
     Framer(
-        final EpochClock clock,
-        final Timer outboundTimer,
-        final Timer sendTimer,
-        final EngineConfiguration configuration,
-        final EndPointFactory endPointFactory,
-        final ClusterSubscription outboundClusterSubscription,
-        final ClusterSubscription outboundClusterSlowSubscription,
-        final Subscription outboundLibrarySubscription,
-        final Subscription outboundSlowSubscription,
-        final int gatewaySessionsOutboundId,
-        final Subscription replaySubscription,
-        final Subscription replaySlowSubscription,
-        final QueuedPipe<AdminCommand> adminCommands,
-        final SessionIdStrategy sessionIdStrategy,
-        final SessionContexts sessionContexts,
-        final SequenceNumberIndexReader sentSequenceNumberIndex,
-        final SequenceNumberIndexReader receivedSequenceNumberIndex,
-        final GatewaySessions gatewaySessions,
-        final ReplayQuery inboundMessages,
-        final ErrorHandler errorHandler,
-        final GatewayPublication outboundPublication,
-        final GatewayPublication replyPublication,
-        final ClusterableStreams clusterableStreams,
-        final EngineDescriptorStore engineDescriptorStore,
-        final LongHashSet replicatedConnectionIds,
-        final GatewayPublication inboundPublication,
-        final String agentNamePrefix,
-        final CompletionPosition inboundCompletionPosition,
-        final CompletionPosition outboundLibraryCompletionPosition,
-        final CompletionPosition outboundClusterCompletionPosition)
+            final EpochClock clock,
+            final Timer outboundTimer,
+            final Timer sendTimer,
+            final EngineConfiguration configuration,
+            final EndPointFactory endPointFactory,
+            final ClusterSubscription outboundClusterSubscription,
+            final ClusterSubscription outboundClusterSlowSubscription,
+            final Subscription outboundLibrarySubscription,
+            final Subscription outboundSlowSubscription,
+            final int gatewaySessionsOutboundId,
+            final Subscription replaySubscription,
+            final Subscription replaySlowSubscription,
+            final QueuedPipe<AdminCommand> adminCommands,
+            final SessionIdStrategy sessionIdStrategy,
+            final SessionContexts sessionContexts,
+            final SequenceNumberIndexReader sentSequenceNumberIndex,
+            final SequenceNumberIndexReader receivedSequenceNumberIndex,
+            final GatewaySessions gatewaySessions,
+            final ReplayQuery inboundMessages,
+            final ErrorHandler errorHandler,
+            final GatewayPublication outboundPublication,
+            final GatewayPublication replyPublication,
+            final ClusterableStreams clusterableStreams,
+            final EngineDescriptorStore engineDescriptorStore,
+            final LongHashSet replicatedConnectionIds,
+            final GatewayPublication inboundPublication,
+            final String agentNamePrefix,
+            final CompletionPosition inboundCompletionPosition,
+            final CompletionPosition outboundLibraryCompletionPosition,
+            final CompletionPosition outboundClusterCompletionPosition,
+            final FinalImagePositions finalImagePositions)
     {
         this.clock = clock;
         this.outboundTimer = outboundTimer;
@@ -218,6 +220,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.adminCommands = adminCommands;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
+        this.finalImagePositions = finalImagePositions;
 
         while (outboundSlowSubscription.hasNoImages() ||
                outboundLibrarySubscription.hasNoImages() ||
@@ -428,7 +431,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         final int librarySessionId = library.aeronSessionId();
         final Image image = outboundLibrarySubscription.imageBySessionId(librarySessionId);
-        final long libraryPosition = image != null ? image.position() : 0;
+        long libraryPosition = finalImagePositions.lookupPosition(librarySessionId);
+        if (image != null)
+        {
+            libraryPosition = image.position();
+        }
+
         final boolean indexed = indexedPosition(librarySessionId, libraryPosition);
         if (indexed)
         {
@@ -493,6 +501,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 receivedSequenceNumber,
                 LogonStatus.LIBRARY_NOTIFICATION));
         }
+
+        finalImagePositions.removePosition(library.aeronSessionId());
     }
 
     private int pollEndPoints() throws IOException
@@ -1305,4 +1315,5 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             toResend.put(connectionId, libraryId);
         }
     }
+
 }

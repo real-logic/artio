@@ -86,7 +86,7 @@ class ClusterContext extends EngineContext
             localOutboundArchiver.subscription(localOutboundSubscription);
 
             final ClusterPositionSender positionSender = new ClusterPositionSender(
-                outboundLibrarySubscription("positionSender"),
+                outboundLibrarySubscription("positionSender", null),
                 outboundClusterSubscription(),
                 inboundLibraryPublication(),
                 configuration.agentNamePrefix());

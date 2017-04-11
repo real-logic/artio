@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine;
 import io.aeron.Aeron;
 import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
+import io.aeron.UnavailableImageHandler;
 import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
@@ -257,10 +258,11 @@ public abstract class EngineContext implements AutoCloseable
     public abstract ClusterSubscription outboundClusterSubscription();
 
     // Each invocation should return a new instance of the subscription
-    public Subscription outboundLibrarySubscription(final String name)
+    public Subscription outboundLibrarySubscription(
+        final String name, final UnavailableImageHandler unavailableImageHandler)
     {
         final Subscription subscription = aeron.addSubscription(
-            configuration.libraryAeronChannel(), OUTBOUND_LIBRARY_STREAM);
+            configuration.libraryAeronChannel(), OUTBOUND_LIBRARY_STREAM, null, unavailableImageHandler);
         StreamInformation.print(name, subscription, configuration);
         return subscription;
     }

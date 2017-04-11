@@ -116,6 +116,7 @@ public class FramerTest
     private final Image peekImage = mock(Image.class);
     private final Image normalImage = mock(Image.class);
     private final ClusterableStreams node = mock(ClusterableStreams.class);
+    private FinalImagePositions finalImagePositions = mock(FinalImagePositions.class);
 
     @SuppressWarnings("unchecked")
     private final ArgumentCaptor<List<SessionInfo>> sessionCaptor = ArgumentCaptor.forClass(List.class);
@@ -190,7 +191,8 @@ public class FramerTest
             DEFAULT_NAME_PREFIX,
             mock(CompletionPosition.class),
             mock(CompletionPosition.class),
-            mock(CompletionPosition.class));
+            mock(CompletionPosition.class),
+            finalImagePositions);
 
         when(sessionContexts.onLogon(any())).thenReturn(
             new SessionContext(SESSION_ID, SessionContext.UNKNOWN_SEQUENCE_INDEX, sessionContexts, 0));
@@ -385,6 +387,13 @@ public class FramerTest
         framer.doWork();
 
         verifySessionsAcquired(ACTIVE);
+
+        removesPosition();
+    }
+
+    private void removesPosition()
+    {
+        verify(finalImagePositions).removePosition(anyInt());
     }
 
     @Test
