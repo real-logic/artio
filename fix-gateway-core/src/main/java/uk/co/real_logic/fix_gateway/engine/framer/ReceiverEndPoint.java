@@ -19,6 +19,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
@@ -353,7 +354,20 @@ class ReceiverEndPoint
             }
             else
             {
-                final PersistenceLevel persistenceLevel = sessionPersistenceStrategy.getPersistenceLevel(logon);
+                PersistenceLevel persistenceLevel;
+                try
+                {
+                    persistenceLevel = sessionPersistenceStrategy.getPersistenceLevel(logon);
+                }
+                catch (final Throwable throwable)
+                {
+                    final String message = String.format(
+                            "Exception thrown by persistence strategy for connectionId=%d, defaulted to LOCAL_ARCHIVE",
+                            connectionId);
+                    errorHandler.onError(new FixGatewayException(message, throwable));
+                    persistenceLevel = PersistenceLevel.LOCAL_ARCHIVE;
+                }
+
                 final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
                 final boolean resetSeqNum = resetSequenceNumbersUponLogon(persistenceLevel) || resetSeqNumFlag;
                 final int sentSequenceNumber = sequenceNumber(sentSequenceNumberIndex, resetSeqNum, sessionId);

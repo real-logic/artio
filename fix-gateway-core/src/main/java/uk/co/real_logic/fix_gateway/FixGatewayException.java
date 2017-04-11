@@ -21,4 +21,9 @@ public class FixGatewayException extends RuntimeException
     {
         super(message);
     }
+
+    public FixGatewayException(final String message, final Throwable cause)
+    {
+        super(message, cause);
+    }
 }

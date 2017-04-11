@@ -17,6 +17,9 @@ package uk.co.real_logic.fix_gateway.session;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
+import org.agrona.LangUtil;
+import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.builder.Decoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil;
@@ -61,17 +64,20 @@ public class SessionParser
     private final SessionIdStrategy sessionIdStrategy;
     private final AuthenticationStrategy authenticationStrategy;
     private final MessageValidationStrategy validationStrategy;
+    private ErrorHandler errorHandler;
 
     public SessionParser(
         final Session session,
         final SessionIdStrategy sessionIdStrategy,
         final AuthenticationStrategy authenticationStrategy,
-        final MessageValidationStrategy validationStrategy)
+        final MessageValidationStrategy validationStrategy,
+        final ErrorHandler errorHandler) // nullable
     {
         this.session = session;
         this.sessionIdStrategy = sessionIdStrategy;
         this.authenticationStrategy = authenticationStrategy;
         this.validationStrategy = validationStrategy;
+        this.errorHandler = errorHandler;
     }
 
     public static String username(final LogonDecoder logon)
@@ -313,7 +319,18 @@ public class SessionParser
         }
         else
         {
-            if (authenticationStrategy.authenticate(logon))
+            boolean authenticated;
+            try
+            {
+                authenticated = authenticationStrategy.authenticate(logon);
+            }
+            catch (final Throwable throwable)
+            {
+                onStrategyError("authentication", throwable, asciiBuffer.getAscii(offset, length));
+                authenticated = false;
+            }
+
+            if (authenticated)
             {
                 final CompositeKey sessionKey = sessionIdStrategy.onAcceptLogon(header);
                 final long origSendingTime = origSendingTime(header);
@@ -339,6 +356,30 @@ public class SessionParser
         }
     }
 
+    private void onStrategyError(final String strategyName, final Throwable throwable, final String fixMessage)
+    {
+        final String message = String.format(
+            "Exception thrown by %s strategy for connectionId=%d, [%s], defaulted to false",
+            strategyName,
+            session.connectionId(),
+            fixMessage);
+        onError(new FixGatewayException(message, throwable));
+    }
+
+    private void onError(final Throwable throwable)
+    {
+        // Library code should throw the exception to make users aware of it
+        // Engine code should log it through the normal error handling process.
+        if (errorHandler == null)
+        {
+            LangUtil.rethrowUnchecked(throwable);
+        }
+        else
+        {
+            errorHandler.onError(throwable);
+        }
+    }
+
     private boolean resetSeqNumFlag(final LogonDecoder logon)
     {
         return logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
@@ -351,7 +392,18 @@ public class SessionParser
             return false;
         }
 
-        if (!validationStrategy.validate(header))
+        boolean validated;
+        try
+        {
+            validated = validationStrategy.validate(header);
+        }
+        catch (final Throwable throwable)
+        {
+            onStrategyError("validation", throwable, header.toString());
+            validated = false;
+        }
+
+        if (!validated)
         {
             session.onInvalidMessage(
                 header.msgSeqNum(),

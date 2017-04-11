@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
+import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -48,6 +49,7 @@ class GatewaySessions
     private final int sessionBufferSize;
     private final long sendingTimeWindowInMs;
     private final long reasonableTransmissionTimeInMs;
+    private ErrorHandler errorHandler;
 
     GatewaySessions(
         final EpochClock clock,
@@ -59,7 +61,8 @@ class GatewaySessions
         final MessageValidationStrategy validationStrategy,
         final int sessionBufferSize,
         final long sendingTimeWindowInMs,
-        final long reasonableTransmissionTimeInMs)
+        final long reasonableTransmissionTimeInMs,
+        final ErrorHandler errorHandler)
     {
         this.clock = clock;
         this.publication = publication;
@@ -71,6 +74,7 @@ class GatewaySessions
         this.sessionBufferSize = sessionBufferSize;
         this.sendingTimeWindowInMs = sendingTimeWindowInMs;
         this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
+        this.errorHandler = errorHandler;
     }
 
     void acquire(
@@ -118,7 +122,8 @@ class GatewaySessions
             session,
             sessionIdStrategy,
             authenticationStrategy,
-            validationStrategy);
+            validationStrategy,
+            errorHandler);
 
         sessions.add(gatewaySession);
         gatewaySession.manage(sessionParser, session, outboundSlowEnginePeeker);

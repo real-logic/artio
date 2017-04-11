@@ -902,7 +902,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final AuthenticationStrategy authenticationStrategy = configuration.authenticationStrategy();
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
-            session, sessionIdStrategy, authenticationStrategy, validationStrategy);
+            session, sessionIdStrategy, authenticationStrategy, validationStrategy, null);
         final SessionSubscriber subscriber = new SessionSubscriber(parser, session, receiveTimer, sessionTimer);
         connectionIdToSession.put(connectionId, subscriber);
         sessions = ArrayUtil.add(sessions, session);

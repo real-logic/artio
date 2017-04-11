@@ -101,7 +101,8 @@ public class FramerContext
             configuration.messageValidationStrategy(),
             configuration.sessionBufferSize(),
             configuration.sendingTimeWindowInMs(),
-            configuration.reasonableTransmissionTimeInMs());
+            configuration.reasonableTransmissionTimeInMs(),
+            errorHandler);
 
         sentSequenceNumberIndex = new SequenceNumberIndexReader(
             configuration.sentSequenceNumberBuffer(), errorHandler);
