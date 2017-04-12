@@ -10,7 +10,7 @@ allprojects {
         }
         dependencies {
             classpath "com.github.jengelman.gradle.plugins:shadow:1.2.4"
-            classpath 'net.researchgate:gradle-release:2.5.0'
+            classpath 'net.researchgate:gradle-release:2.6.0'
         }
     }
 }
