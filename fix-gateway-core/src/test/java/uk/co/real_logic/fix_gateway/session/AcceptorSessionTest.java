@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.session;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.junit.Test;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -46,11 +47,11 @@ public class AcceptorSessionTest extends AbstractSessionTest
             mockReceivedMsgSeqNo,
             mockSentMsgSeqNo,
             LIBRARY_ID,
-            DEFAULT_SESSION_BUFFER_SIZE,
-            1,
+                1,
             SEQUENCE_INDEX,
             CONNECTED,
-            DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS);
+            DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
+            new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]));
     }
 
     @Test

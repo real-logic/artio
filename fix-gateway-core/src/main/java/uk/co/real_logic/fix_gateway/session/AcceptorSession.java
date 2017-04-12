@@ -19,6 +19,7 @@ import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 public class AcceptorSession extends Session
 {
@@ -33,11 +34,11 @@ public class AcceptorSession extends Session
         final AtomicCounter receivedMsgSeqNo,
         final AtomicCounter sentMsgSeqNo,
         final int libraryId,
-        final int sessionBufferSize,
         final int initialSequenceNumber,
         final int sequenceIndex,
         final SessionState state,
-        final long reasonableTransmissionTimeInMs)
+        final long reasonableTransmissionTimeInMs,
+        final MutableAsciiBuffer asciiBuffer)
     {
         super(
             defaultInterval,
@@ -51,10 +52,10 @@ public class AcceptorSession extends Session
             receivedMsgSeqNo,
             sentMsgSeqNo,
             libraryId,
-            sessionBufferSize,
-            initialSequenceNumber,
+                initialSequenceNumber,
             sequenceIndex,
-            reasonableTransmissionTimeInMs);
+            reasonableTransmissionTimeInMs,
+            asciiBuffer);
     }
 
 }

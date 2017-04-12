@@ -919,7 +919,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int defaultInterval = configuration.defaultHeartbeatIntervalInS();
         final GatewayPublication publication = transport.outboundPublication();
 
-        final SessionProxy sessionProxy = sessionProxy(connectionId);
+        final int sessionBufferSize = configuration.sessionBufferSize();
+        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
+        final SessionProxy sessionProxy = sessionProxy(connectionId, asciiBuffer);
         final Session session = new InitiatorSession(
             defaultInterval,
             connectionId,
@@ -931,12 +933,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             fixCounters.receivedMsgSeqNo(connectionId),
             fixCounters.sentMsgSeqNo(connectionId),
             libraryId,
-            configuration.sessionBufferSize(),
             initiatorNewSequenceNumber(sessionConfiguration, lastSentSequenceNumber),
             sequenceIndex,
             state,
             sessionConfiguration != null && sessionConfiguration.resetSeqNum(),
-            configuration.reasonableTransmissionTimeInMs())
+            configuration.reasonableTransmissionTimeInMs(),
+            asciiBuffer)
             .lastReceivedMsgSeqNum(
                 initiatorNewSequenceNumber(sessionConfiguration, lastReceivedSequenceNumber) - 1);
 
@@ -997,30 +999,31 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
         final int sessionBufferSize = configuration.sessionBufferSize();
+        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
 
         return new AcceptorSession(
             heartbeatIntervalInS,
             connectionId,
             clock,
-            sessionProxy(connectionId),
+            sessionProxy(connectionId, asciiBuffer),
             publication,
             sessionIdStrategy,
             sendingTimeWindow,
             receivedMsgSeqNo,
             sentMsgSeqNo,
             libraryId,
-            sessionBufferSize,
             1,
             sequenceIndex,
             state,
-            configuration.reasonableTransmissionTimeInMs())
+            configuration.reasonableTransmissionTimeInMs(),
+            asciiBuffer)
             .address(host, port);
     }
 
-    private SessionProxy sessionProxy(final long connectionId)
+    private SessionProxy sessionProxy(final long connectionId, final MutableAsciiBuffer asciiBuffer)
     {
         return new SessionProxy(
-            configuration.sessionBufferSize(),
+            asciiBuffer,
             transport.outboundPublication(),
             sessionIdStrategy,
             configuration.sessionCustomisationStrategy(),

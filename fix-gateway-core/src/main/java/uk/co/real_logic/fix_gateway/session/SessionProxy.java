@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.session;
 
 import org.agrona.concurrent.EpochClock;
-import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.builder.*;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.fields.RejectReason;
@@ -84,8 +83,7 @@ public class SessionProxy
         testRequest.header(), sequenceReset.header());
 
     private final AsciiFormatter lowSequenceNumber;
-    private final UnsafeBuffer buffer;
-    private final MutableAsciiBuffer string;
+    private final MutableAsciiBuffer buffer;
     private final GatewayPublication gatewayPublication;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionCustomisationStrategy customisationStrategy;
@@ -96,7 +94,7 @@ public class SessionProxy
     private boolean libraryConnected = true;
 
     public SessionProxy(
-        final int bufferSize,
+        final MutableAsciiBuffer buffer,
         final GatewayPublication gatewayPublication,
         final SessionIdStrategy sessionIdStrategy,
         final SessionCustomisationStrategy customisationStrategy,
@@ -110,8 +108,7 @@ public class SessionProxy
         this.clock = clock;
         this.connectionId = connectionId;
         this.libraryId = libraryId;
-        buffer = new UnsafeBuffer(new byte[bufferSize]);
-        string = new MutableAsciiBuffer(buffer);
+        this.buffer = buffer;
         lowSequenceNumber = new AsciiFormatter("MsgSeqNum too low, expecting %s but received %s");
         timestampEncoder.initialise(clock.time());
     }
@@ -135,7 +132,7 @@ public class SessionProxy
         setupHeader(header, msgSeqNo);
         resendRequest.beginSeqNo(beginSeqNo)
                      .endSeqNo(endSeqNo);
-        final long result = resendRequest.encode(string, 0);
+        final long result = resendRequest.encode(buffer, 0);
         return send(result, ResendRequestDecoder.MESSAGE_TYPE, sequenceIndex, resendRequest);
     }
 
@@ -170,7 +167,7 @@ public class SessionProxy
         }
         customisationStrategy.configureLogon(logon, sessionId);
 
-        final long result = logon.encode(string, 0);
+        final long result = logon.encode(buffer, 0);
         return send(result, LogonDecoder.MESSAGE_TYPE, sequenceIndex, logon);
     }
 
@@ -200,7 +197,7 @@ public class SessionProxy
         }
 
         customisationStrategy.configureLogout(logout, sessionId);
-        return send(logout.encode(string, 0), LogoutDecoder.MESSAGE_TYPE, sequenceIndex, logout);
+        return send(logout.encode(buffer, 0), LogoutDecoder.MESSAGE_TYPE, sequenceIndex, logout);
     }
 
     public long lowSequenceNumberLogout(
@@ -262,7 +259,7 @@ public class SessionProxy
             heartbeat.resetTestReqID();
         }
 
-        return send(heartbeat.encode(string, 0), HeartbeatDecoder.MESSAGE_TYPE, sequenceIndex, heartbeat);
+        return send(heartbeat.encode(buffer, 0), HeartbeatDecoder.MESSAGE_TYPE, sequenceIndex, heartbeat);
     }
 
     public long reject(
@@ -329,7 +326,7 @@ public class SessionProxy
         reject.refSeqNum(refSeqNum);
         reject.sessionRejectReason(rejectReason);
 
-        return send(reject.encode(string, 0), RejectDecoder.MESSAGE_TYPE, sequenceIndex, reject);
+        return send(reject.encode(buffer, 0), RejectDecoder.MESSAGE_TYPE, sequenceIndex, reject);
     }
 
     public long testRequest(final int msgSeqNo, final CharSequence testReqID, final int sequenceIndex)
@@ -339,7 +336,7 @@ public class SessionProxy
 
         testRequest.testReqID(testReqID);
 
-        return send(testRequest.encode(string, 0), TestRequestDecoder.MESSAGE_TYPE, sequenceIndex, testRequest);
+        return send(testRequest.encode(buffer, 0), TestRequestDecoder.MESSAGE_TYPE, sequenceIndex, testRequest);
     }
 
     public long sequenceReset(final int msgSeqNo, final int newSeqNo, final int sequenceIndex)
@@ -349,7 +346,7 @@ public class SessionProxy
 
         sequenceReset.newSeqNo(newSeqNo);
 
-        return send(sequenceReset.encode(string, 0), SequenceResetDecoder.MESSAGE_TYPE, sequenceIndex, sequenceReset);
+        return send(sequenceReset.encode(buffer, 0), SequenceResetDecoder.MESSAGE_TYPE, sequenceIndex, sequenceReset);
     }
 
     private void setupHeader(final HeaderEncoder header, final int msgSeqNo)

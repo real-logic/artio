@@ -147,10 +147,10 @@ public class Session implements AutoCloseable
         final AtomicCounter receivedMsgSeqNo,
         final AtomicCounter sentMsgSeqNo,
         final int libraryId,
-        final int sessionBufferSize,
         final int initialSequenceNumber,
         final int sequenceIndex,
-        final long reasonableTransmissionTimeInMs)
+        final long reasonableTransmissionTimeInMs,
+        final MutableAsciiBuffer asciiBuffer)
     {
         Verify.notNull(clock, "clock");
         Verify.notNull(state, "session state");
@@ -172,7 +172,7 @@ public class Session implements AutoCloseable
         this.lastSentMsgSeqNum = initialSequenceNumber - 1;
         this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
 
-        asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
+        this.asciiBuffer = asciiBuffer;
 
         state(state);
         heartbeatIntervalInS(heartbeatIntervalInS);

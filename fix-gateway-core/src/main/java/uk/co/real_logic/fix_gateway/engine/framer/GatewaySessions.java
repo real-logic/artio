@@ -25,6 +25,7 @@ import uk.co.real_logic.fix_gateway.engine.framer.SubscriptionSlowPeeker.Library
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.*;
+import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 
@@ -90,9 +91,10 @@ class GatewaySessions
         final long connectionId = gatewaySession.connectionId();
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
+        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
 
         final SessionProxy proxy = new SessionProxy(
-            sessionBufferSize,
+            asciiBuffer,
             publication,
             sessionIdStrategy,
             customisationStrategy,
@@ -112,11 +114,11 @@ class GatewaySessions
             receivedMsgSeqNo,
             sentMsgSeqNo,
             FixEngine.ENGINE_LIBRARY_ID,
-            sessionBufferSize,
             lastSentSequenceNumber + 1,
             // This gets set by the receiver end point once the logon message has been received.
             0,
-            reasonableTransmissionTimeInMs);
+            reasonableTransmissionTimeInMs,
+            asciiBuffer);
 
         final SessionParser sessionParser = new SessionParser(
             session,
