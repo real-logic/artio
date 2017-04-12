@@ -70,6 +70,12 @@ class ClusterPublication extends ClusterablePublication
         return dataPublication.position();
     }
 
+    @Override
+    public int maxPayloadLength()
+    {
+        return dataPublication.maxPayloadLength();
+    }
+
     public void close()
     {
     }

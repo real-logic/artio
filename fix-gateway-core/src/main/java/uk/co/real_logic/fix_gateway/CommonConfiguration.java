@@ -421,6 +421,8 @@ public class CommonConfiguration
      * via
      * {@link uk.co.real_logic.fix_gateway.session.Session#send(uk.co.real_logic.fix_gateway.builder.Encoder)}.
      *
+     * This is also used as the size of buffer for messages that are sent by the Session management system itself.
+     *
      * @param bufferSize the session's encoding buffer size
      * @return this
      */

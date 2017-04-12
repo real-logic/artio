@@ -173,7 +173,12 @@ class SenderEndPoint implements AutoCloseable
         throws IOException
     {
         final int wrapAdjustment = directBuffer.wrapAdjustment();
-        final ByteBuffer buffer = directBuffer.byteBuffer();
+        ByteBuffer buffer = directBuffer.byteBuffer();
+        // TODO: remove when Aeron release happens with a configurable ControlledFragmentAssembler
+        if (buffer == null)
+        {
+            buffer = ByteBuffer.wrap(directBuffer.byteArray());
+        }
         buffer.limit(wrapAdjustment + offset + length);
         buffer.position(wrapAdjustment + offset);
 

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.protocol;
 
+import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
@@ -28,6 +29,9 @@ import uk.co.real_logic.fix_gateway.replication.ClusterablePublication;
 
 import java.util.List;
 
+import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
+import static io.aeron.protocol.DataHeaderFlyweight.END_FLAG;
+import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static uk.co.real_logic.fix_gateway.DebugLogger.logSbeMessage;
 import static uk.co.real_logic.fix_gateway.LogTag.*;
@@ -41,6 +45,7 @@ import static uk.co.real_logic.fix_gateway.messages.NotLeaderEncoder.libraryChan
 public class GatewayPublication extends ClaimablePublication
 {
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
+    public static final int FRAMED_MESSAGE_SIZE = MessageHeaderEncoder.ENCODED_LENGTH + FRAME_SIZE;
 
     private static final byte[] NO_BYTES = {};
     private static final int CONNECT_SIZE =
@@ -59,6 +64,7 @@ public class GatewayPublication extends ClaimablePublication
         NotLeaderEncoder.BLOCK_LENGTH + HEADER_LENGTH + libraryChannelHeaderLength();
     private static final int SLOW_STATUS_NOTIFICATION_LENGTH =
         HEADER_LENGTH + SlowStatusNotificationEncoder.BLOCK_LENGTH;
+    private static final short MIDDLE_FLAG = 0;
 
     private final SessionExistsEncoder logon = new SessionExistsEncoder();
     private final ManageConnectionEncoder manageConnection = new ManageConnectionEncoder();
@@ -83,6 +89,8 @@ public class GatewayPublication extends ClaimablePublication
     private final SlowStatusNotificationEncoder slowStatusNotification = new SlowStatusNotificationEncoder();
 
     private final NanoClock nanoClock;
+    private final int maxPayloadLength;
+    private final int maxInitialBodyLength;
 
     public GatewayPublication(
         final ClusterablePublication dataPublication,
@@ -93,6 +101,8 @@ public class GatewayPublication extends ClaimablePublication
     {
         super(maxClaimAttempts, idleStrategy, fails, dataPublication);
         this.nanoClock = nanoClock;
+        this.maxPayloadLength = dataPublication.maxPayloadLength();
+        this.maxInitialBodyLength = maxPayloadLength - FRAMED_MESSAGE_SIZE;
     }
 
     public long saveMessage(
@@ -106,16 +116,21 @@ public class GatewayPublication extends ClaimablePublication
         final long connectionId,
         final MessageStatus status)
     {
+        final ExclusiveBufferClaim bufferClaim = this.bufferClaim;
         final long timestamp = nanoClock.nanoTime();
-        final int framedLength = header.encodedLength() + FRAME_SIZE + srcLength;
-        final long position = claim(framedLength);
+        final int framedLength = FRAMED_MESSAGE_SIZE + srcLength;
+        final boolean fragmented = framedLength > maxPayloadLength;
+        final int claimLength = fragmented ? maxPayloadLength : framedLength;
+        int srcFragmentLength = fragmented ? maxInitialBodyLength : srcLength;
+        int srcFragmentOffset = srcOffset;
+
+        long position = claim(claimLength);
         if (position < 0)
         {
             return position;
         }
 
         int offset = bufferClaim.offset();
-
         final MutableDirectBuffer destBuffer = bufferClaim.buffer();
 
         header
@@ -136,13 +151,52 @@ public class GatewayPublication extends ClaimablePublication
             .connection(connectionId)
             .timestamp(timestamp)
             .status(status)
-            .putBody(srcBuffer, srcOffset, srcLength);
+            .putBody(srcBuffer, srcFragmentOffset, srcFragmentLength);
 
-        bufferClaim.commit();
+        if (!fragmented)
+        {
+            bufferClaim.commit();
+        }
+        else
+        {
+            putBodyLength(srcLength, offset, destBuffer);
+
+            bufferClaim.flags(BEGIN_FLAG)
+                       .commit();
+
+            int remaining = srcLength - srcFragmentLength;
+            while (remaining > 0)
+            {
+                srcFragmentOffset += srcFragmentLength;
+                srcFragmentLength = Math.min(remaining, maxPayloadLength);
+
+                position = claim(srcFragmentLength);
+                // NB: if multiple fragments are written but never finished then
+                // the message gets thrown away in re-assembly.
+                if (position < 0)
+                {
+                    return position;
+                }
+
+                remaining -= srcFragmentLength;
+                bufferClaim.buffer()
+                           .putBytes(bufferClaim.offset(), srcBuffer, srcFragmentOffset, srcFragmentLength);
+                bufferClaim.flags(remaining > 0 ? MIDDLE_FLAG : END_FLAG)
+                           .commit();
+            }
+        }
 
         DebugLogger.log(FIX_MESSAGE, "Enqueued %s%n", srcBuffer, srcOffset, srcLength);
 
         return position;
+    }
+
+    private void putBodyLength(final int srcLength, final int offset, final MutableDirectBuffer destBuffer)
+    {
+        destBuffer.putShort(
+            offset + FixMessageEncoder.BLOCK_LENGTH,
+            (short) srcLength,
+            LITTLE_ENDIAN);
     }
 
     public long saveSessionExists(

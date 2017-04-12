@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
@@ -533,7 +532,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         messagesCanBeExchanged();
     }
 
-    @Ignore
     @Test
     public void shouldExchangeLargeMessages()
     {
@@ -545,7 +543,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         sendTestRequest(acceptingSession, testReqID);
 
-        assertReceivedSingleHeartbeat(testSystem, initiatingOtfAcceptor, testReqID);
+        assertReceivedSingleHeartbeat(testSystem, acceptingOtfAcceptor, testReqID);
     }
 
     private void awaitIsConnected(final boolean connected, final FixLibrary library)

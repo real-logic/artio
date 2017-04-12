@@ -383,7 +383,8 @@ public class Session implements AutoCloseable
      * @param encoder the encoder of the message to be sent
      * @throws IndexOutOfBoundsException if the encoded message is too large, if this happens consider
      *                                   increasing {@link CommonConfiguration#sessionBufferSize(int)}
-     * @return the position in the stream that corresponds to the end of this message.
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     *         number indicating an error status.
      */
     public long send(final Encoder encoder)
     {

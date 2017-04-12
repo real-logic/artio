@@ -1020,7 +1020,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private SessionProxy sessionProxy(final long connectionId)
     {
         return new SessionProxy(
-            configuration.encoderBufferSize(),
+            configuration.sessionBufferSize(),
             transport.outboundPublication(),
             sessionIdStrategy,
             configuration.sessionCustomisationStrategy(),

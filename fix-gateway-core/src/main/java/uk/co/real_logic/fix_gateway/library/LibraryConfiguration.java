@@ -37,7 +37,6 @@ import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
  */
 public final class LibraryConfiguration extends CommonConfiguration
 {
-    public static final int DEFAULT_ENCODER_BUFFER_SIZE = 8 * 1024;
     public static final GatewayErrorHandler DEFAULT_GATEWAY_ERROR_HANDLER =
         (errorType, libraryId, message) -> CONTINUE;
     public static final SentPositionHandler DEFAULT_SENT_POSITION_HANDLER = position -> CONTINUE;
@@ -75,7 +74,6 @@ public final class LibraryConfiguration extends CommonConfiguration
         this.libraryId = libraryId;
     }
 
-    private int encoderBufferSize = DEFAULT_ENCODER_BUFFER_SIZE;
     private SessionAcquireHandler sessionAcquireHandler;
     private IdleStrategy libraryIdleStrategy = backoffIdleStrategy();
     private SessionExistsHandler sessionExistsHandler = DEFAULT_SESSION_EXISTS_HANDLER;
@@ -97,19 +95,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     public LibraryConfiguration sessionAcquireHandler(final SessionAcquireHandler sessionAcquireHandler)
     {
         this.sessionAcquireHandler = sessionAcquireHandler;
-        return this;
-    }
-
-    /**
-     * Sets size of the encoder buffer. The encoder buffer is a buffer used by each session to encode
-     * FIX messages onto before they're sent over a FIX connection.
-     *
-     * @param encoderBufferSize size of the encoder buffer in bytes.
-     * @return this
-     */
-    public LibraryConfiguration encoderBufferSize(final int encoderBufferSize)
-    {
-        this.encoderBufferSize = encoderBufferSize;
         return this;
     }
 
@@ -153,11 +138,6 @@ public final class LibraryConfiguration extends CommonConfiguration
     {
         this.scheduler = scheduler;
         return this;
-    }
-
-    public int encoderBufferSize()
-    {
-        return encoderBufferSize;
     }
 
     public SessionAcquireHandler sessionAcquireHandler()

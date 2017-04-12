@@ -45,4 +45,6 @@ public abstract class ClusterablePublication implements Closeable
 
     public abstract long position();
 
+    public abstract int maxPayloadLength();
+
 }
