@@ -38,17 +38,19 @@ public class LowResourceEngineSchedulerTest
         when(configuration.framerIdleStrategy()).thenReturn(new YieldingIdleStrategy());
         when(framer.doWork()).thenThrow(IOException.class);
 
-        final EngineScheduler scheduler = new LowResourceEngineScheduler();
-        scheduler.launch(
-            configuration,
-            mock(ErrorHandler.class),
-            framer,
-            archivingAgent,
-            monitoringAgent);
+        try (EngineScheduler scheduler = new LowResourceEngineScheduler())
+        {
+            scheduler.launch(
+                configuration,
+                mock(ErrorHandler.class),
+                framer,
+                archivingAgent,
+                monitoringAgent);
 
-        assertEventuallyTrue(
-            "Failed to invoke monitoring agent",
-            () -> verify(monitoringAgent, atLeastOnce()).doWork()
-        );
+            assertEventuallyTrue(
+                "Failed to invoke monitoring agent",
+                () -> verify(monitoringAgent, atLeastOnce()).doWork()
+            );
+        }
     }
 }
