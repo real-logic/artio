@@ -179,18 +179,6 @@ public final class SystemTestUtil
             });
     }
 
-    static void awaitLibraryReply(final TestSystem testSystem, final Reply<?> reply)
-    {
-        assertEventuallyTrue(
-            "No reply from: " + reply,
-            () ->
-            {
-                testSystem.poll();
-
-                return !reply.isExecuting();
-            });
-    }
-
     public static SessionReplyStatus releaseToGateway(final FixLibrary library, final Session session)
     {
         final Reply<SessionReplyStatus> reply = library.releaseToGateway(session, DEFAULT_REPLY_TIMEOUT_IN_MS);
@@ -203,7 +191,7 @@ public final class SystemTestUtil
         final FixLibrary library, final Session session, final TestSystem testSystem)
     {
         final Reply<SessionReplyStatus> reply = library.releaseToGateway(session, DEFAULT_REPLY_TIMEOUT_IN_MS);
-        awaitLibraryReply(testSystem, reply);
+        testSystem.awaitLibraryReply(reply);
 
         return reply.resultIfPresent();
     }
@@ -298,42 +286,16 @@ public final class SystemTestUtil
             .messageValidationStrategy(validationStrategy);
     }
 
-    public static Session acquireSession(final FakeHandler sessionHandler, final FixLibrary library)
-    {
-        final long sessionId = sessionHandler.awaitSessionId(() -> library.poll(LIBRARY_LIMIT));
-
-        return acquireSession(sessionHandler, library, sessionId);
-    }
-
-    public static Session acquireSession(
-        final FakeHandler sessionHandler, final FixLibrary library, final long sessionId)
-    {
-        return acquireSession(sessionHandler, library, sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
-    }
-
-    public static Session acquireSession(
-        final FakeHandler sessionHandler,
-        final FixLibrary library,
-        final long sessionId,
-        final int lastReceivedMsgSeqNum,
-        final int sequenceIndex)
-    {
-        final SessionReplyStatus reply = requestSession(library, sessionId, lastReceivedMsgSeqNum, sequenceIndex);
-        assertEquals(SessionReplyStatus.OK, reply);
-        final Session session = sessionHandler.lastSession();
-        sessionHandler.resetSession();
-        return session;
-    }
-
     public static SessionReplyStatus requestSession(
         final FixLibrary library,
         final long sessionId,
         final int lastReceivedMsgSeqNum,
-        final int sequenceIndex)
+        final int sequenceIndex,
+        final TestSystem testSystem)
     {
         final Reply<SessionReplyStatus> reply = library.requestSession(
             sessionId, lastReceivedMsgSeqNum, sequenceIndex, DEFAULT_REPLY_TIMEOUT_IN_MS);
-        awaitLibraryReply(library, reply);
+        testSystem.awaitLibraryReply(reply);
         assertEquals(COMPLETED, reply.state());
 
         return reply.resultIfPresent();
@@ -342,12 +304,21 @@ public final class SystemTestUtil
     public static Session acquireSession(
         final FakeHandler sessionHandler, final FixLibrary library, final long sessionId, final TestSystem testSystem)
     {
-        final Reply<SessionReplyStatus> reply = library.requestSession(
-            sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, DEFAULT_REPLY_TIMEOUT_IN_MS);
-        awaitLibraryReply(testSystem, reply);
-        assertEquals(COMPLETED, reply.state());
+        return acquireSession(sessionHandler, library, sessionId, testSystem, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
+    }
 
-        assertEquals(SessionReplyStatus.OK, reply.resultIfPresent());
+    public static Session acquireSession(
+            final FakeHandler sessionHandler,
+            final FixLibrary library,
+            final long sessionId,
+            final TestSystem testSystem,
+            final int lastReceivedSequenceNumber,
+            final int sequenceIndex)
+    {
+        final SessionReplyStatus replyStatus = requestSession(
+            library, sessionId, lastReceivedSequenceNumber, sequenceIndex, testSystem);
+
+        assertEquals(SessionReplyStatus.OK, replyStatus);
         final Session session = sessionHandler.lastSession();
         sessionHandler.resetSession();
         return session;

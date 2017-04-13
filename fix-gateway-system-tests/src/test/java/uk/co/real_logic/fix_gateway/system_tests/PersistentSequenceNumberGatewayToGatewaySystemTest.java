@@ -148,7 +148,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             final int lastReceivedMsgSeqNum = acceptingSession.lastReceivedMsgSeqNum() - 1;
             final int sequenceIndex = acceptingSession.sequenceIndex();
             final SessionReplyStatus reply = requestSession(
-                    acceptingLibrary, sessionId, lastReceivedMsgSeqNum, sequenceIndex);
+                    acceptingLibrary, sessionId, lastReceivedMsgSeqNum, sequenceIndex, testSystem);
             assertEquals(replyStatus, reply);
 
             acceptingSession = acceptingHandler.lastSession();
@@ -383,7 +383,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     private void acquireSession(final long sessionId, final int lastReceivedMsgSeqNum, final int sequenceIndex)
     {
         acceptingSession = SystemTestUtil.acquireSession(
-            acceptingHandler, acceptingLibrary, sessionId, lastReceivedMsgSeqNum, sequenceIndex);
+            acceptingHandler, acceptingLibrary, sessionId, testSystem, lastReceivedMsgSeqNum, sequenceIndex);
     }
 
     private void requestReplayWhenReacquiringSession()

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
+import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.engine.LockStepFramerEngineScheduler;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
@@ -89,5 +90,17 @@ public class TestSystem
             () -> close(library));
 
         return library;
+    }
+
+    public void awaitLibraryReply(final Reply<?> reply)
+    {
+        assertEventuallyTrue(
+            "No reply from: " + reply,
+            () ->
+            {
+                poll();
+
+                return !reply.isExecuting();
+            });
     }
 }

@@ -190,7 +190,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         {
             acceptingHandler.clearSessions();
             final Reply<Session> reply = initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID);
-            awaitLibraryReply(testSystem, reply);
+            testSystem.awaitLibraryReply(reply);
 
             final Session session2 = reply.resultIfPresent();
 
@@ -203,7 +203,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
                 testSystem::poll,
                 1000);
 
-            final Session acceptingSession2 = acquireSession(acceptingHandler, acceptingLibrary, sessionId);
+            final Session acceptingSession2 = acquireSession(acceptingHandler, acceptingLibrary, sessionId, testSystem);
 
             assertTestRequestSentAndReceived(acceptingSession2, testSystem, initiatingOtfAcceptor2);
 
@@ -380,7 +380,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void librariesShouldNotBeAbleToAcquireSessionsThatDontExist()
     {
-        final SessionReplyStatus status = requestSession(initiatingLibrary, 42, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
+        final SessionReplyStatus status = requestSession(
+            initiatingLibrary, 42, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, testSystem);
 
         assertEquals(SessionReplyStatus.UNKNOWN_SESSION, status);
     }
@@ -584,7 +585,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final int sequenceIndex,
         final SessionReplyStatus expectedStatus)
     {
-        final SessionReplyStatus status = requestSession(library, sessionId, lastReceivedMsgSeqNum, sequenceIndex);
+        final SessionReplyStatus status = requestSession(
+            library, sessionId, lastReceivedMsgSeqNum, sequenceIndex, testSystem);
         assertEquals(expectedStatus, status);
 
         assertThat(gatewayLibraryInfo(engine).sessions(), hasSize(0));
@@ -643,7 +645,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         messagesCanBeExchanged(otherSession, otherAcceptor);
 
-        final SessionReplyStatus status = requestSession(library, sessionId, lastReceivedMsgSeqNum, sequenceIndex);
+        final SessionReplyStatus status = requestSession(
+            library, sessionId, lastReceivedMsgSeqNum, sequenceIndex, testSystem);
         assertEquals(OK, status);
 
         final List<Session> sessions = library.sessions();

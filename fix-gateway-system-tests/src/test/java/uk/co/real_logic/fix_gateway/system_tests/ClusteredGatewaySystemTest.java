@@ -314,7 +314,7 @@ public class ClusteredGatewaySystemTest
                 assertConnectedToLeader();
             },
             10_000);
-        acceptingSession = acquireSession(acceptingHandler, acceptingLibrary, sessionId);
+        acceptingSession = acquireSession(acceptingHandler, acceptingLibrary, sessionId, testSystem);
         assertEquals(ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());
         assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
     }

@@ -142,7 +142,9 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void acquireAcceptingSession()
     {
-        acceptingSession = acquireSession(acceptingHandler, acceptingLibrary);
+        final long sessionId = acceptingHandler.awaitSessionId(() -> acceptingLibrary.poll(LIBRARY_LIMIT));
+
+        acceptingSession = acquireSession(acceptingHandler, acceptingLibrary, sessionId, testSystem);
         assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
         assertEquals(ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());
         assertNotNull("unable to acquire accepting session", acceptingSession);
@@ -154,7 +156,7 @@ public class AbstractGatewayToGatewaySystemTest
     {
         final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
 
-        awaitLibraryReply(testSystem, reply);
+        testSystem.awaitLibraryReply(reply);
         initiatingSession = reply.resultIfPresent();
 
         assertEquals(State.COMPLETED, reply.state());

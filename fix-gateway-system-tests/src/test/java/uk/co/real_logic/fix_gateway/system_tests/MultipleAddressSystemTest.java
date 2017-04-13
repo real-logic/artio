@@ -58,7 +58,7 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
             .build();
 
         final Reply<Session> reply = initiatingLibrary.initiate(config);
-        awaitLibraryReply(testSystem, reply);
+        testSystem.awaitLibraryReply(reply);
 
         final Session session = reply.resultIfPresent();
         assertConnected(session);
