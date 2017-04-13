@@ -64,7 +64,7 @@ public class GatewayPublication extends ClaimablePublication
         NotLeaderEncoder.BLOCK_LENGTH + HEADER_LENGTH + libraryChannelHeaderLength();
     private static final int SLOW_STATUS_NOTIFICATION_LENGTH =
         HEADER_LENGTH + SlowStatusNotificationEncoder.BLOCK_LENGTH;
-    private static final short MIDDLE_FLAG = 0;
+    private static final byte MIDDLE_FLAG = 0;
 
     private final SessionExistsEncoder logon = new SessionExistsEncoder();
     private final ManageConnectionEncoder manageConnection = new ManageConnectionEncoder();
@@ -161,7 +161,7 @@ public class GatewayPublication extends ClaimablePublication
         {
             putBodyLength(srcLength, offset, destBuffer);
 
-            bufferClaim.flags(BEGIN_FLAG)
+            bufferClaim.flags((byte) BEGIN_FLAG)
                        .commit();
 
             int remaining = srcLength - srcFragmentLength;
@@ -181,7 +181,7 @@ public class GatewayPublication extends ClaimablePublication
                 remaining -= srcFragmentLength;
                 bufferClaim.buffer()
                            .putBytes(bufferClaim.offset(), srcBuffer, srcFragmentOffset, srcFragmentLength);
-                bufferClaim.flags(remaining > 0 ? MIDDLE_FLAG : END_FLAG)
+                bufferClaim.flags(remaining > 0 ? MIDDLE_FLAG : (byte) END_FLAG)
                            .commit();
             }
         }
