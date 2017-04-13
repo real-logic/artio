@@ -17,15 +17,11 @@ package uk.co.real_logic.fix_gateway.engine;
 
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.YieldingIdleStrategy;
 import org.junit.Test;
-import uk.co.real_logic.fix_gateway.Timing;
 
-import java.io.IOError;
 import java.io.IOException;
 
-import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 
