@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2016 Real Logic Ltd.
+ * Copyright 2015-2017 Real Logic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,14 +47,14 @@ public class LowResourceEngineScheduler implements EngineScheduler
         }
 
         final List<Agent> agents = new ArrayList<>();
-        Collections.addAll(agents, framer, archivingAgent, monitoringAgent);
+        Collections.addAll(agents, monitoringAgent, framer, archivingAgent);
         agents.removeIf(Objects::isNull);
 
         runner = new AgentRunner(
             configuration.framerIdleStrategy(),
             errorHandler,
             null,
-                new CompositeAgent(agents));
+            new CompositeAgent(agents));
         startOnThread(runner);
     }
 
