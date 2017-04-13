@@ -281,6 +281,22 @@ public class EncoderGeneratorTest
         assertEncodesTo(encoder, NO_OPTIONAL_MESSAGE);
     }
 
+    @Test(expected = EncodingException.class)
+    public void shouldResetFlagForMissingRequiredIntFields() throws Exception
+    {
+        final Encoder encoder = (Encoder)heartbeat.newInstance();
+
+        setRequiredFields(encoder);
+
+        encoder.reset();
+
+        setOnBehalfOfCompID(encoder);
+        setFloatField(encoder);
+        setSomeTimeField(encoder, 1);
+
+        encoder.encode(buffer, 1);
+    }
+
     @Test
     public void shouldResetRequiredFields() throws Exception
     {
@@ -290,7 +306,6 @@ public class EncoderGeneratorTest
         reset(encoder);
 
         assertFalse(hasOnBehalfOfCompID(encoder));
-        assertThat(encoder.toString(), containsString(STRING_RESET_SUFFIX));
     }
 
     @Test

@@ -133,9 +133,6 @@ public final class ExampleDictionary
         "  \"FloatField\": \"1.1\",\n" +
         "  \"SomeTimeField\": \"19700101-00:00:00.001\"";
 
-    public static final String STRING_RESET_SUFFIX =
-        "  \"IntField\": \"-1\"";
-
     public static final String STRING_NO_OPTIONAL_MESSAGE_EXAMPLE =
         "{\n" +
             "  \"MessageName\": \"Heartbeat\",\n" +

@@ -719,9 +719,14 @@ public class EncoderGenerator extends Generator
         ));
     }
 
-    protected String resetFloat(final String name)
+    protected String resetRequiredFloat(final String name)
     {
         return resetByFlag(name);
+    }
+
+    protected String resetRequiredInt(final Field field)
+    {
+        return resetByFlag(field.name());
     }
 
     protected String toStringGroupParameters()

@@ -204,9 +204,14 @@ public class DecoderGenerator extends Generator
         return Decoder.class;
     }
 
-    protected String resetFloat(final String name)
+    protected String resetRequiredFloat(final String name)
     {
         return resetByMethod(name);
+    }
+
+    protected String resetRequiredInt(final Field field)
+    {
+        return resetFieldValue(field.name(), "MISSING_INT");
     }
 
     protected String toStringGroupParameters()

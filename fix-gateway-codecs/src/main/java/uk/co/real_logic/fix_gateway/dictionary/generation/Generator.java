@@ -293,7 +293,7 @@ public abstract class Generator
             case SEQNUM:
             case NUMINGROUP:
             case DAYOFMONTH:
-                return resetFieldValue(name, "MISSING_INT");
+                return resetRequiredInt(field);
 
             case FLOAT:
             case PRICE:
@@ -301,7 +301,7 @@ public abstract class Generator
             case QTY:
             case PERCENTAGE:
             case AMT:
-                return resetFloat(name);
+                return resetRequiredFloat(name);
 
             case CHAR:
                 return resetFieldValue(name, "MISSING_CHAR");
@@ -330,6 +330,8 @@ public abstract class Generator
                 throw new IllegalArgumentException("Unknown type: " + field.type());
         }
     }
+
+    protected abstract String resetRequiredInt(Field field);
 
     protected abstract String optionalReset(Field field, String name);
 
@@ -393,7 +395,7 @@ public abstract class Generator
         return isBodyLength(name) || isCheckSum(name);
     }
 
-    protected abstract String resetFloat(String name);
+    protected abstract String resetRequiredFloat(String name);
 
     protected String resetLength(final String name)
     {
@@ -428,7 +430,7 @@ public abstract class Generator
             nameOfResetMethod(name));
     }
 
-    private String resetFieldValue(final String name, final String resetValue)
+    public String resetFieldValue(final String name, final String resetValue)
     {
         return String.format(
             "    public void %1$s()\n" +
