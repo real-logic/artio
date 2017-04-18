@@ -24,6 +24,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
@@ -111,7 +112,8 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         final ErrorHandler errorHandler,
         final int maxClaimAttempts,
         final ClusterableSubscription subscription,
-        final String agentNamePrefix)
+        final String agentNamePrefix,
+        final EpochClock clock)
     {
         this.replayQuery = replayQuery;
         this.publication = publication;
@@ -123,7 +125,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         this.agentNamePrefix = agentNamePrefix;
 
         possDupEnabler = new PossDupEnabler(
-            bufferClaim, this::claimBuffer, this::nothing, this::onIllegalState, this::onException);
+            bufferClaim, this::claimBuffer, this::nothing, this::onIllegalState, this::onException, clock);
     }
 
     private void nothing()

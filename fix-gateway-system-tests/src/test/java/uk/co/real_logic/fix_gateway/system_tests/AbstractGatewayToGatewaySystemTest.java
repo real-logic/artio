@@ -164,7 +164,7 @@ public class AbstractGatewayToGatewaySystemTest
         sessionLogsOn(testSystem, initiatingSession, DEFAULT_TIMEOUT_IN_MS);
     }
 
-    protected void assertMessageResent(final int sequenceNumber)
+    protected void assertMessageResent(final int sequenceNumber, final String msgType)
     {
         assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
         assertEventuallyTrue("Failed to receive the reply",
@@ -173,7 +173,7 @@ public class AbstractGatewayToGatewaySystemTest
                 testSystem.poll();
 
                 final FixMessage message = acceptingOtfAcceptor.lastMessage();
-                assertEquals(SEQUENCE_RESET_AS_STR, message.getMsgType());
+                assertEquals(msgType, message.getMsgType());
                 assertEquals("Y", message.get(GAP_FILL_FLAG));
                 assertEquals("Y", message.getPossDup());
                 assertEquals(String.valueOf(sequenceNumber), message.get(MSG_SEQ_NUM));
@@ -183,9 +183,14 @@ public class AbstractGatewayToGatewaySystemTest
             });
     }
 
-    protected int sendResendRequest()
+    protected int acceptorSendsResendRequest()
     {
         final int seqNum = acceptingSession.lastReceivedMsgSeqNum();
+        return acceptorSendsResendRequest(seqNum);
+    }
+
+    protected int acceptorSendsResendRequest(final int seqNum)
+    {
         final ResendRequestEncoder resendRequest = new ResendRequestEncoder()
             .beginSeqNo(seqNum)
             .endSeqNo(seqNum);

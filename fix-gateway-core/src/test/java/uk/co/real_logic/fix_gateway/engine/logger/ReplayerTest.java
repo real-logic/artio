@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.ErrorHandler;
+import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.junit.After;
 import org.junit.Before;
@@ -59,6 +60,7 @@ public class ReplayerTest extends AbstractLogTest
     private ClusterableSubscription subscription = mock(ClusterableSubscription.class);
     private IdleStrategy idleStrategy = mock(IdleStrategy.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private EpochClock clock = mock(EpochClock.class);
 
     private Replayer replayer = new Replayer(
         replayQuery,
@@ -68,7 +70,8 @@ public class ReplayerTest extends AbstractLogTest
         errorHandler,
         MAX_CLAIM_ATTEMPTS,
         subscription,
-        DEFAULT_NAME_PREFIX);
+        DEFAULT_NAME_PREFIX,
+        clock);
 
     @Before
     public void setUp()

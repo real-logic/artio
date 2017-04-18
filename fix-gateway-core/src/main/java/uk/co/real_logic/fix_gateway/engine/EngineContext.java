@@ -23,6 +23,7 @@ import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.NanoClock;
+import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.StreamInformation;
@@ -215,7 +216,8 @@ public abstract class EngineContext implements AutoCloseable
             errorHandler,
             configuration.outboundMaxClaimAttempts(),
             inboundLibraryStreams.subscription("replayer"),
-            configuration.agentNamePrefix());
+            configuration.agentNamePrefix(),
+            new SystemEpochClock());
     }
 
     protected void newIndexers(

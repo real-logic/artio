@@ -24,18 +24,23 @@ import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 
 class PossDupFinder implements OtfMessageAcceptor
 {
-    public static final int NO_ENTRY = -1;
+    static final int NO_ENTRY = -1;
 
     private int possDupOffset;
-    private int sendingTimeEnd;
+    private int sendingTimeOffset;
+    private int sendingTimeLength;
     private int bodyLength;
     private int bodyLengthOffset;
     private int lengthOfBodyLength;
+    private int origSendingTimeOffset;
+    private int origSendingTimeLength;
 
     public MessageControl onNext()
     {
         possDupOffset = NO_ENTRY;
-        sendingTimeEnd = NO_ENTRY;
+        sendingTimeOffset = NO_ENTRY;
+        sendingTimeLength = NO_ENTRY;
+        origSendingTimeOffset = NO_ENTRY;
         bodyLength = NO_ENTRY;
         bodyLengthOffset = NO_ENTRY;
         lengthOfBodyLength = NO_ENTRY;
@@ -51,7 +56,13 @@ class PossDupFinder implements OtfMessageAcceptor
                 break;
 
             case Constants.SENDING_TIME:
-                sendingTimeEnd = offset + length + 1;
+                sendingTimeOffset = offset;
+                sendingTimeLength = length;
+                break;
+
+            case Constants.ORIG_SENDING_TIME:
+                origSendingTimeOffset = offset;
+                origSendingTimeLength = length;
                 break;
 
             case Constants.BODY_LENGTH:
@@ -91,27 +102,47 @@ class PossDupFinder implements OtfMessageAcceptor
         return false;
     }
 
-    public int possDupOffset()
+    int possDupOffset()
     {
         return possDupOffset;
     }
 
-    public int sendingTimeEnd()
+    int sendingTimeEnd()
     {
-        return sendingTimeEnd;
+        return sendingTimeOffset + sendingTimeLength + 1;
     }
 
-    public int bodyLength()
+    int sendingTimeOffset()
+    {
+        return sendingTimeOffset;
+    }
+
+    int sendingTimeLength()
+    {
+        return sendingTimeLength;
+    }
+
+    int origSendingTimeOffset()
+    {
+        return origSendingTimeOffset;
+    }
+
+    public int origSendingTimeLength()
+    {
+        return origSendingTimeLength;
+    }
+
+    int bodyLength()
     {
         return bodyLength;
     }
 
-    public int bodyLengthOffset()
+    int bodyLengthOffset()
     {
         return bodyLengthOffset;
     }
 
-    public int lengthOfBodyLength()
+    int lengthOfBodyLength()
     {
         return lengthOfBodyLength;
     }

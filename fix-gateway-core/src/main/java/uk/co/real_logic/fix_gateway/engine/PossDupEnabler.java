@@ -20,8 +20,10 @@ import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.dictionary.IntDictionary;
+import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
@@ -48,25 +50,29 @@ public class PossDupEnabler
     private final PossDupFinder possDupFinder = new PossDupFinder();
     private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
     private final MutableAsciiBuffer mutableAsciiFlyweight = new MutableAsciiBuffer();
+    private final UtcTimestampEncoder utcTimestampEncoder = new UtcTimestampEncoder();
 
     private final ExclusiveBufferClaim bufferClaim;
     private final IntPredicate claimer;
     private final Runnable onPreCommit;
     private final Consumer<String> onIllegalStateFunc;
     private final ErrorHandler errorHandler;
+    private final EpochClock epochClock;
 
     public PossDupEnabler(
         final ExclusiveBufferClaim bufferClaim,
         final IntPredicate claimer,
         final Runnable onPreCommit,
         final Consumer<String> onIllegalStateFunc,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final EpochClock epochClock)
     {
         this.bufferClaim = bufferClaim;
         this.claimer = claimer;
         this.onPreCommit = onPreCommit;
         this.onIllegalStateFunc = onIllegalStateFunc;
         this.errorHandler = errorHandler;
+        this.epochClock = epochClock;
     }
 
     public Action enablePossDupFlag(

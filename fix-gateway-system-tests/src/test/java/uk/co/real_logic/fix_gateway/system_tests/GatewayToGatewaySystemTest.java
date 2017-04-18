@@ -16,8 +16,10 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.Reply;
+import uk.co.real_logic.fix_gateway.builder.ExampleMessageEncoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
@@ -35,10 +37,8 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.FixMatchers.*;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
-import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.fix_gateway.decoder.Constants.MSG_SEQ_NUM;
-import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQUEST_AS_STR;
+import static uk.co.real_logic.fix_gateway.Timing.*;
+import static uk.co.real_logic.fix_gateway.decoder.Constants.*;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.SessionReplyStatus.OK;
@@ -88,16 +88,43 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertSequenceIndicesAre(0);
     }
 
+    @Ignore
     @Test
     public void gatewayProcessesResendRequests()
     {
         acquireAcceptingSession();
 
+        final ExampleMessageEncoder exampleMessage = new ExampleMessageEncoder();
+        exampleMessage.testReqID("abc");
+        final long position = initiatingSession.send(exampleMessage);
+        assertThat(position, greaterThan(0L));
+
+        final FixMessage message = withTimeout("Failed to receive the example message",
+            () ->
+            {
+                testSystem.poll();
+
+                return acceptingOtfAcceptor.hasReceivedMessage(EXAMPLE_MESSAGE_AS_STR).findFirst();
+            },
+            1000);
+
+        final int sequenceNumber = acceptorSendsResendRequest(message.getMessageSequenceNumber());
+
+        assertMessageResent(sequenceNumber, EXAMPLE_MESSAGE_AS_STR);
+
+        assertSequenceIndicesAre(0);
+    }
+
+    @Test
+    public void gatewayProcessesResendRequestsOfAdminMessages()
+    {
+        acquireAcceptingSession();
+
         messagesCanBeSentFromInitiatorToAcceptor();
 
-        final int sequenceNumber = sendResendRequest();
+        final int sequenceNumber = acceptorSendsResendRequest();
 
-        assertMessageResent(sequenceNumber);
+        assertMessageResent(sequenceNumber, SEQUENCE_RESET_AS_STR);
 
         assertSequenceIndicesAre(0);
     }
@@ -545,6 +572,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         sendTestRequest(acceptingSession, testReqID);
 
         assertReceivedSingleHeartbeat(testSystem, acceptingOtfAcceptor, testReqID);
+
+
     }
 
     private void awaitIsConnected(final boolean connected, final FixLibrary library)
