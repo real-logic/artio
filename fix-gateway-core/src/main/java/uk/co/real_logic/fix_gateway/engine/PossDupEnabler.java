@@ -61,7 +61,7 @@ public class PossDupEnabler
     private final Runnable onPreCommit;
     private final Consumer<String> onIllegalStateFunc;
     private final ErrorHandler errorHandler;
-    private final EpochClock epochClock;
+    private final EpochClock clock;
 
     public PossDupEnabler(
         final ExclusiveBufferClaim bufferClaim,
@@ -69,14 +69,14 @@ public class PossDupEnabler
         final Runnable onPreCommit,
         final Consumer<String> onIllegalStateFunc,
         final ErrorHandler errorHandler,
-        final EpochClock epochClock)
+        final EpochClock clock)
     {
         this.bufferClaim = bufferClaim;
         this.claimer = claimer;
         this.onPreCommit = onPreCommit;
         this.onIllegalStateFunc = onIllegalStateFunc;
         this.errorHandler = errorHandler;
-        this.epochClock = epochClock;
+        this.clock = clock;
     }
 
     public Action enablePossDupFlag(

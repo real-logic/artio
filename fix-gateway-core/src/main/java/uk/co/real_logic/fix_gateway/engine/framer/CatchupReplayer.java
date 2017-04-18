@@ -104,8 +104,8 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final int replayFromSequenceNumber,
         final int replayFromSequenceIndex,
         final GatewaySession session,
-        final long catchupEndTimeInMs,
-        final EpochClock epochClock)
+        final long catchupTimeout,
+        final EpochClock clock)
     {
         this.inboundMessages = inboundMessages;
         this.inboundPublication = inboundPublication;
@@ -117,10 +117,10 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         this.replayFromSequenceNumber = replayFromSequenceNumber;
         this.replayFromSequenceIndex = replayFromSequenceIndex;
         this.session = session;
-        this.catchupEndTimeInMs = catchupEndTimeInMs;
+        this.catchupEndTimeInMs = clock.time() + catchupTimeout;
 
         possDupEnabler = new PossDupEnabler(
-            bufferClaim, this::claimBuffer, this::onPreCommit, this::onIllegalState, errorHandler, epochClock);
+            bufferClaim, this::claimBuffer, this::onPreCommit, this::onIllegalState, errorHandler, clock);
     }
 
     private void onPreCommit()
