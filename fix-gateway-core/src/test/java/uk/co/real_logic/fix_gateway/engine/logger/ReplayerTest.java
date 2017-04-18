@@ -19,7 +19,6 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
-import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,7 +28,6 @@ import org.mockito.stubbing.OngoingStubbing;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
-import uk.co.real_logic.fix_gateway.engine.PossDupEnabler;
 import uk.co.real_logic.fix_gateway.fields.RejectReason;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoder;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
@@ -45,16 +43,14 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
-import static uk.co.real_logic.fix_gateway.engine.PossDupEnabler.ORIG_SENDING_TIME_PREFIX;
+import static uk.co.real_logic.fix_gateway.engine.PossDupEnabler.ORIG_SENDING_TIME_PREFIX_AS_STR;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
-import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 import static uk.co.real_logic.fix_gateway.util.CustomMatchers.sequenceEqualsAscii;
 
 public class ReplayerTest extends AbstractLogTest
 {
-    private static final String ORIGINAL_SENDING_TIME = "19700101-00:00:00.000";
     private static final String DATE_TIME_STR = "19840521-15:00:00.000";
     private static final long DATE_TIME_EPOCH_MS =
         new UtcTimestampDecoder().decode(DATE_TIME_STR.getBytes(US_ASCII));
@@ -415,10 +411,10 @@ public class ReplayerTest extends AbstractLogTest
 
             final int afterOffset = this.offset + 1;
             assertThat(resultAsciiBuffer,
-                sequenceEqualsAscii("8=FIX.4.4\0019=94\001", afterOffset));
+                sequenceEqualsAscii("8=FIX.4.4\0019=86\001", afterOffset));
 
             assertThat(resultAsciiBuffer,
-                sequenceEqualsAscii("8=FIX.4.4\0019=94\001", afterOffset));
+                sequenceEqualsAscii("8=FIX.4.4\0019=86\001", afterOffset));
 
             assertEndsWithValidChecksum(afterOffset);
 
@@ -563,7 +559,7 @@ public class ReplayerTest extends AbstractLogTest
     private void hasNotOverwrittenSeperatorChar()
     {
         final String lengthSection = resultAsciiBuffer.getAscii(offset + 11, 11);
-        assertEquals("9=130\00135=1\001", lengthSection);
+        assertEquals("9=126\00135=1\001", lengthSection);
     }
 
     private void assertResultBufferHasGapFillMessage(
@@ -606,10 +602,8 @@ public class ReplayerTest extends AbstractLogTest
         final String resultAsAscii = resultAsciiBuffer.getAscii(0, resultAsciiBuffer.capacity());
         assertThat(resultAsAscii, containsString("43=Y"));
 
-        /*final int origSendingTimeStart = possDupIndex + 2;
-        assertEquals(
-            new String(ORIG_SENDING_TIME_PREFIX),
-            resultAsciiBuffer.getAscii(origSendingTimeStart, ORIG_SENDING_TIME_PREFIX.length));*/
+        assertThat(resultAsAscii,
+            containsString(ORIG_SENDING_TIME_PREFIX_AS_STR + ORIGINAL_SENDING_TIME + '\001'));
     }
 
     private void onContinuedRequestResendMessage(final long result)

@@ -24,18 +24,24 @@ import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.builder.*;
 import uk.co.real_logic.fix_gateway.decoder.ExampleMessageDecoder;
 import uk.co.real_logic.fix_gateway.decoder.TestRequestDecoder;
+import uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoder;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.SIZE_OF_LENGTH_FIELD;
 
 public class AbstractLogTest
 {
+    protected static final String ORIGINAL_SENDING_TIME = "19700101-00:00:00";
+    protected static final long ORIGINAL_SENDING_EPOCH_MS =
+        new UtcTimestampDecoder().decode(ORIGINAL_SENDING_TIME.getBytes(US_ASCII));
+
     protected static final long SESSION_ID = 1;
     protected static final long SESSION_ID_2 = 2;
     protected static final long CONNECTION_ID = 1;
@@ -82,6 +88,7 @@ public class AbstractLogTest
         {
             // NB: set to false to check that it gets flipped upon resend
             header.possDupFlag(false);
+            header.origSendingTime(ORIGINAL_SENDING_TIME.getBytes(US_ASCII));
         }
 
         bufferContainsMessage(
@@ -108,11 +115,11 @@ public class AbstractLogTest
         final int messageType)
     {
         final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
-        timestampEncoder.encode(System.currentTimeMillis());
+        final int timestampLength = timestampEncoder.encode(ORIGINAL_SENDING_EPOCH_MS);
         MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[450]);
 
         header
-            .sendingTime(timestampEncoder.buffer())
+            .sendingTime(timestampEncoder.buffer(), timestampLength)
             .senderCompID(BUFFER_SENDER)
             .targetCompID(BUFFER_TARGET)
             .msgSeqNum(sequenceNumber);

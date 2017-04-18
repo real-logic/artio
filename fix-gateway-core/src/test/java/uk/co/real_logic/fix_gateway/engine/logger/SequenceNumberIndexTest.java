@@ -201,7 +201,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Test
     public void shouldSaveIndexUponRotate()
     {
-        final int requiredMessagesToRoll = 3;
+        final int requiredMessagesToRoll = 2;
         for (int i = 0; i <= requiredMessagesToRoll; i++)
         {
             bufferContainsExampleMessage(true, SESSION_ID, SEQUENCE_NUMBER + i, SEQUENCE_INDEX);

@@ -45,7 +45,8 @@ import static uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer.SEPARATOR;
 public class PossDupEnabler
 {
     public static final byte[] POSS_DUP_FIELD = "43=Y\001".getBytes(US_ASCII);
-    public static final byte[] ORIG_SENDING_TIME_PREFIX = "122=".getBytes(US_ASCII);
+    public static final String ORIG_SENDING_TIME_PREFIX_AS_STR = "122=";
+    public static final byte[] ORIG_SENDING_TIME_PREFIX = ORIG_SENDING_TIME_PREFIX_AS_STR.getBytes(US_ASCII);
 
     private static final int CHECKSUM_TAG_SIZE = "\00110=".length();
     private static final int CHECKSUM_VALUE_LENGTH = 3;
@@ -283,7 +284,7 @@ public class PossDupEnabler
         final int lengthOfSeparator = 1;
         final int checksumEnd = beforeChecksum + lengthOfSeparator;
         final int checksum = mutableAsciiFlyweight.computeChecksum(messageClaimOffset, checksumEnd);
-        final int checksumValueOffset = beforeChecksum + CHECKSUM_TAG_SIZE;
+        final int checksumValueOffset = mutableAsciiFlyweight.capacity() - (CHECKSUM_VALUE_LENGTH + SEPARATOR_LENGTH);
         mutableAsciiFlyweight.putNatural(checksumValueOffset, CHECKSUM_VALUE_LENGTH, checksum);
         mutableAsciiFlyweight.putSeparator(checksumValueOffset + CHECKSUM_VALUE_LENGTH);
     }
