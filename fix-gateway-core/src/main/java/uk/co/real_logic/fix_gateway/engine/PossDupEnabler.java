@@ -147,7 +147,7 @@ public class PossDupEnabler
                 final MutableDirectBuffer claimedBuffer = claimedBuffer();
                 final int claimOffset = claimOffset();
                 claimedBuffer.putBytes(claimOffset, srcBuffer, messageOffset, messageLength);
-                setPossDupFlag(possDupSrcOffset, srcOffset, claimOffset, claimedBuffer);
+                setPossDupFlag(possDupSrcOffset, messageOffset, claimOffset, claimedBuffer);
 
                 commit();
             }
@@ -290,11 +290,11 @@ public class PossDupEnabler
 
     private void setPossDupFlag(
         final int possDupSrcOffset,
-        final int srcOffset,
+        final int messageOffset,
         final int claimOffset,
         final MutableDirectBuffer claimBuffer)
     {
-        final int possDupClaimOffset = srcToClaim(possDupSrcOffset, srcOffset, claimOffset);
+        final int possDupClaimOffset = srcToClaim(possDupSrcOffset, messageOffset, claimOffset);
         mutableAsciiFlyweight.wrap(claimBuffer);
         mutableAsciiFlyweight.putChar(possDupClaimOffset, 'Y');
     }

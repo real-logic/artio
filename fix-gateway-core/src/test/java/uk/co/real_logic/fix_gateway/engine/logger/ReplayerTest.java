@@ -19,6 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,6 +29,7 @@ import org.mockito.stubbing.OngoingStubbing;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
+import uk.co.real_logic.fix_gateway.engine.PossDupEnabler;
 import uk.co.real_logic.fix_gateway.fields.RejectReason;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoder;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
@@ -39,9 +41,11 @@ import java.util.regex.Pattern;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
+import static uk.co.real_logic.fix_gateway.engine.PossDupEnabler.ORIG_SENDING_TIME_PREFIX;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
@@ -50,12 +54,13 @@ import static uk.co.real_logic.fix_gateway.util.CustomMatchers.sequenceEqualsAsc
 
 public class ReplayerTest extends AbstractLogTest
 {
+    private static final String ORIGINAL_SENDING_TIME = "19700101-00:00:00.000";
     private static final String DATE_TIME_STR = "19840521-15:00:00.000";
     private static final long DATE_TIME_EPOCH_MS =
         new UtcTimestampDecoder().decode(DATE_TIME_STR.getBytes(US_ASCII));
 
     public static final byte[] MESSAGE_REQUIRING_LONGER_BODY_LENGTH =
-        ("8=FIX.4.4\0019=99\00135=1\00134=1\00149=LEH_LZJ02\00152=19700101-00:00:00.000\00156=CCG\001" +
+        ("8=FIX.4.4\0019=99\00135=1\00134=1\00149=LEH_LZJ02\00152=" + ORIGINAL_SENDING_TIME + "\00156=CCG\001" +
             "112=a12345678910123456789101234567891012345\00110=005\001").getBytes(US_ASCII);
 
     private static final int MAX_CLAIM_ATTEMPTS = 100;
@@ -528,7 +533,7 @@ public class ReplayerTest extends AbstractLogTest
     private void assertHasResentWithPossDupFlag(final int srcLength, final VerificationMode times)
     {
         verify(publication, atLeastOnce()).tryClaim(srcLength, claim);
-        assertResultBufferHasSetPossDupFlag();
+        assertResultBufferHasSetPossDupFlagAndOrigSendingTime();
         verifyCommit(times);
     }
 
@@ -596,10 +601,15 @@ public class ReplayerTest extends AbstractLogTest
         verify(replayQuery).query(replayer, SESSION_ID, BEGIN_SEQ_NO, SEQUENCE_INDEX, endSeqNo, SEQUENCE_INDEX);
     }
 
-    private void assertResultBufferHasSetPossDupFlag()
+    private void assertResultBufferHasSetPossDupFlagAndOrigSendingTime()
     {
-        final int possDupIndex = resultAsciiBuffer.scan(0, resultAsciiBuffer.capacity() - 1, 'Y');
-        assertNotEquals("Unable to find poss dup index", UNKNOWN_INDEX, possDupIndex);
+        final String resultAsAscii = resultAsciiBuffer.getAscii(0, resultAsciiBuffer.capacity());
+        assertThat(resultAsAscii, containsString("43=Y"));
+
+        /*final int origSendingTimeStart = possDupIndex + 2;
+        assertEquals(
+            new String(ORIG_SENDING_TIME_PREFIX),
+            resultAsciiBuffer.getAscii(origSendingTimeStart, ORIG_SENDING_TIME_PREFIX.length));*/
     }
 
     private void onContinuedRequestResendMessage(final long result)
