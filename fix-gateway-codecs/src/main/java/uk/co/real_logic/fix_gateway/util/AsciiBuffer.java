@@ -27,6 +27,13 @@ public interface AsciiBuffer extends DirectBuffer
     int UNKNOWN_INDEX = -1;
     byte YES = 'Y';
     byte NEGATIVE = '-';
+    int LONGEST_INT_LENGTH = String.valueOf(Integer.MIN_VALUE).length();
+    int LONGEST_LONG_LENGTH = String.valueOf(Long.MIN_VALUE).length();
+    int LONGEST_FLOAT_LENGTH = LONGEST_LONG_LENGTH + 3;
+    int SEPARATOR_LENGTH = 1;
+    int DOT_LENGTH = 1;
+
+    byte SEPARATOR = (byte)'\001';
 
     int getNatural(int startInclusive, int endExclusive);
 

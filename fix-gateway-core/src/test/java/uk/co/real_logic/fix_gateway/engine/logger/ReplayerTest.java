@@ -29,6 +29,7 @@ import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
 import uk.co.real_logic.fix_gateway.decoder.*;
 import uk.co.real_logic.fix_gateway.fields.RejectReason;
+import uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoder;
 import uk.co.real_logic.fix_gateway.replication.ClusterableSubscription;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -41,7 +42,6 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_NAME_PREFIX;
-import static uk.co.real_logic.fix_gateway.engine.PossDupEnabler.POSS_DUP_FIELD;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
@@ -50,6 +50,10 @@ import static uk.co.real_logic.fix_gateway.util.CustomMatchers.sequenceEqualsAsc
 
 public class ReplayerTest extends AbstractLogTest
 {
+    private static final String DATE_TIME_STR = "19840521-15:00:00.000";
+    private static final long DATE_TIME_EPOCH_MS =
+        new UtcTimestampDecoder().decode(DATE_TIME_STR.getBytes(US_ASCII));
+
     public static final byte[] MESSAGE_REQUIRING_LONGER_BODY_LENGTH =
         ("8=FIX.4.4\0019=99\00135=1\00134=1\00149=LEH_LZJ02\00152=19700101-00:00:00.000\00156=CCG\001" +
             "112=a12345678910123456789101234567891012345\00110=005\001").getBytes(US_ASCII);
@@ -76,6 +80,7 @@ public class ReplayerTest extends AbstractLogTest
     @Before
     public void setUp()
     {
+        when(clock.time()).thenReturn(DATE_TIME_EPOCH_MS);
         when(publication.tryClaim(anyInt(), any())).thenReturn(1L);
         whenReplayQueried().thenReturn(1);
     }
@@ -355,13 +360,11 @@ public class ReplayerTest extends AbstractLogTest
             bufferContainsMessage(MESSAGE_REQUIRING_LONGER_BODY_LENGTH);
 
             final int srcLength = fragmentLength();
-            // Poss Dup Flag, and 1 longer body length
-            final int newLength = srcLength + 6;
-            setupMessage(newLength);
+            setupCapturingClaim();
 
             onFragment(srcLength);
 
-            assertHasResentWithPossDupFlag(newLength, times(1));
+            assertHasResentWithPossDupFlag(claimedLength, times(1));
             hasNotOverwrittenSeperatorChar();
 
             assertEndsWithValidChecksum(offset + 1);
@@ -399,19 +402,18 @@ public class ReplayerTest extends AbstractLogTest
         {
             bufferContainsExampleMessage(false);
             final int srcLength = fragmentLength();
-            final int lengthAfterPossDupFlag = srcLength + POSS_DUP_FIELD.length;
-            setupMessage(lengthAfterPossDupFlag);
+            setupCapturingClaim();
 
             onFragment(srcLength);
 
-            assertHasResentWithPossDupFlag(lengthAfterPossDupFlag, times(1));
+            assertHasResentWithPossDupFlag(claimedLength, times(1));
 
             final int afterOffset = this.offset + 1;
             assertThat(resultAsciiBuffer,
-                sequenceEqualsAscii("8=FIX.4.4\0019=68\001", afterOffset));
+                sequenceEqualsAscii("8=FIX.4.4\0019=94\001", afterOffset));
 
             assertThat(resultAsciiBuffer,
-                sequenceEqualsAscii("8=FIX.4.4\0019=68\001", afterOffset));
+                sequenceEqualsAscii("8=FIX.4.4\0019=94\001", afterOffset));
 
             assertEndsWithValidChecksum(afterOffset);
 
@@ -556,7 +558,7 @@ public class ReplayerTest extends AbstractLogTest
     private void hasNotOverwrittenSeperatorChar()
     {
         final String lengthSection = resultAsciiBuffer.getAscii(offset + 11, 11);
-        assertEquals("9=104\00135=1\001", lengthSection);
+        assertEquals("9=130\00135=1\001", lengthSection);
     }
 
     private void assertResultBufferHasGapFillMessage(

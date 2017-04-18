@@ -25,19 +25,12 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 
 public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffer
 {
-    public static final int LONGEST_INT_LENGTH = String.valueOf(Integer.MIN_VALUE).length();
-    public static final int LONGEST_LONG_LENGTH = String.valueOf(Long.MIN_VALUE).length();
-    public static final int LONGEST_FLOAT_LENGTH = LONGEST_LONG_LENGTH + 3;
-
     private static final byte ZERO = '0';
-    private static final byte SEPARATOR = (byte)'\001';
     private static final byte DOT = (byte)'.';
     private static final byte SPACE = ' ';
 
     private static final byte Y = (byte)'Y';
     private static final byte N = (byte)'N';
-
-    public static final int SIZE_OF_DOT = 1;
 
     private static final int[] INT_ROUNDS =
     {
@@ -564,7 +557,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         // Encode the value into a tmp space, leaving the longest possible space required
         final int tmpEnd = start + LONGEST_LONG_LENGTH;
         final int tmpStart = putLong(remainder, tmpEnd) + 1;
-        final int length = tmpEnd - tmpStart + SIZE_OF_DOT;
+        final int length = tmpEnd - tmpStart + DOT_LENGTH;
 
         // Move the value to the beginning once you've encoded it
         if (scale > 0)
@@ -584,7 +577,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
                 }
                 putBytes(cursor, this, tmpStart, length);
 
-                return minusAdj + numberOfZeros + SIZE_OF_DOT + length;
+                return minusAdj + numberOfZeros + DOT_LENGTH + length;
             }
             else
             {
@@ -592,7 +585,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
                 putByte(split, DOT);
                 putBytes(split + 1, this, tmpStart + digitsBeforeDot, scale);
             }
-            return length + SIZE_OF_DOT + minusAdj;
+            return length + DOT_LENGTH + minusAdj;
         }
         else
         {

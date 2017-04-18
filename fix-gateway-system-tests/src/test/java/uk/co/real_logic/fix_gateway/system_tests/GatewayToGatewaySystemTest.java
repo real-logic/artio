@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.system_tests;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.builder.ExampleMessageEncoder;
@@ -88,7 +87,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertSequenceIndicesAre(0);
     }
 
-    @Ignore
     @Test
     public void gatewayProcessesResendRequests()
     {
@@ -110,7 +108,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final int sequenceNumber = acceptorSendsResendRequest(message.getMessageSequenceNumber());
 
-        assertMessageResent(sequenceNumber, EXAMPLE_MESSAGE_AS_STR);
+        assertMessageResent(sequenceNumber, EXAMPLE_MESSAGE_AS_STR, false);
 
         assertSequenceIndicesAre(0);
     }
@@ -124,7 +122,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final int sequenceNumber = acceptorSendsResendRequest();
 
-        assertMessageResent(sequenceNumber, SEQUENCE_RESET_AS_STR);
+        assertMessageResent(sequenceNumber, SEQUENCE_RESET_AS_STR, true);
 
         assertSequenceIndicesAre(0);
     }

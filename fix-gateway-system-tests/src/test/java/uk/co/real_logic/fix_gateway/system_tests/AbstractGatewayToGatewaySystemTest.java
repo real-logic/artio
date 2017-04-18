@@ -164,7 +164,7 @@ public class AbstractGatewayToGatewaySystemTest
         sessionLogsOn(testSystem, initiatingSession, DEFAULT_TIMEOUT_IN_MS);
     }
 
-    protected void assertMessageResent(final int sequenceNumber, final String msgType)
+    protected void assertMessageResent(final int sequenceNumber, final String msgType, final boolean isGapFill)
     {
         assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
         assertEventuallyTrue("Failed to receive the reply",
@@ -174,7 +174,10 @@ public class AbstractGatewayToGatewaySystemTest
 
                 final FixMessage message = acceptingOtfAcceptor.lastMessage();
                 assertEquals(msgType, message.getMsgType());
-                assertEquals("Y", message.get(GAP_FILL_FLAG));
+                if (isGapFill)
+                {
+                    assertEquals("Y", message.get(GAP_FILL_FLAG));
+                }
                 assertEquals("Y", message.getPossDup());
                 assertEquals(String.valueOf(sequenceNumber), message.get(MSG_SEQ_NUM));
                 assertEquals(INITIATOR_ID, message.get(Constants.SENDER_COMP_ID));

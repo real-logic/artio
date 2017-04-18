@@ -29,20 +29,23 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.otf.OtfParser;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
-import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
 import java.util.function.IntPredicate;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static uk.co.real_logic.fix_gateway.LogTag.CATCHUP;
 import static uk.co.real_logic.fix_gateway.engine.PossDupFinder.NO_ENTRY;
 import static uk.co.real_logic.fix_gateway.engine.framer.CatchupReplayer.FRAME_LENGTH;
+import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.SEPARATOR_LENGTH;
+import static uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer.SEPARATOR;
 
 public class PossDupEnabler
 {
-    public static final byte[] POSS_DUP_FIELD = "43=Y\001".getBytes(StandardCharsets.US_ASCII);
+    public static final byte[] POSS_DUP_FIELD = "43=Y\001".getBytes(US_ASCII);
+    public static final byte[] ORIG_SENDING_TIME_PREFIX = "122=".getBytes(US_ASCII);
 
     private static final int CHECKSUM_TAG_SIZE = "\00110=".length();
     private static final int CHECKSUM_VALUE_LENGTH = 3;
@@ -87,9 +90,13 @@ public class PossDupEnabler
         if (possDupSrcOffset == NO_ENTRY)
         {
             final int lengthOfOldBodyLength = possDupFinder.lengthOfBodyLength();
-            int newLength = srcLength + POSS_DUP_FIELD.length;
-            final int lengthOfNewBodyLength = MutableAsciiBuffer.lengthInAscii(
-                possDupFinder.bodyLength() + POSS_DUP_FIELD.length);
+            final int lengthOfAddedFields = POSS_DUP_FIELD.length +
+                ORIG_SENDING_TIME_PREFIX.length +
+                possDupFinder.sendingTimeLength() +
+                SEPARATOR_LENGTH;
+            int newLength = srcLength + lengthOfAddedFields;
+            final int newBodyLength = possDupFinder.bodyLength() + lengthOfAddedFields;
+            final int lengthOfNewBodyLength = MutableAsciiBuffer.lengthInAscii(newBodyLength);
             // Account for having to resize the body length field
             // Might be smaller due to padding
             final int lengthDelta = Math.max(0, lengthOfNewBodyLength - lengthOfOldBodyLength);
@@ -102,7 +109,7 @@ public class PossDupEnabler
 
             try
             {
-                if (addPossDupField(
+                if (addFields(
                     srcBuffer,
                     srcOffset,
                     srcLength,
@@ -110,7 +117,8 @@ public class PossDupEnabler
                     messageLength,
                     claimedBuffer(),
                     claimOffset(),
-                    lengthDelta + POSS_DUP_FIELD.length))
+                    lengthDelta + lengthOfAddedFields,
+                    newBodyLength))
                 {
                     commit();
                 }
@@ -176,7 +184,7 @@ public class PossDupEnabler
         return bufferClaim.offset();
     }
 
-    private boolean addPossDupField(
+    private boolean addFields(
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int srcLength,
@@ -184,7 +192,8 @@ public class PossDupEnabler
         final int messageLength,
         final MutableDirectBuffer claimBuffer,
         final int claimOffset,
-        final int totalLengthDelta)
+        final int totalLengthDelta,
+        final int newBodyLength)
     {
         // Sending time is a required field just before the poss dup field
         final int sendingTimeSrcEnd = possDupFinder.sendingTimeEnd();
@@ -192,18 +201,35 @@ public class PossDupEnabler
         {
             return false;
         }
-        final int lengthToPossDup = sendingTimeSrcEnd - srcOffset;
-        final int possDupClaimOffset = claimOffset + lengthToPossDup;
-        final int remainingClaimOffset = possDupClaimOffset + POSS_DUP_FIELD.length;
-        final int remainingLength = srcLength - lengthToPossDup;
 
+        // Put messages up to the end of sending time
+        final int lengthToPossDup = sendingTimeSrcEnd - srcOffset;
         claimBuffer.putBytes(claimOffset, srcBuffer, srcOffset, lengthToPossDup);
+
+        // Insert Poss Dup Field
+        final int possDupClaimOffset = claimOffset + lengthToPossDup;
         claimBuffer.putBytes(possDupClaimOffset, POSS_DUP_FIELD);
+
+        // Insert Orig Sending Time Field
+        final int origSendingTimePrefixClaimOffset = possDupClaimOffset + POSS_DUP_FIELD.length;
+        claimBuffer.putBytes(origSendingTimePrefixClaimOffset, ORIG_SENDING_TIME_PREFIX);
+
+        final int origSendingTimeValueClaimOffset = origSendingTimePrefixClaimOffset + ORIG_SENDING_TIME_PREFIX.length;
+        final int sendingTimeOffset = possDupFinder.sendingTimeOffset();
+        final int sendingTimeLength = possDupFinder.sendingTimeLength();
+        claimBuffer.putBytes(origSendingTimeValueClaimOffset, srcBuffer, sendingTimeOffset, sendingTimeLength);
+
+        final int separatorClaimOffset = origSendingTimeValueClaimOffset + sendingTimeLength;
+        claimBuffer.putByte(separatorClaimOffset, SEPARATOR);
+
+        // Insert the rest of the message
+        final int remainingClaimOffset = separatorClaimOffset + SEPARATOR_LENGTH;
+        final int remainingLength = srcLength - lengthToPossDup;
         claimBuffer.putBytes(remainingClaimOffset, srcBuffer, sendingTimeSrcEnd, remainingLength);
 
         updateFrameBodyLength(messageLength, claimBuffer, claimOffset, totalLengthDelta);
         final int messageClaimOffset = srcToClaim(messageOffset, srcOffset, claimOffset);
-        updateMessage(srcOffset, messageClaimOffset, claimBuffer, claimOffset);
+        updateMessage(srcOffset, messageClaimOffset, claimBuffer, claimOffset, newBodyLength);
 
         return true;
     }
@@ -218,12 +244,15 @@ public class PossDupEnabler
     }
 
     private void updateMessage(
-        final int srcOffset, final int messageClaimOffset, final MutableDirectBuffer claimBuffer, final int claimOffset)
+        final int srcOffset,
+        final int messageClaimOffset,
+        final MutableDirectBuffer claimBuffer,
+        final int claimOffset,
+        final int newBodyLength)
     {
         mutableAsciiFlyweight.wrap(claimBuffer);
 
         // BEGIN Update body length
-        final int newBodyLength = possDupFinder.bodyLength() + POSS_DUP_FIELD.length;
         final int bodyLengthClaimOffset = srcToClaim(possDupFinder.bodyLengthOffset(), srcOffset, claimOffset);
         final int lengthOfOldBodyLength = possDupFinder.lengthOfBodyLength();
         final int lengthOfNewBodyLength = MutableAsciiBuffer.lengthInAscii(newBodyLength);

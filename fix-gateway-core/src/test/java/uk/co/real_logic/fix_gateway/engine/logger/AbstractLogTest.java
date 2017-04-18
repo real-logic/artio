@@ -207,17 +207,19 @@ public class AbstractLogTest
         when(claim.length()).thenReturn(srcLength);
     }
 
+    protected int claimedLength = -1;
+
     protected int setupCapturingClaim()
     {
         final int offset = offset();
         when(publication.tryClaim(anyInt(), eq(claim))).then(inv ->
         {
-            final int length = (int) inv.getArguments()[0];
-            resultBuffer = new UnsafeBuffer(new byte[offset + length]);
+            claimedLength = (int) inv.getArguments()[0];
+            resultBuffer = new UnsafeBuffer(new byte[offset + claimedLength]);
             resultAsciiBuffer.wrap(resultBuffer);
             when(claim.buffer()).thenReturn(resultBuffer);
             when(claim.offset()).thenReturn(offset);
-            when(claim.length()).thenReturn(length);
+            when(claim.length()).thenReturn(claimedLength);
 
             return (long) offset;
         });
