@@ -48,7 +48,6 @@ public class PossDupEnabler
     public static final String ORIG_SENDING_TIME_PREFIX_AS_STR = "122=";
     public static final byte[] ORIG_SENDING_TIME_PREFIX = ORIG_SENDING_TIME_PREFIX_AS_STR.getBytes(US_ASCII);
 
-    private static final int CHECKSUM_TAG_SIZE = "\00110=".length();
     private static final int CHECKSUM_VALUE_LENGTH = 3;
 
     private final PossDupFinder possDupFinder = new PossDupFinder();
@@ -149,6 +148,7 @@ public class PossDupEnabler
                 final int claimOffset = claimOffset();
                 claimedBuffer.putBytes(claimOffset, srcBuffer, messageOffset, messageLength);
                 setPossDupFlag(possDupSrcOffset, messageOffset, claimOffset, claimedBuffer);
+                updateSendingTime(messageOffset);
 
                 commit();
             }
@@ -228,11 +228,26 @@ public class PossDupEnabler
         final int remainingLength = srcLength - lengthToPossDup;
         claimBuffer.putBytes(remainingClaimOffset, srcBuffer, sendingTimeSrcEnd, remainingLength);
 
+        // Update the sending time
+        updateSendingTime(srcOffset);
+
         updateFrameBodyLength(messageLength, claimBuffer, claimOffset, totalLengthDelta);
         final int messageClaimOffset = srcToClaim(messageOffset, srcOffset, claimOffset);
-        updateMessage(srcOffset, messageClaimOffset, claimBuffer, claimOffset, newBodyLength);
+        updateBodyLengthAndChecksum(srcOffset, messageClaimOffset, claimBuffer, claimOffset, newBodyLength);
 
         return true;
+    }
+
+    private void updateSendingTime(final int srcOffset)
+    {
+        final MutableDirectBuffer claimBuffer = claimedBuffer();
+        final int claimOffset = claimOffset();
+        final int sendingTimeOffset = possDupFinder.sendingTimeOffset();
+        final int sendingTimeLength = possDupFinder.sendingTimeLength();
+
+        final int sendingTimeClaimOffset = srcToClaim(sendingTimeOffset, srcOffset, claimOffset);
+        utcTimestampEncoder.encode(clock.time());
+        claimBuffer.putBytes(sendingTimeClaimOffset, utcTimestampEncoder.buffer(), 0, sendingTimeLength);
     }
 
     private void updateFrameBodyLength(
@@ -244,7 +259,7 @@ public class PossDupEnabler
         claimBuffer.putShort(frameBodyLengthOffset, frameBodyLength, LITTLE_ENDIAN);
     }
 
-    private void updateMessage(
+    private void updateBodyLengthAndChecksum(
         final int srcOffset,
         final int messageClaimOffset,
         final MutableDirectBuffer claimBuffer,

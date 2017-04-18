@@ -51,7 +51,7 @@ import static uk.co.real_logic.fix_gateway.util.CustomMatchers.sequenceEqualsAsc
 
 public class ReplayerTest extends AbstractLogTest
 {
-    private static final String DATE_TIME_STR = "19840521-15:00:00.000";
+    private static final String DATE_TIME_STR = "19840521-15:00:00";
     private static final long DATE_TIME_EPOCH_MS =
         new UtcTimestampDecoder().decode(DATE_TIME_STR.getBytes(US_ASCII));
 
@@ -529,7 +529,7 @@ public class ReplayerTest extends AbstractLogTest
     private void assertHasResentWithPossDupFlag(final int srcLength, final VerificationMode times)
     {
         verify(publication, atLeastOnce()).tryClaim(srcLength, claim);
-        assertResultBufferHasSetPossDupFlagAndOrigSendingTime();
+        assertResultBufferHasSetPossDupFlagAndSendingTimeUpdates();
         verifyCommit(times);
     }
 
@@ -597,13 +597,16 @@ public class ReplayerTest extends AbstractLogTest
         verify(replayQuery).query(replayer, SESSION_ID, BEGIN_SEQ_NO, SEQUENCE_INDEX, endSeqNo, SEQUENCE_INDEX);
     }
 
-    private void assertResultBufferHasSetPossDupFlagAndOrigSendingTime()
+    private void assertResultBufferHasSetPossDupFlagAndSendingTimeUpdates()
     {
         final String resultAsAscii = resultAsciiBuffer.getAscii(0, resultAsciiBuffer.capacity());
         assertThat(resultAsAscii, containsString("43=Y"));
 
         assertThat(resultAsAscii,
             containsString(ORIG_SENDING_TIME_PREFIX_AS_STR + ORIGINAL_SENDING_TIME + '\001'));
+
+        assertThat(resultAsAscii,
+            containsString("52=" + DATE_TIME_STR + '\001'));
     }
 
     private void onContinuedRequestResendMessage(final long result)
