@@ -88,11 +88,11 @@ public class ClusterReplicationTest
     {
         final NodeRunner leader = leader();
 
-        DebugLogger.log(RAFT, "Leader is %s%n", leader.nodeId());
+        DebugLogger.log(RAFT, "Leader is %d%n", leader.nodeId());
 
         final long position = sendMessageTo(leader);
 
-        DebugLogger.log(RAFT, "Leader @ %s%n", position);
+        DebugLogger.log(RAFT, "Leader @ %d%n", position);
 
         assertMessageReceived();
     }
@@ -105,7 +105,7 @@ public class ClusterReplicationTest
         final NodeRunner leader = leader();
         final NodeRunner[] followers = followers();
 
-        DebugLogger.log(RAFT, "Pausing Leader: %s%n", leader.nodeId());
+        DebugLogger.log(RAFT, "Pausing Leader: %d%n", leader.nodeId());
 
         assertEventuallyTrue(
             "Failed to find leader",
@@ -515,9 +515,7 @@ public class ClusterReplicationTest
             () -> message + clusterInfo(),
             test,
             DEFAULT_TIMEOUT_IN_MS,
-            () ->
-            {
-            }
+            () -> {}
         );
     }
 
@@ -533,6 +531,7 @@ public class ClusterReplicationTest
                     final int leadershipTerm = termState.leadershipTerm();
                     final int ourSessionId = agent.ourSessionId();
                     final long position = runner.replicatedPosition();
+
                     return String.format(
                         "%s %d: leader=%d, term=%d, us=%d, pos=%d",
                         state(agent),
