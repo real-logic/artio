@@ -178,6 +178,10 @@ public class AbstractGatewayToGatewaySystemTest
                 {
                     assertEquals("Y", message.get(GAP_FILL_FLAG));
                 }
+                else
+                {
+                    assertNotNull(message.get(ORIG_SENDING_TIME));
+                }
                 assertEquals("Y", message.getPossDup());
                 assertEquals(String.valueOf(sequenceNumber), message.get(MSG_SEQ_NUM));
                 assertEquals(INITIATOR_ID, message.get(Constants.SENDER_COMP_ID));
