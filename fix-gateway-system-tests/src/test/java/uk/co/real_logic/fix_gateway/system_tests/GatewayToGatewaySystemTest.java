@@ -15,7 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
+import org.apache.commons.math3.analysis.function.Constant;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.builder.ExampleMessageEncoder;
@@ -87,13 +89,15 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertSequenceIndicesAre(0);
     }
 
+    @Ignore
     @Test
     public void gatewayProcessesResendRequests()
     {
         acquireAcceptingSession();
 
+        final String testReqID = largeTestReqId();
         final ExampleMessageEncoder exampleMessage = new ExampleMessageEncoder();
-        exampleMessage.testReqID("abc");
+        exampleMessage.testReqID(testReqID);
         final long position = initiatingSession.send(exampleMessage);
         assertThat(position, greaterThan(0L));
 
@@ -108,7 +112,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final int sequenceNumber = acceptorSendsResendRequest(message.getMessageSequenceNumber());
 
-        assertMessageResent(sequenceNumber, EXAMPLE_MESSAGE_AS_STR, false);
+        final FixMessage resentMessage = assertMessageResent(sequenceNumber, EXAMPLE_MESSAGE_AS_STR, false);
+        assertEquals(testReqID, resentMessage.getTestReqId());
 
         assertSequenceIndicesAre(0);
     }
@@ -563,15 +568,20 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
-        final char[] testReqIDChars = new char[MESSAGE_BUFFER_SIZE_IN_BYTES - 100];
-        Arrays.fill(testReqIDChars, 'A');
-        final String testReqID = new String(testReqIDChars);
+        final String testReqID = largeTestReqId();
 
         sendTestRequest(acceptingSession, testReqID);
 
         assertReceivedSingleHeartbeat(testSystem, acceptingOtfAcceptor, testReqID);
 
 
+    }
+
+    private String largeTestReqId()
+    {
+        final char[] testReqIDChars = new char[MESSAGE_BUFFER_SIZE_IN_BYTES - 100];
+        Arrays.fill(testReqIDChars, 'A');
+        return new String(testReqIDChars);
     }
 
     private void awaitIsConnected(final boolean connected, final FixLibrary library)

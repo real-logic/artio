@@ -164,7 +164,7 @@ public class AbstractGatewayToGatewaySystemTest
         sessionLogsOn(testSystem, initiatingSession, DEFAULT_TIMEOUT_IN_MS);
     }
 
-    protected void assertMessageResent(final int sequenceNumber, final String msgType, final boolean isGapFill)
+    protected FixMessage assertMessageResent(final int sequenceNumber, final String msgType, final boolean isGapFill)
     {
         assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
         assertEventuallyTrue("Failed to receive the reply",
@@ -188,6 +188,8 @@ public class AbstractGatewayToGatewaySystemTest
                 assertNull("Detected Error", acceptingOtfAcceptor.lastError());
                 assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());
             });
+
+        return acceptingOtfAcceptor.lastMessage();
     }
 
     protected int acceptorSendsResendRequest()
