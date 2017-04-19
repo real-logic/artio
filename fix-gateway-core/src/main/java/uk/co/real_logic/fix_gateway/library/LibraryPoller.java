@@ -682,6 +682,26 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     status,
                     position);
             }
+            else if (status == MessageStatus.CATCHUP_REPLAY)
+            {
+                for (final SessionSubscriber aSubscriber : connectionIdToSession.values())
+                {
+                    if (sessionId == aSubscriber.session().id())
+                    {
+                        return aSubscriber.onMessage(
+                            buffer,
+                            offset,
+                            length,
+                            libraryId,
+                            sessionId,
+                            sequenceIndex,
+                            messageType,
+                            timestamp,
+                            status,
+                            position);
+                    }
+                }
+            }
         }
 
         return CONTINUE;

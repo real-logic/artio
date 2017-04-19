@@ -397,7 +397,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             acquireSession(sessionId, lastReceivedMsgSeqNum, sequenceIndex);
 
             final FixMessage firstReplayedMessage = acceptingOtfAcceptor.messages().get(0);
-            assertThat(firstReplayedMessage, hasMessageSequenceNumber(lastReceivedMsgSeqNum + 1));
+            assertThat(firstReplayedMessage, hasMessageSequenceNumber(lastReceivedMsgSeqNum));
             assertThat(firstReplayedMessage, hasSequenceIndex(sequenceIndex));
         }
         else

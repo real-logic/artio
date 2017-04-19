@@ -479,4 +479,11 @@ public final class SystemTestUtil
                 assertThat(libraries, containsInAnyOrder(libraryMatchers));
             });
     }
+
+    public static String largeTestReqId()
+    {
+        final char[] testReqIDChars = new char[MESSAGE_BUFFER_SIZE_IN_BYTES - 100];
+        Arrays.fill(testReqIDChars, 'A');
+        return new String(testReqIDChars);
+    }
 }

@@ -15,12 +15,12 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
-import org.apache.commons.math3.analysis.function.Constant;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.Reply;
 import uk.co.real_logic.fix_gateway.builder.ExampleMessageEncoder;
+import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
@@ -30,7 +30,6 @@ import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.session.Session;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.IntSupplier;
 
@@ -96,19 +95,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acquireAcceptingSession();
 
         final String testReqID = largeTestReqId();
-        final ExampleMessageEncoder exampleMessage = new ExampleMessageEncoder();
-        exampleMessage.testReqID(testReqID);
-        final long position = initiatingSession.send(exampleMessage);
-        assertThat(position, greaterThan(0L));
-
-        final FixMessage message = withTimeout("Failed to receive the example message",
-            () ->
-            {
-                testSystem.poll();
-
-                return acceptingOtfAcceptor.hasReceivedMessage(EXAMPLE_MESSAGE_AS_STR).findFirst();
-            },
-            1000);
+        final FixMessage message = exchangeExampleMessageFromInitiatorToAcceptor(testReqID);
 
         final int sequenceNumber = acceptorSendsResendRequest(message.getMessageSequenceNumber());
 
@@ -116,6 +103,23 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertEquals(testReqID, resentMessage.getTestReqId());
 
         assertSequenceIndicesAre(0);
+    }
+
+    private FixMessage exchangeExampleMessageFromInitiatorToAcceptor(final String testReqID)
+    {
+        final ExampleMessageEncoder exampleMessage = new ExampleMessageEncoder();
+        exampleMessage.testReqID(testReqID);
+        final long position = initiatingSession.send(exampleMessage);
+        assertThat(position, greaterThan(0L));
+
+        return withTimeout("Failed to receive the example message",
+            () ->
+            {
+                testSystem.poll();
+
+                return acceptingOtfAcceptor.hasReceivedMessage(EXAMPLE_MESSAGE_AS_STR).findFirst();
+            },
+            1000);
     }
 
     @Test
@@ -315,7 +319,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         libraryNotifiedThatGatewayOwnsSession(initiatingHandler, sessionId);
 
         reacquireSession(
-            initiatingSession, initiatingLibrary, initiatingEngine,  initiatingOtfAcceptor,
+            initiatingSession, initiatingLibrary, initiatingEngine,
             sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, OK);
 
         assertSequenceIndicesAre(0);
@@ -334,7 +338,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         libraryNotifiedThatGatewayOwnsSession(acceptingHandler, sessionId);
 
         reacquireSession(
-            acceptingSession, acceptingLibrary, acceptingEngine, acceptingOtfAcceptor,
+            acceptingSession, acceptingLibrary, acceptingEngine,
             sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, OK);
 
         assertSequenceIndicesAre(0);
@@ -358,13 +362,17 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
+
+        final int lastReceivedMsgSeqNum = acceptingSession.lastReceivedMsgSeqNum();
+        final String testReqID = "A"; //largeTestReqId();
+        exchangeExampleMessageFromInitiatorToAcceptor(testReqID);
+
         disconnectSessions();
 
         assertThat(initiatingLibrary.sessions(), hasSize(0));
         assertThat(acceptingLibrary.sessions(), hasSize(0));
 
         final long sessionId = acceptingSession.id();
-        final int lastReceivedMsgSeqNum = acceptingSession.lastReceivedMsgSeqNum();
         final int sequenceIndex = sequenceIndexSupplier.getAsInt();
 
         assertSequenceIndicesAre(0);
@@ -373,9 +381,19 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         connectSessions();
 
         reacquireSession(
-            acceptingSession, acceptingLibrary, acceptingEngine, acceptingOtfAcceptor,
+            acceptingSession, acceptingLibrary, acceptingEngine,
             sessionId, lastReceivedMsgSeqNum, sequenceIndex,
             expectedStatus);
+
+        if (expectedStatus == OK)
+        {
+            final FixMessage replayedExampleMessage = acceptingOtfAcceptor.messages().get(1);
+            assertEquals(Constants.EXAMPLE_MESSAGE_AS_STR, replayedExampleMessage.getMsgType());
+            assertThat(replayedExampleMessage, hasMessageSequenceNumber(2));
+            assertEquals(0, replayedExampleMessage.sequenceIndex());
+            assertEquals("Y", replayedExampleMessage.getPossDup());
+            assertEquals(testReqID, replayedExampleMessage.getTestReqId());
+        }
 
         acceptingSession = acceptingHandler.lastSession();
         acceptingHandler.resetSession();
@@ -384,7 +402,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         messagesCanBeExchanged(acceptingSession, acceptingOtfAcceptor);
         messagesCanBeExchanged(initiatingSession, initiatingOtfAcceptor);
 
-        assertSequenceIndicesAre(1);
+        assertAcceptingSessionHasSequenceIndex(1);
+        assertInitiatingSequenceIndexIs(1);
     }
 
     @Test
@@ -573,15 +592,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         sendTestRequest(acceptingSession, testReqID);
 
         assertReceivedSingleHeartbeat(testSystem, acceptingOtfAcceptor, testReqID);
-
-
-    }
-
-    private String largeTestReqId()
-    {
-        final char[] testReqIDChars = new char[MESSAGE_BUFFER_SIZE_IN_BYTES - 100];
-        Arrays.fill(testReqIDChars, 'A');
-        return new String(testReqIDChars);
     }
 
     private void awaitIsConnected(final boolean connected, final FixLibrary library)
@@ -616,7 +626,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final Session session,
         final FixLibrary library,
         final FixEngine engine,
-        final FakeOtfAcceptor otfAcceptor,
         final long sessionId,
         final int lastReceivedMsgSeqNum,
         final int sequenceIndex,
@@ -637,15 +646,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
                 testSystem.poll();
                 assertContainsOnlySession(session, library);
             });
-
-        // Has received catch up messages
-        if (lastReceivedMsgSeqNum != NO_MESSAGE_REPLAY && status == OK)
-        {
-            final FixMessage firstReplayedMessage = otfAcceptor.messages().get(0);
-            assertThat(firstReplayedMessage, hasMessageSequenceNumber(1));
-            assertEquals(1, firstReplayedMessage.sequenceIndex());
-            assertEquals("Y", firstReplayedMessage.getPossDup());
-        }
     }
 
     private void assertContainsOnlySession(final Session session, final FixLibrary library)
