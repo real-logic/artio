@@ -28,10 +28,10 @@ import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
+import static java.util.stream.Collectors.joining;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
@@ -48,6 +48,7 @@ public class ClusterReplicationTest
 {
     private static final int BUFFER_SIZE = 1337;
     private static final int POSITION_AFTER_MESSAGE = BUFFER_SIZE + HEADER_LENGTH;
+    private static final String NEWLINE = System.getProperty("line.separator");
 
     private ExclusiveBufferClaim bufferClaim = new ExclusiveBufferClaim();
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[BUFFER_SIZE]);
@@ -541,7 +542,7 @@ public class ClusterReplicationTest
                         ourSessionId,
                         position);
                 })
-            .collect(Collectors.joining("%n", "%n", "%n"));
+            .collect(joining(NEWLINE, NEWLINE, NEWLINE));
     }
 
     private String state(final ClusterAgent agent)
