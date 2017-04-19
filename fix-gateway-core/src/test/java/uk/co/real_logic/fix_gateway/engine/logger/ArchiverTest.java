@@ -54,11 +54,13 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
 import static io.aeron.logbuffer.LogBufferDescriptor.computeTermIdFromPosition;
 import static io.aeron.logbuffer.LogBufferDescriptor.computeTermOffsetFromPosition;
+import static io.aeron.protocol.DataHeaderFlyweight.END_FLAG;
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static java.lang.Integer.min;
 import static java.lang.Integer.numberOfTrailingZeros;
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static org.agrona.BitUtil.SIZE_OF_INT;
+import static org.agrona.BitUtil.findNextPositivePowerOfTwo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -83,7 +85,7 @@ public class ArchiverTest
     private static final String CHANNEL = "aeron:udp?endpoint=localhost:9999";
     private static final String LOG_FILE_DIR = tmpLogsDirName() + "ArchiverTest-logs";
 
-    @Parameters
+    @Parameters(name = "{0},{1}")
     public static Collection<Object[]> data()
     {
         // TODO: enable more comprehensive testing in a CI environment
@@ -92,9 +94,9 @@ public class ArchiverTest
             .boxed()
             .flatMap((size) ->
                 Stream.of(
-                    new UnsafeBuffer(ByteBuffer.allocateDirect(size)),
+                    //new UnsafeBuffer(ByteBuffer.allocateDirect(size)),
                     new UnsafeBuffer(new byte[size])))
-            .map(buffer -> new Object[]{ buffer })
+            .map(buffer -> new Object[]{ buffer.capacity(), buffer })
             .collect(Collectors.toList());
     }
 
@@ -102,10 +104,12 @@ public class ArchiverTest
     private final ControlledFragmentHandler fragmentHandler = mock(ControlledFragmentHandler.class);
     private final ArgumentCaptor<DirectBuffer> bufferCaptor = ArgumentCaptor.forClass(DirectBuffer.class);
     private final ArgumentCaptor<Integer> offsetCaptor = ArgumentCaptor.forClass(Integer.class);
+    private final ArgumentCaptor<Integer> lengthCaptor = ArgumentCaptor.forClass(Integer.class);
     private final CompletionPosition completionPosition = mock(CompletionPosition.class);
     private final Long2LongHashMap completedPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
 
     private final int size;
+    private final int endOfFirstMessage;
     private final double fragments;
     private final UnsafeBuffer buffer;
     private final UnsafeBuffer writeBuffer;
@@ -121,12 +125,13 @@ public class ArchiverTest
     private int lastArchivedValue;
     private int work = 0;
 
-    public ArchiverTest(final UnsafeBuffer buffer)
+    public ArchiverTest(final int size, final UnsafeBuffer buffer)
     {
         this.buffer = buffer;
-        size = buffer.capacity();
+        this.size = size;
         writeBuffer = new UnsafeBuffer(new byte[size]);
         fragments = (double) size / MTU_LENGTH;
+        endOfFirstMessage = HEADER_LENGTH + alignTerm(size);
     }
 
     @Before
@@ -197,17 +202,17 @@ public class ArchiverTest
     @Test
     public void shouldReadDataThatWasWritten()
     {
-        writeAndArchiveBuffer(INITIAL_VALUE);
+        final long endPosition = writeAndArchiveBuffer(INITIAL_VALUE);
 
-        assertReadsInitialValue(HEADER_LENGTH);
+        assertReadsInitialValue(HEADER_LENGTH, endPosition);
     }
 
     @Test
     public void shouldReadFilteredDataThatWasWritten()
     {
-        writeAndArchiveBuffer(INITIAL_VALUE, RESERVED_VALUE);
+        final long endPosition = writeAndArchiveBuffer(INITIAL_VALUE, RESERVED_VALUE);
 
-        assertReadsValueAt(INITIAL_VALUE, (long)HEADER_LENGTH, filteredArchiveReader);
+        assertReadsValueAt(INITIAL_VALUE, (long)HEADER_LENGTH, filteredArchiveReader, endPosition);
     }
 
     @Test
@@ -276,7 +281,7 @@ public class ArchiverTest
     @Test
     public void shouldReadAfterException()
     {
-        writeAndArchiveBuffer(INITIAL_VALUE);
+        final long endPosition = writeAndArchiveBuffer(INITIAL_VALUE);
 
         try
         {
@@ -292,15 +297,15 @@ public class ArchiverTest
         {
         }
 
-        assertReadsInitialValue(HEADER_LENGTH);
+        assertReadsInitialValue(HEADER_LENGTH, endPosition);
     }
 
     @Test
     public void shouldSupportRotatingFilesAtEndOfTerm()
     {
-        archiveBeyondEndOfTerm();
+        final long endPosition = archiveBeyondEndOfTerm();
 
-        assertReadsValueAt(lastArchivedValue, TERM_LENGTH + HEADER_LENGTH);
+        assertReadsValueAt(lastArchivedValue, TERM_LENGTH + HEADER_LENGTH, endPosition);
     }
 
     @Test
@@ -511,7 +516,7 @@ public class ArchiverTest
 
         patchBuffer(0, isArray);
 
-        assertReadsValueAt(PATCH_VALUE, HEADER_LENGTH);
+        assertReadsValueAt(PATCH_VALUE, HEADER_LENGTH, endOfFirstMessage);
     }
 
     @Test
@@ -526,13 +531,17 @@ public class ArchiverTest
         shouldPatchWrapAroundTerm(false);
     }
 
-    public void shouldPatchWrapAroundTerm(final boolean isArray)
+    private void shouldPatchWrapAroundTerm(final boolean isArray)
     {
-        archiveBeyondEndOfTerm();
+        long endPosition = archiveBeyondEndOfTerm();
 
         patchBuffer(TERM_LENGTH, isArray);
 
-        assertReadsValueAt(PATCH_VALUE, TERM_LENGTH + HEADER_LENGTH);
+        if (size > publication.maxPayloadLength())
+        {
+            endPosition -= HEADER_LENGTH;
+        }
+        assertReadsValueAt(PATCH_VALUE, TERM_LENGTH + HEADER_LENGTH, endPosition);
     }
 
     @Test
@@ -553,7 +562,7 @@ public class ArchiverTest
 
         patchBuffer(0, isArray);
 
-        assertReadsValueAt(PATCH_VALUE, HEADER_LENGTH);
+        assertReadsValueAt(PATCH_VALUE, HEADER_LENGTH, endOfFirstMessage);
     }
 
     @Test
@@ -576,7 +585,7 @@ public class ArchiverTest
 
         patchBuffer(0, isArray);
 
-        assertReadsValueAt(PATCH_VALUE, HEADER_LENGTH);
+        assertReadsValueAt(PATCH_VALUE, HEADER_LENGTH, endOfFirstMessage);
     }
 
     @Test
@@ -621,7 +630,7 @@ public class ArchiverTest
         archiver.onClose();
 
         final long startOfSecondBuffer = endOfFirstBuffer + HEADER_LENGTH;
-        assertReadsValueAt(PATCH_VALUE, startOfSecondBuffer);
+        assertReadsValueAt(PATCH_VALUE, startOfSecondBuffer, endOfSecondBuffer);
     }
 
     private int lengthOfTwoMessages()
@@ -671,10 +680,12 @@ public class ArchiverTest
         verify(blockHandler, never()).onBlock(any(), anyInt(), anyInt(), anyInt(), anyInt());
     }
 
-    private boolean patchBuffer(final long position, final boolean isArray)
+    private boolean patchBuffer(final long position, final boolean wrapsArray)
     {
-        final int frameLength = HEADER_LENGTH + OFFSET_WITHIN_MESSAGE + SIZE_OF_INT;
+        final int frameLength = HEADER_LENGTH + size;
         final int dataOffset = HEADER_LENGTH + OFFSET_WITHIN_MESSAGE;
+        final int maxMessageLength = publication.maxMessageLength();
+        final boolean fragment = frameLength > maxMessageLength;
 
         final int sessionId = sessionId();
         final int streamId = publication.streamId();
@@ -684,21 +695,38 @@ public class ArchiverTest
         final int termOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
 
         final int wrapAdjustment = 4;
-        final UnsafeBuffer buffer = isArray ?
-            new UnsafeBuffer(new byte[size], wrapAdjustment, size - wrapAdjustment) :
-            new UnsafeBuffer(ByteBuffer.allocateDirect(size), wrapAdjustment, size - wrapAdjustment);
+        final UnsafeBuffer buffer = wrapsArray ?
+            new UnsafeBuffer(new byte[frameLength + wrapAdjustment], wrapAdjustment, frameLength) :
+            new UnsafeBuffer(ByteBuffer.allocateDirect(frameLength + wrapAdjustment), wrapAdjustment, frameLength);
         final DataHeaderFlyweight flyweight = new DataHeaderFlyweight(buffer);
         flyweight
             .sessionId(sessionId)
             .streamId(streamId)
             .termId(termId)
             .termOffset(termOffset)
-            .frameLength(frameLength)
+            .frameLength(fragment ? maxMessageLength : frameLength)
             .version(HeaderFlyweight.CURRENT_VERSION)
-            .flags(DataHeaderFlyweight.BEGIN_AND_END_FLAGS)
+            .flags(fragment ? DataHeaderFlyweight.BEGIN_FLAG : DataHeaderFlyweight.BEGIN_AND_END_FLAGS)
             .headerType(HeaderFlyweight.HDR_TYPE_DATA);
 
         flyweight.putInt(dataOffset, PATCH_VALUE);
+
+        if (fragment)
+        {
+            final int remaining = frameLength - maxMessageLength;
+            flyweight.wrap(buffer, maxMessageLength, remaining);
+            flyweight
+                .sessionId(sessionId)
+                .streamId(streamId)
+                .termId(termId)
+                .termOffset(termOffset + maxMessageLength)
+                .frameLength(remaining)
+                .version(HeaderFlyweight.CURRENT_VERSION)
+                .flags(END_FLAG)
+                .headerType(HeaderFlyweight.HDR_TYPE_DATA);
+
+            flyweight.putInt(maxMessageLength + dataOffset, PATCH_VALUE);
+        }
 
         return archiver.patch(sessionId, flyweight, 0, frameLength);
     }
@@ -736,7 +764,7 @@ public class ArchiverTest
         return endPosition;
     }
 
-    private void writeAndArchiveBuffer(final int value, final int clusterStreamId)
+    private long writeAndArchiveBuffer(final int value, final int clusterStreamId)
     {
         final long reservedValue = ReservedValue.ofClusterStreamId(clusterStreamId);
         writeBuffer.putInt(OFFSET_WITHIN_MESSAGE, value);
@@ -754,25 +782,42 @@ public class ArchiverTest
         assertDataPublished(endPosition);
 
         archiveUpTo(endPosition);
+
+        return endPosition;
     }
 
-    private void assertReadsInitialValue(final int position)
+    private void assertReadsInitialValue(final int position, final long endPosition)
     {
-        assertReadsValueAt(INITIAL_VALUE, position);
+        assertReadsValueAt(INITIAL_VALUE, position, endPosition);
     }
 
-    private void assertReadsValueAt(final int value, final long position)
+    private void assertReadsValueAt(final int value, final long position, final long endPosition)
     {
-        assertReadsValueAt(value, position, archiveReader);
+        assertReadsValueAt(value, position, archiveReader, endPosition);
     }
 
-    private void assertReadsValueAt(final int value, final long position, final ArchiveReader archiveReader)
+    private void assertReadsValueAt(
+        final int value,
+        final long position,
+        final ArchiveReader archiveReader,
+        final long expectedEndPosition)
     {
+        final long positionOfMessageStart = position + HEADER_LENGTH;
         final boolean hasRead = read(position, archiveReader) > 0;
 
-        verify(fragmentHandler).onFragment(bufferCaptor.capture(), offsetCaptor.capture(), anyInt(), any());
+        verify(fragmentHandler, atLeastOnce()).onFragment(
+            bufferCaptor.capture(), offsetCaptor.capture(), lengthCaptor.capture(), any());
 
-        assertReadValue(value, position + HEADER_LENGTH, hasRead);
+        assertReadValue(value, positionOfMessageStart, hasRead);
+
+        final long endPosition = lengthCaptor
+            .getAllValues()
+            .stream()
+            .reduce(
+                position - HEADER_LENGTH,
+                (acc, len) -> ArchiveDescriptor.nextTerm(acc + HEADER_LENGTH, len),
+                Long::sum);
+        assertEquals(expectedEndPosition, endPosition);
     }
 
     private void assertDataPublished(final long endPosition)
@@ -797,7 +842,10 @@ public class ArchiverTest
 
     private void assertReadValue(final int value, final long positionOfMessageStart, final boolean hasRead)
     {
-        assertEquals(value, bufferCaptor.getValue().getInt(offsetCaptor.getValue() + OFFSET_WITHIN_MESSAGE));
+        final DirectBuffer buffer = bufferCaptor.getAllValues().get(0);
+        final int offset = offsetCaptor.getAllValues().get(0);
+
+        assertEquals(value, buffer.getInt(offset + OFFSET_WITHIN_MESSAGE));
         assertTrue("Failed to read value at " + positionOfMessageStart, hasRead);
     }
 

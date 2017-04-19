@@ -36,6 +36,7 @@ import java.util.zip.CRC32;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
+import static io.aeron.protocol.DataHeaderFlyweight.END_FLAG;
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static java.lang.Integer.numberOfTrailingZeros;
 import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor.nextTerm;
@@ -211,43 +212,53 @@ public class ArchiveReader implements AutoCloseable
         /**
          * Reads a message out of this session's log archive.
          *
-         * @param messagePosition the log position to start reading at
+         * @param initialPosition the log position to start reading at
          * @param handler the handler to pass the data into
          * @return the position after the end of this message. If there's another message, then this is its start.
          */
-        public long read(final long messagePosition, final ControlledFragmentHandler handler)
+        public long read(final long initialPosition, final ControlledFragmentHandler handler)
         {
             final int reservedValueFilter = ArchiveReader.this.reservedValueFilter;
-            final int termOffset = scan(messagePosition);
-            if (termOffset == UNKNOWN_TERM)
-            {
-                return UNKNOWN_TERM;
-            }
 
-            final int frameLength = header.frameLength();
-            if (frameLength == 0)
+            long position = initialPosition;
+            while (true)
             {
-                return NO_MESSAGE;
-            }
+                final int termOffset = scan(position);
+                if (termOffset == UNKNOWN_TERM)
+                {
+                    return UNKNOWN_TERM;
+                }
 
-            final long reservedValue = header.reservedValue();
-            if ((reservedValue & reservedValueFilter) != reservedValueFilter)
-            {
-                return NO_MESSAGE;
-            }
+                final int frameLength = header.frameLength();
+                if (frameLength == 0)
+                {
+                    return NO_MESSAGE;
+                }
 
-            if (!validateChecksum(termOffset, frameLength))
-            {
-                return CORRUPT_LOG;
-            }
+                final long reservedValue = header.reservedValue();
+                if ((reservedValue & reservedValueFilter) != reservedValueFilter)
+                {
+                    return NO_MESSAGE;
+                }
 
-            final Action action = handler.onFragment(buffer, termOffset, frameLength - HEADER_LENGTH, header);
-            if (action == ABORT)
-            {
-                return messagePosition;
-            }
+                if (!validateChecksum(termOffset, frameLength))
+                {
+                    return CORRUPT_LOG;
+                }
 
-            return messagePosition + frameLength;
+                final Action action = handler.onFragment(buffer, termOffset, frameLength - HEADER_LENGTH, header);
+                if (action == ABORT)
+                {
+                    return position;
+                }
+
+                position = nextTerm(position, frameLength);
+
+                if ((header.flags() & END_FLAG) == END_FLAG)
+                {
+                    return position;
+                }
+            }
         }
 
         private boolean validateChecksum(final int termOffset, final int frameLength)
