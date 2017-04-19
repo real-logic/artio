@@ -362,9 +362,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
-
         final int lastReceivedMsgSeqNum = acceptingSession.lastReceivedMsgSeqNum();
-        final String testReqID = "A"; //largeTestReqId();
+        final String testReqID = largeTestReqId();
         exchangeExampleMessageFromInitiatorToAcceptor(testReqID);
 
         disconnectSessions();
