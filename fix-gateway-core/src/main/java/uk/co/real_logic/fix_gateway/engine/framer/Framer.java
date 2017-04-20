@@ -123,6 +123,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ClusterFragmentHandler outboundClusterSubscriber;
 
     private final ReceiverEndPoints receiverEndPoints = new ReceiverEndPoints();
+    private final ControlledFragmentAssembler senderEndPointAssembler;
     private final SenderEndPoints senderEndPoints;
 
     private final EngineConfiguration configuration;
@@ -215,6 +216,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundLibraryCompletionPosition = outboundLibraryCompletionPosition;
         this.outboundClusterCompletionPosition = outboundClusterCompletionPosition;
         this.senderEndPoints = new SenderEndPoints(errorHandler);
+        this.senderEndPointAssembler = new ControlledFragmentAssembler(senderEndPoints);
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionContexts = sessionContexts;
         this.adminCommands = adminCommands;
@@ -392,7 +394,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int newMessagesRead =
             outboundLibrarySubscription.controlledPoll(outboundLibrarySubscriber, outboundLibraryFragmentLimit);
         int messagesRead = newMessagesRead +
-            outboundSlowPeeker.peek(senderEndPoints);
+            outboundSlowPeeker.peek(senderEndPointAssembler);
 
         if (isClustered())
         {

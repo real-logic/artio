@@ -179,7 +179,7 @@ class SenderEndPoint implements AutoCloseable
         {
             buffer = ByteBuffer.wrap(directBuffer.byteArray());
         }
-        buffer.limit(wrapAdjustment + offset + length);
+        ByteBufferUtil.limit(buffer, wrapAdjustment + offset + length);
         buffer.position(wrapAdjustment + offset);
 
         final int written = channel.write(buffer);

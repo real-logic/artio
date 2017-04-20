@@ -35,6 +35,8 @@ import java.util.function.IntPredicate;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
+import static io.aeron.protocol.DataHeaderFlyweight.END_FLAG;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static uk.co.real_logic.fix_gateway.LogTag.CATCHUP;
@@ -50,8 +52,9 @@ public class PossDupEnabler
     public static final byte[] ORIG_SENDING_TIME_PREFIX = ORIG_SENDING_TIME_PREFIX_AS_STR.getBytes(US_ASCII);
 
     private static final int CHECKSUM_VALUE_LENGTH = 3;
+    public static final int FRAGMENTED_MESSAGE_BUFFER_OFFSET = 0;
 
-    private final ExpandableArrayBuffer expandableArrayBuffer = new ExpandableArrayBuffer();
+    private final ExpandableArrayBuffer fragmentedMessageBuffer = new ExpandableArrayBuffer();
     private final PossDupFinder possDupFinder = new PossDupFinder();
     private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
     private final MutableAsciiBuffer mutableAsciiFlyweight = new MutableAsciiBuffer();
@@ -64,6 +67,8 @@ public class PossDupEnabler
     private final ErrorHandler errorHandler;
     private final EpochClock clock;
     private final int maxPayloadLength;
+
+    private int fragmentedMessageLength;
 
     public PossDupEnabler(
         final ExclusiveBufferClaim bufferClaim,
@@ -123,7 +128,8 @@ public class PossDupEnabler
                     writeBuffer(),
                     writeOffset(),
                     lengthDelta + lengthOfAddedFields,
-                    newBodyLength))
+                    newBodyLength,
+                    newLength))
                 {
                     commit();
                 }
@@ -135,7 +141,6 @@ public class PossDupEnabler
             }
             catch (final Exception e)
             {
-                e.printStackTrace();
                 abort();
                 errorHandler.onError(e);
             }
@@ -169,38 +174,102 @@ public class PossDupEnabler
 
     private void abort()
     {
-        bufferClaim.abort();
+        if (isProcessingFragmentedMessage())
+        {
+            fragmentedMessageLength = 0;
+        }
+        else
+        {
+            bufferClaim.abort();
+        }
     }
 
     private boolean claim(final int newLength)
     {
-        return claimer.test(newLength);
+        if (newLength > maxPayloadLength)
+        {
+            fragmentedMessageBuffer.checkLimit(newLength);
+            fragmentedMessageLength = newLength;
+            return true;
+        }
+        else
+        {
+            return claimer.test(newLength);
+        }
     }
 
     private void commit()
     {
-        final MutableDirectBuffer buffer = bufferClaim.buffer();
-        final int offset = bufferClaim.offset();
+        if (isProcessingFragmentedMessage())
+        {
+            int fragmentOffset = FRAGMENTED_MESSAGE_BUFFER_OFFSET;
+            onPreCommit.onPreCommit(fragmentedMessageBuffer, fragmentOffset);
 
-        DebugLogger.log(
-            CATCHUP,
-            "Resending: %s%n",
-            buffer,
-            offset + FRAME_LENGTH,
-            bufferClaim.length() - FRAME_LENGTH);
+            DebugLogger.log(
+                CATCHUP,
+                "Resending: %s%n",
+                fragmentedMessageBuffer,
+                fragmentOffset + FRAME_LENGTH,
+                fragmentedMessageLength - FRAME_LENGTH);
 
-        onPreCommit.onPreCommit(buffer, offset);
-        bufferClaim.commit();
+            while (fragmentedMessageLength > 0)
+            {
+                final int fragmentLength = Math.min(maxPayloadLength, fragmentedMessageLength);
+                if (claimer.test(fragmentLength))
+                {
+                    if (fragmentOffset == FRAGMENTED_MESSAGE_BUFFER_OFFSET)
+                    {
+                        bufferClaim.flags((byte) BEGIN_FLAG);
+                    }
+                    else if (fragmentedMessageLength == fragmentLength)
+                    {
+                        bufferClaim.flags((byte) END_FLAG);
+                    }
+                    else
+                    {
+                        bufferClaim.flags((byte) 0);
+                    }
+
+                    final MutableDirectBuffer destBuffer = bufferClaim.buffer();
+                    final int destOffset = bufferClaim.offset();
+
+                    destBuffer.putBytes(destOffset, fragmentedMessageBuffer, fragmentOffset, fragmentLength);
+                    bufferClaim.commit();
+
+                    fragmentOffset += fragmentLength;
+                    fragmentedMessageLength -= fragmentLength;
+                }
+                else
+                {
+                    // TODO: ABORT
+                }
+            }
+        }
+        else
+        {
+            final MutableDirectBuffer buffer = bufferClaim.buffer();
+            final int offset = bufferClaim.offset();
+
+            DebugLogger.log(
+                CATCHUP,
+                "Resending: %s%n",
+                buffer,
+                offset + FRAME_LENGTH,
+                bufferClaim.length() - FRAME_LENGTH);
+
+            onPreCommit.onPreCommit(buffer, offset);
+            bufferClaim.commit();
+        }
     }
 
     private MutableDirectBuffer writeBuffer()
     {
-        return bufferClaim.buffer();
+        return isProcessingFragmentedMessage() ? fragmentedMessageBuffer : bufferClaim.buffer();
     }
 
     private int writeOffset()
     {
-        return bufferClaim.offset();
+        return isProcessingFragmentedMessage() ? FRAGMENTED_MESSAGE_BUFFER_OFFSET : bufferClaim.offset();
     }
 
     private boolean addFields(
@@ -212,7 +281,8 @@ public class PossDupEnabler
         final MutableDirectBuffer claimBuffer,
         final int claimOffset,
         final int totalLengthDelta,
-        final int newBodyLength)
+        final int newBodyLength,
+        final int newLength)
     {
         // Sending time is a required field just before the poss dup field
         final int sendingTimeSrcEnd = possDupFinder.sendingTimeEnd();
@@ -251,7 +321,8 @@ public class PossDupEnabler
 
         updateFrameBodyLength(messageLength, claimBuffer, claimOffset, totalLengthDelta);
         final int messageClaimOffset = srcToClaim(messageOffset, srcOffset, claimOffset);
-        updateBodyLengthAndChecksum(srcOffset, messageClaimOffset, claimBuffer, claimOffset, newBodyLength);
+        updateBodyLengthAndChecksum(
+            srcOffset, messageClaimOffset, claimBuffer, claimOffset, newBodyLength, claimOffset + newLength);
 
         return true;
     }
@@ -282,7 +353,8 @@ public class PossDupEnabler
         final int messageClaimOffset,
         final MutableDirectBuffer claimBuffer,
         final int claimOffset,
-        final int newBodyLength)
+        final int newBodyLength,
+        final int messageEndOffset)
     {
         mutableAsciiFlyweight.wrap(claimBuffer);
 
@@ -299,7 +371,7 @@ public class PossDupEnabler
                 index,
                 mutableAsciiFlyweight,
                 bodyLengthClaimOffset,
-                mutableAsciiFlyweight.capacity() - index);
+                messageEndOffset - index);
         }
         // Max to avoid special casing the prefixing of the field with zeros
         final int lengthOfUpdatedBodyLengthField = Math.max(lengthOfOldBodyLength, lengthOfNewBodyLength);
@@ -309,15 +381,15 @@ public class PossDupEnabler
 
         final int beforeChecksum =
             bodyLengthClaimOffset + lengthOfUpdatedBodyLengthField + newBodyLength;
-        updateChecksum(messageClaimOffset, beforeChecksum);
+        updateChecksum(messageClaimOffset, beforeChecksum, messageEndOffset);
     }
 
-    private void updateChecksum(final int messageClaimOffset, final int beforeChecksum)
+    private void updateChecksum(final int messageClaimOffset, final int beforeChecksum, final int messageEndOffset)
     {
         final int lengthOfSeparator = 1;
         final int checksumEnd = beforeChecksum + lengthOfSeparator;
         final int checksum = mutableAsciiFlyweight.computeChecksum(messageClaimOffset, checksumEnd);
-        final int checksumValueOffset = mutableAsciiFlyweight.capacity() - (CHECKSUM_VALUE_LENGTH + SEPARATOR_LENGTH);
+        final int checksumValueOffset = messageEndOffset - (CHECKSUM_VALUE_LENGTH + SEPARATOR_LENGTH);
         mutableAsciiFlyweight.putNatural(checksumValueOffset, CHECKSUM_VALUE_LENGTH, checksum);
         mutableAsciiFlyweight.putSeparator(checksumValueOffset + CHECKSUM_VALUE_LENGTH);
     }
@@ -336,6 +408,11 @@ public class PossDupEnabler
     private int srcToClaim(final int srcIndexedOffset, final int srcOffset, final int claimOffset)
     {
         return srcIndexedOffset - srcOffset + claimOffset;
+    }
+
+    private boolean isProcessingFragmentedMessage()
+    {
+        return fragmentedMessageLength > 0;
     }
 
     public interface PreCommit

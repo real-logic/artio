@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import io.aeron.driver.Configuration;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
@@ -74,16 +75,7 @@ public class ReplayerTest extends AbstractLogTest
         ArgumentCaptor.forClass(ControlledFragmentHandler.class);
     private Header fragmentHeader = mock(Header.class);
 
-    private Replayer replayer = new Replayer(
-        replayQuery,
-        publication,
-        claim,
-        idleStrategy,
-        errorHandler,
-        MAX_CLAIM_ATTEMPTS,
-        subscription,
-        DEFAULT_NAME_PREFIX,
-        clock);
+    private Replayer replayer;
 
     @Before
     public void setUp()
@@ -91,7 +83,20 @@ public class ReplayerTest extends AbstractLogTest
         when(fragmentHeader.flags()).thenReturn((byte) DataHeaderFlyweight.BEGIN_AND_END_FLAGS);
         when(clock.time()).thenReturn(DATE_TIME_EPOCH_MS);
         when(publication.tryClaim(anyInt(), any())).thenReturn(1L);
+        when(publication.maxPayloadLength()).thenReturn(Configuration.MTU_LENGTH);
         whenReplayQueried().thenReturn(1);
+
+        replayer = new Replayer(
+            replayQuery,
+            publication,
+            claim,
+            idleStrategy,
+            errorHandler,
+            MAX_CLAIM_ATTEMPTS,
+            subscription,
+            DEFAULT_NAME_PREFIX,
+            clock);
+
         verify(publication).maxPayloadLength();
     }
 
@@ -274,8 +279,6 @@ public class ReplayerTest extends AbstractLogTest
 
         onReplay(endSeqNo, ABORT, inv ->
         {
-            System.out.println(handler.getValue());
-
             setupCapturingClaim();
 
             final int srcLength = onExampleMessage(BEGIN_SEQ_NO);
@@ -392,8 +395,6 @@ public class ReplayerTest extends AbstractLogTest
     {
         onReplay(END_SEQ_NO, ABORT, inv ->
         {
-            System.out.println(handler.getValue());
-
             bufferContainsMessage(MESSAGE_REQUIRING_LONGER_BODY_LENGTH);
 
             backpressureTryClaim();

@@ -20,9 +20,9 @@ import java.nio.ByteBuffer;
 /**
  * Modify a ByteBuffer whilst providing better illegal argument exceptions.
  */
-class ByteBufferUtil
+final class ByteBufferUtil
 {
-    public static void position(final ByteBuffer byteBuffer, final int newPosition)
+    static void position(final ByteBuffer byteBuffer, final int newPosition)
     {
         try
         {
@@ -32,6 +32,18 @@ class ByteBufferUtil
         {
             throw new IllegalArgumentException(
                 "limit = " + byteBuffer.limit() + ", position = " + newPosition, e);
+        }
+    }
+
+    static void limit(final ByteBuffer byteBuffer, final int newLimit)
+    {
+        try
+        {
+            byteBuffer.limit(newLimit);
+        }
+        catch (IllegalArgumentException e)
+        {
+            throw new IllegalArgumentException("newLimit = " + newLimit + " capacity = " + byteBuffer.capacity(), e);
         }
     }
 }
