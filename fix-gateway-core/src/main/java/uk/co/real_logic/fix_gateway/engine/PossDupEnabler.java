@@ -47,12 +47,12 @@ import static uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer.SEPARATOR;
 
 public class PossDupEnabler
 {
-    public static final byte[] POSS_DUP_FIELD = "43=Y\001".getBytes(US_ASCII);
+    private static final byte[] POSS_DUP_FIELD = "43=Y\001".getBytes(US_ASCII);
     public static final String ORIG_SENDING_TIME_PREFIX_AS_STR = "122=";
-    public static final byte[] ORIG_SENDING_TIME_PREFIX = ORIG_SENDING_TIME_PREFIX_AS_STR.getBytes(US_ASCII);
+    private static final byte[] ORIG_SENDING_TIME_PREFIX = ORIG_SENDING_TIME_PREFIX_AS_STR.getBytes(US_ASCII);
 
     private static final int CHECKSUM_VALUE_LENGTH = 3;
-    public static final int FRAGMENTED_MESSAGE_BUFFER_OFFSET = 0;
+    private static final int FRAGMENTED_MESSAGE_BUFFER_OFFSET = 0;
 
     private final ExpandableArrayBuffer fragmentedMessageBuffer = new ExpandableArrayBuffer();
     private final PossDupFinder possDupFinder = new PossDupFinder();
@@ -88,6 +88,7 @@ public class PossDupEnabler
         this.maxPayloadLength = maxPayloadLength;
     }
 
+    // Only return abort if genuinely back pressured
     public Action enablePossDupFlag(
         final DirectBuffer srcBuffer,
         final int messageOffset,
@@ -125,13 +126,11 @@ public class PossDupEnabler
                     srcLength,
                     messageOffset,
                     messageLength,
-                    writeBuffer(),
-                    writeOffset(),
                     lengthDelta + lengthOfAddedFields,
                     newBodyLength,
                     newLength))
                 {
-                    commit();
+                    return commit();
                 }
                 else
                 {
@@ -154,13 +153,13 @@ public class PossDupEnabler
 
             try
             {
-                final MutableDirectBuffer claimedBuffer = writeBuffer();
-                final int claimOffset = writeOffset();
-                claimedBuffer.putBytes(claimOffset, srcBuffer, messageOffset, messageLength);
-                setPossDupFlag(possDupSrcOffset, messageOffset, claimOffset, claimedBuffer);
+                final MutableDirectBuffer writeBuffer = writeBuffer();
+                final int writeOffset = writeOffset();
+                writeBuffer.putBytes(writeOffset, srcBuffer, messageOffset, messageLength);
+                setPossDupFlag(possDupSrcOffset, messageOffset, writeOffset, writeBuffer);
                 updateSendingTime(messageOffset);
 
-                commit();
+                return commit();
             }
             catch (Exception e)
             {
@@ -198,7 +197,7 @@ public class PossDupEnabler
         }
     }
 
-    private void commit()
+    private Action commit()
     {
         if (isProcessingFragmentedMessage())
         {
@@ -241,7 +240,8 @@ public class PossDupEnabler
                 }
                 else
                 {
-                    // TODO: ABORT
+                    fragmentedMessageLength = 0;
+                    return ABORT;
                 }
             }
         }
@@ -260,6 +260,8 @@ public class PossDupEnabler
             onPreCommit.onPreCommit(buffer, offset);
             bufferClaim.commit();
         }
+
+        return CONTINUE;
     }
 
     private MutableDirectBuffer writeBuffer()
@@ -278,12 +280,14 @@ public class PossDupEnabler
         final int srcLength,
         final int messageOffset,
         final int messageLength,
-        final MutableDirectBuffer claimBuffer,
-        final int claimOffset,
         final int totalLengthDelta,
         final int newBodyLength,
         final int newLength)
     {
+
+        final MutableDirectBuffer writeBuffer = writeBuffer();
+        final int writeOffset = writeOffset();
+
         // Sending time is a required field just before the poss dup field
         final int sendingTimeSrcEnd = possDupFinder.sendingTimeEnd();
         if (sendingTimeSrcEnd == NO_ENTRY)
@@ -293,36 +297,36 @@ public class PossDupEnabler
 
         // Put messages up to the end of sending time
         final int lengthToPossDup = sendingTimeSrcEnd - srcOffset;
-        claimBuffer.putBytes(claimOffset, srcBuffer, srcOffset, lengthToPossDup);
+        writeBuffer.putBytes(writeOffset, srcBuffer, srcOffset, lengthToPossDup);
 
         // Insert Poss Dup Field
-        final int possDupClaimOffset = claimOffset + lengthToPossDup;
-        claimBuffer.putBytes(possDupClaimOffset, POSS_DUP_FIELD);
+        final int possDupClaimOffset = writeOffset + lengthToPossDup;
+        writeBuffer.putBytes(possDupClaimOffset, POSS_DUP_FIELD);
 
         // Insert Orig Sending Time Field
         final int origSendingTimePrefixClaimOffset = possDupClaimOffset + POSS_DUP_FIELD.length;
-        claimBuffer.putBytes(origSendingTimePrefixClaimOffset, ORIG_SENDING_TIME_PREFIX);
+        writeBuffer.putBytes(origSendingTimePrefixClaimOffset, ORIG_SENDING_TIME_PREFIX);
 
         final int origSendingTimeValueClaimOffset = origSendingTimePrefixClaimOffset + ORIG_SENDING_TIME_PREFIX.length;
         final int sendingTimeOffset = possDupFinder.sendingTimeOffset();
         final int sendingTimeLength = possDupFinder.sendingTimeLength();
-        claimBuffer.putBytes(origSendingTimeValueClaimOffset, srcBuffer, sendingTimeOffset, sendingTimeLength);
+        writeBuffer.putBytes(origSendingTimeValueClaimOffset, srcBuffer, sendingTimeOffset, sendingTimeLength);
 
         final int separatorClaimOffset = origSendingTimeValueClaimOffset + sendingTimeLength;
-        claimBuffer.putByte(separatorClaimOffset, SEPARATOR);
+        writeBuffer.putByte(separatorClaimOffset, SEPARATOR);
 
         // Insert the rest of the message
         final int remainingClaimOffset = separatorClaimOffset + SEPARATOR_LENGTH;
         final int remainingLength = srcLength - lengthToPossDup;
-        claimBuffer.putBytes(remainingClaimOffset, srcBuffer, sendingTimeSrcEnd, remainingLength);
+        writeBuffer.putBytes(remainingClaimOffset, srcBuffer, sendingTimeSrcEnd, remainingLength);
 
         // Update the sending time
         updateSendingTime(srcOffset);
 
-        updateFrameBodyLength(messageLength, claimBuffer, claimOffset, totalLengthDelta);
-        final int messageClaimOffset = srcToClaim(messageOffset, srcOffset, claimOffset);
+        updateFrameBodyLength(messageLength, writeBuffer, writeOffset, totalLengthDelta);
+        final int messageClaimOffset = srcToClaim(messageOffset, srcOffset, writeOffset);
         updateBodyLengthAndChecksum(
-            srcOffset, messageClaimOffset, claimBuffer, claimOffset, newBodyLength, claimOffset + newLength);
+            srcOffset, messageClaimOffset, writeBuffer, writeOffset, newBodyLength, writeOffset + newLength);
 
         return true;
     }
