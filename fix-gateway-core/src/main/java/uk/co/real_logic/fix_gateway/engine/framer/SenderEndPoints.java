@@ -72,55 +72,42 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
     }
 
     Action onReplayMessage(
-        final long sessionId, final DirectBuffer buffer, final int offset, final int length, final long position)
+        final long connectionId, final DirectBuffer buffer, final int offset, final int length, final long position)
     {
-        final SenderEndPoint endPoint = endPointBySessionId(sessionId);
+        final SenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
             return endPoint.onReplayMessage(buffer, offset, length, timeInMs, position);
         }
         else
         {
-            logReplayError(sessionId, buffer, offset, length);
+            logReplayError(connectionId, buffer, offset, length);
 
             return CONTINUE;
         }
     }
 
     Action onSlowReplayMessage(
-        final long sessionId, final DirectBuffer buffer, final int offset, final int length, final long position)
+        final long connectionId, final DirectBuffer buffer, final int offset, final int length, final long position)
     {
-        final SenderEndPoint endPoint = endPointBySessionId(sessionId);
+        final SenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
             return endPoint.onSlowReplayMessage(buffer, offset, length, timeInMs, position);
         }
         else
         {
-            logReplayError(sessionId, buffer, offset, length);
+            logReplayError(connectionId, buffer, offset, length);
 
             return CONTINUE;
         }
     }
 
-    private SenderEndPoint endPointBySessionId(final long sessionId)
-    {
-        for (final SenderEndPoint endPoint : connectionIdToSenderEndpoint.values())
-        {
-            if (endPoint.sessionId() == sessionId)
-            {
-                return endPoint;
-            }
-        }
-
-        return null;
-    }
-
-    private void logReplayError(final long sessionId, final DirectBuffer buffer, final int offset, final int length)
+    private void logReplayError(final long connectionId, final DirectBuffer buffer, final int offset, final int length)
     {
         errorHandler.onError(new IllegalArgumentException(String.format(
-            "Failed to replay message on %1$d [%2$s]",
-            sessionId,
+            "Failed to replay message on conn=%1$d [%2$s]",
+            connectionId,
             buffer.getStringWithoutLengthUtf8(offset, length))));
     }
 

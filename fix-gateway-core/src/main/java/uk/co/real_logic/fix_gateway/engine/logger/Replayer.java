@@ -129,11 +129,19 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         possDupEnabler = new PossDupEnabler(
             bufferClaim,
             this::claimBuffer,
-            (buffer, offset) -> {},
+            this::onPreCommit,
             this::onIllegalState,
             this::onException,
             clock,
             publication.maxPayloadLength());
+    }
+
+    private void onPreCommit(final MutableDirectBuffer buffer, final int offset)
+    {
+        final int frameOffset = offset + MessageHeaderEncoder.ENCODED_LENGTH;
+        fixMessageEncoder
+            .wrap(buffer, frameOffset)
+            .connection(connectionId);
     }
 
     public Action onMessage(

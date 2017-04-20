@@ -288,7 +288,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 final MessageStatus status,
                 final long position)
             {
-                return senderEndPoints.onReplayMessage(sessionId, buffer, offset, length, position);
+                return senderEndPoints.onReplayMessage(connectionId, buffer, offset, length, position);
             }
 
             public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
@@ -313,7 +313,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 final MessageStatus status,
                 final long position)
             {
-                return senderEndPoints.onSlowReplayMessage(sessionId, buffer, offset, length, position);
+                return senderEndPoints.onSlowReplayMessage(connectionId, buffer, offset, length, position);
             }
 
             public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
