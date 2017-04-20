@@ -31,6 +31,7 @@ import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
+import static java.lang.System.lineSeparator;
 import static java.util.stream.Collectors.joining;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -48,7 +49,6 @@ public class ClusterReplicationTest
 {
     private static final int BUFFER_SIZE = 1337;
     private static final int POSITION_AFTER_MESSAGE = BUFFER_SIZE + HEADER_LENGTH;
-    private static final String NEWLINE = System.getProperty("line.separator");
 
     private ExclusiveBufferClaim bufferClaim = new ExclusiveBufferClaim();
     private UnsafeBuffer buffer = new UnsafeBuffer(new byte[BUFFER_SIZE]);
@@ -542,7 +542,7 @@ public class ClusterReplicationTest
                         ourSessionId,
                         position);
                 })
-            .collect(joining(NEWLINE, NEWLINE, NEWLINE));
+            .collect(joining(lineSeparator(), lineSeparator(), lineSeparator()));
     }
 
     private String state(final ClusterAgent agent)
