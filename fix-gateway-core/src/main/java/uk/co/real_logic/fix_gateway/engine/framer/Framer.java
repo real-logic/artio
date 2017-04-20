@@ -1148,6 +1148,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     inboundPublication,
                     errorHandler,
                     correlationId,
+                    connectionId,
                     libraryId,
                     lastReceivedSeqNum,
                     sequenceIndex,

@@ -79,6 +79,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final GatewayPublication inboundPublication;
     private final ErrorHandler errorHandler;
     private final long correlationId;
+    private final long connectionId;
     private final int libraryId;
     private final int lastReceivedSeqNum;
     private final int currentSequenceIndex;
@@ -101,6 +102,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final GatewayPublication inboundPublication,
         final ErrorHandler errorHandler,
         final long correlationId,
+        final long connectionId,
         final int libraryId,
         final int lastReceivedSeqNum,
         final int currentSequenceIndex,
@@ -114,6 +116,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         this.inboundPublication = inboundPublication;
         this.errorHandler = errorHandler;
         this.correlationId = correlationId;
+        this.connectionId = connectionId;
         this.libraryId = libraryId;
         this.lastReceivedSeqNum = lastReceivedSeqNum;
         this.currentSequenceIndex = currentSequenceIndex;
@@ -137,6 +140,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final int frameOffset = offset + MessageHeaderEncoder.ENCODED_LENGTH;
         messageEncoder
             .wrap(buffer, frameOffset)
+            .connection(connectionId)
             .libraryId(libraryId)
             .status(CATCHUP_REPLAY);
     }
