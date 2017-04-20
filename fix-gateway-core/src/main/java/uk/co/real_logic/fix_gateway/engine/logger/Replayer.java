@@ -250,7 +250,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
             actingBlockLength,
             messageHeader.version());
 
-        final int messageOffset = srcOffset + MESSAGE_FRAME_BLOCK_LENGTH; // TODO
+        final int messageOffset = srcOffset + MESSAGE_FRAME_BLOCK_LENGTH;
         final int messageLength = srcLength - MESSAGE_FRAME_BLOCK_LENGTH;
 
         asciiBuffer.wrap(srcBuffer);
