@@ -15,13 +15,17 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import io.aeron.logbuffer.Header;
+import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.stubbing.OngoingStubbing;
@@ -66,6 +70,9 @@ public class ReplayerTest extends AbstractLogTest
     private IdleStrategy idleStrategy = mock(IdleStrategy.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private EpochClock clock = mock(EpochClock.class);
+    private ArgumentCaptor<ControlledFragmentHandler> handler =
+        ArgumentCaptor.forClass(ControlledFragmentHandler.class);
+    private Header fragmentHeader = mock(Header.class);
 
     private Replayer replayer = new Replayer(
         replayQuery,
@@ -81,6 +88,7 @@ public class ReplayerTest extends AbstractLogTest
     @Before
     public void setUp()
     {
+        when(fragmentHeader.flags()).thenReturn((byte) DataHeaderFlyweight.BEGIN_AND_END_FLAGS);
         when(clock.time()).thenReturn(DATE_TIME_EPOCH_MS);
         when(publication.tryClaim(anyInt(), any())).thenReturn(1L);
         whenReplayQueried().thenReturn(1);
@@ -88,7 +96,7 @@ public class ReplayerTest extends AbstractLogTest
 
     private OngoingStubbing<Integer> whenReplayQueried()
     {
-        return when(replayQuery.query(eq(replayer), anyLong(), anyInt(), anyInt(), anyInt(), anyInt()));
+        return when(replayQuery.query(handler.capture(), anyLong(), anyInt(), anyInt(), anyInt(), anyInt()));
     }
 
     @Test
@@ -177,6 +185,8 @@ public class ReplayerTest extends AbstractLogTest
             return 2;
         });
 
+        reset(replayQuery);
+
         claimedAndNothingMore();
 
         shouldGapFillOnceForTwoConsecutiveAdminMessages();
@@ -240,7 +250,7 @@ public class ReplayerTest extends AbstractLogTest
         });
 
         verifyClaim();
-        reset(publication, claim);
+        reset(publication, claim, replayQuery);
 
         onReplay(endSeqNo, inv ->
         {
@@ -263,6 +273,8 @@ public class ReplayerTest extends AbstractLogTest
 
         onReplay(endSeqNo, ABORT, inv ->
         {
+            System.out.println(handler.getValue());
+
             setupCapturingClaim();
 
             final int srcLength = onExampleMessage(BEGIN_SEQ_NO);
@@ -277,7 +289,7 @@ public class ReplayerTest extends AbstractLogTest
         });
 
         verifyClaim();
-        reset(publication, claim);
+        reset(publication, claim, replayQuery);
 
         final int offset = setupCapturingClaim();
 
@@ -379,6 +391,8 @@ public class ReplayerTest extends AbstractLogTest
     {
         onReplay(END_SEQ_NO, ABORT, inv ->
         {
+            System.out.println(handler.getValue());
+
             bufferContainsMessage(MESSAGE_REQUIRING_LONGER_BODY_LENGTH);
 
             backpressureTryClaim();
@@ -391,7 +405,7 @@ public class ReplayerTest extends AbstractLogTest
         });
 
         verifyNoMoreInteractions(publication, claim);
-        reset(publication, claim);
+        reset(publication, claim, replayQuery);
 
         shouldReplayMessageWithExpandingBodyLength();
     }
@@ -506,7 +520,9 @@ public class ReplayerTest extends AbstractLogTest
 
     private void onFragment(final int length, final Action expectedAction)
     {
-        final Action action = replayer.onFragment(buffer, START, length, null);
+        final Action action = handler
+            .getValue()
+            .onFragment(buffer, START, length, fragmentHeader);
         assertEquals(expectedAction, action);
     }
 
@@ -594,7 +610,8 @@ public class ReplayerTest extends AbstractLogTest
 
     private void verifyQueriedService(final int endSeqNo)
     {
-        verify(replayQuery).query(replayer, SESSION_ID, BEGIN_SEQ_NO, SEQUENCE_INDEX, endSeqNo, SEQUENCE_INDEX);
+        verify(replayQuery).query(
+            any(), eq(SESSION_ID), eq(BEGIN_SEQ_NO), eq(SEQUENCE_INDEX), eq(endSeqNo), eq(SEQUENCE_INDEX));
     }
 
     private void assertResultBufferHasSetPossDupFlagAndSendingTimeUpdates()

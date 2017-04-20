@@ -59,8 +59,6 @@ import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static java.lang.Integer.min;
 import static java.lang.Integer.numberOfTrailingZeros;
 import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
-import static org.agrona.BitUtil.SIZE_OF_INT;
-import static org.agrona.BitUtil.findNextPositivePowerOfTwo;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;

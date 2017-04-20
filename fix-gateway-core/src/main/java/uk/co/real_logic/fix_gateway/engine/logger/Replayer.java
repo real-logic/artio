@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import io.aeron.ControlledFragmentAssembler;
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ExclusiveBufferClaim;
@@ -85,6 +86,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     private final ExclusiveBufferClaim bufferClaim;
     private final PossDupEnabler possDupEnabler;
     private final ProtocolSubscription protocolSubscription = ProtocolSubscription.of(this);
+    private final ControlledFragmentAssembler assembler = new ControlledFragmentAssembler(this);
 
     private final ReplayQuery replayQuery;
     private final ExclusivePublication publication;
@@ -187,7 +189,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
             backpressured = false;
             final int count = replayQuery.query(
-                this,
+                assembler,
                 sessionId,
                 beginSeqNo,
                 sequenceIndex,
