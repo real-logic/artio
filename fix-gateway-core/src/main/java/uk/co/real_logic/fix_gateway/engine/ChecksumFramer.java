@@ -86,9 +86,8 @@ public class ChecksumFramer extends SectorFramer
             }
             else
             {
-                inMemoryByteBuffer
-                    .limit(sectorStart + SECTOR_DATA_LENGTH)
-                    .position(sectorStart);
+                ByteBufferUtil.limit(inMemoryByteBuffer, sectorStart + SECTOR_DATA_LENGTH);
+                ByteBufferUtil.position(inMemoryByteBuffer, sectorStart);
                 crc32.update(inMemoryByteBuffer);
             }
             final int sectorChecksum = (int) crc32.getValue();

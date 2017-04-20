@@ -20,6 +20,7 @@ import uk.co.real_logic.fix_gateway.builder.HeaderEncoder;
 import uk.co.real_logic.fix_gateway.builder.LogonEncoder;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
+import uk.co.real_logic.fix_gateway.engine.ByteBufferUtil;
 import uk.co.real_logic.fix_gateway.fields.UtcTimestampEncoder;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
@@ -100,8 +101,8 @@ public abstract class AbstractBenchmarkClient
         final int offset = Encoder.offset(result);
         final int length = Encoder.length(result);
 
-        writeBuffer.position(offset);
-        writeBuffer.limit(offset + length);
+        ByteBufferUtil.position(writeBuffer, offset);
+        ByteBufferUtil.limit(writeBuffer, offset + length);
         int remaining = length;
         do
         {

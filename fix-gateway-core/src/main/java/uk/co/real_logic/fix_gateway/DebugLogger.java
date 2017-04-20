@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway;
 
 
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.fix_gateway.engine.ByteBufferUtil;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.sbe_util.MessageDumper;
 import uk.co.real_logic.fix_gateway.sbe_util.MessageSchemaIr;
@@ -145,9 +146,9 @@ public final class DebugLogger
         {
             final byte[] data = new byte[length];
             final int originalPosition = byteBuffer.position();
-            byteBuffer.position(originalPosition - length);
+            ByteBufferUtil.position(byteBuffer, originalPosition - length);
             byteBuffer.get(data);
-            byteBuffer.position(originalPosition);
+            ByteBufferUtil.position(byteBuffer, originalPosition);
 
             printf(formatString, new String(data, US_ASCII));
         }

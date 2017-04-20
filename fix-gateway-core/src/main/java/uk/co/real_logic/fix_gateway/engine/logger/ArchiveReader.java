@@ -24,6 +24,7 @@ import org.agrona.IoUtil;
 import org.agrona.collections.Int2ObjectCache;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.engine.ByteBufferUtil;
 import uk.co.real_logic.fix_gateway.replication.ReservedValue;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import uk.co.real_logic.fix_gateway.storage.messages.ArchiveMetaDataDecoder;
@@ -273,7 +274,8 @@ public class ArchiveReader implements AutoCloseable
             final ByteBuffer byteBuffer = buffer.byteBuffer();
             final int bodyLength = Math.max(0, frameLength - HEADER_LENGTH);
             final int limit = messageOffset + bodyLength;
-            byteBuffer.limit(limit).position(messageOffset);
+            ByteBufferUtil.limit(byteBuffer, limit);
+            ByteBufferUtil.position(byteBuffer, messageOffset);
 
             checksum.reset();
             checksum.update(byteBuffer);

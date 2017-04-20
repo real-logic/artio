@@ -13,16 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.fix_gateway.engine.framer;
+package uk.co.real_logic.fix_gateway.engine;
 
 import java.nio.ByteBuffer;
 
 /**
  * Modify a ByteBuffer whilst providing better illegal argument exceptions.
  */
-final class ByteBufferUtil
+public final class ByteBufferUtil
 {
-    static void position(final ByteBuffer byteBuffer, final int newPosition)
+    public static void position(final ByteBuffer byteBuffer, final int newPosition)
     {
         try
         {
@@ -35,7 +35,7 @@ final class ByteBufferUtil
         }
     }
 
-    static void limit(final ByteBuffer byteBuffer, final int newLimit)
+    public static void limit(final ByteBuffer byteBuffer, final int newLimit)
     {
         try
         {

@@ -22,6 +22,7 @@ import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
+import uk.co.real_logic.fix_gateway.engine.ByteBufferUtil;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
 import uk.co.real_logic.fix_gateway.engine.SectorFramer;
 import uk.co.real_logic.fix_gateway.engine.logger.LoggerUtil;
@@ -192,7 +193,9 @@ public class SessionContexts
             final int nextSectorEnd = sectorEnd + SECTOR_SIZE;
             final int nextChecksum = nextSectorEnd - CHECKSUM_SIZE;
             crc32.reset();
-            byteBuffer.clear().position(sectorEnd).limit(nextChecksum);
+            byteBuffer.clear();
+            ByteBufferUtil.position(byteBuffer, sectorEnd);
+            ByteBufferUtil.limit(byteBuffer, nextChecksum);
             crc32.update(byteBuffer);
             final int calculatedChecksum = (int)crc32.getValue();
             final int savedChecksum = buffer.getInt(nextChecksum);
@@ -281,7 +284,9 @@ public class SessionContexts
     private void updateChecksum(final int start, final int checksumOffset)
     {
         final int endOfData = checksumOffset;
-        byteBuffer.clear().position(start).limit(endOfData);
+        byteBuffer.clear();
+        ByteBufferUtil.position(byteBuffer, start);
+        ByteBufferUtil.limit(byteBuffer, endOfData);
         crc32.reset();
         crc32.update(byteBuffer);
         final int checksumValue = (int)crc32.getValue();

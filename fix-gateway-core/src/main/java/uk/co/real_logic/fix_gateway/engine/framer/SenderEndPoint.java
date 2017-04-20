@@ -21,6 +21,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.engine.ByteBufferUtil;
 import uk.co.real_logic.fix_gateway.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
@@ -180,7 +181,7 @@ class SenderEndPoint implements AutoCloseable
             buffer = ByteBuffer.wrap(directBuffer.byteArray());
         }
         ByteBufferUtil.limit(buffer, wrapAdjustment + offset + length);
-        buffer.position(wrapAdjustment + offset);
+        ByteBufferUtil.position(buffer, wrapAdjustment + offset);
 
         final int written = channel.write(buffer);
         DebugLogger.log(FIX_MESSAGE, "Written  %s%n", buffer, written);
@@ -322,7 +323,7 @@ class SenderEndPoint implements AutoCloseable
             final ByteBuffer buffer = directBuffer.byteBuffer();
 
             final int wrapAdjustment = directBuffer.wrapAdjustment();
-            buffer.limit(wrapAdjustment + dataOffset + remainingLength);
+            ByteBufferUtil.limit(buffer, wrapAdjustment + dataOffset + remainingLength);
             ByteBufferUtil.position(buffer, wrapAdjustment + dataOffset);
 
             final int written = channel.write(buffer);

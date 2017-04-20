@@ -23,6 +23,7 @@ import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
+import uk.co.real_logic.fix_gateway.engine.ByteBufferUtil;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
@@ -485,7 +486,7 @@ class ReceiverEndPoint
         usedBufferData -= offset;
         buffer.putBytes(0, buffer, offset, usedBufferData);
         // position set to ensure that back pressure is applied to TCP when read(byteBuffer) called.
-        byteBuffer.position(usedBufferData);
+        ByteBufferUtil.position(byteBuffer, usedBufferData);
     }
 
     private void invalidateMessage(final int offset)

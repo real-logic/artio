@@ -26,6 +26,7 @@ import org.agrona.collections.Int2ObjectCache;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.fix_gateway.engine.ByteBufferUtil;
 import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
 import uk.co.real_logic.fix_gateway.replication.ReservedValue;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
@@ -306,9 +307,8 @@ public class Archiver implements Agent, RawBlockHandler
                         throw new IllegalArgumentException(
                             String.format("%d is > than %d or < 0", messageOffset, limit));
                     }
-                    byteBuffer
-                        .limit(limit + wrapAdjustment)
-                        .position(messageOffset + wrapAdjustment);
+                    ByteBufferUtil.limit(byteBuffer, limit + wrapAdjustment);
+                    ByteBufferUtil.position(byteBuffer, messageOffset + wrapAdjustment);
 
                     checksum.update(byteBuffer);
                 }
@@ -430,12 +430,14 @@ public class Archiver implements Agent, RawBlockHandler
             {
                 // Update Checksum
                 final int limit = readOffset + bodyLength;
-                byteBuffer.limit(limit).position(messageOffset);
+                ByteBufferUtil.limit(byteBuffer, limit);
+                ByteBufferUtil.position(byteBuffer, messageOffset);
                 checksum.update(byteBuffer);
                 writeChecksum(header);
 
                 // Write patch
-                byteBuffer.limit(limit).position(readOffset);
+                ByteBufferUtil.limit(byteBuffer, limit);
+                ByteBufferUtil.position(byteBuffer, readOffset);
                 while (byteBuffer.remaining() > 0)
                 {
                     termWriteOffset += patchTermLogChannel.write(byteBuffer, termWriteOffset);

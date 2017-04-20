@@ -21,6 +21,7 @@ import org.agrona.IoUtil;
 import org.agrona.LangUtil;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.concurrent.BackoffIdleStrategy;
+import uk.co.real_logic.fix_gateway.engine.ByteBufferUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -106,7 +107,7 @@ public class HistogramLogReader implements AutoCloseable
         {
             final int previousPosition = buffer.position();
             map(size);
-            buffer.position(previousPosition);
+            ByteBufferUtil.position(buffer, previousPosition);
         }
     }
 
