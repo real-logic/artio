@@ -127,11 +127,13 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         this.agentNamePrefix = agentNamePrefix;
 
         possDupEnabler = new PossDupEnabler(
-            bufferClaim, this::claimBuffer, this::nothing, this::onIllegalState, this::onException, clock);
-    }
-
-    private void nothing()
-    {
+            bufferClaim,
+            this::claimBuffer,
+            (buffer, offset) -> {},
+            this::onIllegalState,
+            this::onException,
+            clock,
+            publication.maxPayloadLength());
     }
 
     public Action onMessage(

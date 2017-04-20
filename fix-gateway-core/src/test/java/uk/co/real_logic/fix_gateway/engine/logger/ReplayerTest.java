@@ -92,6 +92,7 @@ public class ReplayerTest extends AbstractLogTest
         when(clock.time()).thenReturn(DATE_TIME_EPOCH_MS);
         when(publication.tryClaim(anyInt(), any())).thenReturn(1L);
         whenReplayQueried().thenReturn(1);
+        verify(publication).maxPayloadLength();
     }
 
     private OngoingStubbing<Integer> whenReplayQueried()

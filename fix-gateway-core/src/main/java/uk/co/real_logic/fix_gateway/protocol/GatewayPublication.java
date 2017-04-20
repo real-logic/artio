@@ -1056,4 +1056,9 @@ public class GatewayPublication extends ClaimablePublication
 
         return host.getBytes(UTF_8);
     }
+
+    public int maxPayloadLength()
+    {
+        return maxPayloadLength;
+    }
 }

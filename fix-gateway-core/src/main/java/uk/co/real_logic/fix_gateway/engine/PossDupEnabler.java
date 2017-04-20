@@ -19,6 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
+import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -50,6 +51,7 @@ public class PossDupEnabler
 
     private static final int CHECKSUM_VALUE_LENGTH = 3;
 
+    private final ExpandableArrayBuffer expandableArrayBuffer = new ExpandableArrayBuffer();
     private final PossDupFinder possDupFinder = new PossDupFinder();
     private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
     private final MutableAsciiBuffer mutableAsciiFlyweight = new MutableAsciiBuffer();
@@ -57,18 +59,20 @@ public class PossDupEnabler
 
     private final ExclusiveBufferClaim bufferClaim;
     private final IntPredicate claimer;
-    private final Runnable onPreCommit;
+    private final PreCommit onPreCommit;
     private final Consumer<String> onIllegalStateFunc;
     private final ErrorHandler errorHandler;
     private final EpochClock clock;
+    private final int maxPayloadLength;
 
     public PossDupEnabler(
         final ExclusiveBufferClaim bufferClaim,
         final IntPredicate claimer,
-        final Runnable onPreCommit,
+        final PreCommit onPreCommit,
         final Consumer<String> onIllegalStateFunc,
         final ErrorHandler errorHandler,
-        final EpochClock clock)
+        final EpochClock clock,
+        final int maxPayloadLength)
     {
         this.bufferClaim = bufferClaim;
         this.claimer = claimer;
@@ -76,6 +80,7 @@ public class PossDupEnabler
         this.onIllegalStateFunc = onIllegalStateFunc;
         this.errorHandler = errorHandler;
         this.clock = clock;
+        this.maxPayloadLength = maxPayloadLength;
     }
 
     public Action enablePossDupFlag(
@@ -102,7 +107,7 @@ public class PossDupEnabler
             final int lengthDelta = Math.max(0, lengthOfNewBodyLength - lengthOfOldBodyLength);
             newLength += lengthDelta;
 
-            if (!claimer.test(newLength))
+            if (!claim(newLength))
             {
                 return ABORT;
             }
@@ -115,8 +120,8 @@ public class PossDupEnabler
                     srcLength,
                     messageOffset,
                     messageLength,
-                    claimedBuffer(),
-                    claimOffset(),
+                    writeBuffer(),
+                    writeOffset(),
                     lengthDelta + lengthOfAddedFields,
                     newBodyLength))
                 {
@@ -125,27 +130,27 @@ public class PossDupEnabler
                 else
                 {
                     onIllegalStateFunc.accept("[%s] Missing sending time field in resend request");
-                    bufferClaim.abort();
+                    abort();
                 }
             }
             catch (final Exception e)
             {
                 e.printStackTrace();
-                bufferClaim.abort();
+                abort();
                 errorHandler.onError(e);
             }
         }
         else
         {
-            if (!claimer.test(srcLength))
+            if (!claim(srcLength))
             {
                 return ABORT;
             }
 
             try
             {
-                final MutableDirectBuffer claimedBuffer = claimedBuffer();
-                final int claimOffset = claimOffset();
+                final MutableDirectBuffer claimedBuffer = writeBuffer();
+                final int claimOffset = writeOffset();
                 claimedBuffer.putBytes(claimOffset, srcBuffer, messageOffset, messageLength);
                 setPossDupFlag(possDupSrcOffset, messageOffset, claimOffset, claimedBuffer);
                 updateSendingTime(messageOffset);
@@ -154,7 +159,7 @@ public class PossDupEnabler
             }
             catch (Exception e)
             {
-                bufferClaim.abort();
+                abort();
                 errorHandler.onError(e);
             }
         }
@@ -162,25 +167,38 @@ public class PossDupEnabler
         return CONTINUE;
     }
 
+    private void abort()
+    {
+        bufferClaim.abort();
+    }
+
+    private boolean claim(final int newLength)
+    {
+        return claimer.test(newLength);
+    }
+
     private void commit()
     {
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
         DebugLogger.log(
             CATCHUP,
             "Resending: %s%n",
-            bufferClaim.buffer(),
-            bufferClaim.offset() + FRAME_LENGTH,
+            buffer,
+            offset + FRAME_LENGTH,
             bufferClaim.length() - FRAME_LENGTH);
 
-        onPreCommit.run();
+        onPreCommit.onPreCommit(buffer, offset);
         bufferClaim.commit();
     }
 
-    private MutableDirectBuffer claimedBuffer()
+    private MutableDirectBuffer writeBuffer()
     {
         return bufferClaim.buffer();
     }
 
-    private int claimOffset()
+    private int writeOffset()
     {
         return bufferClaim.offset();
     }
@@ -240,8 +258,8 @@ public class PossDupEnabler
 
     private void updateSendingTime(final int srcOffset)
     {
-        final MutableDirectBuffer claimBuffer = claimedBuffer();
-        final int claimOffset = claimOffset();
+        final MutableDirectBuffer claimBuffer = writeBuffer();
+        final int claimOffset = writeOffset();
         final int sendingTimeOffset = possDupFinder.sendingTimeOffset();
         final int sendingTimeLength = possDupFinder.sendingTimeLength();
 
@@ -318,5 +336,10 @@ public class PossDupEnabler
     private int srcToClaim(final int srcIndexedOffset, final int srcOffset, final int claimOffset)
     {
         return srcIndexedOffset - srcOffset + claimOffset;
+    }
+
+    public interface PreCommit
+    {
+        void onPreCommit(MutableDirectBuffer buffer, int offset);
     }
 }

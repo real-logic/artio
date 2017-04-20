@@ -21,6 +21,7 @@ import io.aeron.logbuffer.ExclusiveBufferClaim;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
+import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.builder.Encoder;
@@ -122,14 +123,20 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         this.catchupEndTimeInMs = clock.time() + catchupTimeout;
 
         possDupEnabler = new PossDupEnabler(
-            bufferClaim, this::claimBuffer, this::onPreCommit, this::onIllegalState, errorHandler, clock);
+            bufferClaim,
+            this::claimBuffer,
+            this::onPreCommit,
+            this::onIllegalState,
+            errorHandler,
+            clock,
+            inboundPublication.maxPayloadLength());
     }
 
-    private void onPreCommit()
+    private void onPreCommit(final MutableDirectBuffer buffer, final int offset)
     {
-        final int frameOffset = bufferClaim.offset() + MessageHeaderEncoder.ENCODED_LENGTH;
+        final int frameOffset = offset + MessageHeaderEncoder.ENCODED_LENGTH;
         messageEncoder
-            .wrap(bufferClaim.buffer(), frameOffset)
+            .wrap(buffer, frameOffset)
             .libraryId(libraryId)
             .status(CATCHUP_REPLAY);
     }
