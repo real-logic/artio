@@ -131,8 +131,8 @@ public final class LatencyUnderLoadBenchmarkClient extends AbstractBenchmarkClie
 
     private long getPauseInNs()
     {
-        final double nanosInSecond = TimeUnit.SECONDS.toNanos(1);
-        return (long) (nanosInSecond / (double) SEND_RATE_PER_SECOND);
+        final double nsPerSecond = TimeUnit.SECONDS.toNanos(1);
+        return (long)(nsPerSecond / (double)SEND_RATE_PER_SECOND);
     }
 
     private void await()
@@ -141,9 +141,9 @@ public final class LatencyUnderLoadBenchmarkClient extends AbstractBenchmarkClie
         {
             barrier.await();
         }
-        catch (InterruptedException | BrokenBarrierException e)
+        catch (final InterruptedException | BrokenBarrierException ex)
         {
-            LangUtil.rethrowUnchecked(e);
+            LangUtil.rethrowUnchecked(ex);
         }
     }
 }

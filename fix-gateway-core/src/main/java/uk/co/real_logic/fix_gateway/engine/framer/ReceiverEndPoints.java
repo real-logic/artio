@@ -71,9 +71,9 @@ class ReceiverEndPoints extends TransportPoller
         {
             selector.selectNow();
         }
-        catch (IOException e)
+        catch (final IOException ex)
         {
-            LangUtil.rethrowUnchecked(e);
+            LangUtil.rethrowUnchecked(ex);
         }
     }
 

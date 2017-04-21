@@ -228,7 +228,6 @@ public class FramerTest
         aClientConnects();
 
         awaitEndpointCreation();
-
     }
 
     private void awaitEndpointCreation()
@@ -321,9 +320,9 @@ public class FramerTest
         {
             framer.doWork();
         }
-        catch (Exception e)
+        catch (final Exception ex)
         {
-            LangUtil.rethrowUnchecked(e);
+            LangUtil.rethrowUnchecked(ex);
         }
     }
 

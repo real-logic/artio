@@ -43,9 +43,9 @@ public final class ConstantlyRestartingLibrary
                     {
                         Thread.sleep(libraryConfiguration.replyTimeoutInMs() * 2);
                     }
-                    catch (InterruptedException e)
+                    catch (final InterruptedException ex)
                     {
-                        e.printStackTrace();
+                        ex.printStackTrace();
                     }
 
                     System.out.println("Finishing sleeping");
