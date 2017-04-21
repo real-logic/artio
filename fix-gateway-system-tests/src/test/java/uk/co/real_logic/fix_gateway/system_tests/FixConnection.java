@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
+import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.builder.*;
@@ -57,10 +58,11 @@ class FixConnection implements AutoCloseable
     {
         setupHeader(logon.header(), timestamp);
 
-        logon.resetSeqNumFlag(true)
-             .encryptMethod(0)
-             .heartBtInt(30)
-             .maxMessageSize(9999);
+        logon
+            .resetSeqNumFlag(true)
+            .encryptMethod(0)
+            .heartBtInt(30)
+            .maxMessageSize(9999);
 
         send(logon);
     }
@@ -101,9 +103,9 @@ class FixConnection implements AutoCloseable
             DebugLogger.log(FIX_TEST, "< [" + asciiBuffer.getAscii(OFFSET, read) + "]");
             decoder.decode(asciiBuffer, OFFSET, read);
         }
-        catch (IOException e)
+        catch (final IOException ex)
         {
-            LangUtil.rethrowUnchecked(e);
+            LangUtil.rethrowUnchecked(ex);
         }
     }
 
@@ -121,21 +123,14 @@ class FixConnection implements AutoCloseable
             DebugLogger.log(FIX_TEST, "> [" + writeAsciiBuffer.getAscii(OFFSET, length) + "]");
             writeBuffer.clear();
         }
-        catch (IOException e)
+        catch (final IOException ex)
         {
-            LangUtil.rethrowUnchecked(e);
+            LangUtil.rethrowUnchecked(ex);
         }
     }
 
     public void close()
     {
-        try
-        {
-            socket.close();
-        }
-        catch (IOException e)
-        {
-            LangUtil.rethrowUnchecked(e);
-        }
+        CloseHelper.close(socket);
     }
 }

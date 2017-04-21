@@ -36,8 +36,7 @@ class HistogramLogWriter implements HistogramHandler
     private final ByteBuffer buffer;
     private final ErrorHandler errorHandler;
 
-    HistogramLogWriter(
-        final int numberOfTimers, final String logFile, final ErrorHandler errorHandler)
+    HistogramLogWriter(final int numberOfTimers, final String logFile, final ErrorHandler errorHandler)
     {
         this.errorHandler = errorHandler;
         buffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
@@ -81,9 +80,9 @@ class HistogramLogWriter implements HistogramHandler
         {
             return FileChannel.open(Paths.get(logFile), WRITE, CREATE, TRUNCATE_EXISTING);
         }
-        catch (IOException e)
+        catch (final IOException ex)
         {
-            LangUtil.rethrowUnchecked(e);
+            LangUtil.rethrowUnchecked(ex);
             return null;
         }
     }
@@ -96,9 +95,9 @@ class HistogramLogWriter implements HistogramHandler
             logFile.write(buffer);
             logFile.force(true);
         }
-        catch (final IOException e)
+        catch (final IOException ex)
         {
-            errorHandler.onError(e);
+            errorHandler.onError(ex);
         }
     }
 
@@ -108,7 +107,7 @@ class HistogramLogWriter implements HistogramHandler
         {
             logFile.force(true);
         }
-        catch (IOException ex)
+        catch (final IOException ex)
         {
             errorHandler.onError(ex);
         }

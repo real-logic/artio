@@ -112,7 +112,7 @@ public final class CustomMatchers
                     {
                         method = aClass.getDeclaredMethod(name);
                     }
-                    catch (NoSuchMethodException e)
+                    catch (final NoSuchMethodException ignore)
                     {
                         method = aClass.getMethod(name);
                     }
@@ -120,10 +120,10 @@ public final class CustomMatchers
                     final Object value = method.invoke(item);
                     return valueMatcher.matches(value);
                 }
-                catch (final IllegalAccessException | InvocationTargetException | NoSuchMethodException e)
+                catch (final IllegalAccessException | InvocationTargetException | NoSuchMethodException ex)
                 {
-                    e.printStackTrace();
-                    error = e.getMessage();
+                    ex.printStackTrace();
+                    error = ex.getMessage();
                     return false;
                 }
             }

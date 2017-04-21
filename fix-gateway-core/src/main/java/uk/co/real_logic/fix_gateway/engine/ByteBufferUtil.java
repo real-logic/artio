@@ -28,10 +28,10 @@ public final class ByteBufferUtil
         {
             byteBuffer.position(newPosition);
         }
-        catch (IllegalArgumentException e)
+        catch (final IllegalArgumentException ex)
         {
             throw new IllegalArgumentException(
-                "limit = " + byteBuffer.limit() + ", position = " + newPosition, e);
+                "limit = " + byteBuffer.limit() + ", position = " + newPosition, ex);
         }
     }
 
@@ -41,9 +41,9 @@ public final class ByteBufferUtil
         {
             byteBuffer.limit(newLimit);
         }
-        catch (IllegalArgumentException e)
+        catch (final IllegalArgumentException ex)
         {
-            throw new IllegalArgumentException("newLimit = " + newLimit + " capacity = " + byteBuffer.capacity(), e);
+            throw new IllegalArgumentException("newLimit = " + newLimit + " capacity = " + byteBuffer.capacity(), ex);
         }
     }
 }

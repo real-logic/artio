@@ -70,9 +70,9 @@ public final class Exceptions
                 {
                     closeable.close();
                 }
-                catch (final Exception e)
+                catch (final Exception ex)
                 {
-                    exceptions.add(e);
+                    exceptions.add(ex);
                 }
             }
         }
@@ -117,9 +117,9 @@ public final class Exceptions
         {
             throw new Exception();
         }
-        catch (Exception e)
+        catch (final Exception ex)
         {
-            e.printStackTrace(System.out);
+            ex.printStackTrace(System.out);
         }
     }
 

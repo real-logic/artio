@@ -54,9 +54,9 @@ public final class DebugLogger
             {
                 output = new PrintStream(new FileOutputStream(DEBUG_FILE));
             }
-            catch (IOException e)
+            catch (final IOException ex)
             {
-                e.printStackTrace();
+                ex.printStackTrace();
                 System.exit(-1);
             }
             finally

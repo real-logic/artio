@@ -121,14 +121,14 @@ public class PossDupEnabler
             try
             {
                 if (addFields(
-                    srcBuffer,
-                    srcOffset,
-                    srcLength,
-                    messageOffset,
-                    messageLength,
-                    lengthDelta + lengthOfAddedFields,
-                    newBodyLength,
-                    newLength))
+                        srcBuffer,
+                        srcOffset,
+                        srcLength,
+                        messageOffset,
+                        messageLength,
+                        lengthDelta + lengthOfAddedFields,
+                        newBodyLength,
+                        newLength))
                 {
                     return commit();
                 }
@@ -138,10 +138,10 @@ public class PossDupEnabler
                     abort();
                 }
             }
-            catch (final Exception e)
+            catch (final Exception ex)
             {
                 abort();
-                errorHandler.onError(e);
+                errorHandler.onError(ex);
             }
         }
         else
@@ -161,10 +161,10 @@ public class PossDupEnabler
 
                 return commit();
             }
-            catch (Exception e)
+            catch (final Exception ex)
             {
                 abort();
-                errorHandler.onError(e);
+                errorHandler.onError(ex);
             }
         }
 
@@ -218,15 +218,15 @@ public class PossDupEnabler
                 {
                     if (fragmentOffset == FRAGMENTED_MESSAGE_BUFFER_OFFSET)
                     {
-                        bufferClaim.flags((byte) BEGIN_FLAG);
+                        bufferClaim.flags((byte)BEGIN_FLAG);
                     }
                     else if (fragmentedMessageLength == fragmentLength)
                     {
-                        bufferClaim.flags((byte) END_FLAG);
+                        bufferClaim.flags((byte)END_FLAG);
                     }
                     else
                     {
-                        bufferClaim.flags((byte) 0);
+                        bufferClaim.flags((byte)0);
                     }
 
                     final MutableDirectBuffer destBuffer = bufferClaim.buffer();
@@ -348,7 +348,7 @@ public class PossDupEnabler
     {
         final int frameBodyLengthOffset =
             claimOffset + MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH;
-        final short frameBodyLength = (short) (messageLength + lengthDelta);
+        final short frameBodyLength = (short)(messageLength + lengthDelta);
         claimBuffer.putShort(frameBodyLengthOffset, frameBodyLength, LITTLE_ENDIAN);
     }
 

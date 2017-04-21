@@ -113,9 +113,9 @@ final class StressUtil
         {
             System.in.read();
         }
-        catch (IOException e)
+        catch (final IOException ex)
         {
-            e.printStackTrace();
+            ex.printStackTrace();
         }
     }
 

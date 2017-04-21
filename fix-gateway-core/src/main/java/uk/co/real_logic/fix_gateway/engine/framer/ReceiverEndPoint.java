@@ -213,6 +213,7 @@ class ReceiverEndPoint
         {
             onDisconnectDetected();
         }
+
         return dataRead;
     }
 
@@ -352,6 +353,7 @@ class ReceiverEndPoint
                 }
                 close(DisconnectReason.DUPLICATE_SESSION);
                 removeEndpointFromFramer();
+
                 return true;
             }
             else
@@ -413,6 +415,7 @@ class ReceiverEndPoint
         {
             moveRemainingDataToBufferStart(offset);
         }
+
         return backPressured;
     }
 
@@ -475,7 +478,7 @@ class ReceiverEndPoint
             return buffer.getDigit(offset + COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD ||
                    buffer.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
         }
-        catch (IllegalArgumentException e)
+        catch (final IllegalArgumentException ex)
         {
             return false;
         }
@@ -564,9 +567,9 @@ class ReceiverEndPoint
             channel.close();
             messagesRead.close();
         }
-        catch (Exception e)
+        catch (final Exception ex)
         {
-            errorHandler.onError(e);
+            errorHandler.onError(ex);
         }
     }
 
