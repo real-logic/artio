@@ -201,7 +201,7 @@ public class Archiver implements Agent, RawBlockHandler
                 final long currentPosition = image.position();
                 final long completedPosition = completedPositions.get(aeronSessionId);
                 int toPoll = (int) (completedPosition - currentPosition);
-                while (toPoll > 0)
+                while (toPoll > 0 && !image.isClosed())
                 {
                     toPoll -= image.rawPoll(this, toPoll);
 
