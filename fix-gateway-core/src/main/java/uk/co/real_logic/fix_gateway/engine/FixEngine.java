@@ -47,7 +47,7 @@ public final class FixEngine extends GatewayProcess
 {
     public static final int ENGINE_LIBRARY_ID = 0;
 
-    private final EngineTimers timers = new EngineTimers();
+    private final EngineTimers timers;
     private final EngineConfiguration configuration;
     private final EngineDescriptorStore engineDescriptorStore;
 
@@ -107,6 +107,7 @@ public final class FixEngine extends GatewayProcess
     {
         try
         {
+            timers = new EngineTimers(configuration.timerClock());
             init(configuration);
             this.configuration = configuration;
             scheduler = configuration.scheduler();

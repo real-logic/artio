@@ -19,6 +19,8 @@ import io.aeron.Aeron;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.NanoClock;
+import org.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.session.SessionCustomisationStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.timing.HistogramHandler;
@@ -114,6 +116,7 @@ public class CommonConfiguration
 
     private long reasonableTransmissionTimeInMs = DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
     private boolean printAeronStreamIdentifiers = DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS;
+    private NanoClock timerClock = new SystemNanoClock();
 
     public static void validateTimeout(final long timeoutInMs)
     {
@@ -462,6 +465,18 @@ public class CommonConfiguration
         return this;
     }
 
+    /**
+     * Sets the clock to be used for recording timestamping messages.
+     *
+     * @param timerClock the clock to be used for recording timestamping messages.
+     * @return this
+     */
+    public CommonConfiguration timerClock(final NanoClock timerClock)
+    {
+        this.timerClock = timerClock;
+        return this;
+    }
+
     public Aeron.Context aeronContext()
     {
         return aeronContext;
@@ -604,5 +619,10 @@ public class CommonConfiguration
     public static IdleStrategy backoffIdleStrategy()
     {
         return new BackoffIdleStrategy(BACKOFF_SPINS, BACKOFF_YIELDS, 1, 1 << 20);
+    }
+
+    public NanoClock timerClock()
+    {
+        return timerClock;
     }
 }

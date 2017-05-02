@@ -376,7 +376,7 @@ public class LibraryPollerTest
                 .libraryAeronChannels(libraryAeronChannels)
                 .sessionAcquireHandler(sessionAcquireHandler)
                 .libraryConnectHandler(connectHandler),
-            new LibraryTimers(),
+            new LibraryTimers(clock::time),
             counters,
             transport,
             fixLibrary,

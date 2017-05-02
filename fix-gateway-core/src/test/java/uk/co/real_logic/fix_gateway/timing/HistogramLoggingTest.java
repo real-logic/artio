@@ -56,7 +56,7 @@ public class HistogramLoggingTest
         when(clock.time()).thenReturn(110L, 220L, 330L, 440L);
 
         file = File.createTempFile("histogram", "tmp");
-        timer = new Timer(NAME, 1);
+        timer = new Timer(clock::time, NAME, 1);
         writer = new HistogramLogAgent(
             Collections.singletonList(timer),
             file.getAbsolutePath(),

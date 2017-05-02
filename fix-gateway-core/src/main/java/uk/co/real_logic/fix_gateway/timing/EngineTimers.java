@@ -15,14 +15,23 @@
  */
 package uk.co.real_logic.fix_gateway.timing;
 
+import org.agrona.concurrent.NanoClock;
+
 import java.util.Arrays;
 import java.util.List;
 
 public class EngineTimers
 {
-    private final Timer outboundTimer = new Timer("Outbound", 1);
-    private final Timer sendTimer = new Timer("Send", 2);
-    private final List<Timer> timers = Arrays.asList(outboundTimer, sendTimer);
+    private final Timer outboundTimer;
+    private final Timer sendTimer;
+    private final List<Timer> timers;
+
+    public EngineTimers(final NanoClock clock)
+    {
+        outboundTimer = new Timer(clock, "Outbound", 1);
+        sendTimer = new Timer(clock, "Send", 2);
+        timers = Arrays.asList(outboundTimer, sendTimer);
+    }
 
     public Timer outboundTimer()
     {

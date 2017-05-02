@@ -15,14 +15,23 @@
  */
 package uk.co.real_logic.fix_gateway.timing;
 
+import org.agrona.concurrent.NanoClock;
+
 import java.util.Arrays;
 import java.util.List;
 
 public class LibraryTimers
 {
-    private final Timer sessionTimer = new Timer("Session", -1);
-    private final Timer receiveTimer = new Timer("Receive", -2);
-    private final List<Timer> timers = Arrays.asList(sessionTimer, receiveTimer);
+    private final Timer sessionTimer;
+    private final Timer receiveTimer;
+    private final List<Timer> timers;
+
+    public LibraryTimers(final NanoClock clock)
+    {
+        sessionTimer = new Timer(clock, "Session", -1);
+        receiveTimer = new Timer(clock, "Receive", -2);
+        timers = Arrays.asList(sessionTimer, receiveTimer);
+    }
 
     public Timer sessionTimer()
     {

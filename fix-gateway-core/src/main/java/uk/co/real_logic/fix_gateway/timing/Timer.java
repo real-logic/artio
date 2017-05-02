@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.timing;
 
 import org.HdrHistogram.Histogram;
 import org.HdrHistogram.SingleWriterRecorder;
+import org.agrona.concurrent.NanoClock;
 
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.TIME_MESSAGES;
 
@@ -27,13 +28,15 @@ public class Timer
     // Only written to on recording thread
     private final SingleWriterRecorder recorder = new SingleWriterRecorder(NUMBER_OF_SIGNIFICANT_VALUE_DIGITS);
 
+    private final NanoClock clock;
     private final int id;
     private final String name;
     // Only accessed upon logging thread
     private Histogram histogram;
 
-    public Timer(final String name, final int id)
+    public Timer(final NanoClock clock, final String name, final int id)
     {
+        this.clock = clock;
         this.name = name;
         this.id = id;
     }
@@ -42,7 +45,7 @@ public class Timer
     {
         if (TIME_MESSAGES)
         {
-            final long time = System.nanoTime();
+            final long time = clock.nanoTime();
             final long duration = time - timestamp;
             recordValue(duration);
             return time;
