@@ -38,7 +38,6 @@ public class GatewayProcess implements AutoCloseable
 {
     public static final int INBOUND_LIBRARY_STREAM = 1;
     public static final int OUTBOUND_LIBRARY_STREAM = 2;
-    public static final int OUTBOUND_REPLAY_STREAM = 3;
 
     private static long startTimeInMs = System.currentTimeMillis();
 

@@ -30,6 +30,7 @@ import uk.co.real_logic.fix_gateway.timing.EngineTimers;
 import java.io.File;
 import java.util.List;
 
+import static io.aeron.CommonContext.IPC_CHANNEL;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.closeAll;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.suppressingClose;
 
@@ -122,7 +123,7 @@ public final class FixEngine extends GatewayProcess
                 aeron,
                 engineDescriptorStore);
             streams = engineContext.streams();
-            initFramer(configuration, fixCounters);
+            initFramer(configuration, fixCounters, replayPublication.sessionId());
             initMonitoringAgent(timers.all(), configuration);
         }
         catch (final Exception e)
@@ -141,20 +142,21 @@ public final class FixEngine extends GatewayProcess
     private ExclusivePublication replayPublication()
     {
         final ExclusivePublication publication = aeron.addExclusivePublication(
-            configuration.libraryAeronChannel(), OUTBOUND_REPLAY_STREAM);
+            IPC_CHANNEL, configuration.replayStreamId());
         StreamInformation.print("replayPublication", publication, configuration);
         return publication;
     }
 
-    private void initFramer(final EngineConfiguration configuration, final FixCounters fixCounters)
+    private void initFramer(
+        final EngineConfiguration configuration, final FixCounters fixCounters, final int replaySessionId)
     {
         framerContext = new FramerContext(
             configuration,
             fixCounters,
             engineContext,
             errorHandler,
-            replaySubscription("replay"),
-            replaySubscription("slow-replay"),
+            replaySubscription("replay", replaySessionId),
+            replaySubscription("slow-replay", replaySessionId),
             engineDescriptorStore,
             timers);
     }
@@ -174,19 +176,23 @@ public final class FixEngine extends GatewayProcess
         return streams.isLeader();
     }
 
-    private Subscription replaySubscription(final String name)
+    private Subscription replaySubscription(final String name, final int replaySessionId)
     {
         final Subscription subscription = aeron.addSubscription(
-            configuration.libraryAeronChannel(), OUTBOUND_REPLAY_STREAM);
+            IPC_CHANNEL, configuration.replayStreamId());
         StreamInformation.print(name, subscription, configuration);
 
         // Await replay publication
-        while (subscription.hasNoImages())
+        while (true)
         {
+            if (subscription.imageCount() == 1 &&
+                subscription.imageBySessionId(replaySessionId) != null)
+            {
+                return subscription;
+            }
+
             Thread.yield();
         }
-
-        return subscription;
     }
 
     private FixEngine launch()
