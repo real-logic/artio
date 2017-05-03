@@ -52,7 +52,6 @@ import static uk.co.real_logic.fix_gateway.FixMatchers.isConnected;
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_REPLAY_STREAM_ID;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
@@ -251,8 +250,7 @@ public final class SystemTestUtil
             .libraryAeronChannel("aeron:ipc")
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(acceptorLogs)
-            .scheduler(new LowResourceEngineScheduler())
-            .replayStreamId(DEFAULT_REPLAY_STREAM_ID + 1);
+            .scheduler(new LowResourceEngineScheduler());
     }
 
     public static String acceptorMonitoringFile(final String countersSuffix)

@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-import io.aeron.Subscription;
+import io.aeron.Image;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.collections.LongHashSet;
@@ -62,8 +62,8 @@ public class FramerContext
         final FixCounters fixCounters,
         final EngineContext engineContext,
         final ErrorHandler errorHandler,
-        final Subscription replaySubscription,
-        final Subscription slowReplaySubscription,
+        final Image replayImage,
+        final Image slowReplayImage,
         final EngineDescriptorStore engineDescriptorStore,
         final EngineTimers timers)
     {
@@ -125,8 +125,8 @@ public class FramerContext
             engineContext.outboundLibrarySubscription(
                     "outboundSlowSubscription", null),
             gatewaySessionsOutbound.id(),
-            replaySubscription,
-            slowReplaySubscription,
+            replayImage,
+            slowReplayImage,
             adminCommands,
             sessionIdStrategy,
             sessionContexts,

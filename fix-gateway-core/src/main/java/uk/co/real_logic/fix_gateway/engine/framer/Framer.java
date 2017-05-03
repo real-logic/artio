@@ -17,6 +17,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import io.aeron.ControlledFragmentAssembler;
 import io.aeron.Image;
+import io.aeron.ImageControlledFragmentAssembler;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
@@ -132,7 +133,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ClusterSubscription outboundClusterSlowSubscription;
     private final Subscription outboundLibrarySubscription;
     private final SubscriptionSlowPeeker outboundSlowPeeker;
-    private final Subscription replaySubscription;
+    private final Image replayImage;
     private final SlowPeeker replaySlowPeeker;
     private final LibrarySlowPeeker outboundSlowEnginePeeker;
     private final GatewayPublication inboundPublication;
@@ -174,8 +175,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final Subscription outboundLibrarySubscription,
         final Subscription outboundSlowSubscription,
         final int gatewaySessionsOutboundId,
-        final Subscription replaySubscription,
-        final Subscription replaySlowSubscription,
+        final Image replayImage,
+        final Image replaySlowImage,
         final QueuedPipe<AdminCommand> adminCommands,
         final SessionIdStrategy sessionIdStrategy,
         final SessionContexts sessionContexts,
@@ -204,7 +205,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundClusterSubscription = outboundClusterSubscription;
         this.outboundClusterSlowSubscription = outboundClusterSlowSubscription;
         this.outboundLibrarySubscription = outboundLibrarySubscription;
-        this.replaySubscription = replaySubscription;
+        this.replayImage = replayImage;
         this.gatewaySessions = gatewaySessions;
         this.inboundMessages = inboundMessages;
         this.errorHandler = errorHandler;
@@ -225,9 +226,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.finalImagePositions = finalImagePositions;
 
         while (outboundSlowSubscription.hasNoImages() ||
-               outboundLibrarySubscription.hasNoImages() ||
-               replaySlowSubscription.hasNoImages() ||
-               replaySubscription.hasNoImages())
+               outboundLibrarySubscription.hasNoImages())
         {
             Thread.yield();
         }
@@ -242,9 +241,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         this.outboundSlowEnginePeeker = outboundSlowPeeker;
-        this.replaySlowPeeker = new SlowPeeker(
-                replaySlowSubscription.getImage(0),
-                replaySubscription.getImage(0));
+        this.replaySlowPeeker = new SlowPeeker(replaySlowImage, replayImage);
 
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
         this.replayFragmentLimit = configuration.replayFragmentLimit();
@@ -273,7 +270,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         // We lookup replayed message by session id, since the connection id may have changed
         // if it's a persistent session.
-        outboundReplaySubscriber = new ControlledFragmentAssembler(ProtocolSubscription.of(new ProtocolHandler()
+        outboundReplaySubscriber = new ImageControlledFragmentAssembler(ProtocolSubscription.of(new ProtocolHandler()
         {
             public Action onMessage(
                 final DirectBuffer buffer,
@@ -385,7 +382,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private int sendReplayMessages()
     {
-        return replaySubscription.controlledPoll(outboundReplaySubscriber, replayFragmentLimit) +
+        return replayImage.controlledPoll(outboundReplaySubscriber, replayFragmentLimit) +
                replaySlowPeeker.peek(outboundReplaySlowSubscriber);
     }
 

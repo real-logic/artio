@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import io.aeron.ExclusivePublication;
+import io.aeron.Image;
 import io.aeron.Subscription;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
@@ -142,7 +143,7 @@ public final class FixEngine extends GatewayProcess
     private ExclusivePublication replayPublication()
     {
         final ExclusivePublication publication = aeron.addExclusivePublication(
-            IPC_CHANNEL, configuration.replayStreamId());
+            IPC_CHANNEL, OUTBOUND_REPLAY_STREAM);
         StreamInformation.print("replayPublication", publication, configuration);
         return publication;
     }
@@ -155,8 +156,8 @@ public final class FixEngine extends GatewayProcess
             fixCounters,
             engineContext,
             errorHandler,
-            replaySubscription("replay", replaySessionId),
-            replaySubscription("slow-replay", replaySessionId),
+            replayImage("replay", replaySessionId),
+            replayImage("slow-replay", replaySessionId),
             engineDescriptorStore,
             timers);
     }
@@ -176,19 +177,19 @@ public final class FixEngine extends GatewayProcess
         return streams.isLeader();
     }
 
-    private Subscription replaySubscription(final String name, final int replaySessionId)
+    private Image replayImage(final String name, final int replaySessionId)
     {
         final Subscription subscription = aeron.addSubscription(
-            IPC_CHANNEL, configuration.replayStreamId());
+            IPC_CHANNEL, OUTBOUND_REPLAY_STREAM);
         StreamInformation.print(name, subscription, configuration);
 
         // Await replay publication
         while (true)
         {
-            if (subscription.imageCount() == 1 &&
-                subscription.imageBySessionId(replaySessionId) != null)
+            final Image image = subscription.imageBySessionId(replaySessionId);
+            if (image != null)
             {
-                return subscription;
+                return image;
             }
 
             Thread.yield();

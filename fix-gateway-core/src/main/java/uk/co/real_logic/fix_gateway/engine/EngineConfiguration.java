@@ -110,7 +110,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final String DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE = "sequence_numbers_received";
     public static final short NO_NODE_ID = -1;
     public static final long DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS = 10_000;
-    public static final int DEFAULT_REPLAY_STREAM_ID = 3;
 
     private String host = null;
     private int port;
@@ -159,7 +158,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private SessionPersistenceStrategy sessionPersistenceStrategy;
     private long slowConsumerTimeoutInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
     private EngineScheduler scheduler = new DefaultEngineScheduler();
-    private int replayStreamId = DEFAULT_REPLAY_STREAM_ID;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -487,18 +485,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
-    /**
-     * Sets the Aeron stream id used for local replay over the IPC channel.
-     *
-     * @param replayStreamId the Aeron stream id used for local replay over the IPC channel.
-     * @return this
-     */
-    public EngineConfiguration replayStreamId(final int replayStreamId)
-    {
-        this.replayStreamId = replayStreamId;
-        return this;
-    }
-
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -652,11 +638,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineScheduler scheduler()
     {
         return scheduler;
-    }
-
-    public int replayStreamId()
-    {
-        return replayStreamId;
     }
 
     /**

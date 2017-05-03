@@ -111,8 +111,8 @@ public class FramerTest
     private final Session session = mock(Session.class);
     private final Subscription outboundLibrarySubscription = mock(Subscription.class);
     private final Subscription outboundSlowSubscription = mock(Subscription.class);
-    private final Subscription replaySubscription = mock(Subscription.class);
-    private final Subscription replaySlowSubscription = mock(Subscription.class);
+    private final Image replayImage = mock(Image.class);
+    private final Image replaySlowImage = mock(Image.class);
     private final Image peekImage = mock(Image.class);
     private final Image normalImage = mock(Image.class);
     private final ClusterableStreams node = mock(ClusterableStreams.class);
@@ -142,8 +142,6 @@ public class FramerTest
         when(outboundSlowSubscription.hasNoImages()).thenReturn(false);
         when(outboundSlowSubscription.imageBySessionId(anyInt())).thenReturn(peekImage);
         when(outboundLibrarySubscription.imageBySessionId(anyInt())).thenReturn(normalImage);
-        when(replaySlowSubscription.getImage(0)).thenReturn(peekImage);
-        when(replaySubscription.getImage(0)).thenReturn(normalImage);
 
         when(mockEndPointFactory.receiverEndPoint(
             any(), connectionId.capture(), anyLong(), anyInt(), anyInt(), any(),
@@ -172,8 +170,8 @@ public class FramerTest
             outboundLibrarySubscription,
             outboundSlowSubscription,
             OUTBOUND_ENGINE_AERON_SESSION_ID,
-            replaySubscription,
-            replaySlowSubscription,
+            replayImage,
+            replaySlowImage,
             mock(QueuedPipe.class),
             mockSessionIdStrategy,
             sessionContexts,
