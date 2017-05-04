@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2016 Real Logic Ltd.
+ * Copyright 2015-2017 Real Logic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,71 +15,248 @@
  */
 package uk.co.real_logic.fix_gateway.engine.logger;
 
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.ErrorHandler;
+import org.agrona.IoUtil;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.stubbing.OngoingStubbing;
+import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.messages.SessionExistsEncoder;
-import uk.co.real_logic.fix_gateway.storage.messages.ReplayIndexRecordDecoder;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
-import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndexDescriptor.*;
+import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.UNKNOWN_SESSION;
+import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
+import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndexDescriptor.RECORD_LENGTH;
+import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndexDescriptor.REPLAY_POSITION_BUFFER_SIZE;
+import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
 public class ReplayIndexTest extends AbstractLogTest
 {
-    private ByteBuffer indexBuffer = ByteBuffer.allocate((16 * 1024) + INITIAL_RECORD_OFFSET);
-    private BufferFactory mockBufferFactory = mock(BufferFactory.class);
-    private UnsafeBuffer replayPositionBuffer = new UnsafeBuffer(new byte[REPLAY_POSITION_BUFFER_SIZE]);
+    private ByteBuffer indexBuffer = ByteBuffer.allocate(16 * 1024 + INITIAL_RECORD_OFFSET);
+    private ExistingBufferFactory existingBufferFactory = mock(ExistingBufferFactory.class);
+    private BufferFactory newBufferFactory = mock(BufferFactory.class);
+    private ControlledFragmentHandler mockHandler = mock(ControlledFragmentHandler.class);
+    private ArchiveReader mockReader = mock(ArchiveReader.class);
+    private ArchiveReader.SessionReader mockSessionReader = mock(ArchiveReader.SessionReader.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
+    private ReplayIndex replayIndex;
+
+    private UnsafeBuffer replayPositionBuffer = new UnsafeBuffer(new byte[REPLAY_POSITION_BUFFER_SIZE]);
     private IndexedPositionConsumer positionConsumer = mock(IndexedPositionConsumer.class);
     private IndexedPositionReader positionReader = new IndexedPositionReader(replayPositionBuffer);
-
     private SessionExistsEncoder logon = new SessionExistsEncoder();
-    private ReplayIndex replayIndex = new ReplayIndex(
-        DEFAULT_LOG_FILE_DIR,
-        STREAM_ID,
-        DEFAULT_REPLAY_INDEX_FILE_SIZE,
-        DEFAULT_LOGGER_CACHE_NUM_SETS,
-        DEFAULT_LOGGER_CACHE_SET_SIZE,
-        mockBufferFactory,
-        replayPositionBuffer,
-        errorHandler);
+
+    private void newReplayIndex()
+    {
+        replayIndex = new ReplayIndex(
+            DEFAULT_LOG_FILE_DIR,
+            STREAM_ID,
+            DEFAULT_REPLAY_INDEX_FILE_SIZE,
+            DEFAULT_LOGGER_CACHE_NUM_SETS,
+            DEFAULT_LOGGER_CACHE_SET_SIZE,
+            newBufferFactory,
+            replayPositionBuffer,
+            errorHandler);
+    }
+
+    private ReplayQuery query;
 
     @Before
     public void setUp()
     {
-        when(mockBufferFactory.map(any(File.class), anyInt())).thenReturn(indexBuffer);
+        final File logFile = logFile(SESSION_ID);
+        IoUtil.deleteIfExists(logFile);
+
+        newReplayIndex();
+        query = new ReplayQuery(
+            DEFAULT_LOG_FILE_DIR,
+            DEFAULT_LOGGER_CACHE_NUM_SETS,
+            DEFAULT_LOGGER_CACHE_SET_SIZE,
+                existingBufferFactory,
+            mockReader,
+            OUTBOUND_LIBRARY_STREAM);
+
+        returnBuffer(indexBuffer, SESSION_ID);
+        returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);
+        when(newBufferFactory.map(any(), anyInt())).thenReturn(indexBuffer);
+
+        when(mockReader.session(anyInt())).thenReturn(mockSessionReader);
+        whenRead().thenReturn(100L);
     }
 
     @Test
-    public void shouldRecordIndexEntryForFixMessage()
+    public void shouldReturnLogEntriesMatchingQuery()
     {
-        bufferContainsExampleMessage(true);
+        indexedExampleMessage();
 
+        final int msgCount = query();
+
+        verifyMappedFile(SESSION_ID, 1);
+        verifyMessagesRead(1);
+        assertEquals(1, msgCount);
+    }
+
+    @Test
+    public void shouldReadSecondRecord()
+    {
+        indexedExampleMessage();
+
+        final int endSequenceNumber = SEQUENCE_NUMBER + 1;
+        bufferContainsExampleMessage(
+            true, SESSION_ID, endSequenceNumber, SEQUENCE_INDEX);
         indexRecord();
 
-        verifyMappedFile(SESSION_ID);
+        final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, endSequenceNumber, SEQUENCE_INDEX);
 
-        final ReplayIndexRecordDecoder replayIndexRecord = new ReplayIndexRecordDecoder()
-            .wrap(new UnsafeBuffer(indexBuffer), INITIAL_RECORD_OFFSET, 16, 0);
+        assertEquals(2, msgCount);
+        verifyMessagesRead(2);
+    }
 
-        assertEquals(STREAM_ID, replayIndexRecord.streamId());
-        assertEquals(AERON_SESSION_ID, replayIndexRecord.aeronSessionId());
-        assertEquals(START, replayIndexRecord.position());
-        assertEquals(SEQUENCE_NUMBER, replayIndexRecord.sequenceNumber());
+    @Test
+    public void shouldReadRecordsFromBeforeARestart() throws IOException
+    {
+        indexedExampleMessage();
+
+        // Fake restarting the gateway
+        final File logFile = logFile(SESSION_ID);
+        IoUtil.ensureDirectoryExists(new File(DEFAULT_LOG_FILE_DIR), DEFAULT_LOG_FILE_DIR);
+        logFile.createNewFile();
+        try
+        {
+            newReplayIndex();
+
+            bufferContainsExampleMessage(false, SESSION_ID, SEQUENCE_NUMBER + 1, SEQUENCE_INDEX);
+            indexRecord();
+
+            final int msgCount = query();
+
+            verifyMappedFile(SESSION_ID, 1);
+            verifyMessagesRead(1);
+            assertEquals(1, msgCount);
+        }
+        finally
+        {
+            IoUtil.delete(new File(DEFAULT_LOG_FILE_DIR), false);
+        }
+    }
+
+    @Test
+    public void shouldReturnAllLogEntriesWhenMostResentMessageRequested()
+    {
+        indexedExampleMessage();
+
+        final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, MOST_RECENT_MESSAGE, SEQUENCE_INDEX);
+
+        verifyMappedFile(SESSION_ID, 1);
+        verifyMessagesRead(1);
+        assertEquals(1, msgCount);
+    }
+
+    @Test
+    public void shouldReturnLogEntriesWhenMostResentMessageRequested()
+    {
+        indexedExampleMessage();
+
+        final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, MOST_RECENT_MESSAGE, SEQUENCE_INDEX);
+
+        verifyMappedFile(SESSION_ID, 1);
+        verifyMessagesRead(1);
+        assertEquals(1, msgCount);
+    }
+
+    @Test
+    public void shouldNotReturnLogEntriesWithWrongSessionId()
+    {
+        indexedExampleMessage();
+
+        final int msgCount = query(SESSION_ID_2, SEQUENCE_NUMBER, SEQUENCE_INDEX, SEQUENCE_NUMBER, SEQUENCE_INDEX);
+
+        assertEquals(0, msgCount);
+        verifyMappedFile(SESSION_ID_2, 1);
+        verifyNoMessageRead();
+    }
+
+    @Test
+    public void shouldNotReturnLogEntriesWithOutOfRangeSequenceNumbers()
+    {
+        indexedExampleMessage();
+
+        final int msgCount = query(SESSION_ID, 1001, SEQUENCE_INDEX, 1002, SEQUENCE_INDEX);
+
+        assertEquals(0, msgCount);
+        verifyNoMessageRead();
+    }
+
+    @Test
+    public void shouldStopWhenSessionReaderReturnsLowPosition()
+    {
+        indexedExampleMessage();
+
+        readPositions(100L, (long)UNKNOWN_SESSION);
+        indexRecord();
+
+        final int msgCount = query();
+
+        assertEquals(1, msgCount);
+        verifyMessagesRead(2);
+    }
+
+    @Test
+    public void shouldQueryOverSequenceIndexBoundaries()
+    {
+        indexedExampleMessage();
+
+        readPositions(100L, 100L);
+
+        final int nextSequenceIndex = SEQUENCE_INDEX + 1;
+        final int endSequenceNumber = 1;
+
+        bufferContainsExampleMessage(true, SESSION_ID, endSequenceNumber, nextSequenceIndex);
+        indexRecord();
+
+        final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, endSequenceNumber, nextSequenceIndex);
+
+        assertEquals(2, msgCount);
+        verifyMessagesRead(2);
+    }
+
+    @Test
+    public void shouldNotStopIndexingWhenBufferFull()
+    {
+        indexedExampleMessage();
+
+        whenRead().thenReturn(100L);
+
+        final int beginSequenceNumber = 1;
+        final int endSequenceNumber = 2_000;
+        final int totalMessages =
+            (indexBuffer.capacity() - MessageHeaderEncoder.ENCODED_LENGTH) / RECORD_LENGTH;
+
+        for (int sequenceNumber = beginSequenceNumber; sequenceNumber <= endSequenceNumber; sequenceNumber++)
+        {
+            bufferContainsExampleMessage(false, SESSION_ID, sequenceNumber, SEQUENCE_INDEX);
+            indexRecord();
+        }
+
+        final int msgCount = query(beginSequenceNumber, SEQUENCE_INDEX, endSequenceNumber, SEQUENCE_INDEX);
+
+        assertEquals(totalMessages, msgCount);
+        verifyMessagesRead(totalMessages);
     }
 
     @Test
     public void shouldUpdatePositionForIndexedRecord()
     {
-        bufferContainsExampleMessage(true);
-
-        indexRecord();
+        indexedExampleMessage();
 
         positionReader.readLastPosition(positionConsumer);
 
@@ -89,9 +266,8 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldOnlyMapSessionFileOnce()
     {
-        bufferContainsExampleMessage(true);
+        indexedExampleMessage();
 
-        indexRecord();
         indexRecord();
 
         verifyMappedFile(SESSION_ID);
@@ -119,36 +295,106 @@ public class ReplayIndexTest extends AbstractLogTest
 
         positionReader.readLastPosition(positionConsumer);
 
-        verifyNoMoreInteractions(mockBufferFactory, positionConsumer);
+        verifyNoMoreInteractions(existingBufferFactory, positionConsumer);
     }
 
     private void bufferContainsLogon()
     {
         offset = START;
         header
-            .wrap(buffer, offset)
-            .blockLength(logon.sbeBlockLength())
-            .templateId(logon.sbeTemplateId())
-            .schemaId(logon.sbeSchemaId())
-            .version(logon.sbeSchemaVersion());
+                .wrap(buffer, offset)
+                .blockLength(logon.sbeBlockLength())
+                .templateId(logon.sbeTemplateId())
+                .schemaId(logon.sbeSchemaId())
+                .version(logon.sbeSchemaVersion());
 
         offset += header.encodedLength();
 
         logon
-            .wrap(buffer, offset)
-            .connection(CONNECTION_ID)
-            .session(SESSION_ID);
+                .wrap(buffer, offset)
+                .connection(CONNECTION_ID)
+                .session(SESSION_ID);
 
         offset += logon.encodedLength();
     }
 
+    // TODO: out of bounds query failing + counter returning
+    // TODO: reloading from a full buffer and continuing
+
+    private void indexedExampleMessage()
+    {
+        bufferContainsExampleMessage(true);
+        indexRecord();
+    }
+
+    private void readPositions(final Long firstPosition, final Long... remainingPositions)
+    {
+        whenRead().thenReturn(firstPosition, remainingPositions);
+    }
+
+    private OngoingStubbing<Long> whenRead()
+    {
+        return when(mockSessionReader.read(anyLong(), any(ControlledFragmentHandler.class)));
+    }
+
+    private void verifyNoMessageRead()
+    {
+        verifyNoMoreInteractions(mockSessionReader);
+    }
+
+    private void verifyMessagesRead(final int number)
+    {
+        verify(mockSessionReader, times(number)).read(START, mockHandler);
+    }
+
+    private void returnBuffer(final ByteBuffer buffer, final long sessionId)
+    {
+        final File file = logFile(sessionId);
+        when(existingBufferFactory.map(file)).thenReturn(buffer);
+    }
+
+    private void verifyMappedFile(final long sessionId, final int wantedNumberOfInvocations)
+    {
+        verify(existingBufferFactory, times(wantedNumberOfInvocations)).map(logFile(sessionId));
+    }
+
     private void verifyMappedFile(final long sessionId)
     {
-        verify(mockBufferFactory, times(1)).map(eq(logFile(DEFAULT_LOG_FILE_DIR, sessionId, STREAM_ID)), anyInt());
+        verify(newBufferFactory).map(eq(logFile(sessionId)), anyInt());
+    }
+
+    private File logFile(final long sessionId)
+    {
+        return ReplayIndexDescriptor.logFile(DEFAULT_LOG_FILE_DIR, sessionId, STREAM_ID);
     }
 
     private void indexRecord()
     {
         replayIndex.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_SESSION_ID, alignedEndPosition());
+    }
+
+    private int query()
+    {
+        return query(SEQUENCE_NUMBER, SEQUENCE_INDEX, SEQUENCE_NUMBER, SEQUENCE_INDEX);
+    }
+
+    private int query(
+        final int beginSequenceNumber,
+        final int beginSequenceIndex,
+        final int endSequenceNumber,
+        final int endSequenceIndex)
+    {
+        return query(SESSION_ID, beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex);
+    }
+
+    private int query(
+        final long sessionId,
+        final int beginSequenceNumber,
+        final int beginSequenceIndex,
+        final int endSequenceNumber,
+        final int endSequenceIndex)
+    {
+        return query.query(
+            mockHandler, sessionId, beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex);
     }
 }
