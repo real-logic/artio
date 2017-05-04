@@ -131,14 +131,18 @@ public class ReplayQuery implements AutoCloseable
             {
                 iteratorPosition = 0;
             }
-            final int stopIteratingPosition = iteratorPosition + capacity;
+            int stopIteratingPosition = iteratorPosition + capacity;
 
             while (iteratorPosition != stopIteratingPosition)
             {
                 final int changePosition = endChangeVolatile(buffer);
 
-                // TODO: If you have been passed by the writer thread then you need to skip up to the position
-                // of the writer thread
+                // Lapped by writer
+                if (changePosition > iteratorPosition && (iteratorPosition + capacity) <= beginChangeVolatile(buffer))
+                {
+                    iteratorPosition = changePosition;
+                    stopIteratingPosition = iteratorPosition + capacity;
+                }
 
                 final int offset = offset(iteratorPosition, capacity);
 

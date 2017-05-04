@@ -282,8 +282,8 @@ public class ReplayIndexTest extends AbstractLogTest
 
         final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, MOST_RECENT_MESSAGE, SEQUENCE_INDEX);
 
-        assertEquals(totalMessages, msgCount);
-        verifyMessagesRead(totalMessages);
+        assertEquals(totalMessages + 1, msgCount);
+        verifyMessagesRead(totalMessages + 1);
     }
 
     private OngoingStubbing<Long> whenHandled()
