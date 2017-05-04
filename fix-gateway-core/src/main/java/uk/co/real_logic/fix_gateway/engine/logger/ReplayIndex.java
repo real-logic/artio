@@ -16,10 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import io.aeron.logbuffer.FrameDescriptor;
-import org.agrona.BitUtil;
-import org.agrona.DirectBuffer;
-import org.agrona.ErrorHandler;
-import org.agrona.IoUtil;
+import org.agrona.*;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -36,6 +33,7 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.function.LongFunction;
 
+import static org.agrona.UnsafeAccess.UNSAFE;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 
@@ -180,10 +178,11 @@ public class ReplayIndex implements Index
             final int sequenceNumber,
             final int sequenceIndex)
         {
-            final int beginChangePosition = beginChangeVolatile(buffer);
+            final int beginChangePosition = beginChange(buffer);
             final int changePosition = beginChangePosition + RECORD_LENGTH;
 
-            beginChangeVolatile(buffer, changePosition);
+            beginChange(buffer, changePosition);
+            UNSAFE.storeFence();
 
             final int offset = offset(beginChangePosition, capacity);
 
@@ -198,7 +197,7 @@ public class ReplayIndex implements Index
             positionWriter.indexedUpTo(aeronSessionId, endPosition);
             positionWriter.updateChecksums();
 
-            endChangeVolatile(buffer, changePosition);
+            endChangeOrdered(buffer, changePosition);
         }
 
         public void close()

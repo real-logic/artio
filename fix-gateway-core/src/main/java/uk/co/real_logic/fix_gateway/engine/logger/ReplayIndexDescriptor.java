@@ -49,9 +49,9 @@ public class ReplayIndexDescriptor
         return logFileDir + File.separator + "replay-positions-"  + streamId;
     }
 
-    static void endChangeVolatile(final AtomicBuffer buffer, final int changeNumber)
+    static void endChangeOrdered(final AtomicBuffer buffer, final int changeNumber)
     {
-        buffer.putIntVolatile(END_CHANGE_OFFSET, changeNumber);
+        buffer.putIntOrdered(END_CHANGE_OFFSET, changeNumber);
     }
 
     static int endChangeVolatile(final AtomicBuffer buffer)
@@ -59,14 +59,19 @@ public class ReplayIndexDescriptor
         return buffer.getIntVolatile(END_CHANGE_OFFSET);
     }
 
-    static void beginChangeVolatile(final AtomicBuffer buffer, final int changeNumber)
+    static void beginChange(final AtomicBuffer buffer, final int changeNumber)
     {
-        buffer.putIntVolatile(BEGIN_CHANGE_OFFSET, changeNumber);
+        buffer.putInt(BEGIN_CHANGE_OFFSET, changeNumber);
     }
 
     static int beginChangeVolatile(final AtomicBuffer buffer)
     {
         return buffer.getIntVolatile(BEGIN_CHANGE_OFFSET);
+    }
+
+    static int beginChange(final AtomicBuffer buffer)
+    {
+        return buffer.getInt(BEGIN_CHANGE_OFFSET);
     }
 
     static int recordCapacity(final int indexFileSize)
