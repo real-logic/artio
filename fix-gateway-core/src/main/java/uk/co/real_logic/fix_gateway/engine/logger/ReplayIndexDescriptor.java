@@ -19,7 +19,6 @@ import org.agrona.BitUtil;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
-import uk.co.real_logic.fix_gateway.storage.messages.ReplayIndexRecordEncoder;
 
 import java.io.File;
 
@@ -32,7 +31,7 @@ public class ReplayIndexDescriptor
     static final int END_CHANGE_OFFSET = BEGIN_CHANGE_OFFSET + BitUtil.SIZE_OF_INT;
     public static final int INITIAL_RECORD_OFFSET = END_CHANGE_OFFSET + BitUtil.SIZE_OF_INT;
 
-    static final int RECORD_LENGTH = ReplayIndexRecordEncoder.BLOCK_LENGTH;
+    static final int RECORD_LENGTH = 32;
 
     static File logFile(final String logFileDir, final long fixSessionId, final int streamId)
     {

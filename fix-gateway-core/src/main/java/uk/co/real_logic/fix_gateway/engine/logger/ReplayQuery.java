@@ -120,26 +120,30 @@ public class ReplayQuery implements AutoCloseable
             int lastAeronSessionId = 0;
             ArchiveReader.SessionReader sessionReader = null;
 
-            int index = INITIAL_RECORD_OFFSET;
-
-            while (true)
+            // positions on a monotonically increasing
+            int iteratorPosition = beginChangeVolatile(buffer);
+            // First iteration around you need to start at 0
+            if (iteratorPosition < capacity)
             {
-                /*final long changeNumber = endLossChange;
+                iteratorPosition = 0;
+            }
+            final int stopIteratingPosition = iteratorPosition + capacity;
 
-                if (changeNumber != lastLossChangeNumber)
-                {
-                    final int termId = lossTermId;
-                    final int termOffset = lossTermOffset;
-                    final int length = lossLength;
-
-                    UNSAFE.loadFence(); // LoadLoad required so previous loads don't move past version check below.
-
-                    if (changeNumber == beginLossChange)*/
-
+            while (iteratorPosition != stopIteratingPosition)
+            {
                 final int changePosition = endChangeVolatile(buffer);
-                final int changeIndex = ReplayIndexDescriptor.offset(changePosition, capacity);
 
-                indexRecord.wrap(buffer, index, actingBlockLength, actingVersion);
+                // If you have been passed by the writer thread then you need to skip up to the position
+                // of the writer thread
+                // TODO: overflows
+                /*if (changePosition > iteratorPosition)
+                {
+                    iteratorPosition = changePosition;
+                }*/
+
+                final int offset = offset(iteratorPosition, capacity);
+
+                indexRecord.wrap(buffer, offset, actingBlockLength, actingVersion);
                 final int streamId = indexRecord.streamId();
                 final long position = indexRecord.position();
                 final int aeronSessionId = indexRecord.aeronSessionId();
@@ -183,7 +187,7 @@ public class ReplayQuery implements AutoCloseable
 
                         count++;
                     }
-                    index += actingBlockLength;
+                    iteratorPosition += RECORD_LENGTH;
                 }
                 else
                 {

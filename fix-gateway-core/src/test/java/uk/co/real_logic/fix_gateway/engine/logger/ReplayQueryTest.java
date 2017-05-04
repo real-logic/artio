@@ -19,11 +19,9 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.stubbing.OngoingStubbing;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
-import uk.co.real_logic.fix_gateway.storage.messages.ReplayIndexRecordEncoder;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,6 +33,7 @@ import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREA
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.UNKNOWN_SESSION;
 import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
+import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndexDescriptor.RECORD_LENGTH;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
 public class ReplayQueryTest extends AbstractLogTest
@@ -222,7 +221,6 @@ public class ReplayQueryTest extends AbstractLogTest
         verifyMessagesRead(2);
     }
 
-    @Ignore
     @Test
     public void shouldNotStopIndexingWhenBufferFull()
     {
@@ -231,7 +229,7 @@ public class ReplayQueryTest extends AbstractLogTest
         final int beginSequenceNumber = 1;
         final int endSequenceNumber = 2_000;
         final int totalMessages =
-            (indexBuffer.capacity() - MessageHeaderEncoder.ENCODED_LENGTH) / ReplayIndexRecordEncoder.BLOCK_LENGTH;
+            (indexBuffer.capacity() - MessageHeaderEncoder.ENCODED_LENGTH) / RECORD_LENGTH;
 
         for (int sequenceNumber = beginSequenceNumber; sequenceNumber <= endSequenceNumber; sequenceNumber++)
         {

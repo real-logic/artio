@@ -190,12 +190,12 @@ public class ReplayIndex implements Index
 
             endLossChange = changeNumber;*/
 
-            final int beginChange = beginChangeVolatile(buffer);
-            final int changeNumber = beginChange + RECORD_LENGTH;
+            final int beginChangePosition = beginChangeVolatile(buffer);
+            final int changePosition = beginChangePosition + RECORD_LENGTH;
 
-            beginChangeVolatile(buffer, changeNumber);
+            beginChangeVolatile(buffer, changePosition);
 
-            final int offset = offset(beginChange, capacity);
+            final int offset = offset(beginChangePosition, capacity);
 
             replayIndexRecord
                 .wrap(buffer, offset)
@@ -208,7 +208,7 @@ public class ReplayIndex implements Index
             positionWriter.indexedUpTo(aeronSessionId, endPosition);
             positionWriter.updateChecksums();
 
-            endChangeVolatile(buffer, changeNumber);
+            endChangeVolatile(buffer, changePosition);
         }
 
         public void close()
