@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2016 Real Logic Ltd.
+ * Copyright 2015-2017 Real Logic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,10 @@
 package uk.co.real_logic.fix_gateway.engine.logger;
 
 import io.aeron.logbuffer.FrameDescriptor;
-import org.agrona.*;
+import org.agrona.BitUtil;
+import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
+import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -33,33 +36,23 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.function.LongFunction;
 
+import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.OK;
 
 /**
  * Builds an index of a composite key of session id and sequence number for a given stream.
  *
- * Written Positions are stored in a separate file at {@link ReplayIndex#replayPositionPath(String, int)}.
+ * Written Positions are stored in a separate file at {@link ReplayIndexDescriptor#replayPositionPath(String, int)}.
+ *
+ * Buffer Consists of:
+ *
+ * MessageHeader
+ * Head position counter
+ * Tail position counter
+ * Multiple ReplayIndexRecord entries
  */
 public class ReplayIndex implements Index
 {
-    static final int REPLAY_BUFFER_SIZE = 128 * 1024;
-
-    static File logFile(final String logFileDir, final long fixSessionId, final int streamId)
-    {
-        return new File(String.format(logFileDir + File.separator + "replay-index-%d-%d", fixSessionId, streamId));
-    }
-
-    public static UnsafeBuffer replayPositionBuffer(final String logFileDir, final int streamId)
-    {
-        final String pathname = replayPositionPath(logFileDir, streamId);
-        return new UnsafeBuffer(LoggerUtil.map(new File(pathname), REPLAY_BUFFER_SIZE));
-    }
-
-    private static String replayPositionPath(final String logFileDir, final int streamId)
-    {
-        return logFileDir + File.separator + "replay-positions-"  + streamId;
-    }
-
     private final LongFunction<SessionIndex> newSessionIndex = SessionIndex::new;
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
@@ -91,6 +84,7 @@ public class ReplayIndex implements Index
         this.logFileDir = logFileDir;
         this.requiredStreamId = requiredStreamId;
         this.indexFileSize = indexFileSize;
+        checkIndexFileSize(indexFileSize);
         this.bufferFactory = bufferFactory;
         this.positionBuffer = positionBuffer;
         fixSessionIdToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
@@ -156,9 +150,8 @@ public class ReplayIndex implements Index
     private final class SessionIndex implements AutoCloseable
     {
         private final ByteBuffer wrappedBuffer;
-        private final MutableDirectBuffer buffer;
-
-        private int offset = indexHeaderEncoder.encodedLength();
+        private final AtomicBuffer buffer;
+        private final int capacity;
 
         private SessionIndex(final long fixSessionId)
         {
@@ -166,11 +159,9 @@ public class ReplayIndex implements Index
             final boolean exists = logFile.exists();
             this.wrappedBuffer = bufferFactory.map(logFile, indexFileSize);
             this.buffer = new UnsafeBuffer(wrappedBuffer);
-            if (exists)
-            {
-                findStartOfRecords();
-            }
-            else
+
+            capacity = recordCapacity(buffer.capacity());
+            if (!exists)
             {
                 indexHeaderEncoder
                     .wrap(buffer, 0)
@@ -181,23 +172,33 @@ public class ReplayIndex implements Index
             }
         }
 
-        private void findStartOfRecords()
+        private void onRecord(
+            final int streamId,
+            final int aeronSessionId,
+            final long beginPosition,
+            final long endPosition,
+            final int sequenceNumber,
+            final int sequenceIndex)
         {
-            while (buffer.getByte(offset) > 0)
-            {
-                offset += ReplayIndexRecordEncoder.BLOCK_LENGTH;
-            }
-        }
+            /*final long changeNumber = beginLossChange + 1;
 
-        void onRecord(final int streamId,
-                      final int aeronSessionId,
-                      final long beginPosition,
-                      final long endPosition,
-                      final int sequenceNumber,
-                      final int sequenceIndex)
-        {
+            beginLossChange = changeNumber;
+
+            lossTermId = termId;
+            lossTermOffset = termOffset;
+            lossLength = length;
+
+            endLossChange = changeNumber;*/
+
+            final int beginChange = beginChangeVolatile(buffer);
+            final int changeNumber = beginChange + RECORD_LENGTH;
+
+            beginChangeVolatile(buffer, changeNumber);
+
+            final int offset = offset(beginChange, capacity);
+
             replayIndexRecord
-                .wrap(buffer, this.offset)
+                .wrap(buffer, offset)
                 .streamId(streamId)
                 .aeronSessionId(aeronSessionId)
                 .position(beginPosition)
@@ -207,12 +208,13 @@ public class ReplayIndex implements Index
             positionWriter.indexedUpTo(aeronSessionId, endPosition);
             positionWriter.updateChecksums();
 
-            this.offset = replayIndexRecord.limit();
+            endChangeVolatile(buffer, changeNumber);
         }
 
         public void close()
         {
             IoUtil.unmap(wrappedBuffer);
         }
+
     }
 }

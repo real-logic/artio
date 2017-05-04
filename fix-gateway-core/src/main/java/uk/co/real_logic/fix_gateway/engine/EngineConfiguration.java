@@ -35,6 +35,7 @@ import java.util.function.Function;
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
 import static uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy.alwaysLocallyArchive;
 import static uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy.alwaysReplicated;
 
@@ -57,7 +58,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /** Property name for the directory to log archive data into */
     public static final String LOG_FILE_DIR_PROP = "logging.dir";
     /** Property name for size of logging index files */
-    public static final String INDEX_FILE_SIZE_PROP = "logging.index.size";
+    public static final String REPLAY_INDEX_FILE_SIZE_PROP = "logging.index.size";
 
     // Care needs to be taken when setting the fragment limits, and buffer sizes
     // The inbound bytes received and buffer sizes should always be set low enough
@@ -90,7 +91,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     // ------------------------------------------------
 
     public static final String DEFAULT_LOG_FILE_DIR = "logs";
-    public static final int DEFAULT_INDEX_FILE_SIZE = 2 * 1024 * 1024;
+    public static final int DEFAULT_REPLAY_INDEX_FILE_SIZE = 2 * 1024 * 1024 + INITIAL_RECORD_OFFSET;
     public static final int DEFAULT_LOGGER_CACHE_NUM_SETS = 8;
     public static final int DEFAULT_LOGGER_CACHE_SET_SIZE = 4;
 
@@ -113,7 +114,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     private String host = null;
     private int port;
-    private int indexFileSize = getInteger(INDEX_FILE_SIZE_PROP, DEFAULT_INDEX_FILE_SIZE);
+    private int replayIndexFileSize = getInteger(REPLAY_INDEX_FILE_SIZE_PROP, DEFAULT_REPLAY_INDEX_FILE_SIZE);
     private String logFileDir = getProperty(LOG_FILE_DIR_PROP, DEFAULT_LOG_FILE_DIR);
     private int loggerCacheNumSets = DEFAULT_LOGGER_CACHE_NUM_SETS;
     private int loggerCacheSetSize = DEFAULT_LOGGER_CACHE_SET_SIZE;
@@ -240,11 +241,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * @param indexFileSize the size of index files.
      * @return this
      *
-     * @see EngineConfiguration#INDEX_FILE_SIZE_PROP
+     * @see EngineConfiguration#REPLAY_INDEX_FILE_SIZE_PROP
      */
-    public EngineConfiguration indexFileSize(final int indexFileSize)
+    public EngineConfiguration replayIndexFileSize(final int indexFileSize)
     {
-        this.indexFileSize = indexFileSize;
+        this.replayIndexFileSize = indexFileSize;
         return this;
     }
 
@@ -515,9 +516,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return logFileDir;
     }
 
-    public int indexFileSize()
+    public int replayIndexFileSize()
     {
-        return indexFileSize;
+        return replayIndexFileSize;
     }
 
     public int loggerCacheSetSize()

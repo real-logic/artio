@@ -28,27 +28,26 @@ import java.nio.ByteBuffer;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
-import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.REPLAY_BUFFER_SIZE;
-import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
+import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndexDescriptor.*;
 
 public class ReplayIndexTest extends AbstractLogTest
 {
-    private ByteBuffer indexBuffer = ByteBuffer.allocate(16 * 1024);
+    private ByteBuffer indexBuffer = ByteBuffer.allocate((16 * 1024) + INITIAL_RECORD_OFFSET);
     private BufferFactory mockBufferFactory = mock(BufferFactory.class);
-    private UnsafeBuffer replayBuffer = new UnsafeBuffer(new byte[REPLAY_BUFFER_SIZE]);
+    private UnsafeBuffer replayPositionBuffer = new UnsafeBuffer(new byte[REPLAY_POSITION_BUFFER_SIZE]);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private IndexedPositionConsumer positionConsumer = mock(IndexedPositionConsumer.class);
-    private IndexedPositionReader positionReader = new IndexedPositionReader(replayBuffer);
+    private IndexedPositionReader positionReader = new IndexedPositionReader(replayPositionBuffer);
 
     private SessionExistsEncoder logon = new SessionExistsEncoder();
     private ReplayIndex replayIndex = new ReplayIndex(
         DEFAULT_LOG_FILE_DIR,
         STREAM_ID,
-        DEFAULT_INDEX_FILE_SIZE,
+        DEFAULT_REPLAY_INDEX_FILE_SIZE,
         DEFAULT_LOGGER_CACHE_NUM_SETS,
         DEFAULT_LOGGER_CACHE_SET_SIZE,
         mockBufferFactory,
-        replayBuffer,
+        replayPositionBuffer,
         errorHandler);
 
     @Before
@@ -67,7 +66,7 @@ public class ReplayIndexTest extends AbstractLogTest
         verifyMappedFile(SESSION_ID);
 
         final ReplayIndexRecordDecoder replayIndexRecord = new ReplayIndexRecordDecoder()
-            .wrap(new UnsafeBuffer(indexBuffer), 8, 16, 0);
+            .wrap(new UnsafeBuffer(indexBuffer), INITIAL_RECORD_OFFSET, 16, 0);
 
         assertEquals(STREAM_ID, replayIndexRecord.streamId());
         assertEquals(AERON_SESSION_ID, replayIndexRecord.aeronSessionId());

@@ -149,11 +149,11 @@ public abstract class EngineContext implements AutoCloseable
         return new ReplayIndex(
             logFileDir,
             streamId,
-            configuration.indexFileSize(),
+            configuration.replayIndexFileSize(),
             cacheNumSets,
             cacheSetSize,
             LoggerUtil::map,
-            ReplayIndex.replayPositionBuffer(logFileDir, streamId),
+            ReplayIndexDescriptor.replayPositionBuffer(logFileDir, streamId),
             errorHandler);
     }
 

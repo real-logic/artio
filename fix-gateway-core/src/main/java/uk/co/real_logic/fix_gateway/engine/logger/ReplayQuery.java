@@ -26,11 +26,14 @@ import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
 import java.util.function.LongFunction;
 
-import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndex.logFile;
+import static org.agrona.UnsafeAccess.UNSAFE;
+import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
 /**
- * Queries an index of a composite key of session id and sequence number
+ * Queries an index of a composite key of session id and sequence number.
+ *
+ * This object isn't thread-safe, but the underlying replay index is a single-writer, multiple-reader threadsafe index.
  */
 public class ReplayQuery implements AutoCloseable
 {
@@ -90,14 +93,15 @@ public class ReplayQuery implements AutoCloseable
     {
         private final ByteBuffer wrappedBuffer;
         private final UnsafeBuffer buffer;
+        private final int capacity;
 
         private SessionQuery(final long sessionId)
         {
             wrappedBuffer = indexBufferFactory.map(logFile(logFileDir, sessionId, requiredStreamId));
             buffer = new UnsafeBuffer(wrappedBuffer);
+            capacity = recordCapacity(buffer.capacity());
         }
 
-        // TODO: potential optimisation of jumping straight to the beginSeqNo offset
         private int query(
             final ControlledFragmentHandler handler,
             final int beginSequenceNumber,
@@ -106,7 +110,7 @@ public class ReplayQuery implements AutoCloseable
             final int endSequenceIndex)
         {
             messageFrameHeader.wrap(buffer, 0);
-            int index = MessageHeaderDecoder.ENCODED_LENGTH;
+
             final int actingBlockLength = messageFrameHeader.blockLength();
             final int actingVersion = messageFrameHeader.version();
             final int requiredStreamId = ReplayQuery.this.requiredStreamId;
@@ -116,49 +120,78 @@ public class ReplayQuery implements AutoCloseable
             int lastAeronSessionId = 0;
             ArchiveReader.SessionReader sessionReader = null;
 
+            int index = INITIAL_RECORD_OFFSET;
+
             while (true)
             {
+                /*final long changeNumber = endLossChange;
+
+                if (changeNumber != lastLossChangeNumber)
+                {
+                    final int termId = lossTermId;
+                    final int termOffset = lossTermOffset;
+                    final int length = lossLength;
+
+                    UNSAFE.loadFence(); // LoadLoad required so previous loads don't move past version check below.
+
+                    if (changeNumber == beginLossChange)*/
+
+                final int changePosition = endChangeVolatile(buffer);
+                final int changeIndex = ReplayIndexDescriptor.offset(changePosition, capacity);
+
                 indexRecord.wrap(buffer, index, actingBlockLength, actingVersion);
                 final int streamId = indexRecord.streamId();
                 final long position = indexRecord.position();
-                if (position == 0)
-                {
-                    return count;
-                }
-
                 final int aeronSessionId = indexRecord.aeronSessionId();
-                if (sessionReader == null || aeronSessionId != lastAeronSessionId)
-                {
-                    lastAeronSessionId = aeronSessionId;
-                    sessionReader = archiveReader.session(aeronSessionId);
-                }
-
-                // You can't find the entry in the log file so treat the same as
-                // ArchiveReader.read() returning NO_MESSAGE.
-                if (sessionReader == null)
-                {
-                    return count;
-                }
-
                 final int sequenceIndex = indexRecord.sequenceIndex();
                 final int sequenceNumber = indexRecord.sequenceNumber();
 
-                final boolean endOk = upToMostRecentMessage || sequenceIndex < endSequenceIndex ||
-                    (sequenceIndex == endSequenceIndex && sequenceNumber <= endSequenceNumber);
-                final boolean startOk = sequenceIndex > beginSequenceIndex ||
-                    (sequenceIndex == beginSequenceIndex && sequenceNumber >= beginSequenceNumber);
-                if (startOk && endOk && streamId == requiredStreamId)
+                UNSAFE.loadFence(); // LoadLoad required so previous loads don't move past version check below.
+
+                // if the block was read atomically with no updates
+                if (changePosition == beginChangeVolatile(buffer))
                 {
-                    final long readTo = sessionReader.read(position, handler);
-                    if (readTo < 0 || readTo == position)
+                    if (position == 0)
                     {
-                        return count;
+                        break;
                     }
 
-                    count++;
+                    if (sessionReader == null || aeronSessionId != lastAeronSessionId)
+                    {
+                        lastAeronSessionId = aeronSessionId;
+                        sessionReader = archiveReader.session(aeronSessionId);
+                    }
+
+                    // You can't find the entry in the log file so treat the same as
+                    // ArchiveReader.read() returning NO_MESSAGE.
+                    if (sessionReader == null)
+                    {
+                        break;
+                    }
+
+                    final boolean endOk = upToMostRecentMessage || sequenceIndex < endSequenceIndex ||
+                        (sequenceIndex == endSequenceIndex && sequenceNumber <= endSequenceNumber);
+                    final boolean startOk = sequenceIndex > beginSequenceIndex ||
+                        (sequenceIndex == beginSequenceIndex && sequenceNumber >= beginSequenceNumber);
+                    if (startOk && endOk && streamId == requiredStreamId)
+                    {
+                        final long readTo = sessionReader.read(position, handler);
+                        if (readTo < 0 || readTo == position)
+                        {
+                            break;
+                        }
+
+                        count++;
+                    }
+                    index += actingBlockLength;
                 }
-                index += actingBlockLength;
+                else
+                {
+                    // TODO: run an idle strategy
+                }
             }
+
+            return count;
         }
 
         public void close()
