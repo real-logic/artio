@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
+import org.agrona.concurrent.NoOpIdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
@@ -83,7 +84,8 @@ public class ReplayIndexTest extends AbstractLogTest
             DEFAULT_LOGGER_CACHE_SET_SIZE,
                 existingBufferFactory,
             mockReader,
-            OUTBOUND_LIBRARY_STREAM);
+            OUTBOUND_LIBRARY_STREAM,
+            new NoOpIdleStrategy());
 
         returnBuffer(indexBuffer, SESSION_ID);
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);

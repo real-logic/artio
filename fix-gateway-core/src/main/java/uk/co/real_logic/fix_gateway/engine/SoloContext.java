@@ -186,7 +186,7 @@ class SoloContext extends EngineContext
         }
 
         final ArchiveReader archiveReader = archiveReader(inboundStreamId);
-        return newReplayQuery(archiveReader);
+        return newReplayQuery(archiveReader, configuration.framerIdleStrategy());
     }
 
     public GatewayPublication inboundLibraryPublication()

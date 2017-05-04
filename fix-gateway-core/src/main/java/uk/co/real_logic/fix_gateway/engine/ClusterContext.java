@@ -162,7 +162,7 @@ class ClusterContext extends EngineContext
 
     public ReplayQuery inboundReplayQuery()
     {
-        return newReplayQuery(inboundArchiveReader());
+        return newReplayQuery(inboundArchiveReader(), configuration.framerIdleStrategy());
     }
 
     public ClusterableStreams streams()

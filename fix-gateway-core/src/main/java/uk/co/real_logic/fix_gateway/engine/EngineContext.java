@@ -21,10 +21,7 @@ import io.aeron.Subscription;
 import io.aeron.UnavailableImageHandler;
 import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.ErrorHandler;
-import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.NanoClock;
-import org.agrona.concurrent.SystemEpochClock;
-import org.agrona.concurrent.SystemNanoClock;
+import org.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.StreamInformation;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
@@ -157,7 +154,7 @@ public abstract class EngineContext implements AutoCloseable
             errorHandler);
     }
 
-    protected ReplayQuery newReplayQuery(final ArchiveReader archiveReader)
+    protected ReplayQuery newReplayQuery(final ArchiveReader archiveReader, final IdleStrategy idleStrategy)
     {
         final String logFileDir = configuration.logFileDir();
         final int cacheSetSize = configuration.loggerCacheSetSize();
@@ -169,7 +166,8 @@ public abstract class EngineContext implements AutoCloseable
             cacheSetSize,
             LoggerUtil::mapExistingFile,
             archiveReader,
-            streamId);
+            streamId,
+            idleStrategy);
     }
 
     public void close()
@@ -209,7 +207,7 @@ public abstract class EngineContext implements AutoCloseable
             final ExclusivePublication replayPublication, final ArchiveReader outboundArchiveReader)
     {
         return new Replayer(
-            newReplayQuery(outboundArchiveReader),
+            newReplayQuery(outboundArchiveReader, configuration.archiverIdleStrategy()),
             replayPublication,
             new ExclusiveBufferClaim(),
             configuration.archiverIdleStrategy(),

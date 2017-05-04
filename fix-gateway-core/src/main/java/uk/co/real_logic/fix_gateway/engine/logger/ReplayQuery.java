@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectCache;
+import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.storage.messages.ReplayIndexRecordDecoder;
@@ -46,6 +47,7 @@ public class ReplayQuery implements AutoCloseable
     private final ExistingBufferFactory indexBufferFactory;
     private final ArchiveReader archiveReader;
     private final int requiredStreamId;
+    private final IdleStrategy idleStrategy;
 
     public ReplayQuery(
         final String logFileDir,
@@ -53,12 +55,14 @@ public class ReplayQuery implements AutoCloseable
         final int cacheSetSize,
         final ExistingBufferFactory indexBufferFactory,
         final ArchiveReader archiveReader,
-        final int requiredStreamId)
+        final int requiredStreamId,
+        final IdleStrategy idleStrategy)
     {
         this.logFileDir = logFileDir;
         this.indexBufferFactory = indexBufferFactory;
         this.archiveReader = archiveReader;
         this.requiredStreamId = requiredStreamId;
+        this.idleStrategy = idleStrategy;
         fixSessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionQuery::close);
     }
 
@@ -150,6 +154,8 @@ public class ReplayQuery implements AutoCloseable
                 // if the block was read atomically with no updates
                 if (changePosition == beginChangeVolatile(buffer))
                 {
+                    idleStrategy.reset();
+
                     if (position == 0)
                     {
                         break;
@@ -186,7 +192,7 @@ public class ReplayQuery implements AutoCloseable
                 }
                 else
                 {
-                    // TODO: run an idle strategy
+                    idleStrategy.idle();
                 }
             }
 
