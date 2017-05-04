@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2016 Real Logic Ltd.
+ * Copyright 2015-2017 Real Logic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,8 +105,6 @@ public class ReplayQueryTest extends AbstractLogTest
         verifyMessagesRead(1);
         assertEquals(1, msgCount);
     }
-
-    // TODO: make capacity a power of two
 
     @Test
     public void shouldReadSecondRecord()
@@ -243,7 +241,6 @@ public class ReplayQueryTest extends AbstractLogTest
         verifyMessagesRead(totalMessages);
     }
 
-    // TODO: fix potential record corruption
     // TODO: out of bounds query failing + counter returning
     // TODO: reloading from a full buffer and continuing
 
