@@ -30,15 +30,12 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.stream.IntStream;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader.UNKNOWN_SESSION;
-import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
-import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndexDescriptor.RECORD_LENGTH;
-import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndexDescriptor.REPLAY_POSITION_BUFFER_SIZE;
+import static uk.co.real_logic.fix_gateway.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.fix_gateway.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
 public class ReplayIndexTest extends AbstractLogTest
@@ -261,8 +258,7 @@ public class ReplayIndexTest extends AbstractLogTest
             indexExampleMessage(SEQUENCE_NUMBER + 1);
 
             return 1L;
-        })
-        .thenReturn(1L);
+        }).thenReturn(1L);
 
         final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, MOST_RECENT_MESSAGE, SEQUENCE_INDEX);
 
@@ -276,12 +272,11 @@ public class ReplayIndexTest extends AbstractLogTest
         indexExampleMessage();
 
         whenHandled().then(inv ->
-            {
-                IntStream.range(SEQUENCE_NUMBER + 1, totalMessages + 2).forEach(this::indexExampleMessage);
+        {
+            IntStream.range(SEQUENCE_NUMBER + 1, totalMessages + 4).forEach(this::indexExampleMessage);
 
-                return 1L;
-            })
-            .thenReturn(1L);
+            return 1L;
+        }).thenReturn(1L);
 
         final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, MOST_RECENT_MESSAGE, SEQUENCE_INDEX);
 

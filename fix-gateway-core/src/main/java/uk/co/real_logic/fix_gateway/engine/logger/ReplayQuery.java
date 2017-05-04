@@ -120,7 +120,7 @@ public class ReplayQuery implements AutoCloseable
             int lastAeronSessionId = 0;
             ArchiveReader.SessionReader sessionReader = null;
 
-            // positions on a monotonically increasing
+            // positions on a monotonically increasing scale
             int iteratorPosition = beginChangeVolatile(buffer);
             // First iteration around you need to start at 0
             if (iteratorPosition < capacity)
@@ -133,13 +133,8 @@ public class ReplayQuery implements AutoCloseable
             {
                 final int changePosition = endChangeVolatile(buffer);
 
-                // If you have been passed by the writer thread then you need to skip up to the position
+                // TODO: If you have been passed by the writer thread then you need to skip up to the position
                 // of the writer thread
-                // TODO: overflows
-                /*if (changePosition > iteratorPosition)
-                {
-                    iteratorPosition = changePosition;
-                }*/
 
                 final int offset = offset(iteratorPosition, capacity);
 
