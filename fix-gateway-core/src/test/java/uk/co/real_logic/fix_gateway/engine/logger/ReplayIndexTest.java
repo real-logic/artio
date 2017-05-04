@@ -247,8 +247,6 @@ public class ReplayIndexTest extends AbstractLogTest
         verifyMessagesRead(totalMessages);
     }
 
-    // TODO: out of bounds query failing + counter returning
-
     @Test
     public void shouldReadSecondInterleavedMessage()
     {
