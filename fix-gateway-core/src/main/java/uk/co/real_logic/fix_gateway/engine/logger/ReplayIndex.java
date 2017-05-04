@@ -180,16 +180,6 @@ public class ReplayIndex implements Index
             final int sequenceNumber,
             final int sequenceIndex)
         {
-            /*final long changeNumber = beginLossChange + 1;
-
-            beginLossChange = changeNumber;
-
-            lossTermId = termId;
-            lossTermOffset = termOffset;
-            lossLength = length;
-
-            endLossChange = changeNumber;*/
-
             final int beginChangePosition = beginChangeVolatile(buffer);
             final int changePosition = beginChangePosition + RECORD_LENGTH;
 

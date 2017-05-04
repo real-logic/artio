@@ -28,7 +28,9 @@ import uk.co.real_logic.fix_gateway.messages.SessionExistsEncoder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.stream.IntStream;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
@@ -49,6 +51,7 @@ public class ReplayIndexTest extends AbstractLogTest
     private ArchiveReader.SessionReader mockSessionReader = mock(ArchiveReader.SessionReader.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private ReplayIndex replayIndex;
+    private int totalMessages = (indexBuffer.capacity() - MessageHeaderEncoder.ENCODED_LENGTH) / RECORD_LENGTH;
 
     private UnsafeBuffer replayPositionBuffer = new UnsafeBuffer(new byte[REPLAY_POSITION_BUFFER_SIZE]);
     private IndexedPositionConsumer positionConsumer = mock(IndexedPositionConsumer.class);
@@ -96,7 +99,7 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldReturnLogEntriesMatchingQuery()
     {
-        indexedExampleMessage();
+        indexExampleMessage();
 
         final int msgCount = query();
 
@@ -108,12 +111,10 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldReadSecondRecord()
     {
-        indexedExampleMessage();
+        indexExampleMessage();
 
         final int endSequenceNumber = SEQUENCE_NUMBER + 1;
-        bufferContainsExampleMessage(
-            true, SESSION_ID, endSequenceNumber, SEQUENCE_INDEX);
-        indexRecord();
+        indexExampleMessage(endSequenceNumber);
 
         final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, endSequenceNumber, SEQUENCE_INDEX);
 
@@ -124,7 +125,7 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldReadRecordsFromBeforeARestart() throws IOException
     {
-        indexedExampleMessage();
+        indexExampleMessage();
 
         // Fake restarting the gateway
         final File logFile = logFile(SESSION_ID);
@@ -152,7 +153,7 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldReturnAllLogEntriesWhenMostResentMessageRequested()
     {
-        indexedExampleMessage();
+        indexExampleMessage();
 
         final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, MOST_RECENT_MESSAGE, SEQUENCE_INDEX);
 
@@ -164,7 +165,7 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldReturnLogEntriesWhenMostResentMessageRequested()
     {
-        indexedExampleMessage();
+        indexExampleMessage();
 
         final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, MOST_RECENT_MESSAGE, SEQUENCE_INDEX);
 
@@ -176,7 +177,7 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldNotReturnLogEntriesWithWrongSessionId()
     {
-        indexedExampleMessage();
+        indexExampleMessage();
 
         final int msgCount = query(SESSION_ID_2, SEQUENCE_NUMBER, SEQUENCE_INDEX, SEQUENCE_NUMBER, SEQUENCE_INDEX);
 
@@ -188,7 +189,7 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldNotReturnLogEntriesWithOutOfRangeSequenceNumbers()
     {
-        indexedExampleMessage();
+        indexExampleMessage();
 
         final int msgCount = query(SESSION_ID, 1001, SEQUENCE_INDEX, 1002, SEQUENCE_INDEX);
 
@@ -199,7 +200,7 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldStopWhenSessionReaderReturnsLowPosition()
     {
-        indexedExampleMessage();
+        indexExampleMessage();
 
         readPositions(100L, (long)UNKNOWN_SESSION);
         indexRecord();
@@ -213,7 +214,7 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldQueryOverSequenceIndexBoundaries()
     {
-        indexedExampleMessage();
+        indexExampleMessage();
 
         readPositions(100L, 100L);
 
@@ -232,20 +233,14 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldNotStopIndexingWhenBufferFull()
     {
-        indexedExampleMessage();
+        indexExampleMessage();
 
         whenRead().thenReturn(100L);
 
         final int beginSequenceNumber = 1;
-        final int endSequenceNumber = 2_000;
-        final int totalMessages =
-            (indexBuffer.capacity() - MessageHeaderEncoder.ENCODED_LENGTH) / RECORD_LENGTH;
+        final int endSequenceNumber = 1_000;
 
-        for (int sequenceNumber = beginSequenceNumber; sequenceNumber <= endSequenceNumber; sequenceNumber++)
-        {
-            bufferContainsExampleMessage(false, SESSION_ID, sequenceNumber, SEQUENCE_INDEX);
-            indexRecord();
-        }
+        IntStream.rangeClosed(beginSequenceNumber, endSequenceNumber).forEach(this::indexExampleMessage);
 
         final int msgCount = query(beginSequenceNumber, SEQUENCE_INDEX, endSequenceNumber, SEQUENCE_INDEX);
 
@@ -253,10 +248,56 @@ public class ReplayIndexTest extends AbstractLogTest
         verifyMessagesRead(totalMessages);
     }
 
+    // TODO: out of bounds query failing + counter returning
+    // TODO: reloading from a full buffer and continuing
+
+    @Test
+    public void shouldReadSecondInterleavedMessage()
+    {
+        indexExampleMessage();
+
+        whenHandled().then(inv ->
+        {
+            indexExampleMessage(SEQUENCE_NUMBER + 1);
+
+            return 1L;
+        })
+        .thenReturn(1L);
+
+        final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, MOST_RECENT_MESSAGE, SEQUENCE_INDEX);
+
+        assertEquals(2, msgCount);
+        verifyMessagesRead(2);
+    }
+
+    @Test
+    public void shouldCheckForWriterOverlap()
+    {
+        indexExampleMessage();
+
+        whenHandled().then(inv ->
+            {
+                IntStream.range(SEQUENCE_NUMBER + 1, totalMessages + 2).forEach(this::indexExampleMessage);
+
+                return 1L;
+            })
+            .thenReturn(1L);
+
+        final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, MOST_RECENT_MESSAGE, SEQUENCE_INDEX);
+
+        assertEquals(totalMessages, msgCount);
+        verifyMessagesRead(totalMessages);
+    }
+
+    private OngoingStubbing<Long> whenHandled()
+    {
+        return when(mockSessionReader.read(anyLong(), any()));
+    }
+
     @Test
     public void shouldUpdatePositionForIndexedRecord()
     {
-        indexedExampleMessage();
+        indexExampleMessage();
 
         positionReader.readLastPosition(positionConsumer);
 
@@ -266,7 +307,7 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldOnlyMapSessionFileOnce()
     {
-        indexedExampleMessage();
+        indexExampleMessage();
 
         indexRecord();
 
@@ -276,8 +317,7 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldRecordIndexesForMultipleSessions()
     {
-        bufferContainsExampleMessage(true, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX);
-        indexRecord();
+        indexExampleMessage(SEQUENCE_NUMBER);
 
         bufferContainsExampleMessage(true, SESSION_ID_2, SEQUENCE_NUMBER, SEQUENCE_INDEX);
         indexRecord();
@@ -318,10 +358,7 @@ public class ReplayIndexTest extends AbstractLogTest
         offset += logon.encodedLength();
     }
 
-    // TODO: out of bounds query failing + counter returning
-    // TODO: reloading from a full buffer and continuing
-
-    private void indexedExampleMessage()
+    private void indexExampleMessage()
     {
         bufferContainsExampleMessage(true);
         indexRecord();
@@ -371,6 +408,13 @@ public class ReplayIndexTest extends AbstractLogTest
     private void indexRecord()
     {
         replayIndex.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_SESSION_ID, alignedEndPosition());
+    }
+
+    private void indexExampleMessage(final int endSequenceNumber)
+    {
+        bufferContainsExampleMessage(
+                true, SESSION_ID, endSequenceNumber, SEQUENCE_INDEX);
+        indexRecord();
     }
 
     private int query()
