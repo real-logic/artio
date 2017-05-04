@@ -248,7 +248,6 @@ public class ReplayIndexTest extends AbstractLogTest
     }
 
     // TODO: out of bounds query failing + counter returning
-    // TODO: reloading from a full buffer and continuing
 
     @Test
     public void shouldReadSecondInterleavedMessage()
