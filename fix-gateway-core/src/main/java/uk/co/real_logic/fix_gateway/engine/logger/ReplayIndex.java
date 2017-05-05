@@ -181,7 +181,7 @@ public class ReplayIndex implements Index
             final int beginChangePosition = beginChange(buffer);
             final int changePosition = beginChangePosition + RECORD_LENGTH;
 
-            beginChange(buffer, changePosition);
+            beginChangeOrdered(buffer, changePosition);
             UNSAFE.storeFence();
 
             final int offset = offset(beginChangePosition, capacity);
@@ -204,6 +204,5 @@ public class ReplayIndex implements Index
         {
             IoUtil.unmap(wrappedBuffer);
         }
-
     }
 }

@@ -24,7 +24,6 @@ import java.io.File;
 
 public class ReplayIndexDescriptor
 {
-
     static final int REPLAY_POSITION_BUFFER_SIZE = 128 * 1024;
 
     static final int BEGIN_CHANGE_OFFSET = MessageHeaderEncoder.ENCODED_LENGTH;
@@ -59,9 +58,9 @@ public class ReplayIndexDescriptor
         return buffer.getIntVolatile(END_CHANGE_OFFSET);
     }
 
-    static void beginChange(final AtomicBuffer buffer, final int changeNumber)
+    static void beginChangeOrdered(final AtomicBuffer buffer, final int changeNumber)
     {
-        buffer.putInt(BEGIN_CHANGE_OFFSET, changeNumber);
+        buffer.putIntOrdered(BEGIN_CHANGE_OFFSET, changeNumber);
     }
 
     static int beginChangeVolatile(final AtomicBuffer buffer)
