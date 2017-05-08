@@ -125,17 +125,17 @@ public class ReplayQuery implements AutoCloseable
             ArchiveReader.SessionReader sessionReader = null;
 
             // positions on a monotonically increasing scale
-            int iteratorPosition = beginChangeVolatile(buffer);
+            long iteratorPosition = beginChangeVolatile(buffer);
             // First iteration around you need to start at 0
             if (iteratorPosition < capacity)
             {
                 iteratorPosition = 0;
             }
-            int stopIteratingPosition = iteratorPosition + capacity;
+            long stopIteratingPosition = iteratorPosition + capacity;
 
             while (iteratorPosition != stopIteratingPosition)
             {
-                final int changePosition = endChangeVolatile(buffer);
+                final long changePosition = endChangeVolatile(buffer);
 
                 // Lapped by writer
                 if (changePosition > iteratorPosition && (iteratorPosition + capacity) <= beginChangeVolatile(buffer))

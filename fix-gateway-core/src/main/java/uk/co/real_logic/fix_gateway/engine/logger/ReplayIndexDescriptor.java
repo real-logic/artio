@@ -27,8 +27,8 @@ public class ReplayIndexDescriptor
     static final int REPLAY_POSITION_BUFFER_SIZE = 128 * 1024;
 
     static final int BEGIN_CHANGE_OFFSET = MessageHeaderEncoder.ENCODED_LENGTH;
-    static final int END_CHANGE_OFFSET = BEGIN_CHANGE_OFFSET + BitUtil.SIZE_OF_INT;
-    public static final int INITIAL_RECORD_OFFSET = END_CHANGE_OFFSET + BitUtil.SIZE_OF_INT;
+    static final int END_CHANGE_OFFSET = BEGIN_CHANGE_OFFSET + BitUtil.SIZE_OF_LONG;
+    public static final int INITIAL_RECORD_OFFSET = END_CHANGE_OFFSET + BitUtil.SIZE_OF_LONG;
 
     static final int RECORD_LENGTH = 32;
 
@@ -48,29 +48,29 @@ public class ReplayIndexDescriptor
         return logFileDir + File.separator + "replay-positions-"  + streamId;
     }
 
-    static void endChangeOrdered(final AtomicBuffer buffer, final int changeNumber)
+    static void endChangeOrdered(final AtomicBuffer buffer, final long changePosition)
     {
-        buffer.putIntOrdered(END_CHANGE_OFFSET, changeNumber);
+        buffer.putLongOrdered(END_CHANGE_OFFSET, changePosition);
     }
 
-    static int endChangeVolatile(final AtomicBuffer buffer)
+    static long endChangeVolatile(final AtomicBuffer buffer)
     {
-        return buffer.getIntVolatile(END_CHANGE_OFFSET);
+        return buffer.getLongVolatile(END_CHANGE_OFFSET);
     }
 
-    static void beginChangeOrdered(final AtomicBuffer buffer, final int changeNumber)
+    static void beginChangeOrdered(final AtomicBuffer buffer, final long changePosition)
     {
-        buffer.putIntOrdered(BEGIN_CHANGE_OFFSET, changeNumber);
+        buffer.putLongOrdered(BEGIN_CHANGE_OFFSET, changePosition);
     }
 
-    static int beginChangeVolatile(final AtomicBuffer buffer)
+    static long beginChangeVolatile(final AtomicBuffer buffer)
     {
-        return buffer.getIntVolatile(BEGIN_CHANGE_OFFSET);
+        return buffer.getLongVolatile(BEGIN_CHANGE_OFFSET);
     }
 
-    static int beginChange(final AtomicBuffer buffer)
+    static long beginChange(final AtomicBuffer buffer)
     {
-        return buffer.getInt(BEGIN_CHANGE_OFFSET);
+        return buffer.getLong(BEGIN_CHANGE_OFFSET);
     }
 
     static int recordCapacity(final int indexFileSize)
@@ -78,9 +78,9 @@ public class ReplayIndexDescriptor
         return indexFileSize - INITIAL_RECORD_OFFSET;
     }
 
-    static int offset(final int changePosition, final int capacity)
+    static int offset(final long changePosition, final int capacity)
     {
-        return INITIAL_RECORD_OFFSET + (changePosition & (capacity - 1));
+        return INITIAL_RECORD_OFFSET + ((int) changePosition & (capacity - 1));
     }
 
     static void checkIndexFileSize(final int indexFileSize)

@@ -178,8 +178,8 @@ public class ReplayIndex implements Index
             final int sequenceNumber,
             final int sequenceIndex)
         {
-            final int beginChangePosition = beginChange(buffer);
-            final int changePosition = beginChangePosition + RECORD_LENGTH;
+            final long beginChangePosition = beginChange(buffer);
+            final long changePosition = beginChangePosition + RECORD_LENGTH;
 
             beginChangeOrdered(buffer, changePosition);
             UNSAFE.storeFence();
