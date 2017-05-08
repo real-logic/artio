@@ -168,6 +168,13 @@ public class ReplayIndex implements Index
                     .schemaId(replayIndexRecord.sbeSchemaId())
                     .version(replayIndexRecord.sbeSchemaVersion());
             }
+            else
+            {
+                // Reset the positions in order to avoid wraps at the start.
+                final int resetPosition = offset(beginChange(buffer), capacity);
+                beginChangeOrdered(buffer, resetPosition);
+                endChangeOrdered(buffer, resetPosition);
+            }
         }
 
         private void onRecord(
