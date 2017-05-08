@@ -274,6 +274,12 @@ public class ArchiveReader implements AutoCloseable
             final ByteBuffer byteBuffer = buffer.byteBuffer();
             final int bodyLength = Math.max(0, frameLength - HEADER_LENGTH);
             final int limit = messageOffset + bodyLength;
+            if (limit > byteBuffer.capacity())
+            {
+                // Invalid checksum - will cause a checksum failure
+                return -1;
+            }
+
             ByteBufferUtil.limit(byteBuffer, limit);
             ByteBufferUtil.position(byteBuffer, messageOffset);
 
