@@ -609,7 +609,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final boolean thisLibrary = libraryId == this.libraryId;
         if (thisLibrary && logonstatus == LogonStatus.NEW)
         {
-            DebugLogger.log(FIX_MESSAGE, "Library Logon: %d, %d%n", connectionId, sessionId);
+            DebugLogger.log(
+                FIX_MESSAGE,
+                "Library Logon: conn=%d, sess=%d, sentSeqNo=%d, recvSeqNo=%d%n",
+                connectionId,
+                sessionId,
+                lastSentSequenceNumber,
+                lastReceivedSequenceNumber);
             final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
             if (subscriber != null)
             {
