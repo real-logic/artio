@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.stress;
 
+import io.aeron.CommonContext;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.builder.TestRequestEncoder;
@@ -27,6 +28,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Random;
 
+import static uk.co.real_logic.fix_gateway.CommonConfiguration.optimalTmpDirName;
 import static uk.co.real_logic.fix_gateway.stress.StressConfiguration.*;
 
 final class StressUtil
@@ -104,6 +106,12 @@ final class StressUtil
     static void cleanupOldLogFileDir(final EngineConfiguration configuration)
     {
         IoUtil.delete(new File(configuration.logFileDir()), true);
+
+        final File tmpDir = new File(optimalTmpDirName());
+        for (File file : tmpDir.listFiles(file -> file.getName().contains("fix-library-")))
+        {
+            IoUtil.delete(file, false);
+        }
     }
 
     static void awaitKeyPress()
