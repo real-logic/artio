@@ -183,7 +183,7 @@ public class ClusteredGatewaySystemTest
             "Cluster failed to elect a leader",
             () ->
             {
-                pollLibraries();
+                testSystem.poll();
                 return findNewLeader(otherNodes);
             },
             5000);
@@ -199,7 +199,7 @@ public class ClusteredGatewaySystemTest
                 ", channel=" + acceptingLibrary.currentAeronChannel(),
             () ->
             {
-                pollLibraries();
+                testSystem.poll();
                 return connectedToLeader();
             },
             10_000,
@@ -218,7 +218,7 @@ public class ClusteredGatewaySystemTest
             "Old library state not flushed out",
             () ->
             {
-                pollLibraries();
+                testSystem.poll();
 
                 assertOldSessionDisconnected(initiatingLibrary);
                 assertOldSessionDisconnected(acceptingLibrary);
@@ -267,12 +267,6 @@ public class ClusteredGatewaySystemTest
     private void assertOldSessionDisconnected(final FixLibrary library)
     {
         assertThat("Old session hasn't disconnected yet", library.sessions(), hasSize(0));
-    }
-
-    private void pollLibraries()
-    {
-        initiatingLibrary.poll(FRAGMENT_LIMIT);
-        acceptingLibrary.poll(FRAGMENT_LIMIT);
     }
 
     private void logLeader(final FixEngineRunner oldLeader, final String formatString)
