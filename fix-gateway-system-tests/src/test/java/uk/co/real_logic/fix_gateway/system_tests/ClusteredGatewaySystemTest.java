@@ -60,7 +60,6 @@ import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_SE
 import static uk.co.real_logic.fix_gateway.engine.logger.FixMessagePredicates.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
-@Ignore
 public class ClusteredGatewaySystemTest
 {
     private static final int CLUSTER_SIZE = 3;
@@ -148,10 +147,17 @@ public class ClusteredGatewaySystemTest
         roundTripOneMessage(initiatingSession, acceptingOtfAcceptor);
         final long position = roundTripOneMessage(acceptingSession, initiatingOtfAcceptor);
 
+        assertEventuallyTrue(
+            "Position never catches up to the required position",
+            () ->
+            {
+                testSystem.poll();
+
+                assertThat(acceptingHandler.sentPosition(), greaterThanOrEqualTo(position));
+            });
+
         closeLibrariesAndEngine();
         final long end = System.nanoTime() + 1;
-
-        assertThat(acceptingHandler.sentPosition(), greaterThanOrEqualTo(position));
 
         assertAllClusterNodesHaveArchivedTestRequestMessage(begin, end, acceptingSession.id());
 
