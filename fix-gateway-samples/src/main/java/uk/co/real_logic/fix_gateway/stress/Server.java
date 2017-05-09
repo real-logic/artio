@@ -65,7 +65,7 @@ public class Server implements Agent
         libraryConfiguration
             .authenticationStrategy(authenticationStrategy)
             .agentNamePrefix("server-");
-        fixLibrary = blockingConnect((LibraryConfiguration) libraryConfiguration
+        fixLibrary = blockingConnect(libraryConfiguration
             .sessionAcquireHandler(StressSessionHandler::new)
             .sessionExistsHandler(new AcquiringSessionExistsHandler())
             .libraryAeronChannels(singletonList(aeronChannel)));
