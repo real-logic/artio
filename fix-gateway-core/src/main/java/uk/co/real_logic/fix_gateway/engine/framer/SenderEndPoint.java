@@ -57,7 +57,8 @@ class SenderEndPoint implements AutoCloseable
     SenderEndPoint(
         final long connectionId,
         final int libraryId,
-        final SlowPeeker outboundSlowPeeker,
+        final BlockablePosition outboundBlockablePosition,
+        final BlockablePosition replayBlockablePosition,
         final TcpChannel channel,
         final AtomicCounter bytesInBuffer,
         final AtomicCounter invalidLibraryAttempts,
@@ -65,8 +66,7 @@ class SenderEndPoint implements AutoCloseable
         final Framer framer,
         final int maxBytesInBuffer,
         final long slowConsumerTimeoutInMs,
-        final long timeInMs,
-        final SlowPeeker replaySlowPeeker)
+        final long timeInMs)
     {
         this.connectionId = connectionId;
         this.libraryId = libraryId;
@@ -78,8 +78,8 @@ class SenderEndPoint implements AutoCloseable
         this.maxBytesInBuffer = maxBytesInBuffer;
         this.slowConsumerTimeoutInMs = slowConsumerTimeoutInMs;
 
-        outboundTracker = new StreamTracker(outboundSlowPeeker);
-        replayTracker = new StreamTracker(replaySlowPeeker);
+        outboundTracker = new StreamTracker(outboundBlockablePosition);
+        replayTracker = new StreamTracker(replayBlockablePosition);
 
         sendingTimeoutTimeInMs = timeInMs + slowConsumerTimeoutInMs;
     }
@@ -237,7 +237,7 @@ class SenderEndPoint implements AutoCloseable
     public void libraryId(final int libraryId, final LibrarySlowPeeker librarySlowPeeker)
     {
         this.libraryId = libraryId;
-        this.outboundTracker.slowPeeker = librarySlowPeeker;
+        this.outboundTracker.blockablePosition = librarySlowPeeker;
     }
 
     public void close()
@@ -360,7 +360,7 @@ class SenderEndPoint implements AutoCloseable
     {
         final int alignedLength = ArchiveDescriptor.alignTerm(length);
         final long startPosition = position - (alignedLength + DataHeaderFlyweight.HEADER_LENGTH);
-        tracker.slowPeeker.blockPosition(startPosition);
+        tracker.blockablePosition.blockPosition(startPosition);
         tracker.skipPosition = position;
         return Action.CONTINUE;
     }
@@ -427,14 +427,14 @@ class SenderEndPoint implements AutoCloseable
     // Struct for tracking the slow state of the replay and outbound streams
     private class StreamTracker
     {
-        private SlowPeeker slowPeeker;
+        private BlockablePosition blockablePosition;
         private long sentPosition;
         private boolean partiallySentMessage = false;
         private long skipPosition = Long.MAX_VALUE;
 
-        StreamTracker(final SlowPeeker slowPeeker)
+        StreamTracker(final BlockablePosition blockablePosition)
         {
-            this.slowPeeker = slowPeeker;
+            this.blockablePosition = blockablePosition;
         }
 
         private void moveSentPosition(final int by)

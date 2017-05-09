@@ -58,13 +58,14 @@ public class SenderEndPointTest
     private Framer framer = mock(Framer.class);
     private ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
     private UnsafeBuffer buffer = new UnsafeBuffer(byteBuffer);
-    private SlowPeeker librarySlowPeeker = mock(SlowPeeker.class);
-    private SlowPeeker replaySlowPeeker = mock(SlowPeeker.class);
+    private BlockablePosition libraryBlockablePosition = mock(BlockablePosition.class);
+    private BlockablePosition replayBlockablePosition = mock(BlockablePosition.class);
 
     private SenderEndPoint endPoint = new SenderEndPoint(
         CONNECTION_ID,
         LIBRARY_ID,
-        librarySlowPeeker,
+        libraryBlockablePosition,
+        replayBlockablePosition,
         tcpChannel,
         bytesInBuffer,
         invalidLibraryAttempts,
@@ -72,8 +73,8 @@ public class SenderEndPointTest
         framer,
         MAX_BYTES_IN_BUFFER,
         DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS,
-        0,
-        replaySlowPeeker);
+        0
+    );
 
     @Test
     public void shouldRetrySlowConsumerMessage() throws IOException
@@ -503,24 +504,24 @@ public class SenderEndPointTest
 
     private void verifyDoesNotBlockLibrary()
     {
-        verify(librarySlowPeeker, never()).blockPosition(anyLong());
-        verify(replaySlowPeeker, never()).blockPosition(anyLong());
+        verify(libraryBlockablePosition, never()).blockPosition(anyLong());
+        verify(replayBlockablePosition, never()).blockPosition(anyLong());
     }
 
     private void verifyBlocksLibraryAt(final long position)
     {
-        verifyBlocksAt(position, librarySlowPeeker);
+        verifyBlocksAt(position, libraryBlockablePosition);
     }
 
     private void verifyBlocksReplayAt(final long position)
     {
-        verifyBlocksAt(position, replaySlowPeeker);
+        verifyBlocksAt(position, replayBlockablePosition);
     }
 
-    private void verifyBlocksAt(final long position, final SlowPeeker slowPeeker)
+    private void verifyBlocksAt(final long position, final BlockablePosition blockablePosition)
     {
-        verify(slowPeeker).blockPosition(position);
-        reset(slowPeeker);
+        verify(blockablePosition).blockPosition(position);
+        reset(blockablePosition);
     }
 
 }

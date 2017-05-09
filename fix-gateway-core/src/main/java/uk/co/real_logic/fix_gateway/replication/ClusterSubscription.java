@@ -573,7 +573,7 @@ public class ClusterSubscription extends ClusterableSubscription
         return currentLeadershipTerm;
     }
 
-    public long lastAppliedPosition()
+    public long position()
     {
         return lastAppliedTransportPosition + positionDelta;
     }

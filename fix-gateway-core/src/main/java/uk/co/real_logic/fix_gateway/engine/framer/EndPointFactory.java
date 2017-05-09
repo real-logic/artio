@@ -108,6 +108,7 @@ class EndPointFactory
             connectionId,
             libraryId,
             librarySlowPeeker,
+            replaySlowPeeker,
             channel,
             fixCounters.bytesInBuffer(connectionId, remoteAddress),
             fixCounters.invalidLibraryAttempts(connectionId, remoteAddress),
@@ -115,8 +116,8 @@ class EndPointFactory
             framer,
             configuration.senderMaxBytesInBuffer(),
             configuration.slowConsumerTimeoutInMs(),
-            System.currentTimeMillis(),
-            replaySlowPeeker);
+            System.currentTimeMillis()
+        );
     }
 
     void replaySlowPeeker(final SlowPeeker replaySlowPeeker)

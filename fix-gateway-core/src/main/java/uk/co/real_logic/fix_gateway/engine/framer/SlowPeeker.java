@@ -18,14 +18,10 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 import io.aeron.Image;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 
-class SlowPeeker
+class SlowPeeker extends BlockablePosition
 {
-    private static final int DID_NOT_BLOCK = 0;
-
     final Image normalImage;
     final Image peekImage;
-
-    private long blockPosition;
 
     SlowPeeker(final Image peekImage, final Image normalImage)
     {
@@ -44,14 +40,5 @@ class SlowPeeker
         peekImage.position(blockPosition != DID_NOT_BLOCK ? blockPosition : resultingPosition);
 
         return (int) delta;
-    }
-
-    void blockPosition(final long blockPosition)
-    {
-        // Pick the lowest (ie first) position to block at
-        if (this.blockPosition == DID_NOT_BLOCK)
-        {
-            this.blockPosition = blockPosition;
-        }
     }
 }
