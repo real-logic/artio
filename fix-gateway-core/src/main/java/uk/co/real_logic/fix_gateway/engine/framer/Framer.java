@@ -179,7 +179,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final Image replaySlowImage,
         final ReplayQuery inboundMessages,
         final GatewayPublication outboundPublication,
-        final GatewayPublication replyPublication,
         final GatewayPublication inboundPublication,
         final int gatewaySessionsOutboundId,
         final QueuedPipe<AdminCommand> adminCommands,
@@ -255,7 +254,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 clusterableStreams,
                 new EngineProtocolSubscription(this),
                 clusterableStreams.publication(OUTBOUND_LIBRARY_STREAM, "outboundLibraryStream"),
-                replyPublication,
+                inboundPublication,
                 engineDescriptorStore,
                 configuration.bindAddress().toString(),
                 replicatedConnectionIds));

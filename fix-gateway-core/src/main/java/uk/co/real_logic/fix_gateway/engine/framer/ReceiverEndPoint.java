@@ -112,8 +112,8 @@ class ReceiverEndPoint
     ReceiverEndPoint(
         final TcpChannel channel,
         final int bufferSize,
-        final GatewayPublication clusterablePublication,
         final GatewayPublication libraryPublication,
+        final GatewayPublication clusterablePublication,
         final SessionPersistenceStrategy sessionPersistenceStrategy,
         final long connectionId,
         final long sessionId,

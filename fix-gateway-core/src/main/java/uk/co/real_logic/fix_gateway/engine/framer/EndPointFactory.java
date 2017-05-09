@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import org.agrona.ErrorHandler;
 import org.agrona.collections.LongHashSet;
-import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
@@ -25,7 +24,6 @@ import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.SequenceNumberType;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
-import uk.co.real_logic.fix_gateway.protocol.Streams;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.IOException;
@@ -35,9 +33,8 @@ class EndPointFactory
     private final EngineConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionContexts sessionContexts;
-    private final Streams inboundStreams;
     private final GatewayPublication inboundLibraryPublication;
-    private final IdleStrategy idleStrategy;
+    private final GatewayPublication inboundClusterablePublication;
     private final FixCounters fixCounters;
     private final ErrorHandler errorHandler;
     private final LongHashSet replicatedConnectionIds;
@@ -48,9 +45,8 @@ class EndPointFactory
         final EngineConfiguration configuration,
         final SessionIdStrategy sessionIdStrategy,
         final SessionContexts sessionContexts,
-        final Streams inboundStreams,
         final GatewayPublication inboundLibraryPublication,
-        final IdleStrategy idleStrategy,
+        final GatewayPublication inboundClusterablePublication,
         final FixCounters fixCounters,
         final ErrorHandler errorHandler,
         final LongHashSet replicatedConnectionIds)
@@ -58,9 +54,8 @@ class EndPointFactory
         this.configuration = configuration;
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionContexts = sessionContexts;
-        this.inboundStreams = inboundStreams;
         this.inboundLibraryPublication = inboundLibraryPublication;
-        this.idleStrategy = idleStrategy;
+        this.inboundClusterablePublication = inboundClusterablePublication;
         this.fixCounters = fixCounters;
         this.errorHandler = errorHandler;
         this.replicatedConnectionIds = replicatedConnectionIds;
@@ -81,8 +76,8 @@ class EndPointFactory
         return new ReceiverEndPoint(
             channel,
             configuration.receiverBufferSize(),
-            inboundPublication("receiverInboundPublication"),
             inboundLibraryPublication,
+            inboundClusterablePublication,
             configuration.sessionPersistenceStrategy(),
             connectionId,
             sessionId,
@@ -99,11 +94,6 @@ class EndPointFactory
             connectionType,
             replicatedConnectionIds
         );
-    }
-
-    GatewayPublication inboundPublication(final String name)
-    {
-        return inboundStreams.gatewayPublication(idleStrategy, name);
     }
 
     SenderEndPoint senderEndPoint(

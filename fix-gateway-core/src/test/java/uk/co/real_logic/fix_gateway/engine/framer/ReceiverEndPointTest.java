@@ -78,7 +78,7 @@ public class ReceiverEndPointTest
     private final LongHashSet replicatedConnectionIds = new LongHashSet();
 
     private ReceiverEndPoint endPoint = new ReceiverEndPoint(
-        mockChannel, BUFFER_SIZE, clusterablePublication, libraryPublication, sessionReplicationStrategy,
+        mockChannel, BUFFER_SIZE, libraryPublication, clusterablePublication, sessionReplicationStrategy,
         CONNECTION_ID, UNKNOWN, SEQUENCE_INDEX, mockSessionIdStrategy, mockSessionContexts,
         sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID,
         DETERMINE_AT_LOGON, ConnectionType.ACCEPTOR, replicatedConnectionIds);

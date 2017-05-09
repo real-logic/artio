@@ -611,7 +611,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         {
             DebugLogger.log(
                 FIX_MESSAGE,
-                "Library Logon: conn=%d, sess=%d, sentSeqNo=%d, recvSeqNo=%d%n",
+                "onSessionExists: conn=%d, sess=%d, sentSeqNo=%d, recvSeqNo=%d%n",
                 connectionId,
                 sessionId,
                 lastSentSequenceNumber,
@@ -627,6 +627,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                         remoteCompId,
                         remoteSubId,
                         remoteLocationId);
+
                 subscriber.onLogon(
                     sessionId,
                     lastSentSequenceNumber,

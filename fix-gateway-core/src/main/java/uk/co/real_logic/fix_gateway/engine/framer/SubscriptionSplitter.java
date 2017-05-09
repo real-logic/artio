@@ -54,7 +54,7 @@ class SubscriptionSplitter implements ControlledFragmentHandler
     private final ClusterableStreams clusterableStreams;
     private final EngineProtocolSubscription engineProtocolSubscription;
     private final ClusterablePublication clusterPublication;
-    private final GatewayPublication replyPublication;
+    private final GatewayPublication replyToLibraryPublication;
     private final EngineDescriptorStore engineDescriptorStore;
     private final String bindAddress;
     private final LongHashSet replicatedConnectionIds;
@@ -63,7 +63,7 @@ class SubscriptionSplitter implements ControlledFragmentHandler
         final ClusterableStreams clusterableStreams,
         final EngineProtocolSubscription engineProtocolSubscription,
         final ClusterablePublication clusterPublication,
-        final GatewayPublication replyPublication,
+        final GatewayPublication replyToLibraryPublication,
         final EngineDescriptorStore engineDescriptorStore,
         final String bindAddress,
         final LongHashSet replicatedConnectionIds)
@@ -71,7 +71,7 @@ class SubscriptionSplitter implements ControlledFragmentHandler
         this.clusterableStreams = clusterableStreams;
         this.engineProtocolSubscription = engineProtocolSubscription;
         this.clusterPublication = clusterPublication;
-        this.replyPublication = replyPublication;
+        this.replyToLibraryPublication = replyToLibraryPublication;
         this.engineDescriptorStore = engineDescriptorStore;
         this.bindAddress = bindAddress;
         this.replicatedConnectionIds = replicatedConnectionIds;
@@ -132,7 +132,7 @@ class SubscriptionSplitter implements ControlledFragmentHandler
             final int libraryId = idExtractor.libraryId();
             final long correlationId = idExtractor.correlationId();
 
-            final long position = replyPublication.saveNotLeader(
+            final long position = replyToLibraryPublication.saveNotLeader(
                 libraryId,
                 correlationId,
                 engineDescriptorStore.leaderLibraryChannel());

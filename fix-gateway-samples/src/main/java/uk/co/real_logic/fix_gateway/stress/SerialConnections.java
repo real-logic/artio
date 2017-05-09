@@ -40,7 +40,9 @@ public final class SerialConnections
     {
         MediaDriver.loadPropertiesFiles(args);
 
-        final AgentRunner server = Server.createServer(new SleepingIdleStrategy(100), Throwable::printStackTrace);
+        final AgentRunner server = Server.createServer(
+            new SleepingIdleStrategy(100),
+            Throwable::printStackTrace);
 
         AgentRunner.startOnThread(server);
 
@@ -109,7 +111,6 @@ public final class SerialConnections
                         library, session, idleStrategy, testReqIdFinder, messagePool, random, INITIATOR_ID);
 
                     session.startLogout();
-                    session.requestDisconnect();
                     while (session.state() != DISCONNECTED)
                     {
                         idleStrategy.idle(library.poll(1));

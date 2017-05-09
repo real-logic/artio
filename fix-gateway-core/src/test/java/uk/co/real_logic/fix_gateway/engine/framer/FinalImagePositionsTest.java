@@ -18,7 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 import io.aeron.Image;
 import org.junit.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.co.real_logic.fix_gateway.engine.framer.FinalImagePositions.UNKNOWN_POSITION;

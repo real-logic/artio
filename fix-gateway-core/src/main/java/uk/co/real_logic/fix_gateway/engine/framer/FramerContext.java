@@ -77,14 +77,16 @@ public class FramerContext
 
         final SystemEpochClock clock = new SystemEpochClock();
         final LongHashSet replicatedConnectionIds = new LongHashSet();
+        final GatewayPublication inboundClusterablePublication =
+            inboundLibraryStreams.gatewayPublication(idleStrategy, "inboundPublication");
+        inboundLibraryPublication = engineContext.inboundLibraryPublication();
 
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,
             sessionIdStrategy,
             sessionContexts,
-            inboundLibraryStreams,
-            engineContext.inboundLibraryPublication(),
-            idleStrategy,
+            inboundLibraryPublication,
+            inboundClusterablePublication,
             fixCounters,
             errorHandler,
             replicatedConnectionIds);
@@ -109,7 +111,6 @@ public class FramerContext
         receivedSequenceNumberIndex = new SequenceNumberIndexReader(
             configuration.receivedSequenceNumberBuffer(), errorHandler);
         outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "dataPublication");
-        inboundLibraryPublication = engineContext.inboundLibraryPublication();
 
         final FinalImagePositions finalImagePositions = new FinalImagePositions();
         framer = new Framer(
@@ -124,7 +125,12 @@ public class FramerContext
                     "outboundLibrarySubscription", finalImagePositions),
             engineContext.outboundLibrarySubscription(
                     "outboundSlowSubscription", null),
-            replayImage, slowReplayImage, engineContext.inboundReplayQuery(), outboundPublication, inboundLibraryPublication, endPointFactory.inboundPublication("framerInboundPublication"), gatewaySessionsOutbound.id(),
+            replayImage,
+            slowReplayImage,
+            engineContext.inboundReplayQuery(),
+            outboundPublication,
+            inboundLibraryPublication,
+            gatewaySessionsOutbound.id(),
             adminCommands,
             sessionIdStrategy,
             sessionContexts,

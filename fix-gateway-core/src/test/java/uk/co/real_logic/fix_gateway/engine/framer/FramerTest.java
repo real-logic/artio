@@ -174,7 +174,6 @@ public class FramerTest
             replaySlowImage,
             replayQuery,
             mock(GatewayPublication.class),
-            mock(GatewayPublication.class),
             inboundPublication,
             OUTBOUND_ENGINE_AERON_SESSION_ID,
             mock(QueuedPipe.class),
