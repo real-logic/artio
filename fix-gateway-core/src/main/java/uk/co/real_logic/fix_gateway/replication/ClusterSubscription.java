@@ -71,6 +71,8 @@ public class ClusterSubscription extends ClusterableSubscription
     // transport = replicated - delta
     private long positionDelta;
 
+    private long transportConsensusPosition;
+
     ClusterSubscription(
         final Subscription dataSubscription,
         final int clusterStreamId,
@@ -125,8 +127,14 @@ public class ClusterSubscription extends ClusterableSubscription
             }
         }
 
-        return dataImage.controlledPoll(messageFilter, fragmentLimit);
+        messageFilter.messagesConsumed = 0;
+        lastAppliedTransportPosition =
+            dataImage.controlledPeek(lastAppliedTransportPosition, messageFilter, transportConsensusPosition);
+
+        return messageFilter.messagesConsumed;
     }
+
+    // TODO: controlledPeek just needs to check the image exists and map the position delta
 
     private boolean gapBeforeSubscription()
     {
@@ -139,7 +147,7 @@ public class ClusterSubscription extends ClusterableSubscription
     {
         final long lastAppliedTransportPosition = this.lastAppliedTransportPosition;
         final long beginPosition = lastAppliedTransportPosition + DataHeaderFlyweight.HEADER_LENGTH;
-        final long endPosition = messageFilter.transportConsensusPosition;
+        final long endPosition = transportConsensusPosition;
 
         final long readUpTo = leaderArchiveReader.readUpTo(
             beginPosition,
@@ -262,9 +270,9 @@ public class ClusterSubscription extends ClusterableSubscription
 
         if (leaderShipTerm == currentLeadershipTerm)
         {
-            if (messageFilter.transportConsensusPosition < transportPosition)
+            if (transportConsensusPosition < transportPosition)
             {
-                messageFilter.transportConsensusPosition = transportPosition;
+                transportConsensusPosition = transportPosition;
                 previousConsensusPosition = alignTerm(position);
 
                 return BREAK;
@@ -404,7 +412,7 @@ public class ClusterSubscription extends ClusterableSubscription
         final long transportConsumedPosition,
         final long transportPosition)
     {
-        messageFilter.transportConsensusPosition = transportPosition;
+        transportConsensusPosition = transportPosition;
         currentLeadershipTerm = leaderShipTerm;
         lastAppliedTransportPosition = alignTerm(transportConsumedPosition);
         previousConsensusPosition = alignTerm(position);
@@ -424,7 +432,7 @@ public class ClusterSubscription extends ClusterableSubscription
 
     private boolean cannotAdvance()
     {
-        return dataImage == null || messageFilter.transportConsensusPosition <= dataImage.position();
+        return dataImage == null || transportConsensusPosition <= dataImage.position();
     }
 
     public void close()
@@ -436,7 +444,7 @@ public class ClusterSubscription extends ClusterableSubscription
     {
         private final int clusterStreamId;
 
-        private long transportConsensusPosition;
+        private int messagesConsumed;
 
         private MessageFilter(final int clusterStreamId)
         {
@@ -447,7 +455,6 @@ public class ClusterSubscription extends ClusterableSubscription
         {
             final int aeronSessionId = header.sessionId();
             final long headerPosition = header.position();
-            final long fragmentStartPosition = headerPosition - length;
             final int clusterStreamId = ReservedValue.clusterStreamId(header);
 
             DebugLogger.log(
@@ -462,18 +469,6 @@ public class ClusterSubscription extends ClusterableSubscription
             // We never have to deal with the case where a message fragment spans over the end of a leadership term
             // - they are aligned.
 
-            // Consensus hasn't been reached for this message.
-            if (headerPosition > transportConsensusPosition)
-            {
-                return ABORT;
-            }
-
-            // Skip data published on the leader's publication when they weren't a leader.
-            if (fragmentStartPosition < lastAppliedTransportPosition)
-            {
-                return CONTINUE;
-            }
-
             if (this.clusterStreamId == clusterStreamId)
             {
                 messageHeader.wrap(buffer, offset);
@@ -484,6 +479,7 @@ public class ClusterSubscription extends ClusterableSubscription
                     if (action != ABORT)
                     {
                         lastAppliedTransportPosition = alignTerm(lastAppliedTransportPosition + length);
+                        messagesConsumed++;
                     }
                     return action;
                 }
@@ -528,7 +524,7 @@ public class ClusterSubscription extends ClusterableSubscription
 
     long transportPosition()
     {
-        return messageFilter.transportConsensusPosition;
+        return transportConsensusPosition;
     }
 
     int currentLeadershipTerm()

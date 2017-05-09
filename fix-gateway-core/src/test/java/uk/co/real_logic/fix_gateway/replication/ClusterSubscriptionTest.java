@@ -218,35 +218,6 @@ public class ClusterSubscriptionTest
     }
 
     @Test
-    public void shouldIgnoreUnagreedDataFromFormerLeadersPublication()
-    {
-        final int unagreedDataLen = 64;
-        final int secondTermLen = 256;
-        final int thirdTermLen = 384;
-        final int firstTermEnd = FIRST_TERM_LENGTH;
-        final int secondTermEnd = firstTermEnd + secondTermLen;
-        final int thirdTermEnd = secondTermEnd + thirdTermLen;
-        final int unagreedDataEnd = FIRST_TERM_LENGTH + unagreedDataLen;
-        final int thirdTermStreamStart = unagreedDataEnd;
-        final int thirdTermStreamEnd = thirdTermStreamStart + thirdTermLen;
-
-        onConsensusHeartbeatPoll(1, LEADER, firstTermEnd, 0, FIRST_TERM_LENGTH);
-        pollsMessageFragment(leaderDataImage, FIRST_TERM_LENGTH, CONTINUE);
-
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermEnd, 0, secondTermLen);
-        pollsMessageFragment(otherLeaderDataImage, secondTermLen, CONTINUE);
-
-        onConsensusHeartbeatPoll(3, LEADER, thirdTermEnd, thirdTermStreamStart, thirdTermStreamEnd);
-        pollsMessageFragment(leaderDataImage, unagreedDataEnd, unagreedDataLen, CONTINUE);
-        pollsMessageFragment(leaderDataImage, thirdTermStreamEnd, thirdTermLen, CONTINUE);
-
-        verifyReceivesFragment(FIRST_TERM_LENGTH);
-        verifyReceivesFragment(secondTermLen);
-        verifyReceivesFragment(thirdTermLen);
-        verifyNoOtherFragmentsReceived();
-    }
-
-    @Test
     public void replicateClusterReplicationTestBug()
     {
         final int leaderShipTermId = 1;
@@ -260,7 +231,7 @@ public class ClusterSubscriptionTest
         // Subscription onFragment(headerPosition=1376, consensusPosition=1376
         pollsMessageFragment(leaderDataImage, newPosition, CONTINUE);
 
-        verify(leaderDataImage).controlledPoll(any(), eq(1));
+        verify(leaderDataImage).controlledPeek(anyLong(), any(), anyLong());
         verifyReceivesFragment(newPosition);
     }
 
@@ -541,16 +512,24 @@ public class ClusterSubscriptionTest
         final int length,
         final Action expectedAction)
     {
-        when(dataImage.controlledPoll(any(), anyInt())).thenAnswer(
+        when(dataImage.controlledPeek(anyLong(), any(), anyLong())).thenAnswer(
             (inv) ->
             {
-                callHandler(streamPosition, length, expectedAction, inv, 0);
-                if (expectedAction != ABORT)
+                final long initialPosition = inv.getArgument(0);
+                final long limitPosition = inv.getArgument(2);
+
+                if (initialPosition < limitPosition)
                 {
-                    when(dataImage.position()).thenReturn((long)streamPosition);
+                    callHandler(streamPosition, length, expectedAction, inv, 1);
+                    if (expectedAction != ABORT)
+                    {
+                        when(dataImage.position()).thenReturn((long)streamPosition);
+                        return (long) streamPosition;
+                    }
                 }
-                return 1;
-            }).then(inv -> 0);
+
+                return initialPosition;
+            }).then(inv -> 0L);
 
         poll();
     }
