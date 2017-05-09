@@ -22,7 +22,6 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.ByteBufferUtil;
-import uk.co.real_logic.fix_gateway.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 
@@ -234,10 +233,10 @@ class SenderEndPoint implements AutoCloseable
         return connectionId;
     }
 
-    public void libraryId(final int libraryId, final LibrarySlowPeeker librarySlowPeeker)
+    public void libraryId(final int libraryId, final BlockablePosition blockablePosition)
     {
         this.libraryId = libraryId;
-        this.outboundTracker.blockablePosition = librarySlowPeeker;
+        this.outboundTracker.blockablePosition = blockablePosition;
     }
 
     public void close()

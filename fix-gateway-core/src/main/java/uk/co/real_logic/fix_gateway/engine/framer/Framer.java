@@ -136,7 +136,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final SubscriptionSlowPeeker librarySlowPeeker;
     private final Image replayImage;
     private final SlowPeeker replaySlowPeeker;
-    private final LibrarySlowPeeker outboundSlowEnginePeeker;
+    private final BlockablePosition engineBlockablePosition;
     private final GatewayPublication inboundPublication;
     private final String agentNamePrefix;
     private final CompletionPosition inboundCompletionPosition;
@@ -222,27 +222,19 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.finalImagePositions = finalImagePositions;
 
-        this.librarySlowPeeker = new SubscriptionSlowPeeker(
-                slowSubscription, librarySubscription);
-
-        final int outboundSessionId = outboundPublication.id();
-        LibrarySlowPeeker outboundSlowPeeker;
-        while ((outboundSlowPeeker = this.librarySlowPeeker.addLibrary(outboundSessionId)) == null)
-        {
-            Thread.yield();
-        }
-
-        this.outboundSlowEnginePeeker = outboundSlowPeeker;
-        this.replaySlowPeeker = new SlowPeeker(replaySlowImage, replayImage);
+        this.librarySlowPeeker = new SubscriptionSlowPeeker(slowSubscription, librarySubscription);
 
         this.outboundLibraryFragmentLimit = configuration.outboundLibraryFragmentLimit();
         this.replayFragmentLimit = configuration.replayFragmentLimit();
         this.inboundBytesReceivedLimit = configuration.inboundBytesReceivedLimit();
 
+        this.replaySlowPeeker = new SlowPeeker(replaySlowImage, replayImage);
         endPointFactory.replaySlowPeeker(replaySlowPeeker);
 
         if (isClustered())
         {
+            clusterSlowPeeker = new ClusterSlowPeeker(clusterSubscription, clusterSlowSubscription);
+            engineBlockablePosition = clusterSlowPeeker;
             librarySubscriber = new ControlledFragmentAssembler(new SubscriptionSplitter(
                 clusterableStreams,
                 new EngineProtocolSubscription(this),
@@ -252,10 +244,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 configuration.bindAddress().toString(),
                 replicatedConnectionIds));
             clusterSubscriber = new ClusterFragmentAssembler(ProtocolSubscription.of(this));
-            clusterSlowPeeker = new ClusterSlowPeeker(clusterSubscription, clusterSlowSubscription);
         }
         else
         {
+            engineBlockablePosition = getOutboundSlowPeeker(outboundPublication);
             librarySubscriber = new ControlledFragmentAssembler(
                 ProtocolSubscription.of(this, new EngineProtocolSubscription(this)));
             clusterSubscriber = null;
@@ -322,6 +314,18 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             throw new IllegalArgumentException(ex);
         }
+    }
+
+    private LibrarySlowPeeker getOutboundSlowPeeker(final GatewayPublication outboundPublication)
+    {
+        final int outboundSessionId = outboundPublication.id();
+        LibrarySlowPeeker outboundSlowPeeker;
+        while ((outboundSlowPeeker = this.librarySlowPeeker.addLibrary(outboundSessionId)) == null)
+        {
+            Thread.yield();
+        }
+
+        return outboundSlowPeeker;
     }
 
     private boolean isClustered()
@@ -485,7 +489,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 receivedSequenceNumber,
                 session.username(),
                 session.password(),
-                outboundSlowEnginePeeker);
+                engineBlockablePosition);
 
             schedule(() -> saveSessionExists(
                 ENGINE_LIBRARY_ID,
@@ -537,7 +541,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 UNK_SESSION,
                 null,
                 null,
-                outboundSlowEnginePeeker);
+                engineBlockablePosition);
 
             final String address = channel.remoteAddress();
             // In this case the save connect is simply logged for posterities sake
@@ -810,9 +814,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 sentSequenceNumberIndex, receivedSequenceNumberIndex, sequenceNumberType, connectionType);
         receiverEndPoints.add(receiverEndPoint);
 
-        final LibrarySlowPeeker librarySlowPeeker = getLibrarySlowPeeker(libraryId);
+        final BlockablePosition libraryBlockablePosition = getLibraryBlockablePosition(libraryId);
         final SenderEndPoint senderEndPoint =
-            endPointFactory.senderEndPoint(channel, connectionId, libraryId, librarySlowPeeker, this);
+            endPointFactory.senderEndPoint(channel, connectionId, libraryId, libraryBlockablePosition, this);
         senderEndPoints.add(senderEndPoint);
 
         final GatewaySession gatewaySession = new GatewaySession(
@@ -829,11 +833,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return gatewaySession;
     }
 
-    private LibrarySlowPeeker getLibrarySlowPeeker(final int libraryId)
+    private BlockablePosition getLibraryBlockablePosition(final int libraryId)
     {
         if (libraryId == ENGINE_LIBRARY_ID)
         {
-            return outboundSlowEnginePeeker;
+            return engineBlockablePosition;
         }
         else
         {
@@ -989,7 +993,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 lastReceivedSequenceNumber,
                 username,
                 password,
-                outboundSlowEnginePeeker);
+                engineBlockablePosition);
 
             schedule(() -> saveSessionExists(
                 ENGINE_LIBRARY_ID,

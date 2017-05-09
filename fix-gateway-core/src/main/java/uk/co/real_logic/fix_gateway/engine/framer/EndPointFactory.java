@@ -19,7 +19,6 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.LongHashSet;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
-import uk.co.real_logic.fix_gateway.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.SequenceNumberType;
@@ -100,14 +99,14 @@ class EndPointFactory
         final TcpChannel channel,
         final long connectionId,
         final int libraryId,
-        final LibrarySlowPeeker librarySlowPeeker,
+        final BlockablePosition libraryBlockablePosition,
         final Framer framer) throws IOException
     {
         final String remoteAddress = channel.remoteAddress();
         return new SenderEndPoint(
             connectionId,
             libraryId,
-            librarySlowPeeker,
+            libraryBlockablePosition,
             replaySlowPeeker,
             channel,
             fixCounters.bytesInBuffer(connectionId, remoteAddress),

@@ -17,7 +17,6 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
-import uk.co.real_logic.fix_gateway.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
@@ -86,21 +85,21 @@ class GatewaySession implements SessionInfo
         return sessionKey;
     }
 
-    void manage(final SessionParser sessionParser, final Session session, final LibrarySlowPeeker librarySlowPeeker)
+    void manage(final SessionParser sessionParser, final Session session, final BlockablePosition blockablePosition)
     {
         this.sessionParser = sessionParser;
         this.session = session;
         receiverEndPoint.libraryId(ENGINE_LIBRARY_ID);
-        senderEndPoint.libraryId(ENGINE_LIBRARY_ID, librarySlowPeeker);
+        senderEndPoint.libraryId(ENGINE_LIBRARY_ID, blockablePosition);
     }
 
     void handoverManagementTo(
         final int libraryId,
-        final LibrarySlowPeeker librarySlowPeeker)
+        final BlockablePosition blockablePosition)
     {
         receiverEndPoint.libraryId(libraryId);
         receiverEndPoint.pause();
-        senderEndPoint.libraryId(libraryId, librarySlowPeeker);
+        senderEndPoint.libraryId(libraryId, blockablePosition);
         sessionParser = null;
         context.updateFrom(session);
         session.close();
