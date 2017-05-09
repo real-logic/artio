@@ -80,6 +80,7 @@ public class FramerContext
         final GatewayPublication inboundClusterablePublication =
             inboundLibraryStreams.gatewayPublication(idleStrategy, "inboundPublication");
         inboundLibraryPublication = engineContext.inboundLibraryPublication();
+        outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "outboundPublication");
 
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,
@@ -91,11 +92,9 @@ public class FramerContext
             errorHandler,
             replicatedConnectionIds);
 
-        final GatewayPublication gatewaySessionsOutbound = outboundLibraryStreams.gatewayPublication(
-            idleStrategy, "gatewaySessionsOutbound");
         gatewaySessions = new GatewaySessions(
             clock,
-            gatewaySessionsOutbound,
+            outboundPublication,
             sessionIdStrategy,
             configuration.sessionCustomisationStrategy(),
             fixCounters,
@@ -110,7 +109,7 @@ public class FramerContext
             configuration.sentSequenceNumberBuffer(), errorHandler);
         receivedSequenceNumberIndex = new SequenceNumberIndexReader(
             configuration.receivedSequenceNumberBuffer(), errorHandler);
-        outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "dataPublication");
+
 
         final FinalImagePositions finalImagePositions = new FinalImagePositions();
         framer = new Framer(
@@ -130,7 +129,6 @@ public class FramerContext
             engineContext.inboundReplayQuery(),
             outboundPublication,
             inboundLibraryPublication,
-            gatewaySessionsOutbound.id(),
             adminCommands,
             sessionIdStrategy,
             sessionContexts,

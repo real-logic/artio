@@ -180,7 +180,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final ReplayQuery inboundMessages,
         final GatewayPublication outboundPublication,
         final GatewayPublication inboundPublication,
-        final int gatewaySessionsOutboundId,
         final QueuedPipe<AdminCommand> adminCommands,
         final SessionIdStrategy sessionIdStrategy,
         final SessionContexts sessionContexts,
@@ -233,8 +232,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundSlowPeeker = new SubscriptionSlowPeeker(
                 outboundSlowSubscription, outboundLibrarySubscription);
 
+        final int outboundSessionId = outboundPublication.id();
         LibrarySlowPeeker outboundSlowPeeker;
-        while ((outboundSlowPeeker = this.outboundSlowPeeker.addLibrary(gatewaySessionsOutboundId)) == null)
+        while ((outboundSlowPeeker = this.outboundSlowPeeker.addLibrary(outboundSessionId)) == null)
         {
             Thread.yield();
         }

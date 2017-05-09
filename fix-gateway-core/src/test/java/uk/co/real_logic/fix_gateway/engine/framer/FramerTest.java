@@ -87,7 +87,6 @@ public class FramerTest
     private static final int CORR_ID = 1;
     private static final long POSITION = 1024;
     private static final int AERON_SESSION_ID = 234;
-    private static final int OUTBOUND_ENGINE_AERON_SESSION_ID = 235;
     private static final long SESSION_ID = 123;
 
     private ServerSocketChannel server;
@@ -175,7 +174,6 @@ public class FramerTest
             replayQuery,
             mock(GatewayPublication.class),
             inboundPublication,
-            OUTBOUND_ENGINE_AERON_SESSION_ID,
             mock(QueuedPipe.class),
             mockSessionIdStrategy,
             sessionContexts,
