@@ -74,6 +74,7 @@ public class DecoderGenerator extends Generator
     {
         return decoderClassName(aggregate.name());
     }
+
     public static String decoderClassName(final String name)
     {
         return name + "Decoder";

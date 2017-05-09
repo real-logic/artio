@@ -27,7 +27,6 @@ import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNK_SESSION;
 
 class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
 {
-
     private volatile State state = State.EXECUTING;
     // write to error only when updating state
     private Exception error;
@@ -53,6 +52,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
         AWAIT_SENT,
         DONE
     }
+
     private Step step = Step.START;
 
     // Variables initialised on any thread, but objects only executed on the Framer thread
