@@ -49,6 +49,7 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.COMMIT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.LogTag.*;
@@ -832,6 +833,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         {
             final long timeInMs = timeInMs();
             livenessDetector.onHeartbeat(timeInMs);
+            state = CONNECTED;
             DebugLogger.log(
                 LIBRARY_CONNECT,
                 "%d: Received Control Notification from engine at timeInMs %d%n",
@@ -879,6 +881,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     .onError(GatewayError.UNKNOWN_SESSION, libraryId,
                         String.format("The gateway thinks that we own the following session ids: %s", sessionIds));
             }
+
+            // Commit to ensure that you leave the poll loop having reconnected successfully
+            return COMMIT;
         }
 
         return CONTINUE;

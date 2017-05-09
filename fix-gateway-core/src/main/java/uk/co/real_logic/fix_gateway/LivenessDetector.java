@@ -25,7 +25,7 @@ import uk.co.real_logic.fix_gateway.protocol.NotConnectedException;
  */
 public final class LivenessDetector
 {
-    public static final int SEND_INTERVAL_FRACTION = 4;
+    public static final int SEND_INTERVAL_FRACTION = 10;
 
     private static final Runnable NONE = () -> {};
 

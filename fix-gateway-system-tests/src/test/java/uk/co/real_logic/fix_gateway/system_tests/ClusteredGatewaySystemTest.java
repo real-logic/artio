@@ -207,7 +207,7 @@ public class ClusteredGatewaySystemTest
             {
             });
 
-        DebugLogger.log(GATEWAY_CLUSTER_TEST, "Library has connected to new leader%n");
+        DebugLogger.log(GATEWAY_CLUSTER_TEST, "Library has connected to new leader" + System.lineSeparator());
 
         initiatingSession.close();
         acceptingSession.close();
