@@ -134,7 +134,48 @@ public class ClusterSubscription extends ClusterableSubscription
         return messageFilter.messagesConsumed;
     }
 
-    // TODO: controlledPeek just needs to check the image exists and map the position delta
+    public long peek(
+        final long initialPosition,
+        final ClusterFragmentHandler fragmentHandler,
+        final long limitPosition)
+    {
+        if (dataImage == null)
+        {
+            final Ternary hasMatchingFutureAck = hasMatchingFutureAck();
+            if (hasMatchingFutureAck != TRUE)
+            {
+                return 0;
+            }
+        }
+
+        this.handler = fragmentHandler;
+
+        final long transportInitialPosition = initialPosition - positionDelta;
+        final long transportLimitPosition = Math.max(limitPosition - positionDelta, transportConsensusPosition);
+
+        validatePosition(transportInitialPosition);
+
+        return dataImage.controlledPeek(transportInitialPosition, messageFilter, transportLimitPosition);
+    }
+
+    public void position(final long newPosition)
+    {
+        final long newTransportPosition = newPosition - positionDelta;
+
+        validatePosition(newTransportPosition);
+
+        lastAppliedTransportPosition = newTransportPosition;
+    }
+
+    private void validatePosition(final long newTransportPosition)
+    {
+        if (newTransportPosition < lastAppliedTransportPosition || newTransportPosition > transportConsensusPosition)
+        {
+            throw new IllegalArgumentException(
+                "newPosition of " + newTransportPosition + " out of range " +
+                lastAppliedTransportPosition + "-" + transportConsensusPosition);
+        }
+    }
 
     private boolean gapBeforeSubscription()
     {
