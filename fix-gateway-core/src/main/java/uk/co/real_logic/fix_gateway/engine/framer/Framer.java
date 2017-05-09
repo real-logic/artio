@@ -129,6 +129,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private final EngineConfiguration configuration;
     private final EndPointFactory endPointFactory;
+    private final ClusterableStreams clusterableStreams;
     private final ClusterSubscription outboundClusterSubscription;
     private final ClusterSubscription outboundClusterSlowSubscription;
     private final Subscription outboundLibrarySubscription;
@@ -137,17 +138,16 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final SlowPeeker replaySlowPeeker;
     private final LibrarySlowPeeker outboundSlowEnginePeeker;
     private final GatewayPublication inboundPublication;
-    private final ClusterableStreams clusterableStreams;
     private final String agentNamePrefix;
     private final CompletionPosition inboundCompletionPosition;
     private final CompletionPosition outboundLibraryCompletionPosition;
     private final CompletionPosition outboundClusterCompletionPosition;
+    private final FinalImagePositions finalImagePositions;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionContexts sessionContexts;
     private final QueuedPipe<AdminCommand> adminCommands;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
-    private FinalImagePositions finalImagePositions;
     private final int inboundBytesReceivedLimit;
     private final int outboundLibraryFragmentLimit;
     private final int replayFragmentLimit;
