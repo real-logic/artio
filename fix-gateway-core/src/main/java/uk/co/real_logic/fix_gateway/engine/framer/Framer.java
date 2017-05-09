@@ -118,10 +118,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Timer outboundTimer;
     private final Timer sendTimer;
 
-    private final ControlledFragmentHandler outboundLibrarySubscriber;
-    private final ControlledFragmentHandler outboundReplaySubscriber;
-    private final ControlledFragmentHandler outboundReplaySlowSubscriber;
-    private final ClusterFragmentHandler outboundClusterSubscriber;
+    private final ControlledFragmentHandler librarySubscriber;
+    private final ControlledFragmentHandler replaySubscriber;
+    private final ControlledFragmentHandler replaySlowSubscriber;
+    private final ClusterFragmentHandler clusterSubscriber;
 
     private final ReceiverEndPoints receiverEndPoints = new ReceiverEndPoints();
     private final ControlledFragmentAssembler senderEndPointAssembler;
@@ -130,9 +130,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final EngineConfiguration configuration;
     private final EndPointFactory endPointFactory;
     private final ClusterableStreams clusterableStreams;
-    private final ClusterSubscription outboundClusterSubscription;
+    private final ClusterSubscription clusterSubscription;
     private final ClusterSlowPeeker clusterSlowPeeker;
-    private final Subscription outboundLibrarySubscription;
+    private final Subscription librarySubscription;
     private final SubscriptionSlowPeeker librarySlowPeeker;
     private final Image replayImage;
     private final SlowPeeker replaySlowPeeker;
@@ -171,10 +171,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final EngineConfiguration configuration,
         final EndPointFactory endPointFactory,
         final ClusterableStreams clusterableStreams,
-        final ClusterSubscription outboundClusterSubscription,
-        final ClusterSubscription outboundClusterSlowSubscription,
-        final Subscription outboundLibrarySubscription,
-        final Subscription outboundSlowSubscription,
+        final ClusterSubscription clusterSubscription,
+        final ClusterSubscription clusterSlowSubscription,
+        final Subscription librarySubscription,
+        final Subscription slowSubscription,
         final Image replayImage,
         final Image replaySlowImage,
         final ReplayQuery inboundMessages,
@@ -200,8 +200,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.sendTimer = sendTimer;
         this.configuration = configuration;
         this.endPointFactory = endPointFactory;
-        this.outboundClusterSubscription = outboundClusterSubscription;
-        this.outboundLibrarySubscription = outboundLibrarySubscription;
+        this.clusterSubscription = clusterSubscription;
+        this.librarySubscription = librarySubscription;
         this.replayImage = replayImage;
         this.gatewaySessions = gatewaySessions;
         this.inboundMessages = inboundMessages;
@@ -223,7 +223,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.finalImagePositions = finalImagePositions;
 
         this.librarySlowPeeker = new SubscriptionSlowPeeker(
-                outboundSlowSubscription, outboundLibrarySubscription);
+                slowSubscription, librarySubscription);
 
         final int outboundSessionId = outboundPublication.id();
         LibrarySlowPeeker outboundSlowPeeker;
@@ -243,7 +243,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         if (isClustered())
         {
-            outboundLibrarySubscriber = new ControlledFragmentAssembler(new SubscriptionSplitter(
+            librarySubscriber = new ControlledFragmentAssembler(new SubscriptionSplitter(
                 clusterableStreams,
                 new EngineProtocolSubscription(this),
                 clusterableStreams.publication(OUTBOUND_LIBRARY_STREAM, "outboundLibraryStream"),
@@ -251,20 +251,20 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 engineDescriptorStore,
                 configuration.bindAddress().toString(),
                 replicatedConnectionIds));
-            outboundClusterSubscriber = new ClusterFragmentAssembler(ProtocolSubscription.of(this));
-            clusterSlowPeeker = new ClusterSlowPeeker(outboundClusterSubscription, outboundClusterSlowSubscription);
+            clusterSubscriber = new ClusterFragmentAssembler(ProtocolSubscription.of(this));
+            clusterSlowPeeker = new ClusterSlowPeeker(clusterSubscription, clusterSlowSubscription);
         }
         else
         {
-            outboundLibrarySubscriber = new ControlledFragmentAssembler(
+            librarySubscriber = new ControlledFragmentAssembler(
                 ProtocolSubscription.of(this, new EngineProtocolSubscription(this)));
-            outboundClusterSubscriber = null;
+            clusterSubscriber = null;
             clusterSlowPeeker = null;
         }
 
         // We lookup replayed message by session id, since the connection id may have changed
         // if it's a persistent session.
-        outboundReplaySubscriber = new ImageControlledFragmentAssembler(ProtocolSubscription.of(new ProtocolHandler()
+        replaySubscriber = new ImageControlledFragmentAssembler(ProtocolSubscription.of(new ProtocolHandler()
         {
             public Action onMessage(
                 final DirectBuffer buffer,
@@ -289,7 +289,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }
         }));
 
-        outboundReplaySlowSubscriber = new ControlledFragmentAssembler(ProtocolSubscription.of(new ProtocolHandler()
+        replaySlowSubscriber = new ControlledFragmentAssembler(ProtocolSubscription.of(new ProtocolHandler()
         {
             public Action onMessage(
                 final DirectBuffer buffer,
@@ -326,7 +326,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private boolean isClustered()
     {
-        return outboundClusterSubscription != null;
+        return clusterSubscription != null;
     }
 
     public int doWork() throws Exception
@@ -376,21 +376,21 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private int sendReplayMessages()
     {
-        return replayImage.controlledPoll(outboundReplaySubscriber, replayFragmentLimit) +
-               replaySlowPeeker.peek(outboundReplaySlowSubscriber);
+        return replayImage.controlledPoll(replaySubscriber, replayFragmentLimit) +
+               replaySlowPeeker.peek(replaySlowSubscriber);
     }
 
     private int sendOutboundMessages()
     {
         int messagesRead =
-            outboundLibrarySubscription.controlledPoll(outboundLibrarySubscriber, outboundLibraryFragmentLimit);
+            librarySubscription.controlledPoll(librarySubscriber, outboundLibraryFragmentLimit);
         messagesRead +=
             librarySlowPeeker.peek(senderEndPointAssembler);
 
         if (isClustered())
         {
             messagesRead +=
-                outboundClusterSubscription.poll(outboundClusterSubscriber, outboundLibraryFragmentLimit);
+                clusterSubscription.poll(clusterSubscriber, outboundLibraryFragmentLimit);
             messagesRead +=
                 clusterSlowPeeker.peek(senderEndPoints);
         }
@@ -423,7 +423,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private void tryAcquireLibrarySessions(final LiveLibraryInfo library)
     {
         final int librarySessionId = library.aeronSessionId();
-        final Image image = outboundLibrarySubscription.imageBySessionId(librarySessionId);
+        final Image image = librarySubscription.imageBySessionId(librarySessionId);
         long libraryPosition = finalImagePositions.lookupPosition(librarySessionId);
         if (image != null)
         {
@@ -1252,7 +1252,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         idToLibrary.values().forEach(liveLibraryInfo ->
         {
             final int aeronSessionId = liveLibraryInfo.aeronSessionId();
-            final Image image = outboundLibrarySubscription.imageBySessionId(aeronSessionId);
+            final Image image = librarySubscription.imageBySessionId(aeronSessionId);
             if (image != null)
             {
                 final long position = image.position();
@@ -1264,7 +1264,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (isClustered())
         {
             final Long2LongHashMap outboundClusterPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
-            final long position = outboundClusterSubscription.position();
+            final long position = clusterSubscription.position();
             outboundClusterPositions.put(OUTBOUND_LIBRARY_STREAM, position);
             outboundClusterCompletionPosition.complete(outboundClusterPositions);
         }

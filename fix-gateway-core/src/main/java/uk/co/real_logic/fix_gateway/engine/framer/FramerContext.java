@@ -118,7 +118,8 @@ public class FramerContext
             timers.sendTimer(),
             configuration,
             endPointFactory,
-            streams, engineContext.outboundClusterSubscription(),
+            streams,
+            engineContext.outboundClusterSubscription(),
             engineContext.outboundClusterSubscription(),
             engineContext.outboundLibrarySubscription(
                     "outboundLibrarySubscription", finalImagePositions),
