@@ -37,8 +37,6 @@ class LibraryTransport
     private final Aeron aeron;
     private final NanoClock nanoClock = new SystemNanoClock();
 
-    private Streams outboundLibraryStreams;
-
     private Subscription inboundSubscription;
     private GatewayPublication outboundPublication;
 
@@ -58,7 +56,7 @@ class LibraryTransport
             aeron, aeronChannel, configuration.printAeronStreamIdentifiers());
         DebugLogger.log(LIBRARY_CONNECT, "Directed streams at %s%n", aeronChannel);
 
-        outboundLibraryStreams = new Streams(
+        final Streams outboundLibraryStreams = new Streams(
             soloNode, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock,
             configuration.outboundMaxClaimAttempts());
 
