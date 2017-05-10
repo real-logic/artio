@@ -352,7 +352,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (timeInMs > nextEngineAttemptTime)
         {
-            attemptNextEngine(timeInMs);
+            attemptNextEngine();
 
             connectToNewEngine(timeInMs);
         }
@@ -370,7 +370,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         sendLibraryConnect(timeInMs);
     }
 
-    private void attemptNextEngine(final long timeInMs)
+    private void attemptNextEngine()
     {
         if (enginesAreClustered)
         {
@@ -807,7 +807,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             final long timeInMs = timeInMs();
             if (libraryChannel.isEmpty())
             {
-                attemptNextEngine(timeInMs);
+                attemptNextEngine();
             }
             else
             {
