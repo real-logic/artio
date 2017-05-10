@@ -207,27 +207,27 @@ public class ClusteredGatewaySystemTest
 
         DebugLogger.log(GATEWAY_CLUSTER_TEST, "Library has connected to new leader" + System.lineSeparator());
 
+        initiatingSession.close();
+        acceptingSession.close();
+        acceptingHandler.clearSessions();
+        initiatingHandler.clearSessions();
+
+        assertEventuallyTrue(
+            "Old library state not flushed out",
+            () ->
+            {
+                testSystem.poll();
+
+                assertOldSessionDisconnected(initiatingLibrary);
+                assertOldSessionDisconnected(acceptingLibrary);
+                assertOldSessionDisconnected(initiatingEngine);
+
+                assertConnectedToLeader();
+            });
+
         // TODO: re-enable this part of the test once it is stably passing
         if (false)
         {
-            initiatingSession.close();
-            acceptingSession.close();
-            acceptingHandler.clearSessions();
-            initiatingHandler.clearSessions();
-
-            assertEventuallyTrue(
-                "Old library state not flushed out",
-                () ->
-                {
-                    testSystem.poll();
-
-                    assertOldSessionDisconnected(initiatingLibrary);
-                    assertOldSessionDisconnected(acceptingLibrary);
-                    assertOldSessionDisconnected(initiatingEngine);
-
-                    assertConnectedToLeader();
-                });
-
             connectFixSession();
 
             DebugLogger.log(GATEWAY_CLUSTER_TEST, "Connected New Fix Session%n");
