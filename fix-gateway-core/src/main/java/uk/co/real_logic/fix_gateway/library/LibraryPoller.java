@@ -73,9 +73,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private static final int CONNECTING = 2;
 
     /**
+     * Currently connecting to an engine instance
+     */
+    private static final int ATTEMPT_CURRENT_NODE = 3;
+
+    /**
      * Was explicitly closed
      */
-    private static final int CLOSED = 3;
+    private static final int CLOSED = 4;
 
     private static final long NO_CORRELATION_ID = 0;
 
@@ -284,6 +289,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
             case CONNECTING:
                 nextConnectingStep(timeInMs);
+                return pollWithoutReconnect(timeInMs, fragmentLimit);
+
+            case ATTEMPT_CURRENT_NODE:
+                connectToNewEngine(timeInMs);
+                state = CONNECTING;
                 return pollWithoutReconnect(timeInMs, fragmentLimit);
 
             case CLOSED:
@@ -809,20 +819,21 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             final long timeInMs = timeInMs();
             if (libraryChannel.isEmpty())
             {
-                attemptNextEngine();
+                connectToNextEngineNow(timeInMs);
             }
             else
             {
-                currentAeronChannel = libraryChannel;
                 DebugLogger.log(
                     LIBRARY_CONNECT,
                     "%d: Attempting connect to (%s) claimed leader%n",
                     libraryId,
                     currentAeronChannel);
-                connectToNextEngineNow(timeInMs);
+
+                currentAeronChannel = libraryChannel;
+                state = ATTEMPT_CURRENT_NODE;
             }
 
-            connectToNewEngine(timeInMs);
+            return BREAK;
         }
 
         return CONTINUE;
