@@ -48,9 +48,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.COMMIT;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.LogTag.*;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -296,10 +294,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private int pollWithoutReconnect(final long timeInMs, final int fragmentLimit)
     {
-        final int messagesRead = inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit);
-        final int operations = messagesRead + pollSessions(timeInMs) + livenessDetector.poll(timeInMs);
-
-        return operations + checkReplies(timeInMs);
+        int operations = 0;
+        operations += inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit);
+        operations += pollSessions(timeInMs);
+        operations += livenessDetector.poll(timeInMs);
+        operations += checkReplies(timeInMs);
+        return operations;
     }
 
     // -----------------------------------------------------------------------
@@ -368,6 +368,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         newLivenessDetector();
 
         sendLibraryConnect(timeInMs);
+
+        resetNextEngineTimer(timeInMs);
     }
 
     private void attemptNextEngine()
@@ -883,7 +885,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             }
 
             // Commit to ensure that you leave the poll loop having reconnected successfully
-            return COMMIT;
+            return BREAK;
         }
 
         return CONTINUE;
