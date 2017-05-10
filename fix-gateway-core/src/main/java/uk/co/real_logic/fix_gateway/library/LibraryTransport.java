@@ -32,10 +32,10 @@ import static uk.co.real_logic.fix_gateway.LogTag.LIBRARY_CONNECT;
 
 class LibraryTransport
 {
-
     private final LibraryConfiguration configuration;
     private final FixCounters fixCounters;
     private final Aeron aeron;
+    private final NanoClock nanoClock = new SystemNanoClock();
 
     private Streams outboundLibraryStreams;
 
@@ -54,7 +54,6 @@ class LibraryTransport
 
     void initStreams(final String aeronChannel)
     {
-        final NanoClock nanoClock = new SystemNanoClock();
         final ClusterableStreams soloNode = ClusterableStreams.solo(
             aeron, aeronChannel, configuration.printAeronStreamIdentifiers());
         DebugLogger.log(LIBRARY_CONNECT, "Directed streams at %s%n", aeronChannel);
