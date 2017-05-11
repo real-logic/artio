@@ -198,6 +198,25 @@ public class ClusterReplicationTest
     }
 
     @Test
+    public void shouldReplicateMessageAfterClusterReformed()
+    {
+        final NodeRunner leader = leader();
+        final NodeRunner follower = aFollower();
+
+        follower.dropFrames(true);
+
+        assertBecomesCandidate(follower);
+
+        follower.dropFrames(false);
+
+        eventuallyOneLeaderAndTwoFollowersWithSameLeader();
+
+        final long position = sendMessageTo(leader);
+
+        assertMessageReceived(position);
+    }
+
+    @Test
     public void shouldEventuallyReplicateMessageWhenClusterReformed()
     {
         final NodeRunner leader = leader();
