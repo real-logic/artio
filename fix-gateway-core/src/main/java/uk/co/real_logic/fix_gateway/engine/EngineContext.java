@@ -21,7 +21,10 @@ import io.aeron.Subscription;
 import io.aeron.UnavailableImageHandler;
 import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.ErrorHandler;
-import org.agrona.concurrent.*;
+import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.NanoClock;
+import org.agrona.concurrent.SystemEpochClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.StreamInformation;
 import uk.co.real_logic.fix_gateway.engine.logger.*;
@@ -42,7 +45,7 @@ import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 public abstract class EngineContext implements AutoCloseable
 {
-    protected final NanoClock nanoClock = new SystemNanoClock();
+    protected final NanoClock nanoClock;
     protected final EngineConfiguration configuration;
     protected final ErrorHandler errorHandler;
     protected final FixCounters fixCounters;
@@ -105,6 +108,7 @@ public abstract class EngineContext implements AutoCloseable
         this.errorHandler = errorHandler;
         this.fixCounters = fixCounters;
         this.aeron = aeron;
+        this.nanoClock = configuration.nanoClock();
 
         try
         {

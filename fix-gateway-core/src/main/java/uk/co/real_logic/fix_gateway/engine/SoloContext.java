@@ -21,7 +21,6 @@ import io.aeron.Subscription;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.CompositeAgent;
-import org.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.StreamInformation;
 import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
@@ -118,7 +117,7 @@ class SoloContext extends EngineContext
                     ClusterablePublication.solo(replayPublication),
                     fixCounters.failedReplayPublications(),
                     configuration.archiverIdleStrategy(),
-                    new SystemNanoClock(),
+                    nanoClock,
                     configuration.outboundMaxClaimAttempts()
                 );
             archivingAgent = new GapFiller(

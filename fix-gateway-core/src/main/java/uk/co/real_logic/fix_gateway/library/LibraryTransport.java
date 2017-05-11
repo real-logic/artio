@@ -18,7 +18,6 @@ package uk.co.real_logic.fix_gateway.library;
 import io.aeron.Aeron;
 import io.aeron.Subscription;
 import org.agrona.concurrent.NanoClock;
-import org.agrona.concurrent.SystemNanoClock;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.StreamInformation;
@@ -35,7 +34,7 @@ class LibraryTransport
     private final LibraryConfiguration configuration;
     private final FixCounters fixCounters;
     private final Aeron aeron;
-    private final NanoClock nanoClock = new SystemNanoClock();
+    private final NanoClock nanoClock;
 
     private Subscription inboundSubscription;
     private GatewayPublication outboundPublication;
@@ -48,6 +47,7 @@ class LibraryTransport
         this.configuration = configuration;
         this.fixCounters = fixCounters;
         this.aeron = aeron;
+        this.nanoClock = configuration.nanoClock();
     }
 
     void initStreams(final String aeronChannel)

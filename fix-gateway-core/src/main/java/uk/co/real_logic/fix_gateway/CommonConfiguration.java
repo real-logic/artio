@@ -116,7 +116,7 @@ public class CommonConfiguration
 
     private long reasonableTransmissionTimeInMs = DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
     private boolean printAeronStreamIdentifiers = DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS;
-    private NanoClock timerClock = new SystemNanoClock();
+    private NanoClock nanoClock = new SystemNanoClock();
 
     public static void validateTimeout(final long timeoutInMs)
     {
@@ -471,9 +471,9 @@ public class CommonConfiguration
      * @param timerClock the clock to be used for recording timestamping messages.
      * @return this
      */
-    public CommonConfiguration timerClock(final NanoClock timerClock)
+    public CommonConfiguration nanoClock(final NanoClock timerClock)
     {
-        this.timerClock = timerClock;
+        this.nanoClock = timerClock;
         return this;
     }
 
@@ -621,8 +621,8 @@ public class CommonConfiguration
         return new BackoffIdleStrategy(BACKOFF_SPINS, BACKOFF_YIELDS, 1, 1 << 20);
     }
 
-    public NanoClock timerClock()
+    public NanoClock nanoClock()
     {
-        return timerClock;
+        return nanoClock;
     }
 }

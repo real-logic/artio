@@ -60,7 +60,7 @@ public class FixLibrary extends GatewayProcess
         try
         {
             init(configuration);
-            final LibraryTimers timers = new LibraryTimers(configuration.timerClock());
+            final LibraryTimers timers = new LibraryTimers(configuration.nanoClock());
             initMonitoringAgent(timers.all(), configuration);
 
             final LibraryTransport transport = new LibraryTransport(configuration, fixCounters, aeron);
