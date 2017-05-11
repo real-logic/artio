@@ -148,11 +148,12 @@ class GatewaySession implements SessionInfo
         return connectionType;
     }
 
-    public void onMessage(final MutableAsciiBuffer buffer,
-                          final int offset,
-                          final int length,
-                          final int messageType,
-                          final long sessionId)
+    public void onMessage(
+        final MutableAsciiBuffer buffer,
+        final int offset,
+        final int length,
+        final int messageType,
+        final long sessionId)
     {
         if (sessionParser != null)
         {
