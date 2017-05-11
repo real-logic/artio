@@ -67,6 +67,7 @@ class NodeRunner implements AutoCloseable
     private final CompletionPosition completionPosition = new CompletionPosition();
 
     private final AtomicBoolean guard = new AtomicBoolean();
+    private final ClusterablePublication publication;
 
     NodeRunner(final int nodeId, final int... otherNodes)
     {
@@ -128,6 +129,7 @@ class NodeRunner implements AutoCloseable
 
         clusterAgent = new ClusterAgent(configuration, System.currentTimeMillis());
         subscription = clusterAgent.clusterStreams().subscription(1, "nodeRunner");
+        publication = clusterAgent.clusterStreams().publication(1, "nodeRunner");
     }
 
     public void close()
@@ -237,6 +239,11 @@ class NodeRunner implements AutoCloseable
     long nodeId()
     {
         return clusterAgent().nodeId();
+    }
+
+    public ClusterablePublication publication()
+    {
+        return publication;
     }
 
     private class NodeIdStasher implements NodeStateHandler
