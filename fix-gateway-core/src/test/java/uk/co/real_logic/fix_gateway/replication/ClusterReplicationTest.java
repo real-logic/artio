@@ -95,7 +95,7 @@ public class ClusterReplicationTest
 
         DebugLogger.log(RAFT, "Leader @ %d%n", position);
 
-        assertMessageReceived();
+        assertMessageReceived(position);
     }
 
     @Test
@@ -207,10 +207,10 @@ public class ClusterReplicationTest
 
         assertBecomesCandidate(follower);
 
-        assertTrue("nodes received message when one was supposedly netsplit", noNodesReceivedMessage());
+        assertTrue("nodes received message when one was supposedly netsplit",
+            noNodesReceivedMessage(POSITION_AFTER_MESSAGE));
 
-        // position is absolute, no need to use this one
-        sendMessageTo(leader);
+        long position = sendMessageTo(leader);
 
         messageCommittedBetweenTwoLiveNodes(follower);
 
@@ -218,7 +218,12 @@ public class ClusterReplicationTest
 
         eventuallyOneLeaderAndTwoFollowersWithSameLeader();
 
-        assertMessageReceived();
+        assertMessageReceived(position);
+
+        // Replicate another message after net split is over
+        position = sendMessageTo(leader);
+
+        assertMessageReceived(position);
     }
 
     private void messageCommittedBetweenTwoLiveNodes(final NodeRunner follower)
@@ -230,7 +235,7 @@ public class ClusterReplicationTest
             () ->
             {
                 pollAll();
-                return receivedMessage(liveNodes[0]) && receivedMessage(liveNodes[1]);
+                return receivedMessage(liveNodes[0], POSITION_AFTER_MESSAGE) && receivedMessage(liveNodes[1], POSITION_AFTER_MESSAGE);
             }
         );
     }
@@ -306,14 +311,14 @@ public class ClusterReplicationTest
         assertEventuallyFindsLeaderIn(followers);
     }
 
-    private void assertMessageReceived()
+    private void assertMessageReceived(final long position)
     {
         assertEventuallyTrue(
             "Message not received",
             () ->
             {
                 pollAll();
-                return !noNodesReceivedMessage();
+                return !noNodesReceivedMessage(position);
             });
 
         checkConsistencyOfReplicatedPositions();
@@ -324,9 +329,11 @@ public class ClusterReplicationTest
         nodes().forEach(NodeRunner::checkConsistencyOfReplicatedPositions);
     }
 
-    private boolean noNodesReceivedMessage()
+    private boolean noNodesReceivedMessage(final long position)
     {
-        return notReceivedMessage(node1) && notReceivedMessage(node2) && notReceivedMessage(node3);
+        return notReceivedMessage(node1, position) &&
+               notReceivedMessage(node2, position) &&
+               notReceivedMessage(node3, position);
     }
 
     private void checkClusterStable()
@@ -366,14 +373,14 @@ public class ClusterReplicationTest
         assertEquals("1 and 3 disagree on leader" + clusterInfo(), leaderSessionId, node3.leaderSessionId());
     }
 
-    private boolean notReceivedMessage(final NodeRunner node)
+    private boolean notReceivedMessage(final NodeRunner node, final long position)
     {
-        return !receivedMessage(node);
+        return !receivedMessage(node, position);
     }
 
-    private boolean receivedMessage(final NodeRunner node)
+    private boolean receivedMessage(final NodeRunner node, final long position)
     {
-        return node.replicatedPosition() >= POSITION_AFTER_MESSAGE;
+        return node.replicatedPosition() >= position;
     }
 
     private long sendMessageTo(final NodeRunner leader)
