@@ -32,6 +32,7 @@ import java.util.stream.Stream;
 
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static java.lang.System.lineSeparator;
+import static java.lang.System.setOut;
 import static java.util.stream.Collectors.joining;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -212,7 +213,7 @@ public class ClusterReplicationTest
 
         long position = sendMessageTo(leader);
 
-        messageCommittedBetweenTwoLiveNodes(follower);
+        messageCommittedBetweenTwoLiveNodes(follower, position);
 
         follower.dropFrames(false);
 
@@ -226,7 +227,7 @@ public class ClusterReplicationTest
         assertMessageReceived(position);
     }
 
-    private void messageCommittedBetweenTwoLiveNodes(final NodeRunner follower)
+    private void messageCommittedBetweenTwoLiveNodes(final NodeRunner follower, final long position)
     {
         final NodeRunner[] liveNodes = nodes().filter(node -> node != follower).toArray(NodeRunner[]::new);
 
@@ -235,7 +236,8 @@ public class ClusterReplicationTest
             () ->
             {
                 pollAll();
-                return receivedMessage(liveNodes[0], POSITION_AFTER_MESSAGE) && receivedMessage(liveNodes[1], POSITION_AFTER_MESSAGE);
+                return receivedMessage(liveNodes[0], position) &&
+                       receivedMessage(liveNodes[1], position);
             }
         );
     }
@@ -380,7 +382,7 @@ public class ClusterReplicationTest
 
     private boolean receivedMessage(final NodeRunner node, final long position)
     {
-        return node.replicatedPosition() >= position;
+        return node.replicatedPosition() == position;
     }
 
     private long sendMessageTo(final NodeRunner leader)

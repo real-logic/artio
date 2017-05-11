@@ -28,7 +28,7 @@ import java.util.function.Supplier;
 
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.*;
 
-public class ClusterNodeConfiguration
+public class ClusterConfiguration
 {
     public static final int DEFAULT_MAX_CLAIM_ATTEMPTS = 100_000;
     public static final int DEFAULT_CONTROL_STREAM_ID = 1;
@@ -78,7 +78,7 @@ public class ClusterNodeConfiguration
      * @param channel the aeron channel to use for all the streams
      * @return this
      */
-    public ClusterNodeConfiguration aeronChannel(final String channel)
+    public ClusterConfiguration aeronChannel(final String channel)
     {
         controlStream(new StreamIdentifier(channel, DEFAULT_CONTROL_STREAM_ID));
         dataStream(new StreamIdentifier(channel, DEFAULT_DATA_STREAM_ID));
@@ -86,121 +86,121 @@ public class ClusterNodeConfiguration
         return this;
     }
 
-    public ClusterNodeConfiguration controlStream(final StreamIdentifier controlStream)
+    public ClusterConfiguration controlStream(final StreamIdentifier controlStream)
     {
         this.controlStream = controlStream;
         return this;
     }
 
-    public ClusterNodeConfiguration dataStream(final StreamIdentifier dataStream)
+    public ClusterConfiguration dataStream(final StreamIdentifier dataStream)
     {
         this.dataStream = dataStream;
         return this;
     }
 
-    public ClusterNodeConfiguration acknowledgementStream(final StreamIdentifier acknowledgementStream)
+    public ClusterConfiguration acknowledgementStream(final StreamIdentifier acknowledgementStream)
     {
         this.acknowledgementStream = acknowledgementStream;
         return this;
     }
 
-    public ClusterNodeConfiguration nodeId(final short nodeId)
+    public ClusterConfiguration nodeId(final short nodeId)
     {
         this.nodeId = nodeId;
         return this;
     }
 
-    public ClusterNodeConfiguration otherNodes(final IntHashSet otherNodes)
+    public ClusterConfiguration otherNodes(final IntHashSet otherNodes)
     {
         this.otherNodes = otherNodes;
         return this;
     }
 
-    public ClusterNodeConfiguration timeoutIntervalInMs(final long timeoutIntervalInMs)
+    public ClusterConfiguration timeoutIntervalInMs(final long timeoutIntervalInMs)
     {
         this.timeoutIntervalInMs = timeoutIntervalInMs;
         return this;
     }
 
-    public ClusterNodeConfiguration acknowledgementStrategy(final AcknowledgementStrategy acknowledgementStrategy)
+    public ClusterConfiguration acknowledgementStrategy(final AcknowledgementStrategy acknowledgementStrategy)
     {
         this.acknowledgementStrategy = acknowledgementStrategy;
         return this;
     }
 
-    public ClusterNodeConfiguration aeron(final Aeron aeron)
+    public ClusterConfiguration aeron(final Aeron aeron)
     {
         this.aeron = aeron;
         return this;
     }
 
-    public ClusterNodeConfiguration idleStrategy(final IdleStrategy idleStrategy)
+    public ClusterConfiguration idleStrategy(final IdleStrategy idleStrategy)
     {
         this.idleStrategy = idleStrategy;
         return this;
     }
 
-    public ClusterNodeConfiguration maxClaimAttempts(final int maxClaimAttempts)
+    public ClusterConfiguration maxClaimAttempts(final int maxClaimAttempts)
     {
         this.maxClaimAttempts = maxClaimAttempts;
         return this;
     }
 
-    public ClusterNodeConfiguration failCounter(final AtomicCounter failCounter)
+    public ClusterConfiguration failCounter(final AtomicCounter failCounter)
     {
         this.failCounter = failCounter;
         return this;
     }
 
-    public ClusterNodeConfiguration archiveReaderSupplier(final Supplier<ArchiveReader> archiveReader)
+    public ClusterConfiguration archiveReaderSupplier(final Supplier<ArchiveReader> archiveReader)
     {
         this.archiveReaderSupplier = archiveReader;
         return this;
     }
 
-    public ClusterNodeConfiguration archiver(final Archiver archiver)
+    public ClusterConfiguration archiver(final Archiver archiver)
     {
         this.archiver = archiver;
         return this;
     }
 
-    public ClusterNodeConfiguration raftTransport(final RaftTransport raftTransport)
+    public ClusterConfiguration raftTransport(final RaftTransport raftTransport)
     {
         this.raftTransport = raftTransport;
         return this;
     }
 
-    public ClusterNodeConfiguration nodeState(final DirectBuffer nodeState)
+    public ClusterConfiguration nodeState(final DirectBuffer nodeState)
     {
         this.nodeState = nodeState;
         return this;
     }
 
-    public ClusterNodeConfiguration nodeStateHandler(final NodeStateHandler nodeStateHandler)
+    public ClusterConfiguration nodeStateHandler(final NodeStateHandler nodeStateHandler)
     {
         this.nodeStateHandler = nodeStateHandler;
         return this;
     }
 
-    public ClusterNodeConfiguration nodeHandler(final RoleHandler roleHandler)
+    public ClusterConfiguration nodeHandler(final RoleHandler roleHandler)
     {
         this.roleHandler = roleHandler;
         return this;
     }
 
-    public ClusterNodeConfiguration copyTo(final ExclusivePublication publication)
+    public ClusterConfiguration copyTo(final ExclusivePublication publication)
     {
         copyToPublication = publication;
         return this;
     }
 
-    public ClusterNodeConfiguration agentNamePrefix(final String agentNamePrefix)
+    public ClusterConfiguration agentNamePrefix(final String agentNamePrefix)
     {
         this.agentNamePrefix = agentNamePrefix;
         return this;
     }
 
-    public ClusterNodeConfiguration printAeronStreamIdentifiers(final boolean printAeronStreamIdentifiers)
+    public ClusterConfiguration printAeronStreamIdentifiers(final boolean printAeronStreamIdentifiers)
     {
         this.printAeronStreamIdentifiers = printAeronStreamIdentifiers;
         return this;

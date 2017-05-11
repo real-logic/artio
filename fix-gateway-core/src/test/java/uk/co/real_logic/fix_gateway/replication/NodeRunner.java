@@ -45,7 +45,7 @@ import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
 import static uk.co.real_logic.fix_gateway.replication.AbstractReplicationTest.logFileDir;
-import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID;
+import static uk.co.real_logic.fix_gateway.replication.ClusterConfiguration.DEFAULT_DATA_STREAM_ID;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 /**
@@ -112,7 +112,7 @@ class NodeRunner implements AutoCloseable
         final UnsafeBuffer nodeState = new UnsafeBuffer(new byte[SIZE_OF_SHORT]);
         nodeState.putShort(0, (short)nodeId);
 
-        final ClusterNodeConfiguration configuration = new ClusterNodeConfiguration()
+        final ClusterConfiguration configuration = new ClusterConfiguration()
             .nodeId((short)nodeId)
             .aeron(aeron)
             .otherNodes(otherNodeIds)

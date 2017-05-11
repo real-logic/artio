@@ -54,7 +54,7 @@ public class ClusterAgent implements Agent
 
     private Role currentRole;
 
-    public ClusterAgent(final ClusterNodeConfiguration configuration, final long timeInMs)
+    public ClusterAgent(final ClusterConfiguration configuration, final long timeInMs)
     {
         configuration.conclude();
 
@@ -124,7 +124,7 @@ public class ClusterAgent implements Agent
         startAsFollower(timeInMs);
 
         clusterStreams = new ClusterStreams(
-            transport, ourSessionId, termState.leaderSessionId(), dataPublication, archiveReaderSupplier);
+            transport, ourSessionId, termState, dataPublication, archiveReaderSupplier);
         outboundPipe = new OutboundPipe(configuration.copyToPublication(), clusterStreams());
     }
 

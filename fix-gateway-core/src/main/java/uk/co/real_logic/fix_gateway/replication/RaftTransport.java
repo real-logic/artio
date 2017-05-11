@@ -21,9 +21,9 @@ import uk.co.real_logic.fix_gateway.StreamInformation;
 
 class RaftTransport
 {
-    private final ClusterNodeConfiguration configuration;
+    private final ClusterConfiguration configuration;
 
-    RaftTransport(final ClusterNodeConfiguration configuration)
+    RaftTransport(final ClusterConfiguration configuration)
     {
         this.configuration = configuration;
     }

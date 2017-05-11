@@ -35,7 +35,7 @@ import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREA
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.closeAll;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.suppressingClose;
 import static uk.co.real_logic.fix_gateway.engine.logger.LoggerUtil.newArchiveMetaData;
-import static uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID;
+import static uk.co.real_logic.fix_gateway.replication.ClusterConfiguration.DEFAULT_DATA_STREAM_ID;
 
 class ClusterContext extends EngineContext
 {
@@ -129,7 +129,7 @@ class ClusterContext extends EngineContext
             newArchiveMetaData(logFileDir), cacheNumSets, cacheSetSize, dataStream, configuration.agentNamePrefix(),
             outboundClusterCompletionPosition());
 
-        final ClusterNodeConfiguration clusterNodeConfiguration = new ClusterNodeConfiguration()
+        final ClusterConfiguration clusterConfiguration = new ClusterConfiguration()
             .nodeId(configuration.nodeId())
             .otherNodes(configuration.otherNodes())
             .timeoutIntervalInMs(configuration.clusterTimeoutIntervalInMs())
@@ -147,7 +147,7 @@ class ClusterContext extends EngineContext
             .agentNamePrefix(configuration.agentNamePrefix())
             .printAeronStreamIdentifiers(configuration.printAeronStreamIdentifiers());
 
-        return new ClusterAgent(clusterNodeConfiguration, System.currentTimeMillis());
+        return new ClusterAgent(clusterConfiguration, System.currentTimeMillis());
     }
 
     private ArchiveReader outboundArchiveReader()

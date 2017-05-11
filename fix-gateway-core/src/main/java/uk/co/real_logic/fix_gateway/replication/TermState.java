@@ -36,6 +36,7 @@ class TermState
 
     /** The position that we can commit up to. */
     private final AtomicLong consensusPosition = new AtomicLong(0);
+    private long transportPositionDelta;
 
     TermState leaderSessionId(final int leadershipSessionId)
     {
@@ -139,5 +140,18 @@ class TermState
             ", lastAppliedPosition=" + lastAppliedPosition +
             ", consensusPosition=" + consensusPosition +
             '}';
+    }
+
+    /** Must be written before the leader session id is set when you become leader */
+    TermState transportPositionDelta(final long transportPositionDelta)
+    {
+        this.transportPositionDelta = transportPositionDelta;
+        return this;
+    }
+
+    /** Can only be read after the leader session id has been read HB */
+    long transportPositionDelta()
+    {
+        return transportPositionDelta;
     }
 }

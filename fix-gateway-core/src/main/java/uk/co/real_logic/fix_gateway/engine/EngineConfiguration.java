@@ -22,7 +22,7 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
 import uk.co.real_logic.fix_gateway.engine.framer.TcpChannelSupplier;
-import uk.co.real_logic.fix_gateway.replication.ClusterNodeConfiguration;
+import uk.co.real_logic.fix_gateway.replication.ClusterConfiguration;
 import uk.co.real_logic.fix_gateway.replication.RoleHandler;
 import uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy;
 
@@ -155,7 +155,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     private String libraryAeronChannel = null;
     private Function<EngineConfiguration, TcpChannelSupplier> channelSupplierFactory = TcpChannelSupplier::new;
-    private RoleHandler roleHandler = ClusterNodeConfiguration.DEFAULT_NODE_HANDLER;
+    private RoleHandler roleHandler = ClusterConfiguration.DEFAULT_NODE_HANDLER;
     private SessionPersistenceStrategy sessionPersistenceStrategy;
     private long slowConsumerTimeoutInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
     private EngineScheduler scheduler = new DefaultEngineScheduler();

@@ -27,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 class ClusterPublication extends ClusterablePublication
 {
     private final ExclusivePublication dataPublication;
+    private final TermState termState;
     private final AtomicInteger leaderSessionId;
     private final int ourSessionId;
     private final long reservedValue;
@@ -34,11 +35,13 @@ class ClusterPublication extends ClusterablePublication
 
     ClusterPublication(
         final ExclusivePublication dataPublication,
+        final TermState termState,
         final AtomicInteger leaderSessionId,
         final int ourSessionId,
         final int streamId)
     {
         this.dataPublication = dataPublication;
+        this.termState = termState;
         this.leaderSessionId = leaderSessionId;
         this.ourSessionId = ourSessionId;
         this.reservedValue = ReservedValue.ofClusterStreamId(streamId);
@@ -52,12 +55,16 @@ class ClusterPublication extends ClusterablePublication
             return CANT_PUBLISH;
         }
 
-        final long position = dataPublication.tryClaim(length, bufferClaim);
-        if (position > 0)
+        final long transportPosition = dataPublication.tryClaim(length, bufferClaim);
+        if (transportPosition > 0)
         {
             bufferClaim.reservedValue(reservedValue);
+
+            final long transportPositionDelta = termState.transportPositionDelta();
+
+            return transportPosition + transportPositionDelta;
         }
-        return position;
+        return transportPosition;
     }
 
     public int id()

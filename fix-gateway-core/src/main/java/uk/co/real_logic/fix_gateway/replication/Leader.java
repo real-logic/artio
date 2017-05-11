@@ -349,12 +349,15 @@ class Leader implements Role, RaftHandler
     {
         this.timeInMs = timeInMs;
 
-        termState.leaderSessionId(ourSessionId);
+        final long currentPosition = consensusPosition.get();
+        transportPositionDelta = currentPosition - transportPosition;
+
+        termState
+            .transportPositionDelta(transportPositionDelta)
+            .leaderSessionId(ourSessionId);
 
         lastAppliedPosition = Math.max(HEADER_LENGTH, termState.lastAppliedPosition());
 
-        final long currentPosition = consensusPosition.get();
-        transportPositionDelta = currentPosition - transportPosition;
         heartbeat(currentPosition);
 
         raftArchiver.checkLeaderArchiver();

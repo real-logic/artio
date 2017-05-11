@@ -128,6 +128,6 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
                 id, DATA_SESSION_ID, clusterNode, CLUSTER_SIZE, TIMEOUT, termState, ackStrategy,
                 NODE_STATE_BUFFER, nodeStateHandler)
                 .controlSubscription(controlSubscription())
-                .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID));
+                .controlPublication(raftPublication(ClusterConfiguration.DEFAULT_CONTROL_STREAM_ID));
     }
 }

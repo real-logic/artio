@@ -19,6 +19,7 @@ import io.aeron.ExclusivePublication;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 /**
@@ -28,6 +29,7 @@ class ClusterStreams extends ClusterableStreams
 {
     private final RaftTransport transport;
     private final int ourSessionId;
+    private final TermState termState;
     private final AtomicInteger leaderSessionId;
     private final ExclusivePublication dataPublication;
     private final Supplier<ArchiveReader> archiveReaderSupplier;
@@ -35,13 +37,14 @@ class ClusterStreams extends ClusterableStreams
     ClusterStreams(
         final RaftTransport transport,
         final int ourSessionId,
-        final AtomicInteger leaderSessionId,
+        final TermState termState,
         final ExclusivePublication dataPublication,
         final Supplier<ArchiveReader> archiveReaderSupplier)
     {
         this.transport = transport;
         this.ourSessionId = ourSessionId;
-        this.leaderSessionId = leaderSessionId;
+        this.termState = termState;
+        leaderSessionId = termState.leaderSessionId();
         this.dataPublication = dataPublication;
         this.archiveReaderSupplier = archiveReaderSupplier;
     }
@@ -58,7 +61,7 @@ class ClusterStreams extends ClusterableStreams
 
     public ClusterPublication publication(final int clusterStreamId, final String name)
     {
-        return new ClusterPublication(dataPublication, leaderSessionId, ourSessionId, clusterStreamId);
+        return new ClusterPublication(dataPublication, termState, leaderSessionId, ourSessionId, clusterStreamId);
     }
 
     public ClusterSubscription subscription(final int clusterStreamId, final String name)

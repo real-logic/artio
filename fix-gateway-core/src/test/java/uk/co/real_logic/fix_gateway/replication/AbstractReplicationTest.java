@@ -70,17 +70,17 @@ public class AbstractReplicationTest
 
     protected Subscription controlSubscription()
     {
-        return aeron.addSubscription(IPC, ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID);
+        return aeron.addSubscription(IPC, ClusterConfiguration.DEFAULT_CONTROL_STREAM_ID);
     }
 
     protected Subscription acknowledgementSubscription()
     {
-        return aeron.addSubscription(IPC, ClusterNodeConfiguration.DEFAULT_ACKNOWLEDGEMENT_STREAM_ID);
+        return aeron.addSubscription(IPC, ClusterConfiguration.DEFAULT_ACKNOWLEDGEMENT_STREAM_ID);
     }
 
     protected Subscription dataSubscription()
     {
-        return aeron.addSubscription(IPC, ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID);
+        return aeron.addSubscription(IPC, ClusterConfiguration.DEFAULT_DATA_STREAM_ID);
     }
 
     protected RaftPublication raftPublication(final int streamId)
@@ -94,7 +94,7 @@ public class AbstractReplicationTest
 
     protected ExclusivePublication dataPublication()
     {
-        return aeron.addExclusivePublication(IPC, ClusterNodeConfiguration.DEFAULT_DATA_STREAM_ID);
+        return aeron.addExclusivePublication(IPC, ClusterConfiguration.DEFAULT_DATA_STREAM_ID);
     }
 
     @Before
@@ -159,8 +159,8 @@ public class AbstractReplicationTest
             NODE_STATE_BUFFER,
             nodeStateHandler)
             .controlSubscription(controlSubscription())
-            .acknowledgementPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_ACKNOWLEDGEMENT_STREAM_ID))
-            .controlPublication(raftPublication(ClusterNodeConfiguration.DEFAULT_CONTROL_STREAM_ID))
+            .acknowledgementPublication(raftPublication(ClusterConfiguration.DEFAULT_ACKNOWLEDGEMENT_STREAM_ID))
+            .controlPublication(raftPublication(ClusterConfiguration.DEFAULT_CONTROL_STREAM_ID))
             .follow(0);
     }
 
