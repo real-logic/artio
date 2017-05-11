@@ -235,6 +235,7 @@ public class ClusterReplicationTest
             () ->
             {
                 pollAll();
+
                 return receivedMessage(liveNodes[0], position) &&
                        receivedMessage(liveNodes[1], position);
             }
