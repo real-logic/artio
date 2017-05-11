@@ -32,7 +32,6 @@ import java.util.stream.Stream;
 
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static java.lang.System.lineSeparator;
-import static java.lang.System.setOut;
 import static java.util.stream.Collectors.joining;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;

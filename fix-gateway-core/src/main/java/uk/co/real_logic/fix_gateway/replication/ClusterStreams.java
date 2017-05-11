@@ -19,7 +19,6 @@ import io.aeron.ExclusivePublication;
 import uk.co.real_logic.fix_gateway.engine.logger.ArchiveReader;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 /**
