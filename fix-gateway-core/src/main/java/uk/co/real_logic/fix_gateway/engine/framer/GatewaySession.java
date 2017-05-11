@@ -23,6 +23,7 @@ import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
+import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_MESSAGE;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 
@@ -157,6 +158,8 @@ class GatewaySession implements SessionInfo
     {
         if (sessionParser != null)
         {
+            DebugLogger.log(FIX_MESSAGE, "Gateway Received %s %n", buffer, offset, length);
+
             sessionParser.onMessage(buffer, offset, length, messageType, sessionId);
         }
     }
