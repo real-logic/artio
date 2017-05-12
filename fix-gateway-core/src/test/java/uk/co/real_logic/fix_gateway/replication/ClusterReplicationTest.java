@@ -22,6 +22,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
+import uk.co.real_logic.fix_gateway.LogTag;
 import uk.co.real_logic.fix_gateway.Timing;
 
 import java.util.Optional;
@@ -137,6 +138,14 @@ public class ClusterReplicationTest
         final NodeRunner leader = leader();
         final NodeRunner[] followers = followers();
 
+        DebugLogger.log(RAFT, "First Leader: %d%n", leader.nodeId());
+
+        long position = sendMessageTo(leader);
+
+        assertMessageReceived(position);
+
+        DebugLogger.log(RAFT, "Dropping Frames to Leader [%d]%n", leader.nodeId());
+
         leader.dropFrames(dropInboundFrames, dropOutboundFrames);
 
         assertElectsNewLeader(followers);
@@ -144,6 +153,15 @@ public class ClusterReplicationTest
         leader.dropFrames(false);
 
         assertBecomesFollower(leader);
+
+        final NodeRunner newLeader = leader();
+
+        DebugLogger.log(RAFT, "New Leader: %d%n", newLeader.nodeId());
+
+        position = sendMessageTo(newLeader);
+
+        // TODO: assertMessageReceived(position);
+        messageCommittedBetweenTwoLiveNodes(leader, position);
     }
 
     @Test
@@ -245,9 +263,9 @@ public class ClusterReplicationTest
         assertMessageReceived(position);
     }
 
-    private void messageCommittedBetweenTwoLiveNodes(final NodeRunner follower, final long position)
+    private void messageCommittedBetweenTwoLiveNodes(final NodeRunner notLiveNode, final long position)
     {
-        final NodeRunner[] liveNodes = nodes().filter(node -> node != follower).toArray(NodeRunner[]::new);
+        final NodeRunner[] liveNodes = nodes().filter(node -> node != notLiveNode).toArray(NodeRunner[]::new);
 
         assertEventuallyTrue(
             "message not committed",
@@ -559,15 +577,19 @@ public class ClusterReplicationTest
                     final int leadershipTerm = termState.leadershipTerm();
                     final int ourSessionId = agent.ourSessionId();
                     final long position = runner.replicatedPosition();
+                    final long dataPubPosition = runner.publication().position();
+                    final long archivedPosition = runner.archivedPosition();
 
                     return String.format(
-                        "%s %d: leader=%d, term=%d, us=%d, pos=%d",
+                        "%s %d: leader=%d, term=%d, us=%d, pos=%d, pubPos=%d, archPos=%d",
                         state(agent),
                         agent.nodeId(),
                         leaderSessionId,
                         leadershipTerm,
                         ourSessionId,
-                        position);
+                        position,
+                        dataPubPosition,
+                        archivedPosition);
                 })
             .collect(joining(lineSeparator(), lineSeparator(), lineSeparator()));
     }
