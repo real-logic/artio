@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
-import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BlockHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;

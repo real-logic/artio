@@ -17,8 +17,6 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import io.aeron.Image;
 import io.aeron.Subscription;
-import io.aeron.logbuffer.FragmentHandler;
-import io.aeron.logbuffer.Header;
 import io.aeron.logbuffer.RawBlockHandler;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.CloseHelper;
@@ -38,7 +36,6 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.IntFunction;
 import java.util.zip.CRC32;
 
