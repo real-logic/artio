@@ -40,7 +40,7 @@ class GatewaySessions
 {
     private final List<GatewaySession> sessions = new ArrayList<>();
     private final EpochClock clock;
-    private final GatewayPublication publication;
+    private final GatewayPublication outboundPublication;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionCustomisationStrategy customisationStrategy;
     private final FixCounters fixCounters;
@@ -53,7 +53,7 @@ class GatewaySessions
 
     GatewaySessions(
         final EpochClock clock,
-        final GatewayPublication publication,
+        final GatewayPublication outboundPublication,
         final SessionIdStrategy sessionIdStrategy,
         final SessionCustomisationStrategy customisationStrategy,
         final FixCounters fixCounters,
@@ -65,7 +65,7 @@ class GatewaySessions
         final ErrorHandler errorHandler)
     {
         this.clock = clock;
-        this.publication = publication;
+        this.outboundPublication = outboundPublication;
         this.sessionIdStrategy = sessionIdStrategy;
         this.customisationStrategy = customisationStrategy;
         this.fixCounters = fixCounters;
@@ -94,7 +94,7 @@ class GatewaySessions
 
         final SessionProxy proxy = new SessionProxy(
             asciiBuffer,
-            publication,
+            outboundPublication,
             sessionIdStrategy,
             customisationStrategy,
             clock,
@@ -107,7 +107,7 @@ class GatewaySessions
             clock,
             state,
             proxy,
-            publication,
+            outboundPublication,
             sessionIdStrategy,
             sendingTimeWindowInMs,
             receivedMsgSeqNo,
