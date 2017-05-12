@@ -366,7 +366,7 @@ public class ClusterSubscription extends ClusterableSubscription
             final boolean nextLeadershipTerm = isNextLeadershipTerm(leaderShipTerm);
             if (nextLeadershipTerm)
             {
-                // THe new leader's image isn't available yet.
+                // The new leader's image isn't available yet.
                 if (!onSwitchTermUpdateSources(leaderSessionId))
                 {
                     return ABORT;
