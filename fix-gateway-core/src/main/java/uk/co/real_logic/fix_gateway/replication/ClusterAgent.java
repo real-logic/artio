@@ -51,6 +51,7 @@ public class ClusterAgent implements Agent
     private final ArchiveReader agentArchiveReader;
     private final Archiver archiver;
     private final ExclusivePublication dataPublication;
+    private final RaftArchiver raftArchiver;
 
     private Role currentRole;
 
@@ -77,7 +78,7 @@ public class ClusterAgent implements Agent
         final IntHashSet otherNodes = configuration.otherNodes();
         final int clusterSize = otherNodes.size() + 1;
         final AcknowledgementStrategy acknowledgementStrategy = configuration.acknowledgementStrategy();
-        final RaftArchiver raftArchiver = new RaftArchiver(termState.leaderSessionId(), archiver);
+        raftArchiver = new RaftArchiver(termState.leaderSessionId(), archiver);
         final DirectBuffer nodeState = configuration.nodeState();
 
         requireNonNull(otherNodes, "otherNodes");
@@ -126,6 +127,11 @@ public class ClusterAgent implements Agent
         clusterStreams = new ClusterStreams(
             transport, ourSessionId, termState, dataPublication, archiveReaderSupplier);
         outboundPipe = new OutboundPipe(configuration.copyToPublication(), clusterStreams());
+    }
+
+    public long archivedPosition()
+    {
+        return raftArchiver.archivedPosition();
     }
 
     private abstract class NodeState
