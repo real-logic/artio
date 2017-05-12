@@ -56,7 +56,6 @@ import static uk.co.real_logic.fix_gateway.storage.messages.SessionIdEncoder.BLO
  */
 public class SessionContexts
 {
-    public static final long MISSING_SESSION_ID = -2;
 
     static final SessionContext DUPLICATE_SESSION = new SessionContext(-3, -3, null, OUT_OF_SPACE);
     static final SessionContext UNKNOWN_SESSION = new SessionContext(
