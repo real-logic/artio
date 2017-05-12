@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.replication;
 
+import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BlockHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
@@ -121,9 +122,12 @@ class Leader implements Role, RaftHandler
         }
 
         final int bytesRead = raftArchiver.poll();
+
         if (bytesRead > 0)
         {
-            nodeToPosition.put(ourSessionId, raftArchiver.archivedPosition());
+            final long transportPosition = raftArchiver.archivedPosition();
+            final long replicatedPosition = transportPosition + transportPositionDelta;
+            nodeToPosition.put(nodeId, replicatedPosition);
         }
 
         return bytesRead;
@@ -167,10 +171,12 @@ class Leader implements Role, RaftHandler
         if (acknowledgementSubscription != null)
         {
             acknowledgementSubscription.close();
+            acknowledgementSubscription = null;
         }
         if (dataSubscription != null)
         {
             dataSubscription.close();
+            dataSubscription = null;
         }
     }
 
@@ -351,6 +357,7 @@ class Leader implements Role, RaftHandler
 
         final long currentPosition = consensusPosition.get();
         transportPositionDelta = currentPosition - transportPosition;
+        nodeToPosition.put(nodeId, currentPosition);
 
         termState
             .transportPositionDelta(transportPositionDelta)
@@ -360,7 +367,7 @@ class Leader implements Role, RaftHandler
 
         heartbeat(currentPosition);
 
-        raftArchiver.checkLeaderArchiver();
+        raftArchiver.onLeader();
 
         return this;
     }

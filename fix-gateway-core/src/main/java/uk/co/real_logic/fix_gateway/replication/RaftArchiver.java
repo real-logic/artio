@@ -46,6 +46,7 @@ class RaftArchiver
                 return true;
             }
         }
+
         return false;
     }
 
@@ -56,7 +57,14 @@ class RaftArchiver
 
     long archivedPosition()
     {
-        return leaderArchiver.archivedPosition();
+        if (leaderArchiver != null)
+        {
+            return leaderArchiver.archivedPosition();
+        }
+        else
+        {
+            return 0;
+        }
     }
 
     int poll()

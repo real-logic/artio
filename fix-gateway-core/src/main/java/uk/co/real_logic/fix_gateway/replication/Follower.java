@@ -55,6 +55,7 @@ class Follower implements Role, RaftHandler
 
     private short votedFor = NO_ONE;
     private long timeInMs;
+    private Subscription dataSubscription;
 
     Follower(
         final short nodeId,
@@ -138,6 +139,11 @@ class Follower implements Role, RaftHandler
 
     public void closeStreams()
     {
+        /*if (dataSubscription != null)
+        {
+            dataSubscription.close();
+            dataSubscription = null;
+        }*/
     }
 
     private void onReplyKeepAlive(final long timeInMs)
@@ -328,6 +334,7 @@ class Follower implements Role, RaftHandler
 
     Follower dataSubscription(final Subscription dataSubscription)
     {
+        this.dataSubscription = dataSubscription;
         raftArchiver.dataSubscription(dataSubscription);
         return this;
     }

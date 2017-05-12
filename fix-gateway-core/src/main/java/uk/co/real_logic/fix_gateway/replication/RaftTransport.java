@@ -58,6 +58,7 @@ class RaftTransport
             .acknowledgementSubscription(
                 subscription(
                     acknowledgement.channel(), acknowledgement.streamId(), "leaderAcknowledgementSubscription"))
+            // The leader uses a spy subscription in order to avoid reading its own data
             .dataSubscription(
                 subscription(
                     data.spyChannel(), data.streamId(), "leaderDataSubscription"));

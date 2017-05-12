@@ -173,7 +173,8 @@ public class ClusterAgent implements Agent
 
             transport.injectFollowerSubscriptions(follower);
 
-            currentRole = follower.votedFor(votedFor)
+            currentRole = follower
+                .votedFor(votedFor)
                 .follow(timeInMs);
 
             onNewLeader();
