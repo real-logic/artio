@@ -246,6 +246,11 @@ class NodeRunner implements AutoCloseable
         return publication;
     }
 
+    public long archivedPosition()
+    {
+        return clusterAgent.archivedPosition();
+    }
+
     private class NodeIdStasher implements NodeStateHandler
     {
         public void onNewNodeState(
