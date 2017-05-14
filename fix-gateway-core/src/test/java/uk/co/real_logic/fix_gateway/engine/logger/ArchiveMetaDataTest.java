@@ -75,7 +75,7 @@ public class ArchiveMetaDataTest
     public void shouldValidateLengthOfBuffer() throws IOException
     {
         final File metaDataFile = directory.metaDataLogFile(STREAM_ID, SESSION_ID);
-        IoUtil.mapNewFile(metaDataFile, 0);
+        LoggerUtil.mapNewFile(metaDataFile, 0);
 
         final ArchiveMetaDataDecoder decoder = archiveMetaData.read(STREAM_ID, SESSION_ID);
         assertNull(decoder);
@@ -93,7 +93,7 @@ public class ArchiveMetaDataTest
 
     private ArchiveMetaData newArchiveMetaData()
     {
-        return new ArchiveMetaData(directory, LoggerUtil::mapExistingFile, IoUtil::mapNewFile);
+        return new ArchiveMetaData(directory, LoggerUtil::mapExistingFile, LoggerUtil::mapNewFile);
     }
 
 }

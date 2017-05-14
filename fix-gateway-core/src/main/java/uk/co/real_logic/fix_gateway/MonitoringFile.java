@@ -19,6 +19,7 @@ import org.agrona.IoUtil;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.CountersManager;
+import uk.co.real_logic.fix_gateway.engine.logger.LoggerUtil;
 
 import java.io.File;
 import java.nio.MappedByteBuffer;
@@ -57,7 +58,7 @@ public final class MonitoringFile implements AutoCloseable
             IoUtil.deleteIfExists(file);
 
             length = configuration.monitoringBuffersLength();
-            mappedByteBuffer = IoUtil.mapNewFile(file, length);
+            mappedByteBuffer = LoggerUtil.mapNewFile(file, length);
         }
         else
         {

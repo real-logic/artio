@@ -35,8 +35,16 @@ public final class LoggerUtil
         }
         else
         {
-            return IoUtil.mapNewFile(file, size);
+            return mapNewFile(file, size);
         }
+    }
+
+    public static MappedByteBuffer mapNewFile(final File file, final int size)
+    {
+        final File parentDir = file.getParentFile();
+        IoUtil.ensureDirectoryExists(parentDir, parentDir.getAbsolutePath());
+
+        return IoUtil.mapNewFile(file, size);
     }
 
     public static MappedByteBuffer mapExistingFile(final File file)
@@ -47,7 +55,7 @@ public final class LoggerUtil
     public static ArchiveMetaData newArchiveMetaData(final String logFileDir)
     {
         final LogDirectoryDescriptor directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
-        return new ArchiveMetaData(directoryDescriptor, LoggerUtil::mapExistingFile, IoUtil::mapNewFile);
+        return new ArchiveMetaData(directoryDescriptor, LoggerUtil::mapExistingFile, LoggerUtil::mapNewFile);
     }
 
     /**
