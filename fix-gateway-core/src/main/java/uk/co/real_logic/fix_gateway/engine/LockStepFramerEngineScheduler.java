@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.AgentRunner;
 import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
 
@@ -28,7 +29,7 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
 {
     private AgentRunner archivingRunner;
     private AgentRunner monitoringRunner;
-    private Agent framer;
+    private AgentInvoker framerInvoker;
 
     public void launch(
         final EngineConfiguration configuration,
@@ -37,7 +38,7 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
         final Agent archivingAgent,
         final Agent monitoringAgent)
     {
-        this.framer = framer;
+        this.framerInvoker = new AgentInvoker(errorHandler, null, framer);
         if (archivingRunner != null)
         {
             EngineScheduler.fail();
@@ -56,11 +57,11 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
         }
     }
 
-    public int doFramerWork()
+    public int invokeFramer()
     {
         try
         {
-            return framer.doWork();
+            return framerInvoker.invoke();
         }
         catch (final Exception e)
         {
@@ -71,6 +72,6 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
 
     public void close()
     {
-        Exceptions.closeAll(framer::onClose, archivingRunner, monitoringRunner);
+        Exceptions.closeAll(framerInvoker, archivingRunner, monitoringRunner);
     }
 }

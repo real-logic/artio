@@ -51,8 +51,8 @@ public class TestSystem
     {
         if (scheduler != null)
         {
-            scheduler.doFramerWork();
-            scheduler.doFramerWork();
+            scheduler.invokeFramer();
+            scheduler.invokeFramer();
         }
         libraries.forEach((library) -> library.poll(LIBRARY_LIMIT));
     }
