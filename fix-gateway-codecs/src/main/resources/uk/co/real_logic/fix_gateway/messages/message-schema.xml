@@ -13,9 +13,13 @@
             <type name="schemaId" primitiveType="uint16"/>
             <type name="version" primitiveType="uint16"/>
         </composite>
-        <composite name="varDataEncoding">
+        <composite name="Utf8String">
             <type name="length" primitiveType="uint16"/>
             <type name="varData" primitiveType="uint8" length="0" characterEncoding="UTF-8"/>
+        </composite>
+        <composite name="AsciiString">
+            <type name="length" primitiveType="uint16"/>
+            <type name="varData" primitiveType="char" length="0"/>
         </composite>
         <composite name="groupSizeEncoding" description="Repeating group dimensions">
             <type name="blockLength" primitiveType="uint16"/>
@@ -170,15 +174,15 @@
         <field name="heartbeatIntervalInS" id="5" type="int32"/>
         <field name="resetSequenceNumber" id="6" type="ResetSequenceNumber"/>
         <field name="correlationId" id="7" type="CorrelationId"/>
-        <data name="host" id="8" type="varDataEncoding"/>
-        <data name="senderCompId" id="9" type="varDataEncoding"/>
-        <data name="senderSubId" id="10" type="varDataEncoding"/>
-        <data name="senderLocationId" id="11" type="varDataEncoding"/>
-        <data name="targetCompId" id="12" type="varDataEncoding"/>
-        <data name="targetSubId" id="13" type="varDataEncoding"/>
-        <data name="targetLocationId" id="14" type="varDataEncoding"/>
-        <data name="username" id="15" type="varDataEncoding"/>
-        <data name="password" id="16" type="varDataEncoding"/>
+        <data name="host" id="8" type="Utf8String"/>
+        <data name="senderCompId" id="9" type="Utf8String"/>
+        <data name="senderSubId" id="10" type="Utf8String"/>
+        <data name="senderLocationId" id="11" type="Utf8String"/>
+        <data name="targetCompId" id="12" type="Utf8String"/>
+        <data name="targetSubId" id="13" type="Utf8String"/>
+        <data name="targetLocationId" id="14" type="Utf8String"/>
+        <data name="username" id="15" type="Utf8String"/>
+        <data name="password" id="16" type="Utf8String"/>
     </sbe:message>
 
     <sbe:message name="RequestDisconnect" id="12" description="Request a connection be disconnected">
@@ -203,8 +207,8 @@
         <field name="state" id="5" type="SessionState"/>
         <field name="lastSentSequenceNumber" id="6" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="7" type="int32"/>
-        <data name="username" id="8" type="varDataEncoding"/>
-        <data name="password" id="9" type="varDataEncoding"/>
+        <data name="username" id="8" type="Utf8String"/>
+        <data name="password" id="9" type="Utf8String"/>
     </sbe:message>
 
     <sbe:message name="RequestSession" id="31"
@@ -225,7 +229,7 @@
 
     <sbe:message name="Connect" id="33" description="We have accepted an inbound TCP Connection">
         <field name="connection" id="1" type="ConnectionId"/>
-        <data name="address" id="2" type="varDataEncoding"/>
+        <data name="address" id="2" type="Utf8String"/>
     </sbe:message>
 
     <sbe:message name="ManageConnection" id="10" description="Here's a connection to manage">
@@ -239,7 +243,7 @@
         <field name="heartbeatIntervalInS" id="7" type="int32"/>
         <field name="replyToId" id="8" type="CorrelationId"/>
         <field name="sequenceIndex" id="10" type="SequenceIndex" />
-        <data name="address" id="9" type="varDataEncoding"/>
+        <data name="address" id="9" type="Utf8String"/>
     </sbe:message>
 
     <sbe:message name="ResetSessionIds" id="36" description="All session ids have been reset">
@@ -253,21 +257,21 @@
         <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
         <field name="logonStatus" id="6" type="LogonStatus"/>
         <field name="slowStatus" id="7" type="SlowStatus"/>
-        <data name="localCompId" id="8" type="varDataEncoding"/>
-        <data name="localSubId" id="9" type="varDataEncoding"/>
-        <data name="localLocationId" id="10" type="varDataEncoding"/>
-        <data name="remoteCompId" id="11" type="varDataEncoding"/>
-        <data name="remoteSubId" id="12" type="varDataEncoding"/>
-        <data name="remoteLocationId" id="13" type="varDataEncoding"/>
-        <data name="username" id="14" type="varDataEncoding"/>
-        <data name="password" id="15" type="varDataEncoding"/>
+        <data name="localCompId" id="8" type="Utf8String"/>
+        <data name="localSubId" id="9" type="Utf8String"/>
+        <data name="localLocationId" id="10" type="Utf8String"/>
+        <data name="remoteCompId" id="11" type="Utf8String"/>
+        <data name="remoteSubId" id="12" type="Utf8String"/>
+        <data name="remoteLocationId" id="13" type="Utf8String"/>
+        <data name="username" id="14" type="Utf8String"/>
+        <data name="password" id="15" type="Utf8String"/>
     </sbe:message>
 
     <sbe:message name="Error" id="13" description="An error has occurred">
         <field name="errorType" id="1" type="GatewayError"/>
         <field name="libraryId" id="2" type="LibraryId"/>
         <field name="replyToId" id="3" type="CorrelationId"/>
-        <data name="message" id="4" type="varDataEncoding"/>
+        <data name="message" id="4" type="Utf8String"/>
     </sbe:message>
 
     <sbe:message name="RequestSessionReply" id="32"
@@ -292,11 +296,11 @@
     <sbe:message name="NotLeader" id="37" description="Let a library know that you aren't the leader">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="replyToId" id="2" type="CorrelationId"/>
-        <data name="libraryChannel" id="3" type="varDataEncoding"/>
+        <data name="libraryChannel" id="3" type="Utf8String"/>
     </sbe:message>
 
     <sbe:message name="EngineDescriptor" id="38" description="">
-        <data name="libraryChannel" id="1" type="varDataEncoding"/>
+        <data name="libraryChannel" id="1" type="Utf8String"/>
     </sbe:message>
 
     <sbe:message name="ControlNotification" id="39"
@@ -323,7 +327,7 @@
         <field name="libraryId" id="6" type="LibraryId"/>
         <field name="bytesSent" id="7" type="int32" />
         <field name="sequenceIndex" id="8" type="SequenceIndex" />
-        <data name="body" id="9" type="varDataEncoding"/>
+        <data name="body" id="9" type="AsciiString"/>
     </sbe:message>
 
     <sbe:message name="ApplicationHeartbeat" id="16"
