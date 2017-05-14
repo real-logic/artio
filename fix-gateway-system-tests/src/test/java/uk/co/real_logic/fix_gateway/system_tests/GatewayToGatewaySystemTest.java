@@ -222,7 +222,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         {
             acceptingHandler.clearSessions();
             final Reply<Session> reply = initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID);
-            testSystem.awaitLibraryReply(reply);
+            testSystem.awaitReply(reply);
 
             final Session session2 = reply.resultIfPresent();
 
@@ -589,6 +589,29 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         sendTestRequest(acceptingSession, testReqID);
 
         assertReceivedSingleHeartbeat(testSystem, acceptingOtfAcceptor, testReqID);
+    }
+
+    @Test
+    public void shouldLookupSessionIdsOfSessions()
+    {
+        final Reply<Long> sessionIdReply = initiatingEngine.lookupSessionId(
+            INITIATOR_ID, ACCEPTOR_ID, null, null, null, null);
+        testSystem.awaitReply(sessionIdReply);
+
+        final long sessionId = sessionIdReply.resultIfPresent();
+
+        assertEquals(initiatingSession.id(), sessionId);
+    }
+
+    @Test
+    public void shouldNotLookupSessionIdsOfUnknownSessions()
+    {
+        final Reply<Long> sessionIdReply = initiatingEngine.lookupSessionId(
+            "foo", "bar", null, null, null, null);
+        testSystem.awaitReply(sessionIdReply);
+
+        assertNull(sessionIdReply.resultIfPresent());
+        assertThat(sessionIdReply.error(), instanceOf(IllegalArgumentException.class));
     }
 
     private void awaitIsConnected(final boolean connected, final FixLibrary library)

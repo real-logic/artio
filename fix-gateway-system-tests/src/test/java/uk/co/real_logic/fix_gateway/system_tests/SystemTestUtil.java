@@ -191,7 +191,7 @@ public final class SystemTestUtil
         final FixLibrary library, final Session session, final TestSystem testSystem)
     {
         final Reply<SessionReplyStatus> reply = library.releaseToGateway(session, DEFAULT_REPLY_TIMEOUT_IN_MS);
-        testSystem.awaitLibraryReply(reply);
+        testSystem.awaitReply(reply);
 
         return reply.resultIfPresent();
     }
@@ -295,7 +295,7 @@ public final class SystemTestUtil
     {
         final Reply<SessionReplyStatus> reply = library.requestSession(
             sessionId, lastReceivedMsgSeqNum, sequenceIndex, DEFAULT_REPLY_TIMEOUT_IN_MS);
-        testSystem.awaitLibraryReply(reply);
+        testSystem.awaitReply(reply);
         assertEquals(COMPLETED, reply.state());
 
         return reply.resultIfPresent();

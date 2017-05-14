@@ -366,4 +366,14 @@ public class SessionContexts
 
         mappedFile.force();
     }
+
+    long lookupSessionId(final CompositeKey compositeKey)
+    {
+        final SessionContext sessionContext = compositeToContext.get(compositeKey);
+        if (sessionContext == null)
+        {
+            return Session.UNKNOWN;
+        }
+        return sessionContext.sessionId();
+    }
 }

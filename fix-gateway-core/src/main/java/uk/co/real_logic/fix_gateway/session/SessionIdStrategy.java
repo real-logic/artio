@@ -61,21 +61,21 @@ public interface SessionIdStrategy
     /**
      * Creates the composite session key when you initiate a logon.
      *
-     * @param senderCompId the sender company id, always present.
-     * @param senderSubId the sender sub id, nullable.
-     * @param senderLocationId the sender location id, nullable.
-     * @param targetCompId the target company id, always present.
-     * @param targetSubId the target sub id, nullable.
-     * @param targetLocationId the target location id, nullable.
+     * @param localCompId the sender company id, always present.
+     * @param localSubId the sender sub id, nullable.
+     * @param localLocationId the sender location id, nullable.
+     * @param remoteCompId the target company id, always present.
+     * @param remoteSubId the target sub id, nullable.
+     * @param remoteLocationId the target location id, nullable.
      * @return the composite session key.
      */
     CompositeKey onInitiateLogon(
-        String senderCompId,
-        String senderSubId,
-        String senderLocationId,
-        String targetCompId,
-        String targetSubId,
-        String targetLocationId);
+        String localCompId,
+        String localSubId,
+        String localLocationId,
+        String remoteCompId,
+        String remoteSubId,
+        String remoteLocationId);
 
     /**
      * Sets up an outbound message header with the composite session key.

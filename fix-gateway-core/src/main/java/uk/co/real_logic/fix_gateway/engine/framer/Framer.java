@@ -1230,6 +1230,29 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
     }
 
+    void onLookupSessionId(final LookupSessionIdCommand command)
+    {
+        final CompositeKey compositeKey = sessionIdStrategy.onInitiateLogon(
+            command.localCompId,
+            command.localSubId,
+            command.localLocationId,
+            command.remoteCompId,
+            command.remoteSubId,
+            command.remoteLocationId);
+
+        final long sessionId = sessionContexts.lookupSessionId(compositeKey);
+
+        if (sessionId == Session.UNKNOWN)
+        {
+            command.error(new IllegalArgumentException(
+                "Unknown Session: " + compositeKey));
+        }
+        else
+        {
+            command.complete(sessionId);
+        }
+    }
+
     private boolean sequenceNumbersNotReset()
     {
         return sentSequenceNumberIndex.lastKnownSequenceNumber(1) != UNK_SESSION
@@ -1314,5 +1337,4 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             toResend.put(connectionId, libraryId);
         }
     }
-
 }

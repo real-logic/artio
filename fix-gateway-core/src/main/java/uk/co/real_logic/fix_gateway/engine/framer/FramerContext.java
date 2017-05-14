@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2016 Real Logic Ltd.
+ * Copyright 2015-2017 Real Logic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -211,5 +211,29 @@ public class FramerContext
         final ResetSessionIdsCommand command = new ResetSessionIdsCommand(backupLocation);
         sendAdminCommand(idleStrategy, command);
         command.awaitResponse(idleStrategy);
+    }
+
+    public Reply<Long> lookupSessionId(
+        final String localCompId,
+        final String remoteCompId,
+        final String localSubId,
+        final String remoteSubId,
+        final String localLocationId,
+        final String remoteLocationId)
+    {
+        final LookupSessionIdCommand command = new LookupSessionIdCommand(
+            localCompId,
+            remoteCompId,
+            localSubId,
+            remoteSubId,
+            localLocationId,
+            remoteLocationId);
+
+        if (adminCommands.offer(command))
+        {
+            return command;
+        }
+
+        return null;
     }
 }

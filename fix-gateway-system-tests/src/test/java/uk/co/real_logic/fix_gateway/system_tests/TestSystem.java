@@ -92,7 +92,7 @@ public class TestSystem
         return library;
     }
 
-    public void awaitLibraryReply(final Reply<?> reply)
+    public void awaitReply(final Reply<?> reply)
     {
         assertEventuallyTrue(
             "No reply from: " + reply,

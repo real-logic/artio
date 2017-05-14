@@ -55,18 +55,18 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
     }
 
     public CompositeKey onInitiateLogon(
-        final String senderCompId,
-        final String senderSubId,
-        final String senderLocationId,
-        final String targetCompId,
-        final String targetSubId,
-        final String targetLocationId)
+        final String localCompId,
+        final String localSubId,
+        final String localLocationId,
+        final String remoteCompId,
+        final String remoteSubId,
+        final String remoteLocationId)
     {
-        requireNonNull(senderCompId, "senderCompId");
-        requireNonNull(targetCompId, "targetCompId");
+        requireNonNull(localCompId, "senderCompId");
+        requireNonNull(remoteCompId, "targetCompId");
 
-        final char[] senderCompID = senderCompId.toCharArray();
-        final char[] targetCompID = targetCompId.toCharArray();
+        final char[] senderCompID = localCompId.toCharArray();
+        final char[] targetCompID = remoteCompId.toCharArray();
         return new CompositeKeyImpl(
             senderCompID, senderCompID.length, targetCompID, targetCompID.length);
     }

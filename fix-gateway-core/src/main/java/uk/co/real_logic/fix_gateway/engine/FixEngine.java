@@ -105,6 +105,34 @@ public final class FixEngine extends GatewayProcess
         return framerContext.resetSequenceNumber(sessionId);
     }
 
+    /**
+     * Gets the session id associated with some combination of id fields
+     *
+     * @param localCompId the senderCompId of messages sent by the gateway on this session.
+     * @param remoteCompId the senderCompId of messages received by the gateway on this session.
+     * @param localSubId the senderSubId of messages sent by the gateway on this session
+     *                   or <code>null</code> if not used in session identification.
+     * @param remoteSubId the senderSubId of messages received by the gateway on this session
+     *                    or <code>null</code> if not used in session identification.
+     * @param localLocationId the senderLocationId of messages sent by the gateway on this session
+     *                        or <code>null</code> if not used in session identification.
+     * @param remoteLocationId the senderLocationId of messages received by the gateway on this session
+     *                         or <code>null</code> if not used in session identification.
+     *
+     * @return the reply object asynchronously wrapping the session id
+     */
+    public Reply<Long> lookupSessionId(
+        final String localCompId,
+        final String remoteCompId,
+        final String localSubId,
+        final String remoteSubId,
+        final String localLocationId,
+        final String remoteLocationId)
+    {
+        return framerContext.lookupSessionId(
+            localCompId, remoteCompId, localSubId, remoteSubId, localLocationId, remoteLocationId);
+    }
+
     private FixEngine(final EngineConfiguration configuration)
     {
         try
