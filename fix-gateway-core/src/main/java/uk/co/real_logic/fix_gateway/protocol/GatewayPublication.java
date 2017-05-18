@@ -267,19 +267,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(logon.sbeBlockLength())
-            .templateId(logon.sbeTemplateId())
-            .schemaId(logon.sbeSchemaId())
-            .version(logon.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         logon
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .connection(connectionId)
             .session(sessionId)
@@ -326,19 +317,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(manageConnection.sbeBlockLength())
-            .templateId(manageConnection.sbeTemplateId())
-            .schemaId(manageConnection.sbeSchemaId())
-            .version(manageConnection.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         manageConnection
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .connection(connectionId)
             .session(sessionId)
             .libraryId(libraryId)
@@ -367,19 +349,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(disconnect.sbeBlockLength())
-            .templateId(disconnect.sbeTemplateId())
-            .schemaId(disconnect.sbeSchemaId())
-            .version(disconnect.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         disconnect
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .connection(connectionId)
             .reason(reason);
@@ -402,19 +375,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(connect.sbeBlockLength())
-            .templateId(connect.sbeTemplateId())
-            .schemaId(connect.sbeSchemaId())
-            .version(connect.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         connect
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .connection(connectionId)
             .putAddress(addressBytes, 0, addressBytes.length);
 
@@ -436,12 +400,7 @@ public class GatewayPublication extends ClaimablePublication
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         final int offset = bufferClaim.offset();
 
-        header
-            .wrap(buffer, offset)
-            .blockLength(resetSessionIds.sbeBlockLength())
-            .templateId(resetSessionIds.sbeTemplateId())
-            .schemaId(resetSessionIds.sbeSchemaId())
-            .version(resetSessionIds.sbeSchemaVersion());
+        resetSessionIds.wrapAndApplyHeader(buffer, offset, header);
 
         bufferClaim.commit();
 
@@ -459,19 +418,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(resetSequenceNumber.sbeBlockLength())
-            .templateId(resetSequenceNumber.sbeTemplateId())
-            .schemaId(resetSequenceNumber.sbeSchemaId())
-            .version(resetSequenceNumber.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         resetSequenceNumber
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .session(sessionId);
 
         bufferClaim.commit();
@@ -491,19 +441,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(requestDisconnect.sbeBlockLength())
-            .templateId(requestDisconnect.sbeTemplateId())
-            .schemaId(requestDisconnect.sbeSchemaId())
-            .version(requestDisconnect.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         requestDisconnect
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .connection(connectionId)
             .reason(reason);
@@ -563,19 +504,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(initiateConnection.sbeBlockLength())
-            .templateId(initiateConnection.sbeTemplateId())
-            .schemaId(initiateConnection.sbeSchemaId())
-            .version(initiateConnection.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         initiateConnection
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .port(port)
             .requestedInitialSequenceNumber(requestedInitialSequenceNumber)
@@ -615,19 +547,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(error.sbeBlockLength())
-            .templateId(error.sbeTemplateId())
-            .schemaId(error.sbeSchemaId())
-            .version(error.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         error
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .errorType(errorType)
             .libraryId(libraryId)
             .replyToId(replyToId)
@@ -649,19 +572,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(applicationHeartbeat.sbeBlockLength())
-            .templateId(applicationHeartbeat.sbeTemplateId())
-            .schemaId(applicationHeartbeat.sbeSchemaId())
-            .version(applicationHeartbeat.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         applicationHeartbeat
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId);
 
         bufferClaim.commit();
@@ -680,19 +594,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(libraryConnect.sbeBlockLength())
-            .templateId(libraryConnect.sbeTemplateId())
-            .schemaId(libraryConnect.sbeSchemaId())
-            .version(libraryConnect.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         libraryConnect
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .correlationId(correlationId);
 
@@ -724,19 +629,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(releaseSession.sbeBlockLength())
-            .templateId(releaseSession.sbeTemplateId())
-            .schemaId(releaseSession.sbeSchemaId())
-            .version(releaseSession.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         releaseSession
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .connection(connectionId)
             .correlationId(correlationId)
@@ -763,19 +659,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(releaseSessionReply.sbeBlockLength())
-            .templateId(releaseSessionReply.sbeTemplateId())
-            .schemaId(releaseSessionReply.sbeSchemaId())
-            .version(releaseSessionReply.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         releaseSessionReply
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .replyToId(replyToId)
             .status(status);
 
@@ -800,19 +687,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(requestSession.sbeBlockLength())
-            .templateId(requestSession.sbeTemplateId())
-            .schemaId(requestSession.sbeSchemaId())
-            .version(requestSession.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         requestSession
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .sessionId(sessionId)
             .correlationId(correlationId)
@@ -835,19 +713,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(requestSessionReply.sbeBlockLength())
-            .templateId(requestSessionReply.sbeTemplateId())
-            .schemaId(requestSessionReply.sbeSchemaId())
-            .version(requestSessionReply.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         requestSessionReply
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .replyToId(replyToId)
             .status(status);
 
@@ -868,19 +737,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(notLeader.sbeBlockLength())
-            .templateId(notLeader.sbeTemplateId())
-            .schemaId(notLeader.sbeSchemaId())
-            .version(notLeader.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         notLeader
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .replyToId(replyToId);
 
@@ -905,19 +765,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(newSentPosition.sbeBlockLength())
-            .templateId(newSentPosition.sbeTemplateId())
-            .schemaId(newSentPosition.sbeSchemaId())
-            .version(newSentPosition.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         newSentPosition
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .position(sentPosition);
 
@@ -937,19 +788,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(libraryTimeout.sbeBlockLength())
-            .templateId(libraryTimeout.sbeTemplateId())
-            .schemaId(libraryTimeout.sbeSchemaId())
-            .version(libraryTimeout.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         libraryTimeout
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .connectCorrelationId(connectCorrelationId);
 
@@ -975,19 +817,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(controlNotification.sbeBlockLength())
-            .templateId(controlNotification.sbeTemplateId())
-            .schemaId(controlNotification.sbeSchemaId())
-            .version(controlNotification.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         controlNotification
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId);
 
         final SessionsEncoder sessionsEncoder = controlNotification.sessionsCount(sessionsCount);
@@ -1013,19 +846,10 @@ public class GatewayPublication extends ClaimablePublication
         }
 
         final MutableDirectBuffer buffer = bufferClaim.buffer();
-        int offset = bufferClaim.offset();
-
-        header
-            .wrap(buffer, offset)
-            .blockLength(slowStatusNotification.sbeBlockLength())
-            .templateId(slowStatusNotification.sbeTemplateId())
-            .schemaId(slowStatusNotification.sbeSchemaId())
-            .version(slowStatusNotification.sbeSchemaVersion());
-
-        offset += header.encodedLength();
+        final int offset = bufferClaim.offset();
 
         slowStatusNotification
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .connectionId(connectionId)
             .status(status);
