@@ -309,20 +309,11 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
         if (claimBuffer(MESSAGE_FRAME_BLOCK_LENGTH + gapFillLength))
         {
-            int destOffset = bufferClaim.offset();
+            final int destOffset = bufferClaim.offset();
             final MutableDirectBuffer destBuffer = bufferClaim.buffer();
 
-            messageHeaderEncoder
-                .wrap(destBuffer, destOffset)
-                .blockLength(fixMessageEncoder.sbeBlockLength())
-                .templateId(fixMessageEncoder.sbeTemplateId())
-                .schemaId(fixMessageEncoder.sbeSchemaId())
-                .version(fixMessageEncoder.sbeSchemaVersion());
-
-            destOffset += MessageHeaderEncoder.ENCODED_LENGTH;
-
             fixMessageEncoder
-                .wrap(destBuffer, destOffset)
+                .wrapAndApplyHeader(destBuffer, destOffset, messageHeaderEncoder)
                 .libraryId(ENGINE_LIBRARY_ID)
                 .messageType(SequenceResetDecoder.MESSAGE_TYPE)
                 .session(this.sessionId)

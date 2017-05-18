@@ -36,15 +36,8 @@ final class EngineDescriptorFactory
 
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[length]);
 
-        messageHeader
-            .wrap(buffer, 0)
-            .blockLength(descriptor.sbeBlockLength())
-            .version(descriptor.sbeSchemaVersion())
-            .schemaId(descriptor.sbeSchemaId())
-            .templateId(descriptor.sbeTemplateId());
-
         descriptor
-            .wrap(buffer, ENCODED_LENGTH)
+            .wrapAndApplyHeader(buffer, 0, messageHeader)
             .putLibraryChannel(libraryChannelBytes, 0, libraryChannelBytes.length);
 
         return buffer;

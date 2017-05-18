@@ -139,24 +139,16 @@ public class AbstractLogTest
         final int messageType)
     {
         offset = START;
-        header
-            .wrap(buffer, offset)
-            .blockLength(messageFrame.sbeBlockLength())
-            .templateId(messageFrame.sbeTemplateId())
-            .schemaId(messageFrame.sbeSchemaId())
-            .version(messageFrame.sbeSchemaVersion());
-
-        offset += header.encodedLength();
 
         messageFrame
-            .wrap(buffer, offset)
+            .wrapAndApplyHeader(buffer, offset, header)
             .messageType(messageType)
             .session(sessionId)
             .connection(CONNECTION_ID)
             .sequenceIndex(sequenceIndex)
             .putBody(asciiBuffer, 0, logEntryLength);
 
-        offset += messageFrame.sbeBlockLength() + SIZE_OF_LENGTH_FIELD;
+        offset += MessageHeaderEncoder.ENCODED_LENGTH + messageFrame.sbeBlockLength() + SIZE_OF_LENGTH_FIELD;
     }
 
     protected int fragmentLength()

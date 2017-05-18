@@ -181,21 +181,13 @@ class SubscriptionSplitter implements ControlledFragmentHandler
         int clusterOffset = bufferClaim.offset();
 
         final ReplicatedMessageEncoder replicatedMessage = this.replicatedMessage;
-        messageHeaderEncoder
-            .wrap(clusterBuffer, clusterOffset)
-            .blockLength(replicatedMessage.sbeBlockLength())
-            .templateId(replicatedMessage.sbeTemplateId())
-            .schemaId(replicatedMessage.sbeSchemaId())
-            .version(replicatedMessage.sbeSchemaVersion());
-
-        clusterOffset += HEADER_LENGTH;
 
         replicatedMessage
-            .wrap(clusterBuffer, clusterOffset)
+            .wrapAndApplyHeader(clusterBuffer, clusterOffset, messageHeaderEncoder)
             .libraryId(libraryId)
             .position(header.position());
 
-        clusterOffset += ReplicatedMessageEncoder.BLOCK_LENGTH;
+        clusterOffset += MessageHeaderEncoder.ENCODED_LENGTH + ReplicatedMessageEncoder.BLOCK_LENGTH;
 
         clusterBuffer.putBytes(clusterOffset, buffer, offset, length);
 

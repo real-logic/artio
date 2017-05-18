@@ -17,8 +17,8 @@ package uk.co.real_logic.fix_gateway.engine.logger;
 
 import org.agrona.IoUtil;
 import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
+import uk.co.real_logic.fix_gateway.storage.messages.MessageHeaderDecoder;
+import uk.co.real_logic.fix_gateway.storage.messages.MessageHeaderEncoder;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import uk.co.real_logic.fix_gateway.storage.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.fix_gateway.storage.messages.ArchiveMetaDataEncoder;
@@ -70,15 +70,8 @@ public class ArchiveMetaData implements AutoCloseable
         {
             metaDataBuffer.wrap(newBufferFactory.map(metaDataFile, META_DATA_FILE_SIZE));
 
-            headerEncoder
-                .wrap(metaDataBuffer, 0)
-                .blockLength(metaDataEncoder.sbeBlockLength())
-                .templateId(metaDataEncoder.sbeTemplateId())
-                .schemaId(metaDataEncoder.sbeSchemaId())
-                .version(metaDataEncoder.sbeSchemaVersion());
-
             metaDataEncoder
-                .wrap(metaDataBuffer, headerEncoder.encodedLength())
+                .wrapAndApplyHeader(metaDataBuffer, 0, headerEncoder)
                 .initialTermId(initialTermId)
                 .termBufferLength(termBufferLength);
         }

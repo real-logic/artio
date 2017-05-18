@@ -335,21 +335,13 @@ public class ReplayIndexTest extends AbstractLogTest
     private void bufferContainsLogon()
     {
         offset = START;
-        header
-                .wrap(buffer, offset)
-                .blockLength(logon.sbeBlockLength())
-                .templateId(logon.sbeTemplateId())
-                .schemaId(logon.sbeSchemaId())
-                .version(logon.sbeSchemaVersion());
-
-        offset += header.encodedLength();
 
         logon
-                .wrap(buffer, offset)
-                .connection(CONNECTION_ID)
-                .session(SESSION_ID);
+            .wrapAndApplyHeader(buffer, offset, header)
+            .connection(CONNECTION_ID)
+            .session(SESSION_ID);
 
-        offset += logon.encodedLength();
+        offset += header.encodedLength() + logon.encodedLength();
     }
 
     private void indexExampleMessage()
