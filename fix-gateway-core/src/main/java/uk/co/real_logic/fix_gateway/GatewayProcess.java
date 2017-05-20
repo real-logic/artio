@@ -45,7 +45,6 @@ public class GatewayProcess implements AutoCloseable
     protected ErrorHandler errorHandler;
     protected DistinctErrorLog distinctErrorLog;
     protected Aeron aeron;
-    protected AgentInvoker aeronConductorInvoker;
     protected Agent monitoringAgent;
 
     protected void init(final CommonConfiguration configuration, final boolean useConductorAgentInvoker)
@@ -75,19 +74,13 @@ public class GatewayProcess implements AutoCloseable
     {
         final Aeron.Context ctx = aeronContext(configuration, useConductorAgentInvoker);
         aeron = Aeron.connect(ctx);
-        aeronConductorInvoker = ctx.conductorAgentInvoker();
         CloseChecker.onOpen(ctx.aeronDirectoryName(), aeron);
     }
 
     // To be invoked by called called before a scheduler has launched
     protected int invokeAeronConductor()
     {
-        if (aeronConductorInvoker != null)
-        {
-            return aeronConductorInvoker.invoke();
-        }
-
-        return 0;
+        return configuration.invokeConductorAgent();
     }
 
     private Aeron.Context aeronContext(final CommonConfiguration configuration, final boolean useConductorAgentInvoker)

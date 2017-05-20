@@ -29,7 +29,6 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2LongHashMap.LongIterator;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -323,11 +322,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         LibrarySlowPeeker outboundSlowPeeker;
         while ((outboundSlowPeeker = this.librarySlowPeeker.addLibrary(outboundSessionId)) == null)
         {
-            final AgentInvoker agentInvoker = configuration.conductorAgentInvoker();
-            if (agentInvoker != null)
-            {
-                agentInvoker.invoke();
-            }
+            configuration.invokeConductorAgent();
 
             Thread.yield();
         }

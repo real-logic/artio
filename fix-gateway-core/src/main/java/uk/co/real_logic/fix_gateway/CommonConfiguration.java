@@ -634,7 +634,18 @@ public class CommonConfiguration
         return invoker.agent();
     }
 
-    public AgentInvoker conductorAgentInvoker()
+    public int invokeConductorAgent()
+    {
+        final AgentInvoker invoker = conductorAgentInvoker();
+        if (invoker == null)
+        {
+            return 0;
+        }
+
+        return invoker.invoke();
+    }
+
+    private AgentInvoker conductorAgentInvoker()
     {
         return aeronContext().conductorAgentInvoker();
     }
