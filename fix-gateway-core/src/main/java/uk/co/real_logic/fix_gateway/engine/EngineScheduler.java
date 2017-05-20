@@ -32,6 +32,8 @@ public interface EngineScheduler extends AutoCloseable
 
     void close();
 
+    boolean useConductorAgentInvoker();
+
     static void fail()
     {
         throw new IllegalStateException("Cannot re-use scheduler for multiple launch attempts");

@@ -74,4 +74,9 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
     {
         Exceptions.closeAll(framerInvoker, archivingRunner, monitoringRunner);
     }
+
+    public boolean useConductorAgentInvoker()
+    {
+        return false;
+    }
 }

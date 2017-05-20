@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
+import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
@@ -28,7 +29,7 @@ import java.util.Objects;
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 
 /**
- * A scheduler that schedules all engine and library agents onto a single thread.
+ * A scheduler that schedules all engine agents onto a single thread.
  */
 public class LowResourceEngineScheduler implements EngineScheduler
 {
@@ -46,8 +47,10 @@ public class LowResourceEngineScheduler implements EngineScheduler
             EngineScheduler.fail();
         }
 
+        final Agent conductorAgent = configuration.conductorAgent();
+
         final List<Agent> agents = new ArrayList<>();
-        Collections.addAll(agents, monitoringAgent, framer, archivingAgent);
+        Collections.addAll(agents, monitoringAgent, framer, archivingAgent, conductorAgent);
         agents.removeIf(Objects::isNull);
 
         runner = new AgentRunner(
@@ -60,6 +63,11 @@ public class LowResourceEngineScheduler implements EngineScheduler
 
     public void close()
     {
-        runner.close();
+        CloseHelper.close(runner);
+    }
+
+    public boolean useConductorAgentInvoker()
+    {
+        return true;
     }
 }

@@ -17,10 +17,7 @@ package uk.co.real_logic.fix_gateway;
 
 import io.aeron.Aeron;
 import org.agrona.ErrorHandler;
-import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.CompositeAgent;
-import org.agrona.concurrent.EpochClock;
-import org.agrona.concurrent.SystemEpochClock;
+import org.agrona.concurrent.*;
 import org.agrona.concurrent.errors.DistinctErrorLog;
 import uk.co.real_logic.fix_gateway.timing.HistogramLogAgent;
 import uk.co.real_logic.fix_gateway.timing.Timer;
@@ -48,13 +45,14 @@ public class GatewayProcess implements AutoCloseable
     protected ErrorHandler errorHandler;
     protected DistinctErrorLog distinctErrorLog;
     protected Aeron aeron;
+    protected AgentInvoker aeronConductorInvoker;
     protected Agent monitoringAgent;
 
-    protected void init(final CommonConfiguration configuration)
+    protected void init(final CommonConfiguration configuration, final boolean useConductorAgentInvoker)
     {
         this.configuration = configuration;
         initMonitoring(configuration);
-        initAeron(configuration);
+        initAeron(configuration, useConductorAgentInvoker);
     }
 
     private void initMonitoring(final CommonConfiguration configuration)
@@ -73,14 +71,26 @@ public class GatewayProcess implements AutoCloseable
         };
     }
 
-    private void initAeron(final CommonConfiguration configuration)
+    private void initAeron(final CommonConfiguration configuration, final boolean useConductorAgentInvoker)
     {
-        final Aeron.Context ctx = aeronContext(configuration);
+        final Aeron.Context ctx = aeronContext(configuration, useConductorAgentInvoker);
         aeron = Aeron.connect(ctx);
+        aeronConductorInvoker = ctx.conductorAgentInvoker();
         CloseChecker.onOpen(ctx.aeronDirectoryName(), aeron);
     }
 
-    private Aeron.Context aeronContext(final CommonConfiguration configuration)
+    // To be invoked by called called before a scheduler has launched
+    protected int invokeAeronConductor()
+    {
+        if (aeronConductorInvoker != null)
+        {
+            return aeronConductorInvoker.invoke();
+        }
+
+        return 0;
+    }
+
+    private Aeron.Context aeronContext(final CommonConfiguration configuration, final boolean useConductorAgentInvoker)
     {
         final Aeron.Context ctx = configuration.aeronContext();
         ctx.imageMapMode(FileChannel.MapMode.READ_WRITE);
@@ -91,6 +101,7 @@ public class GatewayProcess implements AutoCloseable
                 errorHandler.onError(throwable);
             }
         });
+        ctx.useConductorAgentInvoker(useConductorAgentInvoker);
 
         return ctx;
     }

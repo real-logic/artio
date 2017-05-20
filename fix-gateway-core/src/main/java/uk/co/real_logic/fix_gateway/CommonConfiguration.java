@@ -17,10 +17,7 @@ package uk.co.real_logic.fix_gateway;
 
 import io.aeron.Aeron;
 import org.agrona.IoUtil;
-import org.agrona.concurrent.BackoffIdleStrategy;
-import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.NanoClock;
-import org.agrona.concurrent.SystemNanoClock;
+import org.agrona.concurrent.*;
 import uk.co.real_logic.fix_gateway.session.SessionCustomisationStrategy;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.timing.HistogramHandler;
@@ -624,5 +621,21 @@ public class CommonConfiguration
     public NanoClock nanoClock()
     {
         return nanoClock;
+    }
+
+    public Agent conductorAgent()
+    {
+        final AgentInvoker invoker = conductorAgentInvoker();
+        if (invoker == null)
+        {
+            return null;
+        }
+
+        return invoker.agent();
+    }
+
+    public AgentInvoker conductorAgentInvoker()
+    {
+        return aeronContext().conductorAgentInvoker();
     }
 }

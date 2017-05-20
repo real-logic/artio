@@ -64,4 +64,9 @@ public class DefaultEngineScheduler implements EngineScheduler
     {
         Exceptions.closeAll(framerRunner, archivingRunner, monitoringRunner);
     }
+
+    public boolean useConductorAgentInvoker()
+    {
+        return false;
+    }
 }

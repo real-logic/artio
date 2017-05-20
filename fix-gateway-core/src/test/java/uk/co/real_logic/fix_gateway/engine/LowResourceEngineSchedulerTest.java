@@ -36,6 +36,7 @@ public class LowResourceEngineSchedulerTest
     public void shouldPrintErrorIfRepeatedlyThrown() throws Exception
     {
         when(configuration.framerIdleStrategy()).thenReturn(new YieldingIdleStrategy());
+        when(configuration.conductorAgent()).thenReturn(mock(Agent.class));
         when(framer.doWork()).thenThrow(IOException.class);
 
         try (EngineScheduler scheduler = new LowResourceEngineScheduler())
