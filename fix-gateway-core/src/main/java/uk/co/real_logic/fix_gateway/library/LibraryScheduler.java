@@ -25,5 +25,7 @@ public interface LibraryScheduler extends AutoCloseable
         ErrorHandler errorHandler,
         Agent monitoringAgent);
 
+    boolean useConductorAgentInvoker();
+
     void close();
 }

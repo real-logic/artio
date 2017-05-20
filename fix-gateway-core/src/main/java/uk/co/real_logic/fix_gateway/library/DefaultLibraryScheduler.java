@@ -19,6 +19,7 @@ import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
+import org.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.fix_gateway.engine.EngineScheduler;
 
 import static org.agrona.concurrent.AgentRunner.startOnThread;
@@ -40,10 +41,20 @@ public class DefaultLibraryScheduler implements LibraryScheduler
 
         if (monitoringAgent != null)
         {
+            final Agent conductorAgent = configuration.conductorAgent();
+
             monitoringRunner = new AgentRunner(
-                backoffIdleStrategy(), errorHandler, null, monitoringAgent);
+                backoffIdleStrategy(),
+                errorHandler,
+                null,
+                new CompositeAgent(monitoringAgent, conductorAgent));
             startOnThread(monitoringRunner);
         }
+    }
+
+    public boolean useConductorAgentInvoker()
+    {
+        return true;
     }
 
     public void close()

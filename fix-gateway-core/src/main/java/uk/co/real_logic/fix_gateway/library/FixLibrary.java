@@ -59,7 +59,7 @@ public class FixLibrary extends GatewayProcess
 
         try
         {
-            init(configuration, false);
+            init(configuration, scheduler.useConductorAgentInvoker());
             final LibraryTimers timers = new LibraryTimers(configuration.nanoClock());
             initMonitoringAgent(timers.all(), configuration);
 

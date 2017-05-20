@@ -33,6 +33,8 @@ import java.util.List;
  */
 public class SharedLibraryScheduler implements LibraryScheduler
 {
+    private static final int AGENTS_PER_LIBRARY = 2;
+
     private final int libraryCount;
     private final List<Agent> agents = new ArrayList<>();
 
@@ -53,12 +55,21 @@ public class SharedLibraryScheduler implements LibraryScheduler
             EngineScheduler.fail();
         }
 
+        final Agent conductorAgent = configuration.conductorAgent();
+
         agents.add(monitoringAgent);
-        if (libraryCount == agents.size())
+        agents.add(conductorAgent);
+
+        if ((AGENTS_PER_LIBRARY * libraryCount) == agents.size())
         {
             runner = new AgentRunner(
                 configuration.monitoringThreadIdleStrategy(), errorHandler, null, new CompositeAgent(agents));
         }
+    }
+
+    public boolean useConductorAgentInvoker()
+    {
+        return true;
     }
 
     public synchronized void close()
