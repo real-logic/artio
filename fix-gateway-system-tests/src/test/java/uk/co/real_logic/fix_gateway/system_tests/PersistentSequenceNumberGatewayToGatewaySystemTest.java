@@ -291,6 +291,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         acceptingEngine = FixEngine.launch(config);
         initiatingEngine = launchInitiatingEngineWithSameLogs(libraryAeronPort);
 
+        // Use so that the SharedLibraryScheduler is integration tested
         final SharedLibraryScheduler libraryScheduler = new SharedLibraryScheduler(2);
 
         acceptingLibrary = connect(

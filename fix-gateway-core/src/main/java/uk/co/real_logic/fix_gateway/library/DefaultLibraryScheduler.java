@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import io.aeron.Aeron;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
@@ -52,9 +53,9 @@ public class DefaultLibraryScheduler implements LibraryScheduler
         }
     }
 
-    public boolean useConductorAgentInvoker()
+    public void configure(final Aeron.Context aeronContext)
     {
-        return true;
+        aeronContext.useConductorAgentInvoker(true);
     }
 
     public void close()

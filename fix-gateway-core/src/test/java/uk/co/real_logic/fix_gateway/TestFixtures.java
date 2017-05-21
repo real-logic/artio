@@ -49,8 +49,11 @@ public final class TestFixtures
 
     public static MediaDriver launchMediaDriver(final int termBufferLength)
     {
-        final MediaDriver.Context context = mediaDriverContext(termBufferLength, true);
+        return launchMediaDriver(mediaDriverContext(termBufferLength, true));
+    }
 
+    public static MediaDriver launchMediaDriver(final MediaDriver.Context context)
+    {
         final MediaDriver mediaDriver = MediaDriver.launch(context);
         final String aeronDirectoryName = context.aeronDirectoryName();
         CloseChecker.onOpen(aeronDirectoryName, mediaDriver);

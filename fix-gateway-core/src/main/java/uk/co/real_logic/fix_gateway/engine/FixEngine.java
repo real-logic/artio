@@ -138,9 +138,10 @@ public final class FixEngine extends GatewayProcess
         try
         {
             timers = new EngineTimers(configuration.nanoClock());
-            init(configuration, configuration.scheduler().useConductorAgentInvoker());
-            this.configuration = configuration;
             scheduler = configuration.scheduler();
+            scheduler.configure(configuration.aeronContext());
+            init(configuration);
+            this.configuration = configuration;
             engineDescriptorStore = new EngineDescriptorStore(errorHandler);
 
             final ExclusivePublication replayPublication = replayPublication();

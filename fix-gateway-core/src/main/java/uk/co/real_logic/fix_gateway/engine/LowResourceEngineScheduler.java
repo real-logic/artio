@@ -15,9 +15,11 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
+import io.aeron.Aeron;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.CompositeAgent;
 
@@ -30,10 +32,24 @@ import static org.agrona.concurrent.AgentRunner.startOnThread;
 
 /**
  * A scheduler that schedules all engine agents onto a single thread.
+ *
+ * Can also (optionally schedule the media driver's agent onto the same thread.
  */
 public class LowResourceEngineScheduler implements EngineScheduler
 {
+    private final AgentInvoker driverAgentInvoker;
+
     private AgentRunner runner;
+
+    public LowResourceEngineScheduler()
+    {
+        this(null);
+    }
+
+    public LowResourceEngineScheduler(final AgentInvoker driverAgentInvoker)
+    {
+        this.driverAgentInvoker = driverAgentInvoker;
+    }
 
     public void launch(
         final EngineConfiguration configuration,
@@ -51,6 +67,11 @@ public class LowResourceEngineScheduler implements EngineScheduler
 
         final List<Agent> agents = new ArrayList<>();
         Collections.addAll(agents, monitoringAgent, framer, archivingAgent, conductorAgent);
+        if (driverAgentInvoker != null)
+        {
+            agents.add(driverAgentInvoker.agent());
+        }
+
         agents.removeIf(Objects::isNull);
 
         runner = new AgentRunner(
@@ -66,8 +87,13 @@ public class LowResourceEngineScheduler implements EngineScheduler
         CloseHelper.close(runner);
     }
 
-    public boolean useConductorAgentInvoker()
+    public void configure(final Aeron.Context aeronContext)
     {
-        return true;
+        aeronContext.useConductorAgentInvoker(true);
+
+        if (driverAgentInvoker != null)
+        {
+            aeronContext.driverAgentInvoker(driverAgentInvoker);
+        }
     }
 }

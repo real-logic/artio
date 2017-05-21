@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
+import io.aeron.Aeron;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
@@ -65,8 +66,7 @@ public class DefaultEngineScheduler implements EngineScheduler
         Exceptions.closeAll(framerRunner, archivingRunner, monitoringRunner);
     }
 
-    public boolean useConductorAgentInvoker()
+    public void configure(final Aeron.Context aeronContext)
     {
-        return false;
     }
 }

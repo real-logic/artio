@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
+import io.aeron.Aeron;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.Agent;
@@ -75,8 +76,8 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
         Exceptions.closeAll(framerInvoker, archivingRunner, monitoringRunner);
     }
 
-    public boolean useConductorAgentInvoker()
+    public void configure(final Aeron.Context aeronContext)
     {
-        return false;
     }
+
 }

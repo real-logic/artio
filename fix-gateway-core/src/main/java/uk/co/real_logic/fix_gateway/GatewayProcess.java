@@ -47,11 +47,11 @@ public class GatewayProcess implements AutoCloseable
     protected Aeron aeron;
     protected Agent monitoringAgent;
 
-    protected void init(final CommonConfiguration configuration, final boolean useConductorAgentInvoker)
+    protected void init(final CommonConfiguration configuration)
     {
         this.configuration = configuration;
         initMonitoring(configuration);
-        initAeron(configuration, useConductorAgentInvoker);
+        initAeron(configuration);
     }
 
     private void initMonitoring(final CommonConfiguration configuration)
@@ -70,9 +70,9 @@ public class GatewayProcess implements AutoCloseable
         };
     }
 
-    private void initAeron(final CommonConfiguration configuration, final boolean useConductorAgentInvoker)
+    private void initAeron(final CommonConfiguration configuration)
     {
-        final Aeron.Context ctx = aeronContext(configuration, useConductorAgentInvoker);
+        final Aeron.Context ctx = aeronContext(configuration);
         aeron = Aeron.connect(ctx);
         CloseChecker.onOpen(ctx.aeronDirectoryName(), aeron);
     }
@@ -83,7 +83,7 @@ public class GatewayProcess implements AutoCloseable
         return configuration.invokeConductorAgent();
     }
 
-    private Aeron.Context aeronContext(final CommonConfiguration configuration, final boolean useConductorAgentInvoker)
+    private Aeron.Context aeronContext(final CommonConfiguration configuration)
     {
         final Aeron.Context ctx = configuration.aeronContext();
         ctx.imageMapMode(FileChannel.MapMode.READ_WRITE);
@@ -94,7 +94,6 @@ public class GatewayProcess implements AutoCloseable
                 errorHandler.onError(throwable);
             }
         });
-        ctx.useConductorAgentInvoker(useConductorAgentInvoker);
 
         return ctx;
     }

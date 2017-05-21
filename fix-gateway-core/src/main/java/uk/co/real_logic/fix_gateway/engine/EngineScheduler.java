@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.engine;
 
+import io.aeron.Aeron;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 
@@ -32,7 +33,7 @@ public interface EngineScheduler extends AutoCloseable
 
     void close();
 
-    boolean useConductorAgentInvoker();
+    void configure(Aeron.Context aeronContext);
 
     static void fail()
     {

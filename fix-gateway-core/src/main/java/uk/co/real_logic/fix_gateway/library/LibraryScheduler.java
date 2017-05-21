@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import io.aeron.Aeron;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 
@@ -25,7 +26,7 @@ public interface LibraryScheduler extends AutoCloseable
         ErrorHandler errorHandler,
         Agent monitoringAgent);
 
-    boolean useConductorAgentInvoker();
-
     void close();
+
+    void configure(Aeron.Context aeronContext);
 }

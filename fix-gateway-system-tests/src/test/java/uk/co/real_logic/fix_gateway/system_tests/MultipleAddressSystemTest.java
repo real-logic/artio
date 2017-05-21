@@ -15,16 +15,19 @@
  */
 package uk.co.real_logic.fix_gateway.system_tests;
 
+import io.aeron.driver.MediaDriver;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.Reply;
+import uk.co.real_logic.fix_gateway.TestFixtures;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.LowResourceEngineScheduler;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.session.Session;
 
+import static io.aeron.driver.ThreadingMode.INVOKER;
 import static org.junit.Assert.assertEquals;
-import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
+import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTest
@@ -36,10 +39,16 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
     {
         final int libraryAeronPort = unusedPort();
 
-        mediaDriver = launchMediaDriver();
-        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
+        final MediaDriver.Context context = mediaDriverContext(TestFixtures.TERM_BUFFER_LENGTH, true);
+        context.threadingMode(INVOKER);
+        mediaDriver = launchMediaDriver(context);
+
         delete(ACCEPTOR_LOGS);
-        acceptingEngine = FixEngine.launch(acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID));
+        acceptingEngine = FixEngine.launch(
+            acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
+                .scheduler(new LowResourceEngineScheduler(context.driverAgentInvoker())));
+
+        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
         testSystem = new TestSystem(initiatingLibrary);

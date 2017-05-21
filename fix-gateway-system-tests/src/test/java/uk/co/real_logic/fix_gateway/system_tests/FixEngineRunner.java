@@ -83,6 +83,7 @@ public class FixEngineRunner implements AutoCloseable
             .monitoringFile(acceptorMonitoringFile("engineCounters" + ourId))
             .logFileDir(acceptorLogs)
             .clusterAeronChannel(CLUSTER_AERON_CHANNEL)
+            // .scheduler(new LowResourceEngineScheduler())
             .roleHandler(new DebugRoleHandler(ourId))
             .nodeId((short)ourId)
             .addOtherNodes(ids.filter((id) -> id != ourId).toArray())
