@@ -74,6 +74,9 @@ public final class FixEngine extends GatewayProcess
     /**
      * Query the engine for the list of libraries currently active.
      *
+     * If the reply is <code>null</code> then the query hasn't been enqueued and the operation
+     * should be retried on a duty cycle.
+     *
      * @return a list of currently active libraries.
      */
     public Reply<List<LibraryInfo>> libraries()
@@ -95,6 +98,9 @@ public final class FixEngine extends GatewayProcess
     /**
      * Resets the sequence number of a given session. Asynchronous method, the Reply instance
      * needs to be polled to ensure that it has completed.
+     *
+     * If the reply is <code>null</code> then the query hasn't been enqueued and the operation
+     * should be retried on a duty cycle.
      *
      * @param sessionId the id of the session that you want to reset
      *
