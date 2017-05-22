@@ -216,22 +216,10 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private void resetSequenceNumbers()
     {
-        final Reply<?> initiatingReply =
-            initiatingEngine.resetSequenceNumber(initiatingSession.id());
-        final Reply<?> acceptingReply =
-            acceptingEngine.resetSequenceNumber(acceptingSession.id());
-
-        assertNotNull(initiatingReply);
-        assertNotNull(acceptingReply);
-
-        assertEventuallyTrue(
-            "Failed to reset sequence numbers",
-            () ->
-            {
-                testSystem.poll();
-
-                return (!initiatingReply.isExecuting() && !acceptingReply.isExecuting());
-            });
+        final Reply<?> initiatingReply = testSystem.awaitReply(
+            initiatingEngine.resetSequenceNumber(initiatingSession.id()));
+        final Reply<?> acceptingReply = testSystem.awaitReply(
+            acceptingEngine.resetSequenceNumber(acceptingSession.id()));
 
         assertEquals(COMPLETED, initiatingReply.state());
         assertEquals(COMPLETED, acceptingReply.state());
