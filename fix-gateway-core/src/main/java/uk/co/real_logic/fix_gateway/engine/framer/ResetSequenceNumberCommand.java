@@ -147,7 +147,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
                     step = Step.RESET_ENGINE_SESSION;
                 }
                 // Library Managed
-                else if (sessionContexts.isAuthenticated(sessionId))
+                else if (isAuthenticated())
                 {
                     step = Step.RESET_LIBRARY_SESSION;
                 }
@@ -173,10 +173,19 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
 
             case RESET_LIBRARY_SESSION:
             {
-                final int libraryId = libraryLookup.applyAsInt(sessionId);
-                if (!Pressure.isBackPressured(inboundPublication.saveResetLibrarySequenceNumber(libraryId, sessionId)))
+                if (isAuthenticated())
                 {
-                    step = Step.AWAIT_RECV;
+                    final int libraryId = libraryLookup.applyAsInt(sessionId);
+                    if (!Pressure.isBackPressured(
+                        inboundPublication.saveResetLibrarySequenceNumber(libraryId, sessionId)))
+                    {
+                        step = Step.AWAIT_RECV;
+                    }
+                }
+                else
+                {
+                    // The session disconnects whilst you're trying to talk to reset it
+                    step = Step.START;
                 }
 
                 return false;
@@ -199,6 +208,11 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
         }
 
         return false;
+    }
+
+    private boolean isAuthenticated()
+    {
+        return sessionContexts.isAuthenticated(sessionId);
     }
 
     private boolean reset(final GatewayPublication publication, final Step nextStep)
