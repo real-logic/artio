@@ -202,18 +202,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     }
 
     @Test(timeout = TEST_TIMEOUT)
-    public void sequenceNumbersCanBeResetWhileSessionManagedByEngine()
-    {
-        // TODO
-    }
-
-    @Test(timeout = TEST_TIMEOUT)
-    public void sequenceNumbersCanBeResetWhileSessionManagedByLibrary()
-    {
-        // TODO
-    }
-
-    @Test(timeout = TEST_TIMEOUT)
     public void sequenceNumbersCanBeResetOnLogon()
     {
         resetSequenceNumbersOnLogon = true;
