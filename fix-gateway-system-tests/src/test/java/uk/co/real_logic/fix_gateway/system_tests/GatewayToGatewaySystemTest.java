@@ -594,11 +594,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void shouldLookupSessionIdsOfSessions()
     {
-        final Reply<Long> sessionIdReply = initiatingEngine.lookupSessionId(
-            INITIATOR_ID, ACCEPTOR_ID, null, null, null, null);
-        testSystem.awaitReply(sessionIdReply);
-
-        final long sessionId = sessionIdReply.resultIfPresent();
+        final long sessionId = lookupSessionId(INITIATOR_ID, ACCEPTOR_ID, initiatingEngine).resultIfPresent();
 
         assertEquals(initiatingSession.id(), sessionId);
     }
@@ -606,12 +602,34 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void shouldNotLookupSessionIdsOfUnknownSessions()
     {
-        final Reply<Long> sessionIdReply = initiatingEngine.lookupSessionId(
-            "foo", "bar", null, null, null, null);
-        testSystem.awaitReply(sessionIdReply);
+        final Reply<Long> sessionIdReply = lookupSessionId("foo", "bar", initiatingEngine);
 
         assertNull(sessionIdReply.resultIfPresent());
         assertThat(sessionIdReply.error(), instanceOf(IllegalArgumentException.class));
+    }
+
+    @Test
+    public void shouldResetSequenceNumbersOfEngineManagedSessions()
+    {
+        messagesCanBeExchanged();
+
+        assertSequenceNumbers(2, 2, 0);
+
+        final long sessionId = lookupSessionId(ACCEPTOR_ID, INITIATOR_ID, acceptingEngine).resultIfPresent();
+
+        final Reply<?> resetSequenceNumber = testSystem.awaitReply(
+            acceptingEngine.resetSequenceNumber(sessionId));
+        assertTrue(resetSequenceNumber.hasCompleted());
+
+        assertSequenceNumbers(1, 1, 1);
+    }
+
+    private void assertSequenceNumbers(
+        final int lastReceivedMsgSeqNum, final int lastSentMsgSeqNum, final int sequenceIndex)
+    {
+        assertEquals(lastReceivedMsgSeqNum, initiatingSession.lastReceivedMsgSeqNum());
+        assertEquals(lastSentMsgSeqNum, initiatingSession.lastSentMsgSeqNum());
+        assertEquals(sequenceIndex, initiatingSession.sequenceIndex());
     }
 
     private void awaitIsConnected(final boolean connected, final FixLibrary library)
@@ -742,5 +760,13 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final long sessionId = handler.awaitSessionId(() -> testSystem.poll());
 
         assertEquals(sessionId, expectedSessionId);
+    }
+
+    private Reply<Long> lookupSessionId(final String localCompId, final String remoteCompId, final FixEngine engine)
+    {
+        final Reply<Long> sessionIdReply = engine.lookupSessionId(
+            localCompId, remoteCompId, null, null, null, null);
+        testSystem.awaitReply(sessionIdReply);
+        return sessionIdReply;
     }
 }

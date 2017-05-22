@@ -92,7 +92,7 @@ public class TestSystem
         return library;
     }
 
-    public void awaitReply(final Reply<?> reply)
+    public Reply<?> awaitReply(final Reply<?> reply)
     {
         assertEventuallyTrue(
             "No reply from: " + reply,
@@ -102,5 +102,7 @@ public class TestSystem
 
                 return !reply.isExecuting();
             });
+
+        return reply;
     }
 }
