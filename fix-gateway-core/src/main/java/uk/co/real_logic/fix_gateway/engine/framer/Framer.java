@@ -1205,7 +1205,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 },
                 () ->
                 {
-                    if (command.isDone())
+                    if (command.hasCompleted())
                     {
                         return COMPLETE;
                     }

@@ -89,10 +89,12 @@ public final class FixEngine extends GatewayProcess
      *
      * @param backupLocation the location to backup the current session ids file to.
      *                       Can be null to indicate that no backup is required.
+     *
+     * @return the reply object, or null if the request hasn't been successfully enqueued.
      */
-    public void resetSessionIds(final File backupLocation, final IdleStrategy idleStrategy)
+    public Reply<?> resetSessionIds(final File backupLocation, final IdleStrategy idleStrategy)
     {
-        framerContext.resetSessionIds(backupLocation, idleStrategy);
+        return framerContext.resetSessionIds(backupLocation, idleStrategy);
     }
 
     /**

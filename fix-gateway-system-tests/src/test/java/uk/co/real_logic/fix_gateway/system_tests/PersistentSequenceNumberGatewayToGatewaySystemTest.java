@@ -34,7 +34,6 @@ import java.io.IOException;
 import java.util.Arrays;
 
 import static org.junit.Assert.*;
-import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.fix_gateway.Timing.*;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.SEQUENCE_RESET_AS_STR;
@@ -216,19 +215,16 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private void resetSequenceNumbers()
     {
-        final Reply<?> initiatingReply = testSystem.awaitReply(
-            initiatingEngine.resetSequenceNumber(initiatingSession.id()));
-        final Reply<?> acceptingReply = testSystem.awaitReply(
+        testSystem.awaitCompletedReplies(
+            initiatingEngine.resetSequenceNumber(initiatingSession.id()),
             acceptingEngine.resetSequenceNumber(acceptingSession.id()));
-
-        assertEquals(COMPLETED, initiatingReply.state());
-        assertEquals(COMPLETED, acceptingReply.state());
     }
 
     private void resetSessions()
     {
-        acceptingEngine.resetSessionIds(backupLocation, ADMIN_IDLE_STRATEGY);
-        initiatingEngine.resetSessionIds(backupLocation, ADMIN_IDLE_STRATEGY);
+        testSystem.awaitCompletedReplies(
+            acceptingEngine.resetSessionIds(backupLocation, ADMIN_IDLE_STRATEGY),
+            initiatingEngine.resetSessionIds(backupLocation, ADMIN_IDLE_STRATEGY));
     }
 
     private void launch(

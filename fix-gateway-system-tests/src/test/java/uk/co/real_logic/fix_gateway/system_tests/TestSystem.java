@@ -24,8 +24,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.fix_gateway.FixMatchers.isConnected;
+import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.LIBRARY_LIMIT;
@@ -90,6 +92,15 @@ public class TestSystem
             () -> close(library));
 
         return library;
+    }
+
+    public void awaitCompletedReplies(final Reply<?>... replies)
+    {
+        for (final Reply<?> reply : replies)
+        {
+            awaitReply(reply);
+            assertEquals(COMPLETED, reply.state());
+        }
     }
 
     public <T> Reply<T> awaitReply(final Reply<T> reply)

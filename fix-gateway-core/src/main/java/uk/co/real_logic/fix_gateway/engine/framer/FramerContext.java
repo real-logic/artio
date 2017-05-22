@@ -191,7 +191,7 @@ public class FramerContext
         return null;
     }
 
-    public void resetSessionIds(final File backupLocation, final IdleStrategy idleStrategy)
+    public Reply<?> resetSessionIds(final File backupLocation, final IdleStrategy idleStrategy)
     {
         if (backupLocation != null && !backupLocation.exists())
         {
@@ -209,8 +209,12 @@ public class FramerContext
         }
 
         final ResetSessionIdsCommand command = new ResetSessionIdsCommand(backupLocation);
-        sendAdminCommand(idleStrategy, command);
-        command.awaitResponse(idleStrategy);
+        if (adminCommands.offer(command))
+        {
+            return command;
+        }
+
+        return null;
     }
 
     public Reply<Long> lookupSessionId(

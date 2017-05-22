@@ -15,17 +15,18 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-import org.agrona.LangUtil;
-import org.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.fix_gateway.Reply;
 
 import java.io.File;
 
-final class ResetSessionIdsCommand implements AdminCommand
+final class ResetSessionIdsCommand implements AdminCommand, Reply<Void>
 {
     private final File backupLocation;
 
-    private volatile Exception error;
-    private volatile boolean done;
+    private volatile State state = State.EXECUTING;
+
+    // thread-safe publication by writes to state after, and reads of state before its read.
+    private Exception error;
 
     ResetSessionIdsCommand(final File backupLocation)
     {
@@ -37,32 +38,29 @@ final class ResetSessionIdsCommand implements AdminCommand
         framer.onResetSessionIds(backupLocation, this);
     }
 
-    void awaitResponse(final IdleStrategy idleStrategy)
-    {
-        while (!isDone() && error == null)
-        {
-            idleStrategy.idle();
-        }
-        idleStrategy.reset();
-
-        if (!isDone())
-        {
-            LangUtil.rethrowUnchecked(error);
-        }
-    }
-
-    boolean isDone()
-    {
-        return done;
-    }
-
     void onError(final Exception error)
     {
         this.error = error;
+        state = State.ERRORED;
     }
 
     void success()
     {
-        done = true;
+        state = State.COMPLETED;
+    }
+
+    public Exception error()
+    {
+        return error;
+    }
+
+    public Void resultIfPresent()
+    {
+        return null;
+    }
+
+    public State state()
+    {
+        return state;
     }
 }
