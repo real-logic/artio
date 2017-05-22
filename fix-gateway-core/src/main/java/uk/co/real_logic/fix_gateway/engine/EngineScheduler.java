@@ -20,10 +20,20 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 
 /**
- * Interface for determining how Engine's Agents run.
+ * Interface for determining how an Engine's Agents are allocated to threads.
  */
 public interface EngineScheduler extends AutoCloseable
 {
+    /**
+     * Invoked by the FIX Engine to start the threads.
+     * Should only return once they are started.
+     *
+     * @param configuration the engine's configuration object.
+     * @param errorHandler the ErrorHandler used by the engine.
+     * @param framer the framer agent to schedule.
+     * @param archivingAgent the archiver agent to schedule.
+     * @param monitoringAgent the monitoring agent to schedule.
+     */
     void launch(
         EngineConfiguration configuration,
         ErrorHandler errorHandler,
@@ -31,8 +41,17 @@ public interface EngineScheduler extends AutoCloseable
         Agent archivingAgent,
         Agent monitoringAgent);
 
+    /**
+     * Invoked by the FIX Engine to stop the threads. Should only return once they are completed stopped.
+     */
     void close();
 
+    /**
+     * Used to configure the aeron context object. This can be hooked in order to
+     * switch the Aeron Client into Invoking mode, or inject a Media Driver
+     *
+     * @param aeronContext the context of the Aeron client being used by this Engine instance.
+     */
     void configure(Aeron.Context aeronContext);
 
     static void fail()
