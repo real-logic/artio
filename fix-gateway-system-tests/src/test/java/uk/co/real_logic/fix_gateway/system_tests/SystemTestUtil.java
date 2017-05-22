@@ -190,8 +190,8 @@ public final class SystemTestUtil
     public static SessionReplyStatus releaseToGateway(
         final FixLibrary library, final Session session, final TestSystem testSystem)
     {
-        final Reply<SessionReplyStatus> reply = library.releaseToGateway(session, DEFAULT_REPLY_TIMEOUT_IN_MS);
-        testSystem.awaitReply(reply);
+        final Reply<SessionReplyStatus> reply = testSystem.awaitReply(
+            library.releaseToGateway(session, DEFAULT_REPLY_TIMEOUT_IN_MS));
 
         return reply.resultIfPresent();
     }
@@ -293,9 +293,8 @@ public final class SystemTestUtil
         final int sequenceIndex,
         final TestSystem testSystem)
     {
-        final Reply<SessionReplyStatus> reply = library.requestSession(
-            sessionId, lastReceivedMsgSeqNum, sequenceIndex, DEFAULT_REPLY_TIMEOUT_IN_MS);
-        testSystem.awaitReply(reply);
+        final Reply<SessionReplyStatus> reply = testSystem.awaitReply(library.requestSession(
+            sessionId, lastReceivedMsgSeqNum, sequenceIndex, DEFAULT_REPLY_TIMEOUT_IN_MS));
         assertEquals(COMPLETED, reply.state());
 
         return reply.resultIfPresent();

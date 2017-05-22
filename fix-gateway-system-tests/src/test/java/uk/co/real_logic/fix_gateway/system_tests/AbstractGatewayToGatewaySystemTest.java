@@ -154,9 +154,9 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void connectSessions()
     {
-        final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+        final Reply<Session> reply = testSystem.awaitReply(
+            initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID));
 
-        testSystem.awaitReply(reply);
         initiatingSession = reply.resultIfPresent();
 
         assertEquals(State.COMPLETED, reply.state());

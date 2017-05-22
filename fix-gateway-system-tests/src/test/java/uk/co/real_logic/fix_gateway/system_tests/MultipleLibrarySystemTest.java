@@ -50,9 +50,8 @@ public class MultipleLibrarySystemTest extends AbstractGatewayToGatewaySystemTes
 
             acquireAcceptingSession();
 
-            final Reply<SessionReplyStatus> reply = acceptingLibrary.releaseToGateway(
-                acceptingSession, DEFAULT_REPLY_TIMEOUT_IN_MS);
-            testSystem.awaitReply(reply);
+            final Reply<SessionReplyStatus> reply = testSystem.awaitReply(acceptingLibrary.releaseToGateway(
+                acceptingSession, DEFAULT_REPLY_TIMEOUT_IN_MS));
 
             assertEquals(SessionReplyStatus.OK, reply.resultIfPresent());
             acceptingLibrary.close();

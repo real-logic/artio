@@ -221,8 +221,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         try (FixLibrary library2 = testSystem.add(newInitiatingLibrary(libraryAeronPort, initiatingSessionHandler2)))
         {
             acceptingHandler.clearSessions();
-            final Reply<Session> reply = initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID);
-            testSystem.awaitReply(reply);
+            final Reply<Session> reply = testSystem.awaitReply(initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID));
 
             final Session session2 = reply.resultIfPresent();
 
@@ -764,9 +763,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
     private Reply<Long> lookupSessionId(final String localCompId, final String remoteCompId, final FixEngine engine)
     {
-        final Reply<Long> sessionIdReply = engine.lookupSessionId(
-            localCompId, remoteCompId, null, null, null, null);
-        testSystem.awaitReply(sessionIdReply);
-        return sessionIdReply;
+        return testSystem.awaitReply(engine.lookupSessionId(
+            localCompId, remoteCompId, null, null, null, null));
     }
 }
