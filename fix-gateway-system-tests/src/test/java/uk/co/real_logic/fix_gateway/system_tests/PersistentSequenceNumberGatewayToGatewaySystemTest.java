@@ -257,8 +257,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             "Failed to reset sequence numbers",
             () ->
             {
-                initiatingLibrary.poll(LIBRARY_LIMIT);
-                acceptingLibrary.poll(LIBRARY_LIMIT);
+                testSystem.poll();
+
                 return (!initiatingReply.isExecuting() && !acceptingReply.isExecuting());
             });
 
@@ -378,7 +378,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private long getAcceptingSessionId()
     {
-        return acceptingHandler.awaitSessionId(() -> acceptingLibrary.poll(LIBRARY_LIMIT));
+        return acceptingHandler.awaitSessionId(testSystem::poll);
     }
 
     private void acquireSession(final long sessionId, final int lastReceivedMsgSeqNum, final int sequenceIndex)
