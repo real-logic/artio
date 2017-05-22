@@ -53,14 +53,15 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     private static final int DOES_NOT_MATTER = -1;
     private File backupLocation = null;
 
-    private Runnable acquireSessionAction = () ->
+    private Runnable acquireSession = () ->
     {
         final long sessionId = getAcceptingSessionId();
 
         acquireSession(sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
     };
 
-    private Runnable duringRestartAction = this::nothing;
+    private Runnable duringRestart = this::nothing;
+    private Runnable beforeReconnect = this::nothing;
     private boolean printErrorMessages = true;
 
     @Before
@@ -91,7 +92,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT)
     public void previousMessagesAreReplayed()
     {
-        acquireSessionAction = this::requestReplayWhenReacquiringSession;
+        acquireSession = this::requestReplayWhenReacquiringSession;
 
         sequenceNumbersCanPersistOverRestarts(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
 
@@ -102,12 +103,12 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT)
     public void shouldCopeWithReplayOfMissingMessages()
     {
-        duringRestartAction = this::deleteAcceptorLogs;
+        duringRestart = this::deleteAcceptorLogs;
 
-        acquireSessionAction = () -> assertFailStatusWhenReplayRequested(SEQUENCE_NUMBER_TOO_HIGH);
+        acquireSession = () -> assertFailStatusWhenReplayRequested(SEQUENCE_NUMBER_TOO_HIGH);
 
         exchangeMessagesAroundARestart(
-                AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER, this::nothing, true);
+                AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER, true);
 
         assertOnlyAcceptorSequenceReset();
     }
@@ -118,62 +119,14 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         // Avoid spamming the build log with error missing messages error message
         printErrorMessages = false;
 
-        duringRestartAction = this::deleteArchiveOfAcceptorLogs;
+        duringRestart = this::deleteArchiveOfAcceptorLogs;
 
-        acquireSessionAction = () -> assertFailStatusWhenReplayRequested(MISSING_MESSAGES);
+        acquireSession = () -> assertFailStatusWhenReplayRequested(MISSING_MESSAGES);
 
         exchangeMessagesAroundARestart(
-                AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER, this::nothing, true);
+                AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER, true);
 
         assertSequenceIndicesAre(1);
-    }
-
-    private void assertOnlyAcceptorSequenceReset()
-    {
-        // Only delected the acceptor logs so they have different sequence indices.
-
-        assertAcceptingSessionHasSequenceIndex(0);
-        acceptingOtfAcceptor.allMessagesHaveSequenceIndex(0);
-        assertInitiatingSequenceIndexIs(1);
-        initiatingOtfAcceptor.allMessagesHaveSequenceIndex(1);
-    }
-
-    private void assertFailStatusWhenReplayRequested(final SessionReplyStatus replyStatus)
-    {
-        final long sessionId = getAcceptingSessionId();
-
-        if (acceptingSession != null)
-        {
-            // Require replay of at least one message that has been sent
-            final int lastReceivedMsgSeqNum = acceptingSession.lastReceivedMsgSeqNum() - 1;
-            final int sequenceIndex = acceptingSession.sequenceIndex();
-            final SessionReplyStatus reply = requestSession(
-                    acceptingLibrary, sessionId, lastReceivedMsgSeqNum, sequenceIndex, testSystem);
-            assertEquals(replyStatus, reply);
-
-            acceptingSession = acceptingHandler.lastSession();
-            acceptingHandler.resetSession();
-        }
-        else
-        {
-            acquireSession(sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
-        }
-    }
-
-    private void deleteAcceptorLogs()
-    {
-        delete(ACCEPTOR_LOGS);
-    }
-
-    private void deleteArchiveOfAcceptorLogs()
-    {
-        final File dir = new File(ACCEPTOR_LOGS);
-        if (dir.exists())
-        {
-            Arrays.stream(dir.list())
-                  .filter(name -> name.contains("archive"))
-                  .forEach(name -> IoUtil.delete(new File(dir, name), false));
-        }
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -221,25 +174,46 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT)
     public void sessionsCanBeReset()
     {
+        beforeReconnect = this::resetSessions;
+
         exchangeMessagesAroundARestart(
-            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, this::resetSessions, false);
+            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, false);
 
         // Different sessions themselves, so we start again at 0
         assertSequenceIndicesAre(0);
     }
 
-    private void resetSessions()
+    @Test(timeout = TEST_TIMEOUT)
+    public void sequenceNumbersCanBeResetWhileSessionDisconnected()
     {
-        acceptingEngine.resetSessionIds(backupLocation, ADMIN_IDLE_STRATEGY);
-        initiatingEngine.resetSessionIds(backupLocation, ADMIN_IDLE_STRATEGY);
+        beforeReconnect = this::resetSequenceNumbers;
+
+        exchangeMessagesAroundARestart(
+            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 2, false);
+
+        assertSequenceIndicesAre(1);
     }
 
     @Test(timeout = TEST_TIMEOUT)
-    public void sequenceNumbersCanBeReset()
+    public void sequenceNumbersCanBeResetWhileSessionManagedByEngine()
+    {
+        // TODO
+    }
+
+    @Test(timeout = TEST_TIMEOUT)
+    public void sequenceNumbersCanBeResetWhileSessionManagedByLibrary()
+    {
+        // TODO
+    }
+
+    @Test(timeout = TEST_TIMEOUT)
+    public void sequenceNumbersCanBeResetOnLogon()
     {
         exchangeMessagesAroundARestart(
-            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 2, this::resetSequenceNumbers, false);
+            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, true);
 
+        acceptingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
+        initiatingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
         assertSequenceIndicesAre(1);
     }
 
@@ -266,15 +240,10 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertEquals(COMPLETED, acceptingReply.state());
     }
 
-    @Test(timeout = TEST_TIMEOUT)
-    public void sequenceNumbersCanBeResetOnLogon()
+    private void resetSessions()
     {
-        exchangeMessagesAroundARestart(
-            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, this::nothing, true);
-
-        acceptingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
-        initiatingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
-        assertSequenceIndicesAre(1);
+        acceptingEngine.resetSessionIds(backupLocation, ADMIN_IDLE_STRATEGY);
+        initiatingEngine.resetSessionIds(backupLocation, ADMIN_IDLE_STRATEGY);
     }
 
     private void launch(
@@ -326,18 +295,17 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertConnected(initiatingSession);
         sessionLogsOn(testSystem, initiatingSession, DEFAULT_TIMEOUT_IN_MS);
 
-        acquireSessionAction.run();
+        acquireSession.run();
     }
 
     private void sequenceNumbersCanPersistOverRestarts(final int initialSequenceNumber)
     {
-        exchangeMessagesAroundARestart(initialSequenceNumber, 4, this::nothing, false);
+        exchangeMessagesAroundARestart(initialSequenceNumber, 4, false);
     }
 
     private void exchangeMessagesAroundARestart(
         final int initialSequenceNumber,
         final int sequNumAfter,
-        final Runnable beforeConnect,
         final boolean resetSequenceNumbersOnLogon)
     {
         launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, this::nothing, resetSequenceNumbersOnLogon);
@@ -357,9 +325,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         clearMessages();
         close();
 
-        duringRestartAction.run();
+        duringRestart.run();
 
-        launch(initialSequenceNumber, beforeConnect, resetSequenceNumbersOnLogon);
+        launch(initialSequenceNumber, this.beforeReconnect, resetSequenceNumbersOnLogon);
 
         assertEquals("initiatedSessionId not stable over restarts", initiatedSessionId, initiatingSession.id());
         assertEquals("acceptingSessionId not stable over restarts", acceptingSessionId, acceptingSession.id());
@@ -404,6 +372,54 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         else
         {
             acquireSession(sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
+        }
+    }
+
+    private void assertOnlyAcceptorSequenceReset()
+    {
+        // Only delected the acceptor logs so they have different sequence indices.
+
+        assertAcceptingSessionHasSequenceIndex(0);
+        acceptingOtfAcceptor.allMessagesHaveSequenceIndex(0);
+        assertInitiatingSequenceIndexIs(1);
+        initiatingOtfAcceptor.allMessagesHaveSequenceIndex(1);
+    }
+
+    private void assertFailStatusWhenReplayRequested(final SessionReplyStatus replyStatus)
+    {
+        final long sessionId = getAcceptingSessionId();
+
+        if (acceptingSession != null)
+        {
+            // Require replay of at least one message that has been sent
+            final int lastReceivedMsgSeqNum = acceptingSession.lastReceivedMsgSeqNum() - 1;
+            final int sequenceIndex = acceptingSession.sequenceIndex();
+            final SessionReplyStatus reply = requestSession(
+                acceptingLibrary, sessionId, lastReceivedMsgSeqNum, sequenceIndex, testSystem);
+            assertEquals(replyStatus, reply);
+
+            acceptingSession = acceptingHandler.lastSession();
+            acceptingHandler.resetSession();
+        }
+        else
+        {
+            acquireSession(sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
+        }
+    }
+
+    private void deleteAcceptorLogs()
+    {
+        delete(ACCEPTOR_LOGS);
+    }
+
+    private void deleteArchiveOfAcceptorLogs()
+    {
+        final File dir = new File(ACCEPTOR_LOGS);
+        if (dir.exists())
+        {
+            Arrays.stream(dir.list())
+                .filter(name -> name.contains("archive"))
+                .forEach(name -> IoUtil.delete(new File(dir, name), false));
         }
     }
 }
