@@ -23,6 +23,10 @@ import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 
+import static uk.co.real_logic.fix_gateway.GatewayProcess.INBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.fix_gateway.engine.logger.FixArchiveScanner.MessageType.SENT;
+
 /**
  * Scan the archive for fix messages. Can be combined with predicates to create rich queries.
  *
@@ -40,17 +44,29 @@ public class FixArchiveScanner
 
     private FixMessageConsumer handler;
 
+    public enum MessageType
+    {
+        /** Messages sent from the engine to another FIX system */
+        SENT,
+
+        /** Messages received by the engine from another FIX system */
+        RECEIVED,
+    }
+
     public FixArchiveScanner(final String logFileDir)
     {
         archiveScanner = new ArchiveScanner(logFileDir);
     }
 
-    public void forEachMessage(
-        final StreamIdentifier id,
+    public void scan(
+        final String aeronChannel,
+        final MessageType messageType,
         final FixMessageConsumer handler,
         final ErrorHandler errorHandler)
     {
         this.handler = handler;
+        final StreamIdentifier id = new StreamIdentifier(
+            aeronChannel, messageType == SENT ? OUTBOUND_LIBRARY_STREAM : INBOUND_LIBRARY_STREAM);
         archiveScanner.forEachFragment(id, logEntryHandler, errorHandler);
     }
 

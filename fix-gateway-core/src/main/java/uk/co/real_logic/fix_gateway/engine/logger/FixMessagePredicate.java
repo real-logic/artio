@@ -19,6 +19,8 @@ import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 
 /**
  * A criteria for filtering fix messages.
+ *
+ * @see FixMessagePredicates for different useful implementations
  */
 @FunctionalInterface
 public interface FixMessagePredicate

@@ -35,7 +35,6 @@ import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration.Builder;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
-import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.io.File;
@@ -48,7 +47,6 @@ import static java.util.stream.Collectors.toList;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
-import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_CLUSTER_TEST;
 import static uk.co.real_logic.fix_gateway.TestFixtures.*;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
@@ -56,6 +54,7 @@ import static uk.co.real_logic.fix_gateway.Timing.withTimeout;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.TEST_REQUEST;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.closeAll;
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_SESSION_ID_FILE;
+import static uk.co.real_logic.fix_gateway.engine.logger.FixArchiveScanner.MessageType.SENT;
 import static uk.co.real_logic.fix_gateway.engine.logger.FixMessagePredicates.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
@@ -335,12 +334,11 @@ public class ClusteredGatewaySystemTest
                 final EngineConfiguration configuration = runner.configuration();
                 final String logFileDir = configuration.logFileDir();
                 final FixArchiveScanner scanner = new FixArchiveScanner(logFileDir);
-                final StreamIdentifier id = new StreamIdentifier(
-                    configuration.clusterAeronChannel(), OUTBOUND_LIBRARY_STREAM);
 
                 final MessageCounter messageCounter = new MessageCounter();
-                scanner.forEachMessage(
-                    id,
+                scanner.scan(
+                    configuration.clusterAeronChannel(),
+                    SENT,
                     filterBy(
                         messageCounter,
                         messageTypeOf(TEST_REQUEST)
@@ -351,8 +349,9 @@ public class ClusteredGatewaySystemTest
 
                 if (messageCounter.messageCount() != 1)
                 {
-                    scanner.forEachMessage(
-                        id,
+                    scanner.scan(
+                        configuration.clusterAeronChannel(),
+                        SENT,
                         (message, buffer, offset, length, header) -> System.out.println(message.body()),
                         Throwable::printStackTrace);
                 }
