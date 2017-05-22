@@ -86,6 +86,8 @@ public class GatewayPublication extends ClaimablePublication
     private final ControlNotificationEncoder controlNotification = new ControlNotificationEncoder();
     private final LibraryTimeoutEncoder libraryTimeout = new LibraryTimeoutEncoder();
     private final ResetSequenceNumberEncoder resetSequenceNumber = new ResetSequenceNumberEncoder();
+    private final ResetLibrarySequenceNumberEncoder resetLibrarySequenceNumber =
+        new ResetLibrarySequenceNumberEncoder();
     private final SlowStatusNotificationEncoder slowStatusNotification = new SlowStatusNotificationEncoder();
 
     private final NanoClock nanoClock;
@@ -422,6 +424,29 @@ public class GatewayPublication extends ClaimablePublication
 
         resetSequenceNumber
             .wrapAndApplyHeader(buffer, offset, header)
+            .session(sessionId);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+
+        return position;
+    }
+
+    public long saveResetLibrarySequenceNumber(final int libraryId, final long sessionId)
+    {
+        final long position = claim(HEADER_LENGTH + ResetLibrarySequenceNumberEncoder.BLOCK_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        resetLibrarySequenceNumber
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
             .session(sessionId);
 
         bufferClaim.commit();

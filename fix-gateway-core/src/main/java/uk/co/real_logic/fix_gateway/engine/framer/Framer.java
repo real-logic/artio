@@ -1226,6 +1226,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     void onResetSequenceNumber(final ResetSequenceNumberCommand reply)
     {
+        reply.libraryLookup(senderEndPoints.libraryLookup());
+
         if (!reply.poll())
         {
             replies.add(reply);

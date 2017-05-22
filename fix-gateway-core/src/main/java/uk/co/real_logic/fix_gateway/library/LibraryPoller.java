@@ -27,10 +27,7 @@ import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.FixCounters;
-import uk.co.real_logic.fix_gateway.LivenessDetector;
-import uk.co.real_logic.fix_gateway.Reply;
+import uk.co.real_logic.fix_gateway.*;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.messages.ControlNotificationDecoder.SessionsDecoder;
@@ -915,6 +912,23 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
 
         return CONTINUE;
+    }
+
+    public Action onResetLibrarySequenceNumber(final int libraryId, final long sessionId)
+    {
+        if (libraryId == this.libraryId)
+        {
+            for (final SessionSubscriber subscriber : connectionIdToSession.values())
+            {
+                final Session session = subscriber.session();
+                if (session.id() == sessionId)
+                {
+                    return Pressure.apply(session.resetSequenceNumbers());
+                }
+            }
+        }
+
+        return Action.CONTINUE;
     }
 
     // -----------------------------------------------------------------------

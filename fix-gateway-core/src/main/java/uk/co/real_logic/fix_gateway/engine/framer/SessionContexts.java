@@ -376,4 +376,9 @@ public class SessionContexts
         }
         return sessionContext.sessionId();
     }
+
+    boolean isAuthenticated(final long sessionId)
+    {
+        return currentlyAuthenticatedSessionIds.contains(sessionId);
+    }
 }

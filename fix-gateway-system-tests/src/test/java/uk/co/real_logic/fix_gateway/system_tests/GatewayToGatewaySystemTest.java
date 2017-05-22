@@ -612,7 +612,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         messagesCanBeExchanged();
 
-        assertSequenceNumbers(2, 2, 0);
+        assertInitSeqNum(2, 2, 0);
 
         final long sessionId = lookupSessionId(ACCEPTOR_ID, INITIATOR_ID, acceptingEngine).resultIfPresent();
 
@@ -620,15 +620,47 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             acceptingEngine.resetSequenceNumber(sessionId));
         assertTrue(resetSequenceNumber.hasCompleted());
 
-        assertSequenceNumbers(1, 1, 1);
+        assertInitSeqNum(1, 1, 1);
     }
 
-    private void assertSequenceNumbers(
+    @Test
+    public void shouldResetSequenceNumbersOfLibraryManagedSessions()
+    {
+        messagesCanBeExchanged();
+
+        acquireAcceptingSession();
+
+        assertInitSeqNum(2, 2, 0);
+        assertAccSeqNum(2, 2, 0);
+
+        final long sessionId = lookupSessionId(ACCEPTOR_ID, INITIATOR_ID, acceptingEngine).resultIfPresent();
+
+        final Reply<?> resetSequenceNumber = testSystem.awaitReply(
+            acceptingEngine.resetSequenceNumber(sessionId));
+        assertTrue(resetSequenceNumber.hasCompleted());
+
+        assertInitSeqNum(1, 1, 1);
+        assertAccSeqNum(1, 1, 1);
+    }
+
+    private void assertInitSeqNum(
         final int lastReceivedMsgSeqNum, final int lastSentMsgSeqNum, final int sequenceIndex)
     {
-        assertEquals(lastReceivedMsgSeqNum, initiatingSession.lastReceivedMsgSeqNum());
-        assertEquals(lastSentMsgSeqNum, initiatingSession.lastSentMsgSeqNum());
-        assertEquals(sequenceIndex, initiatingSession.sequenceIndex());
+        assertSeqNum(lastReceivedMsgSeqNum, lastSentMsgSeqNum, sequenceIndex, initiatingSession);
+    }
+
+    private void assertAccSeqNum(
+        final int lastReceivedMsgSeqNum, final int lastSentMsgSeqNum, final int sequenceIndex)
+    {
+        assertSeqNum(lastReceivedMsgSeqNum, lastSentMsgSeqNum, sequenceIndex, acceptingSession);
+    }
+
+    private void assertSeqNum(
+        final int lastReceivedMsgSeqNum, final int lastSentMsgSeqNum, final int sequenceIndex, final Session session)
+    {
+        assertEquals(lastReceivedMsgSeqNum, session.lastReceivedMsgSeqNum());
+        assertEquals(lastSentMsgSeqNum, session.lastSentMsgSeqNum());
+        assertEquals(sequenceIndex, session.sequenceIndex());
     }
 
     private void awaitIsConnected(final boolean connected, final FixLibrary library)

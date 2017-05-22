@@ -239,6 +239,11 @@ class SenderEndPoint implements AutoCloseable
         this.outboundTracker.blockablePosition = blockablePosition;
     }
 
+    public int libraryId()
+    {
+        return libraryId;
+    }
+
     public void close()
     {
         bytesInBuffer.close();

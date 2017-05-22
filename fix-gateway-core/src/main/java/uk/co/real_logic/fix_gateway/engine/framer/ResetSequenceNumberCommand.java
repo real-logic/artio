@@ -21,6 +21,8 @@ import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.Session;
 
+import java.util.function.LongToIntFunction;
+
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.Reply.State.ERRORED;
 import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNK_SESSION;
@@ -41,15 +43,36 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
     private final GatewayPublication inboundPublication;
     private final GatewayPublication outboundPublication;
     private Session session;
+    private LongToIntFunction libraryLookup;
+
+    void libraryLookup(final LongToIntFunction libraryLookup)
+    {
+        this.libraryLookup = libraryLookup;
+    }
 
     private enum Step
     {
         START,
-        RESET_SESSION,
+
+        // Sending the reset session message - used if engine managed session
+        RESET_ENGINE_SESSION,
+
+        // Sending the reset session message - used if library managed session
+        RESET_LIBRARY_SESSION,
+
+        // Send the message to reset sent seq num - used if not logged in
         RESET_SENT,
+
+        // Send the message to reset recv seq num - used if not logged in
         RESET_RECV,
+
+        // await reset of sent seq num - jumped to from RESET_ENGINE_SESSION and RESET_LIBRARY_SESSION
+        // since this will be updated when the other end of the session acknowledges the sequence reset.
         AWAIT_RECV,
+
+        // await reset of recv seq num
         AWAIT_SENT,
+
         DONE
     }
 
@@ -117,11 +140,18 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
                 }
 
                 final GatewaySession gatewaySession = gatewaySessions.sessionById(sessionId);
+                // Engine Managed
                 if (gatewaySession != null)
                 {
                     session = gatewaySession.session();
-                    step = Step.RESET_SESSION;
+                    step = Step.RESET_ENGINE_SESSION;
                 }
+                // Library Managed
+                else if (sessionContexts.isAuthenticated(sessionId))
+                {
+                    step = Step.RESET_LIBRARY_SESSION;
+                }
+                // Not logged in
                 else
                 {
                     sessionContexts.sequenceReset(sessionId);
@@ -131,15 +161,24 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
                 return false;
             }
 
-            // TODO: what if session is acquired part way through this action?
-
-            case RESET_SESSION:
+            case RESET_ENGINE_SESSION:
             {
                 final long position = session.resetSequenceNumbers();
                 if (!Pressure.isBackPressured(position))
                 {
                     step = Step.AWAIT_RECV;
                 }
+                return false;
+            }
+
+            case RESET_LIBRARY_SESSION:
+            {
+                final int libraryId = libraryLookup.applyAsInt(sessionId);
+                if (!Pressure.isBackPressured(inboundPublication.saveResetLibrarySequenceNumber(libraryId, sessionId)))
+                {
+                    step = Step.AWAIT_RECV;
+                }
+
                 return false;
             }
 

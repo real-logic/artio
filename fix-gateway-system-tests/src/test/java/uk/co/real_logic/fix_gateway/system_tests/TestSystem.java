@@ -95,12 +95,16 @@ public class TestSystem
     public <T> Reply<T> awaitReply(final Reply<T> reply)
     {
         assertEventuallyTrue(
-            "No reply from: " + reply,
+            () -> "No reply from: " + reply,
             () ->
             {
                 poll();
 
                 return !reply.isExecuting();
+            },
+            DEFAULT_TIMEOUT_IN_MS,
+            () ->
+            {
             });
 
         return reply;

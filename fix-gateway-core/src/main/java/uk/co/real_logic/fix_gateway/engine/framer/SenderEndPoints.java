@@ -20,10 +20,13 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.replication.ClusterFragmentHandler;
 import uk.co.real_logic.fix_gateway.replication.ClusterHeader;
+
+import java.util.function.LongToIntFunction;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
@@ -35,6 +38,21 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
     private final Long2ObjectHashMap<SenderEndPoint> connectionIdToSenderEndpoint = new Long2ObjectHashMap<>();
     private final ErrorHandler errorHandler;
+    private final LongToIntFunction libraryLookup = this::libraryLookup;
+
+    private int libraryLookup(final long sessionId)
+    {
+        for (final SenderEndPoint senderEndPoint : connectionIdToSenderEndpoint.values())
+        {
+            if (senderEndPoint.sessionId() == sessionId)
+            {
+                return senderEndPoint.libraryId();
+            }
+        }
+
+        return FixEngine.ENGINE_LIBRARY_ID;
+    }
+
     private long timeInMs;
 
     SenderEndPoints(final ErrorHandler errorHandler)
@@ -174,5 +192,10 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
         }
 
         return count;
+    }
+
+    public LongToIntFunction libraryLookup()
+    {
+        return libraryLookup;
     }
 }

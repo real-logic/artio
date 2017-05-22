@@ -69,4 +69,6 @@ public interface LibraryEndPointHandler
     Action onControlNotification(int libraryId, SessionsDecoder sessions);
 
     Action onSlowStatusNotification(int libraryId, long connectionId, boolean hasBecomeSlow);
+
+    Action onResetLibrarySequenceNumber(int libraryId, long sessionId);
 }

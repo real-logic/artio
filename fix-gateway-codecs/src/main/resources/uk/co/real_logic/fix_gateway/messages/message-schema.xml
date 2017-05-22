@@ -343,8 +343,14 @@
     </sbe:message>
 
     <sbe:message name="ResetSequenceNumber" id="42"
-                 description="A header for replicated messages">
-        <field name="session" id="1" type="FixSessionId"/>
+                 description="Tells the sequence index to reset the sequence number of a logged out session">
+        <field name="session" id="2" type="FixSessionId"/>
+    </sbe:message>
+
+    <sbe:message name="ResetLibrarySequenceNumber" id="44"
+                 description="Tells the library to reset the sequence number of a session that it owns">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="session" id="2" type="FixSessionId"/>
     </sbe:message>
 
     <sbe:message name="SlowStatusNotification" id="43"
