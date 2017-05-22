@@ -142,7 +142,7 @@ public class AbstractGatewayToGatewaySystemTest
 
     protected void acquireAcceptingSession()
     {
-        final long sessionId = acceptingHandler.awaitSessionId(() -> acceptingLibrary.poll(LIBRARY_LIMIT));
+        final long sessionId = acceptingHandler.awaitSessionId(testSystem::poll);
 
         acceptingSession = acquireSession(acceptingHandler, acceptingLibrary, sessionId, testSystem);
         assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
