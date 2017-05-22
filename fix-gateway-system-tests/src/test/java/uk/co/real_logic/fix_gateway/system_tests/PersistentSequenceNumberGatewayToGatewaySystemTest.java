@@ -51,6 +51,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 {
     private static final long TEST_TIMEOUT = 10_000L;
     private static final int DOES_NOT_MATTER = -1;
+    private static final int DEFAULT_SEQ_NUM_AFTER = 4;
+
     private File backupLocation = null;
 
     private Runnable acquireSession = () ->
@@ -63,6 +65,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     private Runnable duringRestart = this::nothing;
     private Runnable beforeReconnect = this::nothing;
     private boolean printErrorMessages = true;
+    private boolean resetSequenceNumbersOnLogon = false;
 
     @Before
     public void setUp() throws IOException
@@ -84,7 +87,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT)
     public void sequenceNumbersCanPersistOverRestarts()
     {
-        sequenceNumbersCanPersistOverRestarts(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
+        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DEFAULT_SEQ_NUM_AFTER);
 
         assertSequenceIndicesAre(0);
     }
@@ -94,7 +97,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         acquireSession = this::requestReplayWhenReacquiringSession;
 
-        sequenceNumbersCanPersistOverRestarts(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
+        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DEFAULT_SEQ_NUM_AFTER);
 
         assertSequenceIndicesAre(0);
     }
@@ -107,8 +110,10 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         acquireSession = () -> assertFailStatusWhenReplayRequested(SEQUENCE_NUMBER_TOO_HIGH);
 
+        resetSequenceNumbersOnLogon = true;
+
         exchangeMessagesAroundARestart(
-                AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER, true);
+                AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER);
 
         assertOnlyAcceptorSequenceReset();
     }
@@ -123,8 +128,10 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         acquireSession = () -> assertFailStatusWhenReplayRequested(MISSING_MESSAGES);
 
+        resetSequenceNumbersOnLogon = true;
+
         exchangeMessagesAroundARestart(
-                AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER, true);
+                AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER);
 
         assertSequenceIndicesAre(1);
     }
@@ -132,7 +139,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT)
     public void messagesCanBeReplayedOverRestart()
     {
-        sequenceNumbersCanPersistOverRestarts(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
+        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DEFAULT_SEQ_NUM_AFTER);
 
         final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
         resendRequest.beginSeqNo(1).endSeqNo(1);
@@ -166,7 +173,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT)
     public void customInitialSequenceNumbersCanBeSet()
     {
-        sequenceNumbersCanPersistOverRestarts(4);
+        exchangeMessagesAroundARestart(4, DEFAULT_SEQ_NUM_AFTER);
 
         assertSequenceIndicesAre(0);
     }
@@ -177,7 +184,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         beforeReconnect = this::resetSessions;
 
         exchangeMessagesAroundARestart(
-            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, false);
+            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1);
 
         // Different sessions themselves, so we start again at 0
         assertSequenceIndicesAre(0);
@@ -189,7 +196,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         beforeReconnect = this::resetSequenceNumbers;
 
         exchangeMessagesAroundARestart(
-            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 2, false);
+            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 2);
 
         assertSequenceIndicesAre(1);
     }
@@ -209,8 +216,10 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT)
     public void sequenceNumbersCanBeResetOnLogon()
     {
+        resetSequenceNumbersOnLogon = true;
+
         exchangeMessagesAroundARestart(
-            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1, true);
+            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1);
 
         acceptingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
         initiatingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
@@ -298,15 +307,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         acquireSession.run();
     }
 
-    private void sequenceNumbersCanPersistOverRestarts(final int initialSequenceNumber)
-    {
-        exchangeMessagesAroundARestart(initialSequenceNumber, 4, false);
-    }
-
     private void exchangeMessagesAroundARestart(
         final int initialSequenceNumber,
-        final int sequNumAfter,
-        final boolean resetSequenceNumbersOnLogon)
+        final int seqNumAfter)
     {
         launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, this::nothing, resetSequenceNumbersOnLogon);
 
@@ -331,9 +334,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         assertEquals("initiatedSessionId not stable over restarts", initiatedSessionId, initiatingSession.id());
         assertEquals("acceptingSessionId not stable over restarts", acceptingSessionId, acceptingSession.id());
-        if (sequNumAfter != DOES_NOT_MATTER)
+        if (seqNumAfter != DOES_NOT_MATTER)
         {
-            assertSequenceFromInitToAcceptAt(sequNumAfter, sequNumAfter);
+            assertSequenceFromInitToAcceptAt(seqNumAfter, seqNumAfter);
         }
 
         assertTestRequestSentAndReceived(initiatingSession, testSystem, acceptingOtfAcceptor);
