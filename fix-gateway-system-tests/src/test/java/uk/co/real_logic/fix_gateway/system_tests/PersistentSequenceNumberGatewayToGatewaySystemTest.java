@@ -24,8 +24,8 @@ import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.engine.EngineConfiguration;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.library.DynamicLibraryScheduler;
 import uk.co.real_logic.fix_gateway.library.SessionConfiguration;
-import uk.co.real_logic.fix_gateway.library.SharedLibraryScheduler;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.session.Session;
 
@@ -242,7 +242,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         initiatingEngine = launchInitiatingEngineWithSameLogs(libraryAeronPort);
 
         // Use so that the SharedLibraryScheduler is integration tested
-        final SharedLibraryScheduler libraryScheduler = new SharedLibraryScheduler(2);
+        final DynamicLibraryScheduler libraryScheduler = new DynamicLibraryScheduler();
 
         acceptingLibrary = connect(
             acceptingLibraryConfig(acceptingHandler)

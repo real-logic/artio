@@ -199,7 +199,7 @@ public class FixLibrary extends GatewayProcess
 
     void internalClose()
     {
-        closeAll(poller, scheduler, super::close, this::deleteFiles);
+        closeAll(poller, () -> scheduler.close(libraryId()), super::close, this::deleteFiles);
     }
 
     private void deleteFiles()

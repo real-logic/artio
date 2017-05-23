@@ -22,7 +22,7 @@ import org.agrona.concurrent.Agent;
 /**
  * Interface for determining how a Library's Agents are allocated to threads.
  */
-public interface LibraryScheduler extends AutoCloseable
+public interface LibraryScheduler
 {
     /**
      * Invoked by the Library to start the threads.
@@ -40,7 +40,7 @@ public interface LibraryScheduler extends AutoCloseable
     /**
      * Invoked by the Library to stop the threads. Should only return once they are completed stopped.
      */
-    void close();
+    void close(int libraryId);
 
     /**
      * Used to configure the aeron context object. This can be hooked in order to

@@ -58,7 +58,7 @@ public class DefaultLibraryScheduler implements LibraryScheduler
         aeronContext.useConductorAgentInvoker(true);
     }
 
-    public void close()
+    public void close(final int libraryId)
     {
         CloseHelper.close(monitoringRunner);
     }
