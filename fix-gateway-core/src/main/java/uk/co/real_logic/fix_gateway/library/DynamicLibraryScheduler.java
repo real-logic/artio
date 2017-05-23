@@ -68,6 +68,7 @@ public class DynamicLibraryScheduler implements LibraryScheduler
         if (libraryIdToMonitoring.isEmpty())
         {
             CloseHelper.close(runner);
+            runner = null;
         }
     }
 
