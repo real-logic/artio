@@ -37,7 +37,7 @@ import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor.align
  */
 public class Indexer implements Agent, ClusterFragmentHandler
 {
-    private static final int LIMIT = 10;
+    private static final int LIMIT = 20;
 
     private final List<Index> indices;
     private final ArchiveReader archiveReader;

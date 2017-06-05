@@ -26,7 +26,6 @@ import org.agrona.DirectBuffer;
  * Extends {@link FragmentHandler} so that it can be easily used to replay/catchup
  * a Stream.
  */
-// TODO: potential optimisation to enable batching of position updates/writes over batches of messages.
 public interface Index extends ControlledFragmentHandler, AutoCloseable
 {
     default Action onFragment(DirectBuffer buffer, int offset, int length, Header header)

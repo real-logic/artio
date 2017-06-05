@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.LongLongConsumer;
+import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.engine.logger.Index;
 import uk.co.real_logic.fix_gateway.engine.logger.IndexedPositionConsumer;
 import uk.co.real_logic.fix_gateway.messages.FixMessageDecoder;
@@ -31,7 +32,7 @@ class SoloPositionSender implements Index
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
     private final Long2LongHashMap libraryIdToPosition = new Long2LongHashMap(MISSING_LIBRARY);
-    private final LongLongConsumer resendPositionFunc = this::resendPosition;
+    private final LongLongConsumer resendPositionFunc = this::endPosition;
 
     private final GatewayPublication publication;
 
@@ -59,16 +60,13 @@ class SoloPositionSender implements Index
 
             fixMessage.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
 
-            final int libraryId = fixMessage.libraryId();
-            if (saveNewSentPosition(libraryId, endPosition))
-            {
-                libraryIdToPosition.remove(libraryId);
-            }
-            else
-            {
-                libraryIdToPosition.put(libraryId, endPosition);
-            }
+            indexFixMessage(fixMessage.libraryId(), endPosition);
         }
+    }
+
+    void indexFixMessage(final int libraryId, final long endPosition)
+    {
+        libraryIdToPosition.put(libraryId, endPosition);
     }
 
     public int doWork()
@@ -78,7 +76,7 @@ class SoloPositionSender implements Index
         return resendCount;
     }
 
-    private void resendPosition(final long libraryId, final long endPosition)
+    private void endPosition(final long libraryId, final long endPosition)
     {
         if (saveNewSentPosition((int) libraryId, endPosition))
         {
@@ -89,7 +87,7 @@ class SoloPositionSender implements Index
 
     private boolean saveNewSentPosition(final int libraryId, final long endPosition)
     {
-        return publication.saveNewSentPosition(libraryId, endPosition) >= 0;
+        return !Pressure.isBackPressured(publication.saveNewSentPosition(libraryId, endPosition));
     }
 
     public void close()
