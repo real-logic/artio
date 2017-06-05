@@ -215,7 +215,6 @@ public class ClusterReplicationTest
         eventuallyOneLeaderAndTwoFollowersWithSameLeader();
     }
 
-    @Ignore
     @Test
     public void shouldReplicateMessageAfterClusterReformed()
     {
