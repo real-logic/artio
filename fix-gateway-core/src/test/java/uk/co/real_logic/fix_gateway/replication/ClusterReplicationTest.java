@@ -139,7 +139,7 @@ public class ClusterReplicationTest
 
         DebugLogger.log(RAFT, "First Leader: %d%n", leader.nodeId());
 
-        final long position = sendMessageTo(leader);
+        long position = sendMessageTo(leader);
 
         assertMessageReceived(position);
 
@@ -158,9 +158,11 @@ public class ClusterReplicationTest
         DebugLogger.log(RAFT, "New Leader: %d%n", newLeader.nodeId());
 
         // TODO: enable once this is fixed.
-        // position = sendMessageTo(newLeader);
-        // assertMessageReceived(position);
-        // messageCommittedBetweenTwoLiveNodes(leader, position);
+        /*position = sendMessageTo(newLeader);
+
+        assertMessageReceived(position);
+
+        messageCommittedBetweenTwoLiveNodes(leader, position);*/
     }
 
     @Test

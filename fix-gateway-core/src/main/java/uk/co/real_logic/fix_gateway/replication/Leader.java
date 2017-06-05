@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
+import static uk.co.real_logic.fix_gateway.replication.PositionTranslations.replicatedToTransport;
 import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.OK;
 
@@ -68,7 +69,7 @@ class Leader implements Role, RaftHandler
     private final RaftArchiver raftArchiver;
     private final DirectBuffer nodeState;
     private final NodeStateHandler nodeStateHandler;
-    /** Position in the log that has been applied to the state machine*/
+    /** Replicated position in the log that has been applied to the state machine*/
     private long lastAppliedPosition;
 
     /**
@@ -187,7 +188,7 @@ class Leader implements Role, RaftHandler
 
     private void heartbeat(final long currentPosition)
     {
-        final long transportPosition = currentPosition - transportPositionDelta;
+        final long transportPosition = replicatedToTransport(currentPosition, transportPositionDelta);
         if (controlPublication.saveConsensusHeartbeat(
             nodeId,
             termState.leadershipTerm(),
@@ -215,13 +216,14 @@ class Leader implements Role, RaftHandler
 
         if (status == MISSING_LOG_ENTRIES)
         {
-            final int length = (int) (raftArchiver.archivedTransportPosition() - position);
+            final long transportPosition = replicatedToTransport(position, transportPositionDelta);
+            final int length = (int) (raftArchiver.archivedTransportPosition() - transportPosition);
             if (validateReader())
             {
                 final ResendHandler resendHandler = new ResendHandler();
                 resendHandler.messageAcknowledgementPosition = position;
-                resendHandler.messageAcknowledgementTransportPosition = position - transportPositionDelta;
-                final long readPosition = Math.max(position, HEADER_LENGTH);
+                resendHandler.messageAcknowledgementTransportPosition = transportPosition;
+                final long readPosition = Math.max(transportPosition, HEADER_LENGTH);
                 if (!ourArchiveReader.readBlock(readPosition, length, resendHandler))
                 {
                     resendHandler.emptyResend();

@@ -677,7 +677,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     "Duplicate Session for: " + sessionKey +
                     " Surrogate Key: " + sessionId +
                     " Currently owned by " + owningLibraryId);
-                
+
                 channel.close();
 
                 return;
