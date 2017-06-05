@@ -60,8 +60,8 @@ public class ClusterSubscriptionTest
     private static final int FIRST_TERM_END = FIRST_TERM_LENGTH;
     private static final int SECOND_TERM_END = FIRST_TERM_END + SECOND_TERM_LENGTH;
     private static final int THIRD_TERM_END = SECOND_TERM_END + THIRD_TERM_LENGTH;
-    private static final int THIRD_TERM_STREAM_END = SECOND_TERM_LENGTH + THIRD_TERM_LENGTH;
-    private static final long THIRD_TERM_STREAM_START = SECOND_TERM_LENGTH;
+    private static final int THIRD_TERM_TRANSPORT_END = SECOND_TERM_LENGTH + THIRD_TERM_LENGTH;
+    private static final long THIRD_TERM_TRANSPORT_START = SECOND_TERM_LENGTH;
 
     private Subscription dataSubscription = mock(Subscription.class);
     private Subscription controlSubscription = mock(Subscription.class);
@@ -127,24 +127,24 @@ public class ClusterSubscriptionTest
 
         final int firstTermLength = 128;
         final int firstTermPosition = firstTermLength;
-        final int firstTermStreamPosition = firstTermLength;
+        final int firstTermTransportPosition = firstTermLength;
         final int secondTermLength = 256;
-        final int secondTermStreamPosition = secondTermLength;
+        final int secondTermTransportPosition = secondTermLength;
         final int secondTermPosition = firstTermPosition + secondTermLength;
 
-        onConsensusHeartbeatPoll(1, LEADER, firstTermPosition, 0, firstTermStreamPosition);
+        onConsensusHeartbeatPoll(1, LEADER, firstTermPosition, 0, firstTermTransportPosition);
         leaderImageAvailable();
-        onConsensusHeartbeatPoll(1, LEADER, firstTermPosition, 0, firstTermStreamPosition);
+        onConsensusHeartbeatPoll(1, LEADER, firstTermPosition, 0, firstTermTransportPosition);
 
-        pollsMessageFragment(leaderDataImage, firstTermStreamPosition, CONTINUE);
+        pollsMessageFragment(leaderDataImage, firstTermTransportPosition, CONTINUE);
 
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermPosition, 0, secondTermStreamPosition);
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermPosition, 0, secondTermTransportPosition);
         otherLeaderImageAvailable();
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermPosition, 0, secondTermStreamPosition);
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, secondTermPosition, 0, secondTermTransportPosition);
 
-        pollsMessageFragment(otherLeaderDataImage, secondTermStreamPosition, CONTINUE);
+        pollsMessageFragment(otherLeaderDataImage, secondTermTransportPosition, CONTINUE);
 
-        assertState(2, OTHER_LEADER, secondTermStreamPosition);
+        assertState(2, OTHER_LEADER, secondTermTransportPosition);
         verifyReceivesFragment(firstTermLength);
         verifyReceivesFragment(secondTermLength);
         verifyNoOtherFragmentsReceived();
@@ -301,8 +301,8 @@ public class ClusterSubscriptionTest
 
         onResend(0, FIRST_TERM_END, SECOND_TERM_LENGTH);
 
-        onConsensusHeartbeatPoll(2, OTHER_LEADER, THIRD_TERM_END, SECOND_TERM_LENGTH, THIRD_TERM_STREAM_END);
-        pollsMessageFragment(otherLeaderDataImage, THIRD_TERM_STREAM_END, THIRD_TERM_LENGTH, CONTINUE);
+        onConsensusHeartbeatPoll(2, OTHER_LEADER, THIRD_TERM_END, SECOND_TERM_LENGTH, THIRD_TERM_TRANSPORT_END);
+        pollsMessageFragment(otherLeaderDataImage, THIRD_TERM_TRANSPORT_END, THIRD_TERM_LENGTH, CONTINUE);
 
         verifyReceivesFragment(FIRST_TERM_LENGTH);
         verifyReceivesFragment(SECOND_TERM_LENGTH);
@@ -320,11 +320,11 @@ public class ClusterSubscriptionTest
         pollsMessageFragment(leaderDataImage, FIRST_TERM_LENGTH, CONTINUE);
 
         // You got netsplit when the data was sent out on the main data channel
-        when(otherLeaderDataImage.position()).thenReturn((long) THIRD_TERM_STREAM_END);
+        when(otherLeaderDataImage.position()).thenReturn((long) THIRD_TERM_TRANSPORT_END);
 
         // But the data has been resend and archived by the follower.
         onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
-        dataWasArchived(THIRD_TERM_STREAM_START, THIRD_TERM_STREAM_END, CONTINUE);
+        dataWasArchived(THIRD_TERM_TRANSPORT_START, THIRD_TERM_TRANSPORT_END, CONTINUE);
 
         onResend(0, FIRST_TERM_END, SECOND_TERM_LENGTH);
 
@@ -346,11 +346,11 @@ public class ClusterSubscriptionTest
         pollsMessageFragment(leaderDataImage, FIRST_TERM_LENGTH, CONTINUE);
 
         // You got netsplit when the data was sent out on the main data channel
-        when(otherLeaderDataImage.position()).thenReturn((long) THIRD_TERM_STREAM_END);
+        when(otherLeaderDataImage.position()).thenReturn((long) THIRD_TERM_TRANSPORT_END);
 
         // But the data has been resend and archived by the follower.
         onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
-        dataWasArchived(THIRD_TERM_STREAM_START, THIRD_TERM_STREAM_END, CONTINUE);
+        dataWasArchived(THIRD_TERM_TRANSPORT_START, THIRD_TERM_TRANSPORT_END, CONTINUE);
 
         onResend(0, FIRST_TERM_END, SECOND_TERM_LENGTH);
 
@@ -425,7 +425,7 @@ public class ClusterSubscriptionTest
         pollsMessageFragment(leaderDataImage, FIRST_TERM_LENGTH, CONTINUE);
 
         // You got netsplit when the data was sent out on the main data channel
-        when(otherLeaderDataImage.position()).thenReturn((long) THIRD_TERM_STREAM_END);
+        when(otherLeaderDataImage.position()).thenReturn((long) THIRD_TERM_TRANSPORT_END);
 
         // But the data has been resend and archived by the follower.
         onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
@@ -434,10 +434,10 @@ public class ClusterSubscriptionTest
 
         backPressureNextCommit();
 
-        dataWasArchived(THIRD_TERM_STREAM_START, THIRD_TERM_STREAM_END, ABORT);
+        dataWasArchived(THIRD_TERM_TRANSPORT_START, THIRD_TERM_TRANSPORT_END, ABORT);
         poll();
 
-        dataWasArchived(THIRD_TERM_STREAM_START, THIRD_TERM_STREAM_END, CONTINUE);
+        dataWasArchived(THIRD_TERM_TRANSPORT_START, THIRD_TERM_TRANSPORT_END, CONTINUE);
         poll();
 
         verifyReceivesFragment(FIRST_TERM_LENGTH);
@@ -488,27 +488,27 @@ public class ClusterSubscriptionTest
         assertEquals(expectedAction, action);
     }
 
-    private void verifyReceivesFragment(final int newStreamPosition)
+    private void verifyReceivesFragment(final int newTransportPosition)
     {
-        verifyReceivesFragment(newStreamPosition, times(1));
+        verifyReceivesFragment(newTransportPosition, times(1));
     }
 
-    private void verifyReceivesFragment(final int newStreamPosition, final VerificationMode times)
+    private void verifyReceivesFragment(final int newTransportPosition, final VerificationMode times)
     {
-        verify(handler, times).onFragment(any(UnsafeBuffer.class), eq(0), eq(newStreamPosition), any());
+        verify(handler, times).onFragment(any(UnsafeBuffer.class), eq(0), eq(newTransportPosition), any());
     }
 
     private void pollsMessageFragment(
         final Image dataImage,
-        final int streamPosition,
+        final int transportPosition,
         final Action expectedAction)
     {
-        pollsMessageFragment(dataImage, streamPosition, streamPosition, expectedAction);
+        pollsMessageFragment(dataImage, transportPosition, transportPosition, expectedAction);
     }
 
     private void pollsMessageFragment(
         final Image dataImage,
-        final int streamPosition,
+        final int transportPosition,
         final int length,
         final Action expectedAction)
     {
@@ -520,11 +520,11 @@ public class ClusterSubscriptionTest
 
                 if (initialPosition < limitPosition)
                 {
-                    callHandler(streamPosition, length, expectedAction, inv, 1);
+                    callHandler(transportPosition, length, expectedAction, inv, 1);
                     if (expectedAction != ABORT)
                     {
-                        when(dataImage.position()).thenReturn((long)streamPosition);
-                        return (long) streamPosition;
+                        when(dataImage.position()).thenReturn((long)transportPosition);
+                        return (long) transportPosition;
                     }
                 }
 
@@ -535,7 +535,7 @@ public class ClusterSubscriptionTest
     }
 
     private void callHandler(
-        final long streamPosition,
+        final long transportPosition,
         final int length,
         final Action expectedAction,
         final InvocationOnMock inv,
@@ -543,7 +543,7 @@ public class ClusterSubscriptionTest
     {
         final ControlledFragmentHandler handler = (ControlledFragmentHandler)inv.getArguments()[handlerArgumentIndex];
 
-        when(header.position()).thenReturn(streamPosition);
+        when(header.position()).thenReturn(transportPosition);
 
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[length]);
         final Action action = handler.onFragment(buffer, 0, length, header);
@@ -560,11 +560,11 @@ public class ClusterSubscriptionTest
         final int leaderSessionId,
         final long position,
         final long streamStartPosition,
-        final long streamPosition)
+        final long transportPosition)
     {
         clusterSubscription.hasMatchingFutureAck();
         clusterSubscription.onConsensusHeartbeat(
-            leaderShipTerm, leaderSessionId, position, streamStartPosition, streamPosition);
+            leaderShipTerm, leaderSessionId, position, streamStartPosition, transportPosition);
     }
 
     private void willReceiveConsensusHeartbeat(
@@ -572,13 +572,13 @@ public class ClusterSubscriptionTest
         final int leader,
         final long position,
         final long streamStartPosition,
-        final long streamPosition)
+        final long transportPosition)
     {
         when(controlSubscription.controlledPoll(any(), anyInt())).then(
             (inv) ->
             {
                 clusterSubscription.onConsensusHeartbeat(
-                    leaderShipTerm, leader, position, streamStartPosition, streamPosition);
+                    leaderShipTerm, leader, position, streamStartPosition, transportPosition);
                 return 1;
             }).thenReturn(0);
     }

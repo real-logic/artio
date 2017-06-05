@@ -36,6 +36,8 @@ class TermState
 
     /** The position that we can commit up to. */
     private final AtomicLong consensusPosition = new AtomicLong(0);
+
+    // replicated - transport = delta
     private long transportPositionDelta;
 
     TermState leaderSessionId(final int leadershipSessionId)

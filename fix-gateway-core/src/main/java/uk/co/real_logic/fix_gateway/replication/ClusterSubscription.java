@@ -33,10 +33,13 @@ import uk.co.real_logic.fix_gateway.replication.messages.ResendDecoder;
 import java.util.PriorityQueue;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
+import static java.lang.Math.max;
 import static java.util.Comparator.comparingLong;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
 import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor.alignTerm;
 import static uk.co.real_logic.fix_gateway.replication.ClusterSubscription.Ternary.*;
+import static uk.co.real_logic.fix_gateway.replication.PositionTranslations.replicatedToTransport;
+import static uk.co.real_logic.fix_gateway.replication.PositionTranslations.transportToReplicated;
 import static uk.co.real_logic.fix_gateway.replication.ReservedValue.NO_FILTER;
 
 /**
@@ -150,8 +153,9 @@ public class ClusterSubscription extends ClusterableSubscription
 
         this.handler = fragmentHandler;
 
-        final long transportInitialPosition = initialPosition - positionDelta;
-        final long transportLimitPosition = Math.max(limitPosition - positionDelta, transportConsensusPosition);
+        final long transportInitialPosition = replicatedToTransport(initialPosition, positionDelta);
+        final long transportLimitPosition =
+            max(replicatedToTransport(limitPosition, positionDelta), transportConsensusPosition);
 
         validatePosition(transportInitialPosition);
 
@@ -160,7 +164,7 @@ public class ClusterSubscription extends ClusterableSubscription
 
     public void position(final long newPosition)
     {
-        final long newTransportPosition = newPosition - positionDelta;
+        final long newTransportPosition = replicatedToTransport(newPosition, positionDelta);
 
         validatePosition(newTransportPosition);
 
@@ -515,7 +519,8 @@ public class ClusterSubscription extends ClusterableSubscription
                 messageHeader.wrap(buffer, offset);
                 if (messageHeader.templateId() != ConsensusHeartbeatDecoder.TEMPLATE_ID)
                 {
-                    clusterHeader.update(headerPosition + positionDelta, header.sessionId(), header.flags());
+                    final long position = transportToReplicated(headerPosition, positionDelta);
+                    clusterHeader.update(position, header.sessionId(), header.flags());
                     final Action action = handler.onFragment(buffer, offset, length, clusterHeader);
                     if (action != ABORT)
                     {
@@ -575,6 +580,6 @@ public class ClusterSubscription extends ClusterableSubscription
 
     public long position()
     {
-        return lastAppliedTransportPosition + positionDelta;
+        return transportToReplicated(lastAppliedTransportPosition, positionDelta);
     }
 }

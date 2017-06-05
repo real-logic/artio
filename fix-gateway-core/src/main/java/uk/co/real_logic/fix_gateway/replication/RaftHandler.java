@@ -39,8 +39,8 @@ interface RaftHandler
         short nodeId,
         int leaderShipTerm,
         long position,
-        long streamStartPosition,
-        long streamPosition,
+        long transportStartPosition,
+        long transportPosition,
         int leaderSessionId);
 
     Action onResend(

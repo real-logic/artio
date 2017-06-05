@@ -131,7 +131,7 @@ public class ClusterAgent implements Agent
 
     public long archivedPosition()
     {
-        return raftArchiver.archivedPosition();
+        return raftArchiver.archivedTransportPosition();
     }
 
     private abstract class NodeState

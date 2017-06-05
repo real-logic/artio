@@ -20,6 +20,8 @@ import io.aeron.logbuffer.ExclusiveBufferClaim;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static uk.co.real_logic.fix_gateway.replication.PositionTranslations.transportToReplicated;
+
 /**
  * A Clustered Publication is a publication that support the raft protocol and allows
  * for publication of messages if you're the leader of the cluster.
@@ -60,9 +62,7 @@ class ClusterPublication extends ClusterablePublication
         {
             bufferClaim.reservedValue(reservedValue);
 
-            final long transportPositionDelta = termState.transportPositionDelta();
-
-            return transportPosition + transportPositionDelta;
+            return transportToReplicated(transportPosition, termState.transportPositionDelta());
         }
         return transportPosition;
     }
@@ -78,7 +78,7 @@ class ClusterPublication extends ClusterablePublication
      */
     public long position()
     {
-        return dataPublication.position() + termState.transportPositionDelta();
+        return transportToReplicated(dataPublication.position(), termState.transportPositionDelta());
     }
 
     @Override

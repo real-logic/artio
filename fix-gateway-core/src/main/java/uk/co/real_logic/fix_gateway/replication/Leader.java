@@ -124,7 +124,7 @@ class Leader implements Role, RaftHandler
 
         if (bytesRead > 0)
         {
-            final long transportPosition = raftArchiver.archivedPosition();
+            final long transportPosition = raftArchiver.archivedTransportPosition();
             final long replicatedPosition = transportPosition + transportPositionDelta;
             nodeToPosition.put(nodeId, replicatedPosition);
         }
@@ -215,7 +215,7 @@ class Leader implements Role, RaftHandler
 
         if (status == MISSING_LOG_ENTRIES)
         {
-            final int length = (int) (raftArchiver.archivedPosition() - position);
+            final int length = (int) (raftArchiver.archivedTransportPosition() - position);
             if (validateReader())
             {
                 final ResendHandler resendHandler = new ResendHandler();

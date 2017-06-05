@@ -206,8 +206,8 @@ class Candidate implements Role, RaftHandler
         final short nodeId,
         final int leaderShipTerm,
         final long position,
-        final long streamStartPosition,
-        final long streamPosition,
+        final long transportStartPosition,
+        final long transportPosition,
         final int dataSessionId)
     {
         if (nodeId != this.nodeId)

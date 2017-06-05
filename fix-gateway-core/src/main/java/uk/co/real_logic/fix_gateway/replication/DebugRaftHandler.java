@@ -108,8 +108,8 @@ final class DebugRaftHandler implements RaftHandler
         final short nodeId,
         final int leaderShipTerm,
         final long position,
-        final long streamStartPosition,
-        final long streamPosition,
+        final long transportStartPosition,
+        final long transportPosition,
         final int leaderSessionId)
     {
         DebugLogger.log(
@@ -119,8 +119,8 @@ final class DebugRaftHandler implements RaftHandler
             nodeId,
             leaderShipTerm,
             position,
-            streamStartPosition,
-            streamPosition,
+            transportStartPosition,
+            transportPosition,
             leaderSessionId
         );
 
@@ -128,8 +128,8 @@ final class DebugRaftHandler implements RaftHandler
             nodeId,
             leaderShipTerm,
             position,
-            streamStartPosition,
-            streamPosition,
+            transportStartPosition,
+            transportPosition,
             leaderSessionId);
     }
 

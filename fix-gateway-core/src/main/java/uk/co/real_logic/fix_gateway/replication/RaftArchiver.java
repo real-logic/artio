@@ -55,7 +55,7 @@ class RaftArchiver
         return leaderSessionId.get();
     }
 
-    long archivedPosition()
+    long archivedTransportPosition()
     {
         if (leaderArchiver != null)
         {

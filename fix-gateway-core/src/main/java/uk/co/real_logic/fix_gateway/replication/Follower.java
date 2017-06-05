@@ -26,6 +26,7 @@ import uk.co.real_logic.fix_gateway.replication.messages.Vote;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
+import static uk.co.real_logic.fix_gateway.replication.PositionTranslations.transportToReplicated;
 import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.MISSING_LOG_ENTRIES;
 import static uk.co.real_logic.fix_gateway.replication.messages.AcknowledgementStatus.OK;
 import static uk.co.real_logic.fix_gateway.replication.messages.Vote.AGAINST;
@@ -55,7 +56,6 @@ class Follower implements Role, RaftHandler
 
     private short votedFor = NO_ONE;
     private long timeInMs;
-    private Subscription dataSubscription;
 
     Follower(
         final short nodeId,
@@ -111,7 +111,8 @@ class Follower implements Role, RaftHandler
             return 0;
         }
 
-        final long imagePosition = raftArchiver.archivedPosition();
+        final long imageTransportPosition = raftArchiver.archivedTransportPosition();
+        final long imagePosition = transportToReplicated(imageTransportPosition, termState.transportPositionDelta());
         if (imagePosition > termState.receivedPosition() && imagePosition > missingAckedPosition)
         {
             if (saveMessageAcknowledgement(MISSING_LOG_ENTRIES) >= 0)
@@ -139,11 +140,6 @@ class Follower implements Role, RaftHandler
 
     public void closeStreams()
     {
-        /*if (dataSubscription != null)
-        {
-            dataSubscription.close();
-            dataSubscription = null;
-        }*/
     }
 
     private void onReplyKeepAlive(final long timeInMs)
@@ -180,6 +176,7 @@ class Follower implements Role, RaftHandler
             else
             {
                 DebugLogger.log(RAFT, "%d: vote against %d in %d%n", nodeId, candidateId, leaderShipTerm);
+
                 return Pressure.apply(
                     controlPublication.saveReplyVote(nodeId, candidateId, leaderShipTerm, AGAINST, nodeState));
             }
@@ -218,8 +215,8 @@ class Follower implements Role, RaftHandler
         final short leaderNodeId,
         final int leaderShipTerm,
         final long position,
-        final long streamStartPosition,
-        final long streamPosition,
+        final long transportStartPosition,
+        final long transportPosition,
         final int leaderSessionId)
     {
         if (leaderNodeId != this.nodeId)
@@ -334,7 +331,6 @@ class Follower implements Role, RaftHandler
 
     Follower dataSubscription(final Subscription dataSubscription)
     {
-        this.dataSubscription = dataSubscription;
         raftArchiver.dataSubscription(dataSubscription);
         return this;
     }
