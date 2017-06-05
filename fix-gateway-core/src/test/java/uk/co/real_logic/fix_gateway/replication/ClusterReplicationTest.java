@@ -139,7 +139,7 @@ public class ClusterReplicationTest
 
         DebugLogger.log(RAFT, "First Leader: %d%n", leader.nodeId());
 
-        long position = sendMessageTo(leader);
+        final long position = sendMessageTo(leader);
 
         assertMessageReceived(position);
 
@@ -155,7 +155,7 @@ public class ClusterReplicationTest
 
         final NodeRunner newLeader = leader();
 
-        DebugLogger.log(RAFT, "New Leader: %d%n", newLeader.nodeId());
+        DebugLogger.log(RAFT, "New Leader: %d%n%s", newLeader.nodeId(), clusterInfo());
 
         // TODO: enable once this is fixed.
         /*position = sendMessageTo(newLeader);
@@ -576,19 +576,22 @@ public class ClusterReplicationTest
                     final TermState termState = agent.termState();
                     final int leaderSessionId = termState.leaderSessionId().get();
                     final int leadershipTerm = termState.leadershipTerm();
+                    final long consensusPosition = termState.consensusPosition().get();
                     final int ourSessionId = agent.ourSessionId();
-                    final long position = runner.replicatedPosition();
+                    // Should be the same as last applied position
+                    final long handledPosition = runner.replicatedPosition();
                     final long dataPubPosition = runner.publication().position();
                     final long archivedPosition = runner.archivedPosition();
 
                     return String.format(
-                        "%s %d: leader=%d, term=%d, us=%d, pos=%d, pubPos=%d, archPos=%d",
+                        "%s %d: leader=%d, term=%d, us=%d, handledPos=%d, csnsPos=%d, pubPos=%d, archPos=%d",
                         state(agent),
                         agent.nodeId(),
                         leaderSessionId,
                         leadershipTerm,
                         ourSessionId,
-                        position,
+                        handledPosition,
+                        consensusPosition,
                         dataPubPosition,
                         archivedPosition);
                 })
