@@ -72,9 +72,13 @@ class ClusterPublication extends ClusterablePublication
         return streamId;
     }
 
+    /**
+     *
+     * @return the replicated position
+     */
     public long position()
     {
-        return dataPublication.position();
+        return dataPublication.position() + termState.transportPositionDelta();
     }
 
     @Override
