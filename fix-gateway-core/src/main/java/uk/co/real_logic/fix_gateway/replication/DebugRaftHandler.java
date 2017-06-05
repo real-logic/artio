@@ -114,7 +114,8 @@ final class DebugRaftHandler implements RaftHandler
     {
         DebugLogger.log(
             RAFT,
-            "%d: ConsensusHeartbeat(nodeId=%d, leaderShipTerm=%d, pos=%d, sStartPos=%d, sPos=%d, leaderSessId=%d)%n",
+            "%d: ConsensusHeartbeat(nodeId=%d, leaderShipTerm=%d, pos=%d, " +
+            "transStartPos=%d, transPos=%d, leaderSessId=%d)%n",
             this.nodeId,
             nodeId,
             leaderShipTerm,
