@@ -591,7 +591,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final LiveLibraryInfo library = idToLibrary.get(libraryId);
         if (library == null)
         {
-            saveError(GatewayError.UNKNOWN_LIBRARY, libraryId, correlationId);
+            saveError(GatewayError.UNKNOWN_LIBRARY, libraryId, correlationId, "");
 
             return CONTINUE;
         }
@@ -671,7 +671,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final SessionContext sessionContext = sessionContexts.onLogon(sessionKey);
             if (sessionContext == SessionContexts.DUPLICATE_SESSION)
             {
-                saveError(DUPLICATE_SESSION, libraryId, correlationId);
+                final long sessionId = sessionContexts.lookupSessionId(sessionKey);
+                final int owningLibraryId = senderEndPoints.libraryLookup().applyAsInt(sessionId);
+                saveError(DUPLICATE_SESSION, libraryId, correlationId,
+                    "Duplicate Session for: " + sessionKey +
+                    " Surrogate Key: " + sessionId +
+                    " Currently owned by " + owningLibraryId);
+                
+                channel.close();
+
                 return;
             }
 
@@ -742,35 +750,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
     }
 
-    private void saveError(final GatewayError error, final int libraryId, final long replyToId)
+    private void saveError(final GatewayError error, final int libraryId, final long replyToId, final String message)
     {
-        final long position = inboundPublication.saveError(error, libraryId, replyToId, "");
-        pressuredError(error, libraryId, null, position);
+        schedule(() -> inboundPublication.saveError(error, libraryId, replyToId, message));
     }
 
     private void saveError(final GatewayError error, final int libraryId, final long replyToId, final Exception e)
     {
         final String message = e.getMessage();
-        final long position = inboundPublication.saveError(error, libraryId, replyToId, message == null ? "" : message);
-        pressuredError(error, libraryId, message, position);
-    }
-
-    private void pressuredError(
-        final GatewayError error, final int libraryId, final String message, final long position)
-    {
-        if (isBackPressured(position))
-        {
-            if (message == null)
-            {
-                errorHandler.onError(new IllegalStateException(
-                    "Back pressured " + error + " for " + libraryId));
-            }
-            else
-            {
-                errorHandler.onError(new IllegalStateException(
-                    "Back pressured " + error + ": " + message + " for " + libraryId));
-            }
-        }
+        saveError(error, libraryId, replyToId, message == null ? "" : message);
     }
 
     public Action onMessage(
