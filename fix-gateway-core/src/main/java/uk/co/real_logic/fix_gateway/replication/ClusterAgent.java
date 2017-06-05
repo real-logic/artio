@@ -27,6 +27,7 @@ import java.util.function.Supplier;
 
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.LogTag.RAFT;
+import static uk.co.real_logic.fix_gateway.replication.PositionTranslations.transportToReplicated;
 
 /**
  * Agent that manages the clustering and archival.
@@ -131,7 +132,7 @@ public class ClusterAgent implements Agent
 
     public long archivedPosition()
     {
-        return raftArchiver.archivedTransportPosition();
+        return transportToReplicated(raftArchiver.archivedTransportPosition(), termState.transportPositionDelta());
     }
 
     private abstract class NodeState
