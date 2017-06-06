@@ -69,7 +69,6 @@ subprojects {
 
     repositories {
         mavenCentral()
-        mavenLocal()
         maven {
             url "http://sevntu-checkstyle.github.com/sevntu.checkstyle/maven2"
         }
