@@ -505,6 +505,17 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     public void engineShouldAcquireClosedLibrariesSessions()
     {
         acquireAcceptingSession();
+        acceptingLibrary.close();
+
+        assertEquals(DISABLED, acceptingSession.state());
+
+        acceptingEngineHasSessionAndLibraryIsNotified();
+    }
+
+    @Test
+    public void libraryShouldSeeReleasedSession()
+    {
+        acquireAcceptingSession();
 
         releaseSessionToEngine(acceptingSession, acceptingLibrary, acceptingEngine);
 
@@ -513,26 +524,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             final CompleteSessionId sessionId = library2.awaitCompleteSessionId();
             assertSameSession(sessionId, acceptingSession);
         }
-    }
-
-    private void assertSameSession(final CompleteSessionId sessionId, final Session session)
-    {
-        final CompositeKey compositeKey = session.compositeKey();
-
-        assertEquals(sessionId.surrogateId(), session.id());
-        assertEquals(compositeKey.localCompId(), sessionId.localCompId());
-        assertEquals(compositeKey.remoteCompId(), sessionId.remoteCompId());
-    }
-
-    @Test
-    public void libraryShouldSeeReleasedSession()
-    {
-        acquireAcceptingSession();
-        acceptingLibrary.close();
-
-        assertEquals(DISABLED, acceptingSession.state());
-
-        acceptingEngineHasSessionAndLibraryIsNotified();
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -839,5 +830,14 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             final CompleteSessionId sessionId = library2.awaitCompleteSessionId();
             assertSameSession(sessionId, acceptingSession);
         }
+    }
+
+    private void assertSameSession(final CompleteSessionId sessionId, final Session session)
+    {
+        final CompositeKey compositeKey = session.compositeKey();
+
+        assertEquals(sessionId.surrogateId(), session.id());
+        assertEquals(compositeKey.localCompId(), sessionId.localCompId());
+        assertEquals(compositeKey.remoteCompId(), sessionId.remoteCompId());
     }
 }
