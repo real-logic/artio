@@ -21,11 +21,12 @@ import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 
 import java.util.List;
+import java.util.function.Function;
 
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
-class LibraryDriver implements AutoCloseable
+final class LibraryDriver implements AutoCloseable
 {
     private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
     private final FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
@@ -33,11 +34,21 @@ class LibraryDriver implements AutoCloseable
     private final FixLibrary library;
     private final TestSystem testSystem;
 
-    LibraryDriver(final TestSystem testSystem)
+    static LibraryDriver accepting(final TestSystem testSystem)
+    {
+        return new LibraryDriver(testSystem, SystemTestUtil::acceptingLibraryConfig);
+    }
+
+    static LibraryDriver initiating(final int libraryAeronPort, final TestSystem testSystem)
+    {
+        return new LibraryDriver(testSystem, handler -> initiatingLibraryConfig(libraryAeronPort, handler));
+    }
+
+    private LibraryDriver(final TestSystem testSystem, final Function<FakeHandler, LibraryConfiguration> configFactory)
     {
         this.testSystem = testSystem;
 
-        final LibraryConfiguration configuration = SystemTestUtil.acceptingLibraryConfig(handler);
+        final LibraryConfiguration configuration = configFactory.apply(handler);
         configuration.libraryConnectHandler(fakeConnectHandler);
         library = testSystem.connect(configuration);
     }

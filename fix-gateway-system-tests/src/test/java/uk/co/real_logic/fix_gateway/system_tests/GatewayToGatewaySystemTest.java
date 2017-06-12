@@ -435,7 +435,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void librariesShouldBeNotifiedOfGatewayManagedSessionsOnConnect()
     {
-        try (LibraryDriver library2 = new LibraryDriver(testSystem))
+        try (LibraryDriver library2 = LibraryDriver.accepting(testSystem))
         {
             assertEquals(1, library2.awaitSessionId());
         }
@@ -492,7 +492,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void engineShouldAcquireTimedOutLibrariesSessions()
+    public void engineShouldAcquireTimedOutAcceptingSessions()
     {
         acquireAcceptingSession();
 
@@ -502,7 +502,15 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void engineShouldAcquireClosedLibrariesSessions()
+    public void engineShouldAcquireTimedOutInitiatingSessions()
+    {
+        testSystem.remove(initiatingLibrary);
+
+        initiatingEngineHasSessionAndLibraryIsNotified();
+    }
+
+    @Test
+    public void engineShouldAcquireAcceptingSessionsFromClosedLibrary()
     {
         acquireAcceptingSession();
         acceptingLibrary.close();
@@ -513,16 +521,38 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void libraryShouldSeeReleasedSession()
+    public void engineShouldAcquireInitiatingSessionsFromClosedLibrary()
+    {
+        initiatingLibrary.close();
+
+        assertEquals(DISABLED, initiatingSession.state());
+
+        initiatingEngineHasSessionAndLibraryIsNotified();
+    }
+
+    @Test
+    public void libraryShouldSeeReleasedAcceptingSession()
     {
         acquireAcceptingSession();
 
         releaseSessionToEngine(acceptingSession, acceptingLibrary, acceptingEngine);
 
-        try (LibraryDriver library2 = new LibraryDriver(testSystem))
+        try (LibraryDriver library2 = LibraryDriver.accepting(testSystem))
         {
             final CompleteSessionId sessionId = library2.awaitCompleteSessionId();
             assertSameSession(sessionId, acceptingSession);
+        }
+    }
+
+    @Test
+    public void libraryShouldSeeReleasedInitiatingSession()
+    {
+        releaseSessionToEngine(initiatingSession, initiatingLibrary, initiatingEngine);
+
+        try (LibraryDriver library2 = LibraryDriver.initiating(libraryAeronPort, testSystem))
+        {
+            final CompleteSessionId sessionId = library2.awaitCompleteSessionId();
+            assertSameSession(sessionId, initiatingSession);
         }
     }
 
@@ -697,6 +727,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final FixEngine engine)
     {
         final long connectionId = session.connectionId();
+        final long sessionId = session.id();
 
         final SessionReplyStatus status = releaseToGateway(library, session, testSystem);
 
@@ -705,7 +736,10 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertThat(library.sessions(), hasSize(0));
 
         final List<SessionInfo> sessions = gatewayLibraryInfo(engine).sessions();
-        assertThat(sessions, contains(hasConnectionId(connectionId)));
+        assertThat(sessions, contains(
+            allOf(
+                hasConnectionId(connectionId),
+                hasSessionId(sessionId))));
     }
 
     private void reacquireSession(
@@ -818,17 +852,29 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
     private void acceptingEngineHasSessionAndLibraryIsNotified()
     {
-        try (LibraryDriver library2 = new LibraryDriver(testSystem))
+        engineHasSessionAndLibraryIsNotified(LibraryDriver.accepting(testSystem), acceptingEngine, acceptingSession);
+    }
+
+    private void initiatingEngineHasSessionAndLibraryIsNotified()
+    {
+        engineHasSessionAndLibraryIsNotified(
+            LibraryDriver.initiating(libraryAeronPort, testSystem), initiatingEngine, initiatingSession);
+    }
+
+    private void engineHasSessionAndLibraryIsNotified(
+        final LibraryDriver libraryDriver, final FixEngine engine, final Session session)
+    {
+        try (LibraryDriver library2 = libraryDriver)
         {
-            library2.becomeOnlyLibraryConnectedTo(acceptingEngine);
+            library2.becomeOnlyLibraryConnectedTo(engine);
 
-            final LibraryInfo engine = engineLibrary(libraries(acceptingEngine));
+            final LibraryInfo engineLibraryInfo = engineLibrary(libraries(engine));
 
-            assertEquals(ENGINE_LIBRARY_ID, engine.libraryId());
-            assertThat(engine.sessions(), contains(hasConnectionId(acceptingSession.connectionId())));
+            assertEquals(ENGINE_LIBRARY_ID, engineLibraryInfo.libraryId());
+            assertThat(engineLibraryInfo.sessions(), contains(hasConnectionId(session.connectionId())));
 
             final CompleteSessionId sessionId = library2.awaitCompleteSessionId();
-            assertSameSession(sessionId, acceptingSession);
+            assertSameSession(sessionId, session);
         }
     }
 
