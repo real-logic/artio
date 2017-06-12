@@ -31,12 +31,15 @@ class LibraryDriver implements AutoCloseable
     private final FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
     private final FakeHandler handler = new FakeHandler(otfAcceptor);
     private final FixLibrary library;
+    private final TestSystem testSystem;
 
-    LibraryDriver()
+    LibraryDriver(final TestSystem testSystem)
     {
+        this.testSystem = testSystem;
+
         final LibraryConfiguration configuration = SystemTestUtil.acceptingLibraryConfig(handler);
         configuration.libraryConnectHandler(fakeConnectHandler);
-        library = SystemTestUtil.connect(configuration);
+        library = testSystem.connect(configuration);
     }
 
     long awaitSessionId()
@@ -46,7 +49,7 @@ class LibraryDriver implements AutoCloseable
 
     public void close()
     {
-        library.close();
+        testSystem.close(library);
     }
 
     void becomeOnlyLibraryConnectedTo(final FixEngine engine)
@@ -66,13 +69,9 @@ class LibraryDriver implements AutoCloseable
             () -> {});
     }
 
-    private int poll()
+    private void poll()
     {
-        return library.poll(LIBRARY_LIMIT);
+        testSystem.poll();
     }
 
-    void clearSesssions()
-    {
-        handler.clearSessions();
-    }
 }

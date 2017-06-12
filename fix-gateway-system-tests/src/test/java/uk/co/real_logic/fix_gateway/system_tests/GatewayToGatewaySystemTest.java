@@ -434,7 +434,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void librariesShouldBeNotifiedOfGatewayManagedSessionsOnConnect()
     {
-        try (LibraryDriver library2 = new LibraryDriver())
+        try (LibraryDriver library2 = new LibraryDriver(testSystem))
         {
             assertEquals(1, library2.awaitSessionId());
         }
@@ -495,11 +495,27 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
+        testSystem.remove(acceptingLibrary);
+
         acceptingEngineHasSessionAndLibraryIsNotified();
     }
 
     @Test
     public void engineShouldAcquireClosedLibrariesSessions()
+    {
+        acquireAcceptingSession();
+
+        releaseSessionToEngine(acceptingSession, acceptingLibrary, acceptingEngine);
+
+        try (LibraryDriver library2 = new LibraryDriver(testSystem))
+        {
+            final long sessionId = library2.awaitSessionId();
+            assertEquals(sessionId, acceptingSession.id());
+        }
+    }
+
+    @Test
+    public void libraryShouldSeeReleasedSession()
     {
         acquireAcceptingSession();
         acceptingLibrary.close();
@@ -797,5 +813,21 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         return testSystem.awaitReply(engine.lookupSessionId(
             localCompId, remoteCompId, null, null, null, null));
+    }
+
+    private void acceptingEngineHasSessionAndLibraryIsNotified()
+    {
+        try (LibraryDriver library2 = new LibraryDriver(testSystem))
+        {
+            library2.becomeOnlyLibraryConnectedTo(acceptingEngine);
+
+            final LibraryInfo engine = engineLibrary(libraries(acceptingEngine));
+
+            assertEquals(ENGINE_LIBRARY_ID, engine.libraryId());
+            assertThat(engine.sessions(), contains(hasConnectionId(acceptingSession.connectionId())));
+
+            final long sessionId = library2.awaitSessionId();
+            assertEquals(sessionId, acceptingSession.id());
+        }
     }
 }

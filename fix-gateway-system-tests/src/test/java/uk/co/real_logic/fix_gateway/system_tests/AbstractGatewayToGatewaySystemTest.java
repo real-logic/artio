@@ -23,20 +23,17 @@ import uk.co.real_logic.fix_gateway.Reply.State;
 import uk.co.real_logic.fix_gateway.builder.ResendRequestEncoder;
 import uk.co.real_logic.fix_gateway.decoder.Constants;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
-import uk.co.real_logic.fix_gateway.engine.framer.LibraryInfo;
 import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.session.Session;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
-import static uk.co.real_logic.fix_gateway.FixMatchers.hasConnectionId;
 import static uk.co.real_logic.fix_gateway.FixMatchers.hasSequenceIndex;
 import static uk.co.real_logic.fix_gateway.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.fix_gateway.TestFixtures.unusedPort;
 import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.*;
-import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.PASSWORD;
@@ -246,22 +243,6 @@ public class AbstractGatewayToGatewaySystemTest
     {
         acceptingEngine = FixEngine.launch(
             acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID));
-    }
-
-    protected void acceptingEngineHasSessionAndLibraryIsNotified()
-    {
-        try (LibraryDriver library2 = new LibraryDriver())
-        {
-            library2.becomeOnlyLibraryConnectedTo(acceptingEngine);
-
-            final LibraryInfo engine = engineLibrary(libraries(acceptingEngine));
-
-            assertEquals(ENGINE_LIBRARY_ID, engine.libraryId());
-            assertThat(engine.sessions(), contains(hasConnectionId(acceptingSession.connectionId())));
-
-            final long sessionId = library2.awaitSessionId();
-            assertEquals(sessionId, acceptingSession.id());
-        }
     }
 
     protected void assertSequenceIndicesAre(final int sequenceIndex)

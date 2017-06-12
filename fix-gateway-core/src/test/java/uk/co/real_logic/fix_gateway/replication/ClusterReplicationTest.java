@@ -423,6 +423,7 @@ public class ClusterReplicationTest
         return node.replicatedPosition() == position;
     }
 
+    // TODO: what happens if the leader changes in the middle of this test?
     private long sendMessageTo(final NodeRunner leader)
     {
         final ClusterablePublication publication = leader.publication();
