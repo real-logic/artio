@@ -27,6 +27,7 @@ import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 import uk.co.real_logic.fix_gateway.messages.SessionReplyStatus;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
+import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
 
 import java.util.List;
@@ -509,9 +510,18 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         try (LibraryDriver library2 = new LibraryDriver(testSystem))
         {
-            final long sessionId = library2.awaitSessionId();
-            assertEquals(sessionId, acceptingSession.id());
+            final CompleteSessionId sessionId = library2.awaitCompleteSessionId();
+            assertSameSession(sessionId, acceptingSession);
         }
+    }
+
+    private void assertSameSession(final CompleteSessionId sessionId, final Session session)
+    {
+        final CompositeKey compositeKey = session.compositeKey();
+
+        assertEquals(sessionId.surrogateId(), session.id());
+        assertEquals(compositeKey.localCompId(), sessionId.localCompId());
+        assertEquals(compositeKey.remoteCompId(), sessionId.remoteCompId());
     }
 
     @Test
@@ -826,8 +836,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             assertEquals(ENGINE_LIBRARY_ID, engine.libraryId());
             assertThat(engine.sessions(), contains(hasConnectionId(acceptingSession.connectionId())));
 
-            final long sessionId = library2.awaitSessionId();
-            assertEquals(sessionId, acceptingSession.id());
+            final CompleteSessionId sessionId = library2.awaitCompleteSessionId();
+            assertSameSession(sessionId, acceptingSession);
         }
     }
 }

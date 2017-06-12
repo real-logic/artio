@@ -47,6 +47,11 @@ class LibraryDriver implements AutoCloseable
         return handler.awaitSessionId(this::poll);
     }
 
+    CompleteSessionId awaitCompleteSessionId()
+    {
+        return handler.awaitCompleteSessionId(this::poll);
+    }
+
     public void close()
     {
         testSystem.close(library);
