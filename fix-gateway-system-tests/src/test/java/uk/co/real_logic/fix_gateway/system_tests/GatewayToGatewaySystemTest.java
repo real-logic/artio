@@ -312,7 +312,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final long sessionId = initiatingSession.id();
 
-        releaseToGateway(initiatingLibrary, initiatingSession);
+        releaseToGateway(initiatingLibrary, initiatingSession, testSystem);
 
         libraryNotifiedThatGatewayOwnsSession(initiatingHandler, sessionId);
 
@@ -331,7 +331,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final long sessionId = acceptingSession.id();
         acceptingHandler.clearSessions();
 
-        releaseToGateway(acceptingLibrary, acceptingSession);
+        releaseToGateway(acceptingLibrary, acceptingSession, testSystem);
 
         libraryNotifiedThatGatewayOwnsSession(acceptingHandler, sessionId);
 
@@ -698,7 +698,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         final long connectionId = session.connectionId();
 
-        final SessionReplyStatus status = releaseToGateway(library, session);
+        final SessionReplyStatus status = releaseToGateway(library, session, testSystem);
 
         assertEquals(OK, status);
         assertEquals(SessionState.DISABLED, session.state());
@@ -764,7 +764,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final int sequenceIndex = session.sequenceIndex();
         final List<FixMessage> messages = otfAcceptor.messages();
 
-        releaseToGateway(library, session);
+        releaseToGateway(library, session, testSystem);
 
         messagesCanBeExchanged(otherSession, otherAcceptor);
 

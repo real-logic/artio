@@ -179,14 +179,6 @@ public final class SystemTestUtil
             });
     }
 
-    public static SessionReplyStatus releaseToGateway(final FixLibrary library, final Session session)
-    {
-        final Reply<SessionReplyStatus> reply = library.releaseToGateway(session, DEFAULT_REPLY_TIMEOUT_IN_MS);
-        awaitLibraryReply(library, reply);
-
-        return reply.resultIfPresent();
-    }
-
     public static SessionReplyStatus releaseToGateway(
         final FixLibrary library, final Session session, final TestSystem testSystem)
     {
