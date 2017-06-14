@@ -636,6 +636,7 @@ public class GatewayPublication extends ClaimablePublication
     public long saveReleaseSession(
         final int libraryId,
         final long connectionId,
+        final long sessionId,
         final long correlationId,
         final SessionState state,
         final long heartbeatIntervalInMs,
@@ -660,6 +661,7 @@ public class GatewayPublication extends ClaimablePublication
             .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .connection(connectionId)
+            .sessionId(sessionId)
             .correlationId(correlationId)
             .heartbeatIntervalInMs(heartbeatIntervalInMs)
             .state(state)

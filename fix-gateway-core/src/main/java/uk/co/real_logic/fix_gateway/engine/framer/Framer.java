@@ -949,6 +949,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     public Action onReleaseSession(
         final int libraryId,
         final long connectionId,
+        final long sessionId,
         final long correlationId,
         final SessionState state,
         final long heartbeatIntervalInMs,
@@ -966,7 +967,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     libraryId, SessionReplyStatus.UNKNOWN_LIBRARY, correlationId));
         }
 
+        DebugLogger.log(CLUSTER_MANAGEMENT, "Releasing session %s with connectionId %s from library %s%n", sessionId, connectionId, libraryId);
+
         final GatewaySession session = libraryInfo.removeSession(connectionId);
+
         if (session == null)
         {
             return Pressure.apply(
