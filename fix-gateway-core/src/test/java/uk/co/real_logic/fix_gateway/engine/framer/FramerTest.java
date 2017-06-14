@@ -777,11 +777,16 @@ public class FramerTest
 
         assertEquals(CONTINUE, onInitiateConnection());
 
+        int NO_WORK_LEEWAY = 20;
+        int zeroWorkDoneCount = 0;
+
         do
         {
-            framer.doWork();
+            if(framer.doWork() == 0){
+                zeroWorkDoneCount++;
+            }
         }
-        while (server.accept() == null);
+        while (zeroWorkDoneCount < NO_WORK_LEEWAY);
 
         assertNotNull("Connection not completed yet", connectionId.getValue());
     }
