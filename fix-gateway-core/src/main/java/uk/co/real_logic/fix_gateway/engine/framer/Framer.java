@@ -596,6 +596,28 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return CONTINUE;
         }
 
+        final CompositeKey sessionKey = sessionIdStrategy.onInitiateLogon(
+                senderCompId,
+                senderSubId,
+                senderLocationId,
+                targetCompId,
+                targetSubId,
+                targetLocationId);
+
+        final SessionContext sessionContext = sessionContexts.onLogon(sessionKey);
+
+        if (sessionContext == SessionContexts.DUPLICATE_SESSION)
+        {
+            final long sessionId = sessionContexts.lookupSessionId(sessionKey);
+            final int owningLibraryId = senderEndPoints.libraryLookup().applyAsInt(sessionId);
+            saveError(DUPLICATE_SESSION, libraryId, correlationId,
+                      "Duplicate Session for: " + sessionKey +
+                      " Surrogate Key: " + sessionId +
+                      " Currently owned by " + owningLibraryId);
+
+            return CONTINUE;
+        }
+
         try
         {
             final InetSocketAddress address = new InetSocketAddress(host, port);
@@ -604,6 +626,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 {
                     if (ex != null)
                     {
+                        sessionContexts.onDisconnect(sessionContext.sessionId());
                         saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
                         return;
                     }
@@ -625,11 +648,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         header,
                         library,
                         address,
-                        channel);
+                        channel,
+                        sessionContext,
+                        sessionKey);
                 });
         }
         catch (final Exception e)
         {
+            sessionContexts.onDisconnect(sessionContext.sessionId());
             saveError(UNABLE_TO_CONNECT, libraryId, correlationId, e);
 
             return CONTINUE;
@@ -655,33 +681,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final Header header,
         final LiveLibraryInfo library,
         final InetSocketAddress address,
-        final TcpChannel channel)
+        final TcpChannel channel,
+        final SessionContext sessionContext,
+        final CompositeKey sessionKey)
     {
         try
         {
             final long connectionId = this.nextConnectionId++;
-
-            final CompositeKey sessionKey = sessionIdStrategy.onInitiateLogon(
-                senderCompId,
-                senderSubId,
-                senderLocationId,
-                targetCompId,
-                targetSubId,
-                targetLocationId);
-            final SessionContext sessionContext = sessionContexts.onLogon(sessionKey);
-            if (sessionContext == SessionContexts.DUPLICATE_SESSION)
-            {
-                final long sessionId = sessionContexts.lookupSessionId(sessionKey);
-                final int owningLibraryId = senderEndPoints.libraryLookup().applyAsInt(sessionId);
-                saveError(DUPLICATE_SESSION, libraryId, correlationId,
-                    "Duplicate Session for: " + sessionKey +
-                    " Surrogate Key: " + sessionId +
-                    " Currently owned by " + owningLibraryId);
-
-                channel.close();
-
-                return;
-            }
 
             sessionContext.onLogon(resetSequenceNumber || sequenceNumberType == TRANSIENT);
             final long sessionId = sessionContext.sessionId();

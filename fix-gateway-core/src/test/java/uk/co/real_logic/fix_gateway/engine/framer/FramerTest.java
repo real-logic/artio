@@ -313,8 +313,7 @@ public class FramerTest
         try
         {
             framer.doWork();
-        }
-        catch (final Exception ex)
+        } catch (final Exception ex)
         {
             LangUtil.rethrowUnchecked(ex);
         }
@@ -331,9 +330,12 @@ public class FramerTest
 
         when(sessionContexts.onLogon(any())).thenReturn(SessionContexts.DUPLICATE_SESSION);
 
-        initiateConnection();
+        // Don't wait for connection of duplicated session because it should not connect.
+        libraryConnects();
+        assertEquals(CONTINUE, onInitiateConnection());
 
         verifyErrorPublished(DUPLICATE_SESSION);
+        assertNull(server.accept());
     }
 
     @Test
@@ -650,8 +652,7 @@ public class FramerTest
             try
             {
                 client.write(buffer);
-            }
-            catch (final IOException ignore)
+            } catch (final IOException ignore)
             {
                 return;
             }
@@ -679,7 +680,7 @@ public class FramerTest
 
     private void sessionIsActive()
     {
-        when(gatewaySessions.releaseBySessionId(SESSION_ID)).thenReturn(gatewaySession, (GatewaySession)null);
+        when(gatewaySessions.releaseBySessionId(SESSION_ID)).thenReturn(gatewaySession, (GatewaySession) null);
         when(gatewaySession.session()).thenReturn(session);
         when(gatewaySession.heartbeatIntervalInS()).thenReturn(HEARTBEAT_INTERVAL_IN_S);
         when(session.isActive()).thenReturn(true);
