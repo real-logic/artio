@@ -20,6 +20,7 @@ import org.agrona.collections.Int2IntHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.Timing;
@@ -216,6 +217,7 @@ public class ClusterReplicationTest
         eventuallyOneLeaderAndTwoFollowersWithSameLeader();
     }
 
+    @Ignore
     @Test
     public void shouldReplicateMessageAfterClusterReformed()
     {
