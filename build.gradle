@@ -286,8 +286,8 @@ project(':fix-gateway-system-tests') {
             "io.aeron:aeron-client:${aeronVersion}"
 
         perfCompile project,
-            'org.openjdk.jmh:jmh-core:1.18',
-            'org.openjdk.jmh:jmh-generator-annprocess:1.18'
+            'org.openjdk.jmh:jmh-core:1.19',
+            'org.openjdk.jmh:jmh-generator-annprocess:1.19'
     }
 
     idea.module {
@@ -302,9 +302,7 @@ project(':fix-gateway-system-tests') {
             from sourceSets.perf.output
             from project.configurations.perfRuntime
 
-            manifest {
-                attributes "Main-Class": "org.openjdk.jmh.Main"
-            }
+            manifest.attributes('Main-Class': 'org.openjdk.jmh.Main')
         }
 
         doLast {
