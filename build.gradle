@@ -197,7 +197,7 @@ project(':fix-gateway-codecs') {
     }
 
     jar {
-        from("$buildDir/classes/generated") {
+        from(sourceSets.generated.output) {
             include '**/*.class'
         }
     }
@@ -228,7 +228,7 @@ project(':fix-gateway-session-codecs') {
     }
 
     jar {
-        from("$buildDir/classes/generated") {
+        from(sourceSets.generated.output) {
             include '**/*.class'
         }
     }
