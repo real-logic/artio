@@ -30,8 +30,8 @@ public class DynamicLibraryScheduler implements LibraryScheduler
     private final DynamicCompositeAgent dynamicAgent = new DynamicCompositeAgent("Monitoring+ClientConductor");
 
     // GuardedBy synchronized launch + close
-    private final Int2ObjectHashMap<Agent> libraryIdToMonitoring = new Int2ObjectHashMap<>();
-    private final Int2ObjectHashMap<Agent> libraryIdToClientConductor = new Int2ObjectHashMap<>();
+    private final Int2ObjectHashMap<Agent> libraryIdToDelegateAgent = new Int2ObjectHashMap<>();
+
     private AgentRunner runner;
 
     public synchronized void launch(
@@ -41,27 +41,26 @@ public class DynamicLibraryScheduler implements LibraryScheduler
     {
         if (runner == null)
         {
+            // We shouldn't reach this default error handler because we catch exceptions in the CombinedAgent below.
             runner = new AgentRunner(
-                    configuration.monitoringThreadIdleStrategy(), errorHandler, null, dynamicAgent);
+                    configuration.monitoringThreadIdleStrategy(), (e)->e.printStackTrace(), null, dynamicAgent);
             AgentRunner.startOnThread(runner);
         }
 
         final int libraryId = configuration.libraryId();
         final Agent conductorAgent = configuration.conductorAgent();
+        final Agent combinedAgent = new CombinedAgent(libraryId, monitoringAgent, conductorAgent, errorHandler);
 
-        libraryIdToMonitoring.put(libraryId, monitoringAgent);
-        libraryIdToClientConductor.put(libraryId, conductorAgent);
+        libraryIdToDelegateAgent.put(libraryId, combinedAgent);
 
-        dynamicAgent.add(monitoringAgent);
-        dynamicAgent.add(conductorAgent);
+        dynamicAgent.add(combinedAgent);
     }
 
     public synchronized void close(final int libraryId)
     {
-        dynamicAgent.remove(libraryIdToMonitoring.remove(libraryId));
-        dynamicAgent.remove(libraryIdToClientConductor.remove(libraryId));
+        dynamicAgent.remove(libraryIdToDelegateAgent.remove(libraryId));
 
-        if (libraryIdToMonitoring.isEmpty())
+        if (libraryIdToDelegateAgent.isEmpty())
         {
             CloseHelper.close(runner);
             runner = null;
@@ -74,4 +73,37 @@ public class DynamicLibraryScheduler implements LibraryScheduler
             .useConductorAgentInvoker(true);
     }
 
+    private static class CombinedAgent implements Agent {
+        private final Agent monitoringAgent;
+        private final Agent clientConductorAgent;
+        private final ErrorHandler errorHandler;
+        private final String roleName;
+
+        private CombinedAgent(int libraryId, Agent monitoringAgent, Agent clientConductorAgent, ErrorHandler errorHandler) {
+            this.roleName = "[Library:" + libraryId + ":monitoring+conductor]";
+            this.monitoringAgent = monitoringAgent;
+            this.clientConductorAgent = clientConductorAgent;
+            this.errorHandler = errorHandler;
+        }
+
+        @Override
+        public int doWork() throws Exception {
+            int count = 0;
+
+            try {
+                count += monitoringAgent.doWork();
+                count += clientConductorAgent.doWork();
+            } catch(Throwable throwable){
+                System.out.println("Here...");
+                errorHandler.onError(throwable);
+            }
+
+            return count;
+        }
+
+        @Override
+        public String roleName() {
+            return roleName;
+        }
+    }
 }

@@ -137,6 +137,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // Combined with Library Id, uniquely identifies library connection
     private long connectCorrelationId = NO_CORRELATION_ID;
+    private volatile Throwable remoteThrowable;
 
     LibraryPoller(
         final LibraryConfiguration configuration,
@@ -275,6 +276,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     int poll(final int fragmentLimit)
     {
         final long timeInMs = timeInMs();
+
+        if(null != remoteThrowable){
+            LangUtil.rethrowUnchecked(remoteThrowable);
+        }
+
         switch (state)
         {
             case CONNECTED:
@@ -307,6 +313,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         operations += livenessDetector.poll(timeInMs);
         operations += checkReplies(timeInMs);
         return operations;
+    }
+
+    void postExceptionToLibraryThread(Throwable t){
+        this.remoteThrowable = t;
     }
 
     // -----------------------------------------------------------------------
