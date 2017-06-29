@@ -211,6 +211,18 @@ public final class DebugLogger
     }
 
     public static void log(
+            final LogTag tag,
+            final String formatString,
+            final long first,
+            final Object second)
+    {
+        if (isEnabled(tag))
+        {
+            printf(formatString, first, second);
+        }
+    }
+
+    public static void log(
         final LogTag tag,
         final String formatString,
         final long first,

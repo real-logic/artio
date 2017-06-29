@@ -27,6 +27,7 @@ import static java.util.Collections.unmodifiableList;
 final class LiveLibraryInfo implements LibraryInfo
 {
     private final int libraryId;
+    private final String libraryName;
     private final LivenessDetector livenessDetector;
     private final int aeronSessionId;
     private final LibrarySlowPeeker librarySlowPeeker;
@@ -36,11 +37,13 @@ final class LiveLibraryInfo implements LibraryInfo
 
     LiveLibraryInfo(
         final int libraryId,
+        final String libraryName,
         final LivenessDetector livenessDetector,
         final int aeronSessionId,
         final LibrarySlowPeeker librarySlowPeeker)
     {
         this.libraryId = libraryId;
+        this.libraryName = libraryName;
         this.livenessDetector = livenessDetector;
         this.aeronSessionId = aeronSessionId;
         this.librarySlowPeeker = librarySlowPeeker;
@@ -49,6 +52,11 @@ final class LiveLibraryInfo implements LibraryInfo
     public int libraryId()
     {
         return libraryId;
+    }
+
+    public String libraryName()
+    {
+        return libraryName;
     }
 
     public List<SessionInfo> sessions()
