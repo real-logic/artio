@@ -105,6 +105,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
     {
         libraryConnect.wrap(buffer, offset, blockLength, version);
         final int libraryId = libraryConnect.libraryId();
+        final String libraryName = libraryConnect.libraryName();
         final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
         if (action == ABORT)
         {
@@ -112,6 +113,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         }
         return handler.onLibraryConnect(
             libraryId,
+            libraryName,
             libraryConnect.correlationId(),
             header.sessionId());
     }

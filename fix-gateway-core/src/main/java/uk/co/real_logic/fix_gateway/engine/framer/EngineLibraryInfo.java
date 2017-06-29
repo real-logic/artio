@@ -38,6 +38,12 @@ class EngineLibraryInfo implements LibraryInfo
         return ENGINE_LIBRARY_ID;
     }
 
+    @Override
+    public String libraryName()
+    {
+        return "Gateway Library";
+    }
+
     public List<SessionInfo> sessions()
     {
         return sessions;
