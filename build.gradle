@@ -346,12 +346,12 @@ if (System.properties["uploadArchives"] != null) {
                         packaging = 'pom'
                         description = 'Resilient High-Performance FIX Gateway'
 
-                        url = 'https://github.com/real-logic/FIX-Gateway'
+                        url = 'https://github.com/real-logic/fix-gateway'
 
                         scm {
-                            connection = 'scm:git:https://github.com/real-logic/FIX-Gateway.git'
-                            developerConnection = 'scm:git:https://github.com/real-logic/FIX-Gateway.git'
-                            url = 'https://github.com/real-logic/FIX-Gateway.git'
+                            connection = 'scm:git:https://github.com/real-logic/fix-gateway.git'
+                            developerConnection = 'scm:git:https://github.com/real-logic/fix-gateway.git'
+                            url = 'https://github.com/real-logic/fix-gateway.git'
                         }
 
                         licenses {
