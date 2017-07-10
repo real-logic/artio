@@ -23,8 +23,8 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.OngoingStubbing;
+import uk.co.real_logic.fix_gateway.messages.ManageSessionEncoder;
 import uk.co.real_logic.fix_gateway.messages.MessageHeaderEncoder;
-import uk.co.real_logic.fix_gateway.messages.SessionExistsEncoder;
 
 import java.io.File;
 import java.io.IOException;
@@ -54,7 +54,7 @@ public class ReplayIndexTest extends AbstractLogTest
     private UnsafeBuffer replayPositionBuffer = new UnsafeBuffer(new byte[REPLAY_POSITION_BUFFER_SIZE]);
     private IndexedPositionConsumer positionConsumer = mock(IndexedPositionConsumer.class);
     private IndexedPositionReader positionReader = new IndexedPositionReader(replayPositionBuffer);
-    private SessionExistsEncoder logon = new SessionExistsEncoder();
+    private ManageSessionEncoder logon = new ManageSessionEncoder();
 
     private void newReplayIndex()
     {

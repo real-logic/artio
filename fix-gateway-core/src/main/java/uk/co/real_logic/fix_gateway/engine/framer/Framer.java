@@ -96,6 +96,8 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.CONNECTED;
  */
 class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 {
+    // TODO(Nick): This is a copy of the one from LibraryPoller, but that one is also private so we can't access. Combine somewhere.
+    static final long NO_CORRELATION_ID = 0;
     private static final ByteBuffer CONNECT_ERROR;
     private static final List<SessionInfo> NO_SESSIONS = emptyList();
 
@@ -500,7 +502,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 session.password(),
                 engineBlockablePosition);
 
-            schedule(() -> saveSessionExists(
+            schedule(() -> saveManageSession(
                 ENGINE_LIBRARY_ID,
                 session,
                 sentSequenceNumber,
@@ -723,25 +725,32 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 {
                     work(
                         this::checkLoggerUpToDate,
-                        this::saveManageConnection,
-                        this::saveSessionExists);
+                        this::saveManageSession);
                 }
 
-                private long saveSessionExists()
+                private long saveManageSession()
                 {
-                    return inboundPublication.saveSessionExists(
-                        libraryId, connectionId, sessionId,
-                        lastSentSequenceNumber, lastReceivedSequenceNumber,
-                        senderCompId, senderSubId, senderLocationId, targetCompId, targetSubId,
-                        targetLocationId, username, password, LogonStatus.NEW, SlowStatus.NOT_SLOW);
-                }
-
-                private long saveManageConnection()
-                {
-                    return inboundPublication.saveManageConnection(
-                        connectionId, sessionId, address.toString(), libraryId, INITIATOR,
-                        lastSentSequenceNumber, lastReceivedSequenceNumber,
-                        CONNECTED, heartbeatIntervalInS, correlationId, sessionContext.sequenceIndex());
+                    final long result = inboundPublication.saveManageSession(libraryId,
+                                                                        connectionId,
+                                                                        sessionId,
+                                                                        lastSentSequenceNumber,
+                                                                        lastReceivedSequenceNumber,
+                                                                        Session.NO_LOGON_TIME,
+                                                                        LogonStatus.NEW,
+                                                                        SlowStatus.NOT_SLOW,
+                                                                        INITIATOR,
+                                                                        CONNECTED,
+                                                                        heartbeatIntervalInS,
+                                                                        correlationId,
+                                                                        sessionContext.sequenceIndex(),
+                                                                        senderCompId,
+                                                                        senderSubId,
+                                                                        senderLocationId,
+                                                                        targetCompId,
+                                                                        targetSubId,
+                                                                        targetLocationId,
+                                                                        address.toString());
+                    return result;
                 }
 
                 private long checkLoggerUpToDate()
@@ -929,7 +938,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         for (final GatewaySession gatewaySession : gatewaySessions.sessions())
         {
             unitsOfWork.add(
-                () -> saveSessionExists(libraryId, gatewaySession, UNK_SESSION, UNK_SESSION, LIBRARY_NOTIFICATION));
+                    // TODO(Nick): UNK_SESSION is the wrong constant to use?
+                () -> saveManageSession(libraryId, gatewaySession, UNK_SESSION, UNK_SESSION, LIBRARY_NOTIFICATION));
         }
 
         return retryManager.firstAttempt(correlationId, new UnitOfWork(unitsOfWork));
@@ -1013,7 +1023,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 password,
                 engineBlockablePosition);
 
-            schedule(() -> saveSessionExists(
+            schedule(() -> saveManageSession(
                 ENGINE_LIBRARY_ID,
                 session,
                 lastSentSequenceNumber,
@@ -1065,27 +1075,35 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int lastSentSeqNum = session.lastSentMsgSeqNum();
         final int lastRecvSeqNum = session.lastReceivedMsgSeqNum();
         final SessionState sessionState = session.state();
+        final long logonTime = session.logonTime();
         gatewaySession.handoverManagementTo(libraryId, libraryInfo.librarySlowPeeker());
         libraryInfo.addSession(gatewaySession);
 
         DebugLogger.log(CLUSTER_MANAGEMENT, "Handing control for session %s to library %s%n", sessionId, libraryId);
 
         final List<Continuation> continuations = new ArrayList<>();
-        continuations.add(() -> inboundPublication.saveManageConnection(
-            connectionId,
-            sessionId,
-            gatewaySession.address(),
-            libraryId,
-            gatewaySession.connectionType(),
-            lastSentSeqNum,
-            lastRecvSeqNum,
-            sessionState,
-            gatewaySession.heartbeatIntervalInS(),
-            correlationId,
-            gatewaySession.sequenceIndex()));
 
-        continuations.add(() ->
-            saveSessionExists(libraryId, gatewaySession, lastSentSeqNum, lastRecvSeqNum, LogonStatus.NEW));
+        continuations.add(() -> inboundPublication.saveManageSession(
+                libraryId,
+                connectionId,
+                sessionId,
+                lastSentSeqNum,
+                lastRecvSeqNum,
+                logonTime,
+                LogonStatus.NEW,
+                gatewaySession.slowStatus(),
+                gatewaySession.connectionType(),
+                sessionState,
+                gatewaySession.heartbeatIntervalInS(),
+                correlationId,
+                gatewaySession.sequenceIndex(),
+                session.compositeKey().localCompId(),
+                session.compositeKey().localSubId(),
+                session.compositeKey().localLocationId(),
+                session.compositeKey().remoteCompId(),
+                session.compositeKey().remoteSubId(),
+                session.compositeKey().remoteLocationId(),
+                gatewaySession.address()));
 
         catchupSession(
             continuations,
@@ -1100,7 +1118,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return retryManager.firstAttempt(correlationId, new UnitOfWork(continuations));
     }
 
-    private long saveSessionExists(
+    private long saveManageSession(
         final int libraryId,
         final GatewaySession gatewaySession,
         final int lastSentSeqNum,
@@ -1111,26 +1129,27 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (compositeKey != null)
         {
             final long connectionId = gatewaySession.connectionId();
-            final String username = gatewaySession.username();
-            final String password = gatewaySession.password();
-            final SlowStatus slowStatus = gatewaySession.bytesInBuffer() > 0 ? SlowStatus.SLOW : SlowStatus.NOT_SLOW;
 
-            return inboundPublication.saveSessionExists(
-                libraryId,
-                connectionId,
-                gatewaySession.sessionId(),
-                lastSentSeqNum,
-                lastReceivedSeqNum,
-                compositeKey.localCompId(),
-                compositeKey.localSubId(),
-                compositeKey.localLocationId(),
-                compositeKey.remoteCompId(),
-                compositeKey.remoteSubId(),
-                compositeKey.remoteLocationId(),
-                username,
-                password,
-                logonstatus,
-                slowStatus);
+            long result = inboundPublication.saveManageSession(libraryId,
+                                                        connectionId,
+                                                        gatewaySession.sessionId(),
+                                                        lastSentSeqNum,
+                                                        lastReceivedSeqNum,
+                                                        gatewaySession.session().logonTime(),
+                                                        logonstatus,
+                                                        gatewaySession.slowStatus(),
+                                                        gatewaySession.connectionType(),
+                                                        gatewaySession.session().state(),
+                                                        gatewaySession.heartbeatIntervalInS(),
+                                                        NO_CORRELATION_ID,
+                                                        gatewaySession.sequenceIndex(),
+                                                        compositeKey.localCompId(),
+                                                        compositeKey.localSubId(),
+                                                        compositeKey.localLocationId(),
+                                                        compositeKey.remoteCompId(),
+                                                        compositeKey.remoteSubId(),
+                                                        compositeKey.remoteLocationId(), gatewaySession.address());
+            return result;
         }
 
         return COMPLETE;

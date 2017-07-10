@@ -82,6 +82,8 @@ public class Session implements AutoCloseable
     public static final long UNKNOWN = -1;
     public static final long NO_OPERATION = MIN_VALUE;
     public static final long LIBRARY_DISCONNECTED = NO_OPERATION + 1;
+    public static final long NO_LOGON_TIME = -1;
+    public static final long INITIAL_SEQUENCE_NUMBER = 1;
 
     static final short ACTIVE_VALUE = 3;
     static final short AWAITING_RESEND_VALUE = 4;
@@ -131,6 +133,7 @@ public class Session implements AutoCloseable
     private String password;
     private String connectedHost;
     private int connectedPort;
+    private long logonTime = NO_LOGON_TIME;
 
     private boolean incorrectBeginString = false;
     protected boolean resendSaveLogon = false;
@@ -745,6 +748,8 @@ public class Session implements AutoCloseable
     {
         setupSession(sessionId, sessionKey);
 
+        long logonTime = sendingTime(sendingTime, origSendingTime);
+
         if (state() == SessionState.CONNECTED)
         {
             resendSaveLogon = true;
@@ -770,6 +775,12 @@ public class Session implements AutoCloseable
                 }
 
                 setLogonState(heartbeatInterval, username, password);
+
+                if(INITIAL_SEQUENCE_NUMBER == msgSeqNo){
+                    // Incoming initiators are allowed to start a session from 1
+                    // Without also sending 141=Y if the session was previously logged out cleanly.
+                    logonTime(logonTime);
+                }
             }
             else if (expectedSeqNo < msgSeqNo)
             {
@@ -785,11 +796,12 @@ public class Session implements AutoCloseable
 
         if (resetSeqNumFlag)
         {
-            final Action action = onResetSeqNumLogon(heartbeatInterval, msgSeqNo, username, password);
+            final Action action = onResetSeqNumLogon(heartbeatInterval, msgSeqNo, username, password, logonTime);
             if (action != null)
             {
                 return action;
             }
+
         }
 
         if (checkResendSaveLogon(sessionId))
@@ -805,7 +817,8 @@ public class Session implements AutoCloseable
     {
         if (resendSaveLogon)
         {
-            final long position = publication.saveSessionExists(libraryId, connectionId, sessionId);
+            // TODO(Nick): Why is this published? Do we have enough details?
+            final long position = publication.saveManageSession(libraryId, connectionId, sessionId);
             if (position < 0)
             {
                 return true;
@@ -819,13 +832,18 @@ public class Session implements AutoCloseable
         final int heartbeatInterval,
         final int msgSeqNo,
         final String username,
-        final String password)
+        final String password,
+        final long sendingTime)
     {
         if (lastSentMsgSeqNum() == 1)
         {
+            // You've received a reply to a resetSeqNumFlag = Y message
             lastReceivedMsgSeqNumOnly(1);
             setLogonState(heartbeatInterval, username, password);
-            // You've received a reply to a resetSeqNumFlag = Y message
+            // logon time becomes time of the confirmation message.
+            logonTime(sendingTime);
+
+            // TODO(Nick): Publish event to signify the session start time should be reset.
             return CONTINUE;
         }
 
@@ -1177,6 +1195,17 @@ public class Session implements AutoCloseable
         return this;
     }
 
+    public Session logonTime(final long logonTime)
+    {
+        this.logonTime = logonTime;
+        return this;
+    }
+
+    public long logonTime()
+    {
+        return this.logonTime;
+    }
+
     // Visible for testing
     public Action onInvalidMessage(
         final int refSeqNum,
@@ -1254,5 +1283,10 @@ public class Session implements AutoCloseable
     void sequenceIndex(final int sequenceIndex)
     {
         this.sequenceIndex = sequenceIndex;
+    }
+
+    protected long sendingTime(long sendingTime, long origSendingTime)
+    {
+        return UNKNOWN == origSendingTime ? sendingTime : origSendingTime;
     }
 }

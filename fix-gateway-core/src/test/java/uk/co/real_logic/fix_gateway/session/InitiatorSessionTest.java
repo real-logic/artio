@@ -105,7 +105,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
     {
         session.state(SENT_LOGON);
 
-        when(mockPublication.saveSessionExists(anyInt(), anyLong(), anyLong()))
+        when(mockPublication.saveManageSession(anyInt(), anyLong(), anyLong()))
             .thenReturn(BACK_PRESSURED, POSITION);
 
         assertEquals(ABORT, onLogon(1));
@@ -135,7 +135,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
     private void verifySavesLogonMessage(final VerificationMode verificationMode)
     {
-        verify(mockPublication, verificationMode).saveSessionExists(LIBRARY_ID, CONNECTION_ID, SESSION_ID);
+        verify(mockPublication, verificationMode).saveManageSession(LIBRARY_ID, CONNECTION_ID, SESSION_ID);
     }
 
     private void verifyLogon()

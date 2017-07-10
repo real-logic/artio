@@ -22,38 +22,6 @@ import uk.co.real_logic.fix_gateway.messages.ControlNotificationDecoder.Sessions
 
 public interface LibraryEndPointHandler
 {
-    Action onManageConnection(
-        int libraryId,
-        long connectionId,
-        long sessionId,
-        ConnectionType type,
-        int lastSequenceNumber,
-        int lastReceivedSequenceNumber,
-        DirectBuffer buffer,
-        int addressOffset,
-        int addressLength,
-        SessionState state,
-        int heartbeatIntervalInS,
-        long replyToId,
-        int sequenceIndex);
-
-    Action onSessionExists(
-        int libraryId,
-        long connectionId,
-        long sessionId,
-        int lastSentSequenceNumber,
-        int lastReceivedSequenceNumber,
-        LogonStatus logonstatus,
-        boolean isSlow,
-        String localCompId,
-        String localSubId,
-        String localLocationId,
-        String remoteCompId,
-        String remoteSubId,
-        String remoteLocationId,
-        String username,
-        String password);
-
     Action onError(int libraryId, GatewayError errorType, long replyToId, String message);
 
     Action onApplicationHeartbeat(int libraryId);
@@ -71,4 +39,25 @@ public interface LibraryEndPointHandler
     Action onSlowStatusNotification(int libraryId, long connectionId, boolean hasBecomeSlow);
 
     Action onResetLibrarySequenceNumber(int libraryId, long sessionId);
+
+    Action onManageSession(int libraryId,
+                                long connection,
+                                long session,
+                                int lastSentSeqNum,
+                                int lastRecvSeqNum,
+                                long logonTime,
+                                LogonStatus logonStatus,
+                                SlowStatus slowStatus,
+                                ConnectionType connectionType,
+                                SessionState sessionState,
+                                int heartBeatInt,
+                                long correlationId,
+                                int sequenceIndex,
+                                String localCompId,
+                                String localSubId,
+                                String localLocationId,
+                                String remoteCompId,
+                                String remoteSubId,
+                                String remoteLocationId,
+                                String address);
 }

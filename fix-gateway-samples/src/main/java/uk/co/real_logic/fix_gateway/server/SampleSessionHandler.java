@@ -67,4 +67,9 @@ public class SampleSessionHandler implements SessionHandler
         System.out.printf("%d Disconnected: %s%n", session.id(), reason);
         return CONTINUE;
     }
+
+    @Override
+    public void onSessionStart(long startTimeMillis)
+    {
+    }
 }

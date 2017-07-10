@@ -65,41 +65,41 @@
         </enum>
         <enum name="DisconnectReason" encodingType="uint8">
             <validValue name="REMOTE_DISCONNECT"
-                description="The TCP connection was disconnected remotely">0</validValue>
+                        description="The TCP connection was disconnected remotely">0</validValue>
             <validValue name="APPLICATION_DISCONNECT"
-                description="We disconnected due an application level request">1</validValue>
+                        description="We disconnected due an application level request">1</validValue>
             <validValue name="LIBRARY_DISCONNECT"
-                description="We disconnected due to its library disconnecting">2</validValue>
+                        description="We disconnected due to its library disconnecting">2</validValue>
             <validValue name="ENGINE_SHUTDOWN"
-                description="We disconnected the connection due to the engine shutting down">3</validValue>
+                        description="We disconnected the connection due to the engine shutting down">3</validValue>
             <validValue name="EXCEPTION"
-                description="We disconnected due to the engine receiving an IOException">4</validValue>
+                        description="We disconnected due to the engine receiving an IOException">4</validValue>
             <validValue name="SLOW_CONSUMER"
-                description="We disconnected due to the consumer being too slow at reading the connection">5</validValue>
+                        description="We disconnected due to the consumer being too slow at reading the connection">5</validValue>
             <validValue name="NO_LOGON"
-                description="We disconnected due to no logon message being sent after a timeout">6</validValue>
+                        description="We disconnected due to no logon message being sent after a timeout">6</validValue>
             <validValue name="DUPLICATE_SESSION"
-                description="We disconnected due the session id being the same as one already connected">7</validValue>
+                        description="We disconnected due the session id being the same as one already connected">7</validValue>
             <validValue name="INVALID_BODY_LENGTH"
-                description="We disconnected due a message having an invalid body length field">8</validValue>
+                        description="We disconnected due a message having an invalid body length field">8</validValue>
             <validValue name="LOGOUT"
-                description="We disconnected due to receiving a logout message">9</validValue>
+                        description="We disconnected due to receiving a logout message">9</validValue>
             <validValue name="FIRST_MESSAGE_NOT_LOGON"
-                description="We disconnected due to the first message that we received not being a logon">10</validValue>
+                        description="We disconnected due to the first message that we received not being a logon">10</validValue>
             <validValue name="INCORRECT_BEGIN_STRING"
-                description="We disconnected due begin string field was invalid">11</validValue>
+                        description="We disconnected due begin string field was invalid">11</validValue>
             <validValue name="MSG_SEQ_NO_TOO_LOW"
-                description="We disconnected due to the message sequence number being too low">12</validValue>
+                        description="We disconnected due to the message sequence number being too low">12</validValue>
             <validValue name="MSG_SEQ_NO_MISSING"
-                description="We disconnected due to the message sequence number field being missing">13</validValue>
+                        description="We disconnected due to the message sequence number field being missing">13</validValue>
             <validValue name="INVALID_SENDING_TIME"
-                description="We disconnected due an invalid sending time field in the fix message">14</validValue>
+                        description="We disconnected due an invalid sending time field in the fix message">14</validValue>
             <validValue name="NEGATIVE_HEARTBEAT_INTERVAL"
-                description="We disconnected due to a negative heartbeat interval field">15</validValue>
+                        description="We disconnected due to a negative heartbeat interval field">15</validValue>
             <validValue name="FAILED_AUTHENTICATION"
-                description="We disconnected due to the authentication strategy returning false">16</validValue>
+                        description="We disconnected due to the authentication strategy returning false">16</validValue>
             <validValue name="INVALID_FIX_MESSAGE"
-                description="We disconnected due to codec validation failing">17</validValue>
+                        description="We disconnected due to codec validation failing">17</validValue>
         </enum>
         <enum name="SessionState" encodingType="uint8">
             <validValue name="CONNECTING"
@@ -233,23 +233,50 @@
         <data name="address" id="2" type="Utf8String"/>
     </sbe:message>
 
+    <!--
     <sbe:message name="ManageConnection" id="10" description="Here's a connection to manage">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="connection" id="2" type="ConnectionId"/>
         <field name="session" id="10" type="FixSessionId"/>
+        <field name="logonTime" id="12" type="Timestamp" />
         <field name="connectionType" id="3" type="ConnectionType"/>
         <field name="lastSentSequenceNumber" id="4" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
         <field name="sessionState" id="6" type="SessionState"/>
         <field name="heartbeatIntervalInS" id="7" type="int32"/>
         <field name="replyToId" id="8" type="CorrelationId"/>
-        <field name="sequenceIndex" id="10" type="SequenceIndex" />
+        <field name="sequenceIndex" id="11" type="SequenceIndex" />
         <data name="address" id="9" type="Utf8String"/>
     </sbe:message>
+    -->
 
     <sbe:message name="ResetSessionIds" id="36" description="All session ids have been reset">
     </sbe:message>
 
+    <sbe:message name="ManageSession" id="8" description="Any event to manage a session from gateway to library">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="session" id="3" type="FixSessionId"/>
+        <field name="lastSentSequenceNumber" id="4" type="int32"/>
+        <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
+        <field name="logonTime" id="12" type="Timestamp" />
+        <field name="logonStatus" id="6" type="LogonStatus"/>
+        <field name="slowStatus" id="7" type="SlowStatus"/>
+        <field name="connectionType" id="3" type="ConnectionType"/>
+        <field name="sessionState" id="6" type="SessionState"/>
+        <field name="heartbeatIntervalInS" id="7" type="int32"/>
+        <field name="replyToId" id="8" type="CorrelationId"/>
+        <field name="sequenceIndex" id="11" type="SequenceIndex" />
+        <data name="localCompId" id="8" type="Utf8String"/>
+        <data name="localSubId" id="9" type="Utf8String"/>
+        <data name="localLocationId" id="10" type="Utf8String"/>
+        <data name="remoteCompId" id="11" type="Utf8String"/>
+        <data name="remoteSubId" id="12" type="Utf8String"/>
+        <data name="remoteLocationId" id="13" type="Utf8String"/>
+        <data name="address" id="9" type="Utf8String"/>
+    </sbe:message>
+
+    <!--
     <sbe:message name="SessionExists" id="9" description="A session exists at the gateway">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="connection" id="2" type="ConnectionId"/>
@@ -267,6 +294,7 @@
         <data name="username" id="14" type="Utf8String"/>
         <data name="password" id="15" type="Utf8String"/>
     </sbe:message>
+    -->
 
     <sbe:message name="Error" id="13" description="An error has occurred">
         <field name="errorType" id="1" type="GatewayError"/>

@@ -145,8 +145,6 @@ public class AbstractGatewayToGatewaySystemTest
         assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
         assertEquals(ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());
         assertNotNull("unable to acquire accepting session", acceptingSession);
-        assertEquals(USERNAME, acceptingSession.username());
-        assertEquals(PASSWORD, acceptingSession.password());
     }
 
     protected void connectSessions()

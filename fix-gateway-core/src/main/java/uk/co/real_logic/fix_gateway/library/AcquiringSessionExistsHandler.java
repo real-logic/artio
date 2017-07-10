@@ -46,9 +46,7 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
         final String localLocationId,
         final String remoteCompId,
         final String remoteSubId,
-        final String remoteLocationId,
-        final String username,
-        final String password)
+        final String remoteLocationId)
     {
         final Reply<SessionReplyStatus> reply = library.requestSession(
             surrogateId,
@@ -56,7 +54,7 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
             NO_MESSAGE_REPLAY,
             CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS);
         requests.add(new RequestInfo(
-            surrogateId, reply, localCompId, localSubId, localLocationId, remoteCompId, username, password));
+            surrogateId, reply, localCompId, localSubId, localLocationId, remoteCompId));
     }
 
     public static final class RequestInfo
@@ -67,17 +65,13 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
         private final String senderSubId;
         private final String senderLocationId;
         private final String targetCompId;
-        private final String username;
-        private final String password;
 
         private RequestInfo(final long connectionId,
                            final Reply<SessionReplyStatus> reply,
                            final String senderCompId,
                            final String senderSubId,
                            final String senderLocationId,
-                           final String targetCompId,
-                           final String username,
-                           final String password)
+                           final String targetCompId)
         {
             this.connectionId = connectionId;
             this.reply = reply;
@@ -85,8 +79,6 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
             this.senderSubId = senderSubId;
             this.senderLocationId = senderLocationId;
             this.targetCompId = targetCompId;
-            this.username = username;
-            this.password = password;
         }
 
         public Reply<SessionReplyStatus> reply()
@@ -117,16 +109,6 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
         public String targetCompId()
         {
             return targetCompId;
-        }
-
-        public String username()
-        {
-            return username;
-        }
-
-        public String password()
-        {
-            return password;
         }
     }
 }

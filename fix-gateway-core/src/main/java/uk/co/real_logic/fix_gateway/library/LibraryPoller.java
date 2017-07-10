@@ -35,7 +35,6 @@ import uk.co.real_logic.fix_gateway.protocol.*;
 import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.timing.LibraryTimers;
 import uk.co.real_logic.fix_gateway.timing.Timer;
-import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
@@ -564,118 +563,100 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         new ControlledFragmentAssembler(
             ProtocolSubscription.of(this, new LibraryProtocolSubscription(this)));
 
-    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
+    @Override
+    public Action onManageSession(int libraryId,
+            long connection,
+            long sessionId,
+            int lastSentSeqNum,
+            int lastRecvSeqNum,
+            long logonTime,
+            LogonStatus logonStatus,
+            SlowStatus slowStatus,
+            ConnectionType connectionType,
+            SessionState sessionState,
+            int heartbeatIntervalInS,
+            long correlationId,
+            int sequenceIndex,
+            String localCompId,
+            String localSubId,
+            String localLocationId,
+            String remoteCompId,
+            String remoteSubId,
+            String remoteLocationId,
+            String address) {
 
-    public Action onManageConnection(
-        final int libraryId,
-        final long connectionId,
-        final long sessionId,
-        final ConnectionType type,
-        final int lastSentSequenceNumber,
-        final int lastReceivedSequenceNumber,
-        final DirectBuffer buffer,
-        final int addressOffset,
-        final int addressLength,
-        final SessionState state,
-        final int heartbeatIntervalInS,
-        final long replyToId,
-        final int sequenceIndex)
-    {
-        if (libraryId == this.libraryId)
+
+        final boolean thisLibrary = libraryId == this.libraryId;
+        if (libraryId == ENGINE_LIBRARY_ID)
         {
-            if (type == INITIATOR)
-            {
-                DebugLogger.log(FIX_MESSAGE, "Init Connect: %d, %d%n", connectionId, libraryId);
-                final boolean isInitiator = correlationIdToReply.get(replyToId) instanceof InitiateSessionReply;
-                final InitiateSessionReply reply =
-                    isInitiator ? (InitiateSessionReply) correlationIdToReply.remove(replyToId) : null;
-                final Session session = initiateSession(
-                    connectionId, lastSentSequenceNumber, lastReceivedSequenceNumber, state,
-                    isInitiator ? reply.configuration() : null, sequenceIndex);
-                newSession(connectionId, sessionId, session);
-                if (isInitiator)
-                {
+            // Simple case of engine notifying that it has a session available.
+            sessionExistsHandler.onSessionExists(
+                    fixLibrary,
+                    sessionId,
+                    localCompId,
+                    localSubId,
+                    localLocationId,
+                    remoteCompId,
+                    remoteSubId,
+                    remoteLocationId);
+        } else if (libraryId == this.libraryId) {
+            // From manageConnection - ie set up the session in this library.
+            if (connectionType == INITIATOR) {
+                DebugLogger.log(FIX_MESSAGE, "Init Connect: %d, %d%n", connection, libraryId);
+                final boolean isInitiator = correlationIdToReply.get(correlationId) instanceof InitiateSessionReply;
+                final InitiateSessionReply reply = isInitiator ? (InitiateSessionReply) correlationIdToReply.remove(correlationId) : null;
+                final Session session = initiateSession(connection,
+                                                        lastSentSeqNum,
+                                                        lastRecvSeqNum,
+                                                        sessionState,
+                                                        isInitiator ? reply.configuration() : null,
+                                                        sequenceIndex);
+                newSession(connection, sessionId, session);
+                if (isInitiator) {
                     reply.onComplete(session);
                 }
+            } else {
+                DebugLogger.log(FIX_MESSAGE, "Acct Connect: %d, %d%n", connection, libraryId);
+                final Session session = acceptSession(connection, address, sessionState, heartbeatIntervalInS, sequenceIndex, logonTime);
+                newSession(connection, sessionId, session);
             }
-            else
-            {
-                DebugLogger.log(FIX_MESSAGE, "Acct Connect: %d, %d%n", connectionId, libraryId);
-                asciiBuffer.wrap(buffer);
-                final String address = asciiBuffer.getAscii(addressOffset, addressLength);
-                final Session session = acceptSession(
-                    connectionId, address, state, heartbeatIntervalInS, sequenceIndex);
-                newSession(connectionId, sessionId, session);
+
+            // TODO(Nick): LogonStatus is a badly named enum.
+            if (LogonStatus.NEW == logonStatus) {
+                // This is actually the sessionAcquire callback ie the initial part of this library getting hold of this session.
+                DebugLogger.log(GATEWAY_MESSAGE,
+                                "onSessionExists: conn=%d, sess=%d, sentSeqNo=%d, recvSeqNo=%d%n",
+                                connection,
+                                sessionId,
+                                lastSentSeqNum,
+                                lastRecvSeqNum);
+                final SessionSubscriber subscriber = connectionIdToSession.get(connection);
+                if (subscriber != null) {
+                    // I guess this could be not null in the case where the gateway restarted and the library already had the session,
+                    // but has to reacquire it after a new connection to the gateway...
+                    final CompositeKey compositeKey = localCompId.length() == 0 ? null : sessionIdStrategy.onInitiateLogon(localCompId,
+                                                                                                                           localSubId,
+                                                                                                                           localLocationId,
+                                                                                                                           remoteCompId,
+                                                                                                                           remoteSubId,
+                                                                                                                           remoteLocationId);
+
+                    subscriber.onLogon(sessionId, lastSentSeqNum, lastRecvSeqNum, compositeKey);
+                    final SessionHandler handler = configuration.sessionAcquireHandler().onSessionAcquired(subscriber.session(), SlowStatus.SLOW == slowStatus);
+                    subscriber.handler(handler);
+                }
+            } else {
+                    // LIBRARY_NOTIFICATION Seems to be the response when a library connects for the first time if a session is already managed by the gateway but we should always just tell the process that this session is available to be claimed.
+                    sessionExistsHandler.onSessionExists(
+                            fixLibrary,
+                            sessionId,
+                            localCompId,
+                            localSubId,
+                            localLocationId,
+                            remoteCompId,
+                            remoteSubId,
+                            remoteLocationId);
             }
-        }
-
-        return CONTINUE;
-    }
-
-    public Action onSessionExists(
-        final int libraryId,
-        final long connectionId,
-        final long sessionId,
-        final int lastSentSequenceNumber,
-        final int lastReceivedSequenceNumber,
-        final LogonStatus logonstatus,
-        final boolean isSlow,
-        final String localCompId,
-        final String localSubId,
-        final String localLocationId,
-        final String remoteCompId,
-        final String remoteSubId,
-        final String remoteLocationId,
-        final String username,
-        final String password)
-    {
-        final boolean thisLibrary = libraryId == this.libraryId;
-        if (thisLibrary && logonstatus == LogonStatus.NEW)
-        {
-            DebugLogger.log(
-                GATEWAY_MESSAGE,
-                "onSessionExists: conn=%d, sess=%d, sentSeqNo=%d, recvSeqNo=%d%n",
-                connectionId,
-                sessionId,
-                lastSentSequenceNumber,
-                lastReceivedSequenceNumber);
-            final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
-            if (subscriber != null)
-            {
-                final CompositeKey compositeKey = localCompId.length() == 0 ? null :
-                    sessionIdStrategy.onInitiateLogon(
-                        localCompId,
-                        localSubId,
-                        localLocationId,
-                        remoteCompId,
-                        remoteSubId,
-                        remoteLocationId);
-
-                subscriber.onLogon(
-                    sessionId,
-                    lastSentSequenceNumber,
-                    lastReceivedSequenceNumber,
-                    compositeKey,
-                    username,
-                    password);
-                final SessionHandler handler =
-                    configuration.sessionAcquireHandler().onSessionAcquired(subscriber.session(), isSlow);
-                subscriber.handler(handler);
-            }
-        }
-        else if (libraryId == ENGINE_LIBRARY_ID || thisLibrary && logonstatus == LIBRARY_NOTIFICATION)
-        {
-            sessionExistsHandler.onSessionExists(
-                fixLibrary,
-                sessionId,
-                localCompId,
-                localSubId,
-                localLocationId,
-                remoteCompId,
-                remoteSubId,
-                remoteLocationId,
-                username,
-                password);
         }
 
         return CONTINUE;
@@ -852,6 +833,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     @Override
     public Action onControlNotification(final int libraryId, final SessionsDecoder sessionsDecoder)
     {
+        // TODO(Nick): FIX this as it is completely broken.
         if (libraryId == this.libraryId)
         {
             final long timeInMs = timeInMs();
@@ -863,6 +845,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 libraryId,
                 timeInMs);
 
+            // TODO(Nick): This should be a new set, not the actual set as we remove all the ids to check for existence..
+            // Weirdly looks like this.sessionIds is never used anywhere else? Why do we have it then? Is the caching saving
+            // enough considering that below we are creating loads of arrays (potentially)
             final LongHashSet sessionIds = this.sessionIds;
             Session[] sessions = this.sessions;
 
@@ -886,6 +871,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                         subscriber.onTimeout(libraryId);
                     }
                     session.close();
+                    // TODO(Nick): Maybe we shouldn't be creating a lot of arrays and batch this up?
                     sessions = ArrayUtil.remove(sessions, i);
                     size--;
                 }
@@ -1040,7 +1026,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final String address,
         final SessionState state,
         final int heartbeatIntervalInS,
-        final int sequenceIndex)
+        final int sequenceIndex,
+        final long logonTime)
     {
         final GatewayPublication publication = transport.outboundPublication();
         final int split = address.lastIndexOf(':');
@@ -1053,23 +1040,21 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int sessionBufferSize = configuration.sessionBufferSize();
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
 
-        return new AcceptorSession(
-            heartbeatIntervalInS,
-            connectionId,
-            clock,
-            sessionProxy(connectionId, asciiBuffer),
-            publication,
-            sessionIdStrategy,
-            sendingTimeWindow,
-            receivedMsgSeqNo,
-            sentMsgSeqNo,
-            libraryId,
-            1,
-            sequenceIndex,
-            state,
-            configuration.reasonableTransmissionTimeInMs(),
-            asciiBuffer)
-            .address(host, port);
+        return new AcceptorSession(heartbeatIntervalInS,
+                                   connectionId,
+                                   clock,
+                                   sessionProxy(connectionId, asciiBuffer),
+                                   publication,
+                                   sessionIdStrategy,
+                                   sendingTimeWindow,
+                                   receivedMsgSeqNo,
+                                   sentMsgSeqNo,
+                                   libraryId,
+                                   1,
+                                   sequenceIndex,
+                                   state,
+                                   configuration.reasonableTransmissionTimeInMs(),
+                                   asciiBuffer).address(host, port).logonTime(logonTime);
     }
 
     private SessionProxy sessionProxy(final long connectionId, final MutableAsciiBuffer asciiBuffer)
