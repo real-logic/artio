@@ -19,22 +19,16 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
-import uk.co.real_logic.fix_gateway.FixGatewayException;
 import uk.co.real_logic.fix_gateway.Pressure;
 import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
 import uk.co.real_logic.fix_gateway.engine.ByteBufferUtil;
-import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
-import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
-import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import uk.co.real_logic.fix_gateway.validation.PersistenceLevel;
-import uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -46,7 +40,6 @@ import java.util.Objects;
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
-import static uk.co.real_logic.fix_gateway.engine.framer.SessionContexts.DUPLICATE_SESSION;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.*;
@@ -56,7 +49,6 @@ import static uk.co.real_logic.fix_gateway.session.Session.UNKNOWN;
 import static uk.co.real_logic.fix_gateway.util.AsciiBuffer.UNKNOWN_INDEX;
 import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.LOCAL_ARCHIVE;
 import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.REPLICATED;
-import static uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy.resetSequenceNumbersUponLogon;
 
 /**
  * Handles incoming data from sockets.
@@ -87,9 +79,7 @@ class ReceiverEndPoint {
     private final TcpChannel channel;
     private final GatewayPublication libraryPublication;
     private final GatewayPublication clusterablePublication;
-    private final SessionPersistenceStrategy sessionPersistenceStrategy;
     private final long connectionId;
-    private final SessionIdStrategy sessionIdStrategy;
     private final SessionContexts sessionContexts;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
@@ -99,6 +89,7 @@ class ReceiverEndPoint {
     private final MutableAsciiBuffer buffer;
     private final ByteBuffer byteBuffer;
     private final LongHashSet replicatedConnectionIds;
+    private final GatewaySessions gatewaySessions;
 
     private GatewayPublication publication;
     private int libraryId;
@@ -114,11 +105,9 @@ class ReceiverEndPoint {
             final int bufferSize,
             final GatewayPublication libraryPublication,
             final GatewayPublication clusterablePublication,
-            final SessionPersistenceStrategy sessionPersistenceStrategy,
             final long connectionId,
             final long sessionId,
             final int sequenceIndex,
-            final SessionIdStrategy sessionIdStrategy,
             final SessionContexts sessionContexts,
             final SequenceNumberIndexReader sentSequenceNumberIndex,
             final SequenceNumberIndexReader receivedSequenceNumberIndex,
@@ -128,21 +117,19 @@ class ReceiverEndPoint {
             final int libraryId,
             final SequenceNumberType sequenceNumberType,
             final ConnectionType connectionType,
-            final LongHashSet replicatedConnectionIds) {
+            final LongHashSet replicatedConnectionIds,
+            final GatewaySessions gatewaySessions) {
         Objects.requireNonNull(clusterablePublication, "clusterablePublication");
         Objects.requireNonNull(libraryPublication, "libraryPublication");
-        Objects.requireNonNull(sessionPersistenceStrategy, "sessionPersistenceStrategy");
-        Objects.requireNonNull(sessionIdStrategy, "sessionIdStrategy");
         Objects.requireNonNull(sessionContexts, "sessionContexts");
+        Objects.requireNonNull(gatewaySessions, "gatewaySessions");
 
         this.channel = channel;
         this.clusterablePublication = clusterablePublication;
         this.libraryPublication = libraryPublication;
-        this.sessionPersistenceStrategy = sessionPersistenceStrategy;
         this.connectionId = connectionId;
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
-        this.sessionIdStrategy = sessionIdStrategy;
         this.sessionContexts = sessionContexts;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
@@ -151,6 +138,7 @@ class ReceiverEndPoint {
         this.errorHandler = errorHandler;
         this.libraryId = libraryId;
         this.replicatedConnectionIds = replicatedConnectionIds;
+        this.gatewaySessions = gatewaySessions;
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
         buffer = new MutableAsciiBuffer(byteBuffer);
@@ -289,6 +277,7 @@ class ReceiverEndPoint {
         return buffer.scan(startOfBodyLength + 1, usedBufferData - 1, START_OF_HEADER);
     }
 
+    /*
     private boolean checkSessionId(final int offset, final int length) {
         if (sessionId == UNKNOWN) {
             logon.decode(buffer, offset, length);
@@ -358,6 +347,61 @@ class ReceiverEndPoint {
 
         return false;
     }
+    */
+
+    private boolean checkSessionId(final int offset, final int length) {
+        if (sessionId != UNKNOWN)
+        {
+            return false;
+        }
+
+        logon.decode(buffer, offset, length);
+
+        AuthenticationResult authResult = gatewaySessions.authenticateAndInitiate(logon, connectionId(), sentSequenceNumberIndex, receivedSequenceNumberIndex, gatewaySession);
+
+        if(authResult.isDuplicateSession()) {
+            close(DisconnectReason.DUPLICATE_SESSION);
+            removeEndpointFromFramer();
+
+            return true;
+        }
+
+        if(!authResult.isValid())
+        {
+            onInvalidLogon();
+            return true;
+        }
+
+        sessionId = gatewaySession.sessionId();
+        sequenceIndex = gatewaySession.sequenceIndex();
+
+        choosePublication(gatewaySession.persistenceLevel());
+
+        // TODO(Nick): The sent and received seq nums aren't adjusted.
+        // They previously weren't adjusted but I think that might be an issue.
+        return stashIfBackpressured(offset,
+                                    publication.saveManageSession(libraryId,
+                                                                  connectionId,
+                                                                  sessionId,
+                                                                  authResult.sentSequenceNumber,
+                                                                  authResult.receivedSequenceNumber,
+                                                                  Session.NO_LOGON_TIME,
+                                                                  LogonStatus.NEW,
+                                                                  SlowStatus.NOT_SLOW,
+                                                                  ACCEPTOR,
+                                                                  gatewaySession.session().state(),
+                                                                  logon.heartBtInt(),
+                                                                  Framer.NO_CORRELATION_ID,
+                                                                  gatewaySession.sequenceIndex(),
+                                                                  gatewaySession.sessionKey().localCompId(),
+                                                                  gatewaySession.sessionKey().localSubId(),
+                                                                  gatewaySession.sessionKey().localLocationId(),
+                                                                  gatewaySession.sessionKey().remoteCompId(),
+                                                                  gatewaySession.sessionKey().remoteSubId(),
+                                                                  gatewaySession.sessionKey().remoteLocationId(),
+                                                                  ""));
+
+    }
 
     private boolean stashIfBackpressured(final int offset, final long position) {
         final boolean backPressured = Pressure.isBackPressured(position);
@@ -377,14 +421,6 @@ class ReceiverEndPoint {
             gatewaySession.onMessage(buffer, offset, length, messageType, sessionId);
             return false;
         }
-    }
-
-    private int sequenceNumber(final SequenceNumberIndexReader sequenceNumberIndexReader, final boolean resetSeqNum, final long sessionId) {
-        if (resetSeqNum) {
-            return SessionInfo.UNK_SESSION;
-        }
-
-        return sequenceNumberIndexReader.lastKnownSequenceNumber(sessionId);
     }
 
     private boolean validateBodyLength(final int startOfChecksumTag) {
@@ -499,6 +535,11 @@ class ReceiverEndPoint {
 
     void onNoLogonDisconnect() {
         disconnectEndpoint(NO_LOGON);
+        removeEndpointFromFramer();
+    }
+
+    private void onInvalidLogon(){
+        disconnectEndpoint(DisconnectReason.FAILED_AUTHENTICATION);
         removeEndpointFromFramer();
     }
 

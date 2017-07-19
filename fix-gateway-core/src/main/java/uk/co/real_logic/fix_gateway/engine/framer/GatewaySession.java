@@ -23,6 +23,7 @@ import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
+import uk.co.real_logic.fix_gateway.validation.PersistenceLevel;
 
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_MESSAGE;
@@ -48,6 +49,8 @@ class GatewaySession implements SessionInfo
     private String password;
     private int heartbeatIntervalInS;
     private long disconnectTimeout = NO_TIMEOUT;
+
+    private PersistenceLevel persistenceLevel;
 
     GatewaySession(final long connectionId,
                    final SessionContext context,
@@ -255,5 +258,15 @@ class GatewaySession implements SessionInfo
 
     SlowStatus slowStatus(){
         return bytesInBuffer() > 0 ? SlowStatus.SLOW : SlowStatus.NOT_SLOW;
+    }
+
+    void persistenceLevel(PersistenceLevel persistenceLevel)
+    {
+        this.persistenceLevel = persistenceLevel;
+    }
+
+    PersistenceLevel persistenceLevel()
+    {
+        return this. persistenceLevel;
     }
 }

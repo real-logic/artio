@@ -28,12 +28,10 @@ import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.fix_gateway.messages.ConnectionType;
-import uk.co.real_logic.fix_gateway.messages.GatewayError;
-import uk.co.real_logic.fix_gateway.messages.MessageStatus;
-import uk.co.real_logic.fix_gateway.messages.SessionState;
+import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
+import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategyTest;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy;
@@ -64,12 +62,9 @@ public class ReceiverEndPointTest
     private static final int BUFFER_SIZE = 16 * 1024;
     private static final int SEQUENCE_INDEX = 0;
 
-    private CompositeKey compositeKey = mock(CompositeKey.class);
     private TcpChannel mockChannel = mock(TcpChannel.class);
     private GatewayPublication libraryPublication = mock(GatewayPublication.class);
     private GatewayPublication clusterablePublication = mock(GatewayPublication.class);
-    private SessionPersistenceStrategy sessionReplicationStrategy = SessionPersistenceStrategy.alwaysLocallyArchive();
-    private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private SessionContexts mockSessionContexts = mock(SessionContexts.class);
     private AtomicCounter messagesRead = mock(AtomicCounter.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
@@ -79,22 +74,26 @@ public class ReceiverEndPointTest
     private GatewaySession gatewaySession = mock(GatewaySession.class);
     private Session session = mock(Session.class);
     private final LongHashSet replicatedConnectionIds = new LongHashSet();
+    private final AuthenticationResult authenticationResult = AuthenticationResult.authenticatedSession(gatewaySession, 1, 1);
+    private GatewaySessions mockGatewaySessions = mock(GatewaySessions.class);
+    private CompositeKey sessionKey = SessionIdStrategy.senderAndTarget().onInitiateLogon("ACCEPTOR", "", "", "INIATOR", "", "");
 
     private ReceiverEndPoint endPoint = new ReceiverEndPoint(
-        mockChannel, BUFFER_SIZE, libraryPublication, clusterablePublication, sessionReplicationStrategy,
-        CONNECTION_ID, UNKNOWN, SEQUENCE_INDEX, mockSessionIdStrategy, mockSessionContexts,
+        mockChannel, BUFFER_SIZE, libraryPublication, clusterablePublication,
+        CONNECTION_ID, UNKNOWN, SEQUENCE_INDEX, mockSessionContexts,
         sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID,
-        DETERMINE_AT_LOGON, ConnectionType.ACCEPTOR, replicatedConnectionIds);
+        DETERMINE_AT_LOGON, ConnectionType.ACCEPTOR, replicatedConnectionIds, mockGatewaySessions);
 
     @Before
     public void setUp()
     {
         endPoint.gatewaySession(gatewaySession);
         when(gatewaySession.session()).thenReturn(session);
+        when(gatewaySession.sessionKey()).thenReturn(sessionKey);
+        when(gatewaySession.sessionId()).thenReturn(SESSION_ID);
         when(session.state()).thenReturn(SessionState.CONNECTED);
-        when(mockSessionContexts.onLogon(any())).thenReturn(
-            new SessionContext(SESSION_ID, SessionContext.UNKNOWN_SEQUENCE_INDEX, mockSessionContexts, 0));
-        when(mockSessionIdStrategy.onAcceptLogon(any())).thenReturn(compositeKey);
+        when(mockGatewaySessions.authenticateAndInitiate(any(), anyLong(), any(), any(), eq(gatewaySession))).thenReturn(authenticationResult);
+
         doAnswer(
             (inv) ->
             {
@@ -120,25 +119,6 @@ public class ReceiverEndPointTest
         pollsData(MSG_LEN);
 
         verifyDuplicateSession(times(1));
-    }
-
-    @Test
-    public void shouldNotifyDuplicateSessionWhenBackPressured()
-    {
-        when(libraryPublication.saveError(any(), anyInt(), anyLong(), anyString()))
-                .thenReturn(BACK_PRESSURED, POSITION);
-
-        givenADuplicateSession();
-
-        theEndpointReceivesACompleteMessage();
-
-        pollsData(MSG_LEN);
-
-        theEndpointReceivesNothing();
-
-        pollsData(0);
-
-        verifyDuplicateSession(times(2));
     }
 
     @Test
@@ -614,13 +594,12 @@ public class ReceiverEndPointTest
 
     private void verifyDuplicateSession(final VerificationMode times)
     {
-        verify(libraryPublication, times).saveError(
-                eq(GatewayError.DUPLICATE_SESSION), eq(LIBRARY_ID), anyLong(), any());
+        verify(libraryPublication, times).saveDisconnect(anyInt(), anyLong(), eq(DisconnectReason.DUPLICATE_SESSION));
     }
 
     private void givenADuplicateSession()
     {
-        when(mockSessionContexts.onLogon(any())).thenReturn(SessionContexts.DUPLICATE_SESSION);
+        when(mockGatewaySessions.authenticateAndInitiate(any(), anyLong(), any(), any(), any())).thenReturn(AuthenticationResult.DUPLICATE_SESSION);
     }
 
 }
