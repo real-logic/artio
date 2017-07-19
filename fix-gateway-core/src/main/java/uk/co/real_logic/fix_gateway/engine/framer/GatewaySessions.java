@@ -137,9 +137,7 @@ class GatewaySessions
 
         final SessionParser sessionParser = new SessionParser(
             session,
-            sessionIdStrategy,
-            authenticationStrategy,
-            validationStrategy,
+            sessionIdStrategy, validationStrategy,
             errorHandler);
 
         sessions.add(gatewaySession);

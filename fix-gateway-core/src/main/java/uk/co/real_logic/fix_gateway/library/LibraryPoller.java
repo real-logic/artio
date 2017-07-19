@@ -49,7 +49,6 @@ import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.fix_gateway.LogTag.*;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
-import static uk.co.real_logic.fix_gateway.messages.LogonStatus.LIBRARY_NOTIFICATION;
 
 final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, AutoCloseable
 {
@@ -940,7 +939,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final AuthenticationStrategy authenticationStrategy = configuration.authenticationStrategy();
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
-            session, sessionIdStrategy, authenticationStrategy, validationStrategy, null);
+                session, sessionIdStrategy, validationStrategy, null);
         final SessionSubscriber subscriber = new SessionSubscriber(parser, session, receiveTimer, sessionTimer);
         connectionIdToSession.put(connectionId, subscriber);
         sessions = ArrayUtil.add(sessions, session);
