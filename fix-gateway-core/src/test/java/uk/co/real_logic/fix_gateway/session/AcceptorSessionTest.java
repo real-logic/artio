@@ -36,22 +36,23 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
     private AcceptorSession newAcceptorSession()
     {
-        return new AcceptorSession(
-            HEARTBEAT_INTERVAL,
-            CONNECTION_ID,
-            fakeClock,
-            mockProxy,
-            mockPublication,
-            idStrategy,
-            SENDING_TIME_WINDOW,
-            mockReceivedMsgSeqNo,
-            mockSentMsgSeqNo,
-            LIBRARY_ID,
-                1,
-            SEQUENCE_INDEX,
-            CONNECTED,
-            DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
-            new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]));
+        final AcceptorSession acceptorSession = new AcceptorSession(HEARTBEAT_INTERVAL,
+                                                                    CONNECTION_ID,
+                                                                    fakeClock,
+                                                                    mockProxy,
+                                                                    mockPublication,
+                                                                    idStrategy,
+                                                                    SENDING_TIME_WINDOW,
+                                                                    mockReceivedMsgSeqNo,
+                                                                    mockSentMsgSeqNo,
+                                                                    LIBRARY_ID,
+                                                                    1,
+                                                                    SEQUENCE_INDEX,
+                                                                    CONNECTED,
+                                                                    DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
+                                                                    new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]));
+        acceptorSession.logonListener(mockLogonListener);
+        return acceptorSession;
     }
 
     @Test

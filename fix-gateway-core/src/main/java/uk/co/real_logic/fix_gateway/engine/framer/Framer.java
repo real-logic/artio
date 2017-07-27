@@ -63,6 +63,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static io.aeron.Publication.BACK_PRESSURED;
@@ -158,6 +159,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final int outboundLibraryFragmentLimit;
     private final int replayFragmentLimit;
     private final GatewaySessions gatewaySessions;
+    private final Function<GatewaySession, Action> onSessionlogon = this::onSessionLogon;
     /**
      * Null if inbound messages are not logged
      */
@@ -852,7 +854,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             connectionType,
             sessionKey,
             receiverEndPoint,
-            senderEndPoint);
+            senderEndPoint,
+            this.onSessionlogon);
 
         receiverEndPoint.gatewaySession(gatewaySession);
 
@@ -1226,6 +1229,37 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             session.play();
         }
         return position;
+    }
+
+    private Action onSessionLogon(GatewaySession gatewaySession)
+    {
+        CompositeKey key = gatewaySession.sessionKey();
+
+        if(Pressure.isBackPressured(inboundPublication.saveManageSession(ENGINE_LIBRARY_ID,
+                                                                   gatewaySession.connectionId(),
+                                                                   gatewaySession.sessionId(),
+                                                                   gatewaySession.session().lastSentMsgSeqNum(),
+                                                                   gatewaySession.session().lastReceivedMsgSeqNum(),
+                                                                   gatewaySession.session().logonTime(),
+                                                                   LogonStatus.NEW,
+                                                                   gatewaySession.slowStatus(),
+                                                                   gatewaySession.connectionType(),
+                                                                   gatewaySession.session().state(),
+                                                                   gatewaySession.heartbeatIntervalInS(),
+                                                                   NO_CORRELATION_ID,
+                                                                   gatewaySession.sequenceIndex(),
+                                                                   key.localCompId(),
+                                                                   key.localSubId(),
+                                                                   key.localLocationId(),
+                                                                   key.remoteCompId(),
+                                                                   key.remoteSubId(),
+                                                                   key.remoteLocationId(),
+                                                                   gatewaySession.address())))
+        {
+            return ABORT;
+        }
+
+        return null;
     }
 
     void onQueryLibraries(final QueryLibrariesCommand command)

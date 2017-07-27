@@ -23,34 +23,31 @@ import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.fix_gateway.decoder.LogonDecoder.MESSAGE_TYPE_BYTES;
 
-public class InitiatorSession extends Session
-{
+public class InitiatorSession extends Session {
     private final boolean resetSeqNum;
 
     public InitiatorSession(
-        final int heartbeatInterval,
-        final long connectionId,
-        final EpochClock clock,
-        final SessionProxy proxy,
-        final GatewayPublication publication,
-        final SessionIdStrategy sessionIdStrategy,
-        final long sendingTimeWindow,
-        final AtomicCounter receivedMsgSeqNo,
-        final AtomicCounter sentMsgSeqNo,
-        final int libraryId,
-        final int initialSequenceNumber,
-        final int sequenceIndex,
-        final SessionState state,
-        final boolean resetSeqNum,
-        final long reasonableTransmissionTimeInMs,
-        final MutableAsciiBuffer asciiBuffer)
-    {
+	        final int heartbeatInterval,
+            final long connectionId,
+            final EpochClock clock,
+            final SessionProxy proxy,
+            final GatewayPublication publication,
+            final SessionIdStrategy sessionIdStrategy,
+            final long sendingTimeWindow,
+            final AtomicCounter receivedMsgSeqNo,
+            final AtomicCounter sentMsgSeqNo,
+            final int libraryId,
+            final int initialSequenceNumber,
+            final int sequenceIndex,
+            final SessionState state,
+            final boolean resetSeqNum,
+            final long reasonableTransmissionTimeInMs,
+            final MutableAsciiBuffer asciiBuffer) 
+	{
         super(
-            heartbeatInterval,
+		    heartbeatInterval,
             connectionId,
             clock,
             state,
@@ -68,6 +65,7 @@ public class InitiatorSession extends Session
         this.resetSeqNum = resetSeqNum;
     }
 
+    @Override
     public Action onLogon(
         final int heartbeatInterval,
         final int msgSeqNo,
@@ -78,115 +76,71 @@ public class InitiatorSession extends Session
         final String username,
         final String password,
         final boolean isPossDupOrResend,
-        final boolean resetSeqNumFlag)
-    {
-        if (resendSaveLogon)
+        final boolean resetSeqNumFlag) 
+     {
+
+        // We aren't checking CODEC_VALIDATION_ENABLED here because these are required values in order to
+        // have a stable FIX connection.
+        Action action = validateOrRejectHeartbeat(heartbeatInterval);
+        if (action != null)
         {
-            return saveLogonMessage(sessionId);
+            return action;
         }
 
-        if (resetSeqNumFlag)
-        {
-            proxy.setupSession(sessionId, sessionKey);
-
-            final long logonTime = sendingTime(sendingTime, origSendingTime);
-            Action action = onResetSeqNumLogon(heartbeatInterval, msgSeqNo, username, password, logonTime);
-
-            if (action != null)
-            {
-                return action;
-            }
-
-            action = acceptLogon(
-                heartbeatInterval, msgSeqNo, sessionId, sessionKey, sendingTime, origSendingTime, isPossDupOrResend);
-            if (action != null)
-            {
-                return action;
-            }
+        action = validateOrRejectSendingTime(sendingTime);
+        if (action != null) {
+            return action;
         }
 
-        if (msgSeqNo == expectedReceivedSeqNum() && state() == SessionState.SENT_LOGON)
-        {
-            final Action action = acceptLogon(
-                heartbeatInterval, msgSeqNo, sessionId, sessionKey, sendingTime, origSendingTime, isPossDupOrResend);
-            if (action != null)
+        final long logonTime = sendingTime(sendingTime, origSendingTime);
+
+        if (resetSeqNumFlag) {
+            // Either we sent out a resetSeqNum flag when we connected or this session is already connected and they
+            // have sent one to us to run an end of day.
+            setupSession(sessionId, sessionKey);
+
+            return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime);
+        }
+
+        if (msgSeqNo == expectedReceivedSeqNum() && state() == SessionState.SENT_LOGON) {
+            setupSession(sessionId, sessionKey);
+            setLogonState(heartbeatInterval, username, password);
+
+            if (INITIAL_SEQUENCE_NUMBER == msgSeqNo)
             {
-                return action;
+                // Outgoing connections could be exchanging logons because of a network disconnection
+                // So we still only want this to occur on the initial logon.
+                logonTime(logonTime);
+            }
+
+            notifyLogonListener();
+            action = onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+
+            if (action == ABORT)
+            {
+                return ABORT;
             }
         }
         else
         {
+
+            // Shouldn't this be an error case?...
+            // I guess onMessage will check that the session is logged in and it isn't so it will disconnect...
+            // Its pretty opaque...
             return onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
         }
 
         return Action.CONTINUE;
     }
 
-    private Action acceptLogon(
-        final int heartbeatInterval,
-        final int msgSeqNo,
-        final long sessionId,
-        final CompositeKey sessionKey,
-        final long sendingTime,
-        final long origSendingTime,
-        final boolean isPossDupOrResend)
-    {
-        state(SessionState.ACTIVE);
-        this.sessionKey = sessionKey;
-        proxy.setupSession(sessionId, sessionKey);
-        if (CODEC_VALIDATION_DISABLED || (validateHeartbeat(heartbeatInterval) == null &&
-            validateSendingTime(sendingTime) == null))
-        {
-            id(sessionId);
-            heartbeatIntervalInS(heartbeatInterval);
-
-            if (INITIAL_SEQUENCE_NUMBER == msgSeqNo)
-            {
-                // Outgoing connections could be exchanging logons because of a network disconnection
-                // So we still only want this to occur on the initial logon.
-                logonTime(sendingTime(sendingTime, origSendingTime));
-            }
-
-            final Action action =
-                onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
-
-            if (action == ABORT)
-            {
-                return ABORT;
-            }
-
-            return saveLogonMessage(sessionId);
-        }
-
-        return null;
-    }
-
-    private Action saveLogonMessage(final long sessionId)
-    {
-        // TODO(Nick): Make sure we have enough details in this message (used to be sessionExists)
-        final long position = publication.saveManageSession(libraryId, connectionId, sessionId);
-        if (position < 0)
-        {
-            resendSaveLogon = true;
-            return ABORT;
-        }
-        else
-        {
-            resendSaveLogon = false;
-            return CONTINUE;
-        }
-    }
-
-    public int poll(final long time)
-    {
+    public int poll(final long time) {
         int actions = 0;
         if (state() == SessionState.CONNECTED && id() != UNKNOWN)
         {
             state(SessionState.SENT_LOGON);
             final int heartbeatIntervalInS = (int)(heartbeatIntervalInMs() / 1000);
             final int sentSeqNum = resetSeqNum ? 1 : newSentSeqNum();
-            final long position = proxy.logon(
-                heartbeatIntervalInS, sentSeqNum, username(), password(), resetSeqNum, sequenceIndex());
+            final long position = proxy.logon(heartbeatIntervalInS, sentSeqNum, username(), password(), resetSeqNum, sequenceIndex());
             if (position >= 0)
             {
                 lastSentMsgSeqNum(sentSeqNum);
@@ -196,5 +150,4 @@ public class InitiatorSession extends Session
 
         return actions + super.poll(time);
     }
-
 }

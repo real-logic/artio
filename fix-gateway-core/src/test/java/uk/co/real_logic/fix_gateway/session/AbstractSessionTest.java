@@ -76,6 +76,8 @@ public abstract class AbstractSessionTest
     ArgumentCaptor<Integer> offsetCaptor = ArgumentCaptor.forClass(Integer.class);
     ArgumentCaptor<Integer> lengthCaptor = ArgumentCaptor.forClass(Integer.class);
     TestRequestEncoder testRequest = new TestRequestEncoder();
+    SessionLogonListener mockLogonListener = mock(SessionLogonListener.class);
+
 
     AbstractSessionTest()
     {
