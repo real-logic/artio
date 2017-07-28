@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
@@ -27,7 +26,7 @@ import uk.co.real_logic.fix_gateway.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import uk.co.real_logic.fix_gateway.validation.PersistenceLevel;
 
-import java.util.function.Function;
+import java.util.function.Consumer;
 
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_MESSAGE;
@@ -55,7 +54,7 @@ class GatewaySession implements SessionInfo
     private long disconnectTimeout = NO_TIMEOUT;
 
     private PersistenceLevel persistenceLevel;
-    private Function<GatewaySession, Action> onGatewaySessionLogon;
+    private Consumer<GatewaySession> onGatewaySessionLogon;
     private SessionLogonListener logonListener = this::onSessionLogon;
 
     GatewaySession(
@@ -66,7 +65,7 @@ class GatewaySession implements SessionInfo
         final CompositeKey sessionKey,
         final ReceiverEndPoint receiverEndPoint,
         final SenderEndPoint senderEndPoint,
-        final Function<GatewaySession, Action> onGatewaySessionLogon)
+                   final Consumer<GatewaySession> onGatewaySessionLogon)
     {
         this.connectionId = connectionId;
         this.sessionId = context.sessionId();
@@ -154,9 +153,9 @@ class GatewaySession implements SessionInfo
         return 0;
     }
 
-    private Action onSessionLogon(Session session)
+    private void onSessionLogon(Session session)
     {
-        return onGatewaySessionLogon.apply(this);
+        onGatewaySessionLogon.accept(this);
     }
 
     Session session()

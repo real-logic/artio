@@ -5,5 +5,5 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 
 @FunctionalInterface
 public interface SessionLogonListener {
-    Action onLogon(Session session);
+    void onLogon(Session session);
 }

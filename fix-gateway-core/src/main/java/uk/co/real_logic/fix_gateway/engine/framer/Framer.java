@@ -159,7 +159,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final int outboundLibraryFragmentLimit;
     private final int replayFragmentLimit;
     private final GatewaySessions gatewaySessions;
-    private final Function<GatewaySession, Action> onSessionlogon = this::onSessionLogon;
+    private final Consumer<GatewaySession> onSessionlogon = this::onSessionLogon;
     /**
      * Null if inbound messages are not logged
      */
@@ -1231,11 +1231,19 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return position;
     }
 
-    private Action onSessionLogon(GatewaySession gatewaySession)
+    private void onSessionLogon(GatewaySession gatewaySession)
     {
-        CompositeKey key = gatewaySession.sessionKey();
+        schedule(()->{
+            /*
+            // TODO(Nick): We should check that the session is still owned by the gateway since this could be rescheduled later?
+            if(gatewaySession.session())
+            {
+                return CONTINUE;
+            }
+            */
 
-        if(Pressure.isBackPressured(inboundPublication.saveManageSession(ENGINE_LIBRARY_ID,
+            CompositeKey key = gatewaySession.sessionKey();
+            return inboundPublication.saveManageSession(ENGINE_LIBRARY_ID,
                                                                    gatewaySession.connectionId(),
                                                                    gatewaySession.sessionId(),
                                                                    gatewaySession.session().lastSentMsgSeqNum(),
@@ -1254,12 +1262,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                                                                    key.remoteCompId(),
                                                                    key.remoteSubId(),
                                                                    key.remoteLocationId(),
-                                                                   gatewaySession.address())))
-        {
-            return ABORT;
-        }
-
-        return null;
+                                                                   gatewaySession.address());
+        });
     }
 
     void onQueryLibraries(final QueryLibrariesCommand command)

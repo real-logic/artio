@@ -798,21 +798,18 @@ public class Session implements AutoCloseable
                         return ABORT;
                     }
 
+                    setLogonState(heartbeatInterval, username, password);
+                    // Above call sets state to ACTIVE, but we aren't really quite ACTIVE.
                     // We need to request a replay here. This is done in the onMessage call below I believe.
                     state(SessionState.AWAITING_RESEND);
                 }
             }
         } else if (resetSeqNumFlag)
         {
-            // This should never be reached if the sequence number > expected sequence number.
             return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime);
         }
 
-        action = notifyLogonListener();
-        if(null != action)
-        {
-            return action;
-        }
+        notifyLogonListener();
 
         // Back pressure at this point won't re-run the above block if its completed because of the state change
         return onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
@@ -865,13 +862,12 @@ public class Session implements AutoCloseable
             heartbeatInterval, newSentSeqNum(), null, null, false, sequenceIndex()));
     }
 
-    protected Action notifyLogonListener()
+    protected void notifyLogonListener()
     {
-        if(null == this.logonListener)
+        if(null != this.logonListener)
         {
-            return null;
+            this.logonListener.onLogon(this);
         }
-        return this.logonListener.onLogon(this);
     }
 
     Action validateOrRejectSendingTime(final long sendingTime)
