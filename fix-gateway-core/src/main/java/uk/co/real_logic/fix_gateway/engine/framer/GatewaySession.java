@@ -116,7 +116,7 @@ class GatewaySession implements SessionInfo
         senderEndPoint.libraryId(libraryId, blockablePosition);
         sessionParser = null;
         session.logonListener(null);
-        context.updateFrom(session);
+        context.updateAndSaveFrom(session);
         session.close();
         session = null;
     }
@@ -155,6 +155,7 @@ class GatewaySession implements SessionInfo
 
     private void onSessionLogon(Session session)
     {
+        context.updateFrom(session);
         onGatewaySessionLogon.accept(this);
     }
 

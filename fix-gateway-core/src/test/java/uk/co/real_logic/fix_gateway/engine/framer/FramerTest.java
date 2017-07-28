@@ -198,7 +198,7 @@ public class FramerTest
             finalImagePositions);
 
         when(sessionContexts.onLogon(any())).thenReturn(
-            new SessionContext(SESSION_ID, SessionContext.UNKNOWN_SEQUENCE_INDEX, sessionContexts, 0));
+            new SessionContext(SESSION_ID, SessionContext.UNKNOWN_SEQUENCE_INDEX, Session.NO_LOGON_TIME, sessionContexts, 0));
     }
 
     private void isLeader(final boolean value)
