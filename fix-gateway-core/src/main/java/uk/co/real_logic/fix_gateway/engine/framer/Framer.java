@@ -1234,13 +1234,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private void onSessionLogon(GatewaySession gatewaySession)
     {
         schedule(()->{
-            /*
-            // TODO(Nick): We should check that the session is still owned by the gateway since this could be rescheduled later?
-            if(gatewaySession.session())
+            if(null == gatewaySession.session())
             {
-                return CONTINUE;
+                // Generally means that another library is now handling the session so we shouldn't publish availability.
+                return 0;
             }
-            */
 
             CompositeKey key = gatewaySession.sessionKey();
             return inboundPublication.saveManageSession(ENGINE_LIBRARY_ID,
