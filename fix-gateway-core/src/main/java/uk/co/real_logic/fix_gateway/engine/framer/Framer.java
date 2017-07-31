@@ -218,7 +218,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundClusterCompletionPosition = outboundClusterCompletionPosition;
         this.senderEndPoints = new SenderEndPoints(errorHandler);
         this.conductorAgentInvoker = conductorAgentInvoker;
-        this.senderEndPointAssembler = new ControlledFragmentAssembler(senderEndPoints);
+        this.senderEndPointAssembler = new ControlledFragmentAssembler(senderEndPoints, 0, true);
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionContexts = sessionContexts;
         this.adminCommands = adminCommands;
@@ -246,14 +246,18 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 inboundPublication,
                 engineDescriptorStore,
                 configuration.bindAddress().toString(),
-                replicatedConnectionIds));
+                replicatedConnectionIds),
+                0,
+                true);
             clusterSubscriber = new ClusterFragmentAssembler(ProtocolSubscription.of(this));
         }
         else
         {
             engineBlockablePosition = getOutboundSlowPeeker(outboundPublication);
             librarySubscriber = new ControlledFragmentAssembler(
-                ProtocolSubscription.of(this, new EngineProtocolSubscription(this)));
+                ProtocolSubscription.of(this, new EngineProtocolSubscription(this)),
+                0,
+                true);
             clusterSubscriber = null;
             clusterSlowPeeker = null;
         }
@@ -283,7 +287,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 // Should never be replayed.
                 return Action.CONTINUE;
             }
-        }));
+        }),
+        0,
+        true);
 
         replaySlowSubscriber = new ControlledFragmentAssembler(ProtocolSubscription.of(new ProtocolHandler()
         {
