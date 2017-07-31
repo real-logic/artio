@@ -35,9 +35,9 @@ public class DynamicLibraryScheduler implements LibraryScheduler
     private AgentRunner runner;
 
     public synchronized void launch(
-        final LibraryConfiguration configuration,
-        final ErrorHandler errorHandler,
-        final Agent monitoringAgent)
+            final LibraryConfiguration configuration,
+            final ErrorHandler errorHandler,
+            final Agent monitoringAgent, final Agent conductorAgent)
     {
         if (runner == null)
         {
@@ -47,7 +47,6 @@ public class DynamicLibraryScheduler implements LibraryScheduler
         }
 
         final int libraryId = configuration.libraryId();
-        final Agent conductorAgent = configuration.conductorAgent();
 
         libraryIdToMonitoring.put(libraryId, monitoringAgent);
         libraryIdToClientConductor.put(libraryId, conductorAgent);

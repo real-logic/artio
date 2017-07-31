@@ -77,10 +77,15 @@ public class GatewayProcess implements AutoCloseable
         CloseChecker.onOpen(ctx.aeronDirectoryName(), aeron);
     }
 
-    // To be invoked by called called before a scheduler has launched
-    protected int invokeAeronConductor()
+    public Agent conductorAgent()
     {
-        return configuration.invokeConductorAgent();
+        final AgentInvoker invoker = aeron.conductorAgentInvoker();
+        if (invoker == null)
+        {
+            return null;
+        }
+
+        return invoker.agent();
     }
 
     private Aeron.Context aeronContext(final CommonConfiguration configuration)

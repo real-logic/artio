@@ -99,7 +99,7 @@ public class FixLibrary extends GatewayProcess
     private FixLibrary connect()
     {
         poller.startConnecting();
-        scheduler.launch(configuration, errorHandler, monitoringAgent);
+        scheduler.launch(configuration, errorHandler, monitoringAgent, conductorAgent());
         return this;
     }
 

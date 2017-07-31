@@ -37,7 +37,8 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
         final ErrorHandler errorHandler,
         final Agent framer,
         final Agent archivingAgent,
-        final Agent monitoringAgent)
+        final Agent monitoringAgent,
+        final Agent conductorAgent)
     {
         this.framerInvoker = new AgentInvoker(errorHandler, null, framer);
         if (archivingRunner != null)

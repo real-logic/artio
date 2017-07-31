@@ -27,19 +27,21 @@ public interface EngineScheduler extends AutoCloseable
     /**
      * Invoked by the FIX Engine to start the threads.
      * Should only return once they are started.
-     *
      * @param configuration the engine's configuration object.
      * @param errorHandler the ErrorHandler used by the engine.
      * @param framer the framer agent to schedule.
      * @param archivingAgent the archiver agent to schedule.
      * @param monitoringAgent the monitoring agent to schedule.
+     * @param conductorAgent if aeron has useConductorInvoker enable it
+     *                       is the agent for the conductor, otherwise null.
      */
     void launch(
         EngineConfiguration configuration,
         ErrorHandler errorHandler,
         Agent framer,
         Agent archivingAgent,
-        Agent monitoringAgent);
+        Agent monitoringAgent,
+        Agent conductorAgent);
 
     /**
      * Invoked by the FIX Engine to stop the threads. Should only return once they are completed stopped.

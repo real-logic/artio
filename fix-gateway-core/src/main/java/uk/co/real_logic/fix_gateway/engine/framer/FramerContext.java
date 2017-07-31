@@ -56,6 +56,7 @@ public class FramerContext
     private final GatewayPublication outboundPublication;
     private final GatewayPublication inboundLibraryPublication;
     private final SessionContexts sessionContexts;
+    private final AgentInvoker conductorAgentInvoker;
 
     public FramerContext(
         final EngineConfiguration configuration,
@@ -65,8 +66,10 @@ public class FramerContext
         final Image replayImage,
         final Image slowReplayImage,
         final EngineDescriptorStore engineDescriptorStore,
-        final EngineTimers timers)
+        final EngineTimers timers,
+        final AgentInvoker conductorAgentInvoker)
     {
+        this.conductorAgentInvoker = conductorAgentInvoker;
         final ClusterableStreams streams = engineContext.streams();
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
         sessionContexts = new SessionContexts(
@@ -143,7 +146,8 @@ public class FramerContext
             engineContext.inboundCompletionPosition(),
             engineContext.outboundLibraryCompletionPosition(),
             engineContext.outboundClusterCompletionPosition(),
-            finalImagePositions);
+            finalImagePositions,
+                conductorAgentInvoker);
     }
 
     public Agent framer()

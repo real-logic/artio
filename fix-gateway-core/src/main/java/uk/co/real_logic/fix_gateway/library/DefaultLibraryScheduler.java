@@ -33,7 +33,8 @@ public class DefaultLibraryScheduler implements LibraryScheduler
     public void launch(
         final LibraryConfiguration configuration,
         final ErrorHandler errorHandler,
-        final Agent monitoringAgent)
+        final Agent monitoringAgent,
+        final Agent conductorAgent)
     {
         if (monitoringRunner != null)
         {
@@ -42,8 +43,6 @@ public class DefaultLibraryScheduler implements LibraryScheduler
 
         if (monitoringAgent != null)
         {
-            final Agent conductorAgent = configuration.conductorAgent();
-
             monitoringRunner = new AgentRunner(
                 backoffIdleStrategy(),
                 errorHandler,

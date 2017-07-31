@@ -31,22 +31,24 @@ public class LowResourceEngineSchedulerTest
     private Agent archivingAgent = mock(Agent.class);
     private Agent monitoringAgent = mock(Agent.class);
     private EngineConfiguration configuration = mock(EngineConfiguration.class);
+    private Agent conductorAgent = mock(Agent.class);
 
     @Test
     public void shouldPrintErrorIfRepeatedlyThrown() throws Exception
     {
         when(configuration.framerIdleStrategy()).thenReturn(new YieldingIdleStrategy());
-        when(configuration.conductorAgent()).thenReturn(mock(Agent.class));
         when(framer.doWork()).thenThrow(IOException.class);
 
         try (EngineScheduler scheduler = new LowResourceEngineScheduler())
         {
+
             scheduler.launch(
                 configuration,
                 mock(ErrorHandler.class),
                 framer,
                 archivingAgent,
-                monitoringAgent);
+                monitoringAgent,
+                conductorAgent);
 
             assertEventuallyTrue(
                 "Failed to invoke monitoring agent",

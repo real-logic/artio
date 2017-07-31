@@ -29,6 +29,7 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2LongHashMap.LongIterator;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -161,6 +162,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     // Both connection id to library id maps
     private final Long2LongHashMap resendSlowStatus = new Long2LongHashMap(-1);
     private final Long2LongHashMap resendNotSlowStatus = new Long2LongHashMap(-1);
+    private final AgentInvoker conductorAgentInvoker;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
@@ -193,7 +195,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final CompletionPosition inboundCompletionPosition,
         final CompletionPosition outboundLibraryCompletionPosition,
         final CompletionPosition outboundClusterCompletionPosition,
-        final FinalImagePositions finalImagePositions)
+        final FinalImagePositions finalImagePositions,
+        final AgentInvoker conductorAgentInvoker)
     {
         this.clock = clock;
         this.outboundTimer = outboundTimer;
@@ -214,6 +217,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundLibraryCompletionPosition = outboundLibraryCompletionPosition;
         this.outboundClusterCompletionPosition = outboundClusterCompletionPosition;
         this.senderEndPoints = new SenderEndPoints(errorHandler);
+        this.conductorAgentInvoker = conductorAgentInvoker;
         this.senderEndPointAssembler = new ControlledFragmentAssembler(senderEndPoints);
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionContexts = sessionContexts;
@@ -322,7 +326,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         LibrarySlowPeeker outboundSlowPeeker;
         while ((outboundSlowPeeker = this.librarySlowPeeker.addLibrary(outboundSessionId)) == null)
         {
-            configuration.invokeConductorAgent();
+            conductorAgentInvoker.invoke();
 
             Thread.yield();
         }
