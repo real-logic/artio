@@ -72,20 +72,21 @@ subprojects {
         maven {
             url "http://sevntu-checkstyle.github.com/sevntu.checkstyle/maven2"
         }
+        //mavenLocal()
     }
 
     dependencies {
-        checkstyle 'com.puppycrawl.tools:checkstyle:7.8'
-        checkstyle "com.github.sevntu.checkstyle:sevntu-checks:1.23.1"
+        checkstyle 'com.puppycrawl.tools:checkstyle:8.1'
+        checkstyle "com.github.sevntu-checkstyle:sevntu-checks:1.24.1"
 
-        testCompile 'org.hamcrest:hamcrest-all:1.3',
-            'junit:junit:4.12',
-            'org.mockito:mockito-core:2.8.9'
+        testCompile 'org.hamcrest:hamcrest-all:1.3'
+        testCompile 'junit:junit:4.12'
+        testCompile 'org.mockito:mockito-core:2.8.47'
     }
 
     checkstyle {
         configFile = new File(rootDir, 'config/checkstyle/checkstyle.xml')
-        toolVersion = "7.8"
+        toolVersion = "8.1"
     }
 
     test {
@@ -285,8 +286,8 @@ project(':fix-gateway-system-tests') {
             "io.aeron:aeron-client:${aeronVersion}"
 
         perfCompile project,
-            'org.openjdk.jmh:jmh-core:1.18',
-            'org.openjdk.jmh:jmh-generator-annprocess:1.18'
+            'org.openjdk.jmh:jmh-core:1.19',
+            'org.openjdk.jmh:jmh-generator-annprocess:1.19'
     }
 
     idea.module {
@@ -301,9 +302,7 @@ project(':fix-gateway-system-tests') {
             from sourceSets.perf.output
             from project.configurations.perfRuntime
 
-            manifest {
-                attributes "Main-Class": "org.openjdk.jmh.Main"
-            }
+            manifest.attributes('Main-Class': 'org.openjdk.jmh.Main')
         }
 
         doLast {
@@ -347,12 +346,12 @@ if (System.properties["uploadArchives"] != null) {
                         packaging = 'pom'
                         description = 'Resilient High-Performance FIX Gateway'
 
-                        url = 'https://github.com/real-logic/FIX-Gateway'
+                        url = 'https://github.com/real-logic/fix-gateway'
 
                         scm {
-                            connection = 'scm:git:https://github.com/real-logic/FIX-Gateway.git'
-                            developerConnection = 'scm:git:https://github.com/real-logic/FIX-Gateway.git'
-                            url = 'https://github.com/real-logic/FIX-Gateway.git'
+                            connection = 'scm:git:https://github.com/real-logic/fix-gateway.git'
+                            developerConnection = 'scm:git:https://github.com/real-logic/fix-gateway.git'
+                            url = 'https://github.com/real-logic/fix-gateway.git'
                         }
 
                         licenses {
@@ -384,6 +383,6 @@ if (System.properties["uploadArchives"] != null) {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '3.5'
+    gradleVersion = '4.0.1'
     distributionType = 'ALL'
 }

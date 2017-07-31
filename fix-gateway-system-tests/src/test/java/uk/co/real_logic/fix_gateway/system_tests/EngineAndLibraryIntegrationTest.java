@@ -189,7 +189,7 @@ public class EngineAndLibraryIntegrationTest
 
     private void assertNumActiveLibraries(final int count)
     {
-        // +1 to account for the gateway sessions that are modelled as libraries.
+        // +1 to account for the engine managed sessions library object.
         assertThat("libraries haven't disconnected yet", libraries(engine), hasSize(count + 1));
     }
 

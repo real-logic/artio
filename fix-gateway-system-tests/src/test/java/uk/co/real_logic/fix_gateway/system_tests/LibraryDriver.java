@@ -21,22 +21,36 @@ import uk.co.real_logic.fix_gateway.library.FixLibrary;
 import uk.co.real_logic.fix_gateway.library.LibraryConfiguration;
 
 import java.util.List;
+import java.util.function.Function;
 
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
-class LibraryDriver implements AutoCloseable
+final class LibraryDriver implements AutoCloseable
 {
     private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
     private final FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
     private final FakeHandler handler = new FakeHandler(otfAcceptor);
     private final FixLibrary library;
+    private final TestSystem testSystem;
 
-    LibraryDriver()
+    static LibraryDriver accepting(final TestSystem testSystem)
     {
-        final LibraryConfiguration configuration = SystemTestUtil.acceptingLibraryConfig(handler);
+        return new LibraryDriver(testSystem, SystemTestUtil::acceptingLibraryConfig);
+    }
+
+    static LibraryDriver initiating(final int libraryAeronPort, final TestSystem testSystem)
+    {
+        return new LibraryDriver(testSystem, handler -> initiatingLibraryConfig(libraryAeronPort, handler));
+    }
+
+    private LibraryDriver(final TestSystem testSystem, final Function<FakeHandler, LibraryConfiguration> configFactory)
+    {
+        this.testSystem = testSystem;
+
+        final LibraryConfiguration configuration = configFactory.apply(handler);
         configuration.libraryConnectHandler(fakeConnectHandler);
-        library = SystemTestUtil.connect(configuration);
+        library = testSystem.connect(configuration);
     }
 
     long awaitSessionId()
@@ -44,9 +58,14 @@ class LibraryDriver implements AutoCloseable
         return handler.awaitSessionId(this::poll);
     }
 
+    CompleteSessionId awaitCompleteSessionId()
+    {
+        return handler.awaitCompleteSessionId(this::poll);
+    }
+
     public void close()
     {
-        library.close();
+        testSystem.close(library);
     }
 
     void becomeOnlyLibraryConnectedTo(final FixEngine engine)
@@ -66,13 +85,9 @@ class LibraryDriver implements AutoCloseable
             () -> {});
     }
 
-    private int poll()
+    private void poll()
     {
-        return library.poll(LIBRARY_LIMIT);
+        testSystem.poll();
     }
 
-    void clearSesssions()
-    {
-        handler.clearSessions();
-    }
 }

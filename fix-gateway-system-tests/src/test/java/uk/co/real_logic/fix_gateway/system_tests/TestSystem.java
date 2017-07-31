@@ -67,6 +67,11 @@ public class TestSystem
     public void close(final FixLibrary library)
     {
         library.close();
+        remove(library);
+    }
+
+    public void remove(final FixLibrary library)
+    {
         libraries.remove(library);
     }
 

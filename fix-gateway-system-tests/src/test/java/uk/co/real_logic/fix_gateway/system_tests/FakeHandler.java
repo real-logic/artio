@@ -109,7 +109,7 @@ public class FakeHandler
 
     public void onSessionExists(
         final FixLibrary library,
-        final long sessionId,
+        final long surrogateId,
         final String localCompId,
         final String localSubId,
         final String localLocationId,
@@ -119,7 +119,7 @@ public class FakeHandler
         final String username,
         final String password)
     {
-        completeSessionIds.add(new CompleteSessionId(localCompId, remoteCompId, sessionId));
+        completeSessionIds.add(new CompleteSessionId(localCompId, remoteCompId, surrogateId));
     }
 
     // ----------- END EVENTS -----------
@@ -141,6 +141,11 @@ public class FakeHandler
 
     public long awaitSessionId(final Runnable poller)
     {
+        return awaitCompleteSessionId(poller).surrogateId();
+    }
+
+    public CompleteSessionId awaitCompleteSessionId(final Runnable poller)
+    {
         Timing.assertEventuallyTrue(
             "Couldn't find session Id",
             () ->
@@ -149,7 +154,7 @@ public class FakeHandler
                 return hasSeenSession();
             });
 
-        return lastSessionId().sessionId();
+        return lastSessionId();
     }
 
     public boolean hasSeenSession()
@@ -182,20 +187,20 @@ public class FakeHandler
                 return completeSessionIds
                     .stream()
                     .filter((sid) ->
-                        sid.initiatorCompId().equals(initiatorId) && sid.acceptorCompId().equals(acceptorId))
+                        sid.remoteCompId().equals(initiatorId) && sid.localCompId().equals(acceptorId))
                     .findFirst();
             },
-            timeoutInMs).sessionId();
+            timeoutInMs).surrogateId();
     }
 
     public String lastAcceptorCompId()
     {
-        return lastSessionId().acceptorCompId();
+        return lastSessionId().localCompId();
     }
 
     public String lastInitiatorCompId()
     {
-        return lastSessionId().initiatorCompId();
+        return lastSessionId().remoteCompId();
     }
 
     public Session lastSession()
@@ -206,35 +211,6 @@ public class FakeHandler
     private CompleteSessionId lastSessionId()
     {
         return completeSessionIds.peekFirst();
-    }
-
-    public static final class CompleteSessionId
-    {
-        private final String acceptorCompId;
-        private final String initiatorCompId;
-        private final long sessionId;
-
-        private CompleteSessionId(final String acceptorCompId, final String initiatorCompId, final long sessionId)
-        {
-            this.acceptorCompId = acceptorCompId;
-            this.initiatorCompId = initiatorCompId;
-            this.sessionId = sessionId;
-        }
-
-        public String acceptorCompId()
-        {
-            return acceptorCompId;
-        }
-
-        public String initiatorCompId()
-        {
-            return initiatorCompId;
-        }
-
-        public long sessionId()
-        {
-            return sessionId;
-        }
     }
 
     public boolean isSlow(final Session session)
