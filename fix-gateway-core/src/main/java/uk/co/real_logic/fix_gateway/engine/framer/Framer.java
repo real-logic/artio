@@ -326,7 +326,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         LibrarySlowPeeker outboundSlowPeeker;
         while ((outboundSlowPeeker = this.librarySlowPeeker.addLibrary(outboundSessionId)) == null)
         {
-            conductorAgentInvoker.invoke();
+            if (conductorAgentInvoker != null)
+            {
+                conductorAgentInvoker.invoke();
+            }
 
             Thread.yield();
         }

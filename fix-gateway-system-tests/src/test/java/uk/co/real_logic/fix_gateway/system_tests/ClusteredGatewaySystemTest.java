@@ -21,6 +21,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.LangUtil;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.LogTag;
@@ -162,6 +163,7 @@ public class ClusteredGatewaySystemTest
         assertAllClusterNodesHaveSameIndexFiles();
     }
 
+    @Ignore
     @Test
     public void shouldExchangeMessagesAfterPartitionHeals()
     {
