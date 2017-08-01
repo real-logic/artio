@@ -809,6 +809,7 @@ public class Session implements AutoCloseable
             return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime);
         }
 
+        // TODO(Nick): Not sure about this here. The onMessage call below is where we detect corrupt sequences so we could be notifying about a broken session here.
         notifyLogonListener();
 
         // Back pressure at this point won't re-run the above block if its completed because of the state change

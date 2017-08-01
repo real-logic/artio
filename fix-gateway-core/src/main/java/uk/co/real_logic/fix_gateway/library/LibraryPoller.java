@@ -658,6 +658,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     final SessionHandler handler = configuration.sessionAcquireHandler()
                         .onSessionAcquired(subscriber.session(), SlowStatus.SLOW == slowStatus);
                     subscriber.handler(handler);
+
                 }
             }
             else
