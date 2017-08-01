@@ -172,10 +172,9 @@ class SenderEndPoint implements AutoCloseable
         final long timeInMs)
         throws IOException
     {
-        final int wrapAdjustment = directBuffer.wrapAdjustment();
         final ByteBuffer buffer = directBuffer.byteBuffer();
-        ByteBufferUtil.limit(buffer, wrapAdjustment + offset + length);
-        ByteBufferUtil.position(buffer, wrapAdjustment + offset);
+        ByteBufferUtil.limit(buffer, offset + length);
+        ByteBufferUtil.position(buffer, offset);
 
         final int written = channel.write(buffer);
         DebugLogger.log(FIX_MESSAGE, "Written  %s%n", buffer, written);
@@ -321,9 +320,8 @@ class SenderEndPoint implements AutoCloseable
             final int dataOffset = offsetAfterHeader + FRAME_SIZE + bytesPreviouslySent;
             final ByteBuffer buffer = directBuffer.byteBuffer();
 
-            final int wrapAdjustment = directBuffer.wrapAdjustment();
-            ByteBufferUtil.limit(buffer, wrapAdjustment + dataOffset + remainingLength);
-            ByteBufferUtil.position(buffer, wrapAdjustment + dataOffset);
+            ByteBufferUtil.limit(buffer, dataOffset + remainingLength);
+            ByteBufferUtil.position(buffer, dataOffset);
 
             final int written = channel.write(buffer);
             bytesInBuffer.addOrdered(-written);

@@ -168,11 +168,11 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         final ArgumentCaptor<FileSystemCorruptionException> exception =
             ArgumentCaptor.forClass(FileSystemCorruptionException.class);
-        Mockito.verify(errorHandler).onError(exception.capture());
+        Mockito.verify(errorHandler, times(2)).onError(exception.capture());
         assertThat(
             exception.getValue().getMessage(),
             Matchers.containsString(
-                "The SequenceNumberIndex file is corrupted between bytes 0 and 4096, saved checksum is "));
+                "The SequenceNumberIndex file is corrupted"));
         reset(errorHandler);
     }
 
@@ -187,7 +187,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         newInstanceAfterRestart();
 
-        verify(errorHandler, times(2), IllegalStateException.class);
+        verify(errorHandler, times(3), IllegalStateException.class);
     }
 
     private void corruptIndexFile(final int from, final int length)

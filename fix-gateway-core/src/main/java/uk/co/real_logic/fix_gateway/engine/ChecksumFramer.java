@@ -71,12 +71,11 @@ public class ChecksumFramer extends SectorFramer
     {
         final byte[] inMemoryBytes = buffer.byteArray();
         final ByteBuffer inMemoryByteBuffer = buffer.byteBuffer();
-        final int wrapAdjustment = buffer.wrapAdjustment();
         final int capacity = this.capacity;
 
         for (int sectorEnd = SECTOR_SIZE; sectorEnd <= capacity; sectorEnd += SECTOR_SIZE)
         {
-            final int sectorStart = sectorEnd - SECTOR_SIZE + wrapAdjustment;
+            final int sectorStart = sectorEnd - SECTOR_SIZE;
             final int checksumOffset = sectorEnd - CHECKSUM_SIZE;
 
             crc32.reset();
