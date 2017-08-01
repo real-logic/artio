@@ -174,7 +174,7 @@ project(':fix-gateway-codecs') {
 
     dependencies {
         compile "org.agrona:agrona:${agronaVersion}"
-        compile 'uk.co.real-logic:sbe-all:1.7.1-SNAPSHOT'
+        compile 'uk.co.real-logic:sbe-tool:1.7.1-SNAPSHOT'
         testCompile sourceSets.generated.output
     }
 
