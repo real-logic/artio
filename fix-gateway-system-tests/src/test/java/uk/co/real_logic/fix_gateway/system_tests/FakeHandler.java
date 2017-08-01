@@ -92,8 +92,9 @@ public class FakeHandler
         return CONTINUE;
     }
 
-    public void onSessionStart(final long startTimeMillis)
-    {
+    @Override
+    public void onSessionStart(final Session session)
+	{
     }
 
     public SessionHandler onSessionAcquired(final Session session, final boolean isSlow)

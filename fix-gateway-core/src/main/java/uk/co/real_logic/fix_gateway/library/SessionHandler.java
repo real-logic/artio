@@ -79,8 +79,9 @@ public interface SessionHandler
 
     /**
      * Invoked When a client resets a session to the initial sequence number via a logon whilst still connected.
+     * This is only called if there is actually a logon time available.
      *
-     * @param startTimeMillis the sendTime of the logon message to use as the start of the session.
+     * @param session The session that has just started.
      */
-    void onSessionStart(long startTimeMillis);
+    void onSessionStart(Session session);
 }

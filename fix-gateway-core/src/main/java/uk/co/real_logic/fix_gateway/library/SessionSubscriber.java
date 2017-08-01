@@ -144,7 +144,7 @@ class SessionSubscriber implements AutoCloseable
         // Should only be fired if we already own the session and the client sends another logon to run and end of day.
         if(session.logonTime() != Session.NO_LOGON_TIME)
         {
-            handler.onSessionStart(session.logonTime());
+            handler.onSessionStart(session);
         }
     }
 
