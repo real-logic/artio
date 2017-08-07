@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway;
 
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
 
 public final class CloseChecker
