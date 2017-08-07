@@ -16,6 +16,7 @@
 package uk.co.real_logic.fix_gateway;
 
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 public final class CloseChecker
@@ -24,7 +25,7 @@ public final class CloseChecker
 
     private static final Map<String, Resource> RESOURCES = new HashMap<>();
 
-    public static void onOpen(final String resourceId, final Object owner)
+    public static synchronized void onOpen(final String resourceId, final Object owner)
     {
         if (CLOSE_CHECKER_ENABLED)
         {
@@ -48,7 +49,7 @@ public final class CloseChecker
         }
     }
 
-    public static void onClose(final String resourceId, final Object owner)
+    public static synchronized void onClose(final String resourceId, final Object owner)
     {
         if (CLOSE_CHECKER_ENABLED)
         {
@@ -60,12 +61,12 @@ public final class CloseChecker
         }
     }
 
-    public static void validate(final String resourceId)
+    public static synchronized void validate(final String resourceId)
     {
         if (CLOSE_CHECKER_ENABLED)
         {
             final Resource resource = RESOURCES.get(resourceId);
-            if (resource != null && !resource.currentlyOpen.isEmpty())
+            if (resource != null && !resource.isEmpty())
             {
                 final Error error = error(resourceId, resource.currentlyOpen.keySet());
                 resource.currentlyOpen.values().forEach(error::addSuppressed);
@@ -77,13 +78,20 @@ public final class CloseChecker
     private static Error error(final String resourceId, final Object owned)
     {
         return new Error(String.format(
-            "Resource [%s] open by %s",
+            "Resource [%s] open by %s [%s]",
             resourceId,
-            owned));
+            owned,
+            owned.getClass()));
     }
 
     private static final class Resource
     {
         final Map<Object, Exception> currentlyOpen = new HashMap<>();
+
+        private boolean isEmpty()
+        {
+            // Work around potential JDK 9 bug
+            return currentlyOpen.size() <= 0;
+        }
     }
 }
