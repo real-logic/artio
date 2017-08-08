@@ -303,8 +303,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         int operations = 0;
         operations += inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit);
-        operations += pollSessions(timeInMs);
         operations += livenessDetector.poll(timeInMs);
+        operations += pollSessions(timeInMs);
         operations += checkReplies(timeInMs);
         return operations;
     }
