@@ -196,7 +196,6 @@
                  description="Notify an engine that a new library has connected">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="correlationId" id="2" type="CorrelationId"/>
-        <data name="libraryName" id="3" type="Utf8String"/>
     </sbe:message>
 
     <sbe:message name="ReleaseSession" id="29"
