@@ -51,6 +51,7 @@ public interface EngineEndPointHandler
     Action onReleaseSession(
         int libraryId,
         long connectionId,
+        long sessionId,
         long correlationId,
         SessionState state,
         long heartbeatIntervalInMs,
