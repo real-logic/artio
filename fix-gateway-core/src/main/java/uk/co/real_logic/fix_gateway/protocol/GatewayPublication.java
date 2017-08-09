@@ -51,7 +51,8 @@ public class GatewayPublication extends ClaimablePublication
     private static final int CONNECT_SIZE =
         ManageConnectionEncoder.BLOCK_LENGTH + ManageConnectionDecoder.addressHeaderLength();
     private static final int HEARTBEAT_LENGTH = HEADER_LENGTH + ApplicationHeartbeatEncoder.BLOCK_LENGTH;
-    private static final int LIBRARY_CONNECT_LENGTH = HEADER_LENGTH + LibraryConnectEncoder.BLOCK_LENGTH;
+    private static final int LIBRARY_CONNECT_LENGTH = HEADER_LENGTH + LibraryConnectEncoder.BLOCK_LENGTH +
+            LibraryConnectEncoder.libraryNameHeaderLength();
     private static final int DISCONNECT_LENGTH = HEADER_LENGTH + DisconnectEncoder.BLOCK_LENGTH;
     private static final int RELEASE_SESSION_LENGTH = HEADER_LENGTH + ReleaseSessionEncoder.BLOCK_LENGTH +
         ReleaseSessionEncoder.usernameHeaderLength() + ReleaseSessionEncoder.passwordHeaderLength();
@@ -612,7 +613,8 @@ public class GatewayPublication extends ClaimablePublication
 
     public long saveLibraryConnect(final int libraryId, final String libraryName, final long correlationId)
     {
-        final long position = claim(LIBRARY_CONNECT_LENGTH);
+        final byte[] libraryNameBytes = bytes(libraryName);
+        final long position = claim(LIBRARY_CONNECT_LENGTH + libraryNameBytes.length);
         if (position < 0)
         {
             return position;
@@ -624,7 +626,7 @@ public class GatewayPublication extends ClaimablePublication
         libraryConnect
             .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
-            .libraryName(libraryName)
+            .putLibraryName(libraryNameBytes, 0, libraryNameBytes.length)
             .correlationId(correlationId);
 
         bufferClaim.commit();

@@ -874,7 +874,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
-    public Action onLibraryConnect(final int libraryId, String libraryName, final long correlationId, final int aeronSessionId)
+    public Action onLibraryConnect(
+        final int libraryId,
+        final String libraryName,
+        final long correlationId,
+        final int aeronSessionId)
     {
         final Action action = retryManager.retry(correlationId);
         if (action != null)

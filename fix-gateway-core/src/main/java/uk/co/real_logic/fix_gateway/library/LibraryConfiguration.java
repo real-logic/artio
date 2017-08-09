@@ -246,7 +246,7 @@ public final class LibraryConfiguration extends CommonConfiguration
         return libraryName;
     }
 
-    public LibraryConfiguration libraryName(String libraryName)
+    public LibraryConfiguration libraryName(final String libraryName)
     {
         this.libraryName = libraryName;
         return this;
