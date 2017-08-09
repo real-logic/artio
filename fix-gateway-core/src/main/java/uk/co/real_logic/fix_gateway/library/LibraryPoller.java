@@ -225,6 +225,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return outboundPublication.saveReleaseSession(
             libraryId,
             session.connectionId(),
+            session.id(),
             correlationId,
             session.state(),
             session.heartbeatIntervalInMs(),
