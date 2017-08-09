@@ -15,6 +15,9 @@
  */
 package uk.co.real_logic.fix_gateway.library;
 
+import io.aeron.Aeron;
+import io.aeron.exceptions.ConductorServiceTimeoutException;
+import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.SystemEpochClock;
 import uk.co.real_logic.fix_gateway.CommonConfiguration;
@@ -50,6 +53,8 @@ public class FixLibrary extends GatewayProcess
     private final LibraryScheduler scheduler;
     private final LibraryPoller poller;
     private boolean isPolling = false;
+
+
 
     FixLibrary(final LibraryConfiguration configuration)
     {
@@ -99,8 +104,34 @@ public class FixLibrary extends GatewayProcess
     private FixLibrary connect()
     {
         poller.startConnecting();
-        scheduler.launch(configuration, errorHandler, monitoringAgent);
+        ErrorHandler remoteThreadErrorHandler = createRemoteThreadErrorHandler(errorHandler);
+        scheduler.launch(configuration, remoteThreadErrorHandler, monitoringAgent);
         return this;
+    }
+
+    @Override
+    protected Aeron.Context configureAeronContext(final CommonConfiguration configuration)
+    {
+        Aeron.Context context = super.configureAeronContext(configuration);
+        ErrorHandler errorHandler = context.errorHandler();
+        context.errorHandler(createRemoteThreadErrorHandler(errorHandler));
+        return context;
+    }
+
+    private ErrorHandler createRemoteThreadErrorHandler(ErrorHandler innerHandler)
+    {
+        return (e) -> {
+            if (e instanceof ConductorServiceTimeoutException) {
+                // Currently only post specifically exceptions that we know need the library to be closed.
+                FixLibrary.this.postExceptionToLibraryThread(e);
+            } else {
+                innerHandler.onError(e);
+            }
+        };
+    }
+
+    private void postExceptionToLibraryThread(Throwable e) {
+        this.poller.postExceptionToLibraryThread(e);
     }
 
     // ------------- Public API -------------

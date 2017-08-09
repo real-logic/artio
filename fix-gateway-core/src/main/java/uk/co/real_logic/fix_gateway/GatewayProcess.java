@@ -54,7 +54,7 @@ public class GatewayProcess implements AutoCloseable
         initAeron(configuration);
     }
 
-    private void initMonitoring(final CommonConfiguration configuration)
+    protected void initMonitoring(final CommonConfiguration configuration)
     {
         monitoringFile = new MonitoringFile(true, configuration);
         fixCounters = new FixCounters(monitoringFile.createCountersManager());
@@ -70,11 +70,9 @@ public class GatewayProcess implements AutoCloseable
         };
     }
 
-    private void initAeron(final CommonConfiguration configuration)
+    protected void initAeron(final CommonConfiguration configuration)
     {
-        final Aeron.Context ctx = aeronContext(configuration);
-        aeron = Aeron.connect(ctx);
-        CloseChecker.onOpen(ctx.aeronDirectoryName(), aeron);
+        aeronConnect(configureAeronContext(configuration));
     }
 
     // To be invoked by called called before a scheduler has launched
@@ -83,7 +81,13 @@ public class GatewayProcess implements AutoCloseable
         return configuration.invokeConductorAgent();
     }
 
-    private Aeron.Context aeronContext(final CommonConfiguration configuration)
+    protected void aeronConnect(Aeron.Context context)
+    {
+        aeron = Aeron.connect(context);
+        CloseChecker.onOpen(context.aeronDirectoryName(), aeron);
+    }
+
+    protected Aeron.Context configureAeronContext(final CommonConfiguration configuration)
     {
         final Aeron.Context ctx = configuration.aeronContext();
         ctx.imageMapMode(FileChannel.MapMode.READ_WRITE);
