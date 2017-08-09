@@ -104,7 +104,7 @@ public class FixLibrary extends GatewayProcess
     private FixLibrary connect()
     {
         poller.startConnecting();
-        ErrorHandler remoteThreadErrorHandler = createRemoteThreadErrorHandler(errorHandler);
+        final ErrorHandler remoteThreadErrorHandler = createRemoteThreadErrorHandler(errorHandler);
         scheduler.launch(configuration, remoteThreadErrorHandler, monitoringAgent);
         return this;
     }
@@ -112,25 +112,30 @@ public class FixLibrary extends GatewayProcess
     @Override
     protected Aeron.Context configureAeronContext(final CommonConfiguration configuration)
     {
-        Aeron.Context context = super.configureAeronContext(configuration);
-        ErrorHandler errorHandler = context.errorHandler();
+        final Aeron.Context context = super.configureAeronContext(configuration);
+        final ErrorHandler errorHandler = context.errorHandler();
         context.errorHandler(createRemoteThreadErrorHandler(errorHandler));
         return context;
     }
 
-    private ErrorHandler createRemoteThreadErrorHandler(ErrorHandler innerHandler)
+    private ErrorHandler createRemoteThreadErrorHandler(final ErrorHandler innerHandler)
     {
-        return (e) -> {
-            if (e instanceof ConductorServiceTimeoutException) {
+        return (e) ->
+        {
+            if (e instanceof ConductorServiceTimeoutException)
+            {
                 // Currently only post specifically exceptions that we know need the library to be closed.
                 FixLibrary.this.postExceptionToLibraryThread(e);
-            } else {
+            }
+            else
+            {
                 innerHandler.onError(e);
             }
         };
     }
 
-    private void postExceptionToLibraryThread(Throwable e) {
+    private void postExceptionToLibraryThread(final Throwable e)
+    {
         this.poller.postExceptionToLibraryThread(e);
     }
 

@@ -81,7 +81,7 @@ public class GatewayProcess implements AutoCloseable
         return configuration.invokeConductorAgent();
     }
 
-    protected void aeronConnect(Aeron.Context context)
+    protected void aeronConnect(final Aeron.Context context)
     {
         aeron = Aeron.connect(context);
         CloseChecker.onOpen(context.aeronDirectoryName(), aeron);

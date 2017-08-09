@@ -278,7 +278,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         final long timeInMs = timeInMs();
 
-        if(null != remoteThrowable){
+        if (null != remoteThrowable)
+        {
             LangUtil.rethrowUnchecked(remoteThrowable);
         }
 
@@ -316,7 +317,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return operations;
     }
 
-    void postExceptionToLibraryThread(Throwable t){
+    void postExceptionToLibraryThread(final Throwable t)
+    {
         this.remoteThrowable = t;
     }
 

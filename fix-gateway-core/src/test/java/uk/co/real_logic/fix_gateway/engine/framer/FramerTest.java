@@ -694,7 +694,17 @@ public class FramerTest
     private void releaseConnection(final Action expectedResult)
     {
         assertEquals(expectedResult, framer.onReleaseSession(
-            LIBRARY_ID, connectionId.getValue(), SESSION_ID, CORR_ID, ACTIVE, HEARTBEAT_INTERVAL_IN_MS, 0, 0, "", "", header));
+            LIBRARY_ID,
+            connectionId.getValue(),
+            SESSION_ID,
+            CORR_ID,
+            ACTIVE,
+            HEARTBEAT_INTERVAL_IN_MS,
+            0,
+            0,
+            "",
+            "",
+            header));
     }
 
     private Action onLibraryConnect()

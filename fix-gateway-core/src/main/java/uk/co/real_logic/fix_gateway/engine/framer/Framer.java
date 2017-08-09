@@ -486,7 +486,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final boolean hasLoggedIn = receivedSequenceNumber != UNK_SESSION;
             final SessionState state = hasLoggedIn ? ACTIVE : CONNECTED;
 
-            DebugLogger.log(CLUSTER_MANAGEMENT, "Acquiring session %s from library %s%n", session.sessionId(), library.libraryId());
+            DebugLogger.log(
+                CLUSTER_MANAGEMENT,
+                "Acquiring session %s from library %s%n", session.sessionId(), library.libraryId());
 
             gatewaySessions.acquire(
                 session,
@@ -692,7 +694,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         try
         {
-            DebugLogger.log(CLUSTER_MANAGEMENT, "Initiating session %s from library %s%n", sessionContext.sessionId(), library.libraryId());
+            DebugLogger.log(
+                CLUSTER_MANAGEMENT,
+                "Initiating session %s from library %s%n", sessionContext.sessionId(), library.libraryId());
 
             final long connectionId = this.nextConnectionId++;
 
@@ -976,7 +980,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     libraryId, SessionReplyStatus.UNKNOWN_LIBRARY, correlationId));
         }
 
-        DebugLogger.log(CLUSTER_MANAGEMENT, "Releasing session %s with connectionId %s from library %s%n", sessionId, connectionId, libraryId);
+        DebugLogger.log(
+            CLUSTER_MANAGEMENT,
+            "Releasing session %s with connectionId %s from library %s%n",
+            sessionId,
+            connectionId,
+            libraryId);
 
         final GatewaySession session = libraryInfo.removeSession(connectionId);
 

@@ -43,7 +43,7 @@ public class DynamicLibraryScheduler implements LibraryScheduler
         {
             // We shouldn't reach this default error handler because we catch exceptions in the CombinedAgent below.
             runner = new AgentRunner(
-                    configuration.monitoringThreadIdleStrategy(), (e)->e.printStackTrace(), null, dynamicAgent);
+                    configuration.monitoringThreadIdleStrategy(), (e) -> e.printStackTrace(), null, dynamicAgent);
             AgentRunner.startOnThread(runner);
         }
 
@@ -73,13 +73,19 @@ public class DynamicLibraryScheduler implements LibraryScheduler
             .useConductorAgentInvoker(true);
     }
 
-    private static class CombinedAgent implements Agent {
+    private static final class CombinedAgent implements Agent
+    {
         private final Agent monitoringAgent;
         private final Agent clientConductorAgent;
         private final ErrorHandler errorHandler;
         private final String roleName;
 
-        private CombinedAgent(int libraryId, Agent monitoringAgent, Agent clientConductorAgent, ErrorHandler errorHandler) {
+        private CombinedAgent(
+            final int libraryId,
+            final Agent monitoringAgent,
+            final Agent clientConductorAgent,
+            final ErrorHandler errorHandler)
+        {
             this.roleName = "[Library:" + libraryId + ":monitoring+conductor]";
             this.monitoringAgent = monitoringAgent;
             this.clientConductorAgent = clientConductorAgent;
@@ -87,13 +93,17 @@ public class DynamicLibraryScheduler implements LibraryScheduler
         }
 
         @Override
-        public int doWork() throws Exception {
+        public int doWork() throws Exception
+        {
             int count = 0;
 
-            try {
+            try
+            {
                 count += monitoringAgent.doWork();
                 count += clientConductorAgent.doWork();
-            } catch(Throwable throwable){
+            }
+            catch (final Throwable throwable)
+            {
                 System.out.println("Here...");
                 errorHandler.onError(throwable);
             }
@@ -102,7 +112,8 @@ public class DynamicLibraryScheduler implements LibraryScheduler
         }
 
         @Override
-        public String roleName() {
+        public String roleName()
+        {
             return roleName;
         }
     }

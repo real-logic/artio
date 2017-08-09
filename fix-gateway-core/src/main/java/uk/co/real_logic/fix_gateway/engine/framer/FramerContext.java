@@ -69,7 +69,7 @@ public class FramerContext
     {
         final ClusterableStreams streams = engineContext.streams();
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
-        this.sessionContexts = new SessionContexts( configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
+        this.sessionContexts = new SessionContexts(configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
         final Streams outboundLibraryStreams = engineContext.outboundLibraryStreams();
         final Streams inboundLibraryStreams = engineContext.inboundLibraryStreams();
