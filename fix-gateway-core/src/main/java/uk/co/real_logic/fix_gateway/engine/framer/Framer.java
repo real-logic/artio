@@ -74,6 +74,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.collections.CollectionUtil.removeIf;
 import static uk.co.real_logic.fix_gateway.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.fix_gateway.LogTag.APPLICATION_HEARTBEAT;
+import static uk.co.real_logic.fix_gateway.LogTag.CLUSTER_MANAGEMENT;
 import static uk.co.real_logic.fix_gateway.Pressure.isBackPressured;
 import static uk.co.real_logic.fix_gateway.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.fix_gateway.engine.SessionInfo.UNK_SESSION;
@@ -414,6 +415,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             total += library.poll(timeInMs);
             if (!library.isConnected())
             {
+                DebugLogger.log(CLUSTER_MANAGEMENT, "Timing out connection to library %s%n", library.libraryId());
+
                 iterator.remove();
                 library.releaseSlowPeeker();
                 tryAcquireLibrarySessions(library);
@@ -482,6 +485,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final int receivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             final boolean hasLoggedIn = receivedSequenceNumber != UNK_SESSION;
             final SessionState state = hasLoggedIn ? ACTIVE : CONNECTED;
+
+            DebugLogger.log(CLUSTER_MANAGEMENT, "Acquiring session %s from library %s%n", session.sessionId(), library.libraryId());
 
             gatewaySessions.acquire(
                 session,
@@ -687,6 +692,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         try
         {
+            DebugLogger.log(CLUSTER_MANAGEMENT, "Initiating session %s from library %s%n", sessionContext.sessionId(), library.libraryId());
+
             final long connectionId = this.nextConnectionId++;
 
             sessionContext.onLogon(resetSequenceNumber || sequenceNumberType == TRANSIENT);
@@ -910,6 +917,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 libraryId, livenessDetector, aeronSessionId, librarySlowPeeker);
             idToLibrary.put(libraryId, library);
 
+            DebugLogger.log(CLUSTER_MANAGEMENT, "Library %s connected %n", libraryId);
+
             return COMPLETE;
         });
 
@@ -1045,6 +1054,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final SessionState sessionState = session.state();
         gatewaySession.handoverManagementTo(libraryId, libraryInfo.librarySlowPeeker());
         libraryInfo.addSession(gatewaySession);
+
+        DebugLogger.log(CLUSTER_MANAGEMENT, "Handing control for session %s to library %s%n", sessionId, libraryId);
 
         final List<Continuation> continuations = new ArrayList<>();
         continuations.add(() -> inboundPublication.saveManageConnection(

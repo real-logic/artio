@@ -69,8 +69,7 @@ public class FramerContext
     {
         final ClusterableStreams streams = engineContext.streams();
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
-        sessionContexts = new SessionContexts(
-            configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
+        this.sessionContexts = new SessionContexts( configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
         final Streams outboundLibraryStreams = engineContext.outboundLibraryStreams();
         final Streams inboundLibraryStreams = engineContext.inboundLibraryStreams();
@@ -79,8 +78,8 @@ public class FramerContext
         final LongHashSet replicatedConnectionIds = new LongHashSet();
         final GatewayPublication inboundClusterablePublication =
             inboundLibraryStreams.gatewayPublication(idleStrategy, "inboundPublication");
-        inboundLibraryPublication = engineContext.inboundLibraryPublication();
-        outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "outboundPublication");
+        this.inboundLibraryPublication = engineContext.inboundLibraryPublication();
+        this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "outboundPublication");
 
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,
@@ -110,8 +109,8 @@ public class FramerContext
         receivedSequenceNumberIndex = new SequenceNumberIndexReader(
             configuration.receivedSequenceNumberBuffer(), errorHandler);
 
-
         final FinalImagePositions finalImagePositions = new FinalImagePositions();
+
         framer = new Framer(
             clock,
             timers.outboundTimer(),
