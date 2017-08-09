@@ -874,10 +874,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
-    public Action onLibraryConnect(
-        final int libraryId,
-        final long correlationId,
-        final int aeronSessionId)
+    public Action onLibraryConnect(final int libraryId, String libraryName, final long correlationId, final int aeronSessionId)
     {
         final Action action = retryManager.retry(correlationId);
         if (action != null)
@@ -918,10 +915,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }
 
             final LiveLibraryInfo library = new LiveLibraryInfo(
-                libraryId, livenessDetector, aeronSessionId, librarySlowPeeker);
+                    libraryId, libraryName, livenessDetector, aeronSessionId, librarySlowPeeker);
             idToLibrary.put(libraryId, library);
 
-            DebugLogger.log(CLUSTER_MANAGEMENT, "Library %s connected %n", libraryId);
+            DebugLogger.log(CLUSTER_MANAGEMENT, "Library %s - %s connected %n", libraryId, libraryName);
 
             return COMPLETE;
         });
@@ -949,7 +946,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
         else
         {
-            final Action action = onLibraryConnect(libraryId, libraryId, aeronSessionId);
+            // We are not going to send the libraryName on every heartbeat so this library will not have a debug name.
+            final Action action = onLibraryConnect(libraryId, "", libraryId, aeronSessionId);
             if (action == ABORT)
             {
                 return ABORT;

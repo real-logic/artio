@@ -32,6 +32,13 @@ public interface LibraryInfo
     int libraryId();
 
     /**
+     * Get the debug name of the library.
+     *
+     * @return the debug name of the library. May be null.
+     */
+    String libraryName();
+
+    /**
      * Get an unmodifiable list of the current sessions connected to this library.
      *
      * @return an unmodifiable list of the current sessions connected to this library.
