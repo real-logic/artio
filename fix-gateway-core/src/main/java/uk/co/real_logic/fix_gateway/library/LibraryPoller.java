@@ -151,15 +151,15 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         this.transport = transport;
         this.fixLibrary = fixLibrary;
 
-        sessionTimer = timers.sessionTimer();
-        receiveTimer = timers.receiveTimer();
+        this.sessionTimer = timers.sessionTimer();
+        this.receiveTimer = timers.receiveTimer();
 
         this.configuration = configuration;
         this.sessionIdStrategy = configuration.sessionIdStrategy();
-        sessionExistsHandler = configuration.sessionExistsHandler();
-        sentPositionHandler = configuration.sentPositionHandler();
+        this.sessionExistsHandler = configuration.sessionExistsHandler();
+        this.sentPositionHandler = configuration.sentPositionHandler();
         this.clock = clock;
-        enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
+        this.enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
     }
 
     boolean isConnected()
@@ -620,7 +620,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         if (thisLibrary && logonstatus == LogonStatus.NEW)
         {
             DebugLogger.log(
-                FIX_MESSAGE,
+                GATEWAY_MESSAGE,
                 "onSessionExists: conn=%d, sess=%d, sentSeqNo=%d, recvSeqNo=%d%n",
                 connectionId,
                 sessionId,
@@ -707,7 +707,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     public Action onDisconnect(
         final int libraryId, final long connectionId, final DisconnectReason reason)
     {
-        DebugLogger.log(FIX_MESSAGE, "%2$d: Library Disconnect %3$d, %1$s%n", reason, libraryId, connectionId);
+        DebugLogger.log(GATEWAY_MESSAGE, "%2$d: Library Disconnect %3$d, %1$s%n", reason, libraryId, connectionId);
         if (libraryId == this.libraryId)
         {
             final SessionSubscriber subscriber = connectionIdToSession.remove(connectionId);
