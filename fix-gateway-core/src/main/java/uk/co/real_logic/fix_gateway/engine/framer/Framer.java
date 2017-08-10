@@ -97,7 +97,9 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.CONNECTED;
 class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 {
     // TODO(Nick): This is a copy of the one from LibraryPoller,
+    // TODO(Nick): This is a copy of the one from LibraryPoller,
     // but that one is also private so we can't access. Combine somewhere.
+    // Combine somewhere.
     static final long NO_CORRELATION_ID = 0;
     private static final ByteBuffer CONNECT_ERROR;
     private static final List<SessionInfo> NO_SESSIONS = emptyList();
@@ -1133,27 +1135,27 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             final long connectionId = gatewaySession.connectionId();
 
-            final long result = inboundPublication.saveManageSession(libraryId,
-                                                                     connectionId,
-                                                                     gatewaySession.sessionId(),
-                                                                     lastSentSeqNum,
-                                                                     lastReceivedSeqNum,
-                                                                     gatewaySession.session().logonTime(),
-                                                                     logonstatus,
-                                                                     gatewaySession.slowStatus(),
-                                                                     gatewaySession.connectionType(),
-                                                                     gatewaySession.session().state(),
-                                                                     gatewaySession.heartbeatIntervalInS(),
-                                                                     NO_CORRELATION_ID,
-                                                                     gatewaySession.sequenceIndex(),
-                                                                     compositeKey.localCompId(),
-                                                                     compositeKey.localSubId(),
-                                                                     compositeKey.localLocationId(),
-                                                                     compositeKey.remoteCompId(),
-                                                                     compositeKey.remoteSubId(),
+            return inboundPublication.saveManageSession(
+                    libraryId,
+                                                        connectionId,
+                                                        gatewaySession.sessionId(),
+                                                        lastSentSeqNum,
+                                                        lastReceivedSeqNum,
+                                                        gatewaySession.session().logonTime(),
+                                                        logonstatus,
+                                                        gatewaySession.slowStatus(),
+                                                        gatewaySession.connectionType(),
+                                                        gatewaySession.session().state(),
+                                                        gatewaySession.heartbeatIntervalInS(),
+                                                        NO_CORRELATION_ID,
+                                                        gatewaySession.sequenceIndex(),
+                                                        compositeKey.localCompId(),
+                                                        compositeKey.localSubId(),
+                                                        compositeKey.localLocationId(),
+                                                        compositeKey.remoteCompId(),
+                                                        compositeKey.remoteSubId(),
                                                                      compositeKey.remoteLocationId(),
                                                                      gatewaySession.address());
-            return result;
         }
 
         return COMPLETE;

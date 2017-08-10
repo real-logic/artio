@@ -322,7 +322,8 @@ public class FramerTest
         try
         {
             framer.doWork();
-        } catch (final Exception ex)
+        }
+        catch (final Exception ex)
         {
             LangUtil.rethrowUnchecked(ex);
         }
@@ -679,7 +680,8 @@ public class FramerTest
             try
             {
                 client.write(buffer);
-            } catch (final IOException ignore)
+            }
+            catch (final IOException ignore)
             {
                 return;
             }

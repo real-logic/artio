@@ -51,7 +51,7 @@ public class GatewayPublication extends ClaimablePublication
 
     private static final int HEARTBEAT_LENGTH = HEADER_LENGTH + ApplicationHeartbeatEncoder.BLOCK_LENGTH;
     private static final int LIBRARY_CONNECT_LENGTH = HEADER_LENGTH + LibraryConnectEncoder.BLOCK_LENGTH +
-                                                      LibraryConnectEncoder.libraryNameHeaderLength();
+            LibraryConnectEncoder.libraryNameHeaderLength();
     private static final int DISCONNECT_LENGTH = HEADER_LENGTH + DisconnectEncoder.BLOCK_LENGTH;
     private static final int RELEASE_SESSION_LENGTH = HEADER_LENGTH +
                                                       ReleaseSessionEncoder.BLOCK_LENGTH +
@@ -67,6 +67,12 @@ public class GatewayPublication extends ClaimablePublication
     private static final int SLOW_STATUS_NOTIFICATION_LENGTH = HEADER_LENGTH +
                                                                SlowStatusNotificationEncoder.BLOCK_LENGTH;
     private static final byte MIDDLE_FLAG = 0;
+    private static final int MANAGE_SESSION_BLOCK_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
+        ManageSessionEncoder.BLOCK_LENGTH + ManageSessionEncoder.localCompIdHeaderLength() * 7;
+    private static final int INITIATE_CONNECTION_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
+        InitiateConnectionEncoder.BLOCK_LENGTH + InitiateConnectionDecoder.hostHeaderLength() * 9;
+    private static final int CONTROL_NOTIFICATION_LENGTH = HEADER_LENGTH + ControlNotificationEncoder.BLOCK_LENGTH +
+        GroupSizeEncodingEncoder.ENCODED_LENGTH;
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -97,9 +103,9 @@ public class GatewayPublication extends ClaimablePublication
 
     public GatewayPublication(
         final ClusterablePublication dataPublication,
-        final AtomicCounter fails,
-        final IdleStrategy idleStrategy,
-        final NanoClock nanoClock,
+            final AtomicCounter fails,
+            final IdleStrategy idleStrategy,
+            final NanoClock nanoClock,
         final int maxClaimAttempts)
     {
         super(maxClaimAttempts, idleStrategy, fails, dataPublication);
@@ -110,13 +116,13 @@ public class GatewayPublication extends ClaimablePublication
 
     public long saveMessage(
         final DirectBuffer srcBuffer,
-        final int srcOffset,
-        final int srcLength,
-        final int libraryId,
-        final int messageType,
-        final long sessionId,
-        final int sequenceIndex,
-        final long connectionId,
+            final int srcOffset,
+            final int srcLength,
+            final int libraryId,
+            final int messageType,
+            final long sessionId,
+            final int sequenceIndex,
+            final long connectionId,
         final MessageStatus status)
     {
         final ExclusiveBufferClaim bufferClaim = this.bufferClaim;
@@ -137,22 +143,22 @@ public class GatewayPublication extends ClaimablePublication
         final MutableDirectBuffer destBuffer = bufferClaim.buffer();
 
         header.wrap(destBuffer, offset)
-              .blockLength(fixMessage.sbeBlockLength())
-              .templateId(fixMessage.sbeTemplateId())
-              .schemaId(fixMessage.sbeSchemaId())
-              .version(fixMessage.sbeSchemaVersion());
+            .blockLength(fixMessage.sbeBlockLength())
+            .templateId(fixMessage.sbeTemplateId())
+            .schemaId(fixMessage.sbeSchemaId())
+            .version(fixMessage.sbeSchemaVersion());
 
         offset += header.encodedLength();
 
         fixMessage.wrap(destBuffer, offset)
-                  .libraryId(libraryId)
-                  .messageType(messageType)
-                  .session(sessionId)
-                  .sequenceIndex(sequenceIndex)
-                  .connection(connectionId)
-                  .timestamp(timestamp)
-                  .status(status)
-                  .putBody(srcBuffer, srcFragmentOffset, srcFragmentLength);
+            .libraryId(libraryId)
+            .messageType(messageType)
+            .session(sessionId)
+            .sequenceIndex(sequenceIndex)
+            .connection(connectionId)
+            .timestamp(timestamp)
+            .status(status)
+            .putBody(srcBuffer, srcFragmentOffset, srcFragmentLength);
 
         if (!fragmented)
         {
@@ -194,35 +200,16 @@ public class GatewayPublication extends ClaimablePublication
         destBuffer.putShort(offset + FixMessageEncoder.BLOCK_LENGTH, (short) srcLength, LITTLE_ENDIAN);
     }
 
-    /*
-    public long saveSessionExists(final int libraryId, final long connectionId, final long sessionId) {
-        return saveSessionExists(libraryId,
-                                 connectionId,
-                                 sessionId,
-                                 SessionInfo.UNK_SESSION,
-                                 SessionInfo.UNK_SESSION,
-                                 null,
-                                 null,
-                                 null,
-                                 null,
-                                 null,
-                                 null,
-                                 null,
-                                 null,
-                                 LogonStatus.NEW,
-                                 SlowStatus.NOT_SLOW);
-    }
-    */
-
     public long saveManageSession(final int libraryId, final long connectionId, final long sessionId)
     {
-        return saveManageSession(libraryId,
-                                 connectionId,
-                                 sessionId,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 LogonStatus.NULL_VAL,
+        return saveManageSession(
+            libraryId,
+            connectionId,
+            sessionId,
+            -1,
+            -1,
+            -1,
+            LogonStatus.NULL_VAL,
                                  SlowStatus.NULL_VAL,
                                  ConnectionType.NULL_VAL,
                                  SessionState.NULL_VAL,
@@ -240,24 +227,24 @@ public class GatewayPublication extends ClaimablePublication
 
     public long saveManageSession(
         final int libraryId,
-        final long connection,
-        final long session,
-        final int lastSentSequenceNumber,
-        final int lastReceivedSequenceNumber,
-        final long logonTime,
-        final LogonStatus logonStatus,
-        final SlowStatus slowStatus,
-        final ConnectionType connectionType,
-        final SessionState sessionState,
-        final int heartbeatIntervalInS,
-        final long replyToId,
-        final int sequenceIndex,
-        final String localCompId,
-        final String localSubId,
-        final String localLocationId,
-        final String remoteCompId,
-        final String remoteSubId,
-        final String remoteLocationId,
+            final long connection,
+            final long session,
+            final int lastSentSequenceNumber,
+            final int lastReceivedSequenceNumber,
+            final long logonTime,
+            final LogonStatus logonStatus,
+            final SlowStatus slowStatus,
+            final ConnectionType connectionType,
+            final SessionState sessionState,
+            final int heartbeatIntervalInS,
+            final long replyToId,
+            final int sequenceIndex,
+            final String localCompId,
+            final String localSubId,
+            final String localLocationId,
+            final String remoteCompId,
+            final String remoteSubId,
+            final String remoteLocationId,
         final String address)
     {
         final byte[] localCompIdBytes = bytes(localCompId);
@@ -269,16 +256,9 @@ public class GatewayPublication extends ClaimablePublication
         final byte[] addressBytes = bytes(address);
 
         final long position =
-            claim(header.encodedLength() +
-                  ManageSessionEncoder.BLOCK_LENGTH +
-                  ManageSessionEncoder.localCompIdHeaderLength() * 7 +
-                  localCompIdBytes.length +
-                  localSubIdBytes.length +
-                  localLocationIdBytes.length +
-                  remoteCompIdBytes.length +
-                  remoteSubIdBytes.length +
-                  remoteLocationIdBytes.length +
-                  addressBytes.length);
+            claim(MANAGE_SESSION_BLOCK_LENGTH + localCompIdBytes.length + localSubIdBytes.length +
+                localLocationIdBytes.length + remoteCompIdBytes.length + remoteSubIdBytes.length +
+                remoteLocationIdBytes.length + addressBytes.length);
 
         if (position < 0)
         {
@@ -289,26 +269,26 @@ public class GatewayPublication extends ClaimablePublication
         final int offset = bufferClaim.offset();
 
         manageSessionEncoder.wrapAndApplyHeader(buffer, offset, header)
-                            .libraryId(libraryId)
-                            .connection(connection)
-                            .session(session)
-                            .lastSentSequenceNumber(lastSentSequenceNumber)
-                            .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
-                            .logonTime(logonTime)
-                            .logonStatus(logonStatus)
-                            .slowStatus(slowStatus)
-                            .connectionType(connectionType)
-                            .sessionState(sessionState)
-                            .heartbeatIntervalInS(heartbeatIntervalInS)
-                            .replyToId(replyToId)
-                            .sequenceIndex(sequenceIndex)
-                            .putLocalCompId(localCompIdBytes, 0, localCompIdBytes.length)
-                            .putLocalSubId(localSubIdBytes, 0, localSubIdBytes.length)
-                            .putLocalLocationId(localLocationIdBytes, 0, localLocationIdBytes.length)
-                            .putRemoteCompId(remoteCompIdBytes, 0, remoteCompIdBytes.length)
-                            .putRemoteSubId(remoteSubIdBytes, 0, remoteSubIdBytes.length)
-                            .putRemoteLocationId(remoteLocationIdBytes, 0, remoteLocationIdBytes.length)
-                            .putAddress(addressBytes, 0, addressBytes.length);
+            .libraryId(libraryId)
+            .connection(connection)
+            .session(session)
+            .lastSentSequenceNumber(lastSentSequenceNumber)
+            .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
+            .logonTime(logonTime)
+            .logonStatus(logonStatus)
+            .slowStatus(slowStatus)
+            .connectionType(connectionType)
+            .sessionState(sessionState)
+            .heartbeatIntervalInS(heartbeatIntervalInS)
+            .replyToId(replyToId)
+            .sequenceIndex(sequenceIndex)
+            .putLocalCompId(localCompIdBytes, 0, localCompIdBytes.length)
+            .putLocalSubId(localSubIdBytes, 0, localSubIdBytes.length)
+            .putLocalLocationId(localLocationIdBytes, 0, localLocationIdBytes.length)
+            .putRemoteCompId(remoteCompIdBytes, 0, remoteCompIdBytes.length)
+            .putRemoteSubId(remoteSubIdBytes, 0, remoteSubIdBytes.length)
+            .putRemoteLocationId(remoteLocationIdBytes, 0, remoteLocationIdBytes.length)
+            .putAddress(addressBytes, 0, addressBytes.length);
 
         bufferClaim.commit();
 
@@ -476,18 +456,9 @@ public class GatewayPublication extends ClaimablePublication
         final byte[] passwordBytes = bytes(password);
 
         final long position =
-            claim(header.encodedLength() +
-                  InitiateConnectionEncoder.BLOCK_LENGTH +
-                  InitiateConnectionDecoder.hostHeaderLength() * 9 +
-                  hostBytes.length +
-                  senderCompIdBytes.length +
-                  senderSubIdBytes.length +
-                  senderLocationIdBytes.length +
-                  targetCompIdBytes.length +
-                  targetSubIdBytes.length +
-                  targetLocationIdBytes.length +
-                  usernameBytes.length +
-                  passwordBytes.length);
+            claim(INITIATE_CONNECTION_LENGTH + hostBytes.length + senderCompIdBytes.length +
+                senderSubIdBytes.length + senderLocationIdBytes.length + targetCompIdBytes.length +
+                targetSubIdBytes.length + targetLocationIdBytes.length + usernameBytes.length + passwordBytes.length);
 
         if (position < 0)
         {
@@ -498,22 +469,22 @@ public class GatewayPublication extends ClaimablePublication
         final int offset = bufferClaim.offset();
 
         initiateConnection.wrapAndApplyHeader(buffer, offset, header)
-                          .libraryId(libraryId)
-                          .port(port)
-                          .requestedInitialSequenceNumber(requestedInitialSequenceNumber)
-                          .sequenceNumberType(sequenceNumberType)
-                          .heartbeatIntervalInS(heartbeatIntervalInS)
-                          .resetSequenceNumber(resetSequenceNumber ? ResetSequenceNumber.YES : ResetSequenceNumber.NO)
-                          .correlationId(correlationId)
-                          .putHost(hostBytes, 0, hostBytes.length)
-                          .putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length)
-                          .putSenderSubId(senderSubIdBytes, 0, senderSubIdBytes.length)
-                          .putSenderLocationId(senderLocationIdBytes, 0, senderLocationIdBytes.length)
-                          .putTargetCompId(targetCompIdBytes, 0, targetCompIdBytes.length)
-                          .putTargetSubId(targetSubIdBytes, 0, targetSubIdBytes.length)
-                          .putTargetLocationId(targetLocationIdBytes, 0, targetLocationIdBytes.length)
-                          .putUsername(usernameBytes, 0, usernameBytes.length)
-                          .putPassword(passwordBytes, 0, passwordBytes.length);
+            .libraryId(libraryId)
+            .port(port)
+            .requestedInitialSequenceNumber(requestedInitialSequenceNumber)
+            .sequenceNumberType(sequenceNumberType)
+            .heartbeatIntervalInS(heartbeatIntervalInS)
+            .resetSequenceNumber(resetSequenceNumber ? ResetSequenceNumber.YES : ResetSequenceNumber.NO)
+            .correlationId(correlationId)
+            .putHost(hostBytes, 0, hostBytes.length)
+            .putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length)
+            .putSenderSubId(senderSubIdBytes, 0, senderSubIdBytes.length)
+            .putSenderLocationId(senderLocationIdBytes, 0, senderLocationIdBytes.length)
+            .putTargetCompId(targetCompIdBytes, 0, targetCompIdBytes.length)
+            .putTargetSubId(targetSubIdBytes, 0, targetSubIdBytes.length)
+            .putTargetLocationId(targetLocationIdBytes, 0, targetLocationIdBytes.length)
+            .putUsername(usernameBytes, 0, usernameBytes.length)
+            .putPassword(passwordBytes, 0, passwordBytes.length);
 
         bufferClaim.commit();
 
@@ -536,10 +507,10 @@ public class GatewayPublication extends ClaimablePublication
         final int offset = bufferClaim.offset();
 
         error.wrapAndApplyHeader(buffer, offset, header)
-             .errorType(errorType)
-             .libraryId(libraryId)
-             .replyToId(replyToId)
-             .putMessage(messageBytes, 0, messageBytes.length);
+            .errorType(errorType)
+            .libraryId(libraryId)
+            .replyToId(replyToId)
+            .putMessage(messageBytes, 0, messageBytes.length);
 
         bufferClaim.commit();
 
@@ -596,14 +567,14 @@ public class GatewayPublication extends ClaimablePublication
 
     public long saveReleaseSession(
         final int libraryId,
-        final long connectionId,
-        final long sessionId,
-        final long correlationId,
-        final SessionState state,
-        final long heartbeatIntervalInMs,
-        final int lastSentSequenceNumber,
-        final int lastReceivedSequenceNumber,
-        final String username,
+            final long connectionId,
+            final long sessionId,
+            final long correlationId,
+            final SessionState state,
+            final long heartbeatIntervalInMs,
+            final int lastSentSequenceNumber,
+            final int lastReceivedSequenceNumber,
+            final String username,
         final String password)
     {
         final byte[] usernameBytes = bytes(username);
@@ -619,16 +590,16 @@ public class GatewayPublication extends ClaimablePublication
         final int offset = bufferClaim.offset();
 
         releaseSession.wrapAndApplyHeader(buffer, offset, header)
-                      .libraryId(libraryId)
-                      .connection(connectionId)
-                      .sessionId(sessionId)
-                      .correlationId(correlationId)
-                      .heartbeatIntervalInMs(heartbeatIntervalInMs)
-                      .state(state)
-                      .lastSentSequenceNumber(lastSentSequenceNumber)
-                      .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
-                      .putUsername(usernameBytes, 0, usernameBytes.length)
-                      .putPassword(passwordBytes, 0, passwordBytes.length);
+            .libraryId(libraryId)
+            .connection(connectionId)
+            .sessionId(sessionId)
+            .correlationId(correlationId)
+            .heartbeatIntervalInMs(heartbeatIntervalInMs)
+            .state(state)
+            .lastSentSequenceNumber(lastSentSequenceNumber)
+            .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
+            .putUsername(usernameBytes, 0, usernameBytes.length)
+            .putPassword(passwordBytes, 0, passwordBytes.length);
 
         bufferClaim.commit();
 
@@ -659,9 +630,9 @@ public class GatewayPublication extends ClaimablePublication
 
     public long saveRequestSession(
         final int libraryId,
-        final long sessionId,
-        final long correlationId,
-        final int lastReceivedSequenceNumber,
+            final long sessionId,
+            final long correlationId,
+            final int lastReceivedSequenceNumber,
         final int sequenceIndex)
     {
         final long position = claim(REQUEST_SESSION_LENGTH);
@@ -674,11 +645,11 @@ public class GatewayPublication extends ClaimablePublication
         final int offset = bufferClaim.offset();
 
         requestSession.wrapAndApplyHeader(buffer, offset, header)
-                      .libraryId(libraryId)
-                      .sessionId(sessionId)
-                      .correlationId(correlationId)
-                      .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
-                      .sequenceIndex(sequenceIndex);
+            .libraryId(libraryId)
+            .sessionId(sessionId)
+            .correlationId(correlationId)
+            .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
+            .sequenceIndex(sequenceIndex);
 
         bufferClaim.commit();
 
@@ -764,9 +735,10 @@ public class GatewayPublication extends ClaimablePublication
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         final int offset = bufferClaim.offset();
 
-        libraryTimeout.wrapAndApplyHeader(buffer, offset, header)
-                      .libraryId(libraryId)
-                      .connectCorrelationId(connectCorrelationId);
+        libraryTimeout
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .connectCorrelationId(connectCorrelationId);
 
         bufferClaim.commit();
 
@@ -778,10 +750,8 @@ public class GatewayPublication extends ClaimablePublication
     public long saveControlNotification(final int libraryId, final List<SessionInfo> sessions)
     {
         final int sessionsCount = sessions.size();
-        final long position = claim(HEADER_LENGTH +
-                                    ControlNotificationEncoder.BLOCK_LENGTH +
-                                    GroupSizeEncodingEncoder.ENCODED_LENGTH +
-                                    sessionsCount * SessionsEncoder.sbeBlockLength());
+        final long position = claim(CONTROL_NOTIFICATION_LENGTH +
+            sessionsCount * SessionsEncoder.sbeBlockLength());
 
         if (position < 0)
         {
@@ -818,10 +788,10 @@ public class GatewayPublication extends ClaimablePublication
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         final int offset = bufferClaim.offset();
 
-        slowStatusNotification.wrapAndApplyHeader(buffer, offset, header)
-                              .libraryId(libraryId)
-                              .connectionId(connectionId)
-                              .status(status);
+        slowStatusNotification
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .connectionId(connectionId).status(status);
 
         bufferClaim.commit();
 

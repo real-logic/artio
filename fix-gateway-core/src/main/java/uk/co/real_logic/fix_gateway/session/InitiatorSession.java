@@ -61,7 +61,7 @@ public class InitiatorSession extends Session
             receivedMsgSeqNo,
             sentMsgSeqNo,
             libraryId,
-                initialSequenceNumber,
+            initialSequenceNumber,
             sequenceIndex,
             reasonableTransmissionTimeInMs,
             asciiBuffer);

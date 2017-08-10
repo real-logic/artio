@@ -168,11 +168,13 @@ class ReceiverEndPoint
         try
         {
             return readData() + frameMessages();
-        } catch (final ClosedChannelException ex)
+        }
+        catch (final ClosedChannelException ex)
         {
             onDisconnectDetected();
             return 1;
-        } catch (final Exception ex)
+        }
+        catch (final Exception ex)
         {
             // Regular disconnects aren't errors
             if (!Exceptions.isJustDisconnect(ex))
@@ -282,11 +284,13 @@ class ReceiverEndPoint
                 }
 
                 offset += length;
-            } catch (final IllegalArgumentException ex)
+            }
+            catch (final IllegalArgumentException ex)
             {
                 saveInvalidMessage(offset);
                 return offset;
-            } catch (final Exception ex)
+            }
+            catch (final Exception ex)
             {
                 errorHandler.onError(ex);
                 break;
@@ -356,18 +360,18 @@ class ReceiverEndPoint
         // TODO(Nick): The sent and received seq nums aren't adjusted.
         // They previously weren't adjusted but I think that might be an issue.
         return stashIfBackpressured(offset,
-                                    publication.saveManageSession(libraryId,
-                                                                  connectionId,
-                                                                  sessionId,
+                                            publication.saveManageSession(libraryId,
+                                                                          connectionId,
+                                                                          sessionId,
                                                                   authResult.sentSequenceNumber,
                                                                   authResult.receivedSequenceNumber,
-                                                                  Session.NO_LOGON_TIME,
-                                                                  LogonStatus.NEW,
-                                                                  SlowStatus.NOT_SLOW,
-                                                                  ACCEPTOR,
-                                                                  gatewaySession.session().state(),
-                                                                  logon.heartBtInt(),
-                                                                  Framer.NO_CORRELATION_ID,
+                                                                          Session.NO_LOGON_TIME,
+                                                                          LogonStatus.NEW,
+                                                                          SlowStatus.NOT_SLOW,
+                                                                          ACCEPTOR,
+                                                                          gatewaySession.session().state(),
+                                                                          logon.heartBtInt(),
+                                                                          Framer.NO_CORRELATION_ID,
                                                                   gatewaySession.sequenceIndex(),
                                                                   gatewaySession.sessionKey().localCompId(),
                                                                   gatewaySession.sessionKey().localSubId(),
@@ -375,7 +379,7 @@ class ReceiverEndPoint
                                                                   gatewaySession.sessionKey().remoteCompId(),
                                                                   gatewaySession.sessionKey().remoteSubId(),
                                                                   gatewaySession.sessionKey().remoteLocationId(),
-                                                                  ""));
+                                                                          ""));
 
     }
 
@@ -416,8 +420,7 @@ class ReceiverEndPoint
     private boolean validateBodyLength(final int startOfChecksumTag)
     {
         return buffer.getByte(startOfChecksumTag) == CHECKSUM0 &&
-               buffer.getByte(startOfChecksumTag + 1) == CHECKSUM1
-               &&
+               buffer.getByte(startOfChecksumTag + 1) == CHECKSUM1 &&
                buffer.getByte(startOfChecksumTag + 2) == CHECKSUM2 &&
                buffer.getByte(startOfChecksumTag + 3) == CHECKSUM3;
     }
@@ -443,7 +446,8 @@ class ReceiverEndPoint
         {
             return buffer.getDigit(offset + COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD ||
                    buffer.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
-        } catch (final IllegalArgumentException ex)
+        }
+        catch (final IllegalArgumentException ex)
         {
             return false;
         }
@@ -465,29 +469,29 @@ class ReceiverEndPoint
     private boolean saveInvalidMessage(final int offset, final int startOfChecksumTag)
     {
         return stashIfBackpressured(offset,
-                                    libraryPublication.saveMessage(buffer,
-                                                                   offset,
-                                                                   libraryId,
-                                                                   startOfChecksumTag,
-                                                                   UNKNOWN_MESSAGE_TYPE,
-                                                                   sessionId,
-                                                                   sequenceIndex,
-                                                                   connectionId,
-                                                                   INVALID_BODYLENGTH));
+            libraryPublication.saveMessage(buffer,
+                offset,
+                libraryId,
+                startOfChecksumTag,
+                UNKNOWN_MESSAGE_TYPE,
+                sessionId,
+                sequenceIndex,
+                connectionId,
+                INVALID_BODYLENGTH));
     }
 
     private boolean saveInvalidMessage(final int offset)
     {
         final boolean backpressured = stashIfBackpressured(offset,
-                                                           libraryPublication.saveMessage(buffer,
-                                                                                          offset,
-                                                                                          usedBufferData,
-                                                                                          libraryId,
-                                                                                          INVALID_MESSAGE_TYPE,
-                                                                                          sessionId,
-                                                                                          sequenceIndex,
-                                                                                          connectionId,
-                                                                                          INVALID));
+            libraryPublication.saveMessage(buffer,
+                offset,
+                usedBufferData,
+                libraryId,
+                INVALID_MESSAGE_TYPE,
+                sessionId,
+                sequenceIndex,
+                connectionId,
+                INVALID));
 
         if (!backpressured)
         {
@@ -504,15 +508,15 @@ class ReceiverEndPoint
     private boolean saveInvalidChecksumMessage(final int offset, final int messageType, final int length)
     {
         return stashIfBackpressured(offset,
-                                    libraryPublication.saveMessage(buffer,
-                                                                   offset,
-                                                                   length,
-                                                                   libraryId,
-                                                                   messageType,
-                                                                   sessionId,
-                                                                   sequenceIndex,
-                                                                   connectionId,
-                                                                   INVALID_CHECKSUM));
+            libraryPublication.saveMessage(buffer,
+                offset,
+                length,
+                libraryId,
+                messageType,
+                sessionId,
+                sequenceIndex,
+                connectionId,
+                INVALID_CHECKSUM));
     }
 
     public void close(final DisconnectReason reason)
@@ -531,7 +535,8 @@ class ReceiverEndPoint
         {
             channel.close();
             messagesRead.close();
-        } catch (final Exception ex)
+        }
+        catch (final Exception ex)
         {
             errorHandler.onError(ex);
         }

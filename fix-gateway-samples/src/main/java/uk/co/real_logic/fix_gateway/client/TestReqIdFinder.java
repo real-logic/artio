@@ -77,7 +77,6 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
         return CONTINUE;
     }
 
-    @Override
     public void onSessionStart(final long startTimeMillis)
     {
     }

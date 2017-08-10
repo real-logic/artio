@@ -68,7 +68,6 @@ public class SampleSessionHandler implements SessionHandler
         return CONTINUE;
     }
 
-    @Override
     public void onSessionStart(final long startTimeMillis)
     {
     }
