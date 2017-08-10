@@ -443,7 +443,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         try
         {
             final long correlationId = ++currentCorrelationId;
-            if (outboundPublication.saveLibraryConnect(libraryId, correlationId) < 0)
+            if (outboundPublication.saveLibraryConnect(libraryId, configuration.libraryName(), correlationId) < 0)
             {
                 connectToNextEngineNow(timeInMs);
             }

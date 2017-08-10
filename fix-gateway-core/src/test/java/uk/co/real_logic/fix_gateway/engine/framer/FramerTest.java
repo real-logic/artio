@@ -90,6 +90,7 @@ public class FramerTest
     private static final long POSITION = 1024;
     private static final int AERON_SESSION_ID = 234;
     private static final long SESSION_ID = 123;
+    private static final String LIBRARY_NAME = "library";
 
     private ServerSocketChannel server;
 
@@ -654,7 +655,7 @@ public class FramerTest
 
     private void duplicateLibraryConnect()
     {
-        framer.onLibraryConnect(LIBRARY_ID, CORR_ID + 1, AERON_SESSION_ID);
+        framer.onLibraryConnect(LIBRARY_ID, LIBRARY_NAME, CORR_ID + 1, AERON_SESSION_ID);
     }
 
     private void verifyLibraryControlNotified(final Matcher<? super Collection<?>> sessionMatcher)
@@ -737,7 +738,7 @@ public class FramerTest
 
     private Action onLibraryConnect()
     {
-        return framer.onLibraryConnect(LIBRARY_ID, CORR_ID, AERON_SESSION_ID);
+        return framer.onLibraryConnect(LIBRARY_ID, LIBRARY_NAME, CORR_ID, AERON_SESSION_ID);
     }
 
     private void givenAGatewayToManage()

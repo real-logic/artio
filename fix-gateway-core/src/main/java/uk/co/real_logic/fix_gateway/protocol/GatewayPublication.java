@@ -47,11 +47,13 @@ public class GatewayPublication extends ClaimablePublication {
     public static final int FRAMED_MESSAGE_SIZE = MessageHeaderEncoder.ENCODED_LENGTH + FRAME_SIZE;
 
     private static final byte[] NO_BYTES = {};
+   
     private static final int HEARTBEAT_LENGTH = HEADER_LENGTH + ApplicationHeartbeatEncoder.BLOCK_LENGTH;
-    private static final int LIBRARY_CONNECT_LENGTH = HEADER_LENGTH + LibraryConnectEncoder.BLOCK_LENGTH;
+    private static final int LIBRARY_CONNECT_LENGTH = HEADER_LENGTH + LibraryConnectEncoder.BLOCK_LENGTH +
+            LibraryConnectEncoder.libraryNameHeaderLength();
     private static final int DISCONNECT_LENGTH = HEADER_LENGTH + DisconnectEncoder.BLOCK_LENGTH;
-    private static final int RELEASE_SESSION_LENGTH =
-            HEADER_LENGTH + ReleaseSessionEncoder.BLOCK_LENGTH + ReleaseSessionEncoder.usernameHeaderLength() + ReleaseSessionEncoder.passwordHeaderLength();
+    private static final int RELEASE_SESSION_LENGTH = HEADER_LENGTH + ReleaseSessionEncoder.BLOCK_LENGTH +
+        ReleaseSessionEncoder.usernameHeaderLength() + ReleaseSessionEncoder.passwordHeaderLength();
     private static final int RELEASE_SESSION_REPLY_LENGTH = HEADER_LENGTH + ReleaseSessionReplyDecoder.BLOCK_LENGTH;
     private static final int REQUEST_SESSION_LENGTH = HEADER_LENGTH + RequestSessionEncoder.BLOCK_LENGTH;
     private static final int REQUEST_SESSION_REPLY_LENGTH = HEADER_LENGTH + RequestSessionReplyEncoder.BLOCK_LENGTH;
@@ -591,9 +593,10 @@ public class GatewayPublication extends ClaimablePublication {
 
     public long saveLibraryConnect(final int libraryId, final String libraryName, final long correlationId)
     {
-        byte[] libraryNameBytes = bytes(libraryName);
-        final long position = claim(LIBRARY_CONNECT_LENGTH + LibraryConnectEncoder.libraryNameHeaderLength() + libraryNameBytes.length);
-        if (position < 0) {
+        final byte[] libraryNameBytes = bytes(libraryName);
+        
+        final long position = claim(LIBRARY_CONNECT_LENGTH + libraryNameBytes.length);
+        if (position < 0)
         {
             return position;
         }
@@ -601,10 +604,11 @@ public class GatewayPublication extends ClaimablePublication {
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         final int offset = bufferClaim.offset();
 
-        libraryConnect.wrapAndApplyHeader(buffer, offset, header)
-		              .libraryId(libraryId)
-                      .correlationId(correlationId)
-                      .putLibraryName(libraryNameBytes, 0, libraryNameBytes.length);
+        libraryConnect
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .putLibraryName(libraryNameBytes, 0, libraryNameBytes.length)
+            .correlationId(correlationId);
 
         bufferClaim.commit();
 

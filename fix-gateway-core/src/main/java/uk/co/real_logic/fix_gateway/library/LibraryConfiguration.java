@@ -80,6 +80,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private List<String> libraryAeronChannels = new ArrayList<>();
     private LibraryConnectHandler libraryConnectHandler = DEFAULT_LIBRARY_CONNECT_HANDLER;
     private LibraryScheduler scheduler = new DefaultLibraryScheduler();
+    private String libraryName = "";
 
     /**
      * When a new session connects to the gateway you register a callback handler to find
@@ -236,5 +237,16 @@ public final class LibraryConfiguration extends CommonConfiguration
     public List<String> libraryAeronChannels()
     {
         return libraryAeronChannels;
+    }
+
+    String libraryName()
+    {
+        return libraryName;
+    }
+
+    public LibraryConfiguration libraryName(final String libraryName)
+    {
+        this.libraryName = libraryName;
+        return this;
     }
 }

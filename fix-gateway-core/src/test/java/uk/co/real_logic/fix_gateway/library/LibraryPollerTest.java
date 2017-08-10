@@ -229,7 +229,7 @@ public class LibraryPollerTest
     private void sendsLibraryConnect(final VerificationMode times)
     {
         verify(outboundPublication, times)
-            .saveLibraryConnect(eq(libraryId()), any(), anyLong());
+            .saveLibraryConnect(eq(libraryId()), anyString(), anyLong());
     }
 
     private void pollTwice()
@@ -329,7 +329,7 @@ public class LibraryPollerTest
             inOrder.verify(transport).inboundSubscription();
             inOrder.verify(transport).outboundPublication();
             inOrder.verify(outboundPublication)
-                .saveLibraryConnect(eq(libraryId()), any(), anyLong());
+                .saveLibraryConnect(eq(libraryId()), anyString(), anyLong());
         }
         verifyNoMoreInteractions(transport);
         reset(outboundPublication);
