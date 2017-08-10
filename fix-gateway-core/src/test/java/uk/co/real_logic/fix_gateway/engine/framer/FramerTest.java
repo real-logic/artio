@@ -29,9 +29,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.MockingDetails;
-import org.mockito.Mockito;
-import org.mockito.internal.creation.MockSettingsImpl;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.Timing;
 import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
@@ -118,7 +115,8 @@ public class FramerTest
     private final Image peekImage = mock(Image.class);
     private final Image normalImage = mock(Image.class);
     private final ClusterableStreams node = mock(ClusterableStreams.class);
-    private final CompositeKey sessionKey = SessionIdStrategy.senderAndTarget().onInitiateLogon("local", "", "", "remote", "", "");
+    private final CompositeKey sessionKey = SessionIdStrategy.senderAndTarget()
+                                                             .onInitiateLogon("local", "", "", "remote", "", "");
 
     private FinalImagePositions finalImagePositions = mock(FinalImagePositions.class);
 
@@ -534,26 +532,26 @@ public class FramerTest
     @Test
     public void shouldHandoverSessionToLibraryUponRequestWhenBackPressured() throws IOException
     {
-        when(inboundPublication.saveManageSession(anyInt()
-                , anyLong()
-                , anyLong()
-                , anyInt()
-                , anyInt()
-                , anyLong()
-                , any()
-                , any()
-                , any()
-                , any()
-                , anyInt()
-                , anyLong()
-                , anyInt()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any())).thenReturn(BACK_PRESSURED, POSITION);
+        when(inboundPublication.saveManageSession(anyInt(),
+            anyLong(),
+            anyLong(),
+            anyInt(),
+            anyInt(),
+            anyLong(),
+            any(),
+            any(),
+            any(),
+            any(),
+            anyInt(),
+            anyLong(),
+            anyInt(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any())).thenReturn(BACK_PRESSURED, POSITION);
 
         aClientConnects();
 
@@ -563,26 +561,26 @@ public class FramerTest
 
         assertEquals(CONTINUE, onRequestSession());
 
-        verify(inboundPublication, times(2)).saveManageSession(eq(LIBRARY_ID)
-                , anyLong()
-                , anyLong()
-                , anyInt()
-                , anyInt()
-                , anyLong()
-                , any()
-                , any()
-                , any()
-                , any()
-                , anyInt()
-                , anyLong()
-                , anyInt()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any());
+        verify(inboundPublication, times(2)).saveManageSession(eq(LIBRARY_ID),
+            anyLong(),
+            anyLong(),
+            anyInt(),
+            anyInt(),
+            anyLong(),
+            any(),
+            any(),
+            any(),
+            any(),
+            anyInt(),
+            anyLong(),
+            anyInt(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any());
         saveRequestSessionReply();
 
         neverSavesUnknownSession();
@@ -750,50 +748,50 @@ public class FramerTest
 
     private void backPressureFirstSaveAttempts()
     {
-        when(inboundPublication.saveManageSession(eq(LIBRARY_ID)
-                , anyLong()
-                , anyLong()
-                , anyInt()
-                , anyInt()
-                , anyLong()
-                , any()
-                , eq(SlowStatus.NOT_SLOW)
-                , eq(INITIATOR)
-                , any()
-                , anyInt()
-                , anyLong()
-                , anyInt()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any())).thenReturn(BACK_PRESSURED, POSITION);
+        when(inboundPublication.saveManageSession(eq(LIBRARY_ID),
+            anyLong(),
+            anyLong(),
+            anyInt(),
+            anyInt(),
+            anyLong(),
+            any(),
+            eq(SlowStatus.NOT_SLOW),
+            eq(INITIATOR),
+            any(),
+            anyInt(),
+            anyLong(),
+            anyInt(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any())).thenReturn(BACK_PRESSURED, POSITION);
     }
 
     private void backPressureSaveSessionExists()
     {
-        when(inboundPublication.saveManageSession(eq(LIBRARY_ID)
-                , anyLong()
-                , anyLong()
-                , anyInt()
-                , anyInt()
-                , anyLong()
-                , any()
-                , any()
-                , any()
-                , any()
-                , anyInt()
-                , anyLong()
-                , anyInt()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any())).thenReturn(BACK_PRESSURED, POSITION);
+        when(inboundPublication.saveManageSession(eq(LIBRARY_ID),
+            anyLong(),
+            anyLong(),
+            anyInt(),
+            anyInt(),
+            anyLong(),
+            any(),
+            any(),
+            any(),
+            any(),
+            anyInt(),
+            anyLong(),
+            anyInt(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any())).thenReturn(BACK_PRESSURED, POSITION);
     }
 
     private void verifySessionsAcquired(final SessionState state)
@@ -887,50 +885,50 @@ public class FramerTest
 
     private void notifyLibraryOfConnection(final VerificationMode times)
     {
-        verify(inboundPublication, times).saveManageSession(eq(LIBRARY_ID)
-                , eq(connectionId.getValue())
-                , anyLong()
-                , anyInt()
-                , anyInt()
-                , anyLong()
-                , eq(LogonStatus.NEW)
-                , eq(SlowStatus.NOT_SLOW)
-                , eq(INITIATOR)
-                , any()
-                , anyInt()
-                , anyLong()
-                , anyInt()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any());
+        verify(inboundPublication, times).saveManageSession(eq(LIBRARY_ID),
+            eq(connectionId.getValue()),
+            anyLong(),
+            anyInt(),
+            anyInt(),
+            anyLong(),
+            eq(LogonStatus.NEW),
+            eq(SlowStatus.NOT_SLOW),
+            eq(INITIATOR),
+            any(),
+            anyInt(),
+            anyLong(),
+            anyInt(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any());
     }
 
     private void verifySessionExistsSaved(final VerificationMode times, final LogonStatus status)
     {
-        verify(inboundPublication, times).saveManageSession(eq(LIBRARY_ID)
-                , eq(connectionId.getValue())
-                , anyLong()
-                , anyInt()
-                , anyInt()
-                , anyLong()
-                , eq(status)
-                , any() // todo(Nick): Should be NOT_SLOW?
-                , any()
-                , any()
-                , anyInt()
-                , anyLong()
-                , anyInt()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any()
-                , any());
+        verify(inboundPublication, times).saveManageSession(eq(LIBRARY_ID),
+            eq(connectionId.getValue()),
+            anyLong(),
+            anyInt(),
+            anyInt(),
+            anyLong(),
+            eq(status),
+            any(), // todo(Nick): Should be NOT_SLOW? ,
+            any(),
+            any(),
+            anyInt(),
+            anyLong(),
+            anyInt(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any());
     }
 
     private void aClientSendsData() throws IOException

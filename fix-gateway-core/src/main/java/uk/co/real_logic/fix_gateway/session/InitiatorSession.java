@@ -139,7 +139,7 @@ public class InitiatorSession extends Session
             id(sessionId);
             heartbeatIntervalInS(heartbeatInterval);
 
-            if(INITIAL_SEQUENCE_NUMBER == msgSeqNo)
+            if (INITIAL_SEQUENCE_NUMBER == msgSeqNo)
             {
                 // Outgoing connections could be exchanging logons because of a network disconnection
                 // So we still only want this to occur on the initial logon.

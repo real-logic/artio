@@ -31,10 +31,8 @@ import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
-import uk.co.real_logic.fix_gateway.session.SenderAndTargetSessionIdStrategyTest;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
-import uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -74,9 +72,14 @@ public class ReceiverEndPointTest
     private GatewaySession gatewaySession = mock(GatewaySession.class);
     private Session session = mock(Session.class);
     private final LongHashSet replicatedConnectionIds = new LongHashSet();
-    private final AuthenticationResult authenticationResult = AuthenticationResult.authenticatedSession(gatewaySession, 1, 1);
+    private final AuthenticationResult authenticationResult = AuthenticationResult.authenticatedSession(gatewaySession,
+        1,
+        1);
     private GatewaySessions mockGatewaySessions = mock(GatewaySessions.class);
-    private CompositeKey sessionKey = SessionIdStrategy.senderAndTarget().onInitiateLogon("ACCEPTOR", "", "", "INIATOR", "", "");
+    private CompositeKey sessionKey = SessionIdStrategy.senderAndTarget()
+                                                       .onInitiateLogon("ACCEPTOR",
+                                                           "", "",
+                                                           "INIATOR", "", "");
 
     private ReceiverEndPoint endPoint = new ReceiverEndPoint(
         mockChannel, BUFFER_SIZE, libraryPublication, clusterablePublication,
@@ -92,12 +95,16 @@ public class ReceiverEndPointTest
         when(gatewaySession.sessionKey()).thenReturn(sessionKey);
         when(gatewaySession.sessionId()).thenReturn(SESSION_ID);
         when(session.state()).thenReturn(SessionState.CONNECTED);
-        when(mockGatewaySessions.authenticateAndInitiate(any(), anyLong(), any(), any(), eq(gatewaySession))).thenReturn(authenticationResult);
+        when(mockGatewaySessions.authenticateAndInitiate(any(),
+            anyLong(),
+            any(),
+            any(),
+            eq(gatewaySession))).thenReturn(authenticationResult);
 
         doAnswer(
             (inv) ->
             {
-                ((Continuation)inv.getArguments()[0]).attemptToAction();
+                ((Continuation) inv.getArguments()[0]).attemptToAction();
                 return null;
             }).when(framer).schedule(any(Continuation.class));
     }
@@ -428,27 +435,27 @@ public class ReceiverEndPointTest
     {
         final InOrder inOrder = Mockito.inOrder(libraryPublication);
         inOrder.verify(libraryPublication, times(firstMessageSaveAttempts))
-            .saveMessage(
-                anyBuffer(),
-                eq(0),
-                eq(MSG_LEN),
-                eq(LIBRARY_ID),
-                eq(MESSAGE_TYPE),
-                eq(SESSION_ID),
-                eq(SEQUENCE_INDEX),
-                eq(CONNECTION_ID),
-                eq(OK));
+               .saveMessage(
+                   anyBuffer(),
+                   eq(0),
+                   eq(MSG_LEN),
+                   eq(LIBRARY_ID),
+                   eq(MESSAGE_TYPE),
+                   eq(SESSION_ID),
+                   eq(SEQUENCE_INDEX),
+                   eq(CONNECTION_ID),
+                   eq(OK));
         inOrder.verify(libraryPublication, times(1))
-            .saveMessage(
-                anyBuffer(),
-                eq(MSG_LEN),
-                eq(MSG_LEN),
-                eq(LIBRARY_ID),
-                eq(MESSAGE_TYPE),
-                eq(SESSION_ID),
-                eq(SEQUENCE_INDEX),
-                eq(CONNECTION_ID),
-                eq(OK));
+               .saveMessage(
+                   anyBuffer(),
+                   eq(MSG_LEN),
+                   eq(MSG_LEN),
+                   eq(LIBRARY_ID),
+                   eq(MESSAGE_TYPE),
+                   eq(SESSION_ID),
+                   eq(SEQUENCE_INDEX),
+                   eq(CONNECTION_ID),
+                   eq(OK));
         inOrder.verifyNoMoreInteractions();
     }
 
@@ -503,7 +510,7 @@ public class ReceiverEndPointTest
             (buffer) ->
             {
                 buffer.put(EG_MESSAGE)
-                    .put(EG_MESSAGE, secondOffset, secondLength);
+                      .put(EG_MESSAGE, secondOffset, secondLength);
                 return MSG_LEN + secondLength;
             });
     }
@@ -524,11 +531,10 @@ public class ReceiverEndPointTest
             doAnswer(
                 (invocation) ->
                 {
-                    final ByteBuffer buffer = (ByteBuffer)invocation.getArguments()[0];
+                    final ByteBuffer buffer = (ByteBuffer) invocation.getArguments()[0];
                     return bufferUpdater.applyAsInt(buffer);
                 }).when(mockChannel).read(any(ByteBuffer.class));
-        }
-        catch (final IOException ex)
+        } catch (final IOException ex)
         {
             // Should never happen, test in error
             LangUtil.rethrowUnchecked(ex);
@@ -599,7 +605,8 @@ public class ReceiverEndPointTest
 
     private void givenADuplicateSession()
     {
-        when(mockGatewaySessions.authenticateAndInitiate(any(), anyLong(), any(), any(), any())).thenReturn(AuthenticationResult.DUPLICATE_SESSION);
+        when(mockGatewaySessions.authenticateAndInitiate(any(), anyLong(), any(), any(), any())).thenReturn(
+            AuthenticationResult.DUPLICATE_SESSION);
     }
 
 }

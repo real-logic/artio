@@ -1,17 +1,23 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
-class AuthenticationResult {
-    static final AuthenticationResult DUPLICATE_SESSION = new AuthenticationResult(AuthenticationError.DUPLICATE_SESSION);
-    static final AuthenticationResult FAILED_AUTHENTICATION = new AuthenticationResult(AuthenticationError.FAILED_AUTHENTICATION);
+final class AuthenticationResult
+{
+    static final AuthenticationResult DUPLICATE_SESSION =
+        new AuthenticationResult(AuthenticationError.DUPLICATE_SESSION);
+    static final AuthenticationResult FAILED_AUTHENTICATION =
+        new AuthenticationResult(AuthenticationError.FAILED_AUTHENTICATION);
 
-    enum AuthenticationError { DUPLICATE_SESSION, FAILED_AUTHENTICATION }
+    enum AuthenticationError
+    {
+        DUPLICATE_SESSION, FAILED_AUTHENTICATION
+    }
 
     final GatewaySession session;
     final int sentSequenceNumber;
     final int receivedSequenceNumber;
     final AuthenticationError error;
 
-    private AuthenticationResult(AuthenticationError error)
+    private AuthenticationResult(final AuthenticationError error)
     {
         this.session = null;
         this.error = error;
@@ -19,7 +25,10 @@ class AuthenticationResult {
         receivedSequenceNumber = -1;
     }
 
-    private AuthenticationResult(GatewaySession session, int sentSequenceNumber, int receivedSequenceNumber)
+    private AuthenticationResult(
+        final GatewaySession session,
+        final int sentSequenceNumber,
+        final int receivedSequenceNumber)
     {
         this.session = session;
         this.sentSequenceNumber = sentSequenceNumber;
@@ -27,7 +36,10 @@ class AuthenticationResult {
         this.error = null;
     }
 
-    static AuthenticationResult authenticatedSession(GatewaySession session, int sentSequenceNumber, int receivedSequenceNumber)
+    static AuthenticationResult authenticatedSession(
+        final GatewaySession session,
+        final int sentSequenceNumber,
+        final int receivedSequenceNumber)
     {
         return new AuthenticationResult(session, sentSequenceNumber, receivedSequenceNumber);
     }
@@ -37,7 +49,8 @@ class AuthenticationResult {
         return null != error && AuthenticationError.DUPLICATE_SESSION == error;
     }
 
-    boolean isValid() {
+    boolean isValid()
+    {
         return null != session;
     }
 }

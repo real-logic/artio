@@ -296,7 +296,8 @@ public final class DebugLogger
         final String threadName = threadName();
         if (isThreadEnabled(threadName))
         {
-            OUTPUT.printf(System.currentTimeMillis() + ":" + threadName + "[" + tag.name() + "]"  + " : " + formatString, args);
+            OUTPUT.printf(System.currentTimeMillis() + ":" +
+                          threadName + "[" + tag.name() + "]"  + " : " + formatString, args);
         }
     }
 

@@ -93,7 +93,8 @@ public class FakeHandler
     }
 
     @Override
-    public void onSessionStart(long startTimeMillis) {
+    public void onSessionStart(final long startTimeMillis)
+    {
 
     }
 

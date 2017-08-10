@@ -52,13 +52,14 @@ class GatewaySession implements SessionInfo
 
     private PersistenceLevel persistenceLevel;
 
-    GatewaySession(final long connectionId,
-                   final SessionContext context,
-                   final String address,
-                   final ConnectionType connectionType,
-                   final CompositeKey sessionKey,
-                   final ReceiverEndPoint receiverEndPoint,
-                   final SenderEndPoint senderEndPoint)
+    GatewaySession(
+        final long connectionId,
+        final SessionContext context,
+        final String address,
+        final ConnectionType connectionType,
+        final CompositeKey sessionKey,
+        final ReceiverEndPoint receiverEndPoint,
+        final SenderEndPoint senderEndPoint)
     {
         this.connectionId = connectionId;
         this.sessionId = context.sessionId();
@@ -231,9 +232,9 @@ class GatewaySession implements SessionInfo
     public String toString()
     {
         return "GatewaySession{" +
-            "sessionId=" + sessionId +
-            ", sessionKey=" + sessionKey +
-            '}';
+               "sessionId=" + sessionId +
+               ", sessionKey=" + sessionKey +
+               '}';
     }
 
     void disconnectAt(final long disconnectTimeout)
@@ -256,17 +257,18 @@ class GatewaySession implements SessionInfo
         return context.sequenceIndex();
     }
 
-    SlowStatus slowStatus(){
+    SlowStatus slowStatus()
+    {
         return bytesInBuffer() > 0 ? SlowStatus.SLOW : SlowStatus.NOT_SLOW;
     }
 
-    void persistenceLevel(PersistenceLevel persistenceLevel)
+    void persistenceLevel(final PersistenceLevel persistenceLevel)
     {
         this.persistenceLevel = persistenceLevel;
     }
 
     PersistenceLevel persistenceLevel()
     {
-        return this. persistenceLevel;
+        return this.persistenceLevel;
     }
 }

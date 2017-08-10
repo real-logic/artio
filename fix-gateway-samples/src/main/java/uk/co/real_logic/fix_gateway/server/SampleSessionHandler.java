@@ -69,7 +69,7 @@ public class SampleSessionHandler implements SessionHandler
     }
 
     @Override
-    public void onSessionStart(long startTimeMillis)
+    public void onSessionStart(final long startTimeMillis)
     {
     }
 }

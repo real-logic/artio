@@ -76,5 +76,7 @@ public class StressSessionHandler implements SessionHandler
     }
 
     @Override
-    public void onSessionStart(long startTimeMillis) { }
+    public void onSessionStart(final long startTimeMillis)
+    {
+    }
 }

@@ -36,8 +36,6 @@ import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.fix_gateway.decoder.Constants.*;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.PASSWORD;
-import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.USERNAME;
 
 public class AbstractGatewayToGatewaySystemTest
 {

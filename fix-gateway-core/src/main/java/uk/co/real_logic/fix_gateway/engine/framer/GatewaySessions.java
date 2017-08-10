@@ -160,7 +160,7 @@ class GatewaySessions
         final int index = indexBySesionId(sessionId);
         if (index < 0)
         {
-            return  null;
+            return null;
         }
 
         return sessions.remove(index);
@@ -171,7 +171,7 @@ class GatewaySessions
         final int index = indexBySesionId(sessionId);
         if (index < 0)
         {
-            return  null;
+            return null;
         }
 
         return sessions.get(index);
@@ -236,16 +236,18 @@ class GatewaySessions
         return null;
     }
 
-    AuthenticationResult authenticateAndInitiate(LogonDecoder logon,
-                                                    long connectionId,
-                                                    SequenceNumberIndexReader sentSequenceNumberIndex,
-                                                    SequenceNumberIndexReader receivedSequenceNumberIndex,
-                                                    GatewaySession gatewaySession)
+    AuthenticationResult authenticateAndInitiate(
+        final LogonDecoder logon,
+        final long connectionId,
+        final SequenceNumberIndexReader sentSequenceNumberIndex,
+        final SequenceNumberIndexReader receivedSequenceNumberIndex,
+        final GatewaySession gatewaySession)
     {
         final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(logon.header());
         final SessionContext sessionContext = sessionContexts.onLogon(compositeKey);
-        long sessionId = sessionContext.sessionId();
-        if (sessionContext == DUPLICATE_SESSION) {
+        final long sessionId = sessionContext.sessionId();
+        if (sessionContext == DUPLICATE_SESSION)
+        {
             return AuthenticationResult.DUPLICATE_SESSION;
         }
 
@@ -253,25 +255,27 @@ class GatewaySessions
         try
         {
             authenticated = authenticationStrategy.authenticate(logon);
-        }
-        catch (final Throwable throwable)
+        } catch (final Throwable throwable)
         {
             // TODO(Nick): Maybe this should go back to also logging the message that was being decoded.
             onStrategyError("authentication", throwable, connectionId);
             authenticated = false;
         }
 
-        if(!authenticated)
+        if (!authenticated)
         {
             return AuthenticationResult.FAILED_AUTHENTICATION;
         }
 
         PersistenceLevel persistenceLevel;
-        try {
+        try
+        {
             persistenceLevel = sessionPersistenceStrategy.getPersistenceLevel(logon);
-        } catch (final Throwable throwable) {
+        } catch (final Throwable throwable)
+        {
             final String message =
-                    String.format("Exception thrown by persistence strategy for connectionId=%d, defaulted to LOCAL_ARCHIVE", connectionId);
+                String.format("Exception thrown by persistence strategy for connectionId=%d, " +
+                              "defaulted to LOCAL_ARCHIVE", connectionId);
             errorHandler.onError(new FixGatewayException(message, throwable));
             persistenceLevel = PersistenceLevel.LOCAL_ARCHIVE;
         }
@@ -292,8 +296,13 @@ class GatewaySessions
         return AuthenticationResult.authenticatedSession(gatewaySession, sentSequenceNumber, receivedSequenceNumber);
     }
 
-    private int sequenceNumber(final SequenceNumberIndexReader sequenceNumberIndexReader, final boolean resetSeqNum, final long sessionId) {
-        if (resetSeqNum) {
+    private int sequenceNumber(
+        final SequenceNumberIndexReader sequenceNumberIndexReader,
+        final boolean resetSeqNum,
+        final long sessionId)
+    {
+        if (resetSeqNum)
+        {
             return SessionInfo.UNK_SESSION;
         }
 
@@ -303,9 +312,9 @@ class GatewaySessions
     private void onStrategyError(final String strategyName, final Throwable throwable, final long connectionId)
     {
         final String message = String.format(
-                "Exception thrown by %s strategy for connectionId=%d, [%s], defaulted to false",
-                strategyName,
-                connectionId);
+            "Exception thrown by %s strategy for connectionId=%d, [%s], defaulted to false",
+            strategyName,
+            connectionId);
         onError(new FixGatewayException(message, throwable));
     }
 

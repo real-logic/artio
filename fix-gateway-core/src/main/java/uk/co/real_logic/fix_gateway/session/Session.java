@@ -50,31 +50,31 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound.
- *
+ * <p>
  * Should only be accessed on a single thread.
- *
+ * <p>
  * <h1>State Transitions</h1>
- *
+ * <p>
  * Successful Login: CONNECTED -> ACTIVE
  * Login with high sequence number: CONNECTED -> AWAITING_RESEND
  * Login with low sequence number: CONNECTED -> DISCONNECTED
  * Login with wrong credentials: CONNECTED -> DISCONNECTED or CONNECTED -> DISABLED
  * depending on authentication plugin
- *
+ * <p>
  * Successful Hijack: * -> ACTIVE (same as regular login)
  * Hijack with high sequence number: * -> AWAITING_RESEND (same as regular login)
  * Hijack with low sequence number: requestDisconnect the hijacker and leave main system ACTIVE
  * Hijack with wrong credentials: requestDisconnect the hijacker and leave main system ACTIVE
- *
+ * <p>
  * Successful resend: AWAITING_RESEND -> ACTIVE
- *
+ * <p>
  * Send test request: ACTIVE -> ACTIVE - but alter the timeout for the next expected heartbeat.
  * Successful Heartbeat: ACTIVE -> ACTIVE - updates the timeout time.
  * Heartbeat Timeout: ACTIVE -> DISCONNECTED
- *
+ * <p>
  * Logout request: ACTIVE -> AWAITING_LOGOUT
  * Logout acknowledgement: AWAITING_LOGOUT -> DISCONNECTED
- *
+ * <p>
  * Manual disable: * -> DISABLED
  */
 public class Session implements AutoCloseable
@@ -192,8 +192,8 @@ public class Session implements AutoCloseable
     {
         final SessionState state = state();
         return state != CONNECTING
-            && state != DISCONNECTED
-            && state != DISABLED;
+               && state != DISCONNECTED
+               && state != DISABLED;
     }
 
     /**
@@ -351,7 +351,7 @@ public class Session implements AutoCloseable
 
     /**
      * Send a logout message and immediately disconnect the session.
-     *
+     * <p>
      * This disconnects the session faster than <code>startLogout</code>.
      *
      * @see Session#startLogout()
@@ -384,10 +384,10 @@ public class Session implements AutoCloseable
      * Send a message on this session.
      *
      * @param encoder the encoder of the message to be sent
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
      * @throws IndexOutOfBoundsException if the encoded message is too large, if this happens consider
      *                                   increasing {@link CommonConfiguration#sessionBufferSize(int)}
-     * @return the position in the stream that corresponds to the end of this message or a negative
-     *         number indicating an error status.
      */
     public long send(final Encoder encoder)
     {
@@ -398,7 +398,7 @@ public class Session implements AutoCloseable
         }
 
         final int sentSeqNum = newSentSeqNum();
-        final HeaderEncoder header = (HeaderEncoder)encoder.header();
+        final HeaderEncoder header = (HeaderEncoder) encoder.header();
         header
             .msgSeqNum(sentSeqNum)
             .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(time()));
@@ -440,7 +440,7 @@ public class Session implements AutoCloseable
      * Reset the sequence number, so that the specified sequence number will be the sequence
      * number of the next message. This sends a sequence reset message and can thus only be
      * used to increase the sequence number of the session.
-     *
+     * <p>
      * If you want to reset the sequence number back to 1 you should use
      * {@link #resetSequenceNumbers()}.
      *
@@ -465,7 +465,7 @@ public class Session implements AutoCloseable
     /**
      * Resets both the receiver and sender sequence numbers of this session. This is equivalent to
      * sending a Logon message with ResetSeqNum flag set to Y.
-     *
+     * <p>
      * If you want to send a sequence reset message then you should use {@link #sendSequenceReset(int)}.
      *
      * @return the position in the stream that corresponds to the end of this message.
@@ -473,7 +473,7 @@ public class Session implements AutoCloseable
     public long resetSequenceNumbers()
     {
         final int sentSeqNum = 1;
-        final int heartbeatIntervalInS = (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs);
+        final int heartbeatIntervalInS = (int) MILLISECONDS.toSeconds(heartbeatIntervalInMs);
         nextSequenceIndex();
         final long position = proxy.logon(
             heartbeatIntervalInS, sentSeqNum, username(), password(), true, sequenceIndex());
@@ -596,7 +596,7 @@ public class Session implements AutoCloseable
 
     /**
      * Close the session object and release its resources.
-     *
+     * <p>
      * API users should never have to call this method.
      */
     public void close()
@@ -748,7 +748,7 @@ public class Session implements AutoCloseable
     {
         setupSession(sessionId, sessionKey);
 
-        long logonTime = sendingTime(sendingTime, origSendingTime);
+        final long logonTime = sendingTime(sendingTime, origSendingTime);
 
         if (state() == SessionState.CONNECTED)
         {
@@ -776,7 +776,8 @@ public class Session implements AutoCloseable
 
                 setLogonState(heartbeatInterval, username, password);
 
-                if(INITIAL_SEQUENCE_NUMBER == msgSeqNo){
+                if (INITIAL_SEQUENCE_NUMBER == msgSeqNo)
+                {
                     // Incoming initiators are allowed to start a session from 1
                     // Without also sending 141=Y if the session was previously logged out cleanly.
                     logonTime(logonTime);
@@ -1103,11 +1104,11 @@ public class Session implements AutoCloseable
 
     Session heartbeatIntervalInS(final int heartbeatIntervalInS)
     {
-        this.heartbeatIntervalInMs = SECONDS.toMillis((long)heartbeatIntervalInS);
+        this.heartbeatIntervalInMs = SECONDS.toMillis((long) heartbeatIntervalInS);
 
         final long time = time();
         incNextReceivedInboundMessageTime(time);
-        sendingHeartbeatIntervalInMs = (long)(heartbeatIntervalInMs * HEARTBEAT_PAUSE_FACTOR);
+        sendingHeartbeatIntervalInMs = (long) (heartbeatIntervalInMs * HEARTBEAT_PAUSE_FACTOR);
         nextRequiredHeartbeatTimeInMs = time + sendingHeartbeatIntervalInMs;
 
         return this;
@@ -1260,13 +1261,13 @@ public class Session implements AutoCloseable
     public String toString()
     {
         return getClass().getSimpleName() + "{" +
-            "connectionId=" + connectionId +
-            ", sessionId=" + id +
-            ", state=" + state +
-            ", sequenceIndex=" + sequenceIndex +
-            ", lastReceivedMsgSeqNum=" + lastReceivedMsgSeqNum +
-            ", lastSentMsgSeqNum=" + lastSentMsgSeqNum +
-            '}';
+               "connectionId=" + connectionId +
+               ", sessionId=" + id +
+               ", state=" + state +
+               ", sequenceIndex=" + sequenceIndex +
+               ", lastReceivedMsgSeqNum=" + lastReceivedMsgSeqNum +
+               ", lastSentMsgSeqNum=" + lastSentMsgSeqNum +
+               '}';
     }
 
     void disable()
@@ -1285,7 +1286,7 @@ public class Session implements AutoCloseable
         this.sequenceIndex = sequenceIndex;
     }
 
-    protected long sendingTime(long sendingTime, long origSendingTime)
+    protected long sendingTime(final long sendingTime, final long origSendingTime)
     {
         return UNKNOWN == origSendingTime ? sendingTime : origSendingTime;
     }

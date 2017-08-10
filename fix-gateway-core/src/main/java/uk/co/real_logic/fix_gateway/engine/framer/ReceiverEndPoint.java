@@ -57,7 +57,8 @@ import static uk.co.real_logic.fix_gateway.validation.PersistenceLevel.REPLICATE
  * It also handles backpressure coming from the Aeron stream and applies it to
  * its own TCP connections.
  */
-class ReceiverEndPoint {
+class ReceiverEndPoint
+{
     private static final char INVALID_MESSAGE_TYPE = '-';
 
     private static final byte BODY_LENGTH_FIELD = 9;
@@ -101,24 +102,26 @@ class ReceiverEndPoint {
     private SelectionKey selectionKey;
     private boolean isPaused = false;
 
-    ReceiverEndPoint(final TcpChannel channel,
-            final int bufferSize,
-            final GatewayPublication libraryPublication,
-            final GatewayPublication clusterablePublication,
-            final long connectionId,
-            final long sessionId,
-            final int sequenceIndex,
-            final SessionContexts sessionContexts,
-            final SequenceNumberIndexReader sentSequenceNumberIndex,
-            final SequenceNumberIndexReader receivedSequenceNumberIndex,
-            final AtomicCounter messagesRead,
-            final Framer framer,
-            final ErrorHandler errorHandler,
-            final int libraryId,
-            final SequenceNumberType sequenceNumberType,
-            final ConnectionType connectionType,
-            final LongHashSet replicatedConnectionIds,
-            final GatewaySessions gatewaySessions) {
+    ReceiverEndPoint(
+        final TcpChannel channel,
+        final int bufferSize,
+        final GatewayPublication libraryPublication,
+        final GatewayPublication clusterablePublication,
+        final long connectionId,
+        final long sessionId,
+        final int sequenceIndex,
+        final SessionContexts sessionContexts,
+        final SequenceNumberIndexReader sentSequenceNumberIndex,
+        final SequenceNumberIndexReader receivedSequenceNumberIndex,
+        final AtomicCounter messagesRead,
+        final Framer framer,
+        final ErrorHandler errorHandler,
+        final int libraryId,
+        final SequenceNumberType sequenceNumberType,
+        final ConnectionType connectionType,
+        final LongHashSet replicatedConnectionIds,
+        final GatewaySessions gatewaySessions)
+    {
         Objects.requireNonNull(clusterablePublication, "clusterablePublication");
         Objects.requireNonNull(libraryPublication, "libraryPublication");
         Objects.requireNonNull(sessionContexts, "sessionContexts");
@@ -144,28 +147,36 @@ class ReceiverEndPoint {
         buffer = new MutableAsciiBuffer(byteBuffer);
 
         // Initiator sessions are persistent if the sequence numbers are expected to be persistent.
-        if (connectionType == INITIATOR) {
+        if (connectionType == INITIATOR)
+        {
             choosePublication(sequenceNumberType == TRANSIENT ? LOCAL_ARCHIVE : REPLICATED);
         }
     }
 
-    public long connectionId() {
+    public long connectionId()
+    {
         return connectionId;
     }
 
-    int pollForData() {
-        if (isPaused || hasDisconnected()) {
+    int pollForData()
+    {
+        if (isPaused || hasDisconnected())
+        {
             return 0;
         }
 
-        try {
+        try
+        {
             return readData() + frameMessages();
-        } catch (final ClosedChannelException ex) {
+        } catch (final ClosedChannelException ex)
+        {
             onDisconnectDetected();
             return 1;
-        } catch (final Exception ex) {
+        } catch (final Exception ex)
+        {
             // Regular disconnects aren't errors
-            if (!Exceptions.isJustDisconnect(ex)) {
+            if (!Exceptions.isJustDisconnect(ex))
+            {
                 errorHandler.onError(ex);
             }
 
@@ -174,37 +185,48 @@ class ReceiverEndPoint {
         }
     }
 
-    private int readData() throws IOException {
+    private int readData() throws IOException
+    {
         final int dataRead = channel.read(byteBuffer);
-        if (dataRead != SOCKET_DISCONNECTED) {
-            if (dataRead > 0) {
+        if (dataRead != SOCKET_DISCONNECTED)
+        {
+            if (dataRead > 0)
+            {
                 DebugLogger.log(FIX_MESSAGE, "Read     %s%n", buffer, 0, dataRead);
             }
             usedBufferData += dataRead;
-        } else {
+        }
+        else
+        {
             onDisconnectDetected();
         }
 
         return dataRead;
     }
 
-    private int frameMessages() {
+    private int frameMessages()
+    {
         int offset = 0;
-        while (true) {
+        while (true)
+        {
             final int startOfBodyLength = offset + START_OF_BODY_LENGTH;
-            if (usedBufferData < startOfBodyLength) {
+            if (usedBufferData < startOfBodyLength)
+            {
                 // Need more data
                 break;
             }
 
-            try {
-                if (invalidBodyLengthTag(offset)) {
+            try
+            {
+                if (invalidBodyLengthTag(offset))
+                {
                     invalidateMessage(offset);
                     return offset;
                 }
 
                 final int endOfBodyLength = scanEndOfBodyLength(startOfBodyLength);
-                if (endOfBodyLength == UNKNOWN_INDEX) {
+                if (endOfBodyLength == UNKNOWN_INDEX)
+                {
                     // Need more data
                     break;
                 }
@@ -212,12 +234,15 @@ class ReceiverEndPoint {
                 final int startOfChecksumTag = endOfBodyLength + getBodyLength(offset, endOfBodyLength);
 
                 final int endOfChecksumTag = startOfChecksumTag + 3;
-                if (endOfChecksumTag >= usedBufferData) {
+                if (endOfChecksumTag >= usedBufferData)
+                {
                     break;
                 }
 
-                if (!validateBodyLength(startOfChecksumTag)) {
-                    if (saveInvalidMessage(offset, startOfChecksumTag)) {
+                if (!validateBodyLength(startOfChecksumTag))
+                {
+                    if (saveInvalidMessage(offset, startOfChecksumTag))
+                    {
                         return offset;
                     }
                     close(INVALID_BODY_LENGTH);
@@ -227,33 +252,42 @@ class ReceiverEndPoint {
 
                 final int startOfChecksumValue = startOfChecksumTag + MIN_CHECKSUM_SIZE;
                 final int endOfMessage = scanEndOfMessage(startOfChecksumValue);
-                if (endOfMessage == UNKNOWN_INDEX) {
+                if (endOfMessage == UNKNOWN_INDEX)
+                {
                     // Need more data
                     break;
                 }
 
                 final int messageType = getMessageType(endOfBodyLength, endOfMessage);
                 final int length = (endOfMessage + 1) - offset;
-                if (validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag)) {
-                    if (saveInvalidChecksumMessage(offset, messageType, length)) {
+                if (validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
+                {
+                    if (saveInvalidChecksumMessage(offset, messageType, length))
+                    {
                         return offset;
                     }
-                } else {
-                    if (UNKNOWN == sessionId && checkSessionId(offset, length)) {
+                }
+                else
+                {
+                    if (UNKNOWN == sessionId && checkSessionId(offset, length))
+                    {
                         return offset;
                     }
 
                     messagesRead.orderedIncrement();
-                    if (saveMessage(offset, messageType, length)) {
+                    if (saveMessage(offset, messageType, length))
+                    {
                         return offset;
                     }
                 }
 
                 offset += length;
-            } catch (final IllegalArgumentException ex) {
+            } catch (final IllegalArgumentException ex)
+            {
                 saveInvalidMessage(offset);
                 return offset;
-            } catch (final Exception ex) {
+            } catch (final Exception ex)
+            {
                 errorHandler.onError(ex);
                 break;
             }
@@ -263,22 +297,30 @@ class ReceiverEndPoint {
         return offset;
     }
 
-    private boolean validateChecksum(final int endOfMessage, final int startOfChecksumValue, final int offset, final int startOfChecksumTag) {
+    private boolean validateChecksum(
+        final int endOfMessage,
+        final int startOfChecksumValue,
+        final int offset,
+        final int startOfChecksumTag)
+    {
         final int expectedChecksum = buffer.getInt(startOfChecksumValue - 1, endOfMessage);
         final int computedChecksum = buffer.computeChecksum(offset, startOfChecksumTag + 1);
         return expectedChecksum != computedChecksum;
     }
 
-    private int scanEndOfMessage(final int startOfChecksumValue) {
+    private int scanEndOfMessage(final int startOfChecksumValue)
+    {
         return buffer.scan(startOfChecksumValue, usedBufferData - 1, START_OF_HEADER);
     }
 
-    private int scanEndOfBodyLength(final int startOfBodyLength) {
+    private int scanEndOfBodyLength(final int startOfBodyLength)
+    {
         return buffer.scan(startOfBodyLength + 1, usedBufferData - 1, START_OF_HEADER);
     }
 
 
-    private boolean checkSessionId(final int offset, final int length) {
+    private boolean checkSessionId(final int offset, final int length)
+    {
         if (sessionId != UNKNOWN)
         {
             return false;
@@ -286,16 +328,21 @@ class ReceiverEndPoint {
 
         logon.decode(buffer, offset, length);
 
-        AuthenticationResult authResult = gatewaySessions.authenticateAndInitiate(logon, connectionId(), sentSequenceNumberIndex, receivedSequenceNumberIndex, gatewaySession);
+        final AuthenticationResult authResult = gatewaySessions.authenticateAndInitiate(logon,
+                                                                                  connectionId(),
+                                                                                  sentSequenceNumberIndex,
+                                                                                  receivedSequenceNumberIndex,
+                                                                                  gatewaySession);
 
-        if(authResult.isDuplicateSession()) {
+        if (authResult.isDuplicateSession())
+        {
             close(DisconnectReason.DUPLICATE_SESSION);
             removeEndpointFromFramer();
 
             return true;
         }
 
-        if(!authResult.isValid())
+        if (!authResult.isValid())
         {
             onInvalidLogon();
             return true;
@@ -332,63 +379,91 @@ class ReceiverEndPoint {
 
     }
 
-    private boolean stashIfBackpressured(final int offset, final long position) {
+    private boolean stashIfBackpressured(final int offset, final long position)
+    {
         final boolean backPressured = Pressure.isBackPressured(position);
-        if (backPressured) {
+        if (backPressured)
+        {
             moveRemainingDataToBufferStart(offset);
         }
 
         return backPressured;
     }
 
-    private boolean saveMessage(final int offset, final int messageType, final int length) {
-        final long position = publication.saveMessage(buffer, offset, length, libraryId, messageType, sessionId, sequenceIndex, connectionId, OK);
-        if (Pressure.isBackPressured(position)) {
+    private boolean saveMessage(final int offset, final int messageType, final int length)
+    {
+        final long position = publication.saveMessage(buffer,
+                                                      offset,
+                                                      length,
+                                                      libraryId,
+                                                      messageType,
+                                                      sessionId,
+                                                      sequenceIndex,
+                                                      connectionId,
+                                                      OK);
+        if (Pressure.isBackPressured(position))
+        {
             moveRemainingDataToBufferStart(offset);
             return true;
-        } else {
+        }
+        else
+        {
             gatewaySession.onMessage(buffer, offset, length, messageType, sessionId);
             return false;
         }
     }
 
-    private boolean validateBodyLength(final int startOfChecksumTag) {
-        return buffer.getByte(startOfChecksumTag) == CHECKSUM0 && buffer.getByte(startOfChecksumTag + 1) == CHECKSUM1
-               && buffer.getByte(startOfChecksumTag + 2) == CHECKSUM2 && buffer.getByte(startOfChecksumTag + 3) == CHECKSUM3;
+    private boolean validateBodyLength(final int startOfChecksumTag)
+    {
+        return buffer.getByte(startOfChecksumTag) == CHECKSUM0 &&
+               buffer.getByte(startOfChecksumTag + 1) == CHECKSUM1
+               &&
+               buffer.getByte(startOfChecksumTag + 2) == CHECKSUM2 &&
+               buffer.getByte(startOfChecksumTag + 3) == CHECKSUM3;
     }
 
-    private int getMessageType(final int endOfBodyLength, final int indexOfLastByteOfMessage) {
+    private int getMessageType(final int endOfBodyLength, final int indexOfLastByteOfMessage)
+    {
         final int start = buffer.scan(endOfBodyLength, indexOfLastByteOfMessage, '=');
-        if (buffer.getByte(start + 2) == START_OF_HEADER) {
+        if (buffer.getByte(start + 2) == START_OF_HEADER)
+        {
             return buffer.getByte(start + 1);
         }
         return buffer.getMessageType(start + 1, 2);
     }
 
-    private int getBodyLength(final int offset, final int endOfBodyLength) {
+    private int getBodyLength(final int offset, final int endOfBodyLength)
+    {
         return buffer.getNatural(offset + START_OF_BODY_LENGTH, endOfBodyLength);
     }
 
-    private boolean invalidBodyLengthTag(final int offset) {
-        try {
-            return buffer.getDigit(offset + COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD || buffer.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
-        } catch (final IllegalArgumentException ex) {
+    private boolean invalidBodyLengthTag(final int offset)
+    {
+        try
+        {
+            return buffer.getDigit(offset + COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD ||
+                   buffer.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
+        } catch (final IllegalArgumentException ex)
+        {
             return false;
         }
     }
 
-    private void moveRemainingDataToBufferStart(final int offset) {
+    private void moveRemainingDataToBufferStart(final int offset)
+    {
         usedBufferData -= offset;
         buffer.putBytes(0, buffer, offset, usedBufferData);
         // position set to ensure that back pressure is applied to TCP when read(byteBuffer) called.
         ByteBufferUtil.position(byteBuffer, usedBufferData);
     }
 
-    private void invalidateMessage(final int offset) {
+    private void invalidateMessage(final int offset)
+    {
         DebugLogger.log(FIX_MESSAGE, "%s", buffer, offset, COMMON_PREFIX_LENGTH);
     }
 
-    private boolean saveInvalidMessage(final int offset, final int startOfChecksumTag) {
+    private boolean saveInvalidMessage(final int offset, final int startOfChecksumTag)
+    {
         return stashIfBackpressured(offset,
                                     libraryPublication.saveMessage(buffer,
                                                                    offset,
@@ -401,7 +476,8 @@ class ReceiverEndPoint {
                                                                    INVALID_BODYLENGTH));
     }
 
-    private boolean saveInvalidMessage(final int offset) {
+    private boolean saveInvalidMessage(final int offset)
+    {
         final boolean backpressured = stashIfBackpressured(offset,
                                                            libraryPublication.saveMessage(buffer,
                                                                                           offset,
@@ -413,17 +489,20 @@ class ReceiverEndPoint {
                                                                                           connectionId,
                                                                                           INVALID));
 
-        if (!backpressured) {
+        if (!backpressured)
+        {
             clearBuffer();
         }
         return backpressured;
     }
 
-    private void clearBuffer() {
+    private void clearBuffer()
+    {
         moveRemainingDataToBufferStart(usedBufferData);
     }
 
-    private boolean saveInvalidChecksumMessage(final int offset, final int messageType, final int length) {
+    private boolean saveInvalidChecksumMessage(final int offset, final int messageType, final int length)
+    {
         return stashIfBackpressured(offset,
                                     libraryPublication.saveMessage(buffer,
                                                                    offset,
@@ -436,86 +515,108 @@ class ReceiverEndPoint {
                                                                    INVALID_CHECKSUM));
     }
 
-    public void close(final DisconnectReason reason) {
+    public void close(final DisconnectReason reason)
+    {
         closeResources();
 
-        if (!hasDisconnected) {
+        if (!hasDisconnected)
+        {
             disconnectEndpoint(reason);
         }
     }
 
-    private void closeResources() {
-        try {
+    private void closeResources()
+    {
+        try
+        {
             channel.close();
             messagesRead.close();
-        } catch (final Exception ex) {
+        } catch (final Exception ex)
+        {
             errorHandler.onError(ex);
         }
     }
 
-    private void removeEndpointFromFramer() {
+    private void removeEndpointFromFramer()
+    {
         framer.onDisconnect(libraryId, connectionId, null);
     }
 
-    private void onDisconnectDetected() {
+    private void onDisconnectDetected()
+    {
         disconnectEndpoint(REMOTE_DISCONNECT);
         removeEndpointFromFramer();
     }
 
-    void onNoLogonDisconnect() {
+    void onNoLogonDisconnect()
+    {
         disconnectEndpoint(NO_LOGON);
         removeEndpointFromFramer();
     }
 
-    private void onInvalidLogon(){
+    private void onInvalidLogon()
+    {
         disconnectEndpoint(DisconnectReason.FAILED_AUTHENTICATION);
         removeEndpointFromFramer();
     }
 
-    private void disconnectEndpoint(final DisconnectReason reason) {
+    private void disconnectEndpoint(final DisconnectReason reason)
+    {
         framer.schedule(() -> libraryPublication.saveDisconnect(libraryId, connectionId, reason));
 
         sessionContexts.onDisconnect(sessionId);
-        if (selectionKey != null) {
+        if (selectionKey != null)
+        {
             selectionKey.cancel();
         }
 
         hasDisconnected = true;
     }
 
-    boolean hasDisconnected() {
+    boolean hasDisconnected()
+    {
         return hasDisconnected;
     }
 
-    public void register(final Selector selector) throws IOException {
+    public void register(final Selector selector) throws IOException
+    {
         selectionKey = channel.register(selector, OP_READ, this);
     }
 
-    public int libraryId() {
+    public int libraryId()
+    {
         return libraryId;
     }
 
-    public void libraryId(final int libraryId) {
+    public void libraryId(final int libraryId)
+    {
         this.libraryId = libraryId;
     }
 
-    void gatewaySession(final GatewaySession gatewaySession) {
+    void gatewaySession(final GatewaySession gatewaySession)
+    {
         this.gatewaySession = gatewaySession;
     }
 
-    void pause() {
+    void pause()
+    {
         isPaused = true;
     }
 
-    void play() {
+    void play()
+    {
         isPaused = false;
     }
 
-    private void choosePublication(final PersistenceLevel persistenceLevel) {
-        if (persistenceLevel == REPLICATED) {
+    private void choosePublication(final PersistenceLevel persistenceLevel)
+    {
+        if (persistenceLevel == REPLICATED)
+        {
             publication = clusterablePublication;
             replicatedConnectionIds.add(connectionId);
-        } else {
+        }
+        else
+        {
             publication = libraryPublication;
         }
     }

@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.protocol;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.messages.ControlNotificationDecoder.SessionsDecoder;
 

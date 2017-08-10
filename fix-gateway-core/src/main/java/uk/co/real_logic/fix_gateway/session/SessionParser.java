@@ -63,7 +63,11 @@ public class SessionParser
     private final MessageValidationStrategy validationStrategy;
     private ErrorHandler errorHandler;
 
-    public SessionParser(final Session session, final SessionIdStrategy sessionIdStrategy, final MessageValidationStrategy validationStrategy, final ErrorHandler errorHandler) // nullable
+    public SessionParser(
+        final Session session,
+        final SessionIdStrategy sessionIdStrategy,
+        final MessageValidationStrategy validationStrategy,
+        final ErrorHandler errorHandler) // nullable
     {
         this.session = session;
         this.sessionIdStrategy = sessionIdStrategy;
@@ -158,8 +162,8 @@ public class SessionParser
     private long decodeTimestamp(final byte[] sendingTime)
     {
         return CODEC_VALIDATION_ENABLED
-            ? timestampDecoder.decode(sendingTime, sendingTime.length)
-            : MISSING_LONG;
+               ? timestampDecoder.decode(sendingTime, sendingTime.length)
+               : MISSING_LONG;
     }
 
     private Action onAnyOtherMessage(final int offset, final int length)
@@ -304,7 +308,7 @@ public class SessionParser
         final char[] beginString = header.beginString();
         final int beginStringLength = header.beginStringLength();
         if (CODEC_VALIDATION_ENABLED && (!logon.validate() ||
-            !session.onBeginString(beginString, beginStringLength, true)))
+                                         !session.onBeginString(beginString, beginStringLength, true)))
         {
             return onCodecInvalidMessage(logon, header, true);
         }
@@ -369,8 +373,7 @@ public class SessionParser
         try
         {
             validated = validationStrategy.validate(header);
-        }
-        catch (final Throwable throwable)
+        } catch (final Throwable throwable)
         {
             onStrategyError("validation", throwable, header.toString());
             validated = false;
@@ -440,7 +443,7 @@ public class SessionParser
     private boolean isPossDup(final HeaderDecoder header)
     {
         return (header.hasPossDupFlag() && header.possDupFlag())
-            || (header.hasPossResend() && header.possResend());
+               || (header.hasPossResend() && header.possResend());
     }
 
     public Session session()
