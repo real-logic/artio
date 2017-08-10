@@ -74,4 +74,7 @@ public class StressSessionHandler implements SessionHandler
 
         return CONTINUE;
     }
+
+    @Override
+    public void onSessionStart(long startTimeMillis) { }
 }

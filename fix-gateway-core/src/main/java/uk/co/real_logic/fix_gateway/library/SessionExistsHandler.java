@@ -38,8 +38,6 @@ public interface SessionExistsHandler
      * @param remoteCompId the compId for the local party in the logon message (eg senderCompId if acceptor).
      * @param remoteSubId the subId for the local party in the logon message (eg senderSubId if acceptor).
      * @param remoteLocationId the locationId for the local party in the logon message (eg senderLocationId if acceptor)
-     * @param username the username in the logon message (If FIX 4.4 or later)
-     * @param password the password in the logon message (If FIX 4.4 or later)
      */
     void onSessionExists(
         FixLibrary library,
@@ -49,7 +47,5 @@ public interface SessionExistsHandler
         String localLocationId,
         String remoteCompId,
         String remoteSubId,
-        String remoteLocationId,
-        String username,
-        String password);
+        String remoteLocationId);
 }

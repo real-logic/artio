@@ -29,6 +29,7 @@ import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.engine.framer.FakeEpochClock;
 import uk.co.real_logic.fix_gateway.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.fix_gateway.messages.LogonStatus;
+import uk.co.real_logic.fix_gateway.messages.SlowStatus;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.timing.LibraryTimers;
@@ -76,8 +77,7 @@ public class LibraryPollerTest
     private LibraryTransport transport = mock(LibraryTransport.class);
     private FixCounters counters = mock(FixCounters.class);
     private FixLibrary fixLibrary = mock(FixLibrary.class);
-    private UnsafeBuffer address = new UnsafeBuffer(new byte[1024]);
-    private int addressLength = address.putStringUtf8(0, "localhost:1234");
+    private String address = "localhost:1234";
     private FakeEpochClock clock = new FakeEpochClock();
 
     private LibraryPoller library;
@@ -390,37 +390,25 @@ public class LibraryPollerTest
 
     private void manageConnection(final long connectionId, final long sessionId)
     {
-        library.onManageConnection(
-            libraryId(),
-            connectionId,
-            sessionId,
-            ACCEPTOR,
-            LAST_SENT_SEQUENCE_NUMBER,
-            LAST_RECEIVED_SEQUENCE_NUMBER,
-            address,
-            0,
-            addressLength,
-            ACTIVE,
-            HEARTBEAT_INTERVAL_IN_S,
-            REPLY_TO_ID,
-            SEQUENCE_INDEX);
-
-        library.onSessionExists(
-            libraryId(),
-            connectionId,
-            sessionId,
-            LAST_SENT_SEQUENCE_NUMBER,
-            LAST_RECEIVED_SEQUENCE_NUMBER,
-            LogonStatus.NEW,
-            false,
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            null,
-            null);
+        library.onManageSession(libraryId()
+                                    , connectionId
+                                    , sessionId
+                                    , LAST_SENT_SEQUENCE_NUMBER
+                                    , LAST_RECEIVED_SEQUENCE_NUMBER
+                                    , -1
+                                    , LogonStatus.NEW
+                                    , SlowStatus.NOT_SLOW
+                                    , ACCEPTOR
+                                    , ACTIVE, HEARTBEAT_INTERVAL_IN_S
+                                    , REPLY_TO_ID
+                                    , SEQUENCE_INDEX
+                                    ,""
+                                    ,""
+                                    ,""
+                                    ,""
+                                    ,""
+                                    ,""
+                                    , address);
     }
 
     private SessionsDecoder hasOtherSessionId()

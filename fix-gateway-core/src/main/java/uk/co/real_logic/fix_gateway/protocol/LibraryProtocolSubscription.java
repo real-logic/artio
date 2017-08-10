@@ -22,13 +22,10 @@ import uk.co.real_logic.fix_gateway.messages.*;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.fix_gateway.messages.ManageConnectionDecoder.addressHeaderLength;
 
 public final class LibraryProtocolSubscription implements ControlledFragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
-    private final SessionExistsDecoder sessionExists = new SessionExistsDecoder();
-    private final ManageConnectionDecoder manageConnection = new ManageConnectionDecoder();
     private final ErrorDecoder error = new ErrorDecoder();
     private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
     private final ReleaseSessionReplyDecoder releaseSessionReply = new ReleaseSessionReplyDecoder();
@@ -39,6 +36,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private final SlowStatusNotificationDecoder slowStatusNotification = new SlowStatusNotificationDecoder();
     private final ResetLibrarySequenceNumberDecoder resetLibrarySequenceNumber =
         new ResetLibrarySequenceNumberDecoder();
+    private final ManageSessionDecoder manageSession = new ManageSessionDecoder();
 
     private final LibraryEndPointHandler handler;
 
@@ -63,14 +61,9 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
                 return onNewSentPosition(buffer, offset, blockLength, version);
             }
 
-            case SessionExistsDecoder.TEMPLATE_ID:
+            case ManageSessionDecoder.TEMPLATE_ID:
             {
-                return onSessionExists(buffer, offset, blockLength, version);
-            }
-
-            case ManageConnectionDecoder.TEMPLATE_ID:
-            {
-                return onManageConnection(buffer, offset, blockLength, version);
+                return onManageSession(buffer, offset, blockLength, version);
             }
 
             case ErrorDecoder.TEMPLATE_ID:
@@ -116,6 +109,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
 
         return CONTINUE;
     }
+
 
     private Action onNotLeader(
         final DirectBuffer buffer,
@@ -262,59 +256,36 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             newSentPosition.position());
     }
 
-    private Action onManageConnection(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
-    {
-        manageConnection.wrap(buffer, offset, blockLength, version);
-        final int addressOffset = offset + ManageConnectionDecoder.BLOCK_LENGTH + addressHeaderLength();
-        final int libraryId = manageConnection.libraryId();
+    private Action onManageSession(DirectBuffer buffer, int offset, int blockLength, int version) {
+        manageSession.wrap(buffer, offset, blockLength, version);
+        final int libraryId = manageSession.libraryId();
         final Action action = handler.onApplicationHeartbeat(libraryId);
-        if (action == ABORT)
-        {
-            return action;
-        }
-        return handler.onManageConnection(
-            libraryId,
-            manageConnection.connection(),
-            manageConnection.session(),
-            manageConnection.connectionType(),
-            manageConnection.lastSentSequenceNumber(),
-            manageConnection.lastReceivedSequenceNumber(),
-            buffer,
-            addressOffset,
-            manageConnection.addressLength(),
-            manageConnection.sessionState(),
-            manageConnection.heartbeatIntervalInS(),
-            manageConnection.replyToId(),
-            manageConnection.sequenceIndex());
-    }
 
-    private Action onSessionExists(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
-    {
-        sessionExists.wrap(buffer, offset, blockLength, version);
-        final int libraryId = sessionExists.libraryId();
-        final Action action = handler.onApplicationHeartbeat(libraryId);
-        if (action == ABORT)
+        if(ABORT == action)
         {
             return action;
         }
 
-        return handler.onSessionExists(
-            libraryId,
-            sessionExists.connection(),
-            sessionExists.session(),
-            sessionExists.lastSentSequenceNumber(),
-            sessionExists.lastReceivedSequenceNumber(),
-            sessionExists.logonStatus(),
-            sessionExists.slowStatus() == SlowStatus.SLOW,
-            sessionExists.localCompId(),
-            sessionExists.localSubId(),
-            sessionExists.localLocationId(),
-            sessionExists.remoteCompId(),
-            sessionExists.remoteSubId(),
-            sessionExists.remoteLocationId(),
-            sessionExists.username(),
-            sessionExists.password());
+        return handler.onManageSession(
+                    libraryId,
+                    manageSession.connection(),
+                    manageSession.session(),
+                    manageSession.lastSentSequenceNumber(),
+                    manageSession.lastReceivedSequenceNumber(),
+                    manageSession.logonTime(),
+                    manageSession.logonStatus(),
+                    manageSession.slowStatus(),
+                    manageSession.connectionType(),
+                    manageSession.sessionState(),
+                    manageSession.heartbeatIntervalInS(),
+                    manageSession.replyToId(),
+                    manageSession.sequenceIndex(),
+                    manageSession.localCompId(),
+                    manageSession.localSubId(),
+                    manageSession.localLocationId(),
+                    manageSession.remoteCompId(),
+                    manageSession.remoteSubId(),
+                    manageSession.remoteLocationId(),
+                    manageSession.address());
     }
 }

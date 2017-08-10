@@ -31,8 +31,10 @@ import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.GatewayError;
 import uk.co.real_logic.fix_gateway.messages.MessageStatus;
+import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
+import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 import uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy;
 
@@ -75,6 +77,7 @@ public class ReceiverEndPointTest
     private SequenceNumberIndexReader receivedSequenceNumbers = mock(SequenceNumberIndexReader.class);
     private Framer framer = mock(Framer.class);
     private GatewaySession gatewaySession = mock(GatewaySession.class);
+    private Session session = mock(Session.class);
     private final LongHashSet replicatedConnectionIds = new LongHashSet();
 
     private ReceiverEndPoint endPoint = new ReceiverEndPoint(
@@ -87,6 +90,8 @@ public class ReceiverEndPointTest
     public void setUp()
     {
         endPoint.gatewaySession(gatewaySession);
+        when(gatewaySession.session()).thenReturn(session);
+        when(session.state()).thenReturn(SessionState.CONNECTED);
         when(mockSessionContexts.onLogon(any())).thenReturn(
             new SessionContext(SESSION_ID, SessionContext.UNKNOWN_SEQUENCE_INDEX, mockSessionContexts, 0));
         when(mockSessionIdStrategy.onAcceptLogon(any())).thenReturn(compositeKey);

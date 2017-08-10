@@ -92,6 +92,11 @@ public class FakeHandler
         return CONTINUE;
     }
 
+    @Override
+    public void onSessionStart(long startTimeMillis) {
+
+    }
+
     public SessionHandler onSessionAcquired(final Session session, final boolean isSlow)
     {
         assertNotEquals(Session.UNKNOWN, session.id());
@@ -115,9 +120,7 @@ public class FakeHandler
         final String localLocationId,
         final String remoteCompId,
         final String remoteSubId,
-        final String remoteLocationId,
-        final String username,
-        final String password)
+        final String remoteLocationId)
     {
         completeSessionIds.add(new CompleteSessionId(localCompId, remoteCompId, surrogateId));
     }

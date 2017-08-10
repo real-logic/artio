@@ -76,4 +76,11 @@ public interface SessionHandler
      * @return an action to indicate the correct back pressure behaviour.
      */
     Action onDisconnect(int libraryId, Session session, DisconnectReason reason);
+
+    /**
+     * Invoked When a client resets a session to the initial sequence number via a logon whilst still connected.
+     *
+     * @param startTimeMillis the sendTime of the logon message to use as the start of the session.
+     */
+    void onSessionStart(long startTimeMillis);
 }

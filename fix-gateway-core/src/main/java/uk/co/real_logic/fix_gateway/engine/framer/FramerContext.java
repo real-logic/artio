@@ -92,17 +92,16 @@ public class FramerContext
             replicatedConnectionIds);
 
         gatewaySessions = new GatewaySessions(
-            clock,
-            outboundPublication,
-            sessionIdStrategy,
-            configuration.sessionCustomisationStrategy(),
-            fixCounters,
-            configuration.authenticationStrategy(),
-            configuration.messageValidationStrategy(),
-            configuration.sessionBufferSize(),
-            configuration.sendingTimeWindowInMs(),
-            configuration.reasonableTransmissionTimeInMs(),
-            errorHandler);
+                clock,
+                outboundPublication,
+                sessionIdStrategy,
+                configuration.sessionCustomisationStrategy(),
+                fixCounters,
+                configuration.authenticationStrategy(),
+                configuration.messageValidationStrategy(),
+                configuration.sessionBufferSize(),
+                configuration.sendingTimeWindowInMs(),
+                configuration.reasonableTransmissionTimeInMs(), errorHandler);
 
         sentSequenceNumberIndex = new SequenceNumberIndexReader(
             configuration.sentSequenceNumberBuffer(), errorHandler);

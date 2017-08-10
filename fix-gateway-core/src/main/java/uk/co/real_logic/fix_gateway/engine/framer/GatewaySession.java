@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine.framer;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.engine.SessionInfo;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
+import uk.co.real_logic.fix_gateway.messages.SlowStatus;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionParser;
@@ -250,5 +251,9 @@ class GatewaySession implements SessionInfo
     int sequenceIndex()
     {
         return context.sequenceIndex();
+    }
+
+    SlowStatus slowStatus(){
+        return bytesInBuffer() > 0 ? SlowStatus.SLOW : SlowStatus.NOT_SLOW;
     }
 }

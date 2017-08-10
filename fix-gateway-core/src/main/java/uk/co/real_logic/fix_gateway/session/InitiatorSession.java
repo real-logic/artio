@@ -89,7 +89,9 @@ public class InitiatorSession extends Session
         {
             proxy.setupSession(sessionId, sessionKey);
 
-            Action action = onResetSeqNumLogon(heartbeatInterval, msgSeqNo, username, password);
+            final long logonTime = sendingTime(sendingTime, origSendingTime);
+            Action action = onResetSeqNumLogon(heartbeatInterval, msgSeqNo, username, password, logonTime);
+
             if (action != null)
             {
                 return action;
@@ -136,8 +138,17 @@ public class InitiatorSession extends Session
         {
             id(sessionId);
             heartbeatIntervalInS(heartbeatInterval);
+
+            if(INITIAL_SEQUENCE_NUMBER == msgSeqNo)
+            {
+                // Outgoing connections could be exchanging logons because of a network disconnection
+                // So we still only want this to occur on the initial logon.
+                logonTime(sendingTime(sendingTime, origSendingTime));
+            }
+
             final Action action =
                 onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+
             if (action == ABORT)
             {
                 return ABORT;
@@ -150,7 +161,8 @@ public class InitiatorSession extends Session
 
     private Action saveLogonMessage(final long sessionId)
     {
-        final long position = publication.saveSessionExists(libraryId, connectionId, sessionId);
+        // TODO(Nick): Make sure we have enough details in this message (used to be sessionExists)
+        final long position = publication.saveManageSession(libraryId, connectionId, sessionId);
         if (position < 0)
         {
             resendSaveLogon = true;

@@ -122,9 +122,7 @@ class SessionSubscriber implements AutoCloseable
         final long sessionId,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
-        final CompositeKey compositeKey,
-        final String username,
-        final String password)
+        final CompositeKey compositeKey)
     {
         if (compositeKey != null)
         {
@@ -141,8 +139,6 @@ class SessionSubscriber implements AutoCloseable
             session.lastSentMsgSeqNum(lastSentSequenceNumber);
             session.lastReceivedMsgSeqNum(lastReceivedSequenceNumber);
         }
-        session.username(username);
-        session.password(password);
     }
 
     void onTimeout(final int libraryId)

@@ -788,8 +788,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final Session newSession = sessions.get(0);
         assertTrue(newSession.isConnected());
         assertEquals(session.id(), newSession.id());
-        assertEquals(session.username(), newSession.username());
-        assertEquals(session.password(), newSession.password());
     }
 
     private void engineIsManagingSession(final FixEngine engine, final long sessionId)
