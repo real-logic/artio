@@ -92,7 +92,7 @@ public final class DebugLogger
         {
             final byte[] data = new byte[length];
             buffer.getBytes(offset, data);
-            printf(formatString, value, new String(data, US_ASCII));
+            printf(tag, formatString, value, new String(data, US_ASCII));
         }
     }
 
@@ -132,7 +132,7 @@ public final class DebugLogger
         {
             final byte[] data = new byte[length];
             buffer.getBytes(offset, data);
-            printf(formatString, new String(data, US_ASCII));
+            printf(tag, formatString, new String(data, US_ASCII));
         }
     }
 
@@ -150,7 +150,7 @@ public final class DebugLogger
             byteBuffer.get(data);
             ByteBufferUtil.position(byteBuffer, originalPosition);
 
-            printf(formatString, new String(data, US_ASCII));
+            printf(tag, formatString, new String(data, US_ASCII));
         }
     }
 
@@ -171,7 +171,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            printf(formatString, value);
+            printf(tag, formatString, value);
         }
     }
 
@@ -183,7 +183,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            printf(formatString, first, second);
+            printf(tag, formatString, first, second);
         }
     }
 
@@ -194,7 +194,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            printf(formatString, first);
+            printf(tag, formatString, first);
         }
     }
 
@@ -206,7 +206,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            printf(formatString, first, second);
+            printf(tag, formatString, first, second);
         }
     }
 
@@ -218,7 +218,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            printf(formatString, first, second);
+            printf(tag, formatString, first, second);
         }
     }
 
@@ -230,7 +230,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            printf(formatString, first, second);
+            printf(tag, formatString, first, second);
         }
     }
 
@@ -243,7 +243,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            printf(formatString, first, second, third);
+            printf(tag, formatString, first, second, third);
         }
     }
 
@@ -256,7 +256,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            printf(formatString, first, second, third);
+            printf(tag, formatString, first, second, third);
         }
     }
 
@@ -270,7 +270,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            printf(formatString, first, second, third, fourth);
+            printf(tag, formatString, first, second, third, fourth);
         }
     }
 
@@ -284,18 +284,19 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            printf(formatString, first, second, third, fourth);
+            printf(tag, formatString, first, second, third, fourth);
         }
     }
 
     private static void printf(
+        final LogTag tag,
         final String formatString,
         final Object... args)
     {
         final String threadName = threadName();
         if (isThreadEnabled(threadName))
         {
-            OUTPUT.printf(threadName + formatString, args);
+            OUTPUT.printf(System.currentTimeMillis() + ":" + threadName + "[" + tag.name() + "]"  + " : " + formatString, args);
         }
     }
 
@@ -310,7 +311,7 @@ public final class DebugLogger
 
     private static String threadName()
     {
-        return Thread.currentThread().getName() + " : ";
+        return Thread.currentThread().getName();
     }
 
     public static void log(
@@ -322,7 +323,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            printf(formatString, first, second, third);
+            printf(tag, formatString, first, second, third);
         }
     }
 
@@ -337,7 +338,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            printf(formatString, first, second, third, fourth, fifth);
+            printf(tag, formatString, first, second, third, fourth, fifth);
         }
     }
 
@@ -353,7 +354,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            printf(formatString, first, second, third, fourth, fifth, sixth);
+            printf(tag, formatString, first, second, third, fourth, fifth, sixth);
         }
     }
 
@@ -370,7 +371,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            printf(formatString, first, second, third, fourth, fifth, sixth, seventh);
+            printf(tag, formatString, first, second, third, fourth, fifth, sixth, seventh);
         }
     }
 
@@ -385,7 +386,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            printf(formatString, first, second, third, fourth, fifth);
+            printf(tag, formatString, first, second, third, fourth, fifth);
         }
     }
 
