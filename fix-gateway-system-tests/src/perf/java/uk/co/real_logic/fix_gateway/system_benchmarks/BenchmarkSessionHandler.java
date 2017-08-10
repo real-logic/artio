@@ -59,9 +59,8 @@ public final class BenchmarkSessionHandler implements SessionHandler
         return CONTINUE;
     }
 
-    @Override
-    public void onSessionStart(long startTimeMillis) {
-
+    public void onSessionStart(final long startTimeMillis)
+    {
     }
 
 }

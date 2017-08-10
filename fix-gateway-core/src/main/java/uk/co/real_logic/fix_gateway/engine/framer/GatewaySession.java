@@ -253,7 +253,8 @@ class GatewaySession implements SessionInfo
         return context.sequenceIndex();
     }
 
-    SlowStatus slowStatus(){
+    SlowStatus slowStatus()
+    {
         return bytesInBuffer() > 0 ? SlowStatus.SLOW : SlowStatus.NOT_SLOW;
     }
 }

@@ -256,36 +256,38 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             newSentPosition.position());
     }
 
-    private Action onManageSession(DirectBuffer buffer, int offset, int blockLength, int version) {
+    private Action onManageSession(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
         manageSession.wrap(buffer, offset, blockLength, version);
         final int libraryId = manageSession.libraryId();
         final Action action = handler.onApplicationHeartbeat(libraryId);
 
-        if(ABORT == action)
+        if (ABORT == action)
         {
             return action;
         }
 
         return handler.onManageSession(
-                    libraryId,
-                    manageSession.connection(),
-                    manageSession.session(),
-                    manageSession.lastSentSequenceNumber(),
-                    manageSession.lastReceivedSequenceNumber(),
-                    manageSession.logonTime(),
-                    manageSession.logonStatus(),
-                    manageSession.slowStatus(),
-                    manageSession.connectionType(),
-                    manageSession.sessionState(),
-                    manageSession.heartbeatIntervalInS(),
-                    manageSession.replyToId(),
-                    manageSession.sequenceIndex(),
-                    manageSession.localCompId(),
-                    manageSession.localSubId(),
-                    manageSession.localLocationId(),
-                    manageSession.remoteCompId(),
-                    manageSession.remoteSubId(),
-                    manageSession.remoteLocationId(),
-                    manageSession.address());
+            libraryId,
+            manageSession.connection(),
+            manageSession.session(),
+            manageSession.lastSentSequenceNumber(),
+            manageSession.lastReceivedSequenceNumber(),
+            manageSession.logonTime(),
+            manageSession.logonStatus(),
+            manageSession.slowStatus(),
+            manageSession.connectionType(),
+            manageSession.sessionState(),
+            manageSession.heartbeatIntervalInS(),
+            manageSession.replyToId(),
+            manageSession.sequenceIndex(),
+            manageSession.localCompId(),
+            manageSession.localSubId(),
+            manageSession.localLocationId(),
+            manageSession.remoteCompId(),
+            manageSession.remoteSubId(),
+            manageSession.remoteLocationId(),
+            manageSession.address());
     }
 }

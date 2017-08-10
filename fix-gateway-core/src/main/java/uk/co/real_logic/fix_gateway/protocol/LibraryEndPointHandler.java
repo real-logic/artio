@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.protocol;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.messages.ControlNotificationDecoder.SessionsDecoder;
 
@@ -40,24 +39,25 @@ public interface LibraryEndPointHandler
 
     Action onResetLibrarySequenceNumber(int libraryId, long sessionId);
 
-    Action onManageSession(int libraryId,
-                                long connection,
-                                long session,
-                                int lastSentSeqNum,
-                                int lastRecvSeqNum,
-                                long logonTime,
-                                LogonStatus logonStatus,
-                                SlowStatus slowStatus,
-                                ConnectionType connectionType,
-                                SessionState sessionState,
-                                int heartBeatInt,
-                                long correlationId,
-                                int sequenceIndex,
-                                String localCompId,
-                                String localSubId,
-                                String localLocationId,
-                                String remoteCompId,
-                                String remoteSubId,
-                                String remoteLocationId,
-                                String address);
+    Action onManageSession(
+        int libraryId,
+        long connection,
+        long session,
+        int lastSentSeqNum,
+        int lastRecvSeqNum,
+        long logonTime,
+        LogonStatus logonStatus,
+        SlowStatus slowStatus,
+        ConnectionType connectionType,
+        SessionState sessionState,
+        int heartBeatInt,
+        long correlationId,
+        int sequenceIndex,
+        String localCompId,
+        String localSubId,
+        String localLocationId,
+        String remoteCompId,
+        String remoteSubId,
+        String remoteLocationId,
+        String address);
 }

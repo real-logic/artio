@@ -16,7 +16,6 @@
 package uk.co.real_logic.fix_gateway.library;
 
 import io.aeron.Subscription;
-import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Before;
 import org.junit.Test;
@@ -390,25 +389,27 @@ public class LibraryPollerTest
 
     private void manageConnection(final long connectionId, final long sessionId)
     {
-        library.onManageSession(libraryId()
-                                    , connectionId
-                                    , sessionId
-                                    , LAST_SENT_SEQUENCE_NUMBER
-                                    , LAST_RECEIVED_SEQUENCE_NUMBER
-                                    , -1
-                                    , LogonStatus.NEW
-                                    , SlowStatus.NOT_SLOW
-                                    , ACCEPTOR
-                                    , ACTIVE, HEARTBEAT_INTERVAL_IN_S
-                                    , REPLY_TO_ID
-                                    , SEQUENCE_INDEX
-                                    ,""
-                                    ,""
-                                    ,""
-                                    ,""
-                                    ,""
-                                    ,""
-                                    , address);
+        library.onManageSession(
+            libraryId(),
+            connectionId,
+            sessionId,
+            LAST_SENT_SEQUENCE_NUMBER,
+            LAST_RECEIVED_SEQUENCE_NUMBER,
+            -1,
+            LogonStatus.NEW,
+            SlowStatus.NOT_SLOW,
+            ACCEPTOR,
+            ACTIVE,
+            HEARTBEAT_INTERVAL_IN_S,
+            REPLY_TO_ID,
+            SEQUENCE_INDEX,
+            "",
+            "",
+            "",
+            "",
+            "",
+            "",
+            address);
     }
 
     private SessionsDecoder hasOtherSessionId()
