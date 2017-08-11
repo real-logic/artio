@@ -78,7 +78,7 @@ class SoloPositionSender implements Index
 
     private void endPosition(final long libraryId, final long endPosition)
     {
-        if (saveNewSentPosition((int) libraryId, endPosition))
+        if (saveNewSentPosition((int)libraryId, endPosition))
         {
             libraryIdToPosition.remove(libraryId);
             resendCount++;

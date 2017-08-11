@@ -36,7 +36,7 @@ public class LocalMktDateDecoderValidCasesTest
     static int toLocalDay(final String timestamp)
     {
         final LocalDate parsedDate = LocalDate.parse(timestamp, FORMATTER);
-        return (int) parsedDate.getLong(ChronoField.EPOCH_DAY);
+        return (int)parsedDate.getLong(ChronoField.EPOCH_DAY);
     }
 
     private final String timestamp;
@@ -45,11 +45,11 @@ public class LocalMktDateDecoderValidCasesTest
     public static Iterable<Object> data()
     {
         return Arrays.asList(
-                new String[]{"00010101"},
-                new String[]{"20150225"},
-                new String[]{"00010101"},
-                new String[]{"20150225"},
-                new String[]{"99991231"}
+            new String[]{ "00010101" },
+            new String[]{ "20150225" },
+            new String[]{ "00010101" },
+            new String[]{ "20150225" },
+            new String[]{ "99991231" }
         );
     }
 

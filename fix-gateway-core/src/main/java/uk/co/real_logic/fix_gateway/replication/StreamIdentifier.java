@@ -19,13 +19,13 @@ import io.aeron.CommonContext;
 import io.aeron.Subscription;
 import io.aeron.driver.media.UdpChannel;
 
+import static io.aeron.CommonContext.SPY_PREFIX;
+
 /**
  * .
  */
 public final class StreamIdentifier
 {
-    private static final String SPY_PREFIX = "aeron-spy:";
-
     private final int streamId;
     private final String channel;
     private final String spyChannel;
@@ -82,7 +82,7 @@ public final class StreamIdentifier
             return false;
         }
 
-        final StreamIdentifier that = (StreamIdentifier) o;
+        final StreamIdentifier that = (StreamIdentifier)o;
 
         return streamId == that.streamId && channel.equals(that.channel);
     }

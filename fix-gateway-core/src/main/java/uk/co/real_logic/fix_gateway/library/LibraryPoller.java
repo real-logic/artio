@@ -562,7 +562,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         new ControlledFragmentAssembler(
             ProtocolSubscription.of(this, new LibraryProtocolSubscription(this)));
 
-    @Override
     public Action onManageSession(
         final int libraryId,
         final long connection,
@@ -606,7 +605,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 DebugLogger.log(FIX_MESSAGE, "Init Connect: %d, %d%n", connection, libraryId);
                 final boolean isInitiator = correlationIdToReply.get(correlationId) instanceof InitiateSessionReply;
                 final InitiateSessionReply reply = isInitiator ?
-                    (InitiateSessionReply) correlationIdToReply.remove(correlationId) : null;
+                    (InitiateSessionReply)correlationIdToReply.remove(correlationId) : null;
                 final Session session = initiateSession(connection,
                     lastSentSeqNum,
                     lastRecvSeqNum,
@@ -790,7 +789,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     public Action onReleaseSessionReply(final int libraryId, final long replyToId, final SessionReplyStatus status)
     {
         final ReleaseToGatewayReply reply =
-            (ReleaseToGatewayReply) correlationIdToReply.remove(replyToId);
+            (ReleaseToGatewayReply)correlationIdToReply.remove(replyToId);
         if (reply != null)
         {
             reply.onComplete(status);
@@ -801,7 +800,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public Action onRequestSessionReply(final int toId, final long replyToId, final SessionReplyStatus status)
     {
-        final RequestSessionReply reply = (RequestSessionReply) correlationIdToReply.remove(replyToId);
+        final RequestSessionReply reply = (RequestSessionReply)correlationIdToReply.remove(replyToId);
         if (reply != null)
         {
             reply.onComplete(status);

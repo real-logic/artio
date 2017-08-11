@@ -43,8 +43,9 @@ public final class CodecUtil
         final byte[] buffer = (oldBuffer.length < length) ? new byte[length] : oldBuffer;
         for (int i = 0; i < length; i++)
         {
-            buffer[i] = (byte) value.charAt(i);
+            buffer[i] = (byte)value.charAt(i);
         }
+
         return buffer;
     }
 
@@ -59,8 +60,9 @@ public final class CodecUtil
         final byte[] buffer = (oldBuffer.length < length) ? new byte[length] : oldBuffer;
         for (int i = 0; i < length; i++)
         {
-            buffer[i] = (byte) value[i];
+            buffer[i] = (byte)value[i];
         }
+
         return buffer;
     }
 
@@ -69,8 +71,9 @@ public final class CodecUtil
         final byte[] buffer = new byte[length];
         for (int i = 0; i < length; i++)
         {
-            buffer[i] = (byte) value[i];
+            buffer[i] = (byte)value[i];
         }
+
         return buffer;
     }
 
@@ -88,6 +91,7 @@ public final class CodecUtil
                 return false;
             }
         }
+
         return true;
     }
 
@@ -98,7 +102,7 @@ public final class CodecUtil
         {
             result = 31 * result + value[i];
         }
+
         return result;
     }
-
 }

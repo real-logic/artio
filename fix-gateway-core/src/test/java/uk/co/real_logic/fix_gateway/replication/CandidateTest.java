@@ -108,7 +108,7 @@ public class CandidateTest
     @Test
     public void shouldNotCountVotesForOtherCandidates()
     {
-        final short otherCandidate = (short) 2;
+        final short otherCandidate = (short)2;
 
         startElection();
 

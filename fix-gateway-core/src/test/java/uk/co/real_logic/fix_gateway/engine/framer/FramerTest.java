@@ -711,7 +711,7 @@ public class FramerTest
 
     private void sessionIsActive()
     {
-        when(gatewaySessions.releaseBySessionId(SESSION_ID)).thenReturn(gatewaySession, (GatewaySession) null);
+        when(gatewaySessions.releaseBySessionId(SESSION_ID)).thenReturn(gatewaySession, (GatewaySession)null);
         when(gatewaySession.session()).thenReturn(session);
         when(gatewaySession.heartbeatIntervalInS()).thenReturn(HEARTBEAT_INTERVAL_IN_S);
         when(session.isActive()).thenReturn(true);

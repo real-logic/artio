@@ -177,8 +177,7 @@ class ClusterContext extends EngineContext
             fixCounters.failedInboundPublications(),
             configuration.framerIdleStrategy(),
             nanoClock,
-            configuration.inboundMaxClaimAttempts()
-        );
+            configuration.inboundMaxClaimAttempts());
     }
 
     public Streams outboundLibraryStreams()
@@ -193,7 +192,7 @@ class ClusterContext extends EngineContext
 
     public ClusterSubscription outboundClusterSubscription()
     {
-        return (ClusterSubscription) outboundLibraryStreams().subscription("outboundClusterSubscription");
+        return (ClusterSubscription)outboundLibraryStreams().subscription("outboundClusterSubscription");
     }
 
     public void close()

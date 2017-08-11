@@ -37,11 +37,10 @@ class ClusterSlowPeeker extends BlockablePosition
         final long limitPosition = normalClusterSubscription.position();
         final long initialPosition = peekClusterSubscription.position();
         final long resultingPosition = peekClusterSubscription.peek(
-                initialPosition, handler, limitPosition);
+            initialPosition, handler, limitPosition);
         final long delta = resultingPosition - initialPosition;
         peekClusterSubscription.position(blockPosition != DID_NOT_BLOCK ? blockPosition : resultingPosition);
 
-        return (int) delta;
+        return (int)delta;
     }
-
 }

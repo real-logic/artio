@@ -211,9 +211,9 @@ public class SequenceNumberIndexWriter implements Index
             indexFile.close();
         }
 
-        final boolean flipsFiles = rename(indexPath, passingPlacePath)
-            && rename(writablePath, indexPath)
-            && rename(passingPlacePath, writablePath);
+        final boolean flipsFiles = rename(indexPath, passingPlacePath) &&
+            rename(writablePath, indexPath) &&
+            rename(passingPlacePath, writablePath);
 
         if (RUNNING_ON_WINDOWS)
         {
@@ -385,9 +385,8 @@ public class SequenceNumberIndexWriter implements Index
         if (fileCapacity < SECTOR_SIZE)
         {
             throw new IllegalStateException(String.format(
-                "Cannot create sequencen number of size < 1 sector: %d",
-                fileCapacity
-            ));
+                "Cannot create sequence number of size < 1 sector: %d",
+                fileCapacity));
         }
     }
 

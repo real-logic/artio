@@ -275,12 +275,11 @@ class Follower implements Role, RaftHandler
         }
     }
 
-    private boolean isValidPosition(
-        final int leaderSessionId, final int leaderShipTerm, final long position)
+    private boolean isValidPosition(final int leaderSessionId, final int leaderShipTerm, final long position)
     {
-        return position == termState.receivedPosition()
-            && leaderSessionId == termState.leaderSessionId().get()
-            && leaderShipTerm == termState.leadershipTerm();
+        return position == termState.receivedPosition() &&
+            leaderSessionId == termState.leaderSessionId().get() &&
+            leaderShipTerm == termState.leadershipTerm();
     }
 
     Follower follow(final long timeInMs)

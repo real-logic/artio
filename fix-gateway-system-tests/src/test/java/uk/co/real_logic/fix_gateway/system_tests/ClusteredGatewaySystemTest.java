@@ -202,9 +202,7 @@ public class ClusteredGatewaySystemTest
                 return connectedToLeader();
             },
             10_000,
-            () ->
-            {
-            });
+            () -> {});
 
         DebugLogger.log(GATEWAY_CLUSTER_TEST, "Library has connected to new leader" + System.lineSeparator());
 
@@ -263,7 +261,7 @@ public class ClusteredGatewaySystemTest
     private void assertOldSessionDisconnected(final FixEngine engine)
     {
         final List<LibraryInfo> libraries = SystemTestUtil.libraries(engine);
-        libraries.forEach(library ->
+        libraries.forEach((library) ->
             assertThat("Old session hasn't disconnected yet", library.sessions(), hasSize(0)));
     }
 
@@ -284,8 +282,7 @@ public class ClusteredGatewaySystemTest
     private boolean connectedToLeader()
     {
         final String libraryChannel = leader.libraryChannel();
-        return acceptingLibrary.isConnected()
-            && acceptingLibrary.currentAeronChannel().equals(libraryChannel);
+        return acceptingLibrary.isConnected() && acceptingLibrary.currentAeronChannel().equals(libraryChannel);
     }
 
     private void connectFixSession()

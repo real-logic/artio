@@ -122,7 +122,6 @@ final class LiveLibraryInfo implements LibraryInfo
         return librarySlowPeeker;
     }
 
-    @Override
     public boolean equals(final Object o)
     {
         if (this == o)
@@ -134,12 +133,11 @@ final class LiveLibraryInfo implements LibraryInfo
             return false;
         }
 
-        final LiveLibraryInfo that = (LiveLibraryInfo) o;
+        final LiveLibraryInfo that = (LiveLibraryInfo)o;
 
         return libraryId == that.libraryId;
     }
 
-    @Override
     public int hashCode()
     {
         return libraryId;

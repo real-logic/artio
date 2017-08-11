@@ -27,10 +27,10 @@ import static uk.co.real_logic.fix_gateway.engine.SectorFramer.nextSectorStart;
 
 /**
  * Stores a cache of the last sent sequence number.
- *
+ * <p>
  * Each instance is not thread-safe, however, they can share a common
  * off-heap in a single-writer threadsafe manner.
- *
+ * <p>
  * Message Header
  * Series of LastKnownSequenceNumber records
  * ...
@@ -57,7 +57,7 @@ final class SequenceNumberIndexDescriptor
      */
     static int positionTableOffset(final int fileCapacity)
     {
-        final int proposedCapacity = nextSectorStart((int) (fileCapacity * SEQUENCE_NUMBER_RATIO));
+        final int proposedCapacity = nextSectorStart((int)(fileCapacity * SEQUENCE_NUMBER_RATIO));
         if (proposedCapacity == fileCapacity)
         {
             return fileCapacity - SECTOR_SIZE;

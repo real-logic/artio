@@ -84,14 +84,14 @@ class SessionContext
             return false;
         }
 
-        final SessionContext that = (SessionContext) o;
+        final SessionContext that = (SessionContext)o;
 
         return sessionId == that.sessionId;
     }
 
     public int hashCode()
     {
-        return (int) (sessionId ^ (sessionId >>> 32));
+        return (int)(sessionId ^ (sessionId >>> 32));
     }
 
     public String toString()

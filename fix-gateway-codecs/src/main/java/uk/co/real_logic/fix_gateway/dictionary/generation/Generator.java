@@ -184,8 +184,7 @@ public abstract class Generator
                 "%3$s",
                 resetEntries,
                 additionalReset,
-                methods
-            );
+                methods);
         }
         else
         {
@@ -198,8 +197,7 @@ public abstract class Generator
                 "%s",
                 resetEntries,
                 additionalReset,
-                methods
-            );
+                methods);
         }
     }
 
@@ -268,8 +266,7 @@ public abstract class Generator
             nameOfResetMethod(name),
             formatPropertyName(name),
             formatPropertyName(numberField.name()),
-            numberField.name()
-        );
+            numberField.name());
     }
 
     private String resetField(final boolean isRequired, final Field field)
@@ -366,17 +363,17 @@ public abstract class Generator
     protected String hasField(final Entry entry)
     {
         final String name = entry.name();
-        return entry.required()
-            ? ""
-            : String.format("    private boolean has%1$s;\n\n", name);
+        return entry.required() ?
+            "" :
+            String.format("    private boolean has%1$s;\n\n", name);
     }
 
     protected String resetNothing(final String name)
     {
         return String.format(
             "    public void %1$s()\n" +
-                "    {\n" +
-                "    }\n\n",
+            "    {\n" +
+            "    }\n\n",
             nameOfResetMethod(name));
     }
 
@@ -452,8 +449,8 @@ public abstract class Generator
                 .collect(joining(" + \n"));
 
         final String prefix =
-            !hasCommonCompounds ? ""
-                : "\"  \\\"header\\\": \" + header" + EXPAND_INDENT + " + \"\\n\" + ";
+            !hasCommonCompounds ?
+                "" : "\"  \\\"header\\\": \" + header" + EXPAND_INDENT + " + \"\\n\" + ";
 
         final String suffix;
         final String parameters;
@@ -601,6 +598,7 @@ public abstract class Generator
         final StringBuilder sb = new StringBuilder(times * 4 + suffix.length());
         IntStream.range(0, times).forEach(x -> sb.append("    "));
         sb.append(suffix);
+
         return sb.toString();
     }
 }

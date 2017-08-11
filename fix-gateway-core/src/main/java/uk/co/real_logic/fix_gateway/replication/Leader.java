@@ -62,14 +62,17 @@ class Leader implements Role, RaftHandler
     private Subscription dataSubscription;
     private Subscription controlSubscription;
 
-    /** Position in the log that has been acknowledged by a majority of the cluster
+    /**
+     * Position in the log that has been acknowledged by a majority of the cluster
      * commitPosition >= lastAppliedPosition
      */
     private final AtomicLong consensusPosition;
     private final RaftArchiver raftArchiver;
     private final DirectBuffer nodeState;
     private final NodeStateHandler nodeStateHandler;
-    /** Replicated position in the log that has been applied to the state machine*/
+    /**
+     * Replicated position in the log that has been applied to the state machine
+     */
     private long lastAppliedPosition;
 
     /**
@@ -137,7 +140,7 @@ class Leader implements Role, RaftHandler
     {
         final int resends = CollectionUtil.removeIf(resendHandlers, ResendHandler::reAttemptResend);
         final long newPosition = acknowledgementStrategy.findAckedTerm(nodeToPosition);
-        final int delta = (int) (newPosition - consensusPosition.get());
+        final int delta = (int)(newPosition - consensusPosition.get());
         if (delta > 0)
         {
             consensusPosition.set(newPosition);
@@ -163,7 +166,7 @@ class Leader implements Role, RaftHandler
         this.timeInMs = timeInMs;
 
         return acknowledgementSubscription.controlledPoll(raftSubscription, fragmentLimit) +
-               controlSubscription.controlledPoll(raftSubscription, fragmentLimit);
+            controlSubscription.controlledPoll(raftSubscription, fragmentLimit);
     }
 
     public void closeStreams()
@@ -217,7 +220,7 @@ class Leader implements Role, RaftHandler
         if (status == MISSING_LOG_ENTRIES)
         {
             final long transportPosition = replicatedToTransport(position, transportPositionDelta);
-            final int length = (int) (raftArchiver.archivedTransportPosition() - transportPosition);
+            final int length = (int)(raftArchiver.archivedTransportPosition() - transportPosition);
             if (validateReader())
             {
                 final ResendHandler resendHandler = new ResendHandler();

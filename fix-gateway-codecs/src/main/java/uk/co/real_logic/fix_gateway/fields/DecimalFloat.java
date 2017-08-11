@@ -19,14 +19,14 @@ import java.util.Arrays;
 
 /**
  * Fix float data type. Floats are used for a variety of things, including price.
- *
+ * <p>
  * Must support 15 significant digits, decimal places variable.
- *
+ * <p>
  * Decimal float represents the significant digits using a value field,
  * and the location of the point using the scale field.
- *
+ * <p>
  * See http://fixwiki.org/fixwiki/FloatDataType for details. Examples:
- *
+ * <p>
  * 55.36
  * 55.3600
  * 0055.36
@@ -167,8 +167,8 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         }
 
         final int scaleComparison = Integer.compare(scale, other.scale);
-        return scaleComparison == 0
-            ? Long.compare(value, other.value)
-            : !isPositive ? -1 * scaleComparison : scaleComparison;
+        return scaleComparison == 0 ?
+            Long.compare(value, other.value) :
+            !isPositive ? -1 * scaleComparison : scaleComparison;
     }
 }

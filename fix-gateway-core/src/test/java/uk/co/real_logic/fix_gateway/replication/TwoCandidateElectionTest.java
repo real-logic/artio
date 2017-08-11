@@ -38,9 +38,9 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
     {
         termState3.leaderSessionId(DATA_SESSION_ID);
 
-        node1 = candidate((short) 1, clusterNode1, termState1);
-        node2 = candidate((short) 2, clusterNode2, termState2);
-        node3 = follower((short) 3, clusterNode3, termState3);
+        node1 = candidate((short)1, clusterNode1, termState1);
+        node2 = candidate((short)2, clusterNode2, termState2);
+        node3 = follower((short)3, clusterNode3, termState3);
     }
 
     @Test
@@ -125,9 +125,9 @@ public class TwoCandidateElectionTest extends AbstractReplicationTest
     {
         final QuorumAcknowledgementStrategy ackStrategy = new QuorumAcknowledgementStrategy();
         return new Candidate(
-                id, DATA_SESSION_ID, clusterNode, CLUSTER_SIZE, TIMEOUT, termState, ackStrategy,
-                NODE_STATE_BUFFER, nodeStateHandler)
-                .controlSubscription(controlSubscription())
-                .controlPublication(raftPublication(ClusterConfiguration.DEFAULT_CONTROL_STREAM_ID));
+            id, DATA_SESSION_ID, clusterNode, CLUSTER_SIZE, TIMEOUT, termState, ackStrategy,
+            NODE_STATE_BUFFER, nodeStateHandler)
+            .controlSubscription(controlSubscription())
+            .controlPublication(raftPublication(ClusterConfiguration.DEFAULT_CONTROL_STREAM_ID));
     }
 }

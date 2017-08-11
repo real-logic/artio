@@ -320,7 +320,7 @@ public class ClusterSubscriptionTest
         pollsMessageFragment(leaderDataImage, FIRST_TERM_LENGTH, CONTINUE);
 
         // You got netsplit when the data was sent out on the main data channel
-        when(otherLeaderDataImage.position()).thenReturn((long) THIRD_TERM_TRANSPORT_END);
+        when(otherLeaderDataImage.position()).thenReturn((long)THIRD_TERM_TRANSPORT_END);
 
         // But the data has been resend and archived by the follower.
         onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
@@ -346,7 +346,7 @@ public class ClusterSubscriptionTest
         pollsMessageFragment(leaderDataImage, FIRST_TERM_LENGTH, CONTINUE);
 
         // You got netsplit when the data was sent out on the main data channel
-        when(otherLeaderDataImage.position()).thenReturn((long) THIRD_TERM_TRANSPORT_END);
+        when(otherLeaderDataImage.position()).thenReturn((long)THIRD_TERM_TRANSPORT_END);
 
         // But the data has been resend and archived by the follower.
         onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
@@ -425,7 +425,7 @@ public class ClusterSubscriptionTest
         pollsMessageFragment(leaderDataImage, FIRST_TERM_LENGTH, CONTINUE);
 
         // You got netsplit when the data was sent out on the main data channel
-        when(otherLeaderDataImage.position()).thenReturn((long) THIRD_TERM_TRANSPORT_END);
+        when(otherLeaderDataImage.position()).thenReturn((long)THIRD_TERM_TRANSPORT_END);
 
         // But the data has been resend and archived by the follower.
         onResend(SECOND_TERM_LENGTH, SECOND_TERM_END, THIRD_TERM_LENGTH);
@@ -524,12 +524,12 @@ public class ClusterSubscriptionTest
                     if (expectedAction != ABORT)
                     {
                         when(dataImage.position()).thenReturn((long)transportPosition);
-                        return (long) transportPosition;
+                        return (long)transportPosition;
                     }
                 }
 
                 return initialPosition;
-            }).then(inv -> 0L);
+            }).then((inv) -> 0L);
 
         poll();
     }

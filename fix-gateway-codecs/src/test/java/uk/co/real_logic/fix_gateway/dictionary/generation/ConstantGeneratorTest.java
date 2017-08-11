@@ -33,7 +33,6 @@ public class ConstantGeneratorTest
     private static ConstantGenerator constantGenerator =
         new ConstantGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
 
-    private static Class<?> constantsClass;
     private static Object constants;
 
     @BeforeClass
@@ -42,7 +41,7 @@ public class ConstantGeneratorTest
         constantGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
         //System.out.println(sources);
-        constantsClass = compileInMemory(TEST_PACKAGE + "." + ConstantGenerator.CLASS_NAME, sources);
+        final Class<?> constantsClass = compileInMemory(TEST_PACKAGE + "." + ConstantGenerator.CLASS_NAME, sources);
         constants = constantsClass.newInstance();
     }
 
@@ -61,7 +60,7 @@ public class ConstantGeneratorTest
     @Test
     public void shouldContainStringConstantsForMessageTypes() throws Exception
     {
-        final String heartbeatString = String.valueOf((char) HEARTBEAT_TYPE);
+        final String heartbeatString = String.valueOf((char)HEARTBEAT_TYPE);
         assertEquals(heartbeatString, getField(constants, "HEARTBEAT_AS_STR"));
     }
 
@@ -78,5 +77,4 @@ public class ConstantGeneratorTest
     {
         Reflection.field(constants, "VALUES_OF_TestReqID");
     }
-
 }

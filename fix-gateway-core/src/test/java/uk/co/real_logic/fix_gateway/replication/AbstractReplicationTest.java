@@ -45,7 +45,6 @@ import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_LO
 
 public class AbstractReplicationTest
 {
-
     protected static final String IPC = "aeron:ipc";
     protected static final int FRAGMENT_LIMIT = 1;
     protected static final long TIMEOUT = 100;
@@ -117,7 +116,7 @@ public class AbstractReplicationTest
 
     private void deleteLogDir(final int id)
     {
-        IoUtil.delete(new File(logFileDir((short) id)), true);
+        IoUtil.delete(new File(logFileDir((short)id)), true);
     }
 
     protected static int poll(final Role role)

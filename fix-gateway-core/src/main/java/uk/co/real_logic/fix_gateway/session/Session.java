@@ -191,9 +191,7 @@ public class Session implements AutoCloseable
     public boolean isConnected()
     {
         final SessionState state = state();
-        return state != CONNECTING
-            && state != DISCONNECTED
-            && state != DISABLED;
+        return state != CONNECTING && state != DISCONNECTED && state != DISABLED;
     }
 
     /**
@@ -398,7 +396,7 @@ public class Session implements AutoCloseable
         }
 
         final int sentSeqNum = newSentSeqNum();
-        final HeaderEncoder header = (HeaderEncoder) encoder.header();
+        final HeaderEncoder header = (HeaderEncoder)encoder.header();
         header
             .msgSeqNum(sentSeqNum)
             .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(time()));
@@ -473,7 +471,7 @@ public class Session implements AutoCloseable
     public long resetSequenceNumbers()
     {
         final int sentSeqNum = 1;
-        final int heartbeatIntervalInS = (int) MILLISECONDS.toSeconds(heartbeatIntervalInMs);
+        final int heartbeatIntervalInS = (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs);
         nextSequenceIndex();
         final long position = proxy.logon(
             heartbeatIntervalInS, sentSeqNum, username(), password(), true, sequenceIndex());
@@ -1104,11 +1102,11 @@ public class Session implements AutoCloseable
 
     Session heartbeatIntervalInS(final int heartbeatIntervalInS)
     {
-        this.heartbeatIntervalInMs = SECONDS.toMillis((long) heartbeatIntervalInS);
+        this.heartbeatIntervalInMs = SECONDS.toMillis((long)heartbeatIntervalInS);
 
         final long time = time();
         incNextReceivedInboundMessageTime(time);
-        sendingHeartbeatIntervalInMs = (long) (heartbeatIntervalInMs * HEARTBEAT_PAUSE_FACTOR);
+        sendingHeartbeatIntervalInMs = (long)(heartbeatIntervalInMs * HEARTBEAT_PAUSE_FACTOR);
         nextRequiredHeartbeatTimeInMs = time + sendingHeartbeatIntervalInMs;
 
         return this;

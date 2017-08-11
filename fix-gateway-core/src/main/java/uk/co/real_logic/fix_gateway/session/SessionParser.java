@@ -166,9 +166,9 @@ public class SessionParser
 
     private long decodeTimestamp(final byte[] sendingTime)
     {
-        return CODEC_VALIDATION_ENABLED
-            ? timestampDecoder.decode(sendingTime, sendingTime.length)
-            : MISSING_LONG;
+        return CODEC_VALIDATION_ENABLED ?
+            timestampDecoder.decode(sendingTime, sendingTime.length) :
+            MISSING_LONG;
     }
 
     private Action onAnyOtherMessage(final int offset, final int length)
@@ -466,8 +466,7 @@ public class SessionParser
 
     private boolean isPossDup(final HeaderDecoder header)
     {
-        return (header.hasPossDupFlag() && header.possDupFlag())
-            || (header.hasPossResend() && header.possResend());
+        return (header.hasPossDupFlag() && header.possDupFlag()) || (header.hasPossResend() && header.possResend());
     }
 
     public Session session()

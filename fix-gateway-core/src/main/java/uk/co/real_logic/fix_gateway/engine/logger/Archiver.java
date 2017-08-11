@@ -45,7 +45,6 @@ import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 
 public class Archiver implements Agent, RawBlockHandler
 {
-
     public interface ArchivedPositionHandler
     {
         void onArchivedPosition(int aeronSessionId, long endPosition, int length);
@@ -53,7 +52,7 @@ public class Archiver implements Agent, RawBlockHandler
 
     private static final int POLL_LENGTH = TERM_BUFFER_LENGTH_DEFAULT;
 
-    public static final long UNKNOWN_POSITION = -1;
+    private static final long UNKNOWN_POSITION = -1;
 
     private final IntFunction<SessionArchiver> newSessionArchiver = this::newSessionArchiver;
     private final ArchiveMetaData metaData;
@@ -197,19 +196,20 @@ public class Archiver implements Agent, RawBlockHandler
         final Long2LongHashMap completedPositions = completionPosition.positions();
         if (!completionPosition.wasStartupComplete())
         {
-            subscription.forEachImage(image ->
-            {
-                final int aeronSessionId = image.sessionId();
-                final long currentPosition = image.position();
-                final long completedPosition = completedPositions.get(aeronSessionId);
-                int toPoll = (int) (completedPosition - currentPosition);
-                while (toPoll > 0 && !image.isClosed())
+            subscription.forEachImage(
+                (image) ->
                 {
-                    toPoll -= image.rawPoll(this, toPoll);
+                    final int aeronSessionId = image.sessionId();
+                    final long currentPosition = image.position();
+                    final long completedPosition = completedPositions.get(aeronSessionId);
+                    int toPoll = (int)(completedPosition - currentPosition);
+                    while (toPoll > 0 && !image.isClosed())
+                    {
+                        toPoll -= image.rawPoll(this, toPoll);
 
-                    Thread.yield();
-                }
-            });
+                        Thread.yield();
+                    }
+                });
         }
     }
 

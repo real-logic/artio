@@ -63,8 +63,7 @@ public class ChecksumFramer extends SectorFramer
         final int savedChecksum = buffer.getInt(checksumOffset);
         final int start = errorReportingOffset + checksumOffset - SECTOR_DATA_LENGTH;
         final int end = errorReportingOffset + checksumOffset + CHECKSUM_SIZE;
-        validateCheckSum(
-            fileName, start, end, savedChecksum, calculatedChecksum, errorHandler);
+        validateCheckSum(fileName, start, end, savedChecksum, calculatedChecksum, errorHandler);
     }
 
     private void withChecksums(final ChecksumConsumer consumer)
@@ -90,7 +89,7 @@ public class ChecksumFramer extends SectorFramer
                 ByteBufferUtil.position(inMemoryByteBuffer, sectorStart);
                 crc32.update(inMemoryByteBuffer);
             }
-            final int sectorChecksum = (int) crc32.getValue();
+            final int sectorChecksum = (int)crc32.getValue();
             consumer.accept(checksumOffset, sectorChecksum);
         }
 

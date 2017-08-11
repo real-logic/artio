@@ -87,19 +87,20 @@ public class LeaderTest
             .controlSubscription(controlSubscription)
             .getsElected(TIME, POSITION);
 
-        whenBlockRead().then(inv ->
-        {
-            final Object[] arguments = inv.getArguments();
-            final int length = (int) arguments[1];
-            final BlockHandler handler = (BlockHandler) arguments[2];
-
-            if (handler != null)
+        whenBlockRead().then(
+            (inv) ->
             {
-                handler.onBlock(new UnsafeBuffer(new byte[length]), 0, length, LEADER_SESSION_ID, 1);
-            }
+                final Object[] arguments = inv.getArguments();
+                final int length = (int)arguments[1];
+                final BlockHandler handler = (BlockHandler)arguments[2];
 
-            return true;
-        });
+                if (handler != null)
+                {
+                    handler.onBlock(new UnsafeBuffer(new byte[length]), 0, length, LEADER_SESSION_ID, 1);
+                }
+
+                return true;
+            });
     }
 
     @Test
@@ -120,7 +121,7 @@ public class LeaderTest
 
         receivesMissingLogEntries(followerPosition);
 
-        resendsMissingLogEntries(followerPosition, (int) POSITION, times(1));
+        resendsMissingLogEntries(followerPosition, (int)POSITION, times(1));
     }
 
     @Test
@@ -129,7 +130,7 @@ public class LeaderTest
         final long followerPosition = 0;
 
         when(sessionArchiver.archivedPosition()).thenReturn(POSITION);
-        backpressureResend(followerPosition);
+        backPressureResend(followerPosition);
 
         leader.readData();
 
@@ -139,7 +140,7 @@ public class LeaderTest
 
         leader.poll(1, 0);
 
-        resendsMissingLogEntries(followerPosition, (int) POSITION, times(2));
+        resendsMissingLogEntries(followerPosition, (int)POSITION, times(2));
     }
 
     @Test
@@ -150,8 +151,8 @@ public class LeaderTest
 
         when(sessionArchiver.archivedPosition()).thenReturn(POSITION);
 
-        backpressureResend(otherFollowerPosition);
-        backpressureResend(followerPosition);
+        backPressureResend(otherFollowerPosition);
+        backPressureResend(followerPosition);
 
         leader.readData();
 
@@ -162,11 +163,11 @@ public class LeaderTest
 
         leader.poll(1, 0);
 
-        resendsMissingLogEntries(otherFollowerPosition, (int) POSITION, times(2));
-        resendsMissingLogEntries(followerPosition, (int) POSITION, times(2));
+        resendsMissingLogEntries(otherFollowerPosition, (int)POSITION, times(2));
+        resendsMissingLogEntries(followerPosition, (int)POSITION, times(2));
     }
 
-    private void backpressureResend(final long position)
+    private void backPressureResend(final long position)
     {
         when(controlPublication.saveResend(anyInt(), anyInt(), eq(position), anyLong(), any(), anyInt(), anyInt()))
             .thenReturn(BACK_PRESSURED, 100L);
@@ -203,7 +204,7 @@ public class LeaderTest
             anyLong(),
             any(),
             eq(0),
-            eq((int) (length - followerPosition)));
+            eq((int)(length - followerPosition)));
     }
 
     private OngoingStubbing<Boolean> whenBlockRead()

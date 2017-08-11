@@ -129,13 +129,14 @@ public class DecoderGenerator extends Generator
     {
         if (type == COMPONENT)
         {
-            componentInterface((Component) aggregate);
+            componentInterface((Component)aggregate);
             return;
         }
 
         final String className = decoderClassName(aggregate);
 
-        outputManager.withOutput(className,
+        outputManager.withOutput(
+            className,
             (out) ->
             {
                 out.append(fileHeader(builderPackage));
@@ -282,8 +283,8 @@ public class DecoderGenerator extends Generator
             "            invalidTagId = trailer.invalidTagId();\n" +
             "            rejectReason = trailer.rejectReason();\n" +
             "            return false;\n" +
-            "        }\n"
-            : "";
+            "        }\n" :
+            "";
 
         out.append(String.format(
             "    private final IntHashSet alreadyVisitedFields = new IntHashSet(%4$d);\n\n" +
@@ -414,7 +415,7 @@ public class DecoderGenerator extends Generator
     {
         return entry.match(
             (e, field) -> Stream.of(field),
-            (e, group) -> Stream.of((Field) group.numberField().element()),
+            (e, group) -> Stream.of((Field)group.numberField().element()),
             (e, component) -> requiredFields(component.entries()));
     }
 
@@ -481,11 +482,11 @@ public class DecoderGenerator extends Generator
         final String fieldName = formatPropertyName(name);
         final Type type = field.type();
 
-        final String length = type.isStringBased()
-            ? String.format("    public int %1$sLength();\n", fieldName) : "";
+        final String length = type.isStringBased() ?
+            String.format("    public int %1$sLength();\n", fieldName) : "";
 
-        final String optional = !entry.required()
-            ? String.format("    public boolean has%1$s();\n", name) : "";
+        final String optional = !entry.required() ?
+            String.format("    public boolean has%1$s();\n", name) : "";
 
         return String.format(
             "    public %1$s %2$s();\n" +
@@ -578,7 +579,7 @@ public class DecoderGenerator extends Generator
         }
 
         final Entry numberField = group.numberField();
-        final String prefix = fieldGetter(numberField, (Field) numberField.element());
+        final String prefix = fieldGetter(numberField, (Field)numberField.element());
 
         out.append(String.format(
             "\n" +
@@ -646,8 +647,8 @@ public class DecoderGenerator extends Generator
             fieldName,
             name);
 
-        final String suffix = type.isStringBased()
-            ? String.format(
+        final String suffix = type.isStringBased() ?
+            String.format(
                 "    private int %1$sLength;\n\n" +
                 "    public int %1$sLength()\n" +
                 "    {\n" +
@@ -660,8 +661,8 @@ public class DecoderGenerator extends Generator
                 "    }\n\n",
                 fieldName,
                 optionalCheck,
-                asStringBody)
-            : "";
+                asStringBody) :
+            "";
 
         return String.format(
             "    private %s %s%s;\n\n" +
@@ -745,12 +746,13 @@ public class DecoderGenerator extends Generator
 
     private String optionalCheck(final Entry entry)
     {
-        return entry.required() ? "" : String.format(
-            "        if (!has%s)\n" +
-            "        {\n" +
-            "            throw new IllegalArgumentException(\"No value for optional field: %1$s\");\n" +
-            "        }\n\n",
-            entry.name());
+        return entry.required() ? "" :
+            String.format(
+                "        if (!has%s)\n" +
+                "        {\n" +
+                "            throw new IllegalArgumentException(\"No value for optional field: %1$s\");\n" +
+                "        }\n\n",
+                entry.name());
     }
 
     private String javaTypeOf(final Type type)
@@ -864,24 +866,24 @@ public class DecoderGenerator extends Generator
 
         final String suffix =
             "            default:\n" +
-                "                if (" + CODEC_VALIDATION_ENABLED + isTrailerTag(type) + groupSuffix + ")\n" +
-                "                {\n" +
-                "                    unknownFields.add(tag);\n" +
-                "                }\n" +
-                // Skip the thing if it's a completely unknown field and you aren't validating messages
-                "                if (" + CODEC_VALIDATION_ENABLED + " || allFields.contains(tag))\n" +
-                "                {\n" +
-                decodeTrailerOrReturn(hasCommonCompounds, 5) +
-                "                }\n" +
-                "\n" +
-                "            }\n\n" +
-                "            if (position < (endOfField + 1))\n" +
-                "            {\n" +
-                "                position = endOfField + 1;\n" +
-                "            }\n" +
-                "        }\n" +
-                decodeTrailerOrReturn(hasCommonCompounds, 2) +
-                "    }\n\n";
+            "                if (" + CODEC_VALIDATION_ENABLED + isTrailerTag(type) + groupSuffix + ")\n" +
+            "                {\n" +
+            "                    unknownFields.add(tag);\n" +
+            "                }\n" +
+            // Skip the thing if it's a completely unknown field and you aren't validating messages
+            "                if (" + CODEC_VALIDATION_ENABLED + " || allFields.contains(tag))\n" +
+            "                {\n" +
+            decodeTrailerOrReturn(hasCommonCompounds, 5) +
+            "                }\n" +
+            "\n" +
+            "            }\n\n" +
+            "            if (position < (endOfField + 1))\n" +
+            "            {\n" +
+            "                position = endOfField + 1;\n" +
+            "            }\n" +
+            "        }\n" +
+            decodeTrailerOrReturn(hasCommonCompounds, 2) +
+            "    }\n\n";
 
         return prefix + body + suffix;
     }
@@ -890,8 +892,8 @@ public class DecoderGenerator extends Generator
     {
         return
             (hasCommonCompounds ?
-                indent(indent, "position += trailer.decode(buffer, position, end - position);\n")
-                : "") +
+                indent(indent, "position += trailer.decode(buffer, position, end - position);\n") :
+                "") +
             indent(indent, "return position - offset;\n");
     }
 
@@ -949,8 +951,8 @@ public class DecoderGenerator extends Generator
             "                {\n" +
             "                    invalidTagId = tag;\n" +
             "                    rejectReason = " + TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER + ";\n" +
-            "                }\n"
-            : "";
+            "                }\n" :
+            "";
     }
 
     private String decodeEntry(final Entry entry)
@@ -963,7 +965,7 @@ public class DecoderGenerator extends Generator
 
     private String decodeComponent(final Entry entry)
     {
-        final Component component = (Component) entry.element();
+        final Component component = (Component)entry.element();
         return component
             .entries()
             .stream()
@@ -973,10 +975,11 @@ public class DecoderGenerator extends Generator
 
     protected String componentToString(final Component component)
     {
-        return component.entries()
-                        .stream()
-                        .map(this::entryToString)
-                        .collect(joining(" + \n"));
+        return component
+            .entries()
+            .stream()
+            .map(this::entryToString)
+            .collect(joining(" + \n"));
     }
 
     private String decodeGroup(final Entry entry)
@@ -1026,9 +1029,9 @@ public class DecoderGenerator extends Generator
 
     private String storeLengthForArrays(final Type type, final String fieldName)
     {
-        return type.hasLengthField()
-            ? String.format("                %sLength = valueLength;\n", fieldName)
-            : "";
+        return type.hasLengthField() ?
+            String.format("                %sLength = valueLength;\n", fieldName) :
+            "";
     }
 
     private String optionalAssign(final Entry entry)
@@ -1101,12 +1104,7 @@ public class DecoderGenerator extends Generator
         return entries
             .stream()
             .filter(Entry::isComponent)
-            .map(
-                (entry) ->
-                {
-                    final Component component = (Component) entry.element();
-                    return resetEntries(component.entries(), methods);
-                })
+            .map((entry) -> resetEntries(((Component)entry.element()).entries(), methods))
             .collect(joining());
     }
 

@@ -33,7 +33,7 @@ public final class ReservedValue
 
     public static long ofChecksum(final int checksum)
     {
-        return ((long) checksum) << BITS_IN_INT;
+        return ((long)checksum) << BITS_IN_INT;
     }
 
     public static long of(final int clusterStreamId, final int checksum)
@@ -43,7 +43,7 @@ public final class ReservedValue
 
     public static int clusterStreamId(final long reservedValue)
     {
-        return (int) reservedValue;
+        return (int)reservedValue;
     }
 
     public static int clusterStreamId(final Header header)
@@ -65,6 +65,6 @@ public final class ReservedValue
 
     public static int checksum(final long reservedValue)
     {
-        return (int) (reservedValue >> BITS_IN_INT);
+        return (int)(reservedValue >> BITS_IN_INT);
     }
 }

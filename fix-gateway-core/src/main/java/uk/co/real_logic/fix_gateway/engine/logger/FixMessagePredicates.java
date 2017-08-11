@@ -126,8 +126,8 @@ public final class FixMessagePredicates
             message.getBody(buffer, 0, length);
             asciiBuffer.wrap(buffer);
             header.decode(asciiBuffer, 0, length);
-            return CodecUtil.equals(header.senderCompID(), expectedSenderCompId, header.senderCompIDLength())
-                && CodecUtil.equals(header.targetCompID(), expectedTargetCompId, header.targetCompIDLength());
+            return CodecUtil.equals(header.senderCompID(), expectedSenderCompId, header.senderCompIDLength()) &&
+                CodecUtil.equals(header.targetCompID(), expectedTargetCompId, header.targetCompIDLength());
         };
     }
 

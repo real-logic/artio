@@ -33,8 +33,8 @@ public class SessionAccessor
 
     private boolean isNotInsideLibraryPackage(final Class<?> witness)
     {
-        return FixLibrary.class.getPackage() != witness.getPackage()
-            || !"LibraryPoller".equals(witness.getSimpleName());
+        return FixLibrary.class.getPackage() != witness.getPackage() ||
+            !"LibraryPoller".equals(witness.getSimpleName());
     }
 
     public void libraryConnected(final Session session, final boolean libraryConnected)

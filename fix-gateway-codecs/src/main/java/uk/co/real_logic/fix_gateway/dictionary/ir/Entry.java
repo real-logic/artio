@@ -44,16 +44,17 @@ public final class Entry
     {
         if (element instanceof Field)
         {
-            return withField.apply(this, (Field) element);
+            return withField.apply(this, (Field)element);
         }
         else if (element instanceof Group)
         {
-            return withGroup.apply(this, (Group) element);
+            return withGroup.apply(this, (Group)element);
         }
         else if (element instanceof Component)
         {
-            return withComponent.apply(this, (Component) element);
+            return withComponent.apply(this, (Component)element);
         }
+
         throw new IllegalStateException("Unknown element type: " + element);
     }
 
@@ -64,15 +65,15 @@ public final class Entry
     {
         if (element instanceof Field)
         {
-            withField.accept((Field) element);
+            withField.accept((Field)element);
         }
         else if (element instanceof Group)
         {
-            withGroup.accept((Group) element);
+            withGroup.accept((Group)element);
         }
         else if (element instanceof Component)
         {
-            withComponent.accept((Component) element);
+            withComponent.accept((Component)element);
         }
         else
         {
@@ -137,9 +138,9 @@ public final class Entry
     public String toString()
     {
         return "Entry{" +
-                "required=" + required +
-                ", element=" + element +
-                '}';
+            "required=" + required +
+            ", element=" + element +
+            '}';
     }
 
     public String name()

@@ -94,7 +94,7 @@ public final class LoggerUtil
                 buffer.setMemory(
                     offset,
                     length,
-                    (byte) 0);
+                    (byte)0);
             }
 
             return false;

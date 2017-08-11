@@ -45,7 +45,7 @@ public class ReplayIndexDescriptor
 
     static String replayPositionPath(final String logFileDir, final int streamId)
     {
-        return logFileDir + File.separator + "replay-positions-"  + streamId;
+        return logFileDir + File.separator + "replay-positions-" + streamId;
     }
 
     static void endChangeOrdered(final AtomicBuffer buffer, final long changePosition)
@@ -80,7 +80,7 @@ public class ReplayIndexDescriptor
 
     static int offset(final long changePosition, final int capacity)
     {
-        return INITIAL_RECORD_OFFSET + ((int) changePosition & (capacity - 1));
+        return INITIAL_RECORD_OFFSET + ((int)changePosition & (capacity - 1));
     }
 
     static void checkIndexFileSize(final int indexFileSize)

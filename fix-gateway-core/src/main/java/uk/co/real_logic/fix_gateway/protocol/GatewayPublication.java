@@ -45,7 +45,7 @@ import static uk.co.real_logic.fix_gateway.messages.NotLeaderEncoder.libraryChan
 public class GatewayPublication extends ClaimablePublication
 {
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
-    public static final int FRAMED_MESSAGE_SIZE = MessageHeaderEncoder.ENCODED_LENGTH + FRAME_SIZE;
+    private static final int FRAMED_MESSAGE_SIZE = MessageHeaderEncoder.ENCODED_LENGTH + FRAME_SIZE;
 
     private static final byte[] NO_BYTES = {};
 
@@ -99,11 +99,12 @@ public class GatewayPublication extends ClaimablePublication
     private final int maxPayloadLength;
     private final int maxInitialBodyLength;
 
-    public GatewayPublication(final ClusterablePublication dataPublication,
-                              final AtomicCounter fails,
-                              final IdleStrategy idleStrategy,
-                              final NanoClock nanoClock,
-                              final int maxClaimAttempts)
+    public GatewayPublication(
+        final ClusterablePublication dataPublication,
+        final AtomicCounter fails,
+        final IdleStrategy idleStrategy,
+        final NanoClock nanoClock,
+        final int maxClaimAttempts)
     {
         super(maxClaimAttempts, idleStrategy, fails, dataPublication);
         this.nanoClock = nanoClock;
@@ -111,15 +112,16 @@ public class GatewayPublication extends ClaimablePublication
         this.maxInitialBodyLength = maxPayloadLength - FRAMED_MESSAGE_SIZE;
     }
 
-    public long saveMessage(final DirectBuffer srcBuffer,
-                            final int srcOffset,
-                            final int srcLength,
-                            final int libraryId,
-                            final int messageType,
-                            final long sessionId,
-                            final int sequenceIndex,
-                            final long connectionId,
-                            final MessageStatus status)
+    public long saveMessage(
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int srcLength,
+        final int libraryId,
+        final int messageType,
+        final long sessionId,
+        final int sequenceIndex,
+        final long connectionId,
+        final MessageStatus status)
     {
         final ExclusiveBufferClaim bufferClaim = this.bufferClaim;
         final long timestamp = nanoClock.nanoTime();
@@ -164,7 +166,7 @@ public class GatewayPublication extends ClaimablePublication
         {
             putBodyLength(srcLength, offset, destBuffer);
 
-            bufferClaim.flags((byte) BEGIN_FLAG).commit();
+            bufferClaim.flags((byte)BEGIN_FLAG).commit();
 
             int remaining = srcLength - srcFragmentLength;
             while (remaining > 0)
@@ -182,7 +184,7 @@ public class GatewayPublication extends ClaimablePublication
 
                 remaining -= srcFragmentLength;
                 bufferClaim.buffer().putBytes(bufferClaim.offset(), srcBuffer, srcFragmentOffset, srcFragmentLength);
-                bufferClaim.flags(remaining > 0 ? MIDDLE_FLAG : (byte) END_FLAG).commit();
+                bufferClaim.flags(remaining > 0 ? MIDDLE_FLAG : (byte)END_FLAG).commit();
             }
         }
 
@@ -193,7 +195,7 @@ public class GatewayPublication extends ClaimablePublication
 
     private void putBodyLength(final int srcLength, final int offset, final MutableDirectBuffer destBuffer)
     {
-        destBuffer.putShort(offset + FixMessageEncoder.BLOCK_LENGTH, (short) srcLength, LITTLE_ENDIAN);
+        destBuffer.putShort(offset + FixMessageEncoder.BLOCK_LENGTH, (short)srcLength, LITTLE_ENDIAN);
     }
 
     public long saveManageSession(final int libraryId, final long connectionId, final long sessionId)
@@ -221,26 +223,27 @@ public class GatewayPublication extends ClaimablePublication
             "");
     }
 
-    public long saveManageSession(final int libraryId,
-                                  final long connection,
-                                  final long session,
-                                  final int lastSentSequenceNumber,
-                                  final int lastReceivedSequenceNumber,
-                                  final long logonTime,
-                                  final LogonStatus logonStatus,
-                                  final SlowStatus slowStatus,
-                                  final ConnectionType connectionType,
-                                  final SessionState sessionState,
-                                  final int heartbeatIntervalInS,
-                                  final long replyToId,
-                                  final int sequenceIndex,
-                                  final String localCompId,
-                                  final String localSubId,
-                                  final String localLocationId,
-                                  final String remoteCompId,
-                                  final String remoteSubId,
-                                  final String remoteLocationId,
-                                  final String address)
+    public long saveManageSession(
+        final int libraryId,
+        final long connection,
+        final long session,
+        final int lastSentSequenceNumber,
+        final int lastReceivedSequenceNumber,
+        final long logonTime,
+        final LogonStatus logonStatus,
+        final SlowStatus slowStatus,
+        final ConnectionType connectionType,
+        final SessionState sessionState,
+        final int heartbeatIntervalInS,
+        final long replyToId,
+        final int sequenceIndex,
+        final String localCompId,
+        final String localSubId,
+        final String localLocationId,
+        final String remoteCompId,
+        final String remoteSubId,
+        final String remoteLocationId,
+        final String address)
     {
         final byte[] localCompIdBytes = bytes(localCompId);
         final byte[] localSubIdBytes = bytes(localSubId);
@@ -304,10 +307,11 @@ public class GatewayPublication extends ClaimablePublication
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         final int offset = bufferClaim.offset();
 
-        disconnect.wrapAndApplyHeader(buffer, offset, header)
-                  .libraryId(libraryId)
-                  .connection(connectionId)
-                  .reason(reason);
+        disconnect
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .connection(connectionId)
+            .reason(reason);
 
         bufferClaim.commit();
 
@@ -329,9 +333,10 @@ public class GatewayPublication extends ClaimablePublication
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         final int offset = bufferClaim.offset();
 
-        connect.wrapAndApplyHeader(buffer, offset, header)
-               .connection(connectionId)
-               .putAddress(addressBytes, 0, addressBytes.length);
+        connect
+            .wrapAndApplyHeader(buffer, offset, header)
+            .connection(connectionId)
+            .putAddress(addressBytes, 0, addressBytes.length);
 
         bufferClaim.commit();
 
@@ -411,10 +416,11 @@ public class GatewayPublication extends ClaimablePublication
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         final int offset = bufferClaim.offset();
 
-        requestDisconnect.wrapAndApplyHeader(buffer, offset, header)
-                         .libraryId(libraryId)
-                         .connection(connectionId)
-                         .reason(reason);
+        requestDisconnect
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .connection(connectionId)
+            .reason(reason);
 
         bufferClaim.commit();
 
@@ -561,16 +567,17 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveReleaseSession(final int libraryId,
-                                   final long connectionId,
-                                   final long sessionId,
-                                   final long correlationId,
-                                   final SessionState state,
-                                   final long heartbeatIntervalInMs,
-                                   final int lastSentSequenceNumber,
-                                   final int lastReceivedSequenceNumber,
-                                   final String username,
-                                   final String password)
+    public long saveReleaseSession(
+        final int libraryId,
+        final long connectionId,
+        final long sessionId,
+        final long correlationId,
+        final SessionState state,
+        final long heartbeatIntervalInMs,
+        final int lastSentSequenceNumber,
+        final int lastReceivedSequenceNumber,
+        final String username,
+        final String password)
     {
         final byte[] usernameBytes = bytes(username);
         final byte[] passwordBytes = bytes(password);
@@ -623,11 +630,12 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    public long saveRequestSession(final int libraryId,
-                                   final long sessionId,
-                                   final long correlationId,
-                                   final int lastReceivedSequenceNumber,
-                                   final int sequenceIndex)
+    public long saveRequestSession(
+        final int libraryId,
+        final long sessionId,
+        final long correlationId,
+        final int lastReceivedSequenceNumber,
+        final int sequenceIndex)
     {
         final long position = claim(REQUEST_SESSION_LENGTH);
         if (position < 0)
