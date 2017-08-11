@@ -26,36 +26,39 @@ import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_SESSION_B
 import static uk.co.real_logic.fix_gateway.engine.EngineConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 
-public class InitiatorSessionTest extends AbstractSessionTest {
+public class InitiatorSessionTest extends AbstractSessionTest
+{
     private InitiatorSession session;
 
     {
-        session  = new InitiatorSession(HEARTBEAT_INTERVAL,
-                                            CONNECTION_ID,
-                                            fakeClock,
-                                            mockProxy,
-                                            mockPublication,
-                                            idStrategy,
-                                            SENDING_TIME_WINDOW,
-                                            mockReceivedMsgSeqNo,
-                                            mockSentMsgSeqNo,
-                                            LIBRARY_ID,
-                                            1,
-                                            SEQUENCE_INDEX,
-                                            CONNECTED,
-                                            false,
-                                            DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
-                                            new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]));
+        session = new InitiatorSession(HEARTBEAT_INTERVAL,
+            CONNECTION_ID,
+            fakeClock,
+            mockProxy,
+            mockPublication,
+            idStrategy,
+            SENDING_TIME_WINDOW,
+            mockReceivedMsgSeqNo,
+            mockSentMsgSeqNo,
+            LIBRARY_ID,
+            1,
+            SEQUENCE_INDEX,
+            CONNECTED,
+            false,
+            DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
+            new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]));
         session.logonListener(mockLogonListener);
     }
 
     @Test
-    public void shouldInitiallyBeConnected() {
+    public void shouldInitiallyBeConnected()
+    {
         assertEquals(CONNECTED, session.state());
     }
 
     @Test
-    public void shouldActivateUponLogonResponse() {
+    public void shouldActivateUponLogonResponse()
+    {
         session.state(SENT_LOGON);
 
         assertEquals(CONTINUE, onLogon(1));
@@ -66,7 +69,8 @@ public class InitiatorSessionTest extends AbstractSessionTest {
     }
 
     @Test
-    public void shouldAttemptLogonWhenConnected() {
+    public void shouldAttemptLogonWhenConnected()
+    {
         session.id(SESSION_ID);
         session.poll(0);
 
@@ -76,7 +80,8 @@ public class InitiatorSessionTest extends AbstractSessionTest {
     }
 
     @Test
-    public void shouldAttemptLogonOnlyOnce() {
+    public void shouldAttemptLogonOnlyOnce()
+    {
         session.id(SESSION_ID);
         session.poll(0);
 
@@ -88,7 +93,8 @@ public class InitiatorSessionTest extends AbstractSessionTest {
     }
 
     @Test
-    public void shouldNotifyGatewayWhenLoggedIn() {
+    public void shouldNotifyGatewayWhenLoggedIn()
+    {
         session.state(SENT_LOGON);
 
         assertEquals(CONTINUE, onLogon(1));
@@ -97,7 +103,8 @@ public class InitiatorSessionTest extends AbstractSessionTest {
     }
 
     @Test
-    public void shouldNotifyGatewayWhenLoggedInOnce() {
+    public void shouldNotifyGatewayWhenLoggedInOnce()
+    {
         session.state(SENT_LOGON);
 
         assertEquals(CONTINUE, onLogon(1));
@@ -108,23 +115,28 @@ public class InitiatorSessionTest extends AbstractSessionTest {
     }
 
     @Test
-    public void shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne() {
+    public void shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne()
+    {
         shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne(SEQUENCE_INDEX);
     }
 
-    private void verifySavesLogonMessage(final VerificationMode verificationMode) {
+    private void verifySavesLogonMessage(final VerificationMode verificationMode)
+    {
         verify(mockLogonListener, verificationMode).onLogon(any());
     }
 
-    private void verifyLogon() {
+    private void verifyLogon()
+    {
         verify(mockProxy, times(1)).logon(HEARTBEAT_INTERVAL, 1, null, null, false, SEQUENCE_INDEX);
     }
 
-    protected void readyForLogon() {
+    protected void readyForLogon()
+    {
         session.state(SENT_LOGON);
     }
 
-    protected Session session() {
+    protected Session session()
+    {
         return session;
     }
 }

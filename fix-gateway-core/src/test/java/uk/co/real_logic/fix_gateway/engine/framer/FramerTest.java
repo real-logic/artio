@@ -198,7 +198,11 @@ public class FramerTest
             finalImagePositions);
 
         when(sessionContexts.onLogon(any())).thenReturn(
-            new SessionContext(SESSION_ID, SessionContext.UNKNOWN_SEQUENCE_INDEX, Session.NO_LOGON_TIME, sessionContexts, 0));
+            new SessionContext(SESSION_ID,
+                SessionContext.UNKNOWN_SEQUENCE_INDEX,
+                Session.NO_LOGON_TIME,
+                sessionContexts,
+                0));
     }
 
     private void isLeader(final boolean value)
@@ -322,8 +326,7 @@ public class FramerTest
         try
         {
             framer.doWork();
-        }
-        catch (final Exception ex)
+        } catch (final Exception ex)
         {
             LangUtil.rethrowUnchecked(ex);
         }
@@ -680,8 +683,7 @@ public class FramerTest
             try
             {
                 client.write(buffer);
-            }
-            catch (final IOException ignore)
+            } catch (final IOException ignore)
             {
                 return;
             }

@@ -153,7 +153,7 @@ class GatewaySession implements SessionInfo
         return 0;
     }
 
-    private void onSessionLogon(Session session)
+    private void onSessionLogon(final Session session)
     {
         context.updateFrom(session);
         onGatewaySessionLogon.accept(this);

@@ -35,7 +35,11 @@ class SessionContext
     private long logonTime;
 
     SessionContext(
-        final long sessionId, final int sequenceIndex, final long logonTime, final SessionContexts sessionContexts, final int filePosition)
+        final long sessionId,
+        final int sequenceIndex,
+        final long logonTime,
+        final SessionContexts sessionContexts,
+        final int filePosition)
     {
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
@@ -107,8 +111,8 @@ class SessionContext
     public String toString()
     {
         return "SessionContext{" +
-            "sessionId=" + sessionId +
-            ", sequenceIndex=" + sequenceIndex +
-            '}';
+               "sessionId=" + sessionId +
+               ", sequenceIndex=" + sequenceIndex +
+               '}';
     }
 }

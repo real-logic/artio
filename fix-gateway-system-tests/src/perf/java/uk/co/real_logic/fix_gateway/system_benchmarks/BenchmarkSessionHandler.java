@@ -61,7 +61,7 @@ public final class BenchmarkSessionHandler implements SessionHandler
 
     @Override
     public void onSessionStart(final Session session)
-	{
+    {
     }
 
 }

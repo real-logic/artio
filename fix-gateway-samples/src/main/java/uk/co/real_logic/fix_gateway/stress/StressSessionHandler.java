@@ -77,6 +77,6 @@ public class StressSessionHandler implements SessionHandler
 
     @Override
     public void onSessionStart(final Session session)
-	{
-	}
+    {
+    }
 }

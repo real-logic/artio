@@ -63,7 +63,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static io.aeron.Publication.BACK_PRESSURED;
@@ -170,7 +169,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Long2LongHashMap resendSlowStatus = new Long2LongHashMap(-1);
     private final Long2LongHashMap resendNotSlowStatus = new Long2LongHashMap(-1);
 
-    private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
+    private long nextConnectionId = (long) (Math.random() * Long.MAX_VALUE);
 
     Framer(
         final EpochClock clock,
@@ -348,15 +347,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long timeInMs = clock.time();
         senderEndPoints.timeInMs(timeInMs);
         return retryManager.attemptSteps() +
-            sendOutboundMessages() +
-            sendReplayMessages() +
-            pollEndPoints() +
-            pollNewConnections(timeInMs) +
-            pollLibraries(timeInMs) +
-            gatewaySessions.pollSessions(timeInMs) +
-            senderEndPoints.checkTimeouts(timeInMs) +
-            adminCommands.drain(onAdminCommand) +
-            checkDutyCycle();
+               sendOutboundMessages() +
+               sendReplayMessages() +
+               pollEndPoints() +
+               pollNewConnections(timeInMs) +
+               pollLibraries(timeInMs) +
+               gatewaySessions.pollSessions(timeInMs) +
+               senderEndPoints.checkTimeouts(timeInMs) +
+               adminCommands.drain(onAdminCommand) +
+               checkDutyCycle();
     }
 
     private int checkDutyCycle()
@@ -626,8 +625,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final int owningLibraryId = senderEndPoints.libraryLookup().applyAsInt(sessionId);
             saveError(DUPLICATE_SESSION, libraryId, correlationId,
                 "Duplicate Session for: " + sessionKey +
-                    " Surrogate Key: " + sessionId +
-                    " Currently owned by " + owningLibraryId);
+                      " Surrogate Key: " + sessionId +
+                      " Currently owned by " + owningLibraryId);
 
             return CONTINUE;
         }
@@ -1031,7 +1030,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySessions.acquire(
                 session,
                 state,
-                (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs),
+                (int) MILLISECONDS.toSeconds(heartbeatIntervalInMs),
                 lastSentSequenceNumber,
                 lastReceivedSequenceNumber,
                 username,
@@ -1231,36 +1230,38 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return position;
     }
 
-    private void onSessionLogon(GatewaySession gatewaySession)
+    private void onSessionLogon(final GatewaySession gatewaySession)
     {
-        schedule(()->{
-            if(null == gatewaySession.session())
+        schedule(() ->
+        {
+            if (null == gatewaySession.session())
             {
-                // Generally means that another library is now handling the session so we shouldn't publish availability.
+                // Generally means that another library is now handling the session
+                // so we shouldn't publish availability.
                 return 0;
             }
 
-            CompositeKey key = gatewaySession.sessionKey();
+            final CompositeKey key = gatewaySession.sessionKey();
             return inboundPublication.saveManageSession(ENGINE_LIBRARY_ID,
-                                                                   gatewaySession.connectionId(),
-                                                                   gatewaySession.sessionId(),
-                                                                   gatewaySession.session().lastSentMsgSeqNum(),
-                                                                   gatewaySession.session().lastReceivedMsgSeqNum(),
-                                                                   gatewaySession.session().logonTime(),
-                                                                   LogonStatus.NEW,
-                                                                   gatewaySession.slowStatus(),
-                                                                   gatewaySession.connectionType(),
-                                                                   gatewaySession.session().state(),
-                                                                   gatewaySession.heartbeatIntervalInS(),
-                                                                   NO_CORRELATION_ID,
-                                                                   gatewaySession.sequenceIndex(),
-                                                                   key.localCompId(),
-                                                                   key.localSubId(),
-                                                                   key.localLocationId(),
-                                                                   key.remoteCompId(),
-                                                                   key.remoteSubId(),
-                                                                   key.remoteLocationId(),
-                                                                   gatewaySession.address());
+                gatewaySession.connectionId(),
+                gatewaySession.sessionId(),
+                gatewaySession.session().lastSentMsgSeqNum(),
+                gatewaySession.session().lastReceivedMsgSeqNum(),
+                gatewaySession.session().logonTime(),
+                LogonStatus.NEW,
+                gatewaySession.slowStatus(),
+                gatewaySession.connectionType(),
+                gatewaySession.session().state(),
+                gatewaySession.heartbeatIntervalInS(),
+                NO_CORRELATION_ID,
+                gatewaySession.sequenceIndex(),
+                key.localCompId(),
+                key.localSubId(),
+                key.localLocationId(),
+                key.remoteCompId(),
+                key.remoteSubId(),
+                key.remoteLocationId(),
+                gatewaySession.address());
         });
     }
 

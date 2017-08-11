@@ -103,8 +103,7 @@ class SessionSubscriber implements AutoCloseable
                 default:
                     return CONTINUE;
             }
-        }
-        finally
+        } finally
         {
             sessionTimer.recordSince(now);
         }
@@ -139,10 +138,10 @@ class SessionSubscriber implements AutoCloseable
         }
     }
 
-    private void onSessionLogon(Session session)
+    private void onSessionLogon(final Session session)
     {
         // Should only be fired if we already own the session and the client sends another logon to run and end of day.
-        if(session.logonTime() != Session.NO_LOGON_TIME)
+        if (session.logonTime() != Session.NO_LOGON_TIME)
         {
             handler.onSessionStart(session);
         }

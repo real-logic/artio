@@ -49,7 +49,7 @@ import static uk.co.real_logic.fix_gateway.storage.messages.SessionIdEncoder.BLO
 
 /**
  * Identifies which sessions are currently authenticated.
- *
+ * <p>
  * The session ids table is saved into a file. Records are written out using the {@link SessionIdEncoder}
  * and aren't allowed to span sectors. Each sector has a CRC32 checksum and each checksum is updated after writing
  * each session id record.
@@ -57,9 +57,13 @@ import static uk.co.real_logic.fix_gateway.storage.messages.SessionIdEncoder.BLO
 public class SessionContexts
 {
 
-    static final SessionContext DUPLICATE_SESSION = new SessionContext(-3, -3,  Session.NO_LOGON_TIME, null, OUT_OF_SPACE);
+    static final SessionContext DUPLICATE_SESSION = new SessionContext(-3,
+        -3,
+        Session.NO_LOGON_TIME,
+        null,
+        OUT_OF_SPACE);
     static final SessionContext UNKNOWN_SESSION = new SessionContext(
-        Session.UNKNOWN, (int)Session.UNKNOWN, Session.NO_LOGON_TIME, null, OUT_OF_SPACE);
+        Session.UNKNOWN, (int) Session.UNKNOWN, Session.NO_LOGON_TIME, null, OUT_OF_SPACE);
     static final long LOWEST_VALID_SESSION_ID = 1L;
 
     private static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
@@ -146,7 +150,8 @@ public class SessionContexts
                 return;
             }
 
-            compositeToContext.put(compositeKey, new SessionContext(sessionId, sequenceIndex, logonTime,this, filePosition));
+            compositeToContext.put(compositeKey,
+                new SessionContext(sessionId, sequenceIndex, logonTime, this, filePosition));
             recordedSessions.add(sessionId);
             counter = Math.max(counter, sessionId + 1);
 
@@ -196,7 +201,7 @@ public class SessionContexts
             ByteBufferUtil.position(byteBuffer, sectorEnd);
             ByteBufferUtil.limit(byteBuffer, nextChecksum);
             crc32.update(byteBuffer);
-            final int calculatedChecksum = (int)crc32.getValue();
+            final int calculatedChecksum = (int) crc32.getValue();
             final int savedChecksum = buffer.getInt(nextChecksum);
             validateCheckSum(
                 "session ids", sectorEnd, nextSectorEnd, savedChecksum, calculatedChecksum, errorHandler);
@@ -224,7 +229,8 @@ public class SessionContexts
         return assignSessionId(compositeKey, sessionId, SessionContext.UNKNOWN_SEQUENCE_INDEX);
     }
 
-    private SessionContext assignSessionId(final CompositeKey compositeKey,
+    private SessionContext assignSessionId(
+        final CompositeKey compositeKey,
         final long sessionId,
         final int sequenceIndex)
     {
@@ -289,7 +295,7 @@ public class SessionContexts
         ByteBufferUtil.limit(byteBuffer, endOfData);
         crc32.reset();
         crc32.update(byteBuffer);
-        final int checksumValue = (int)crc32.getValue();
+        final int checksumValue = (int) crc32.getValue();
         buffer.putInt(checksumOffset, checksumValue);
     }
 
@@ -315,7 +321,7 @@ public class SessionContexts
             mappedFile.transferTo(backupLocation);
         }
 
-        buffer.setMemory(0, buffer.capacity(), (byte)0);
+        buffer.setMemory(0, buffer.capacity(), (byte) 0);
         initialiseBuffer();
     }
 
@@ -355,7 +361,7 @@ public class SessionContexts
         compositeToContext.put(compositeKey, sessionContext);
     }
 
-    void updateSavedData(final int filePosition, final int sequenceIndex, long logonTime)
+    void updateSavedData(final int filePosition, final int sequenceIndex, final long logonTime)
     {
         sessionIdEncoder
             .wrap(buffer, filePosition)
