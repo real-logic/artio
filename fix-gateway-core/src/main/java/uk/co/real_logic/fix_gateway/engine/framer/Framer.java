@@ -943,7 +943,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             unitsOfWork.add(
                     // TODO(Nick): UNK_SESSION is the wrong constant to use?
-                () -> saveManageSession(ENGINE_LIBRARY_ID, gatewaySession, UNK_SESSION, UNK_SESSION, LIBRARY_NOTIFICATION));
+                () -> saveManageSession(libraryId, gatewaySession, UNK_SESSION, UNK_SESSION, LIBRARY_NOTIFICATION));
         }
 
         return retryManager.firstAttempt(correlationId, new UnitOfWork(unitsOfWork));

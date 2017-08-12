@@ -597,38 +597,36 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
         else if (libraryId == this.libraryId)
         {
-            // From manageConnection - ie set up the session in this library.
-            if (connectionType == INITIATOR)
-            {
-                DebugLogger.log(FIX_MESSAGE, "Init Connect: %d, %d%n", connection, libraryId);
-                final boolean isInitiator = correlationIdToReply.get(correlationId) instanceof InitiateSessionReply;
-                final InitiateSessionReply reply = isInitiator ?
-                    (InitiateSessionReply) correlationIdToReply.remove(correlationId) : null;
-                final Session session = initiateSession(connection,
-                    lastSentSeqNum,
-                    lastRecvSeqNum,
-                    sessionState,
-                    isInitiator ? reply.configuration() : null,
-                    sequenceIndex);
-                newSession(connection, sessionId, session);
-                if (isInitiator)
-                {
-                    reply.onComplete(session);
-                }
-            }
-            else
-            {
-                DebugLogger.log(FIX_MESSAGE, "Acct Connect: %d, %d%n", connection, libraryId);
-                final Session session = acceptSession(
-                    connection, address, sessionState, heartbeatIntervalInS, sequenceIndex, logonTime);
-                newSession(connection, sessionId, session);
-            }
-
             // TODO(Nick): LogonStatus is a badly named enum.
             if (LogonStatus.NEW == logonStatus)
             {
-                // This is actually the sessionAcquire callback
-                // This is actually the sessionAcquire callback
+                // From manageConnection - ie set up the session in this library.
+                if (connectionType == INITIATOR)
+                {
+                    DebugLogger.log(FIX_MESSAGE, "Init Connect: %d, %d%n", connection, libraryId);
+                    final boolean isInitiator = correlationIdToReply.get(correlationId) instanceof InitiateSessionReply;
+                    final InitiateSessionReply reply = isInitiator ?
+                            (InitiateSessionReply) correlationIdToReply.remove(correlationId) : null;
+                    final Session session = initiateSession(connection,
+                            lastSentSeqNum,
+                            lastRecvSeqNum,
+                            sessionState,
+                            isInitiator ? reply.configuration() : null,
+                            sequenceIndex);
+                    newSession(connection, sessionId, session);
+                    if (isInitiator)
+                    {
+                        reply.onComplete(session);
+                    }
+                }
+                else
+                {
+                    DebugLogger.log(FIX_MESSAGE, "Acct Connect: %d, %d%n", connection, libraryId);
+                    final Session session = acceptSession(
+                            connection, address, sessionState, heartbeatIntervalInS, sequenceIndex, logonTime);
+                    newSession(connection, sessionId, session);
+                }
+
                 // ie the initial part of this library getting hold of this session.
                 // this session.
                 DebugLogger.log(GATEWAY_MESSAGE,
@@ -637,7 +635,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     sessionId,
                     lastSentSeqNum,
                     lastRecvSeqNum);
+
                 final SessionSubscriber subscriber = connectionIdToSession.get(connection);
+
                 if (subscriber != null)
                 {
                     // I guess this could be not null in the case where
