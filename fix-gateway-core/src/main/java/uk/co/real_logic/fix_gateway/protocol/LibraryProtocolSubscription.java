@@ -257,7 +257,10 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     }
 
     private Action onManageSession(
-        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version)
     {
         manageSession.wrap(buffer, offset, blockLength, version);
         final int libraryId = manageSession.libraryId();

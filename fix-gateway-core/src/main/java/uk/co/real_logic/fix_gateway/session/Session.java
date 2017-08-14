@@ -1259,13 +1259,13 @@ public class Session implements AutoCloseable
     public String toString()
     {
         return getClass().getSimpleName() + "{" +
-            "connectionId=" + connectionId +
-            ", sessionId=" + id +
-            ", state=" + state +
-            ", sequenceIndex=" + sequenceIndex +
-            ", lastReceivedMsgSeqNum=" + lastReceivedMsgSeqNum +
-            ", lastSentMsgSeqNum=" + lastSentMsgSeqNum +
-            '}';
+               "connectionId=" + connectionId +
+               ", sessionId=" + id +
+               ", state=" + state +
+               ", sequenceIndex=" + sequenceIndex +
+               ", lastReceivedMsgSeqNum=" + lastReceivedMsgSeqNum +
+               ", lastSentMsgSeqNum=" + lastSentMsgSeqNum +
+               '}';
     }
 
     void disable()

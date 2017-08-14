@@ -16,22 +16,31 @@
 package uk.co.real_logic.fix_gateway.engine.framer;
 
 import org.agrona.ErrorHandler;
+import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.FixCounters;
+import uk.co.real_logic.fix_gateway.FixGatewayException;
+import uk.co.real_logic.fix_gateway.decoder.LogonDecoder;
 import uk.co.real_logic.fix_gateway.engine.FixEngine;
+import uk.co.real_logic.fix_gateway.engine.SessionInfo;
+import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
 import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
+import uk.co.real_logic.fix_gateway.validation.PersistenceLevel;
+import uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.fix_gateway.engine.framer.SessionContexts.DUPLICATE_SESSION;
+import static uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy.resetSequenceNumbersUponLogon;
 
 /**
  * Keeps track of which sessions managed by the gateway
@@ -49,6 +58,9 @@ class GatewaySessions
     private final int sessionBufferSize;
     private final long sendingTimeWindowInMs;
     private final long reasonableTransmissionTimeInMs;
+    private final SessionContexts sessionContexts;
+    private final SessionPersistenceStrategy sessionPersistenceStrategy;
+
     private ErrorHandler errorHandler;
 
     GatewaySessions(
@@ -62,7 +74,9 @@ class GatewaySessions
         final int sessionBufferSize,
         final long sendingTimeWindowInMs,
         final long reasonableTransmissionTimeInMs,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final SessionContexts sessionContexts,
+        final SessionPersistenceStrategy sessionPersistenceStrategy)
     {
         this.clock = clock;
         this.outboundPublication = outboundPublication;
@@ -75,6 +89,8 @@ class GatewaySessions
         this.sendingTimeWindowInMs = sendingTimeWindowInMs;
         this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
         this.errorHandler = errorHandler;
+        this.sessionContexts = sessionContexts;
+        this.sessionPersistenceStrategy = sessionPersistenceStrategy;
     }
 
     void acquire(
@@ -121,9 +137,7 @@ class GatewaySessions
 
         final SessionParser sessionParser = new SessionParser(
             session,
-            sessionIdStrategy,
-            authenticationStrategy,
-            validationStrategy,
+            sessionIdStrategy, validationStrategy,
             errorHandler);
 
         sessions.add(gatewaySession);
@@ -146,7 +160,7 @@ class GatewaySessions
         final int index = indexBySesionId(sessionId);
         if (index < 0)
         {
-            return  null;
+            return null;
         }
 
         return sessions.remove(index);
@@ -157,7 +171,7 @@ class GatewaySessions
         final int index = indexBySesionId(sessionId);
         if (index < 0)
         {
-            return  null;
+            return null;
         }
 
         return sessions.get(index);
@@ -220,5 +234,103 @@ class GatewaySessions
         }
 
         return null;
+    }
+
+    AuthenticationResult authenticateAndInitiate(
+        final LogonDecoder logon,
+        final long connectionId,
+        final SequenceNumberIndexReader sentSequenceNumberIndex,
+        final SequenceNumberIndexReader receivedSequenceNumberIndex,
+        final GatewaySession gatewaySession)
+    {
+        final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(logon.header());
+        final SessionContext sessionContext = sessionContexts.onLogon(compositeKey);
+        final long sessionId = sessionContext.sessionId();
+        if (sessionContext == DUPLICATE_SESSION)
+        {
+            return AuthenticationResult.DUPLICATE_SESSION;
+        }
+
+        boolean authenticated;
+        try
+        {
+            authenticated = authenticationStrategy.authenticate(logon);
+        }
+        catch (final Throwable throwable)
+        {
+            // TODO(Nick): Maybe this should go back to also logging the message that was being decoded.
+            onStrategyError("authentication", throwable, connectionId);
+            authenticated = false;
+        }
+
+        if (!authenticated)
+        {
+            return AuthenticationResult.FAILED_AUTHENTICATION;
+        }
+
+        PersistenceLevel persistenceLevel;
+        try
+        {
+            persistenceLevel = sessionPersistenceStrategy.getPersistenceLevel(logon);
+        }
+        catch (final Throwable throwable)
+        {
+            final String message =
+                String.format("Exception thrown by persistence strategy for connectionId=%d, " +
+                              "defaulted to LOCAL_ARCHIVE", connectionId);
+            errorHandler.onError(new FixGatewayException(message, throwable));
+            persistenceLevel = PersistenceLevel.LOCAL_ARCHIVE;
+        }
+
+        final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
+        final boolean resetSeqNum = resetSequenceNumbersUponLogon(persistenceLevel) || resetSeqNumFlag;
+        final int sentSequenceNumber = sequenceNumber(sentSequenceNumberIndex, resetSeqNum, sessionId);
+        final int receivedSequenceNumber = sequenceNumber(receivedSequenceNumberIndex, resetSeqNum, sessionId);
+        final String username = SessionParser.username(logon);
+        final String password = SessionParser.password(logon);
+
+        sessionContext.onLogon(resetSeqNum);
+
+        gatewaySession.onLogon(sessionId, sessionContext, compositeKey, username, password, logon.heartBtInt());
+        gatewaySession.acceptorSequenceNumbers(sentSequenceNumber, receivedSequenceNumber);
+        gatewaySession.persistenceLevel(persistenceLevel);
+
+        return AuthenticationResult.authenticatedSession(gatewaySession, sentSequenceNumber, receivedSequenceNumber);
+    }
+
+    private int sequenceNumber(
+        final SequenceNumberIndexReader sequenceNumberIndexReader,
+        final boolean resetSeqNum,
+        final long sessionId)
+    {
+        if (resetSeqNum)
+        {
+            return SessionInfo.UNK_SESSION;
+        }
+
+        return sequenceNumberIndexReader.lastKnownSequenceNumber(sessionId);
+    }
+
+    private void onStrategyError(final String strategyName, final Throwable throwable, final long connectionId)
+    {
+        final String message = String.format(
+            "Exception thrown by %s strategy for connectionId=%d, [%s], defaulted to false",
+            strategyName,
+            connectionId);
+        onError(new FixGatewayException(message, throwable));
+    }
+
+    private void onError(final Throwable throwable)
+    {
+        // Library code should throw the exception to make users aware of it
+        // Engine code should log it through the normal error handling process.
+        if (errorHandler == null)
+        {
+            LangUtil.rethrowUnchecked(throwable);
+        }
+        else
+        {
+            errorHandler.onError(throwable);
+        }
     }
 }

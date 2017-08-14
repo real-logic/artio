@@ -96,7 +96,9 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.CONNECTED;
  */
 class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 {
-    // TODO(Nick): This is a copy of the one from LibraryPoller, but that one is also private so we can't access.
+    // TODO(Nick): This is a copy of the one from LibraryPoller,
+    // TODO(Nick): This is a copy of the one from LibraryPoller,
+    // but that one is also private so we can't access. Combine somewhere.
     // Combine somewhere.
     static final long NO_CORRELATION_ID = 0;
     private static final ByteBuffer CONNECT_ERROR;
@@ -1159,7 +1161,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 compositeKey.localLocationId(),
                 compositeKey.remoteCompId(),
                 compositeKey.remoteSubId(),
-                compositeKey.remoteLocationId(), gatewaySession.address());
+                compositeKey.remoteLocationId(),
+                gatewaySession.address());
         }
 
         return COMPLETE;

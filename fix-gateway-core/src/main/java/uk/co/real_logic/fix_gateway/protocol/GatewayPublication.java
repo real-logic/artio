@@ -51,19 +51,19 @@ public class GatewayPublication extends ClaimablePublication
 
     private static final int HEARTBEAT_LENGTH = HEADER_LENGTH + ApplicationHeartbeatEncoder.BLOCK_LENGTH;
     private static final int LIBRARY_CONNECT_LENGTH = HEADER_LENGTH + LibraryConnectEncoder.BLOCK_LENGTH +
-        LibraryConnectEncoder.libraryNameHeaderLength();
+            LibraryConnectEncoder.libraryNameHeaderLength();
     private static final int DISCONNECT_LENGTH = HEADER_LENGTH + DisconnectEncoder.BLOCK_LENGTH;
     private static final int RELEASE_SESSION_LENGTH = HEADER_LENGTH + ReleaseSessionEncoder.BLOCK_LENGTH +
         ReleaseSessionEncoder.usernameHeaderLength() + ReleaseSessionEncoder.passwordHeaderLength();
     private static final int RELEASE_SESSION_REPLY_LENGTH = HEADER_LENGTH + ReleaseSessionReplyDecoder.BLOCK_LENGTH;
     private static final int REQUEST_SESSION_LENGTH = HEADER_LENGTH + RequestSessionEncoder.BLOCK_LENGTH;
     private static final int REQUEST_SESSION_REPLY_LENGTH = HEADER_LENGTH + RequestSessionReplyEncoder.BLOCK_LENGTH;
-    private static final int CONNECT_FIXED_LENGTH =
-        HEADER_LENGTH + ConnectEncoder.BLOCK_LENGTH + ConnectEncoder.addressHeaderLength();
-    private static final int NOT_LEADER_BLOCK_LENGTH =
-        NotLeaderEncoder.BLOCK_LENGTH + HEADER_LENGTH + libraryChannelHeaderLength();
-    private static final int SLOW_STATUS_NOTIFICATION_LENGTH =
-        HEADER_LENGTH + SlowStatusNotificationEncoder.BLOCK_LENGTH;
+    private static final int CONNECT_FIXED_LENGTH = HEADER_LENGTH + ConnectEncoder.BLOCK_LENGTH +
+                                                    ConnectEncoder.addressHeaderLength();
+    private static final int NOT_LEADER_BLOCK_LENGTH = NotLeaderEncoder.BLOCK_LENGTH + HEADER_LENGTH +
+                                                       libraryChannelHeaderLength();
+    private static final int SLOW_STATUS_NOTIFICATION_LENGTH = HEADER_LENGTH +
+                                                               SlowStatusNotificationEncoder.BLOCK_LENGTH;
     private static final byte MIDDLE_FLAG = 0;
     private static final int MANAGE_SESSION_BLOCK_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
         ManageSessionEncoder.BLOCK_LENGTH + ManageSessionEncoder.localCompIdHeaderLength() * 7;
@@ -208,19 +208,19 @@ public class GatewayPublication extends ClaimablePublication
             -1,
             -1,
             LogonStatus.NULL_VAL,
-            SlowStatus.NULL_VAL,
-            ConnectionType.NULL_VAL,
-            SessionState.NULL_VAL,
-            -1,
-            -1,
-            -1,
-            "",
-            "",
-            "",
-            "",
-            "",
-            "",
-            "");
+                                 SlowStatus.NULL_VAL,
+                                 ConnectionType.NULL_VAL,
+                                 SessionState.NULL_VAL,
+                                 -1,
+                                 -1,
+                                 -1,
+                                 "",
+                                 "",
+                                 "",
+                                 "",
+                                 "",
+                                 "",
+                                 "");
     }
 
     public long saveManageSession(
@@ -294,7 +294,6 @@ public class GatewayPublication extends ClaimablePublication
 
         return position;
     }
-
 
     public long saveDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {

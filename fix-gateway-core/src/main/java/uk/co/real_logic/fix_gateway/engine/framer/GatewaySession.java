@@ -23,6 +23,7 @@ import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
+import uk.co.real_logic.fix_gateway.validation.PersistenceLevel;
 
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_MESSAGE;
@@ -49,13 +50,16 @@ class GatewaySession implements SessionInfo
     private int heartbeatIntervalInS;
     private long disconnectTimeout = NO_TIMEOUT;
 
-    GatewaySession(final long connectionId,
-                   final SessionContext context,
-                   final String address,
-                   final ConnectionType connectionType,
-                   final CompositeKey sessionKey,
-                   final ReceiverEndPoint receiverEndPoint,
-                   final SenderEndPoint senderEndPoint)
+    private PersistenceLevel persistenceLevel;
+
+    GatewaySession(
+        final long connectionId,
+        final SessionContext context,
+        final String address,
+        final ConnectionType connectionType,
+        final CompositeKey sessionKey,
+        final ReceiverEndPoint receiverEndPoint,
+        final SenderEndPoint senderEndPoint)
     {
         this.connectionId = connectionId;
         this.sessionId = context.sessionId();
@@ -228,9 +232,9 @@ class GatewaySession implements SessionInfo
     public String toString()
     {
         return "GatewaySession{" +
-            "sessionId=" + sessionId +
-            ", sessionKey=" + sessionKey +
-            '}';
+               "sessionId=" + sessionId +
+               ", sessionKey=" + sessionKey +
+               '}';
     }
 
     void disconnectAt(final long disconnectTimeout)
@@ -256,5 +260,15 @@ class GatewaySession implements SessionInfo
     SlowStatus slowStatus()
     {
         return bytesInBuffer() > 0 ? SlowStatus.SLOW : SlowStatus.NOT_SLOW;
+    }
+
+    void persistenceLevel(final PersistenceLevel persistenceLevel)
+    {
+        this.persistenceLevel = persistenceLevel;
+    }
+
+    PersistenceLevel persistenceLevel()
+    {
+        return this.persistenceLevel;
     }
 }

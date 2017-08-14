@@ -23,41 +23,40 @@ import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.SequenceNumberType;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
-import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.IOException;
 
 class EndPointFactory
 {
     private final EngineConfiguration configuration;
-    private final SessionIdStrategy sessionIdStrategy;
     private final SessionContexts sessionContexts;
     private final GatewayPublication inboundLibraryPublication;
     private final GatewayPublication inboundClusterablePublication;
     private final FixCounters fixCounters;
     private final ErrorHandler errorHandler;
     private final LongHashSet replicatedConnectionIds;
+    private final GatewaySessions gatewaySessions;
 
     private SlowPeeker replaySlowPeeker;
 
     EndPointFactory(
         final EngineConfiguration configuration,
-        final SessionIdStrategy sessionIdStrategy,
         final SessionContexts sessionContexts,
         final GatewayPublication inboundLibraryPublication,
         final GatewayPublication inboundClusterablePublication,
         final FixCounters fixCounters,
         final ErrorHandler errorHandler,
-        final LongHashSet replicatedConnectionIds)
+        final LongHashSet replicatedConnectionIds,
+        final GatewaySessions gatewaySessions)
     {
         this.configuration = configuration;
-        this.sessionIdStrategy = sessionIdStrategy;
         this.sessionContexts = sessionContexts;
         this.inboundLibraryPublication = inboundLibraryPublication;
         this.inboundClusterablePublication = inboundClusterablePublication;
         this.fixCounters = fixCounters;
         this.errorHandler = errorHandler;
         this.replicatedConnectionIds = replicatedConnectionIds;
+        this.gatewaySessions = gatewaySessions;
     }
 
     ReceiverEndPoint receiverEndPoint(
@@ -77,11 +76,9 @@ class EndPointFactory
             configuration.receiverBufferSize(),
             inboundLibraryPublication,
             inboundClusterablePublication,
-            configuration.sessionPersistenceStrategy(),
             connectionId,
             sessionId,
             sequenceIndex,
-            sessionIdStrategy,
             sessionContexts,
             sentSequenceNumberIndex,
             receivedSequenceNumberIndex,
@@ -91,7 +88,8 @@ class EndPointFactory
             libraryId,
             sequenceNumberType,
             connectionType,
-            replicatedConnectionIds
+            replicatedConnectionIds,
+            gatewaySessions
         );
     }
 

@@ -27,7 +27,6 @@ import uk.co.real_logic.fix_gateway.fields.UtcTimestampDecoder;
 import uk.co.real_logic.fix_gateway.messages.SessionState;
 import uk.co.real_logic.fix_gateway.util.AsciiBuffer;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
-import uk.co.real_logic.fix_gateway.validation.AuthenticationStrategy;
 import uk.co.real_logic.fix_gateway.validation.MessageValidationStrategy;
 
 import java.util.stream.Stream;
@@ -37,7 +36,6 @@ import static uk.co.real_logic.fix_gateway.builder.Validation.CODEC_VALIDATION_E
 import static uk.co.real_logic.fix_gateway.builder.Validation.isValidMsgType;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.fix_gateway.dictionary.generation.CodecUtil.MISSING_LONG;
-import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.FAILED_AUTHENTICATION;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.INVALID_FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.AWAITING_LOGOUT;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
@@ -62,20 +60,17 @@ public class SessionParser
 
     private final Session session;
     private final SessionIdStrategy sessionIdStrategy;
-    private final AuthenticationStrategy authenticationStrategy;
     private final MessageValidationStrategy validationStrategy;
     private ErrorHandler errorHandler;
 
     public SessionParser(
         final Session session,
         final SessionIdStrategy sessionIdStrategy,
-        final AuthenticationStrategy authenticationStrategy,
         final MessageValidationStrategy validationStrategy,
         final ErrorHandler errorHandler) // nullable
     {
         this.session = session;
         this.sessionIdStrategy = sessionIdStrategy;
-        this.authenticationStrategy = authenticationStrategy;
         this.validationStrategy = validationStrategy;
         this.errorHandler = errorHandler;
     }
@@ -313,46 +308,28 @@ public class SessionParser
         final char[] beginString = header.beginString();
         final int beginStringLength = header.beginStringLength();
         if (CODEC_VALIDATION_ENABLED && (!logon.validate() ||
-            !session.onBeginString(beginString, beginStringLength, true)))
+                                         !session.onBeginString(beginString, beginStringLength, true)))
         {
             return onCodecInvalidMessage(logon, header, true);
         }
         else
         {
-            boolean authenticated;
-            try
-            {
-                authenticated = authenticationStrategy.authenticate(logon);
-            }
-            catch (final Throwable throwable)
-            {
-                onStrategyError("authentication", throwable, asciiBuffer.getAscii(offset, length));
-                authenticated = false;
-            }
+            final CompositeKey sessionKey = sessionIdStrategy.onAcceptLogon(header);
+            final long origSendingTime = origSendingTime(header);
+            final String username = username(logon);
+            final String password = password(logon);
 
-            if (authenticated)
-            {
-                final CompositeKey sessionKey = sessionIdStrategy.onAcceptLogon(header);
-                final long origSendingTime = origSendingTime(header);
-                final String username = username(logon);
-                final String password = password(logon);
-
-                return session.onLogon(
-                    logon.heartBtInt(),
-                    header.msgSeqNum(),
-                    sessionId,
-                    sessionKey,
-                    sendingTime(header),
-                    origSendingTime,
-                    username,
-                    password,
-                    isPossDup(header),
-                    resetSeqNumFlag(logon));
-            }
-            else
-            {
-                return session.onRequestDisconnect(FAILED_AUTHENTICATION);
-            }
+            return session.onLogon(
+                logon.heartBtInt(),
+                header.msgSeqNum(),
+                sessionId,
+                sessionKey,
+                sendingTime(header),
+                origSendingTime,
+                username,
+                password,
+                isPossDup(header),
+                resetSeqNumFlag(logon));
         }
     }
 

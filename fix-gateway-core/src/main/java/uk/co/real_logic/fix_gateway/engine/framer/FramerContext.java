@@ -81,16 +81,6 @@ public class FramerContext
         this.inboundLibraryPublication = engineContext.inboundLibraryPublication();
         this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "outboundPublication");
 
-        final EndPointFactory endPointFactory = new EndPointFactory(
-            configuration,
-            sessionIdStrategy,
-            sessionContexts,
-            inboundLibraryPublication,
-            inboundClusterablePublication,
-            fixCounters,
-            errorHandler,
-            replicatedConnectionIds);
-
         gatewaySessions = new GatewaySessions(
                 clock,
                 outboundPublication,
@@ -101,7 +91,20 @@ public class FramerContext
                 configuration.messageValidationStrategy(),
                 configuration.sessionBufferSize(),
                 configuration.sendingTimeWindowInMs(),
-                configuration.reasonableTransmissionTimeInMs(), errorHandler);
+                configuration.reasonableTransmissionTimeInMs(),
+                errorHandler,
+                sessionContexts,
+                configuration.sessionPersistenceStrategy());
+
+        final EndPointFactory endPointFactory = new EndPointFactory(
+                configuration,
+                sessionContexts,
+                inboundLibraryPublication,
+                inboundClusterablePublication,
+                fixCounters,
+                errorHandler,
+                replicatedConnectionIds,
+                gatewaySessions);
 
         sentSequenceNumberIndex = new SequenceNumberIndexReader(
             configuration.sentSequenceNumberBuffer(), errorHandler);

@@ -599,37 +599,37 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
         else if (libraryId == this.libraryId)
         {
-            // From manageConnection - ie set up the session in this library.
-            if (connectionType == INITIATOR)
-            {
-                DebugLogger.log(FIX_MESSAGE, "Init Connect: %d, %d%n", connection, libraryId);
-                final boolean isInitiator = correlationIdToReply.get(correlationId) instanceof InitiateSessionReply;
-                final InitiateSessionReply reply = isInitiator ?
-                    (InitiateSessionReply)correlationIdToReply.remove(correlationId) : null;
-                final Session session = initiateSession(connection,
-                    lastSentSeqNum,
-                    lastRecvSeqNum,
-                    sessionState,
-                    isInitiator ? reply.configuration() : null,
-                    sequenceIndex);
-                newSession(connection, sessionId, session);
-                if (isInitiator)
-                {
-                    reply.onComplete(session);
-                }
-            }
-            else
-            {
-                DebugLogger.log(FIX_MESSAGE, "Acct Connect: %d, %d%n", connection, libraryId);
-                final Session session = acceptSession(
-                    connection, address, sessionState, heartbeatIntervalInS, sequenceIndex, logonTime);
-                newSession(connection, sessionId, session);
-            }
-
             // TODO(Nick): LogonStatus is a badly named enum.
             if (LogonStatus.NEW == logonStatus)
             {
-                // This is actually the sessionAcquire callback ie the initial part of this library getting hold of
+                // From manageConnection - ie set up the session in this library.
+                if (connectionType == INITIATOR)
+                {
+                    DebugLogger.log(FIX_MESSAGE, "Init Connect: %d, %d%n", connection, libraryId);
+                    final boolean isInitiator = correlationIdToReply.get(correlationId) instanceof InitiateSessionReply;
+                    final InitiateSessionReply reply = isInitiator ?
+                        (InitiateSessionReply)correlationIdToReply.remove(correlationId) : null;
+                    final Session session = initiateSession(connection,
+                            lastSentSeqNum,
+                            lastRecvSeqNum,
+                            sessionState,
+                            isInitiator ? reply.configuration() : null,
+                            sequenceIndex);
+                    newSession(connection, sessionId, session);
+                    if (isInitiator)
+                    {
+                        reply.onComplete(session);
+                    }
+                }
+                else
+                {
+                    DebugLogger.log(FIX_MESSAGE, "Acct Connect: %d, %d%n", connection, libraryId);
+                    final Session session = acceptSession(
+                            connection, address, sessionState, heartbeatIntervalInS, sequenceIndex, logonTime);
+                    newSession(connection, sessionId, session);
+                }
+
+                // ie the initial part of this library getting hold of this session.
                 // this session.
                 DebugLogger.log(GATEWAY_MESSAGE,
                     "onSessionExists: conn=%d, sess=%d, sentSeqNo=%d, recvSeqNo=%d%n",
@@ -637,11 +637,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     sessionId,
                     lastSentSeqNum,
                     lastRecvSeqNum);
+
                 final SessionSubscriber subscriber = connectionIdToSession.get(connection);
+
                 if (subscriber != null)
                 {
-                    // I guess this could be not null in the case where the gateway restarted and the library already
-                    // had the session,
+                    // I guess this could be not null in the case where
+                    // the gateway restarted and the library already had the session,
                     // but has to reacquire it after a new connection to the gateway...
                     final CompositeKey compositeKey = localCompId.length() == 0 ? null :
                         sessionIdStrategy.onInitiateLogon(
@@ -660,9 +662,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             }
             else
             {
-                // LIBRARY_NOTIFICATION Seems to be the response when a library connects for the first time if a
-                // session is already managed by the gateway but we should always just tell the process that this
-                // session is available to be claimed.
                 sessionExistsHandler.onSessionExists(
                     fixLibrary,
                     sessionId,
@@ -849,7 +848,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     @Override
     public Action onControlNotification(final int libraryId, final SessionsDecoder sessionsDecoder)
     {
-        // TODO(Nick): FIX this as it is completely broken.
+        // TODO(Nick): Reorganise this as it is confusing.
         if (libraryId == this.libraryId)
         {
             final long timeInMs = timeInMs();
@@ -861,8 +860,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 libraryId,
                 timeInMs);
 
-            // TODO(Nick): This should be a new set, not the actual set as we remove all the ids to check for
-            // existence.. Weirdly looks like this.sessionIds is never used anywhere else? Why do we have it then?
+            // TODO(Nick): This should be a new set,
+            // TODO(Nick): This should be a new set, not the actual
+            // set as we remove all the ids to check for existence..
+            // Weirdly looks like this.sessionIds is never used anywhere else?
+            // Why do we have it then? Is the caching saving
+            // Why do we have it then? Is the caching saving
             // Is the caching saving enough considering that below we are creating loads of arrays (potentially)
             final LongHashSet sessionIds = this.sessionIds;
             Session[] sessions = this.sessions;
@@ -904,7 +907,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 configuration
                     .gatewayErrorHandler()
                     .onError(GatewayError.UNKNOWN_SESSION, libraryId,
-                        String.format("The gateway thinks that we own the following session ids: %s", sessionIds));
+                             String.format("The gateway thinks that we own the following session ids: %s", sessionIds));
             }
 
             // Commit to ensure that you leave the poll loop having reconnected successfully
@@ -956,7 +959,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final AuthenticationStrategy authenticationStrategy = configuration.authenticationStrategy();
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
-            session, sessionIdStrategy, authenticationStrategy, validationStrategy, null);
+            session, sessionIdStrategy, validationStrategy, null);
         final SessionSubscriber subscriber = new SessionSubscriber(parser, session, receiveTimer, sessionTimer);
         connectionIdToSession.put(connectionId, subscriber);
         sessions = ArrayUtil.add(sessions, session);

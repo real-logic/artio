@@ -115,8 +115,8 @@ public class FramerTest
     private final Image peekImage = mock(Image.class);
     private final Image normalImage = mock(Image.class);
     private final ClusterableStreams node = mock(ClusterableStreams.class);
-    private final CompositeKey sessionKey = SessionIdStrategy.senderAndTarget().onInitiateLogon(
-        "local", "", "", "remote", "", "");
+    private final CompositeKey sessionKey = SessionIdStrategy.senderAndTarget()
+                                                             .onInitiateLogon("local", "", "", "remote", "", "");
 
     private FinalImagePositions finalImagePositions = mock(FinalImagePositions.class);
 
@@ -533,8 +533,7 @@ public class FramerTest
     @Test
     public void shouldHandoverSessionToLibraryUponRequestWhenBackPressured() throws IOException
     {
-        when(inboundPublication.saveManageSession(
-            anyInt(),
+        when(inboundPublication.saveManageSession(anyInt(),
             anyLong(),
             anyLong(),
             anyInt(),
@@ -563,8 +562,7 @@ public class FramerTest
 
         assertEquals(CONTINUE, onRequestSession());
 
-        verify(inboundPublication, times(2)).saveManageSession(
-            eq(LIBRARY_ID),
+        verify(inboundPublication, times(2)).saveManageSession(eq(LIBRARY_ID),
             anyLong(),
             anyLong(),
             anyInt(),
@@ -752,8 +750,7 @@ public class FramerTest
 
     private void backPressureFirstSaveAttempts()
     {
-        when(inboundPublication.saveManageSession(
-            eq(LIBRARY_ID),
+        when(inboundPublication.saveManageSession(eq(LIBRARY_ID),
             anyLong(),
             anyLong(),
             anyInt(),
@@ -777,8 +774,7 @@ public class FramerTest
 
     private void backPressureSaveSessionExists()
     {
-        when(inboundPublication.saveManageSession(
-            eq(LIBRARY_ID),
+        when(inboundPublication.saveManageSession(eq(LIBRARY_ID),
             anyLong(),
             anyLong(),
             anyInt(),
@@ -891,8 +887,7 @@ public class FramerTest
 
     private void notifyLibraryOfConnection(final VerificationMode times)
     {
-        verify(inboundPublication, times).saveManageSession(
-            eq(LIBRARY_ID),
+        verify(inboundPublication, times).saveManageSession(eq(LIBRARY_ID),
             eq(connectionId.getValue()),
             anyLong(),
             anyInt(),
@@ -916,15 +911,14 @@ public class FramerTest
 
     private void verifySessionExistsSaved(final VerificationMode times, final LogonStatus status)
     {
-        verify(inboundPublication, times).saveManageSession(
-            eq(LIBRARY_ID),
-            anyLong(),
+        verify(inboundPublication, times).saveManageSession(eq(LIBRARY_ID),
+            eq(connectionId.getValue()),
             anyLong(),
             anyInt(),
             anyInt(),
             anyLong(),
             eq(status),
-            any(), // todo(Nick): Should be NOT_SLOW?
+            any(), // todo(Nick): Should be NOT_SLOW? ,
             any(),
             any(),
             anyInt(),

@@ -328,7 +328,7 @@ public class LibraryPollerTest
             inOrder.verify(transport).inboundSubscription();
             inOrder.verify(transport).outboundPublication();
             inOrder.verify(outboundPublication)
-                .saveLibraryConnect(eq(libraryId()), anyString(), anyLong());
+                   .saveLibraryConnect(eq(libraryId()), anyString(), anyLong());
         }
         verifyNoMoreInteractions(transport);
         reset(outboundPublication);
@@ -389,8 +389,7 @@ public class LibraryPollerTest
 
     private void manageConnection(final long connectionId, final long sessionId)
     {
-        library.onManageSession(
-            libraryId(),
+        library.onManageSession(libraryId(),
             connectionId,
             sessionId,
             LAST_SENT_SEQUENCE_NUMBER,
