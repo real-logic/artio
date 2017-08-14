@@ -63,7 +63,7 @@ public class SessionContexts
         null,
         OUT_OF_SPACE);
     static final SessionContext UNKNOWN_SESSION = new SessionContext(
-        Session.UNKNOWN, (int) Session.UNKNOWN, Session.NO_LOGON_TIME, null, OUT_OF_SPACE);
+        Session.UNKNOWN, (int)Session.UNKNOWN, Session.NO_LOGON_TIME, null, OUT_OF_SPACE);
     static final long LOWEST_VALID_SESSION_ID = 1L;
 
     private static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
@@ -201,7 +201,7 @@ public class SessionContexts
             ByteBufferUtil.position(byteBuffer, sectorEnd);
             ByteBufferUtil.limit(byteBuffer, nextChecksum);
             crc32.update(byteBuffer);
-            final int calculatedChecksum = (int) crc32.getValue();
+            final int calculatedChecksum = (int)crc32.getValue();
             final int savedChecksum = buffer.getInt(nextChecksum);
             validateCheckSum(
                 "session ids", sectorEnd, nextSectorEnd, savedChecksum, calculatedChecksum, errorHandler);
@@ -295,7 +295,7 @@ public class SessionContexts
         ByteBufferUtil.limit(byteBuffer, endOfData);
         crc32.reset();
         crc32.update(byteBuffer);
-        final int checksumValue = (int) crc32.getValue();
+        final int checksumValue = (int)crc32.getValue();
         buffer.putInt(checksumOffset, checksumValue);
     }
 
@@ -321,7 +321,7 @@ public class SessionContexts
             mappedFile.transferTo(backupLocation);
         }
 
-        buffer.setMemory(0, buffer.capacity(), (byte) 0);
+        buffer.setMemory(0, buffer.capacity(), (byte)0);
         initialiseBuffer();
     }
 

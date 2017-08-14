@@ -103,7 +103,8 @@ class SessionSubscriber implements AutoCloseable
                 default:
                     return CONTINUE;
             }
-        } finally
+        }
+        finally
         {
             sessionTimer.recordSince(now);
         }

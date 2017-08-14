@@ -169,7 +169,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Long2LongHashMap resendSlowStatus = new Long2LongHashMap(-1);
     private final Long2LongHashMap resendNotSlowStatus = new Long2LongHashMap(-1);
 
-    private long nextConnectionId = (long) (Math.random() * Long.MAX_VALUE);
+    private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
     Framer(
         final EpochClock clock,
@@ -1030,7 +1030,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySessions.acquire(
                 session,
                 state,
-                (int) MILLISECONDS.toSeconds(heartbeatIntervalInMs),
+                (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs),
                 lastSentSequenceNumber,
                 lastReceivedSequenceNumber,
                 username,

@@ -48,7 +48,7 @@ public class InitiatorSession extends Session
         final MutableAsciiBuffer asciiBuffer)
     {
         super(
-		    heartbeatInterval,
+            heartbeatInterval,
             connectionId,
             clock,
             state,
@@ -77,8 +77,8 @@ public class InitiatorSession extends Session
         final String username,
         final String password,
         final boolean isPossDupOrResend,
-        final boolean resetSeqNumFlag) 
-	{
+        final boolean resetSeqNumFlag)
+    {
 
         // We aren't checking CODEC_VALIDATION_ENABLED here because these are required values in order to
         // have a stable FIX connection.
