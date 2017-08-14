@@ -122,13 +122,14 @@ public class InitiatorSession extends Session
         return Action.CONTINUE;
     }
 
-    private Action acceptLogon(final int heartbeatInterval,
-                               final int msgSeqNo,
-                               final long sessionId,
-                               final CompositeKey sessionKey,
-                               final long sendingTime,
-                               final long origSendingTime,
-                               final boolean isPossDupOrResend)
+    private Action acceptLogon(
+        final int heartbeatInterval,
+        final int msgSeqNo,
+        final long sessionId,
+        final CompositeKey sessionKey,
+        final long sendingTime,
+        final long origSendingTime,
+        final boolean isPossDupOrResend)
     {
         state(SessionState.ACTIVE);
         this.sessionKey = sessionKey;
@@ -156,6 +157,7 @@ public class InitiatorSession extends Session
 
             return saveLogonMessage(sessionId);
         }
+
         return null;
     }
 
@@ -181,7 +183,7 @@ public class InitiatorSession extends Session
         if (state() == SessionState.CONNECTED && id() != UNKNOWN)
         {
             state(SessionState.SENT_LOGON);
-            final int heartbeatIntervalInS = (int) (heartbeatIntervalInMs() / 1000);
+            final int heartbeatIntervalInS = (int)(heartbeatIntervalInMs() / 1000);
             final int sentSeqNum = resetSeqNum ? 1 : newSentSeqNum();
             final long position = proxy.logon(
                 heartbeatIntervalInS, sentSeqNum, username(), password(), resetSeqNum, sequenceIndex());
@@ -191,6 +193,7 @@ public class InitiatorSession extends Session
             }
             actions++;
         }
+
         return actions + super.poll(time);
     }
 

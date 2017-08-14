@@ -71,7 +71,7 @@ class NodeRunner implements AutoCloseable
 
     NodeRunner(final int nodeId, final int... otherNodes)
     {
-        final File logFileDir = new File(logFileDir((short) nodeId));
+        final File logFileDir = new File(logFileDir((short)nodeId));
         if (logFileDir.exists())
         {
             IoUtil.delete(logFileDir, true);

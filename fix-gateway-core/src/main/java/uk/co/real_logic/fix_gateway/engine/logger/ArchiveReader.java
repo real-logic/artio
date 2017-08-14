@@ -44,7 +44,6 @@ import static uk.co.real_logic.fix_gateway.engine.logger.ArchiveDescriptor.nextT
 
 public class ArchiveReader implements AutoCloseable
 {
-
     private final IntFunction<SessionReader> newSessionReader = this::newSessionReader;
 
     /**
@@ -113,8 +112,8 @@ public class ArchiveReader implements AutoCloseable
      * Reads a message out of the log archive.
      *
      * @param aeronSessionId the session to read from
-     * @param position the log position to start reading at
-     * @param handler the handler to pass the data into
+     * @param position       the log position to start reading at
+     * @param handler        the handler to pass the data into
      * @return the position after the end of this message. If there's another message, then this is its start.
      */
     public long read(final int aeronSessionId, final long position, final ControlledFragmentHandler handler)
@@ -132,9 +131,9 @@ public class ArchiveReader implements AutoCloseable
      * Reads a message out of the log archive.
      *
      * @param aeronSessionId the session to read from
-     * @param beginPosition the log position to start reading at
-     * @param endPosition the last start position of a message to stop reading at (NB: can read up to a fragment beyond)
-     * @param handler the handler to pass the data into
+     * @param beginPosition  the log position to start reading at
+     * @param endPosition    the last start position of a message to stop reading at (NB: can read up to a fragment beyond)
+     * @param handler        the handler to pass the data into
      * @return the position after the end of this message. If there's another message, then this is its start.
      */
     public long readUpTo(
@@ -154,13 +153,13 @@ public class ArchiveReader implements AutoCloseable
 
     /**
      * Reads a block of bytes out of the log archive.
-     *
+     * <p>
      * A block will only be read if the archive contains the whole block.
      *
      * @param aeronSessionId the session to read from
-     * @param position the log position to start reading at
-     * @param length the length of data read
-     * @param handler the handler to pass the data into
+     * @param position       the log position to start reading at
+     * @param length         the length of data read
+     * @param handler        the handler to pass the data into
      * @return true if the message has been read, false otherwise
      */
     public boolean readBlock(
@@ -214,7 +213,7 @@ public class ArchiveReader implements AutoCloseable
          * Reads a message out of this session's log archive.
          *
          * @param initialPosition the log position to start reading at
-         * @param handler the handler to pass the data into
+         * @param handler         the handler to pass the data into
          * @return the position after the end of this message. If there's another message, then this is its start.
          */
         public long read(final long initialPosition, final ControlledFragmentHandler handler)
@@ -285,15 +284,15 @@ public class ArchiveReader implements AutoCloseable
 
             checksum.reset();
             checksum.update(byteBuffer);
-            return (int) checksum.getValue();
+            return (int)checksum.getValue();
         }
 
         /**
          * Reads a message out of this session's log archive.
          *
          * @param beginPosition the log position to start reading at, specified by the beginning of the message
-         * @param endPosition the last start position of a message to stop reading at (NB: can read up to a fragment beyond)
-         * @param handler the handler to pass the data into
+         * @param endPosition   the last start position of a message to stop reading at (NB: can read up to a fragment beyond)
+         * @param handler       the handler to pass the data into
          * @return the position after the end of this message. If there's another message, then this is its start.
          */
         public long readUpTo(
@@ -356,11 +355,11 @@ public class ArchiveReader implements AutoCloseable
 
         /**
          * Reads a block of bytes out of this session's log archive.
-         *
+         * <p>
          * A block will only be read if the archive contains the whole block.
          *
          * @param position the log position to start reading at
-         * @param handler the handler to pass the data into
+         * @param handler  the handler to pass the data into
          * @return true if the message has been read, false otherwise
          */
         public boolean readBlock(final long position, final int requestedLength, final BlockHandler handler)

@@ -65,7 +65,6 @@ public class PrinterGeneratorTest
 
     private Printer printer() throws InstantiationException, IllegalAccessException
     {
-        return (Printer) PrinterGeneratorTest.printer.newInstance();
+        return (Printer)PrinterGeneratorTest.printer.newInstance();
     }
-
 }

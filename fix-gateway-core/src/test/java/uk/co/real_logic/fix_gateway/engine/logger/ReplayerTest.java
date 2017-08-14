@@ -80,7 +80,7 @@ public class ReplayerTest extends AbstractLogTest
     @Before
     public void setUp()
     {
-        when(fragmentHeader.flags()).thenReturn((byte) DataHeaderFlyweight.BEGIN_AND_END_FLAGS);
+        when(fragmentHeader.flags()).thenReturn((byte)DataHeaderFlyweight.BEGIN_AND_END_FLAGS);
         when(clock.time()).thenReturn(DATE_TIME_EPOCH_MS);
         when(publication.tryClaim(anyInt(), any())).thenReturn(1L);
         when(publication.maxPayloadLength()).thenReturn(Configuration.MTU_LENGTH);
@@ -311,7 +311,7 @@ public class ReplayerTest extends AbstractLogTest
 
     private void assertBeginSeqNo(final int endSeqNo, final InvocationOnMock inv)
     {
-        final int beginSeqNo = (int) inv.getArguments()[2];
+        final int beginSeqNo = (int)inv.getArguments()[2];
         assertEquals(endSeqNo, beginSeqNo);
     }
 

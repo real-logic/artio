@@ -74,7 +74,7 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
 
     public void setupSession(final CompositeKey compositeKey, final HeaderEncoder headerEncoder)
     {
-        final CompositeKeyImpl composite = (CompositeKeyImpl) compositeKey;
+        final CompositeKeyImpl composite = (CompositeKeyImpl)compositeKey;
         headerEncoder.senderCompID(composite.localCompId);
         headerEncoder.senderSubID(composite.localSubID);
         headerEncoder.targetCompID(composite.remoteCompID);
@@ -82,7 +82,7 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
 
     public int save(final CompositeKey compositeKey, final MutableDirectBuffer buffer, final int offset)
     {
-        final CompositeKeyImpl key = (CompositeKeyImpl) compositeKey;
+        final CompositeKeyImpl key = (CompositeKeyImpl)compositeKey;
         final byte[] localCompID = key.localCompId;
         final byte[] localSubID = key.localSubID;
         final byte[] remoteCompID = key.remoteCompID;
@@ -156,7 +156,7 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
 
         private int hash(final byte[] localCompID, final byte[] localSubID, final byte[] remoteCompID)
         {
-            int result  = Arrays.hashCode(localCompID);
+            int result = Arrays.hashCode(localCompID);
             result = 31 * result + Arrays.hashCode(localSubID);
             result = 31 * result + Arrays.hashCode(remoteCompID);
             return result;
@@ -172,9 +172,9 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
             if (obj instanceof CompositeKeyImpl)
             {
                 final CompositeKeyImpl compositeKey = (CompositeKeyImpl)obj;
-                return Arrays.equals(compositeKey.localCompId, localCompId)
-                    && Arrays.equals(compositeKey.localSubID, localSubID)
-                    && Arrays.equals(compositeKey.remoteCompID, remoteCompID);
+                return Arrays.equals(compositeKey.localCompId, localCompId) &&
+                    Arrays.equals(compositeKey.localSubID, localSubID) &&
+                    Arrays.equals(compositeKey.remoteCompID, remoteCompID);
             }
 
             return false;

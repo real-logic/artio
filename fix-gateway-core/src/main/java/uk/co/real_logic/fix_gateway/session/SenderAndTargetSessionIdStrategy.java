@@ -86,7 +86,7 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
         requireNonNull(compositeKey, "compositeKey");
         requireNonNull(buffer, "buffer");
 
-        final CompositeKeyImpl key = (CompositeKeyImpl) compositeKey;
+        final CompositeKeyImpl key = (CompositeKeyImpl)compositeKey;
         final byte[] senderCompID = key.localCompID;
         final byte[] targetCompID = key.remoteCompID;
 
@@ -126,10 +126,11 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
         private final byte[] remoteCompID;
         private final int hashCode;
 
-        private CompositeKeyImpl(final char[] localCompID,
-                                 final int localCompIDLength,
-                                 final char[] remoteCompID,
-                                 final int remoteCompIDLength)
+        private CompositeKeyImpl(
+            final char[] localCompID,
+            final int localCompIDLength,
+            final char[] remoteCompID,
+            final int remoteCompIDLength)
         {
             this(
                 CodecUtil.toBytes(localCompID, localCompIDLength),
@@ -145,7 +146,7 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
 
         private int hash(final byte[] senderCompID, final byte[] targetCompID)
         {
-            int result  = Arrays.hashCode(senderCompID);
+            int result = Arrays.hashCode(senderCompID);
             result = 31 * result + Arrays.hashCode(targetCompID);
             return result;
         }
@@ -160,8 +161,8 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
             if (obj instanceof CompositeKeyImpl)
             {
                 final CompositeKeyImpl compositeKey = (CompositeKeyImpl)obj;
-                return Arrays.equals(compositeKey.localCompID, localCompID)
-                    && Arrays.equals(compositeKey.remoteCompID, remoteCompID);
+                return Arrays.equals(compositeKey.localCompID, localCompID) &&
+                    Arrays.equals(compositeKey.remoteCompID, remoteCompID);
             }
 
             return false;

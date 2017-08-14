@@ -67,9 +67,9 @@ class ReceiverEndPoint
     private static final int START_OF_BODY_LENGTH = COMMON_PREFIX_LENGTH + 2;
 
     private static final byte CHECKSUM0 = 1;
-    private static final byte CHECKSUM1 = (byte) '1';
-    private static final byte CHECKSUM2 = (byte) '0';
-    private static final byte CHECKSUM3 = (byte) '=';
+    private static final byte CHECKSUM1 = (byte)'1';
+    private static final byte CHECKSUM2 = (byte)'0';
+    private static final byte CHECKSUM3 = (byte)'=';
 
     private static final int MIN_CHECKSUM_SIZE = " 10=".length() + 1;
     private static final int SOCKET_DISCONNECTED = -1;
@@ -420,9 +420,9 @@ class ReceiverEndPoint
     private boolean validateBodyLength(final int startOfChecksumTag)
     {
         return buffer.getByte(startOfChecksumTag) == CHECKSUM0 &&
-               buffer.getByte(startOfChecksumTag + 1) == CHECKSUM1 &&
-               buffer.getByte(startOfChecksumTag + 2) == CHECKSUM2 &&
-               buffer.getByte(startOfChecksumTag + 3) == CHECKSUM3;
+            buffer.getByte(startOfChecksumTag + 1) == CHECKSUM1 &&
+            buffer.getByte(startOfChecksumTag + 2) == CHECKSUM2 &&
+            buffer.getByte(startOfChecksumTag + 3) == CHECKSUM3;
     }
 
     private int getMessageType(final int endOfBodyLength, final int indexOfLastByteOfMessage)
@@ -445,7 +445,7 @@ class ReceiverEndPoint
         try
         {
             return buffer.getDigit(offset + COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD ||
-                   buffer.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
+                buffer.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
         }
         catch (final IllegalArgumentException ex)
         {

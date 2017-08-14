@@ -74,12 +74,11 @@
         <module name="NoWhitespaceBefore"/>
 
         <module name="WhitespaceAfter">
-            <property name="tokens"
-                      value="COMMA, SEMI, LITERAL_IF, LITERAL_ELSE, LITERAL_WHILE, LITERAL_DO, LITERAL_FOR, DO_WHILE"/>
+            <property name="tokens" value="COMMA, SEMI, LITERAL_IF, LITERAL_ELSE, LITERAL_WHILE, LITERAL_DO, LITERAL_FOR, DO_WHILE"/>
         </module>
 
         <module name="NoWhitespaceAfter">
-            <property name="tokens" value="DOT"/>
+            <property name="tokens" value="INC, DEC, UNARY_MINUS, UNARY_PLUS, BNOT, LNOT, DOT, TYPECAST, ARRAY_DECLARATOR, INDEX_OP, METHOD_REF"/>
             <property name="allowLineBreaks" value="false"/>
         </module>
 
@@ -88,7 +87,6 @@
         </module>
 
         <module name="OperatorWrap">
-            <property name="tokens" value="PLUS, ASSIGN"/>
             <property name="option" value="eol"/>
         </module>
 
@@ -114,7 +112,7 @@
 
         <module name="RightCurly">
             <property name="option" value="alone"/>
-            <property name="tokens" value="LITERAL_ELSE, LITERAL_DO, LITERAL_WHILE"/>
+            <property name="tokens" value="LITERAL_TRY, LITERAL_CATCH, LITERAL_FINALLY, LITERAL_IF, LITERAL_ELSE, CLASS_DEF, METHOD_DEF, CTOR_DEF, LITERAL_FOR, LITERAL_WHILE, LITERAL_DO, STATIC_INIT, INSTANCE_INIT"/>
         </module>
 
         <module name="EmptyStatement"/>

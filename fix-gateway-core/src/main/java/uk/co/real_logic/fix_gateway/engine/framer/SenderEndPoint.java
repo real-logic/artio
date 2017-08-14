@@ -266,7 +266,7 @@ class SenderEndPoint implements AutoCloseable
         }
 
         return attemptSlowMessage(
-                directBuffer, offsetAfterHeader, length, position, bodyLength, timeInMs, outboundTracker);
+            directBuffer, offsetAfterHeader, length, position, bodyLength, timeInMs, outboundTracker);
     }
 
     private Action attemptSlowMessage(
@@ -319,7 +319,7 @@ class SenderEndPoint implements AutoCloseable
             }
             else
             {
-                remainingLength = (int) (position - sentPosition);
+                remainingLength = (int)(position - sentPosition);
                 bytesPreviouslySent = bodyLength - remainingLength;
             }
 
@@ -372,8 +372,8 @@ class SenderEndPoint implements AutoCloseable
     private boolean partiallySentOtherStream(final StreamTracker tracker)
     {
         return tracker == outboundTracker ?
-               replayTracker.partiallySentMessage :
-               outboundTracker.partiallySentMessage;
+            replayTracker.partiallySentMessage :
+            outboundTracker.partiallySentMessage;
     }
 
     private boolean isWrongLibraryId(final int libraryId)
@@ -441,9 +441,9 @@ class SenderEndPoint implements AutoCloseable
             this.blockablePosition = blockablePosition;
         }
 
-        private void moveSentPosition(final int by)
+        private void moveSentPosition(final int delta)
         {
-            sentPosition += by;
+            sentPosition += delta;
         }
     }
 }

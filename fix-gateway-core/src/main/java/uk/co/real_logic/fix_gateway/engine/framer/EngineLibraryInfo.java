@@ -68,7 +68,7 @@ class EngineLibraryInfo implements LibraryInfo
             return false;
         }
 
-        final EngineLibraryInfo that = (EngineLibraryInfo) o;
+        final EngineLibraryInfo that = (EngineLibraryInfo)o;
 
         return gatewaySessions != null ? gatewaySessions.equals(that.gatewaySessions) : that.gatewaySessions == null;
     }

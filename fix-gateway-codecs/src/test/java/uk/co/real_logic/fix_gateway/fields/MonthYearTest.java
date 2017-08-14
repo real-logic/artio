@@ -38,9 +38,9 @@ public class MonthYearTest
     public static Iterable<Object[]> validMonthYears()
     {
         return Arrays.asList(
-            new Object[]{"000101", MonthYear.of(1, JANUARY) },
-            new Object[]{"201502", MonthYear.of(2015, FEBRUARY) },
-            new Object[]{"999912", MonthYear.of(9999, DECEMBER) }
+            new Object[]{ "000101", MonthYear.of(1, JANUARY) },
+            new Object[]{ "201502", MonthYear.of(2015, FEBRUARY) },
+            new Object[]{ "999912", MonthYear.of(9999, DECEMBER) }
         );
     }
 
@@ -48,9 +48,9 @@ public class MonthYearTest
     public static Iterable<Object[]> validMonthYearsWithDay()
     {
         return Arrays.asList(
-            new Object[]{"00010101", MonthYear.withDayOfMonth(1, JANUARY, 1) },
-            new Object[]{"20150225", MonthYear.withDayOfMonth(2015, FEBRUARY, 25) },
-            new Object[]{"99991231", MonthYear.withDayOfMonth(9999, DECEMBER, 31) }
+            new Object[]{ "00010101", MonthYear.withDayOfMonth(1, JANUARY, 1) },
+            new Object[]{ "20150225", MonthYear.withDayOfMonth(2015, FEBRUARY, 25) },
+            new Object[]{ "99991231", MonthYear.withDayOfMonth(9999, DECEMBER, 31) }
         );
     }
 
@@ -58,9 +58,9 @@ public class MonthYearTest
     public static Iterable<Object[]> validMonthYearsWithWeek()
     {
         return Arrays.asList(
-            new Object[]{"000101w1", MonthYear.withWeekOfMonth(1, JANUARY, 1) },
-            new Object[]{"201502w5", MonthYear.withWeekOfMonth(2015, FEBRUARY, 5) },
-            new Object[]{"999912w3", MonthYear.withWeekOfMonth(9999, DECEMBER, 3) }
+            new Object[]{ "000101w1", MonthYear.withWeekOfMonth(1, JANUARY, 1) },
+            new Object[]{ "201502w5", MonthYear.withWeekOfMonth(2015, FEBRUARY, 5) },
+            new Object[]{ "999912w3", MonthYear.withWeekOfMonth(9999, DECEMBER, 3) }
         );
     }
 
@@ -68,17 +68,17 @@ public class MonthYearTest
     public static Iterable<Object[]> invalidMonthYearsWithDay()
     {
         return Arrays.asList(
-            new Object[]{"00010101"},
-            new Object[]{"20150225"},
-            new Object[]{"99991231"}
+            new Object[]{ "00010101" },
+            new Object[]{ "20150225" },
+            new Object[]{ "99991231" }
         );
     }
 
     @Theory
     public void shouldToStringValidDates(@FromDataPoints("validMonthYears") final Object[] data)
     {
-        final String input = (String) data[0];
-        final MonthYear expectedMonthYear = (MonthYear) data[1];
+        final String input = (String)data[0];
+        final MonthYear expectedMonthYear = (MonthYear)data[1];
 
         assertThat(expectedMonthYear, hasToString(input));
     }
@@ -86,8 +86,8 @@ public class MonthYearTest
     @Theory
     public void shouldToStringValidDatesWithDay(@FromDataPoints("validMonthYearsWithDay") final Object[] data)
     {
-        final String input = (String) data[0];
-        final MonthYear expectedMonthYear = (MonthYear) data[1];
+        final String input = (String)data[0];
+        final MonthYear expectedMonthYear = (MonthYear)data[1];
 
         assertThat(expectedMonthYear, hasToString(input));
     }
@@ -95,8 +95,8 @@ public class MonthYearTest
     @Theory
     public void shouldToStringValidDatesWithWeek(@FromDataPoints("validMonthYearsWithWeek") final Object[] data)
     {
-        final String input = (String) data[0];
-        final MonthYear expectedMonthYear = (MonthYear) data[1];
+        final String input = (String)data[0];
+        final MonthYear expectedMonthYear = (MonthYear)data[1];
 
         assertThat(expectedMonthYear, hasToString(input));
     }
@@ -104,8 +104,8 @@ public class MonthYearTest
     @Theory
     public void shouldDecodeValidDates(@FromDataPoints("validMonthYears") final Object[] data)
     {
-        final String input = (String) data[0];
-        final MonthYear expectedMonthYear = (MonthYear) data[1];
+        final String input = (String)data[0];
+        final MonthYear expectedMonthYear = (MonthYear)data[1];
 
         assertDecodesMonthYear(input, expectedMonthYear);
     }
@@ -113,8 +113,8 @@ public class MonthYearTest
     @Theory
     public void shouldDecodeValidDatesWithDay(@FromDataPoints("validMonthYearsWithDay") final Object[] data)
     {
-        final String input = (String) data[0];
-        final MonthYear expectedMonthYear = (MonthYear) data[1];
+        final String input = (String)data[0];
+        final MonthYear expectedMonthYear = (MonthYear)data[1];
 
         assertDecodesMonthYear(input, expectedMonthYear);
     }
@@ -122,8 +122,8 @@ public class MonthYearTest
     @Theory
     public void shouldDecodeValidDatesWithWeek(@FromDataPoints("validMonthYearsWithWeek") final Object[] data)
     {
-        final String input = (String) data[0];
-        final MonthYear expectedMonthYear = (MonthYear) data[1];
+        final String input = (String)data[0];
+        final MonthYear expectedMonthYear = (MonthYear)data[1];
 
         assertDecodesMonthYear(input, expectedMonthYear);
     }
@@ -131,8 +131,8 @@ public class MonthYearTest
     @Theory
     public void shouldEncodeValidDates(@FromDataPoints("validMonthYears") final Object[] data)
     {
-        final String input = (String) data[0];
-        final MonthYear expectedMonthYear = (MonthYear) data[1];
+        final String input = (String)data[0];
+        final MonthYear expectedMonthYear = (MonthYear)data[1];
 
         assertEncodesMonthYear(input, expectedMonthYear);
     }
@@ -140,8 +140,8 @@ public class MonthYearTest
     @Theory
     public void shouldEncodeValidDatesWithDay(@FromDataPoints("validMonthYearsWithDay") final Object[] data)
     {
-        final String input = (String) data[0];
-        final MonthYear expectedMonthYear = (MonthYear) data[1];
+        final String input = (String)data[0];
+        final MonthYear expectedMonthYear = (MonthYear)data[1];
 
         assertEncodesMonthYear(input, expectedMonthYear);
     }
@@ -149,8 +149,8 @@ public class MonthYearTest
     @Theory
     public void shouldEncodeValidDatesWithWeek(@FromDataPoints("validMonthYearsWithWeek") final Object[] data)
     {
-        final String input = (String) data[0];
-        final MonthYear expectedMonthYear = (MonthYear) data[1];
+        final String input = (String)data[0];
+        final MonthYear expectedMonthYear = (MonthYear)data[1];
 
         assertEncodesMonthYear(input, expectedMonthYear);
     }
@@ -177,5 +177,4 @@ public class MonthYearTest
 
         assertEquals(String.format("Failed to encode %s correctly", input), expectedLength, length);
     }
-
 }

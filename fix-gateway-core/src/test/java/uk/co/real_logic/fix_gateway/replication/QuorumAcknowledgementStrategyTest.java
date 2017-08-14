@@ -23,7 +23,6 @@ import static org.junit.Assert.*;
 
 public class QuorumAcknowledgementStrategyTest
 {
-
     private QuorumAcknowledgementStrategy strategy = new QuorumAcknowledgementStrategy();
 
     @Test
@@ -95,8 +94,8 @@ public class QuorumAcknowledgementStrategyTest
     public void shouldElectWithMajority()
     {
         final IntHashSet votedFor = votedFor();
-        votedFor.add((short) 1);
-        votedFor.add((short) 2);
+        votedFor.add((short)1);
+        votedFor.add((short)2);
 
         assertTrue(strategy.isElected(votedFor.size(), 3));
     }
@@ -105,7 +104,7 @@ public class QuorumAcknowledgementStrategyTest
     public void shouldNotElectWithoutMajority()
     {
         final IntHashSet votes = votedFor();
-        votes.add((short) 1);
+        votes.add((short)1);
 
         assertFalse(strategy.isElected(votes.size(), 3));
     }

@@ -105,7 +105,7 @@ public class EncoderGeneratorTest
 
         setTestReqIdTo(encoder, "abcd");
 
-        assertArrayEquals(new byte[]{97, 98, 99, 100}, (byte[])getField(encoder, TEST_REQ_ID));
+        assertArrayEquals(new byte[]{ 97, 98, 99, 100 }, (byte[])getField(encoder, TEST_REQ_ID));
         assertEquals(4, getField(encoder, TEST_REQ_ID_LENGTH));
     }
 
@@ -114,7 +114,7 @@ public class EncoderGeneratorTest
     {
         final Object encoder = heartbeat.newInstance();
 
-        final Object value = new char[]{'a', 'b', 'c'};
+        final Object value = new char[]{ 'a', 'b', 'c' };
         heartbeat.getMethod(TEST_REQ_ID, char[].class)
             .invoke(encoder, value);
 
@@ -582,7 +582,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldGenerateTwoCharacterMessageTypes() throws Exception
     {
-        final Encoder encoder = (Encoder) otherMessage.newInstance();
+        final Encoder encoder = (Encoder)otherMessage.newInstance();
 
         assertThat(encoder.toString(), containsString("\"MsgType\": \"" + OTHER_MESSAGE_TYPE + "\""));
         assertEncodesTo(encoder, "8=FIX.4.4\0019=6\00135=AB\00110=247\001");
@@ -691,7 +691,7 @@ public class EncoderGeneratorTest
     {
         setTestReqIdTo(encoder, ABC);
         setBoolean(encoder, BOOLEAN_FIELD, true);
-        setByteArray(encoder, DATA_FIELD, new byte[]{'1', '2', '3'});
+        setByteArray(encoder, DATA_FIELD, new byte[]{ '1', '2', '3' });
     }
 
     private void setupTrailer(final Encoder encoder) throws Exception

@@ -356,7 +356,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         int total = 0;
         for (int index = offset; index < end; index++)
         {
-            total += (int) getByte(index);
+            total += (int)getByte(index);
         }
 
         return total % 256;
@@ -401,7 +401,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     /**
      * Encode a natural number starting at its end position.
      *
-     * @param value the natural number to encode
+     * @param value        the natural number to encode
      * @param endExclusive index after the last character encoded
      * @return startInclusive index of first character encoded
      */
@@ -526,7 +526,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
     public int putAsciiChar(final int index, final char value)
     {
-        putByte(index, (byte) value);
+        putByte(index, (byte)value);
         return 1;
     }
 

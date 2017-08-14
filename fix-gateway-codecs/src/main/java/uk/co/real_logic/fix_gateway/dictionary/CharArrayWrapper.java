@@ -59,15 +59,9 @@ final class CharArrayWrapper
             return false;
         }
 
-        final CharArrayWrapper that = (CharArrayWrapper) o;
+        final CharArrayWrapper that = (CharArrayWrapper)o;
 
-        final int length = this.length;
-        if (length != that.length)
-        {
-            return false;
-        }
-
-        return CodecUtil.equals(values, that.values, length);
+        return this.length == that.length && CodecUtil.equals(values, that.values, this.length);
     }
 
     public String toString()

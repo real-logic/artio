@@ -86,5 +86,4 @@ public class SenderAndTargetSessionIdStrategyTest
 
         assertEquals(INSUFFICIENT_SPACE, length);
     }
-
 }

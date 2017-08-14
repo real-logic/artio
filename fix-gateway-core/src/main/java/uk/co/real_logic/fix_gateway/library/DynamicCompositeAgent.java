@@ -62,10 +62,9 @@ public final class DynamicCompositeAgent implements Agent
     {
         int operations = pollCommands();
 
-        final Agent[] agents = this.agents;
-        for (int i = 0; i < agents.length; i++)
+        for (final Agent agent : agents)
         {
-            operations += agents[i].doWork();
+            operations += agent.doWork();
         }
 
         return operations;
@@ -79,7 +78,8 @@ public final class DynamicCompositeAgent implements Agent
             if (command.isAdd)
             {
                 agents = ArrayUtil.add(agents, command.agent);
-            } else
+            }
+            else
             {
                 agents = ArrayUtil.remove(agents, command.agent);
 

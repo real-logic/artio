@@ -24,17 +24,17 @@ public interface Encoder
 
     static int length(final long result)
     {
-        return (int) result;
+        return (int)result;
     }
 
     static int offset(final long result)
     {
-        return (int) (result >> BITS_IN_INT);
+        return (int)(result >> BITS_IN_INT);
     }
 
     static long result(final int length, final int offset)
     {
-        return length | ((long) offset) << BITS_IN_INT;
+        return length | ((long)offset) << BITS_IN_INT;
     }
 
     /**

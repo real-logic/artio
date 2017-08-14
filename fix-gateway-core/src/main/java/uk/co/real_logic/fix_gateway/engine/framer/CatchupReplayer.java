@@ -353,8 +353,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     private boolean replayIncomplete()
     {
-        return replayFromSequenceIndex < currentSequenceIndex
-            || replayFromSequenceNumber < lastReceivedSeqNum;
+        return replayFromSequenceIndex < currentSequenceIndex || replayFromSequenceNumber < lastReceivedSeqNum;
     }
 
     private boolean notLoggingInboundMessages()
@@ -382,6 +381,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         {
             session.play();
         }
+
         return position;
     }
 
@@ -401,6 +401,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
             session.play();
         }
+
         return position;
     }
 }

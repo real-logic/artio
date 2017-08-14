@@ -40,7 +40,7 @@ public abstract class AbstractBenchmarkClient
 {
     protected static final String HOST = System.getProperty("fix.benchmark.host", "localhost");
     protected static final int BUFFER_SIZE = 16 * 1024;
-    protected static final byte NINE = (byte) '9';
+    protected static final byte NINE = (byte)'9';
 
     protected final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
     protected final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
@@ -142,7 +142,7 @@ public abstract class AbstractBenchmarkClient
     protected static void printThroughput(final long startTime, final int messagesExchanged)
     {
         final long duration = System.currentTimeMillis() - startTime;
-        final double rate = (double) messagesExchanged / duration;
+        final double rate = (double)messagesExchanged / duration;
         System.out.printf("%d messages in %d ms%n", messagesExchanged, duration);
         System.out.printf("%G messages / s%n", rate * 1000.0);
     }

@@ -116,7 +116,7 @@ public class DecoderGeneratorTest
     @Test
     public void stringGettersReadFromFields() throws Exception
     {
-        final Decoder decoder = (Decoder) heartbeat.newInstance();
+        final Decoder decoder = (Decoder)heartbeat.newInstance();
         setField(decoder, ON_BEHALF_OF_COMP_ID, ABC);
         setField(decoder, ON_BEHALF_OF_COMP_ID + "Length", 3);
 
@@ -173,7 +173,7 @@ public class DecoderGeneratorTest
 
         assertArrayEquals(ABC, getTestReqId(decoder));
         assertEquals(true, getBooleanField(decoder));
-        assertArrayEquals(new byte[]{'1', '2', '3'}, getDataField(decoder));
+        assertArrayEquals(new byte[]{ '1', '2', '3' }, getDataField(decoder));
 
         assertValid(decoder);
     }
@@ -181,7 +181,7 @@ public class DecoderGeneratorTest
     @Test
     public void hasMessageTypeFlag() throws Exception
     {
-        final int messageType = (int) getStatic(heartbeat, "MESSAGE_TYPE");
+        final int messageType = (int)getStatic(heartbeat, "MESSAGE_TYPE");
 
         assertEquals(HEARTBEAT_TYPE, messageType);
     }
@@ -363,12 +363,11 @@ public class DecoderGeneratorTest
     @Test
     public void shouldGenerateRequiredFieldsDictionary() throws Exception
     {
-        final Decoder decoder = (Decoder) heartbeat.newInstance();
+        final Decoder decoder = (Decoder)heartbeat.newInstance();
         final Object allFieldsField = getRequiredFields(decoder);
         assertThat(allFieldsField, instanceOf(IntHashSet.class));
 
-        @SuppressWarnings("unchecked")
-        final Set<Integer> allFields = (Set<Integer>) allFieldsField;
+        @SuppressWarnings("unchecked") final Set<Integer> allFields = (Set<Integer>)allFieldsField;
         assertThat(allFields, hasItem(116));
         assertThat(allFields, not(hasItem(112)));
         assertThat(allFields, not(hasItem(999)));
@@ -478,8 +477,8 @@ public class DecoderGeneratorTest
     @Test
     public void shouldProduceCorrectMessageTypeForTwoCharTypes() throws Exception
     {
-        final byte[] messageTypeBytes = (byte[]) getStatic(otherMessage, "MESSAGE_TYPE_BYTES");
-        final int messageTypePacked = (int) getStatic(otherMessage, "MESSAGE_TYPE");
+        final byte[] messageTypeBytes = (byte[])getStatic(otherMessage, "MESSAGE_TYPE_BYTES");
+        final int messageTypePacked = (int)getStatic(otherMessage, "MESSAGE_TYPE");
 
         assertEquals(OTHER_MESSAGE_TYPE_PACKED, messageTypePacked);
         assertArrayEquals(OTHER_MESSAGE_TYPE_BYTES, messageTypeBytes);
@@ -512,12 +511,11 @@ public class DecoderGeneratorTest
     @Test
     public void shouldGenerateAllFieldsSet() throws Exception
     {
-        final Decoder decoder = (Decoder) heartbeat.newInstance();
+        final Decoder decoder = (Decoder)heartbeat.newInstance();
         final Object allFieldsField = getField(decoder, ALL_FIELDS);
         assertThat(allFieldsField, instanceOf(IntHashSet.class));
 
-        @SuppressWarnings("unchecked")
-        final Set<Integer> allFields = (Set<Integer>) allFieldsField;
+        @SuppressWarnings("unchecked") final Set<Integer> allFields = (Set<Integer>)allFieldsField;
         assertThat(allFields, hasItem(123));
         assertThat(allFields, hasItem(124));
         assertThat(allFields, hasItem(35));
@@ -527,7 +525,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldDecodeDifferentFieldTypes() throws Exception
     {
-        final Decoder decoder = (Decoder) fieldsMessage.newInstance();
+        final Decoder decoder = (Decoder)fieldsMessage.newInstance();
         decode(EG_FIELDS_MESSAGE, decoder);
 
         assertRequiredFieldsMessageFieldsDecoded(decoder, "GBP", "XLON", "GB");
@@ -550,7 +548,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldDecodeDifferentFieldTypesWithoutOptionalFields() throws Exception
     {
-        final Decoder decoder = (Decoder) fieldsMessage.newInstance();
+        final Decoder decoder = (Decoder)fieldsMessage.newInstance();
         decode(EG_NO_OPTIONAL_FIELDS_MESSAGE, decoder);
 
         assertRequiredFieldsMessageFieldsDecoded(decoder, "USD", "N", "US");
@@ -563,7 +561,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldResetDifferentFieldTypes() throws Exception
     {
-        final Decoder decoder = (Decoder) fieldsMessage.newInstance();
+        final Decoder decoder = (Decoder)fieldsMessage.newInstance();
         decode(EG_FIELDS_MESSAGE, decoder);
 
         decoder.reset();
@@ -667,7 +665,7 @@ public class DecoderGeneratorTest
 
         assertArrayEquals(ABC, getTestReqId(decoder));
         assertEquals(true, getBooleanField(decoder));
-        assertArrayEquals(new byte[]{'1', '2', '3'}, getDataField(decoder));
+        assertArrayEquals(new byte[]{ '1', '2', '3' }, getDataField(decoder));
 
         assertValid(decoder);
     }
@@ -909,49 +907,49 @@ public class DecoderGeneratorTest
 
     private int getNoEgGroupGroupCounter(final Decoder decoder) throws Exception
     {
-        return (int) get(decoder, "noEgGroupGroupCounter");
+        return (int)get(decoder, "noEgGroupGroupCounter");
     }
 
     private boolean hasNoEgGroupGroupCounter(final Decoder decoder) throws Exception
     {
-        return (boolean) get(decoder, "hasNoEgGroupGroupCounter");
+        return (boolean)get(decoder, "hasNoEgGroupGroupCounter");
     }
 
     private int getGroupField(final Object group) throws Exception
     {
-        return (int) get(group, "groupField");
+        return (int)get(group, "groupField");
     }
 
     private int getBodyLength(final Decoder header) throws Exception
     {
-        return (int) get(header, ExampleDictionary.BODY_LENGTH);
+        return (int)get(header, ExampleDictionary.BODY_LENGTH);
     }
 
     private Decoder getTrailer(final Decoder trailer) throws Exception
     {
-        return (Decoder) get(trailer, "trailer");
+        return (Decoder)get(trailer, "trailer");
     }
 
     private String getChecksum(final Decoder trailer) throws Exception
     {
-        return (String) get(trailer, "checkSumAsString");
+        return (String)get(trailer, "checkSumAsString");
     }
 
     private Decoder getHeader(final Decoder decoder) throws Exception
     {
-        return (Decoder) get(decoder, "header");
+        return (Decoder)get(decoder, "header");
     }
 
     private Decoder decodeHeartbeat(final String example) throws Exception
     {
-        final Decoder decoder = (Decoder) heartbeat.newInstance();
+        final Decoder decoder = (Decoder)heartbeat.newInstance();
         decode(example, decoder);
         return decoder;
     }
 
     private Decoder decodeHeartbeatWithoutValidation(final String example) throws Exception
     {
-        final Decoder decoder = (Decoder) heartbeatWithoutValidation.newInstance();
+        final Decoder decoder = (Decoder)heartbeatWithoutValidation.newInstance();
         decode(example, decoder);
         return decoder;
     }
@@ -969,22 +967,22 @@ public class DecoderGeneratorTest
 
     private boolean hasTestReqId(final Object encoder) throws Exception
     {
-        return (boolean) getField(encoder, HAS_TEST_REQ_ID);
+        return (boolean)getField(encoder, HAS_TEST_REQ_ID);
     }
 
     private boolean hasDataField(final Decoder decoder) throws Exception
     {
-        return (boolean) getField(decoder, HAS_DATA_FIELD);
+        return (boolean)getField(decoder, HAS_DATA_FIELD);
     }
 
     private boolean hasComponentField(final Decoder decoder) throws Exception
     {
-        return (boolean) getField(decoder, HAS_COMPONENT_FIELD);
+        return (boolean)getField(decoder, HAS_COMPONENT_FIELD);
     }
 
     private boolean hasBooleanField(final Decoder decoder) throws Exception
     {
-        return (boolean) getField(decoder, HAS_BOOLEAN_FIELD);
+        return (boolean)getField(decoder, HAS_BOOLEAN_FIELD);
     }
 
     private Object getFloatField(final Decoder decoder) throws Exception
@@ -1014,7 +1012,7 @@ public class DecoderGeneratorTest
 
     private String getSomeTimeFieldAsString(final Decoder decoder) throws Exception
     {
-        return (String) get(decoder, SOME_TIME_FIELD + "AsString");
+        return (String)get(decoder, SOME_TIME_FIELD + "AsString");
     }
 
     private Object getBooleanField(final Decoder decoder) throws Exception
@@ -1029,8 +1027,8 @@ public class DecoderGeneratorTest
 
     private char[] getCharArray(final Decoder decoder, final String name) throws Exception
     {
-        final char[] value = (char[]) get(decoder, name);
-        final int length = (int) get(decoder, name + "Length");
+        final char[] value = (char[])get(decoder, name);
+        final int length = (int)get(decoder, name + "Length");
         return Arrays.copyOf(value, length);
     }
 

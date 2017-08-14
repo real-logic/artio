@@ -132,12 +132,14 @@ public class EncoderGenerator extends Generator
     {
         final String className = encoderClassName(aggregate.name());
 
-        outputManager.withOutput(className, out ->
-        {
-            out.append(fileHeader(builderPackage));
-            generateImports("Encoder", aggregateType, out);
-            generateAggregateClass(aggregate, aggregateType, className, out);
-        });
+        outputManager.withOutput(
+            className,
+            (out) ->
+            {
+                out.append(fileHeader(builderPackage));
+                generateImports("Encoder", aggregateType, out);
+                generateAggregateClass(aggregate, aggregateType, className, out);
+            });
     }
 
     protected Class<?> topType(final AggregateType aggregateType)
@@ -161,7 +163,7 @@ public class EncoderGenerator extends Generator
         }
         else if (type == GROUP)
         {
-            final Group group = (Group) aggregate;
+            final Group group = (Group)aggregate;
             out.append(nextMethod(group));
         }
         precomputedHeaders(out, aggregate.entries());
@@ -206,12 +208,11 @@ public class EncoderGenerator extends Generator
         if (aggregate instanceof Message)
         {
             final Component header = dictionary.header();
-            final Message message = (Message) aggregate;
+            final Message message = (Message)aggregate;
             final int packedType = message.packedType();
             final String fullType = message.fullType();
-            final String msgType =
-                header.hasField(MSG_TYPE)
-                    ? String.format("        header.msgType(\"%s\");\n", fullType) : "";
+            final String msgType = header.hasField(MSG_TYPE) ?
+                String.format("        header.msgType(\"%s\");\n", fullType) : "";
 
             return String.format(
                 "    public int messageType()\n" +
@@ -224,8 +225,7 @@ public class EncoderGenerator extends Generator
                 "    }\n\n",
                 packedType,
                 message.name(),
-                msgType
-            );
+                msgType);
         }
 
         return "";
@@ -437,16 +437,17 @@ public class EncoderGenerator extends Generator
 
         final String body =
             entries.stream()
-                   .map(this::encodeEntry)
-                   .collect(joining("\n"));
+                .map(this::encodeEntry)
+                .collect(joining("\n"));
 
         String suffix;
         if (hasCommonCompounds)
         {
-            suffix = "        position += trailer.encode(buffer, position, start);\n" +
-                     "        final int realStart = trailer.realStart;" +
-                     "        return Encoder.result(position - realStart, realStart);\n" +
-                     "    }\n\n";
+            suffix =
+                "        position += trailer.encode(buffer, position, start);\n" +
+                "        final int realStart = trailer.realStart;" +
+                "        return Encoder.result(position - realStart, realStart);\n" +
+                "    }\n\n";
         }
         else
         {
@@ -458,9 +459,9 @@ public class EncoderGenerator extends Generator
             {
                 suffix =
                     "        if (next != null)\n" +
-                        "        {\n" +
-                        "            position += next.encode(buffer, position, remainingElements - 1);\n" +
-                        "        }\n" + suffix;
+                    "        {\n" +
+                    "            position += next.encode(buffer, position, remainingElements - 1);\n" +
+                    "        }\n" + suffix;
             }
         }
 
@@ -505,7 +506,7 @@ public class EncoderGenerator extends Generator
     private String encodeField(final Entry entry)
     {
         final Element element = entry.element();
-        final Field field = (Field) element;
+        final Field field = (Field)element;
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
         final Field.Type type = field.type();
@@ -609,7 +610,7 @@ public class EncoderGenerator extends Generator
 
     private String encodeGroup(final Entry entry)
     {
-        final Group group = (Group) entry.element();
+        final Group group = (Group)entry.element();
         return String.format(
             "%1$s\n" +
             "        if (%2$s != null)\n" +
@@ -618,8 +619,7 @@ public class EncoderGenerator extends Generator
             "        }\n",
             encodeField(group.numberField()),
             formatPropertyName(group.name()),
-            formatPropertyName(group.numberField().name())
-        );
+            formatPropertyName(group.numberField().name()));
     }
 
     private String encodeComponent(final Entry entry)
@@ -627,8 +627,7 @@ public class EncoderGenerator extends Generator
         // TODO: make component return int, split encode prefix
         return String.format(
             "            position += %1$s.encode(buffer, position);\n",
-            formatPropertyName(entry.name())
-        );
+            formatPropertyName(entry.name()));
     }
 
     private String formatTag(final String fieldName, final String optionalPrefix)
@@ -662,12 +661,12 @@ public class EncoderGenerator extends Generator
                 final Element element = entry.element();
                 if (element instanceof Field)
                 {
-                    precomputedFieldHeader(out, (Field) element);
+                    precomputedFieldHeader(out, (Field)element);
                 }
                 else if (element instanceof Group)
                 {
-                    final Group group = (Group) element;
-                    precomputedFieldHeader(out, (Field) group.numberField().element());
+                    final Group group = (Group)element;
+                    precomputedFieldHeader(out, (Field)group.numberField().element());
                 }
             }
         }
@@ -678,10 +677,10 @@ public class EncoderGenerator extends Generator
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
         final int length = string.putAsciiInt(0, field.number());
-        final String bytes =
-            IntStream.range(0, length)
-                     .mapToObj(i -> String.valueOf(buffer[i]))
-                     .collect(joining(", ", "", ", (byte) '='"));
+        final String bytes = IntStream
+            .range(0, length)
+            .mapToObj(i -> String.valueOf(buffer[i]))
+            .collect(joining(", ", "", ", (byte) '='"));
 
         out.append(String.format(
             "    private static final int %sHeaderLength = %d;\n" +
@@ -702,8 +701,7 @@ public class EncoderGenerator extends Generator
         return String.format(
             "                String.format(\"  \\\"%1$s\\\":  %%s\\n\", %2$s" + EXPAND_INDENT + ")",
             name,
-            formatPropertyName(name)
-        );
+            formatPropertyName(name));
     }
 
     private void componentField(final String className, final Component element, final Writer out) throws IOException
@@ -715,8 +713,7 @@ public class EncoderGenerator extends Generator
             "        return %2$s;\n" +
             "    }\n\n",
             className,
-            formatPropertyName(element.name())
-        ));
+            formatPropertyName(element.name())));
     }
 
     protected String resetRequiredFloat(final String name)
@@ -773,8 +770,7 @@ public class EncoderGenerator extends Generator
             "\\n\", %2$s.toString(%3$s).replace(\"\\n\", \"\\n  \")" + ") : \"\")",
             name,
             formatPropertyName(name),
-            formatPropertyName(numberField.name())
-        );
+            formatPropertyName(numberField.name()));
     }
 
     protected String optionalReset(final Field field, final String name)

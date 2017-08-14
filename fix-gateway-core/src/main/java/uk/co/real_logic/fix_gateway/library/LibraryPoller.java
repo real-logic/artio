@@ -347,14 +347,16 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             resetNextEngineTimer(timeInMs);
 
             sendLibraryConnect(timeInMs);
-        } catch (final Exception ex)
+        }
+		catch (final Exception ex)
         {
             // We won't be returning an instance of ourselves to callers in the connect,
             // so we must clean up after ourselves
             try
             {
                 closeWithParent();
-            } catch (final Exception closeException)
+            }
+			catch (final Exception closeException)
             {
                 ex.addSuppressed(closeException);
             }
@@ -449,7 +451,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 this.connectCorrelationId = correlationId;
                 nextSendLibraryConnectTime = configuration.connectAttemptTimeoutInMs() + timeInMs;
             }
-        } catch (final NotConnectedException e)
+        }
+		catch (final NotConnectedException e)
         {
             connectToNextEngineNow(timeInMs);
         }
@@ -559,7 +562,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         new ControlledFragmentAssembler(
             ProtocolSubscription.of(this, new LibraryProtocolSubscription(this)));
 
-    @Override
     public Action onManageSession(
         final int libraryId,
         final long connection,
@@ -606,7 +608,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     DebugLogger.log(FIX_MESSAGE, "Init Connect: %d, %d%n", connection, libraryId);
                     final boolean isInitiator = correlationIdToReply.get(correlationId) instanceof InitiateSessionReply;
                     final InitiateSessionReply reply = isInitiator ?
-                            (InitiateSessionReply) correlationIdToReply.remove(correlationId) : null;
+                    (InitiateSessionReply) correlationIdToReply.remove(correlationId) : null;
                     final Session session = initiateSession(connection,
                             lastSentSeqNum,
                             lastRecvSeqNum,
@@ -643,19 +645,18 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     // I guess this could be not null in the case where
                     // the gateway restarted and the library already had the session,
                     // but has to reacquire it after a new connection to the gateway...
-                    final CompositeKey compositeKey = localCompId.length() == 0
-                                                      ? null
-                                                      : sessionIdStrategy.onInitiateLogon(localCompId,
-                                                                                          localSubId,
-                                                                                          localLocationId,
-                                                                                          remoteCompId,
-                                                                                          remoteSubId,
-                                                                                          remoteLocationId);
+                    final CompositeKey compositeKey = localCompId.length() == 0 ? null :
+					    sessionIdStrategy.onInitiateLogon(
+					        localCompId,
+							localSubId,
+							localLocationId,
+							remoteCompId,
+                            remoteSubId,
+                            remoteLocationId);
 
                     subscriber.onLogon(sessionId, lastSentSeqNum, lastRecvSeqNum, compositeKey);
                     final SessionHandler handler = configuration.sessionAcquireHandler()
-                                                                .onSessionAcquired(subscriber.session(),
-                                                                                   SlowStatus.SLOW == slowStatus);
+                        .onSessionAcquired(subscriber.session(), SlowStatus.SLOW == slowStatus);
                     subscriber.handler(handler);
                 }
             }
@@ -787,7 +788,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     public Action onReleaseSessionReply(final int libraryId, final long replyToId, final SessionReplyStatus status)
     {
         final ReleaseToGatewayReply reply =
-            (ReleaseToGatewayReply) correlationIdToReply.remove(replyToId);
+            (ReleaseToGatewayReply)correlationIdToReply.remove(replyToId);
         if (reply != null)
         {
             reply.onComplete(status);
@@ -798,7 +799,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public Action onRequestSessionReply(final int toId, final long replyToId, final SessionReplyStatus status)
     {
-        final RequestSessionReply reply = (RequestSessionReply) correlationIdToReply.remove(replyToId);
+        final RequestSessionReply reply = (RequestSessionReply)correlationIdToReply.remove(replyToId);
         if (reply != null)
         {
             reply.onComplete(status);
@@ -1101,7 +1102,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         try
         {
             fixLibrary.internalClose();
-        } finally
+        }
+		finally
         {
             close();
         }

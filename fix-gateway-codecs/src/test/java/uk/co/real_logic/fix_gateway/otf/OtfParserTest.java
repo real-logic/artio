@@ -134,7 +134,7 @@ public class OtfParserTest
 
         parser.onMessage(buffer, offset, INVALID_CHECKSUM_LEN);
 
-        verify(mockAcceptor).onError(eq(INVALID_CHECKSUM), eq((int) 'D'), eq(10), any(AsciiFieldFlyweight.class));
+        verify(mockAcceptor).onError(eq(INVALID_CHECKSUM), eq((int)'D'), eq(10), any(AsciiFieldFlyweight.class));
     }
 
     @Theory
@@ -144,7 +144,7 @@ public class OtfParserTest
 
         parser.onMessage(buffer, offset, INVALID_LEN);
 
-        verify(mockAcceptor).onError(eq(PARSE_ERROR), eq((int) 'D'), eq(11), any(AsciiFieldFlyweight.class));
+        verify(mockAcceptor).onError(eq(PARSE_ERROR), eq((int)'D'), eq(11), any(AsciiFieldFlyweight.class));
     }
 
     @Theory

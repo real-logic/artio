@@ -44,7 +44,7 @@ import static uk.co.real_logic.fix_gateway.validation.SessionPersistenceStrategy
  * commandline properties. Setters override commandline properties, not the other way around.
  * <p>
  * See setters or properties for documentation of what specific configuration options do.
- *
+ * <p>
  * NB: DO NOT REUSE this object over multiple {@code FixEngine.launch(EngineConfiguration)} calls.
  *
  * @see FixEngine
@@ -55,9 +55,13 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     //          Configuration Properties
     // ------------------------------------------------
 
-    /** Property name for the directory to log archive data into */
+    /**
+     * Property name for the directory to log archive data into
+     */
     public static final String LOG_FILE_DIR_PROP = "logging.dir";
-    /** Property name for size of logging index files */
+    /**
+     * Property name for size of logging index files
+     */
     public static final String REPLAY_INDEX_FILE_SIZE_PROP = "logging.index.size";
 
     // Care needs to be taken when setting the fragment limits, and buffer sizes
@@ -65,25 +69,45 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     // that fragments will be read off of the TCP connections slower
     // that they can be written onto them.
 
-    /** Property name for the max number of messages to read from libraries.*/
+    /**
+     * Property name for the max number of messages to read from libraries.
+     */
     public static final String OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP = "fix.core.outbound_fragment_limit";
-    /** Property name for the max number of messages to read from replayer. */
+    /**
+     * Property name for the max number of messages to read from replayer.
+     */
     public static final String REPLAY_FRAGMENT_LIMIT_PROP = "fix.core.replay_fragment_limit";
-    /** Property name for the max number of bytes to read from all TCP Connections. */
+    /**
+     * Property name for the max number of bytes to read from all TCP Connections.
+     */
     public static final String INBOUND_BYTES_RECEIVED_LIMIT_PROP = "fix.core.inbound_bytes_limit";
-    /** Property name for the size in bytes of the receiver end point's framing buffer. */
+    /**
+     * Property name for the size in bytes of the receiver end point's framing buffer.
+     */
     public static final String RECEIVER_BUFFER_SIZE_PROP = "fix.core.receiver_buffer_size";
-    /** Property name for the size in bytes of the TCP socket's receive buffer. */
+    /**
+     * Property name for the size in bytes of the TCP socket's receive buffer.
+     */
     public static final String RECEIVER_SOCKET_BUFFER_SIZE_PROP = "fix.core.receiver_socket_buffer_size";
-    /** Property name for the size in bytes of the TCP socket's send buffer. */
+    /**
+     * Property name for the size in bytes of the TCP socket's send buffer.
+     */
     public static final String SENDER_SOCKET_BUFFER_SIZE_PROP = "fix.core.sender_socket_buffer_size";
-    /** Property name for the size in bytes of the sequence number cache file*/
+    /**
+     * Property name for the size in bytes of the sequence number cache file
+     */
     public static final String SEQUENCE_NUMBER_INDEX_SIZE_PROP = "fix.core.sequence_number_cache_size";
-    /** Property name for the size in bytes of the session id file */
+    /**
+     * Property name for the size in bytes of the session id file
+     */
     public static final String SESSION_ID_BUFFER_SIZE_PROP = "fix.core.session_id_file_size";
-    /** Property name for the maximum number of bytes to allow in the quarantine buffer before disconnection */
+    /**
+     * Property name for the maximum number of bytes to allow in the quarantine buffer before disconnection
+     */
     public static final String SENDER_MAX_BYTES_IN_BUFFER_PROP = "fix.core.sender_max_bytes_in_buffer";
-    /** Property name for the timeout before a connection that hasn't sent a logon is disconnected */
+    /**
+     * Property name for the timeout before a connection that hasn't sent a logon is disconnected
+     */
     public static final String NO_LOGON_DISCONNECT_TIMEOUT_PROP = "fix.core.no_logon_disconnect";
 
     // ------------------------------------------------
@@ -104,7 +128,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_SEQUENCE_NUMBER_INDEX_SIZE = 8 * 1024 * 1024;
     public static final int DEFAULT_SESSION_ID_BUFFER_SIZE = 4 * 1024 * 1024;
     public static final int DEFAULT_SENDER_MAX_BYTES_IN_BUFFER = 4 * 1024 * 1024;
-    public static final int DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT = (int) SECONDS.toMillis(5);
+    public static final int DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT = (int)SECONDS.toMillis(5);
     public static final int DEFAULT_CLUSTER_TIMEOUT_IN_MS = 1000;
     public static final String DEFAULT_SESSION_ID_FILE = "session_id_buffer";
     public static final String DEFAULT_SEQUENCE_NUMBERS_SENT_FILE = "sequence_numbers_sent";
@@ -162,7 +186,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
-     *
+     * <p>
      * Optional.
      *
      * @param host the hostname to bind to.
@@ -183,7 +207,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      *
      * @param receiverBufferSize the receiver buffer size.
      * @return this
-     *
      * @see CommonConfiguration#sessionBufferSize(int)
      * @see EngineConfiguration#RECEIVER_BUFFER_SIZE_PROP
      */
@@ -198,7 +221,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      *
      * @param receiverSocketBufferSize the receiver socket buffer size.
      * @return this
-     *
      * @see EngineConfiguration#RECEIVER_SOCKET_BUFFER_SIZE_PROP
      */
     public EngineConfiguration receiverSocketBufferSize(final int receiverSocketBufferSize)
@@ -212,7 +234,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      *
      * @param senderSocketBufferSize the receiver socket buffer size.
      * @return this
-     *
      * @see EngineConfiguration#SENDER_SOCKET_BUFFER_SIZE_PROP
      */
     public EngineConfiguration senderSocketBufferSize(final int senderSocketBufferSize)
@@ -226,7 +247,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      *
      * @param logFileDir the directory to store log files in.
      * @return this
-     *
      * @see EngineConfiguration#LOG_FILE_DIR_PROP
      */
     public EngineConfiguration logFileDir(final String logFileDir)
@@ -240,7 +260,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      *
      * @param indexFileSize the size of index files.
      * @return this
-     *
      * @see EngineConfiguration#REPLAY_INDEX_FILE_SIZE_PROP
      */
     public EngineConfiguration replayIndexFileSize(final int indexFileSize)
@@ -274,7 +293,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      *
      * @param loggerCacheNumSets the number of sets of in the logger's caches.
      * @return this
-     *
      * @see this#loggerCacheSetSize(int)
      */
     public EngineConfiguration loggerCacheNumSets(final int loggerCacheNumSets)
@@ -301,10 +319,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     /**
      * Sets logging of outbound messages.
-     *
+     * <p>
      * Switch off if you don't want the logging system to store all outbound messages.
      * <b>NB:</b> take care if you switch this off as message replay won't work.
-     *
+     * <p>
      * Default: true.
      *
      * @param logOutboundMessages logging of outbound messages.
@@ -345,7 +363,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      *
      * @param outboundLibraryFragmentLimit the fragment limit for the subscription to outbound messages from libraries.
      * @return this
-     *
      * @see EngineConfiguration#OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP
      */
     public EngineConfiguration outboundLibraryFragmentLimit(final int outboundLibraryFragmentLimit)
@@ -359,7 +376,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      *
      * @param outboundReplayFragmentLimit the fragment limit for the subscription to messages from the replayer.
      * @return this
-     *
      * @see EngineConfiguration#REPLAY_FRAGMENT_LIMIT_PROP
      */
     public EngineConfiguration replayFragmentLimit(final int outboundReplayFragmentLimit)
@@ -373,7 +389,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      *
      * @param inboundBytesReceivedLimit the bytes limit for receiving inbound messages.
      * @return this
-     *
      * @see EngineConfiguration#INBOUND_BYTES_RECEIVED_LIMIT_PROP
      */
     public EngineConfiguration inboundBytesReceivedLimit(final int inboundBytesReceivedLimit)
@@ -690,7 +705,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         {
             throw new IllegalArgumentException(String.format(
                 "You cannot set the receiverBufferSize(%d) < sessionBufferSize(%d)." +
-                "this would allow you to encode messages that are larger than you can read.",
+                    "this would allow you to encode messages that are larger than you can read.",
                 receiverBufferSize(),
                 sessionBufferSize()));
         }

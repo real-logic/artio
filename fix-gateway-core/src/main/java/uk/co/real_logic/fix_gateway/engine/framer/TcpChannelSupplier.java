@@ -36,7 +36,6 @@ import static java.nio.channels.SelectionKey.OP_CONNECT;
  */
 public class TcpChannelSupplier implements AutoCloseable
 {
-    private final boolean hasBindAddress;
     private final EngineConfiguration configuration;
 
     private Selector selector;
@@ -44,7 +43,7 @@ public class TcpChannelSupplier implements AutoCloseable
 
     public TcpChannelSupplier(final EngineConfiguration configuration)
     {
-        hasBindAddress = configuration.hasBindAddress();
+        final boolean hasBindAddress = configuration.hasBindAddress();
         this.configuration = configuration;
         try
         {
@@ -95,8 +94,8 @@ public class TcpChannelSupplier implements AutoCloseable
                 }
                 else if (selectionKey.isConnectable())
                 {
-                    final InitiatedChannelHandler channelHandler = (InitiatedChannelHandler) selectionKey.attachment();
-                    final SocketChannel channel = (SocketChannel) selectionKey.channel();
+                    final InitiatedChannelHandler channelHandler = (InitiatedChannelHandler)selectionKey.attachment();
+                    final SocketChannel channel = (SocketChannel)selectionKey.channel();
                     try
                     {
                         if (channel.finishConnect())

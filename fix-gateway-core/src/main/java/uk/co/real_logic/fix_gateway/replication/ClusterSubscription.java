@@ -177,7 +177,7 @@ public class ClusterSubscription extends ClusterableSubscription
         {
             throw new IllegalArgumentException(
                 "newPosition of " + newTransportPosition + " out of range " +
-                lastAppliedTransportPosition + "-" + transportConsensusPosition);
+                    lastAppliedTransportPosition + "-" + transportConsensusPosition);
         }
     }
 
@@ -381,7 +381,7 @@ public class ClusterSubscription extends ClusterableSubscription
 
             // TODO: correct session id
             // TODO: correct header flags
-            clusterHeader.update(position, leaderSessionId, (byte) 0);
+            clusterHeader.update(position, leaderSessionId, (byte)0);
             action = handler.onFragment(bodyBuffer, bodyOffset, bodyLength, clusterHeader);
             if (action == ABORT)
             {

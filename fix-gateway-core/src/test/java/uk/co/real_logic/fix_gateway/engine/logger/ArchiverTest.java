@@ -128,7 +128,7 @@ public class ArchiverTest
         this.buffer = buffer;
         this.size = size;
         writeBuffer = new UnsafeBuffer(new byte[size]);
-        fragments = (double) size / MTU_LENGTH;
+        fragments = (double)size / MTU_LENGTH;
         endOfFirstMessage = HEADER_LENGTH + alignTerm(size);
     }
 
@@ -353,7 +353,7 @@ public class ArchiverTest
         if (fragments > 1)
         {
             // If the message is over MTU length then you need to scale the number of callbacks up by that ratio
-            return times((int) Math.ceil((2 * fragments)));
+            return times((int)Math.ceil((2 * fragments)));
         }
         else
         {

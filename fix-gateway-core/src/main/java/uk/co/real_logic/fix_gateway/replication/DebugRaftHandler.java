@@ -34,9 +34,9 @@ final class DebugRaftHandler implements RaftHandler
 
     static RaftHandler wrap(final short nodeId, final RaftHandler delegateHandler)
     {
-        return CommonConfiguration.DEBUG_PRINT_MESSAGES
-             ? new DebugRaftHandler(nodeId, delegateHandler)
-             : delegateHandler;
+        return CommonConfiguration.DEBUG_PRINT_MESSAGES ?
+            new DebugRaftHandler(nodeId, delegateHandler) :
+            delegateHandler;
     }
 
     private DebugRaftHandler(final short nodeId, final RaftHandler delegateHandler)
@@ -54,12 +54,9 @@ final class DebugRaftHandler implements RaftHandler
             status,
             this.nodeId,
             newAckedPosition,
-            nodeId
-        );
+            nodeId);
 
-        return delegateHandler.onMessageAcknowledgement(
-            newAckedPosition, nodeId, status
-        );
+        return delegateHandler.onMessageAcknowledgement(newAckedPosition, nodeId, status);
     }
 
     public Action onRequestVote(
@@ -115,7 +112,7 @@ final class DebugRaftHandler implements RaftHandler
         DebugLogger.log(
             RAFT,
             "%d: ConsensusHeartbeat(nodeId=%d, leaderShipTerm=%d, pos=%d, " +
-            "transStartPos=%d, transPos=%d, leaderSessId=%d)%n",
+                "transStartPos=%d, transPos=%d, leaderSessId=%d)%n",
             this.nodeId,
             nodeId,
             leaderShipTerm,

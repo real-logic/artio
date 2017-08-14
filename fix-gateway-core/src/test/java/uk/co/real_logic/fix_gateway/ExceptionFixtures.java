@@ -58,7 +58,7 @@ public final class ExceptionFixtures
 
     private static void baz()
     {
-        ((Object) null).toString();
+        ((Object)null).toString();
     }
 
     private static void bar()

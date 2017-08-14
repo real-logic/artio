@@ -38,7 +38,7 @@ public class BufferAsciiSequence implements CharSequence
 
     public char charAt(final int index)
     {
-        return (char) buffer.getByte(index + offset);
+        return (char)buffer.getByte(index + offset);
     }
 
     public CharSequence subSequence(final int start, final int end)

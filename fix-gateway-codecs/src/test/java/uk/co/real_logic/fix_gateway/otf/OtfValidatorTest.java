@@ -173,17 +173,17 @@ public class OtfValidatorTest
 
     private void verifyUnknownMessage()
     {
-        verify(acceptor).onError(eq(UNKNOWN_MESSAGE_TYPE), eq((int) '0'), anyInt(), any(AsciiFieldFlyweight.class));
+        verify(acceptor).onError(eq(UNKNOWN_MESSAGE_TYPE), eq((int)'0'), anyInt(), any(AsciiFieldFlyweight.class));
     }
 
     private void verifyUnknownField()
     {
-        verify(acceptor).onError(eq(UNKNOWN_FIELD), eq((int) '0'), eq(112), any(AsciiFieldFlyweight.class));
+        verify(acceptor).onError(eq(UNKNOWN_FIELD), eq((int)'0'), eq(112), any(AsciiFieldFlyweight.class));
     }
 
     private void verifyMissingRequiredField()
     {
-        verify(acceptor).onError(eq(MISSING_REQUIRED_FIELD), eq((int) '0'), eq(112), any(AsciiFieldFlyweight.class));
+        verify(acceptor).onError(eq(MISSING_REQUIRED_FIELD), eq((int)'0'), eq(112), any(AsciiFieldFlyweight.class));
     }
 
     private void validateTestReqId()
