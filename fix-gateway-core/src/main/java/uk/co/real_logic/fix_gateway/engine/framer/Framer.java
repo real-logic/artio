@@ -347,15 +347,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long timeInMs = clock.time();
         senderEndPoints.timeInMs(timeInMs);
         return retryManager.attemptSteps() +
-               sendOutboundMessages() +
-               sendReplayMessages() +
-               pollEndPoints() +
-               pollNewConnections(timeInMs) +
-               pollLibraries(timeInMs) +
-               gatewaySessions.pollSessions(timeInMs) +
-               senderEndPoints.checkTimeouts(timeInMs) +
-               adminCommands.drain(onAdminCommand) +
-               checkDutyCycle();
+            sendOutboundMessages() +
+            sendReplayMessages() +
+            pollEndPoints() +
+            pollNewConnections(timeInMs) +
+            pollLibraries(timeInMs) +
+            gatewaySessions.pollSessions(timeInMs) +
+            senderEndPoints.checkTimeouts(timeInMs) +
+            adminCommands.drain(onAdminCommand) +
+            checkDutyCycle();
     }
 
     private int checkDutyCycle()
@@ -625,8 +625,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final int owningLibraryId = senderEndPoints.libraryLookup().applyAsInt(sessionId);
             saveError(DUPLICATE_SESSION, libraryId, correlationId,
                 "Duplicate Session for: " + sessionKey +
-                      " Surrogate Key: " + sessionId +
-                      " Currently owned by " + owningLibraryId);
+                    " Surrogate Key: " + sessionId +
+                    " Currently owned by " + owningLibraryId);
 
             return CONTINUE;
         }

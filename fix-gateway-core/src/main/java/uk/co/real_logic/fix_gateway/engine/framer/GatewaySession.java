@@ -65,7 +65,7 @@ class GatewaySession implements SessionInfo
         final CompositeKey sessionKey,
         final ReceiverEndPoint receiverEndPoint,
         final SenderEndPoint senderEndPoint,
-                   final Consumer<GatewaySession> onGatewaySessionLogon)
+        final Consumer<GatewaySession> onGatewaySessionLogon)
     {
         this.connectionId = connectionId;
         this.sessionId = context.sessionId();

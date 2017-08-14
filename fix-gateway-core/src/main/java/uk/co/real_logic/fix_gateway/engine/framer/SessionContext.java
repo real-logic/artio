@@ -111,8 +111,8 @@ class SessionContext
     public String toString()
     {
         return "SessionContext{" +
-               "sessionId=" + sessionId +
-               ", sequenceIndex=" + sequenceIndex +
-               '}';
+            "sessionId=" + sessionId +
+            ", sequenceIndex=" + sequenceIndex +
+            '}';
     }
 }
