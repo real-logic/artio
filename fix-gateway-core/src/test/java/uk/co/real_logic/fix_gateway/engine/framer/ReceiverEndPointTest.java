@@ -104,7 +104,7 @@ public class ReceiverEndPointTest
         doAnswer(
             (inv) ->
             {
-                ((Continuation) inv.getArguments()[0]).attemptToAction();
+                ((Continuation)inv.getArguments()[0]).attemptToAction();
                 return null;
             }).when(framer).schedule(any(Continuation.class));
     }
@@ -531,10 +531,11 @@ public class ReceiverEndPointTest
             doAnswer(
                 (invocation) ->
                 {
-                    final ByteBuffer buffer = (ByteBuffer) invocation.getArguments()[0];
+                    final ByteBuffer buffer = (ByteBuffer)invocation.getArguments()[0];
                     return bufferUpdater.applyAsInt(buffer);
                 }).when(mockChannel).read(any(ByteBuffer.class));
-        } catch (final IOException ex)
+        }
+        catch (final IOException ex)
         {
             // Should never happen, test in error
             LangUtil.rethrowUnchecked(ex);

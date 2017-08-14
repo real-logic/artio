@@ -255,7 +255,8 @@ class GatewaySessions
         try
         {
             authenticated = authenticationStrategy.authenticate(logon);
-        } catch (final Throwable throwable)
+        }
+        catch (final Throwable throwable)
         {
             // TODO(Nick): Maybe this should go back to also logging the message that was being decoded.
             onStrategyError("authentication", throwable, connectionId);
@@ -271,7 +272,8 @@ class GatewaySessions
         try
         {
             persistenceLevel = sessionPersistenceStrategy.getPersistenceLevel(logon);
-        } catch (final Throwable throwable)
+        }
+        catch (final Throwable throwable)
         {
             final String message =
                 String.format("Exception thrown by persistence strategy for connectionId=%d, " +

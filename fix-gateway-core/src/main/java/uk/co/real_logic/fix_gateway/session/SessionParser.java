@@ -374,7 +374,7 @@ public class SessionParser
         {
             validated = validationStrategy.validate(header);
         }
-		catch (final Throwable throwable)
+        catch (final Throwable throwable)
         {
             onStrategyError("validation", throwable, header.toString());
             validated = false;
