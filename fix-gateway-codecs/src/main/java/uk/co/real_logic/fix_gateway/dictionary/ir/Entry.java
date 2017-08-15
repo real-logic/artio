@@ -134,7 +134,6 @@ public final class Entry
         return element() instanceof Group;
     }
 
-    @Override
     public String toString()
     {
         return "Entry{" +

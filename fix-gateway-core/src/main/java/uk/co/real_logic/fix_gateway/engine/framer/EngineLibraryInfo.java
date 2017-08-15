@@ -38,7 +38,6 @@ class EngineLibraryInfo implements LibraryInfo
         return ENGINE_LIBRARY_ID;
     }
 
-    @Override
     public String libraryName()
     {
         return "Gateway Library";
@@ -56,7 +55,6 @@ class EngineLibraryInfo implements LibraryInfo
             '}';
     }
 
-    @Override
     public boolean equals(final Object o)
     {
         if (this == o)
@@ -73,7 +71,6 @@ class EngineLibraryInfo implements LibraryInfo
         return gatewaySessions != null ? gatewaySessions.equals(that.gatewaySessions) : that.gatewaySessions == null;
     }
 
-    @Override
     public int hashCode()
     {
         return gatewaySessions != null ? gatewaySessions.hashCode() : 0;

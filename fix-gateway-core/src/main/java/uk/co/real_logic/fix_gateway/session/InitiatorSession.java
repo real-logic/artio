@@ -66,7 +66,6 @@ public class InitiatorSession extends Session
         this.resetSeqNum = resetSeqNum;
     }
 
-    @Override
     public Action onLogon(
         final int heartbeatInterval,
         final int msgSeqNo,

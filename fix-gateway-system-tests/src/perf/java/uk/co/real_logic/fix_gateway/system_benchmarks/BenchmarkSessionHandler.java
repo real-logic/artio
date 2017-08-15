@@ -59,7 +59,6 @@ public final class BenchmarkSessionHandler implements SessionHandler
         return CONTINUE;
     }
 
-    @Override
     public void onSessionStart(final Session session)
     {
     }

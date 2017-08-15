@@ -47,13 +47,11 @@ class SoloPublication extends ClusterablePublication
         return dataPublication.position();
     }
 
-    @Override
     public int maxPayloadLength()
     {
         return dataPublication.maxPayloadLength();
     }
 
-    @Override
     public String toString()
     {
         return "SoloPublication: " +

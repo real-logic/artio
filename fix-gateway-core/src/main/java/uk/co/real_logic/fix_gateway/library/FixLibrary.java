@@ -109,7 +109,6 @@ public class FixLibrary extends GatewayProcess
         return this;
     }
 
-    @Override
     protected Aeron.Context configureAeronContext(final CommonConfiguration configuration)
     {
         final Aeron.Context context = super.configureAeronContext(configuration);

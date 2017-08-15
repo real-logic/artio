@@ -845,7 +845,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    @Override
     public Action onControlNotification(final int libraryId, final SessionsDecoder sessionsDecoder)
     {
         // TODO(Nick): Reorganise this as it is confusing.

@@ -92,7 +92,6 @@ public class FakeHandler
         return CONTINUE;
     }
 
-    @Override
     public void onSessionStart(final Session session)
     {
     }
