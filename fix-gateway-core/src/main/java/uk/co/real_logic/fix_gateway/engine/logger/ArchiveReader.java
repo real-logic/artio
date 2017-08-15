@@ -66,6 +66,8 @@ public class ArchiveReader implements AutoCloseable
      */
     public static final long CORRUPT_LOG = -4;
 
+    public static final long START_OF_TERM = 0;
+
     private final Int2ObjectHashMap<SessionReader> aeronSessionIdToReader;
     private final ExistingBufferFactory archiveBufferFactory;
     private final ArchiveMetaData metaData;
@@ -425,8 +427,19 @@ public class ArchiveReader implements AutoCloseable
                 return UNKNOWN_TERM;
             }
 
-            final int termOffset = computeTermOffsetFromPosition(position);
-            final int headerOffset = termOffset - HEADER_LENGTH;
+            int termOffset = computeTermOffsetFromPosition(position);
+            int headerOffset;
+
+            if (termOffset == START_OF_TERM)
+            {
+                headerOffset = 0;
+                termOffset = HEADER_LENGTH;
+            }
+            else
+            {
+                headerOffset = termOffset - HEADER_LENGTH;
+            }
+
             buffer.wrap(termBuffer);
             header.buffer(buffer);
             header.offset(headerOffset);
