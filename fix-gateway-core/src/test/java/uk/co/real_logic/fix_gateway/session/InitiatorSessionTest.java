@@ -47,7 +47,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
             false,
             DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
             new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]));
-            session.logonListener(mockLogonListener);
+        session.logonListener(mockLogonListener);
     }
 
     @Test

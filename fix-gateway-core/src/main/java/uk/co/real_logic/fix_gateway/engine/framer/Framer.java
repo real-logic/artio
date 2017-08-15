@@ -970,17 +970,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
             return CONTINUE;
         }
-        else
-        {
-            // We are not going to send the libraryName on every heartbeat so this library will not have a debug name.
-            final Action action = onLibraryConnect(libraryId, "", libraryId, aeronSessionId);
-            if (action == ABORT)
-            {
-                return ABORT;
-            }
 
-            return Pressure.apply(inboundPublication.saveControlNotification(libraryId, NO_SESSIONS));
-        }
+        return ABORT;
     }
 
     public Action onReleaseSession(
