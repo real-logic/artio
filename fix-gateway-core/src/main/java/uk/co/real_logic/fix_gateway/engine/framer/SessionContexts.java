@@ -49,7 +49,7 @@ import static uk.co.real_logic.fix_gateway.storage.messages.SessionIdEncoder.BLO
 
 /**
  * Identifies which sessions are currently authenticated.
- *
+ * <p>
  * The session ids table is saved into a file. Records are written out using the {@link SessionIdEncoder}
  * and aren't allowed to span sectors. Each sector has a CRC32 checksum and each checksum is updated after writing
  * each session id record.
@@ -57,9 +57,13 @@ import static uk.co.real_logic.fix_gateway.storage.messages.SessionIdEncoder.BLO
 public class SessionContexts
 {
 
-    static final SessionContext DUPLICATE_SESSION = new SessionContext(-3, -3, null, OUT_OF_SPACE);
+    static final SessionContext DUPLICATE_SESSION = new SessionContext(-3,
+        -3,
+        Session.NO_LOGON_TIME,
+        null,
+        OUT_OF_SPACE);
     static final SessionContext UNKNOWN_SESSION = new SessionContext(
-        Session.UNKNOWN, (int)Session.UNKNOWN, null, OUT_OF_SPACE);
+        Session.UNKNOWN, (int)Session.UNKNOWN, Session.NO_LOGON_TIME, null, OUT_OF_SPACE);
     static final long LOWEST_VALID_SESSION_ID = 1L;
 
     private static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
@@ -137,7 +141,7 @@ public class SessionContexts
                 }
             }
             final int sequenceIndex = sessionIdDecoder.sequenceIndex();
-
+            final long logonTime = sessionIdDecoder.logonTime();
             final int compositeKeyLength = sessionIdDecoder.compositeKeyLength();
             final CompositeKey compositeKey = idStrategy.load(
                 buffer, filePosition + BLOCK_LENGTH, compositeKeyLength);
@@ -146,7 +150,8 @@ public class SessionContexts
                 return;
             }
 
-            compositeToContext.put(compositeKey, new SessionContext(sessionId, sequenceIndex, this, filePosition));
+            compositeToContext.put(compositeKey,
+                new SessionContext(sessionId, sequenceIndex, logonTime, this, filePosition));
             recordedSessions.add(sessionId);
             counter = Math.max(counter, sessionId + 1);
 
@@ -224,7 +229,8 @@ public class SessionContexts
         return assignSessionId(compositeKey, sessionId, SessionContext.UNKNOWN_SEQUENCE_INDEX);
     }
 
-    private SessionContext assignSessionId(final CompositeKey compositeKey,
+    private SessionContext assignSessionId(
+        final CompositeKey compositeKey,
         final long sessionId,
         final int sequenceIndex)
     {
@@ -236,7 +242,7 @@ public class SessionContexts
                 "Unable to save record session id %d for %s, because the buffer is too small",
                 sessionId,
                 compositeKey)));
-            return new SessionContext(sessionId, sequenceIndex, this, OUT_OF_SPACE);
+            return new SessionContext(sessionId, sequenceIndex, Session.NO_LOGON_TIME, this, OUT_OF_SPACE);
         }
         else
         {
@@ -255,6 +261,7 @@ public class SessionContexts
                         .wrap(buffer, filePosition)
                         .sessionId(sessionId)
                         .sequenceIndex(sequenceIndex)
+                        .logonTime(Session.NO_LOGON_TIME)
                         .compositeKeyLength(compositeKeyLength);
                     filePosition += BLOCK_LENGTH;
 
@@ -266,7 +273,7 @@ public class SessionContexts
                 }
             }
 
-            return new SessionContext(sessionId, sequenceIndex, this, keyPosition);
+            return new SessionContext(sessionId, sequenceIndex, Session.NO_LOGON_TIME, this, keyPosition);
         }
     }
 
@@ -354,11 +361,12 @@ public class SessionContexts
         compositeToContext.put(compositeKey, sessionContext);
     }
 
-    void updateSequenceIndex(final int filePosition, final int sequenceIndex)
+    void updateSavedData(final int filePosition, final int sequenceIndex, final long logonTime)
     {
         sessionIdEncoder
             .wrap(buffer, filePosition)
-            .sequenceIndex(sequenceIndex);
+            .sequenceIndex(sequenceIndex)
+            .logonTime(logonTime);
 
         final int start = nextSectorStart(filePosition) - SECTOR_SIZE;
         final int checksumOffset = start + SECTOR_DATA_LENGTH;

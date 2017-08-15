@@ -21,9 +21,12 @@ import uk.co.real_logic.fix_gateway.messages.ConnectionType;
 import uk.co.real_logic.fix_gateway.messages.SlowStatus;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
 import uk.co.real_logic.fix_gateway.session.Session;
+import uk.co.real_logic.fix_gateway.session.SessionLogonListener;
 import uk.co.real_logic.fix_gateway.session.SessionParser;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import uk.co.real_logic.fix_gateway.validation.PersistenceLevel;
+
+import java.util.function.Consumer;
 
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.LogTag.GATEWAY_MESSAGE;
@@ -51,6 +54,8 @@ class GatewaySession implements SessionInfo
     private long disconnectTimeout = NO_TIMEOUT;
 
     private PersistenceLevel persistenceLevel;
+    private Consumer<GatewaySession> onGatewaySessionLogon;
+    private SessionLogonListener logonListener = this::onSessionLogon;
 
     GatewaySession(
         final long connectionId,
@@ -59,7 +64,8 @@ class GatewaySession implements SessionInfo
         final ConnectionType connectionType,
         final CompositeKey sessionKey,
         final ReceiverEndPoint receiverEndPoint,
-        final SenderEndPoint senderEndPoint)
+        final SenderEndPoint senderEndPoint,
+        final Consumer<GatewaySession> onGatewaySessionLogon)
     {
         this.connectionId = connectionId;
         this.sessionId = context.sessionId();
@@ -69,6 +75,7 @@ class GatewaySession implements SessionInfo
         this.sessionKey = sessionKey;
         this.receiverEndPoint = receiverEndPoint;
         this.senderEndPoint = senderEndPoint;
+        this.onGatewaySessionLogon = onGatewaySessionLogon;
     }
 
     public long connectionId()
@@ -95,6 +102,7 @@ class GatewaySession implements SessionInfo
     {
         this.sessionParser = sessionParser;
         this.session = session;
+        this.session.logonListener(this.logonListener);
         receiverEndPoint.libraryId(ENGINE_LIBRARY_ID);
         senderEndPoint.libraryId(ENGINE_LIBRARY_ID, blockablePosition);
     }
@@ -107,7 +115,8 @@ class GatewaySession implements SessionInfo
         receiverEndPoint.pause();
         senderEndPoint.libraryId(libraryId, blockablePosition);
         sessionParser = null;
-        context.updateFrom(session);
+        session.logonListener(null);
+        context.updateAndSaveFrom(session);
         session.close();
         session = null;
     }
@@ -142,6 +151,12 @@ class GatewaySession implements SessionInfo
         }
 
         return 0;
+    }
+
+    private void onSessionLogon(final Session session)
+    {
+        context.updateFrom(session);
+        onGatewaySessionLogon.accept(this);
     }
 
     Session session()

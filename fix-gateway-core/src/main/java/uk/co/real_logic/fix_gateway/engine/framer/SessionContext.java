@@ -32,11 +32,18 @@ class SessionContext
     // session or not.
     private int sequenceIndex = UNKNOWN_SEQUENCE_INDEX;
 
+    private long logonTime;
+
     SessionContext(
-        final long sessionId, final int sequenceIndex, final SessionContexts sessionContexts, final int filePosition)
+        final long sessionId,
+        final int sequenceIndex,
+        final long logonTime,
+        final SessionContexts sessionContexts,
+        final int filePosition)
     {
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
+        this.logonTime = logonTime;
         this.sessionContexts = sessionContexts;
         this.filePosition = filePosition;
     }
@@ -44,12 +51,19 @@ class SessionContext
     void onSequenceReset()
     {
         sequenceIndex++;
-        sessionContexts.updateSequenceIndex(filePosition, sequenceIndex);
+        sessionContexts.updateSavedData(filePosition, sequenceIndex, logonTime);
+    }
+
+    void updateAndSaveFrom(final Session session)
+    {
+        updateFrom(session);
+        sessionContexts.updateSavedData(filePosition, sequenceIndex, logonTime);
     }
 
     void updateFrom(final Session session)
     {
         sequenceIndex = session.sequenceIndex();
+        logonTime = session.logonTime();
     }
 
     void onLogon(final boolean resetSeqNum)

@@ -57,7 +57,8 @@
     <sbe:message name="SessionId" id="28" description="">
         <field name="sessionId" id="1" type="int64"/>
         <field name="sequenceIndex" id="2" type="SequenceIndex"/>
-        <field name="compositeKeyLength" id="3" type="int32"/>
+        <field name="logonTime" id="3" type="int64" />
+        <field name="compositeKeyLength" id="4" type="int32"/>
     </sbe:message>
     <sbe:message name="SenderAndTargetCompositeKey" id="26" description="">
         <data name="localCompId" id="1" type="Utf8String"/>

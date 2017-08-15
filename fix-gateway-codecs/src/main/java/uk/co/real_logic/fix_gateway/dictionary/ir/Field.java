@@ -86,7 +86,6 @@ public final class Field implements Element
         return !values.isEmpty();
     }
 
-    @Override
     public String toString()
     {
         return "EnumField{" +

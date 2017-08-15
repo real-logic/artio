@@ -92,7 +92,7 @@ public class FakeHandler
         return CONTINUE;
     }
 
-    public void onSessionStart(final long startTimeMillis)
+    public void onSessionStart(final Session session)
     {
     }
 

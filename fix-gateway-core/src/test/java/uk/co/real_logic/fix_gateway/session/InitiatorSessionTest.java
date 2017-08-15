@@ -19,8 +19,6 @@ import org.junit.Test;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 
-import static io.aeron.Publication.BACK_PRESSURED;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
@@ -30,23 +28,27 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.*;
 
 public class InitiatorSessionTest extends AbstractSessionTest
 {
-    private InitiatorSession session = new InitiatorSession(
-        HEARTBEAT_INTERVAL,
-        CONNECTION_ID,
-        fakeClock,
-        mockProxy,
-        mockPublication,
-        idStrategy,
-        SENDING_TIME_WINDOW,
-        mockReceivedMsgSeqNo,
-        mockSentMsgSeqNo,
-        LIBRARY_ID,
+    private InitiatorSession session;
+
+    {
+        session = new InitiatorSession(HEARTBEAT_INTERVAL,
+            CONNECTION_ID,
+            fakeClock,
+            mockProxy,
+            mockPublication,
+            idStrategy,
+            SENDING_TIME_WINDOW,
+            mockReceivedMsgSeqNo,
+            mockSentMsgSeqNo,
+            LIBRARY_ID,
             1,
-        SEQUENCE_INDEX,
-        CONNECTED,
-        false,
-        DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
-        new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]));
+            SEQUENCE_INDEX,
+            CONNECTED,
+            false,
+            DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
+            new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]));
+            session.logonListener(mockLogonListener);
+    }
 
     @Test
     public void shouldInitiallyBeConnected()
@@ -101,21 +103,6 @@ public class InitiatorSessionTest extends AbstractSessionTest
     }
 
     @Test
-    public void shouldNotifyGatewayWhenLoggedInWhenBackPressured()
-    {
-        session.state(SENT_LOGON);
-
-        when(mockPublication.saveManageSession(anyInt(), anyLong(), anyLong()))
-            .thenReturn(BACK_PRESSURED, POSITION);
-
-        assertEquals(ABORT, onLogon(1));
-
-        assertEquals(CONTINUE, onLogon(1));
-
-        verifySavesLogonMessage(times(2));
-    }
-
-    @Test
     public void shouldNotifyGatewayWhenLoggedInOnce()
     {
         session.state(SENT_LOGON);
@@ -130,12 +117,12 @@ public class InitiatorSessionTest extends AbstractSessionTest
     @Test
     public void shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne()
     {
-        shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne(SEQUENCE_INDEX + 1);
+        shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne(SEQUENCE_INDEX);
     }
 
     private void verifySavesLogonMessage(final VerificationMode verificationMode)
     {
-        verify(mockPublication, verificationMode).saveManageSession(LIBRARY_ID, CONNECTION_ID, SESSION_ID);
+        verify(mockLogonListener, verificationMode).onLogon(any());
     }
 
     private void verifyLogon()

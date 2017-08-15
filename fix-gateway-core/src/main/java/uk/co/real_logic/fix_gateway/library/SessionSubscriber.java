@@ -19,10 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 import uk.co.real_logic.fix_gateway.messages.MessageStatus;
-import uk.co.real_logic.fix_gateway.session.AcceptorSession;
-import uk.co.real_logic.fix_gateway.session.CompositeKey;
-import uk.co.real_logic.fix_gateway.session.Session;
-import uk.co.real_logic.fix_gateway.session.SessionParser;
+import uk.co.real_logic.fix_gateway.session.*;
 import uk.co.real_logic.fix_gateway.timing.Timer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
@@ -47,6 +44,7 @@ class SessionSubscriber implements AutoCloseable
         this.session = session;
         this.receiveTimer = receiveTimer;
         this.sessionTimer = sessionTimer;
+        this.session.logonListener(this::onSessionLogon);
     }
 
     Action onMessage(
@@ -138,6 +136,15 @@ class SessionSubscriber implements AutoCloseable
         {
             session.lastSentMsgSeqNum(lastSentSequenceNumber);
             session.lastReceivedMsgSeqNum(lastReceivedSequenceNumber);
+        }
+    }
+
+    private void onSessionLogon(final Session session)
+    {
+        // Should only be fired if we already own the session and the client sends another logon to run and end of day.
+        if (session.logonTime() != Session.NO_LOGON_TIME)
+        {
+            handler.onSessionStart(session);
         }
     }
 

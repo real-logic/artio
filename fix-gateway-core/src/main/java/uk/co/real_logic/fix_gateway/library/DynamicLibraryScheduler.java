@@ -92,7 +92,6 @@ public class DynamicLibraryScheduler implements LibraryScheduler
             this.errorHandler = errorHandler;
         }
 
-        @Override
         public int doWork() throws Exception
         {
             int count = 0;
@@ -111,7 +110,6 @@ public class DynamicLibraryScheduler implements LibraryScheduler
             return count;
         }
 
-        @Override
         public String roleName()
         {
             return roleName;

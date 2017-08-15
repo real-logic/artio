@@ -62,7 +62,6 @@ public final class OtfValidator implements OtfMessageAcceptor
         return MessageControl.CONTINUE;
     }
 
-    @Override
     public MessageControl onComplete()
     {
         final IntHashSet missingFields = requiredFields.values(messageType).difference(fieldsForMessage);

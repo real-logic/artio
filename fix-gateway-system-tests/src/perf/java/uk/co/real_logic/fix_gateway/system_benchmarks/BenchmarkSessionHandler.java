@@ -59,7 +59,7 @@ public final class BenchmarkSessionHandler implements SessionHandler
         return CONTINUE;
     }
 
-    public void onSessionStart(final long startTimeMillis)
+    public void onSessionStart(final Session session)
     {
     }
 

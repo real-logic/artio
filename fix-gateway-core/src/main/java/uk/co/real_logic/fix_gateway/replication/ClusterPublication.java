@@ -81,7 +81,6 @@ class ClusterPublication extends ClusterablePublication
         return transportToReplicated(dataPublication.position(), termState.transportPositionDelta());
     }
 
-    @Override
     public int maxPayloadLength()
     {
         return dataPublication.maxPayloadLength();

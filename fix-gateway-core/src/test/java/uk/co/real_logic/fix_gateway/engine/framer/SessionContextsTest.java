@@ -24,6 +24,7 @@ import uk.co.real_logic.fix_gateway.FileSystemCorruptionException;
 import uk.co.real_logic.fix_gateway.decoder.HeaderDecoder;
 import uk.co.real_logic.fix_gateway.engine.MappedFile;
 import uk.co.real_logic.fix_gateway.session.CompositeKey;
+import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.session.SessionIdStrategy;
 
 import java.io.File;
@@ -129,7 +130,7 @@ public class SessionContextsTest
     @Test
     public void wrapsOverSectorBoundaries()
     {
-        final int requiredNumberOfWritesToSpanSector = 299;
+        final int requiredNumberOfWritesToSpanSector = 232;
 
         final List<CompositeKey> keys =
             IntStream.range(0, requiredNumberOfWritesToSpanSector)
@@ -214,7 +215,7 @@ public class SessionContextsTest
         final SessionContext sessionContext = sessionContexts.onLogon(aSession);
         assertValuesEqual(
             sessionContext,
-            new SessionContext(sessionId, SEQUENCE_INDEX, sessionContexts, FILE_POSITION));
+            new SessionContext(sessionId, SEQUENCE_INDEX, Session.NO_LOGON_TIME, sessionContexts, FILE_POSITION));
     }
 
     private void verifyNoBackUp()
