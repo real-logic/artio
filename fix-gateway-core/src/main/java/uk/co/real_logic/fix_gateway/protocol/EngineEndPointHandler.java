@@ -49,12 +49,6 @@ public interface EngineEndPointHandler
 
     Action onRequestDisconnect(int libraryId, long connectionId, DisconnectReason reason);
 
-    /**
-     * Update latest heartbeat time for the indicated library.
-     * @param libraryId Library id
-     * @param aeronSessionId Aeron session id
-     * @return CONTINUE if successful, ABORT if not - ie if the library is already considered disconnected.
-     */
     Action onApplicationHeartbeat(int libraryId, int aeronSessionId);
 
     Action onReleaseSession(

@@ -968,10 +968,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 APPLICATION_HEARTBEAT, "Received Heartbeat from library %d at timeInMs %d%n", libraryId, timeInMs);
             library.onHeartbeat(timeInMs);
 
-            return CONTINUE;
+            return null;
         }
 
-        return ABORT;
+        return CONTINUE;
     }
 
     public Action onReleaseSession(

@@ -125,9 +125,9 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         releaseSession.wrap(buffer, offset, blockLength, version);
         final int libraryId = releaseSession.libraryId();
         final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
-        if (action == ABORT)
+        if (action != null)
         {
-            return CONTINUE; // Continue processing messages, but not this message.
+            return action; // Continue processing messages, but not this message.
         }
         return handler.onReleaseSession(
             libraryId,
@@ -153,9 +153,9 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         requestSession.wrap(buffer, offset, blockLength, version);
         final int libraryId = requestSession.libraryId();
         final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
-        if (action == ABORT)
+        if (action != null)
         {
-            return CONTINUE; // Continue processing messages but not this message.
+            return action; // Continue processing messages but not this message.
         }
 
         return handler.onRequestSession(
@@ -176,9 +176,9 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         initiateConnection.wrap(buffer, offset, blockLength, version);
         final int libraryId = initiateConnection.libraryId();
         final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
-        if (action == ABORT)
+        if (action != null)
         {
-            return CONTINUE; // Continue processing messages, but don't process this message.
+            return action; // Continue processing messages, but don't process this message.
         }
         return handler.onInitiateConnection(
             libraryId,
@@ -211,9 +211,9 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         requestDisconnect.wrap(buffer, offset, blockLength, version);
         final int libraryId = requestDisconnect.libraryId();
         final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
-        if (action == ABORT)
+        if (action != null)
         {
-            return CONTINUE; // Continue processing messages, but not this message.
+            return action; // Continue processing messages, but not this message.
         }
         return handler.onRequestDisconnect(
             libraryId,
