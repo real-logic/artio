@@ -637,25 +637,6 @@ public class FramerTest
         saveControlNotification(times(1));
     }
 
-    @Test
-    public void shouldNotNotifyLibraryOfControlledSessionsUponHeartbeatAfterTimeout() throws Exception
-    {
-        // If a library has timed out we should notify it that it has no sessions
-        aClientConnects();
-
-        handoverSessionToLibrary();
-
-        timeoutLibrary();
-
-        framer.doWork();
-
-        reset(inboundPublication);
-
-        framer.onApplicationHeartbeat(LIBRARY_ID, AERON_SESSION_ID);
-
-        verifyLibraryControlNotified(hasSize(0));
-    }
-
     private void duplicateLibraryConnect()
     {
         framer.onLibraryConnect(LIBRARY_ID, LIBRARY_NAME, CORR_ID + 1, AERON_SESSION_ID);
