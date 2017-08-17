@@ -26,7 +26,6 @@ import uk.co.real_logic.fix_gateway.engine.ByteBufferUtil;
 import uk.co.real_logic.fix_gateway.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.fix_gateway.messages.*;
 import uk.co.real_logic.fix_gateway.protocol.GatewayPublication;
-import uk.co.real_logic.fix_gateway.session.Session;
 import uk.co.real_logic.fix_gateway.util.MutableAsciiBuffer;
 import uk.co.real_logic.fix_gateway.validation.PersistenceLevel;
 
@@ -40,7 +39,6 @@ import java.util.Objects;
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.fix_gateway.dictionary.StandardFixConstants.START_OF_HEADER;
-import static uk.co.real_logic.fix_gateway.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.fix_gateway.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.fix_gateway.messages.DisconnectReason.*;
 import static uk.co.real_logic.fix_gateway.messages.MessageStatus.*;
@@ -358,31 +356,7 @@ class ReceiverEndPoint
 
         choosePublication(gatewaySession.persistenceLevel());
 
-        // TODO(Nick): The sent and received seq nums aren't adjusted.
-        // TODO(Nick): Honestly not sure why we are advertising the session here...
-        // They previously weren't adjusted but I think that might be an issue.
-        return stashIfBackpressured(offset,
-                                            publication.saveManageSession(libraryId,
-                                                                          connectionId,
-                                                                          sessionId,
-                                                                  authResult.sentSequenceNumber,
-                                                                  authResult.receivedSequenceNumber,
-                                                                          Session.NO_LOGON_TIME,
-                                                                          LogonStatus.NEW,
-                                                                          SlowStatus.NOT_SLOW,
-                                                                          ACCEPTOR,
-                                                                          gatewaySession.session().state(),
-                                                                          logon.heartBtInt(),
-                                                                          Framer.NO_CORRELATION_ID,
-                                                                  gatewaySession.sequenceIndex(),
-                                                                  gatewaySession.sessionKey().localCompId(),
-                                                                  gatewaySession.sessionKey().localSubId(),
-                                                                  gatewaySession.sessionKey().localLocationId(),
-                                                                  gatewaySession.sessionKey().remoteCompId(),
-                                                                  gatewaySession.sessionKey().remoteSubId(),
-                                                                  gatewaySession.sessionKey().remoteLocationId(),
-                                                                          ""));
-
+        return false;
     }
 
     private boolean stashIfBackpressured(final int offset, final long position)
