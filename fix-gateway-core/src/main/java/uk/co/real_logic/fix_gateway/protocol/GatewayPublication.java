@@ -198,31 +198,6 @@ public class GatewayPublication extends ClaimablePublication
         destBuffer.putShort(offset + FixMessageEncoder.BLOCK_LENGTH, (short)srcLength, LITTLE_ENDIAN);
     }
 
-    public long saveManageSession(final int libraryId, final long connectionId, final long sessionId)
-    {
-        return saveManageSession(
-            libraryId,
-            connectionId,
-            sessionId,
-            -1,
-            -1,
-            -1,
-            LogonStatus.NULL_VAL,
-                                 SlowStatus.NULL_VAL,
-                                 ConnectionType.NULL_VAL,
-                                 SessionState.NULL_VAL,
-                                 -1,
-                                 -1,
-                                 -1,
-                                 "",
-                                 "",
-                                 "",
-                                 "",
-                                 "",
-                                 "",
-                                 "");
-    }
-
     public long saveManageSession(
         final int libraryId,
         final long connection,
