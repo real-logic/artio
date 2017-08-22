@@ -105,7 +105,7 @@ public class FixLibrary extends GatewayProcess
     {
         poller.startConnecting();
         final ErrorHandler remoteThreadErrorHandler = createRemoteThreadErrorHandler(errorHandler);
-        scheduler.launch(configuration, remoteThreadErrorHandler, monitoringAgent);
+        scheduler.launch(configuration, remoteThreadErrorHandler, monitoringAgent, conductorAgent());
         return this;
     }
 

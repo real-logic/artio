@@ -49,14 +49,13 @@ public class SharedLibraryScheduler implements LibraryScheduler
     public synchronized void launch(
         final LibraryConfiguration configuration,
         final ErrorHandler errorHandler,
-        final Agent monitoringAgent)
+        final Agent monitoringAgent,
+        final Agent conductorAgent)
     {
         if (runner != null)
         {
             EngineScheduler.fail();
         }
-
-        final Agent conductorAgent = configuration.conductorAgent();
 
         agents.add(monitoringAgent);
         agents.add(conductorAgent);

@@ -31,11 +31,14 @@ public interface LibraryScheduler
      * @param configuration the library's configuration object.
      * @param errorHandler the ErrorHandler used by the library.
      * @param monitoringAgent the monitoring agent to schedule.
+     * @param conductorAgent if aeron has useConductorInvoker enable it
+     *                       is the agent for the conductor, otherwise null.
      */
     void launch(
         LibraryConfiguration configuration,
         ErrorHandler errorHandler,
-        Agent monitoringAgent);
+        Agent monitoringAgent,
+        Agent conductorAgent);
 
     /**
      * Invoked by the Library to stop the threads. Should only return once they are completed stopped.

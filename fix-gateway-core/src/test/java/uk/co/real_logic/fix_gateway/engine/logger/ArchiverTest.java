@@ -692,10 +692,9 @@ public class ArchiverTest
         final int termId = computeTermIdFromPosition(position, positionBitsToShift, initialTermId);
         final int termOffset = computeTermOffsetFromPosition(position, positionBitsToShift);
 
-        final int wrapAdjustment = 4;
         final UnsafeBuffer buffer = wrapsArray ?
-            new UnsafeBuffer(new byte[frameLength + wrapAdjustment], wrapAdjustment, frameLength) :
-            new UnsafeBuffer(ByteBuffer.allocateDirect(frameLength + wrapAdjustment), wrapAdjustment, frameLength);
+            new UnsafeBuffer(new byte[frameLength], 0, frameLength) :
+            new UnsafeBuffer(ByteBuffer.allocateDirect(frameLength), 0, frameLength);
         final DataHeaderFlyweight flyweight = new DataHeaderFlyweight(buffer);
         flyweight
             .sessionId(sessionId)

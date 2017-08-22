@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
 import io.aeron.Subscription;
+import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.fix_gateway.FixCounters;
 import uk.co.real_logic.fix_gateway.GatewayProcess;
@@ -196,7 +197,8 @@ public final class FixEngine extends GatewayProcess
             replayImage("replay", replaySessionId),
             replayImage("slow-replay", replaySessionId),
             engineDescriptorStore,
-            timers);
+            timers,
+            aeron.conductorAgentInvoker());
     }
 
     /**
@@ -235,6 +237,16 @@ public final class FixEngine extends GatewayProcess
         }
     }
 
+    // To be invoked by called called before a scheduler has launched
+    private void invokeAeronConductor()
+    {
+        final AgentInvoker invoker = aeron.conductorAgentInvoker();
+        if (invoker != null)
+        {
+            invoker.invoke();
+        }
+    }
+
     private FixEngine launch()
     {
         scheduler.launch(
@@ -242,7 +254,8 @@ public final class FixEngine extends GatewayProcess
             errorHandler,
             framerContext.framer(),
             engineContext.archivingAgent(),
-            monitoringAgent);
+            monitoringAgent,
+            conductorAgent());
 
         return this;
     }

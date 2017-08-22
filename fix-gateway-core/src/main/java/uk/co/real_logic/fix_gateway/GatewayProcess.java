@@ -75,10 +75,15 @@ public class GatewayProcess implements AutoCloseable
         aeronConnect(configureAeronContext(configuration));
     }
 
-    // To be invoked by called called before a scheduler has launched
-    protected int invokeAeronConductor()
+    public Agent conductorAgent()
     {
-        return configuration.invokeConductorAgent();
+        final AgentInvoker invoker = aeron.conductorAgentInvoker();
+        if (invoker == null)
+        {
+            return null;
+        }
+
+        return invoker.agent();
     }
 
     protected void aeronConnect(final Aeron.Context context)

@@ -299,18 +299,14 @@ public class Archiver implements Agent, RawBlockHandler
 
                 if (byteBuffer != null)
                 {
-                    // This offset is as a result of the bytebuffer not having a one-to-one mapping
-                    // to UnsafeBuffer instances as of Aeron 1.0
-                    final int wrapAdjustment = termBuffer.wrapAdjustment();
-
                     final int limit = offset + frameLength;
                     if (messageOffset > limit)
                     {
                         throw new IllegalArgumentException(
                             String.format("%d is > than %d or < 0", messageOffset, limit));
                     }
-                    ByteBufferUtil.limit(byteBuffer, limit + wrapAdjustment);
-                    ByteBufferUtil.position(byteBuffer, messageOffset + wrapAdjustment);
+                    ByteBufferUtil.limit(byteBuffer, limit);
+                    ByteBufferUtil.position(byteBuffer, messageOffset);
 
                     checksum.update(byteBuffer);
                 }
@@ -425,7 +421,6 @@ public class Archiver implements Agent, RawBlockHandler
         {
             checksum.reset();
 
-            readOffset += bodyBuffer.wrapAdjustment();
             final int messageOffset = readOffset + HEADER_LENGTH;
             final ByteBuffer byteBuffer = bodyBuffer.byteBuffer();
             if (byteBuffer != null)

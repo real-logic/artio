@@ -56,14 +56,13 @@ public class LowResourceEngineScheduler implements EngineScheduler
         final ErrorHandler errorHandler,
         final Agent framer,
         final Agent archivingAgent,
-        final Agent monitoringAgent)
+        final Agent monitoringAgent,
+        final Agent conductorAgent)
     {
         if (runner != null)
         {
             EngineScheduler.fail();
         }
-
-        final Agent conductorAgent = configuration.conductorAgent();
 
         final List<Agent> agents = new ArrayList<>();
         Collections.addAll(agents, monitoringAgent, framer, archivingAgent, conductorAgent);

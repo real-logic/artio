@@ -29,6 +29,7 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2LongHashMap.LongIterator;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.fix_gateway.DebugLogger;
@@ -168,6 +169,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     // Both connection id to library id maps
     private final Long2LongHashMap resendSlowStatus = new Long2LongHashMap(-1);
     private final Long2LongHashMap resendNotSlowStatus = new Long2LongHashMap(-1);
+    private final AgentInvoker conductorAgentInvoker;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
@@ -200,7 +202,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final CompletionPosition inboundCompletionPosition,
         final CompletionPosition outboundLibraryCompletionPosition,
         final CompletionPosition outboundClusterCompletionPosition,
-        final FinalImagePositions finalImagePositions)
+        final FinalImagePositions finalImagePositions,
+        final AgentInvoker conductorAgentInvoker)
     {
         this.clock = clock;
         this.outboundTimer = outboundTimer;
@@ -221,7 +224,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundLibraryCompletionPosition = outboundLibraryCompletionPosition;
         this.outboundClusterCompletionPosition = outboundClusterCompletionPosition;
         this.senderEndPoints = new SenderEndPoints(errorHandler);
-        this.senderEndPointAssembler = new ControlledFragmentAssembler(senderEndPoints);
+        this.conductorAgentInvoker = conductorAgentInvoker;
+        this.senderEndPointAssembler = new ControlledFragmentAssembler(senderEndPoints, 0, true);
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionContexts = sessionContexts;
         this.adminCommands = adminCommands;
@@ -249,14 +253,18 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 inboundPublication,
                 engineDescriptorStore,
                 configuration.bindAddress().toString(),
-                replicatedConnectionIds));
+                replicatedConnectionIds),
+                0,
+                true);
             clusterSubscriber = new ClusterFragmentAssembler(ProtocolSubscription.of(this));
         }
         else
         {
             engineBlockablePosition = getOutboundSlowPeeker(outboundPublication);
             librarySubscriber = new ControlledFragmentAssembler(
-                ProtocolSubscription.of(this, new EngineProtocolSubscription(this)));
+                ProtocolSubscription.of(this, new EngineProtocolSubscription(this)),
+                0,
+                true);
             clusterSubscriber = null;
             clusterSlowPeeker = null;
         }
@@ -286,7 +294,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 // Should never be replayed.
                 return Action.CONTINUE;
             }
-        }));
+        }),
+        0,
+        true);
 
         replaySlowSubscriber = new ControlledFragmentAssembler(ProtocolSubscription.of(new ProtocolHandler()
         {
@@ -329,7 +339,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         LibrarySlowPeeker outboundSlowPeeker;
         while ((outboundSlowPeeker = this.librarySlowPeeker.addLibrary(outboundSessionId)) == null)
         {
-            configuration.invokeConductorAgent();
+            if (conductorAgentInvoker != null)
+            {
+                conductorAgentInvoker.invoke();
+            }
 
             Thread.yield();
         }

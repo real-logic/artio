@@ -22,6 +22,7 @@ import io.aeron.logbuffer.Header;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.collections.LongHashSet;
+import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.QueuedPipe;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
@@ -195,7 +196,8 @@ public class FramerTest
             mock(CompletionPosition.class),
             mock(CompletionPosition.class),
             mock(CompletionPosition.class),
-            finalImagePositions);
+            finalImagePositions,
+            mock(AgentInvoker.class));
 
         when(sessionContexts.onLogon(any())).thenReturn(
             new SessionContext(SESSION_ID,

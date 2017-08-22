@@ -27,8 +27,8 @@ apply plugin: 'signing'
 apply plugin: 'net.researchgate.release'
 apply plugin: 'com.github.johnrengelman.shadow'
 
-def aeronVersion = '1.3.0'
-def agronaVersion = '0.9.6'
+def aeronVersion = '1.4.0-SNAPSHOT'
+def agronaVersion = '0.9.7-SNAPSHOT'
 
 defaultTasks 'clean', 'build', 'install'
 
@@ -79,7 +79,7 @@ subprojects {
         maven {
             url "http://sevntu-checkstyle.github.com/sevntu.checkstyle/maven2"
         }
-        //mavenLocal()
+        mavenLocal()
     }
 
     dependencies {
@@ -181,7 +181,7 @@ project(':fix-gateway-codecs') {
 
     dependencies {
         compile "org.agrona:agrona:${agronaVersion}"
-        compile 'uk.co.real-logic:sbe-all:1.7.0'
+        compile 'uk.co.real-logic:sbe-tool:1.7.1-SNAPSHOT'
         testCompile sourceSets.generated.output
     }
 

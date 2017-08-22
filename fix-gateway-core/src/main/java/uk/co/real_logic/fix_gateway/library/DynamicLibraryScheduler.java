@@ -37,18 +37,18 @@ public class DynamicLibraryScheduler implements LibraryScheduler
     public synchronized void launch(
         final LibraryConfiguration configuration,
         final ErrorHandler errorHandler,
-        final Agent monitoringAgent)
+        final Agent monitoringAgent,
+        final Agent conductorAgent)
     {
         if (runner == null)
         {
             // We shouldn't reach this default error handler because we catch exceptions in the CombinedAgent below.
             runner = new AgentRunner(
-                    configuration.monitoringThreadIdleStrategy(), (e) -> e.printStackTrace(), null, dynamicAgent);
+                configuration.monitoringThreadIdleStrategy(), Throwable::printStackTrace, null, dynamicAgent);
             AgentRunner.startOnThread(runner);
         }
 
         final int libraryId = configuration.libraryId();
-        final Agent conductorAgent = configuration.conductorAgent();
         final Agent combinedAgent = new CombinedAgent(libraryId, monitoringAgent, conductorAgent, errorHandler);
 
         libraryIdToDelegateAgent.put(libraryId, combinedAgent);

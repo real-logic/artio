@@ -623,30 +623,4 @@ public class CommonConfiguration
         return nanoClock;
     }
 
-    public Agent conductorAgent()
-    {
-        final AgentInvoker invoker = conductorAgentInvoker();
-        if (invoker == null)
-        {
-            return null;
-        }
-
-        return invoker.agent();
-    }
-
-    public int invokeConductorAgent()
-    {
-        final AgentInvoker invoker = conductorAgentInvoker();
-        if (invoker == null)
-        {
-            return 0;
-        }
-
-        return invoker.invoke();
-    }
-
-    private AgentInvoker conductorAgentInvoker()
-    {
-        return aeronContext().conductorAgentInvoker();
-    }
 }
