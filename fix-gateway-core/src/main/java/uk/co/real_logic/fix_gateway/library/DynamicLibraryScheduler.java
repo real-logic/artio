@@ -21,6 +21,9 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
+import org.agrona.concurrent.DynamicCompositeAgent;
+
+import static org.agrona.concurrent.DynamicCompositeAgent.Status.ACTIVE;
 
 /**
  * Share the monitoring thread over multiple instances of a library.
@@ -46,6 +49,12 @@ public class DynamicLibraryScheduler implements LibraryScheduler
             runner = new AgentRunner(
                 configuration.monitoringThreadIdleStrategy(), Throwable::printStackTrace, null, dynamicAgent);
             AgentRunner.startOnThread(runner);
+
+            // Wait for it to start
+            while (dynamicAgent.status() != ACTIVE)
+            {
+                Thread.yield();
+            }
         }
 
         final int libraryId = configuration.libraryId();
@@ -53,17 +62,38 @@ public class DynamicLibraryScheduler implements LibraryScheduler
 
         libraryIdToDelegateAgent.put(libraryId, combinedAgent);
 
-        dynamicAgent.add(combinedAgent);
+        while (!dynamicAgent.tryAdd(combinedAgent))
+        {
+            Thread.yield();
+        }
+
+        while (!dynamicAgent.hasAddAgentCompleted())
+        {
+            Thread.yield();
+        }
     }
 
     public synchronized void close(final int libraryId)
     {
-        dynamicAgent.remove(libraryIdToDelegateAgent.remove(libraryId));
+        final Agent agentToRemove = libraryIdToDelegateAgent.remove(libraryId);
 
-        if (libraryIdToDelegateAgent.isEmpty())
+        if (agentToRemove != null)
         {
-            CloseHelper.close(runner);
-            runner = null;
+            while (!dynamicAgent.tryRemove(agentToRemove))
+            {
+                Thread.yield();
+            }
+
+            while (!dynamicAgent.hasRemoveAgentCompleted())
+            {
+                Thread.yield();
+            }
+
+            if (libraryIdToDelegateAgent.isEmpty())
+            {
+                CloseHelper.close(runner);
+                runner = null;
+            }
         }
     }
 
@@ -103,7 +133,6 @@ public class DynamicLibraryScheduler implements LibraryScheduler
             }
             catch (final Throwable throwable)
             {
-                System.out.println("Here...");
                 errorHandler.onError(throwable);
             }
 
