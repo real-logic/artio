@@ -722,14 +722,14 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertEquals(sequenceIndex, session.sequenceIndex());
     }
 
-    private void awaitIsConnected(final boolean connected, final FixLibrary library)
+    private void awaitIsConnected(final boolean isConnected, final FixLibrary library)
     {
         assertEventuallyTrue(
-            "isConnect never became: " + connected,
+            "isConnected never became: " + isConnected,
             () ->
             {
                 testSystem.poll();
-                return library.isConnected() == connected;
+                return library.isConnected() == isConnected;
             });
     }
 
