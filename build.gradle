@@ -302,6 +302,13 @@ project(':fix-gateway-system-tests') {
         scopes.COMPILE.plus += [configurations.perfCompile]
     }
 
+    test {
+        systemProperties(
+            'aeron.dir.warn.if.exists': 'false',
+            'aeron.use.windows.high.res.timer': 'true',
+            'aeron.term.buffer.sparse.file': 'true')
+    }
+
     task benchmarks(dependsOn: perfClasses) {
         shadowJar {
             classifier = "benchmarks"
