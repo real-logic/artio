@@ -27,8 +27,9 @@ apply plugin: 'signing'
 apply plugin: 'net.researchgate.release'
 apply plugin: 'com.github.johnrengelman.shadow'
 
-def aeronVersion = '1.4.0-SNAPSHOT'
-def agronaVersion = '0.9.7-SNAPSHOT'
+def aeronVersion = '1.4.1'
+def agronaVersion = '0.9.7'
+def sbeVersion = '1.7.1'
 
 defaultTasks 'clean', 'build', 'install'
 
@@ -181,7 +182,7 @@ project(':fix-gateway-codecs') {
 
     dependencies {
         compile "org.agrona:agrona:${agronaVersion}"
-        compile 'uk.co.real-logic:sbe-tool:1.7.1-SNAPSHOT'
+        compile "uk.co.real-logic:sbe-tool:${sbeVersion}"
         testCompile sourceSets.generated.output
     }
 

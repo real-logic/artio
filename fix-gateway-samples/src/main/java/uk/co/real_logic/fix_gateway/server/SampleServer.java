@@ -63,7 +63,7 @@ public final class SampleServer
 
         final Context context = new Context()
             .threadingMode(SHARED)
-            .dirsDeleteOnStart(true);
+            .dirDeleteOnStart(true);
         try (MediaDriver driver = MediaDriver.launch(context);
              FixEngine gateway = FixEngine.launch(configuration))
         {

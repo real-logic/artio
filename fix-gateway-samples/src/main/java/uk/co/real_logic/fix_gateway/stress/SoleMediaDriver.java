@@ -25,7 +25,7 @@ public final class SoleMediaDriver
     {
         final MediaDriver.Context context = new MediaDriver.Context()
             .threadingMode(SHARED)
-            .dirsDeleteOnStart(true);
+            .dirDeleteOnStart(true);
 
         try (MediaDriver ignore = MediaDriver.launch(context))
         {

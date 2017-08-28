@@ -66,7 +66,7 @@ public final class TestFixtures
     {
         return new MediaDriver.Context()
             .threadingMode(SHARED)
-            .dirsDeleteOnStart(dirsDeleteOnStart)
+            .dirDeleteOnStart(dirsDeleteOnStart)
             .publicationTermBufferLength(termBufferLength)
             .ipcTermBufferLength(termBufferLength);
     }

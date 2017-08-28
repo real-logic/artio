@@ -30,7 +30,6 @@ import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class MediaDriverRestartTest extends AbstractGatewayToGatewaySystemTest
 {
-
     private static final int DRIVER_TIMEOUT_MS = 1000;
 
     @Before
@@ -57,12 +56,12 @@ public class MediaDriverRestartTest extends AbstractGatewayToGatewaySystemTest
         messagesCanBeExchanged();
     }
 
-    private void start(final boolean dirsDeleteOnStart)
+    private void start(final boolean dirDeleteOnStart)
     {
         final MediaDriver.Context context = TestFixtures.mediaDriverContext(
-            TestFixtures.TERM_BUFFER_LENGTH, dirsDeleteOnStart);
+            TestFixtures.TERM_BUFFER_LENGTH, dirDeleteOnStart);
         context.driverTimeoutMs(DRIVER_TIMEOUT_MS);
-        context.warnIfDirectoriesExist(false);
+        context.warnIfDirectoryExists(false);
 
         mediaDriver = MediaDriver.launch(context);
         final String aeronDirectoryName = context.aeronDirectoryName();
@@ -95,5 +94,4 @@ public class MediaDriverRestartTest extends AbstractGatewayToGatewaySystemTest
 
         connectSessions();
     }
-
 }

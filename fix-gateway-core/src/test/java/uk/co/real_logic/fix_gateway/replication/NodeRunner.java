@@ -86,7 +86,7 @@ class NodeRunner implements AutoCloseable
             .sharedIdleStrategy(new YieldingIdleStrategy())
             .receiveChannelEndpointSupplier(frameDropper.newReceiveChannelEndpointSupplier())
             .sendChannelEndpointSupplier(frameDropper.newSendChannelEndpointSupplier())
-            .dirsDeleteOnStart(true)
+            .dirDeleteOnStart(true)
             .aeronDirectoryName(AERON_DIR_PROP_DEFAULT + nodeId)
             .publicationTermBufferLength(termBufferLength)
             .ipcTermBufferLength(termBufferLength);

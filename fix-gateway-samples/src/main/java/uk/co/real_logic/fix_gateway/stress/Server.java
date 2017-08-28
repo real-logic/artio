@@ -57,7 +57,7 @@ public class Server implements Agent
 
         final MediaDriver.Context context = new MediaDriver.Context()
             .threadingMode(SHARED)
-            .dirsDeleteOnStart(true);
+            .dirDeleteOnStart(true);
         mediaDriver = MediaDriver.launch(context);
         fixEngine = FixEngine.launch(configuration);
 
