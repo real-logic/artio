@@ -59,6 +59,8 @@ import static uk.co.real_logic.fix_gateway.engine.logger.FixArchiveScanner.Messa
 import static uk.co.real_logic.fix_gateway.engine.logger.FixMessagePredicates.*;
 import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
+// TODO: re-enable once time and resources can be allocated to fix this kind of issue
+@Ignore
 public class ClusteredGatewaySystemTest
 {
     private static final int CLUSTER_SIZE = 3;
