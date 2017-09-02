@@ -48,7 +48,6 @@ import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.CommonConfiguration.optimalTmpDirName;
-import static uk.co.real_logic.fix_gateway.FixMatchers.isConnected;
 import static uk.co.real_logic.fix_gateway.Reply.State.COMPLETED;
 import static uk.co.real_logic.fix_gateway.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.fix_gateway.Timing.assertEventuallyTrue;
@@ -58,24 +57,26 @@ import static uk.co.real_logic.fix_gateway.messages.SessionState.ACTIVE;
 
 public final class SystemTestUtil
 {
-    public static final IdleStrategy ADMIN_IDLE_STRATEGY = new YieldingIdleStrategy();
     public static final String ACCEPTOR_ID = "acceptor";
     public static final String INITIATOR_ID = "initiator";
-    public static final String INITIATOR_ID2 = "initiator2";
-    public static final String CLIENT_LOGS = "client-logs";
     public static final String ACCEPTOR_LOGS = "acceptor-logs";
-    public static final long TIMEOUT_IN_MS = 100;
-    public static final long AWAIT_TIMEOUT = 50 * TIMEOUT_IN_MS;
-    public static final String HI_ID = "hi";
-    public static final int LIBRARY_LIMIT = 2;
-    public static final String USERNAME = "bob";
-    public static final String PASSWORD = "Uv1aegoh";
 
-    public static final int MESSAGE_BUFFER_SIZE_IN_BYTES = 15000;
+    static final IdleStrategy ADMIN_IDLE_STRATEGY = new YieldingIdleStrategy();
+    static final String INITIATOR_ID2 = "initiator2";
+    static final String CLIENT_LOGS = "client-logs";
+    static final long TIMEOUT_IN_MS = 100;
+    static final long AWAIT_TIMEOUT = 50 * TIMEOUT_IN_MS;
+    static final int LIBRARY_LIMIT = 2;
+
+    private static final String HI_ID = "hi";
+    private static final String USERNAME = "bob";
+    private static final String PASSWORD = "Uv1aegoh";
+    private static final int MESSAGE_BUFFER_SIZE_IN_BYTES = 15000;
 
     static
     {
         final File parentDirectory = new File(optimalTmpDirName());
+        //noinspection ConstantConditions
         for (final File directory : parentDirectory.listFiles((file) -> file.getName().startsWith("fix-library-")))
         {
             IoUtil.delete(directory, true);
@@ -89,7 +90,7 @@ public final class SystemTestUtil
         return HI_ID + TEST_REQ_COUNTER.incrementAndGet();
     }
 
-    public static long assertTestRequestSentAndReceived(
+    static long assertTestRequestSentAndReceived(
         final Session sendingSession,
         final TestSystem testSystem,
         final FakeOtfAcceptor receivingHandler)
@@ -102,7 +103,7 @@ public final class SystemTestUtil
         return position;
     }
 
-    public static long sendTestRequest(final Session session, final String testReqID)
+    static long sendTestRequest(final Session session, final String testReqID)
     {
         assertEventuallyTrue("Session not connected", session::isConnected);
 
@@ -114,7 +115,7 @@ public final class SystemTestUtil
         return position;
     }
 
-    public static void assertReceivedTestRequest(
+    private static void assertReceivedTestRequest(
         final TestSystem testSystem, final FakeOtfAcceptor acceptor, final String testReqId)
     {
         assertEventuallyTrue("Failed to receive a test request message",
@@ -137,16 +138,7 @@ public final class SystemTestUtil
         }
     }
 
-    public static void assertConnected(final FixLibrary library1, final FixLibrary library2)
-    {
-        assertThat(library1, isConnected());
-        if (library2 != null)
-        {
-            assertThat(library2, isConnected());
-        }
-    }
-
-    public static Reply<Session> initiate(
+    static Reply<Session> initiate(
         final FixLibrary library,
         final int port,
         final String initiatorId,
@@ -162,7 +154,7 @@ public final class SystemTestUtil
         return library.initiate(config);
     }
 
-    public static void awaitLibraryReply(final FixLibrary library, final Reply<?> reply)
+    static void awaitLibraryReply(final FixLibrary library, final Reply<?> reply)
     {
         awaitLibraryReply(library, null, reply);
     }
@@ -179,7 +171,7 @@ public final class SystemTestUtil
             });
     }
 
-    public static SessionReplyStatus releaseToGateway(
+    static SessionReplyStatus releaseToGateway(
         final FixLibrary library, final Session session, final TestSystem testSystem)
     {
         final Reply<SessionReplyStatus> reply = testSystem.awaitReply(
@@ -188,19 +180,19 @@ public final class SystemTestUtil
         return reply.resultIfPresent();
     }
 
-    public static FixEngine launchInitiatingEngine(final int libraryAeronPort)
+    static FixEngine launchInitiatingEngine(final int libraryAeronPort)
     {
         delete(CLIENT_LOGS);
         return launchInitiatingEngineWithSameLogs(libraryAeronPort);
     }
 
-    public static FixEngine launchInitiatingEngineWithSameLogs(final int libraryAeronPort)
+    static FixEngine launchInitiatingEngineWithSameLogs(final int libraryAeronPort)
     {
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
         return FixEngine.launch(initiatingConfig);
     }
 
-    public static EngineConfiguration initiatingConfig(final int libraryAeronPort)
+    static EngineConfiguration initiatingConfig(final int libraryAeronPort)
     {
         final EngineConfiguration configuration = new EngineConfiguration()
             .libraryAeronChannel("aeron:udp?endpoint=localhost:" + libraryAeronPort)
@@ -220,7 +212,7 @@ public final class SystemTestUtil
         }
     }
 
-    public static EngineConfiguration acceptingConfig(
+    static EngineConfiguration acceptingConfig(
         final int port,
         final String acceptorId,
         final String initiatorId)
@@ -228,7 +220,7 @@ public final class SystemTestUtil
         return acceptingConfig(port, acceptorId, initiatorId, ACCEPTOR_LOGS);
     }
 
-    public static EngineConfiguration acceptingConfig(
+    private static EngineConfiguration acceptingConfig(
         final int port,
         final String acceptorId,
         final String initiatorId,
@@ -245,12 +237,12 @@ public final class SystemTestUtil
             .scheduler(new LowResourceEngineScheduler());
     }
 
-    public static String acceptorMonitoringFile(final String countersSuffix)
+    static String acceptorMonitoringFile(final String countersSuffix)
     {
         return optimalTmpDirName() + File.separator + "fix-acceptor" + File.separator + countersSuffix;
     }
 
-    public static LibraryConfiguration acceptingLibraryConfig(
+    static LibraryConfiguration acceptingLibraryConfig(
         final FakeHandler sessionHandler)
     {
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
@@ -265,7 +257,7 @@ public final class SystemTestUtil
         return libraryConfiguration;
     }
 
-    public static void setupCommonConfig(
+    static void setupCommonConfig(
         final String acceptorId, final String initiatorId, final CommonConfiguration configuration)
     {
         final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(acceptorId)
@@ -278,7 +270,7 @@ public final class SystemTestUtil
             .messageValidationStrategy(validationStrategy);
     }
 
-    public static SessionReplyStatus requestSession(
+    static SessionReplyStatus requestSession(
         final FixLibrary library,
         final long sessionId,
         final int lastReceivedMsgSeqNum,
@@ -292,19 +284,19 @@ public final class SystemTestUtil
         return reply.resultIfPresent();
     }
 
-    public static Session acquireSession(
+    static Session acquireSession(
         final FakeHandler sessionHandler, final FixLibrary library, final long sessionId, final TestSystem testSystem)
     {
         return acquireSession(sessionHandler, library, sessionId, testSystem, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
     }
 
-    public static Session acquireSession(
-            final FakeHandler sessionHandler,
-            final FixLibrary library,
-            final long sessionId,
-            final TestSystem testSystem,
-            final int lastReceivedSequenceNumber,
-            final int sequenceIndex)
+    static Session acquireSession(
+        final FakeHandler sessionHandler,
+        final FixLibrary library,
+        final long sessionId,
+        final TestSystem testSystem,
+        final int lastReceivedSequenceNumber,
+        final int sequenceIndex)
     {
         final SessionReplyStatus replyStatus = requestSession(
             library, sessionId, lastReceivedSequenceNumber, sequenceIndex, testSystem);
@@ -331,19 +323,19 @@ public final class SystemTestUtil
             timeoutInMs);
     }
 
-    public static FixLibrary newInitiatingLibrary(final int libraryAeronPort, final FakeHandler sessionHandler)
+    static FixLibrary newInitiatingLibrary(final int libraryAeronPort, final FakeHandler sessionHandler)
     {
         return connect(initiatingLibraryConfig(libraryAeronPort, sessionHandler));
     }
 
-    public static LibraryConfiguration initiatingLibraryConfig(
+    static LibraryConfiguration initiatingLibraryConfig(
         final int libraryAeronPort, final FakeHandler sessionHandler)
     {
         return new LibraryConfiguration()
-                .sessionAcquireHandler(sessionHandler)
-                .sentPositionHandler(sessionHandler)
-                .sessionExistsHandler(sessionHandler)
-                .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort));
+            .sessionAcquireHandler(sessionHandler)
+            .sentPositionHandler(sessionHandler)
+            .sessionExistsHandler(sessionHandler)
+            .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort));
     }
 
     public static FixLibrary connect(final LibraryConfiguration configuration)
@@ -363,18 +355,18 @@ public final class SystemTestUtil
         return library;
     }
 
-    public static FixLibrary newAcceptingLibrary(final FakeHandler sessionHandler)
+    static FixLibrary newAcceptingLibrary(final FakeHandler sessionHandler)
     {
         return connect(acceptingLibraryConfig(sessionHandler));
     }
 
-    public static void assertConnected(final Session session)
+    static void assertConnected(final Session session)
     {
         assertNotNull("Session is null", session);
         assertTrue("Session has failed to connect", session.isConnected());
     }
 
-    public static List<LibraryInfo> libraries(final FixEngine engine)
+    static List<LibraryInfo> libraries(final FixEngine engine)
     {
         final Reply<List<LibraryInfo>> reply = engine.libraries();
         assertEventuallyTrue(
@@ -386,7 +378,7 @@ public final class SystemTestUtil
         return reply.resultIfPresent();
     }
 
-    public static List<LibraryInfo> libraries(final FixEngine engine, final TestSystem testSystem)
+    static List<LibraryInfo> libraries(final FixEngine engine, final TestSystem testSystem)
     {
         final Reply<List<LibraryInfo>> reply = engine.libraries();
         assertEventuallyTrue(
@@ -403,20 +395,21 @@ public final class SystemTestUtil
         return reply.resultIfPresent();
     }
 
-    public static Optional<LibraryInfo> libraryInfoById(final List<LibraryInfo> libraries, final int libraryId)
+    static Optional<LibraryInfo> libraryInfoById(final List<LibraryInfo> libraries, final int libraryId)
     {
         return libraries
             .stream()
-            .filter(libraryInfo -> libraryInfo.libraryId() == libraryId)
+            .filter((libraryInfo) -> libraryInfo.libraryId() == libraryId)
             .findFirst();
     }
 
-    public static LibraryInfo engineLibrary(final List<LibraryInfo> libraries)
+    @SuppressWarnings("ConstantConditions")
+    static LibraryInfo engineLibrary(final List<LibraryInfo> libraries)
     {
         return libraryInfoById(libraries, ENGINE_LIBRARY_ID).get(); // Error if not present
     }
 
-    public static void awaitLibraryConnect(final FixLibrary library)
+    static void awaitLibraryConnect(final FixLibrary library)
     {
         assertEventuallyTrue(
             () -> "Library hasn't seen Engine",
@@ -426,9 +419,7 @@ public final class SystemTestUtil
                 return library.isConnected();
             },
             AWAIT_TIMEOUT,
-            () ->
-            {
-            }
+            () -> {}
         );
     }
 
@@ -447,7 +438,7 @@ public final class SystemTestUtil
             });
     }
 
-    public static LibraryInfo gatewayLibraryInfo(final FixEngine engine)
+    static LibraryInfo gatewayLibraryInfo(final FixEngine engine)
     {
         return libraries(engine)
             .stream()
@@ -457,7 +448,7 @@ public final class SystemTestUtil
     }
 
     @SafeVarargs
-    public static void assertEventuallyHasLibraries(
+    static void assertEventuallyHasLibraries(
         final TestSystem testSystem,
         final FixEngine engine,
         final Matcher<LibraryInfo>... libraryMatchers)
@@ -471,7 +462,7 @@ public final class SystemTestUtil
             });
     }
 
-    public static String largeTestReqId()
+    static String largeTestReqId()
     {
         final char[] testReqIDChars = new char[MESSAGE_BUFFER_SIZE_IN_BYTES - 100];
         Arrays.fill(testReqIDChars, 'A');
