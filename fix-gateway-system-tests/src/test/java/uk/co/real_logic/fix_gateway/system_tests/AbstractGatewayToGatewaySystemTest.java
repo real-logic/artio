@@ -41,22 +41,21 @@ public class AbstractGatewayToGatewaySystemTest
 {
     protected int port = unusedPort();
     protected int libraryAeronPort = unusedPort();
-
     protected MediaDriver mediaDriver;
-    protected FixEngine acceptingEngine;
-    protected FixEngine initiatingEngine;
-    protected FixLibrary acceptingLibrary;
-    protected FixLibrary initiatingLibrary;
-    protected Session initiatingSession;
-    protected Session acceptingSession;
-
-    protected FakeOtfAcceptor acceptingOtfAcceptor = new FakeOtfAcceptor();
-    protected FakeHandler acceptingHandler = new FakeHandler(acceptingOtfAcceptor);
-
-    protected FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
-    protected FakeHandler initiatingHandler = new FakeHandler(initiatingOtfAcceptor);
-
     protected TestSystem testSystem;
+
+    FixEngine acceptingEngine;
+    FixEngine initiatingEngine;
+    FixLibrary acceptingLibrary;
+    FixLibrary initiatingLibrary;
+    Session initiatingSession;
+    Session acceptingSession;
+
+    FakeOtfAcceptor acceptingOtfAcceptor = new FakeOtfAcceptor();
+    FakeHandler acceptingHandler = new FakeHandler(acceptingOtfAcceptor);
+
+    FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
+    FakeHandler initiatingHandler = new FakeHandler(initiatingOtfAcceptor);
 
     @After
     public void close()
@@ -70,14 +69,14 @@ public class AbstractGatewayToGatewaySystemTest
         cleanupMediaDriver(mediaDriver);
     }
 
-    protected void assertOriginalLibraryDoesNotReceiveMessages(final int initiatorMessageCount)
+    void assertOriginalLibraryDoesNotReceiveMessages(final int initiatorMessageCount)
     {
         initiatingLibrary.poll(LIBRARY_LIMIT);
         assertThat("Messages received by wrong initiator",
             initiatingOtfAcceptor.messages(), hasSize(initiatorMessageCount));
     }
 
-    protected void assertSequenceFromInitToAcceptAt(
+    void assertSequenceFromInitToAcceptAt(
         final int expectedInitToAccSeqNum, final int expectedAccToInitSeqNum)
     {
         assertEquals(expectedInitToAccSeqNum, initiatingSession.lastSentMsgSeqNum());
@@ -100,7 +99,7 @@ public class AbstractGatewayToGatewaySystemTest
             });
     }
 
-    protected void assertSessionsDisconnected()
+    void assertSessionsDisconnected()
     {
         assertSessionDisconnected(initiatingSession);
         assertSessionDisconnected(acceptingSession);
@@ -124,18 +123,18 @@ public class AbstractGatewayToGatewaySystemTest
             });
     }
 
-    protected void assertNotSession(final FakeHandler sessionHandler, final Session session)
+    private void assertNotSession(final FakeHandler sessionHandler, final Session session)
     {
         assertThat(sessionHandler.sessions(), not(hasItem(session)));
     }
 
-    protected void wireSessions()
+    void wireSessions()
     {
         connectSessions();
         acquireAcceptingSession();
     }
 
-    protected void acquireAcceptingSession()
+    void acquireAcceptingSession()
     {
         final long sessionId = acceptingHandler.awaitSessionId(testSystem::poll);
 
@@ -145,7 +144,7 @@ public class AbstractGatewayToGatewaySystemTest
         assertNotNull("unable to acquire accepting session", acceptingSession);
     }
 
-    protected void connectSessions()
+    void connectSessions()
     {
         final Reply<Session> reply = testSystem.awaitReply(
             initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID));
@@ -157,7 +156,7 @@ public class AbstractGatewayToGatewaySystemTest
         sessionLogsOn(testSystem, initiatingSession, DEFAULT_TIMEOUT_IN_MS);
     }
 
-    protected FixMessage assertMessageResent(final int sequenceNumber, final String msgType, final boolean isGapFill)
+    FixMessage assertMessageResent(final int sequenceNumber, final String msgType, final boolean isGapFill)
     {
         assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
         assertEventuallyTrue("Failed to receive the reply",
@@ -185,13 +184,13 @@ public class AbstractGatewayToGatewaySystemTest
         return acceptingOtfAcceptor.lastMessage();
     }
 
-    protected int acceptorSendsResendRequest()
+    int acceptorSendsResendRequest()
     {
         final int seqNum = acceptingSession.lastReceivedMsgSeqNum();
         return acceptorSendsResendRequest(seqNum);
     }
 
-    protected int acceptorSendsResendRequest(final int seqNum)
+    int acceptorSendsResendRequest(final int seqNum)
     {
         final ResendRequestEncoder resendRequest = new ResendRequestEncoder()
             .beginSeqNo(seqNum)
@@ -204,7 +203,7 @@ public class AbstractGatewayToGatewaySystemTest
         return seqNum;
     }
 
-    protected void messagesCanBeExchanged()
+    void messagesCanBeExchanged()
     {
         final long position = messagesCanBeExchanged(initiatingSession, initiatingOtfAcceptor);
 
@@ -217,9 +216,7 @@ public class AbstractGatewayToGatewaySystemTest
             });
     }
 
-    protected long messagesCanBeExchanged(
-        final Session sendingSession,
-        final FakeOtfAcceptor receivingAcceptor)
+    long messagesCanBeExchanged(final Session sendingSession, final FakeOtfAcceptor receivingAcceptor)
     {
         final String testReqID = testReqId();
         final long position = sendTestRequest(sendingSession, testReqID);
@@ -229,26 +226,26 @@ public class AbstractGatewayToGatewaySystemTest
         return position;
     }
 
-    protected void clearMessages()
+    void clearMessages()
     {
         initiatingOtfAcceptor.messages().clear();
         acceptingOtfAcceptor.messages().clear();
     }
 
-    protected void launchAcceptingEngine()
+    void launchAcceptingEngine()
     {
         acceptingEngine = FixEngine.launch(
             acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID));
     }
 
-    protected void assertSequenceIndicesAre(final int sequenceIndex)
+    void assertSequenceIndicesAre(final int sequenceIndex)
     {
         assertAcceptingSessionHasSequenceIndex(sequenceIndex);
         assertInitiatingSequenceIndexIs(sequenceIndex);
         assertAllMessagesHaveSequenceIndex(sequenceIndex);
     }
 
-    protected void assertAcceptingSessionHasSequenceIndex(final int sequenceIndex)
+    void assertAcceptingSessionHasSequenceIndex(final int sequenceIndex)
     {
         if (acceptingSession != null)
         {
@@ -256,13 +253,13 @@ public class AbstractGatewayToGatewaySystemTest
         }
     }
 
-    protected void assertInitiatingSequenceIndexIs(final int sequenceIndex)
+    void assertInitiatingSequenceIndexIs(final int sequenceIndex)
     {
         assertThat(initiatingSession, hasSequenceIndex(sequenceIndex));
 
     }
 
-    protected void assertAllMessagesHaveSequenceIndex(final int sequenceIndex)
+    void assertAllMessagesHaveSequenceIndex(final int sequenceIndex)
     {
         acceptingOtfAcceptor.allMessagesHaveSequenceIndex(sequenceIndex);
         initiatingOtfAcceptor.allMessagesHaveSequenceIndex(sequenceIndex);

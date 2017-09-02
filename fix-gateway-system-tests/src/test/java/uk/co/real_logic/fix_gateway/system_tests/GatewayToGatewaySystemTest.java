@@ -49,7 +49,7 @@ import static uk.co.real_logic.fix_gateway.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
-    private FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
+    private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
 
     @Before
     public void launch()
@@ -675,8 +675,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final long sessionId = lookupSessionId(ACCEPTOR_ID, INITIATOR_ID, acceptingEngine).resultIfPresent();
 
-        final Reply<?> resetSequenceNumber = testSystem.awaitReply(
-            acceptingEngine.resetSequenceNumber(sessionId));
+        final Reply<?> resetSequenceNumber = testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
         assertTrue(resetSequenceNumber.hasCompleted());
 
         assertInitSeqNum(1, 1, 1);
@@ -694,8 +693,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final long sessionId = lookupSessionId(ACCEPTOR_ID, INITIATOR_ID, acceptingEngine).resultIfPresent();
 
-        final Reply<?> resetSequenceNumber = testSystem.awaitReply(
-            acceptingEngine.resetSequenceNumber(sessionId));
+        final Reply<?> resetSequenceNumber = testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
         assertTrue(resetSequenceNumber.hasCompleted());
 
         assertInitSeqNum(1, 1, 1);
@@ -733,10 +731,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             });
     }
 
-    private void releaseSessionToEngine(
-        final Session session,
-        final FixLibrary library,
-        final FixEngine engine)
+    private void releaseSessionToEngine(final Session session, final FixLibrary library, final FixEngine engine)
     {
         final long connectionId = session.connectionId();
         final long sessionId = session.id();
@@ -826,10 +821,11 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         // Callbacks for the missing messages whilst the gateway managed them
         final String expectedSeqNum = String.valueOf(lastReceivedMsgSeqNum + 1);
-        assertEquals(messages.toString(), 1, messages
-            .stream()
-            .filter(msg -> msg.getMsgType().equals(TEST_REQUEST_AS_STR) && msg.get(MSG_SEQ_NUM).equals(expectedSeqNum))
-            .count());
+        assertEquals(messages.toString(), 1,
+            messages
+                .stream()
+                .filter((m) -> m.getMsgType().equals(TEST_REQUEST_AS_STR) && m.get(MSG_SEQ_NUM).equals(expectedSeqNum))
+                .count());
     }
 
     private void disconnectSessions()

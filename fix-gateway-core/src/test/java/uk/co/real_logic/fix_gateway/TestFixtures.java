@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway;
 import io.aeron.driver.MediaDriver;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
+import org.agrona.concurrent.YieldingIdleStrategy;
 
 import java.io.File;
 
@@ -65,7 +66,9 @@ public final class TestFixtures
         final int termBufferLength, final boolean dirsDeleteOnStart)
     {
         return new MediaDriver.Context()
+            .useWindowsHighResTimer(true)
             .threadingMode(SHARED)
+            .sharedIdleStrategy(new YieldingIdleStrategy())
             .dirDeleteOnStart(dirsDeleteOnStart)
             .publicationTermBufferLength(termBufferLength)
             .ipcTermBufferLength(termBufferLength);
