@@ -124,7 +124,7 @@ public final class SystemTestUtil
                 testSystem.poll();
                 return acceptor
                     .hasReceivedMessage("1")
-                    .filter(msg -> testReqId.equals(msg.getTestReqId()))
+                    .filter((msg) -> testReqId.equals(msg.getTestReqId()))
                     .count() > 0;
             });
     }
@@ -200,6 +200,7 @@ public final class SystemTestUtil
             .logFileDir(CLIENT_LOGS)
             .scheduler(new LowResourceEngineScheduler());
         configuration.agentNamePrefix("init-");
+
         return configuration;
     }
 
@@ -304,6 +305,7 @@ public final class SystemTestUtil
         assertEquals(SessionReplyStatus.OK, replyStatus);
         final Session session = sessionHandler.lastSession();
         sessionHandler.resetSession();
+
         return session;
     }
 
@@ -328,8 +330,7 @@ public final class SystemTestUtil
         return connect(initiatingLibraryConfig(libraryAeronPort, sessionHandler));
     }
 
-    static LibraryConfiguration initiatingLibraryConfig(
-        final int libraryAeronPort, final FakeHandler sessionHandler)
+    static LibraryConfiguration initiatingLibraryConfig(final int libraryAeronPort, final FakeHandler sessionHandler)
     {
         return new LibraryConfiguration()
             .sessionAcquireHandler(sessionHandler)
@@ -466,6 +467,7 @@ public final class SystemTestUtil
     {
         final char[] testReqIDChars = new char[MESSAGE_BUFFER_SIZE_IN_BYTES - 100];
         Arrays.fill(testReqIDChars, 'A');
+
         return new String(testReqIDChars);
     }
 }
