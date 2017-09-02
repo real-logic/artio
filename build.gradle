@@ -287,15 +287,15 @@ project(':fix-gateway-system-tests') {
     }
 
     dependencies {
-        testCompile project(path: ':fix-gateway-core', configuration: 'tests'),
-            project(path: ':fix-gateway-codecs', configuration: 'tests')
+        testCompile project(path: ':fix-gateway-core', configuration: 'tests')
+        testCompile project(path: ':fix-gateway-codecs', configuration: 'tests')
 
-        compile project(path: ':fix-gateway-core'),
-            "io.aeron:aeron-client:${aeronVersion}"
+        compile project(path: ':fix-gateway-core')
+        compile "io.aeron:aeron-client:${aeronVersion}"
 
-        perfCompile project,
-            'org.openjdk.jmh:jmh-core:1.19',
-            'org.openjdk.jmh:jmh-generator-annprocess:1.19'
+        perfCompile project
+        perfCompile 'org.openjdk.jmh:jmh-core:1.19'
+        perfCompile 'org.openjdk.jmh:jmh-generator-annprocess:1.19'
     }
 
     idea.module {
