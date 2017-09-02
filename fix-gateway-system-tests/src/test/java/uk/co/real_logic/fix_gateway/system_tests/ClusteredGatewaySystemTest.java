@@ -128,7 +128,7 @@ public class ClusteredGatewaySystemTest
 
         configuration
             .libraryAeronChannels()
-            .forEach(channel -> assertNotEquals(initiatingLibrary.currentAeronChannel(), channel));
+            .forEach((channel) -> assertNotEquals(initiatingLibrary.currentAeronChannel(), channel));
     }
 
     @After
@@ -227,6 +227,7 @@ public class ClusteredGatewaySystemTest
             });
 
         // TODO: re-enable this part of the test once it is stably passing
+        //noinspection ConstantConditions,ConstantIfStatement
         if (false)
         {
             connectFixSession();
@@ -263,8 +264,8 @@ public class ClusteredGatewaySystemTest
     private void assertOldSessionDisconnected(final FixEngine engine)
     {
         final List<LibraryInfo> libraries = SystemTestUtil.libraries(engine);
-        libraries.forEach((library) ->
-            assertThat("Old session hasn't disconnected yet", library.sessions(), hasSize(0)));
+        libraries.forEach(
+            (library) -> assertThat("Old session hasn't disconnected yet", library.sessions(), hasSize(0)));
     }
 
     private void assertOldSessionDisconnected(final FixLibrary library)
@@ -417,7 +418,7 @@ public class ClusteredGatewaySystemTest
         }
     }
 
-    private class MessageCounter implements FixMessageConsumer
+    class MessageCounter implements FixMessageConsumer
     {
         private int messageCount = 0;
 
@@ -431,7 +432,7 @@ public class ClusteredGatewaySystemTest
             messageCount++;
         }
 
-        public int messageCount()
+        int messageCount()
         {
             return messageCount;
         }
