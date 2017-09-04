@@ -26,8 +26,9 @@ public class ReplayIndexDescriptor
 {
     static final int REPLAY_POSITION_BUFFER_SIZE = 128 * 1024;
 
-    static final int BEGIN_CHANGE_OFFSET = MessageHeaderEncoder.ENCODED_LENGTH;
-    static final int END_CHANGE_OFFSET = BEGIN_CHANGE_OFFSET + BitUtil.SIZE_OF_LONG;
+    private static final int BEGIN_CHANGE_OFFSET = MessageHeaderEncoder.ENCODED_LENGTH;
+    private static final int END_CHANGE_OFFSET = BEGIN_CHANGE_OFFSET + BitUtil.SIZE_OF_LONG;
+
     public static final int INITIAL_RECORD_OFFSET = END_CHANGE_OFFSET + BitUtil.SIZE_OF_LONG;
 
     static final int RECORD_LENGTH = 32;

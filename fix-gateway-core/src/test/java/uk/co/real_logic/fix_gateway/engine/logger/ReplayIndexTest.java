@@ -20,6 +20,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.NoOpIdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.stubbing.OngoingStubbing;
@@ -93,6 +94,12 @@ public class ReplayIndexTest extends AbstractLogTest
 
         when(mockReader.session(anyInt())).thenReturn(mockSessionReader);
         whenRead().thenReturn(100L);
+    }
+
+    @After
+    public void teardown()
+    {
+        replayIndex.close();
     }
 
     @Test
