@@ -59,6 +59,8 @@ public class DefaultLibraryScheduler implements LibraryScheduler
 
     public void close(final int libraryId)
     {
+        EngineScheduler.awaitRunnerStart(monitoringRunner);
+
         CloseHelper.close(monitoringRunner);
     }
 }

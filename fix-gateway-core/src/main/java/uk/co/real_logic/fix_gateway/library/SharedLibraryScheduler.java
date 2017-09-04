@@ -69,6 +69,8 @@ public class SharedLibraryScheduler implements LibraryScheduler
 
     public synchronized void close(final int libraryId)
     {
+        EngineScheduler.awaitRunnerStart(runner);
+
         CloseHelper.close(runner);
     }
 
