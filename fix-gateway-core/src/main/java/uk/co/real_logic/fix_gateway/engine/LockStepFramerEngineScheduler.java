@@ -76,6 +76,9 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
 
     public void close()
     {
+        EngineScheduler.awaitRunnerStart(archivingRunner);
+        EngineScheduler.awaitRunnerStart(monitoringRunner);
+
         Exceptions.closeAll(framerInvoker, archivingRunner, monitoringRunner);
     }
 

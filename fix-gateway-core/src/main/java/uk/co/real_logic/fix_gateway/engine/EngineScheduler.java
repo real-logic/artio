@@ -18,6 +18,7 @@ package uk.co.real_logic.fix_gateway.engine;
 import io.aeron.Aeron;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.AgentRunner;
 
 /**
  * Interface for determining how an Engine's Agents are allocated to threads.
@@ -59,5 +60,16 @@ public interface EngineScheduler extends AutoCloseable
     static void fail()
     {
         throw new IllegalStateException("Cannot re-use scheduler for multiple launch attempts");
+    }
+
+    static void awaitRunnerStart(AgentRunner runner)
+    {
+        if (runner != null)
+        {
+            while (runner.thread() == null)
+            {
+                Thread.yield();
+            }
+        }
     }
 }

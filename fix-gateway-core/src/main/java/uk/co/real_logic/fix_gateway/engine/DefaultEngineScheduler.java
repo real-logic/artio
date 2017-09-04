@@ -64,6 +64,10 @@ public class DefaultEngineScheduler implements EngineScheduler
 
     public void close()
     {
+        EngineScheduler.awaitRunnerStart(framerRunner);
+        EngineScheduler.awaitRunnerStart(archivingRunner);
+        EngineScheduler.awaitRunnerStart(monitoringRunner);
+
         Exceptions.closeAll(framerRunner, archivingRunner, monitoringRunner);
     }
 

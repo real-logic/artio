@@ -59,6 +59,7 @@ public abstract class EngineContext implements AutoCloseable
 
     protected Streams inboundLibraryStreams;
     protected Streams outboundLibraryStreams;
+    // Indexers are owned by the archivingAgent
     protected Indexer inboundIndexer;
     protected Indexer outboundIndexer;
     protected Agent archivingAgent;

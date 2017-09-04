@@ -48,6 +48,8 @@ import static uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions.supp
  */
 public final class FixEngine extends GatewayProcess
 {
+    private static final Object CLOSE_MUTEX = new Object();
+
     public static final int ENGINE_LIBRARY_ID = 0;
 
     private final EngineTimers timers;
@@ -67,9 +69,12 @@ public final class FixEngine extends GatewayProcess
      */
     public static FixEngine launch(final EngineConfiguration configuration)
     {
-        configuration.conclude();
+        synchronized (CLOSE_MUTEX)
+        {
+            configuration.conclude();
 
-        return new FixEngine(configuration).launch();
+            return new FixEngine(configuration).launch();
+        }
     }
 
     /**
@@ -266,9 +271,12 @@ public final class FixEngine extends GatewayProcess
      * This does not remove files associated with the engine, that are persistent
      * over multiple runs of the engine.
      */
-    public synchronized void close()
+    public void close()
     {
-        closeAll(scheduler, engineContext, configuration, super::close);
+        synchronized (CLOSE_MUTEX)
+        {
+            closeAll(scheduler, engineContext, configuration, super::close);
+        }
     }
 
     public EngineConfiguration configuration()

@@ -21,6 +21,7 @@ import org.agrona.collections.CollectionUtil;
 import org.agrona.concurrent.Agent;
 import uk.co.real_logic.fix_gateway.DebugLogger;
 import uk.co.real_logic.fix_gateway.LogTag;
+import uk.co.real_logic.fix_gateway.dictionary.generation.Exceptions;
 import uk.co.real_logic.fix_gateway.engine.CompletionPosition;
 import uk.co.real_logic.fix_gateway.replication.ClusterFragmentHandler;
 import uk.co.real_logic.fix_gateway.replication.ClusterHeader;
@@ -109,9 +110,7 @@ public class Indexer implements Agent, ClusterFragmentHandler
     {
         quiesce();
 
-        indices.forEach(Index::close);
-        archiveReader.close();
-        subscription.close();
+        Exceptions.closeAll(() -> Exceptions.closeAll(indices), archiveReader, subscription);
     }
 
     private void quiesce()

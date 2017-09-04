@@ -89,8 +89,9 @@ public class ReplayIndex implements Index
         this.bufferFactory = bufferFactory;
         this.positionBuffer = positionBuffer;
         fixSessionIdToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
+        final String replayPositionPath = replayPositionPath(logFileDir, requiredStreamId);
         positionWriter = new IndexedPositionWriter(
-            positionBuffer, errorHandler, 0, replayPositionPath(logFileDir, requiredStreamId));
+            positionBuffer, errorHandler, 0, replayPositionPath);
         positionReader = new IndexedPositionReader(positionBuffer);
     }
 

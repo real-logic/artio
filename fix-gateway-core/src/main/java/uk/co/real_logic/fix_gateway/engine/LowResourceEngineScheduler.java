@@ -75,7 +75,7 @@ public class LowResourceEngineScheduler implements EngineScheduler
 
         runner = new AgentRunner(
             configuration.framerIdleStrategy(),
-            errorHandler,
+            Throwable::printStackTrace,
             null,
             new CompositeAgent(agents));
         startOnThread(runner);
@@ -83,6 +83,8 @@ public class LowResourceEngineScheduler implements EngineScheduler
 
     public void close()
     {
+        EngineScheduler.awaitRunnerStart(runner);
+
         CloseHelper.close(runner);
     }
 
