@@ -176,8 +176,8 @@ public class CommonConfiguration
     public static final boolean TIME_MESSAGES = Boolean.getBoolean(TIME_MESSAGES_PROPERTY);
     public static final boolean FORCE_WRITES = Boolean.getBoolean(FORCE_WRITES_MESSAGES_PROPERTY);
 
-    public static final int BACKOFF_SPINS = Integer.getInteger("fix.core.spins", 1_000);
-    public static final int BACKOFF_YIELDS = Integer.getInteger("fix.core.yields", 1_000);
+    public static final int BACKOFF_SPINS = Integer.getInteger("fix.core.spins", 100);
+    public static final int BACKOFF_YIELDS = Integer.getInteger("fix.core.yields", 100);
 
     // ------------------------------------------------
     //          Configuration Defaults
