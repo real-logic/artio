@@ -16,8 +16,7 @@
 package uk.co.real_logic.fix_gateway.engine;
 
 import org.agrona.ErrorHandler;
-import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.YieldingIdleStrategy;
+import org.agrona.concurrent.*;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -32,19 +31,19 @@ public class LowResourceEngineSchedulerTest
     private Agent monitoringAgent = mock(Agent.class);
     private EngineConfiguration configuration = mock(EngineConfiguration.class);
     private Agent conductorAgent = mock(Agent.class);
+    private ErrorHandler mockErrorHandler = mock(ErrorHandler.class);
 
     @Test
     public void shouldPrintErrorIfRepeatedlyThrown() throws Exception
     {
-        when(configuration.framerIdleStrategy()).thenReturn(new YieldingIdleStrategy());
+        when(configuration.framerIdleStrategy()).thenReturn(new BusySpinIdleStrategy());
         when(framer.doWork()).thenThrow(IOException.class);
 
         try (EngineScheduler scheduler = new LowResourceEngineScheduler())
         {
-
             scheduler.launch(
                 configuration,
-                mock(ErrorHandler.class),
+                mockErrorHandler,
                 framer,
                 archivingAgent,
                 monitoringAgent,
@@ -54,6 +53,8 @@ public class LowResourceEngineSchedulerTest
                 "Failed to invoke monitoring agent",
                 () -> verify(monitoringAgent, atLeastOnce()).doWork()
             );
+
+            verify(mockErrorHandler, atLeastOnce()).onError(any(IOException.class));
         }
     }
 }

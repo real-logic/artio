@@ -75,7 +75,7 @@ public class LowResourceEngineScheduler implements EngineScheduler
 
         runner = new AgentRunner(
             configuration.framerIdleStrategy(),
-            Throwable::printStackTrace,
+            errorHandler,
             null,
             new CompositeAgent(agents));
         startOnThread(runner);
