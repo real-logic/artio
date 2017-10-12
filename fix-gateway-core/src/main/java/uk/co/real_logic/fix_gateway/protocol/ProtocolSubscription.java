@@ -39,7 +39,6 @@ public final class ProtocolSubscription implements ControlledFragmentHandler, Cl
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
-    private final ReplicatedMessageDecoder replicatedMessage = new ReplicatedMessageDecoder();
 
     private final ProtocolHandler protocolHandler;
     private final Action defaultAction;

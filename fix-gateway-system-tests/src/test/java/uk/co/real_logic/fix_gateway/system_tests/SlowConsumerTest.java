@@ -100,7 +100,7 @@ public class SlowConsumerTest
             testSystem.poll();
         }
 
-        bytesInBufferAtLeast(sessionInfo, (long)senderMaxBytesInBuffer);
+        bytesInBufferAtLeast(sessionInfo, senderMaxBytesInBuffer);
 
         // stopStepping();
     }
