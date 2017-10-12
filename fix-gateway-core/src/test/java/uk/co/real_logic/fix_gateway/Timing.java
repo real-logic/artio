@@ -15,18 +15,17 @@
  */
 package uk.co.real_logic.fix_gateway;
 
-import java.lang.management.ManagementFactory;
-import java.lang.management.RuntimeMXBean;
 import java.util.Optional;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
+import static org.agrona.SystemUtil.isDebuggerAttached;
 import static org.junit.Assert.fail;
 
 public final class Timing
 {
     // Long timeout, but one that doesn't cause long overflow.
-    public static final long DEFAULT_TIMEOUT_IN_MS = hasDebuggerAttached() ? Integer.MAX_VALUE : 10_000;
+    public static final long DEFAULT_TIMEOUT_IN_MS = isDebuggerAttached() ? Integer.MAX_VALUE : 10_000;
 
     public static <T> T withTimeout(final String message, final Supplier<Optional<T>> supplier, final long timeoutInMs)
     {
@@ -114,14 +113,6 @@ public final class Timing
         failureCleanup.run();
 
         fail(message.get());
-    }
-
-    private static boolean hasDebuggerAttached()
-    {
-        final RuntimeMXBean runtimeMXBean = ManagementFactory.getRuntimeMXBean();
-        final String jvmArguments = runtimeMXBean.getInputArguments().toString();
-
-        return jvmArguments.contains("-agentlib:jdwp");
     }
 
     public interface Block

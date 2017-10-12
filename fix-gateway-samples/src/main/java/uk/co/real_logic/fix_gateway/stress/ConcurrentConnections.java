@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.fix_gateway.stress;
 
-import io.aeron.driver.MediaDriver;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.SleepingIdleStrategy;
 import uk.co.real_logic.fix_gateway.Reply;
@@ -32,6 +31,7 @@ import java.util.Random;
 import java.util.concurrent.CyclicBarrier;
 
 import static java.util.Collections.singletonList;
+import static org.agrona.SystemUtil.loadPropertiesFiles;
 import static uk.co.real_logic.fix_gateway.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.fix_gateway.stress.StressConfiguration.MESSAGES_EXCHANGED;
 import static uk.co.real_logic.fix_gateway.stress.StressConfiguration.NUM_SESSIONS;
@@ -40,7 +40,7 @@ public final class ConcurrentConnections
 {
     public static void main(final String[] args) throws Exception
     {
-        MediaDriver.loadPropertiesFiles(args);
+        loadPropertiesFiles(args);
 
         final AgentRunner server = Server.createServer(new SleepingIdleStrategy(100), Throwable::printStackTrace);
 

@@ -37,7 +37,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.aeron.CommonContext.AERON_DIR_PROP_DEFAULT;
 import static io.aeron.driver.ThreadingMode.SHARED;
-import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static org.agrona.BitUtil.SIZE_OF_SHORT;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -98,10 +97,7 @@ class NodeRunner implements AutoCloseable
         }
 
         mediaDriver = MediaDriver.launch(context);
-        final Aeron.Context clientContext = new Aeron.Context()
-            .aeronDirectoryName(context.aeronDirectoryName())
-            .imageMapMode(READ_WRITE);
-        aeron = Aeron.connect(clientContext);
+        aeron = Aeron.connect(new Aeron.Context().aeronDirectoryName(context.aeronDirectoryName()));
 
         final StreamIdentifier dataStream = new StreamIdentifier(AERON_CHANNEL, DEFAULT_DATA_STREAM_ID);
         final ArchiveMetaData metaData = AbstractReplicationTest.archiveMetaData((short)nodeId);
@@ -246,7 +242,7 @@ class NodeRunner implements AutoCloseable
         return publication;
     }
 
-    public long archivedPosition()
+    long archivedPosition()
     {
         return clusterAgent.archivedPosition();
     }

@@ -58,7 +58,6 @@ import static io.aeron.protocol.DataHeaderFlyweight.END_FLAG;
 import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
 import static java.lang.Integer.min;
 import static java.lang.Integer.numberOfTrailingZeros;
-import static java.nio.channels.FileChannel.MapMode.READ_WRITE;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -141,7 +140,7 @@ public class ArchiverTest
         deleteLogFileDir();
 
         mediaDriver = launchMediaDriver(TERM_LENGTH);
-        aeron = Aeron.connect(new Aeron.Context().imageMapMode(READ_WRITE));
+        aeron = Aeron.connect();
 
         final StreamIdentifier dataStream = new StreamIdentifier(CHANNEL, STREAM_ID);
         logDirectoryDescriptor = new LogDirectoryDescriptor(LOG_FILE_DIR);

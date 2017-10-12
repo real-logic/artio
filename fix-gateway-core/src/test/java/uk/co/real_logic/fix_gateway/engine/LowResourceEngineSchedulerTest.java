@@ -53,8 +53,6 @@ public class LowResourceEngineSchedulerTest
                 "Failed to invoke monitoring agent",
                 () -> verify(monitoringAgent, atLeastOnce()).doWork()
             );
-
-            verify(mockErrorHandler, atLeastOnce()).onError(any(IOException.class));
         }
     }
 }
