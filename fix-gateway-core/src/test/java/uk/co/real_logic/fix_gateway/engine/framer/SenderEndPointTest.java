@@ -425,7 +425,7 @@ public class SenderEndPointTest
     {
         try
         {
-            verify(tcpChannel, times).write(byteBuffer);
+            verify(tcpChannel, times).write(any(ByteBuffer.class));
             reset(tcpChannel);
         }
         catch (final IOException e)
@@ -468,7 +468,7 @@ public class SenderEndPointTest
     {
         try
         {
-            when(tcpChannel.write(byteBuffer)).thenReturn(bodyLength);
+            when(tcpChannel.write(any(ByteBuffer.class))).thenReturn(bodyLength);
         }
         catch (final IOException e)
         {

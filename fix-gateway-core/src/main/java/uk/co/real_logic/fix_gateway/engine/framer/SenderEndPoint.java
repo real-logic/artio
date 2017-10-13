@@ -27,6 +27,7 @@ import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.IdentityHashMap;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
@@ -37,6 +38,9 @@ import static uk.co.real_logic.fix_gateway.protocol.GatewayPublication.FRAME_SIZ
 
 class SenderEndPoint implements AutoCloseable
 {
+    // All Sender End Points are accessed from the same thread.
+    private static final IdentityHashMap<ByteBuffer, ByteBuffer> BUFFER_TO_DUPLICATE = new IdentityHashMap<>();
+
     private final long connectionId;
     private final TcpChannel channel;
     private final AtomicCounter bytesInBuffer;
@@ -165,6 +169,19 @@ class SenderEndPoint implements AutoCloseable
         }
     }
 
+    // Workaround to avoid the buffers being accessed from different threads.
+    private ByteBuffer getBuffer(final DirectBuffer directBuffer)
+    {
+        final ByteBuffer originalBuffer = directBuffer.byteBuffer();
+        ByteBuffer duplicateBuffer = BUFFER_TO_DUPLICATE.get(originalBuffer);
+        if (duplicateBuffer == null)
+        {
+            duplicateBuffer = originalBuffer.duplicate();
+            BUFFER_TO_DUPLICATE.put(originalBuffer, duplicateBuffer);
+        }
+        return duplicateBuffer;
+    }
+
     private int writeFramedMessage(
         final DirectBuffer directBuffer,
         final int offset,
@@ -172,9 +189,10 @@ class SenderEndPoint implements AutoCloseable
         final long timeInMs)
         throws IOException
     {
-        final ByteBuffer buffer = directBuffer.byteBuffer();
-        ByteBufferUtil.limit(buffer, offset + length);
-        ByteBufferUtil.position(buffer, offset);
+        final ByteBuffer buffer = getBuffer(directBuffer);
+        ByteBufferUtil.move(buffer, offset, offset + length);
+
+        buffer.duplicate();
 
         final int written = channel.write(buffer);
         DebugLogger.log(FIX_MESSAGE, "Written  %s%n", buffer, written);
@@ -318,10 +336,9 @@ class SenderEndPoint implements AutoCloseable
             }
 
             final int dataOffset = offsetAfterHeader + FRAME_SIZE + bytesPreviouslySent;
-            final ByteBuffer buffer = directBuffer.byteBuffer();
+            final ByteBuffer buffer = getBuffer(directBuffer);
 
-            ByteBufferUtil.limit(buffer, dataOffset + remainingLength);
-            ByteBufferUtil.position(buffer, dataOffset);
+            ByteBufferUtil.move(buffer, dataOffset, dataOffset + remainingLength);
 
             final int written = channel.write(buffer);
             bytesInBuffer.addOrdered(-written);
