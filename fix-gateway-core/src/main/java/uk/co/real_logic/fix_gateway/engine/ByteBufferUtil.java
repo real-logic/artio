@@ -22,16 +22,6 @@ import java.nio.ByteBuffer;
  */
 public final class ByteBufferUtil
 {
-
-    public static void move(final ByteBuffer byteBuffer, final int newPosition, final int newLimit)
-    {
-        // System.out.println("newPosition = " + newPosition);
-        // System.out.println("newLimit = " + newLimit);
-
-        limit(byteBuffer, newLimit);
-        position(byteBuffer, newPosition);
-    }
-
     public static void position(final ByteBuffer byteBuffer, final int newPosition)
     {
         try
