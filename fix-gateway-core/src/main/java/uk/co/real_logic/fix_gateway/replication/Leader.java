@@ -401,7 +401,7 @@ class Leader implements Role, RaftHandler
         return this;
     }
 
-    private class ResendHandler implements BlockHandler
+    class ResendHandler implements BlockHandler
     {
         private long messageAcknowledgementPosition;
         private long messageAcknowledgementTransportPosition;
@@ -440,7 +440,7 @@ class Leader implements Role, RaftHandler
             }
         }
 
-        private boolean reAttemptResend()
+        boolean reAttemptResend()
         {
             final boolean resendIsComplete = resendIsComplete();
             if (!resendIsComplete)
@@ -450,12 +450,12 @@ class Leader implements Role, RaftHandler
             return resendIsComplete;
         }
 
-        private boolean resendIsComplete()
+        boolean resendIsComplete()
         {
             return repeatResendBuffer == null;
         }
 
-        private void emptyResend()
+        void emptyResend()
         {
             saveResend(EMPTY_BUFFER, 0, 0);
         }

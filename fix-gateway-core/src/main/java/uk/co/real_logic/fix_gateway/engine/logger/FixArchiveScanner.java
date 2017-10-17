@@ -70,7 +70,7 @@ public class FixArchiveScanner
         archiveScanner.forEachFragment(id, logEntryHandler, errorHandler);
     }
 
-    private class LogEntryHandler implements FragmentHandler
+    class LogEntryHandler implements FragmentHandler
     {
         @SuppressWarnings("FinalParameters")
         public void onFragment(
