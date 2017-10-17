@@ -107,6 +107,16 @@ public final class DebugLogger
         }
     }
 
+    public static void logSbeMessage(
+        final LogTag tag,
+        final Object sbeObject)
+    {
+        if (isEnabled(tag))
+        {
+            println(sbeObject.toString());
+        }
+    }
+
     public static String toStringSbeMessage(final DirectBuffer buffer, final int offset)
     {
         final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();

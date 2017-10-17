@@ -265,7 +265,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, manageSessionEncoder);
 
         return position;
     }
@@ -289,7 +289,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, disconnect);
 
         return position;
     }
@@ -314,7 +314,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, connect);
 
         return position;
     }
@@ -334,7 +334,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, resetSessionIds);
 
         return position;
     }
@@ -354,7 +354,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, resetSequenceNumber);
 
         return position;
     }
@@ -374,7 +374,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, resetLibrarySequenceNumber);
 
         return position;
     }
@@ -398,7 +398,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, requestDisconnect);
 
         return position;
     }
@@ -464,7 +464,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, initiateConnection);
 
         return position;
     }
@@ -490,7 +490,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, error);
 
         return position;
     }
@@ -510,7 +510,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(APPLICATION_HEARTBEAT, buffer, bufferClaim.offset());
+        logSbeMessage(APPLICATION_HEARTBEAT, applicationHeartbeat);
 
         return position;
     }
@@ -536,7 +536,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, libraryConnect);
 
         return position;
     }
@@ -579,7 +579,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, releaseSession);
 
         return position;
     }
@@ -599,7 +599,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, releaseSessionReply);
 
         return position;
     }
@@ -629,7 +629,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, requestSession);
 
         return position;
     }
@@ -649,7 +649,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, requestSessionReply);
 
         return position;
     }
@@ -675,7 +675,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, notLeader);
 
         return position;
     }
@@ -695,7 +695,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, newSentPosition);
 
         return position;
     }
@@ -718,7 +718,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, libraryTimeout);
 
         return position;
     }
@@ -748,7 +748,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, controlNotification);
 
         return position;
     }
@@ -771,7 +771,7 @@ public class GatewayPublication extends ClaimablePublication
 
         bufferClaim.commit();
 
-        logSbeMessage(GATEWAY_MESSAGE, buffer, bufferClaim.offset());
+        logSbeMessage(GATEWAY_MESSAGE, slowStatusNotification);
 
         return position;
     }
