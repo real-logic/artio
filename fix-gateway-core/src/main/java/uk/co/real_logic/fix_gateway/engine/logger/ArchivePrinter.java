@@ -23,6 +23,7 @@ import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.replication.StreamIdentifier;
 import uk.co.real_logic.fix_gateway.sbe_util.MessageDumper;
 import uk.co.real_logic.fix_gateway.sbe_util.MessageSchemaIr;
+import uk.co.real_logic.sbe.json.JsonPrinter;
 
 import java.io.PrintStream;
 
@@ -36,7 +37,7 @@ public class ArchivePrinter implements FragmentHandler
     private static final int ID_ARG = 1;
 
     private final PrintStream output;
-    private final MessageDumper dumper = new MessageDumper(MessageSchemaIr.SCHEMA_BUFFER);
+    private final JsonPrinter dumper = new JsonPrinter(MessageSchemaIr.SCHEMA_IR);
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
 
     public static void main(final String[] args)
@@ -65,14 +66,9 @@ public class ArchivePrinter implements FragmentHandler
     {
         headerDecoder.wrap(buffer, offset);
 
-        final String result = dumper.toString(
-            headerDecoder.templateId(),
-            headerDecoder.version(),
-            headerDecoder.blockLength(),
-            buffer,
-            offset + MessageHeaderDecoder.ENCODED_LENGTH
-        );
+        final String result = MessageDumper.print(dumper, buffer, offset, length);
 
         output.println(result);
     }
+
 }

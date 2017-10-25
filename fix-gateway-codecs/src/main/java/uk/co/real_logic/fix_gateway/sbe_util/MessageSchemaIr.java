@@ -29,27 +29,32 @@ import java.nio.ByteBuffer;
 public final class MessageSchemaIr
 {
     private static final String PATH = "message-schema.xml";
+    public static final Ir SCHEMA_IR = loadIr();
     public static final ByteBuffer SCHEMA_BUFFER = encodeSchema();
 
-    private static ByteBuffer encodeSchema()
+    private static Ir loadIr()
     {
-        final ByteBuffer byteBuffer = ByteBuffer.allocate(64 * 1024);
         try (InputStream in = MessageSchemaLocation.class.getResourceAsStream(PATH))
         {
             final MessageSchema schema = XmlSchemaParser.parse(in, ParserOptions.DEFAULT);
-            final Ir ir = new IrGenerator().generate(schema);
-            try (IrEncoder irEncoder = new IrEncoder(byteBuffer, ir))
-            {
-                irEncoder.encode();
-            }
-
-            byteBuffer.flip();
+            return new IrGenerator().generate(schema);
         }
         catch (final Exception ex)
         {
             ex.printStackTrace();
             return null;
         }
+    }
+
+    private static ByteBuffer encodeSchema()
+    {
+        final ByteBuffer byteBuffer = ByteBuffer.allocate(64 * 1024);
+        try (IrEncoder irEncoder = new IrEncoder(byteBuffer, SCHEMA_IR))
+        {
+            irEncoder.encode();
+        }
+
+        byteBuffer.flip();
 
         return byteBuffer;
     }

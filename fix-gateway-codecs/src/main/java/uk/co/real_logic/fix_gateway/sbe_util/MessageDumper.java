@@ -16,42 +16,22 @@
 package uk.co.real_logic.fix_gateway.sbe_util;
 
 import org.agrona.DirectBuffer;
-import uk.co.real_logic.sbe.ir.Ir;
-import uk.co.real_logic.sbe.ir.IrDecoder;
-import uk.co.real_logic.sbe.ir.Token;
-import uk.co.real_logic.sbe.otf.OtfMessageDecoder;
+import uk.co.real_logic.sbe.json.JsonPrinter;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 
 public class MessageDumper
 {
-    private final Ir ir;
-
-    public MessageDumper(final ByteBuffer schemaBuffer)
+    public static String print(
+        final JsonPrinter dumper, final DirectBuffer buffer, final int offset, final int length)
     {
-        ir = new IrDecoder(schemaBuffer).decode();
-    }
+        final ByteBuffer byteBuffer = buffer.byteBuffer();
+        final int originalPosition = byteBuffer.position();
+        final int originalLimit = byteBuffer.limit();
+        byteBuffer.limit(length + offset).position(offset);
+        final ByteBuffer slice = byteBuffer.slice();
+        byteBuffer.limit(originalLimit).position(originalPosition);
 
-    public String toString(
-        final int templateId,
-        final int actingVersion,
-        final int blockLength,
-        final DirectBuffer buffer,
-        final int offset)
-    {
-        final List<Token> tokens = ir.getMessage(templateId);
-
-        final DumpingTokenListener tokenListener = new DumpingTokenListener();
-
-        OtfMessageDecoder.decode(
-            buffer,
-            offset,
-            actingVersion,
-            blockLength,
-            tokens,
-            tokenListener);
-
-        return tokenListener.toString();
+        return dumper.print(slice);
     }
 }

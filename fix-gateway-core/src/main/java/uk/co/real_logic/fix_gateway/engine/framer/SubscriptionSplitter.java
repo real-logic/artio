@@ -197,8 +197,7 @@ class SubscriptionSplitter implements ControlledFragmentHandler
 
     private Action handleMessage(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
-        // TODO: identify generic toString() approach in SBE
-        DebugLogger.logSbeMessage(GATEWAY_MESSAGE, buffer, offset);
+        DebugLogger.logSbeMessage(GATEWAY_MESSAGE, buffer, offset, length);
         return engineProtocolSubscription.onFragment(buffer, offset, length, header);
     }
 }

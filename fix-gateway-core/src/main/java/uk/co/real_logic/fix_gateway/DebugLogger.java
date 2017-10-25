@@ -18,9 +18,9 @@ package uk.co.real_logic.fix_gateway;
 
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.fix_gateway.engine.ByteBufferUtil;
-import uk.co.real_logic.fix_gateway.messages.MessageHeaderDecoder;
 import uk.co.real_logic.fix_gateway.sbe_util.MessageDumper;
 import uk.co.real_logic.fix_gateway.sbe_util.MessageSchemaIr;
+import uk.co.real_logic.sbe.json.JsonPrinter;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -99,11 +99,12 @@ public final class DebugLogger
     public static void logSbeMessage(
         final LogTag tag,
         final DirectBuffer buffer,
-        final int offset)
+        final int offset,
+        final int length)
     {
         if (isEnabled(tag))
         {
-            println(toStringSbeMessage(buffer, offset));
+            println(toStringSbeMessage(buffer, offset, length));
         }
     }
 
@@ -117,18 +118,10 @@ public final class DebugLogger
         }
     }
 
-    public static String toStringSbeMessage(final DirectBuffer buffer, final int offset)
+    private static String toStringSbeMessage(final DirectBuffer buffer, final int offset, final int length)
     {
-        final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
-        headerDecoder.wrap(buffer, offset);
-        final MessageDumper dumper = new MessageDumper(MessageSchemaIr.SCHEMA_BUFFER);
-        return dumper.toString(
-            headerDecoder.templateId(),
-            headerDecoder.version(),
-            headerDecoder.blockLength(),
-            buffer,
-            offset + MessageHeaderDecoder.ENCODED_LENGTH
-        );
+        final JsonPrinter dumper = new JsonPrinter(MessageSchemaIr.SCHEMA_IR);
+        return MessageDumper.print(dumper, buffer, offset, length);
     }
 
     public static void log(
