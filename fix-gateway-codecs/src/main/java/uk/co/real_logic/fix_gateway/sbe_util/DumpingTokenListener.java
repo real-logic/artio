@@ -27,7 +27,7 @@ import java.util.List;
 
 public class DumpingTokenListener implements TokenListener
 {
-    public static final String INDENT = "    ";
+    private static final String INDENT = "    ";
     private final StringBuilder builder = new StringBuilder();
     private final StringBuilder prefix = new StringBuilder();
 
