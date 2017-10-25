@@ -73,8 +73,7 @@ public class SenderEndPointTest
         framer,
         MAX_BYTES_IN_BUFFER,
         DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS,
-        0
-    );
+        0);
 
     @Test
     public void shouldRetrySlowConsumerMessage() throws IOException
@@ -425,7 +424,7 @@ public class SenderEndPointTest
     {
         try
         {
-            verify(tcpChannel, times).write(any(ByteBuffer.class));
+            verify(tcpChannel, times).write(byteBuffer);
             reset(tcpChannel);
         }
         catch (final IOException e)
@@ -468,7 +467,7 @@ public class SenderEndPointTest
     {
         try
         {
-            when(tcpChannel.write(any(ByteBuffer.class))).thenReturn(bodyLength);
+            when(tcpChannel.write(byteBuffer)).thenReturn(bodyLength);
         }
         catch (final IOException e)
         {
@@ -523,5 +522,4 @@ public class SenderEndPointTest
         verify(blockablePosition).blockPosition(position);
         reset(blockablePosition);
     }
-
 }

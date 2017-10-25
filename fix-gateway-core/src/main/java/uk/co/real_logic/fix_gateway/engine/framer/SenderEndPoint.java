@@ -27,7 +27,6 @@ import uk.co.real_logic.fix_gateway.messages.DisconnectReason;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.IdentityHashMap;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.fix_gateway.LogTag.FIX_MESSAGE;
@@ -38,9 +37,6 @@ import static uk.co.real_logic.fix_gateway.protocol.GatewayPublication.FRAME_SIZ
 
 class SenderEndPoint implements AutoCloseable
 {
-    // All Sender End Points are accessed from the same thread.
-    private static final IdentityHashMap<ByteBuffer, ByteBuffer> BUFFER_TO_DUPLICATE = new IdentityHashMap<>();
-
     private final long connectionId;
     private final TcpChannel channel;
     private final AtomicCounter bytesInBuffer;
@@ -169,19 +165,6 @@ class SenderEndPoint implements AutoCloseable
         }
     }
 
-    // Workaround to avoid the buffers being accessed from different threads.
-    private ByteBuffer getBuffer(final DirectBuffer directBuffer)
-    {
-        final ByteBuffer originalBuffer = directBuffer.byteBuffer();
-        ByteBuffer duplicateBuffer = BUFFER_TO_DUPLICATE.get(originalBuffer);
-        if (duplicateBuffer == null)
-        {
-            duplicateBuffer = originalBuffer.duplicate();
-            BUFFER_TO_DUPLICATE.put(originalBuffer, duplicateBuffer);
-        }
-        return duplicateBuffer;
-    }
-
     private int writeFramedMessage(
         final DirectBuffer directBuffer,
         final int offset,
@@ -189,14 +172,14 @@ class SenderEndPoint implements AutoCloseable
         final long timeInMs)
         throws IOException
     {
-        final ByteBuffer buffer = getBuffer(directBuffer);
-        ByteBufferUtil.move(buffer, offset, offset + length);
-
-        buffer.duplicate();
+        final ByteBuffer buffer = directBuffer.byteBuffer();
+        ByteBufferUtil.limit(buffer, offset + length);
+        ByteBufferUtil.position(buffer, offset);
 
         final int written = channel.write(buffer);
         DebugLogger.log(FIX_MESSAGE, "Written  %s%n", buffer, written);
         updateSendingTimeoutTimeInMs(timeInMs, written);
+
         return written;
     }
 
@@ -210,8 +193,8 @@ class SenderEndPoint implements AutoCloseable
 
     private void onError(final Exception ex)
     {
-        errorHandler.onError(new Exception(
-            String.format("Exception reported for sessionId=%d,connectionId=%d", sessionId, connectionId), ex));
+        errorHandler.onError(new Exception(String.format(
+            "Exception reported for sessionId=%d,connectionId=%d", sessionId, connectionId), ex));
         removeEndpoint(EXCEPTION);
     }
 
@@ -319,7 +302,6 @@ class SenderEndPoint implements AutoCloseable
         try
         {
             final long startOfMessage = position - length;
-
             final int remainingLength;
             final int bytesPreviouslySent;
 
@@ -336,9 +318,10 @@ class SenderEndPoint implements AutoCloseable
             }
 
             final int dataOffset = offsetAfterHeader + FRAME_SIZE + bytesPreviouslySent;
-            final ByteBuffer buffer = getBuffer(directBuffer);
+            final ByteBuffer buffer = directBuffer.byteBuffer();
 
-            ByteBufferUtil.move(buffer, dataOffset, dataOffset + remainingLength);
+            ByteBufferUtil.limit(buffer, dataOffset + remainingLength);
+            ByteBufferUtil.position(buffer, dataOffset);
 
             final int written = channel.write(buffer);
             bytesInBuffer.addOrdered(-written);
@@ -439,19 +422,19 @@ class SenderEndPoint implements AutoCloseable
     }
 
     // Struct for tracking the slow state of the replay and outbound streams
-    private class StreamTracker
+    static class StreamTracker
     {
-        private BlockablePosition blockablePosition;
         private long sentPosition;
-        private boolean partiallySentMessage = false;
         private long skipPosition = Long.MAX_VALUE;
+        private boolean partiallySentMessage = false;
+        private BlockablePosition blockablePosition;
 
         StreamTracker(final BlockablePosition blockablePosition)
         {
             this.blockablePosition = blockablePosition;
         }
 
-        private void moveSentPosition(final int delta)
+        void moveSentPosition(final int delta)
         {
             sentPosition += delta;
         }
