@@ -280,7 +280,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void fieldOutOfOrderMessageRecorded() throws IOException
+    public void fieldOutOfOrderMessageRecordedOnce() throws IOException
     {
         final int length = theEndpointReceivesAnOutOfOrderMessage();
 
