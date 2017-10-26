@@ -60,21 +60,23 @@ public class IdExtractor extends AbstractTokenListener
             this);
     }
 
-    public void onEncoding(final Token fieldToken,
-                           final DirectBuffer buffer,
-                           final int bufferIndex,
-                           final Token typeToken,
-                           final int actingVersion)
+    public void onEncoding(
+        final Token fieldToken,
+        final DirectBuffer buffer,
+        final int bufferIndex,
+        final Token typeToken,
+        final int actingVersion)
     {
         switch (fieldToken.name())
         {
             case "libraryId":
                 libraryId = buffer.getInt(bufferIndex);
-                return;
+                break;
 
             case "correlationId":
             case "connectCorrelationId":
                 correlationId = buffer.getLong(bufferIndex);
+                break;
         }
     }
 

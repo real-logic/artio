@@ -140,10 +140,10 @@ public final class DictionaryParser
         final Entry.Element group)
     {
         aggregate.entriesWith(element -> element == component)
-            .forEach(entry -> entry.element(group));
+            .forEach((entry) -> entry.element(group));
 
         aggregate.entriesWith(element -> element instanceof Aggregate)
-            .forEach(entry -> replaceComponent((Aggregate)entry.element(), component, group));
+            .forEach((entry) -> replaceComponent((Aggregate)entry.element(), component, group));
     }
 
     private Entry.Element extractFirst(final Component component)
@@ -256,7 +256,8 @@ public final class DictionaryParser
         final NodeList childNodes,
         final Map<String, Field> fields,
         final List<Entry> entries,
-        final Map<String, Component> components, final Map<Entry, String> forwardReferences)
+        final Map<String, Component> components,
+        final Map<Entry, String> forwardReferences)
     {
         forEach(childNodes,
             (node) ->
@@ -270,7 +271,7 @@ public final class DictionaryParser
 
                 final boolean required = isRequired(attributes);
                 final Consumer<Entry.Element> newEntry =
-                    element ->
+                    (element) ->
                     {
                         Verify.notNull(element, "element for " + name);
                         entries.add(new Entry(required, element));
@@ -313,6 +314,7 @@ public final class DictionaryParser
         final Component component = new Component(name);
         final NodeList nodes = evaluate(document, expression);
         extractEntries(nodes, fields, component.entries(), components, forwardReferences);
+
         return component;
     }
 

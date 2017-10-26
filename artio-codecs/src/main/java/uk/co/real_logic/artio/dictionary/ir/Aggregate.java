@@ -46,7 +46,7 @@ public abstract class Aggregate
 
     public Stream<Entry> entriesWith(final Predicate<Entry.Element> predicate)
     {
-        return entries.stream().filter(entry -> predicate.test(entry.element()));
+        return entries.stream().filter((entry) -> predicate.test(entry.element()));
     }
 
     /**
@@ -55,23 +55,23 @@ public abstract class Aggregate
     public Stream<Entry> allChildEntries()
     {
         return entries.stream()
-                      .flatMap(entry ->
-                        entry.match(
-                            (ele, field) -> Stream.of(ele),
-                            (ele, group) -> Stream.empty(),
-                            (ele, component) -> component.allChildEntries()
-                        ));
+            .flatMap(
+                (entry) -> entry.match(
+                    (ele, field) -> Stream.of(ele),
+                    (ele, group) -> Stream.empty(),
+                    (ele, component) -> component.allChildEntries()
+                ));
     }
 
     public Stream<Field> allGroupFields()
     {
         return entries.stream()
-                      .flatMap(entry ->
-                        entry.match(
-                            (ele, field) -> Stream.of(field),
-                            (ele, group) -> group.allGroupFields(),
-                            (ele, component) -> component.allGroupFields()
-                        ));
+            .flatMap(
+                (entry) -> entry.match(
+                    (ele, field) -> Stream.of(field),
+                    (ele, group) -> group.allGroupFields(),
+                    (ele, component) -> component.allGroupFields()
+                ));
     }
 
     public Aggregate optionalEntry(final Entry.Element element)
@@ -89,9 +89,9 @@ public abstract class Aggregate
     public String toString()
     {
         return getClass().getSimpleName() + "{" +
-                "name='" + name + '\'' +
-                ", entries=" + entries +
-                '}';
+            "name='" + name + '\'' +
+            ", entries=" + entries +
+            '}';
     }
 
     public boolean hasField(final String msgType)
@@ -102,11 +102,12 @@ public abstract class Aggregate
     public boolean containsGroup()
     {
         return entries.stream()
-                      .anyMatch(entry -> entry.match(
-                          (ele, field) -> false,
-                          (ele, group) -> true,
-                          (ele, component) -> component.containsGroup()
-                      ));
+            .anyMatch(
+                (entry) -> entry.match(
+                    (ele, field) -> false,
+                    (ele, group) -> true,
+                    (ele, component) -> component.containsGroup()
+                ));
     }
 
 }
