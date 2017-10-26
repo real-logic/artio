@@ -99,6 +99,7 @@ public class Session implements AutoCloseable
 
     static final String TEST_REQ_ID = "TEST";
     private static final char[] TEST_REQ_ID_CHARS = TEST_REQ_ID.toCharArray();
+    public static final int NO_LOGOUT_REJECT_REASON = -1;
 
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
 
@@ -138,6 +139,8 @@ public class Session implements AutoCloseable
     private boolean incorrectBeginString = false;
 
     protected SessionLogonListener logonListener;
+
+    private int logoutRejectReason = NO_LOGOUT_REJECT_REASON;
 
     public Session(
         final int heartbeatIntervalInS,
@@ -614,6 +617,7 @@ public class Session implements AutoCloseable
 
     public void onDisconnect()
     {
+        logoutRejectReason = NO_LOGOUT_REJECT_REASON;
         state(DISCONNECTED);
     }
 
@@ -676,6 +680,7 @@ public class Session implements AutoCloseable
                     final Action action = rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
                     if (action != ABORT)
                     {
+                        logoutRejectReason(RejectReason.SENDINGTIME_ACCURACY_PROBLEM.representation());
                         logoutAndDisconnect(INVALID_SENDING_TIME);
                     }
 
@@ -724,9 +729,11 @@ public class Session implements AutoCloseable
         return checkPosition(proxy.reject(
             newSentSeqNum(),
             msgSeqNo,
+            Constants.SENDING_TIME,
             msgType,
             msgTypeLength,
-            SENDINGTIME_ACCURACY_PROBLEM, sequenceIndex()));
+            SENDINGTIME_ACCURACY_PROBLEM,
+            sequenceIndex()));
     }
 
     private void incNextReceivedInboundMessageTime(final long time)
@@ -1099,7 +1106,9 @@ public class Session implements AutoCloseable
     private long sendLogout()
     {
         final int sentSeqNum = newSentSeqNum();
-        final long position = proxy.logout(sentSeqNum, sequenceIndex());
+        final long position = (logoutRejectReason == NO_LOGOUT_REJECT_REASON) ?
+            proxy.logout(sentSeqNum, sequenceIndex()) :
+            proxy.logout(sentSeqNum, sequenceIndex(), logoutRejectReason);
         if (position >= 0)
         {
             lastSentMsgSeqNum(sentSeqNum);
@@ -1302,5 +1311,10 @@ public class Session implements AutoCloseable
     public void logonListener(final SessionLogonListener logonListener)
     {
         this.logonListener = logonListener;
+    }
+
+    public void logoutRejectReason(final int logoutRejectReason)
+    {
+        this.logoutRejectReason = logoutRejectReason;
     }
 }

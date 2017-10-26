@@ -984,6 +984,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return null;
         }
 
+        // Don't skip messages from the engine managed library.
+        if (libraryId == ENGINE_LIBRARY_ID)
+        {
+            return null;
+        }
+
         return CONTINUE;
     }
 

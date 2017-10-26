@@ -808,7 +808,7 @@ public abstract class AbstractSessionTest
     protected void verifySendingTimeProblem()
     {
         verify(mockProxy).reject(
-            2, 2, MSG_TYPE_BYTES, MSG_TYPE_BYTES.length, SENDINGTIME_ACCURACY_PROBLEM, SEQUENCE_INDEX);
+            2, 2, 52, MSG_TYPE_BYTES, MSG_TYPE_BYTES.length, SENDINGTIME_ACCURACY_PROBLEM, SEQUENCE_INDEX);
     }
 
     protected void messageWithWeirdTime(final long sendingTime)

@@ -150,7 +150,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
         messageWithWeirdTime(sendingTime() + TWO_MINUTES);
 
         verifySendingTimeProblem();
-        verifyLogout(3, times(1));
+        verifySendingTimeAccuracyLogout();
         verifyDisconnect(times(1));
     }
 
@@ -162,8 +162,14 @@ public class AcceptorSessionTest extends AbstractSessionTest
         messageWithWeirdTime(sendingTime() - TWO_MINUTES);
 
         verifySendingTimeProblem();
-        verifyLogout(3, times(1));
+        verifySendingTimeAccuracyLogout();
         verifyDisconnect(times(1));
+    }
+
+    private void verifySendingTimeAccuracyLogout()
+    {
+        verify(mockProxy, times(1)).logout(3, SEQUENCE_INDEX,
+            SENDINGTIME_ACCURACY_PROBLEM.representation());
     }
 
     @Test

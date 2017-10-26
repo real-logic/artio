@@ -53,8 +53,14 @@ public class SessionProxy
         {
             final RejectReason reason = reasons[i];
             final String formattedReason = reason.name().replace('_', ' ').toLowerCase();
-            NOT_LOGGED_ON_SESSION_REJECT_REASONS[i] = String.format(
+            // TODO: figure out when this message change happened
+            /*NOT_LOGGED_ON_SESSION_REJECT_REASONS[i] = String.format(
                 "Tried to send a reject while not logged on: %s (field 0)",
+                formattedReason
+            ).getBytes(US_ASCII);*/
+
+            NOT_LOGGED_ON_SESSION_REJECT_REASONS[i] = String.format(
+                "Invalid Logon message: SendingTime accuracy problem, field=52",
                 formattedReason
             ).getBytes(US_ASCII);
 
@@ -179,6 +185,12 @@ public class SessionProxy
     public long logout(final int msgSeqNo, final int sequenceIndex)
     {
         return logout(msgSeqNo, null, 0, sequenceIndex);
+    }
+
+    public long logout(final int msgSeqNo, final int sequenceIndex, final int rejectReason)
+    {
+        final byte[] reasonText = LOGGED_ON_SESSION_REJECT_REASONS[rejectReason];
+        return logout(msgSeqNo, reasonText, reasonText.length, sequenceIndex);
     }
 
     private long logout(final int msgSeqNo, final byte[] text, final int sequenceIndex)

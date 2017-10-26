@@ -388,6 +388,7 @@ public class SessionParser
                 header.msgType(),
                 header.msgTypeLength(),
                 validationStrategy.rejectReason());
+            session.logoutRejectReason(validationStrategy.rejectReason());
             session.startLogout();
             return false;
         }
