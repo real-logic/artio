@@ -1,0 +1,393 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
+                   package="uk.co.real_logic.artio.messages"
+                   id="666"
+                   version="0"
+                   semanticVersion="0.1"
+                   description="Internal messaging format used by the FIX Gateway"
+                   byteOrder="littleEndian">
+    <types>
+        <composite name="messageHeader" description="Message identifiers and length of message root">
+            <type name="blockLength" primitiveType="uint16"/>
+            <type name="templateId" primitiveType="uint16"/>
+            <type name="schemaId" primitiveType="uint16"/>
+            <type name="version" primitiveType="uint16"/>
+        </composite>
+        <composite name="Utf8String">
+            <type name="length" primitiveType="uint16"/>
+            <type name="varData" primitiveType="uint8" length="0" characterEncoding="UTF-8"/>
+        </composite>
+        <composite name="AsciiString">
+            <type name="length" primitiveType="uint16"/>
+            <type name="varData" primitiveType="char" length="0"/>
+        </composite>
+        <composite name="groupSizeEncoding" description="Repeating group dimensions">
+            <type name="blockLength" primitiveType="uint16"/>
+            <type name="numInGroup" primitiveType="uint8" semanticType="NumInGroup"/>
+        </composite>
+    </types>
+    <types>
+        <type name="FixSessionId" primitiveType="int64"/>
+        <type name="LibraryId" primitiveType="int32"/>
+        <type name="SequenceIndex" primitiveType="int32"/>
+        <type name="ConnectionId" primitiveType="int64"/>
+        <type name="CorrelationId" primitiveType="int64"/>
+        <type name="TermId" primitiveType="int32"/>
+        <type name="MessageType" primitiveType="int32"/>
+        <type name="Timestamp" primitiveType="int64"/>
+        <enum name="ConnectionType" encodingType="uint8">
+            <validValue name="ACCEPTOR">0</validValue>
+            <validValue name="INITIATOR">1</validValue>
+        </enum>
+        <enum name="ResetSequenceNumber" encodingType="uint8">
+            <validValue name="NO">0</validValue>
+            <validValue name="YES">1</validValue>
+        </enum>
+        <enum name="SlowStatus" encodingType="uint8">
+            <validValue name="NOT_SLOW">0</validValue>
+            <validValue name="SLOW">1</validValue>
+        </enum>
+        <enum name="GatewayError" encodingType="uint16">
+            <validValue name="EXCEPTION">0</validValue>
+            <validValue name="DUPLICATE_SESSION">1</validValue>
+            <validValue name="UNABLE_TO_CONNECT">2</validValue>
+            <validValue name="UNKNOWN_LIBRARY">3</validValue>
+            <validValue name="DUPLICATE_LIBRARY_ID">4</validValue>
+            <validValue name="DUPLICATE_ACCEPTOR">5</validValue>
+            <validValue name="UNKNOWN_SESSION">6</validValue>
+        </enum>
+        <enum name="MessageStatus" encodingType="uint8">
+            <validValue name="OK">0</validValue>
+            <validValue name="INVALID_CHECKSUM">1</validValue>
+            <validValue name="INVALID_BODYLENGTH">2</validValue>
+            <validValue name="INVALID">3</validValue>
+            <validValue name="CATCHUP_REPLAY">4</validValue>
+        </enum>
+        <enum name="DisconnectReason" encodingType="uint8">
+            <validValue name="REMOTE_DISCONNECT"
+                        description="The TCP connection was disconnected remotely">0</validValue>
+            <validValue name="APPLICATION_DISCONNECT"
+                        description="We disconnected due an application level request">1</validValue>
+            <validValue name="LIBRARY_DISCONNECT"
+                        description="We disconnected due to its library disconnecting">2</validValue>
+            <validValue name="ENGINE_SHUTDOWN"
+                        description="We disconnected the connection due to the engine shutting down">3</validValue>
+            <validValue name="EXCEPTION"
+                        description="We disconnected due to the engine receiving an IOException">4</validValue>
+            <validValue name="SLOW_CONSUMER"
+                        description="We disconnected due to the consumer being too slow at reading the connection">5</validValue>
+            <validValue name="NO_LOGON"
+                        description="We disconnected due to no logon message being sent after a timeout">6</validValue>
+            <validValue name="DUPLICATE_SESSION"
+                        description="We disconnected due the session id being the same as one already connected">7</validValue>
+            <validValue name="INVALID_BODY_LENGTH"
+                        description="We disconnected due a message having an invalid body length field">8</validValue>
+            <validValue name="LOGOUT"
+                        description="We disconnected due to receiving a logout message">9</validValue>
+            <validValue name="FIRST_MESSAGE_NOT_LOGON"
+                        description="We disconnected due to the first message that we received not being a logon">10</validValue>
+            <validValue name="INCORRECT_BEGIN_STRING"
+                        description="We disconnected due begin string field was invalid">11</validValue>
+            <validValue name="MSG_SEQ_NO_TOO_LOW"
+                        description="We disconnected due to the message sequence number being too low">12</validValue>
+            <validValue name="MSG_SEQ_NO_MISSING"
+                        description="We disconnected due to the message sequence number field being missing">13</validValue>
+            <validValue name="INVALID_SENDING_TIME"
+                        description="We disconnected due an invalid sending time field in the fix message">14</validValue>
+            <validValue name="NEGATIVE_HEARTBEAT_INTERVAL"
+                        description="We disconnected due to a negative heartbeat interval field">15</validValue>
+            <validValue name="FAILED_AUTHENTICATION"
+                        description="We disconnected due to the authentication strategy returning false">16</validValue>
+            <validValue name="INVALID_FIX_MESSAGE"
+                        description="We disconnected due to codec validation failing">17</validValue>
+        </enum>
+        <enum name="SessionState" encodingType="uint8">
+            <validValue name="CONNECTING"
+                        description="The session is connecting or reconnecting.">0</validValue>
+            <validValue name="CONNECTED"
+                        description="A machine has connected to the gateway, but hasn't logged in yet. Initial state of a session.">1</validValue>
+            <validValue name="SENT_LOGON"
+                        description="Initiator only state - sent logon message but it hasn't received the reply yet.">2</validValue>
+            <validValue name="ACTIVE"
+                        description="Session is fully authenticated and ready to execute.">3</validValue>
+            <validValue name="AWAITING_RESEND"
+                        description="Login had too high a sequence number and a resend or gap fill is required.">4</validValue>
+            <validValue name="LOGGING_OUT"
+                        description="Session is trying to send logout, will retry sending until not backpressured">5</validValue>
+            <validValue name="LOGGING_OUT_AND_DISCONNECTING"
+                        description="Session is trying to send logout and the disconnect, will retry sending until not backpressured">6</validValue>
+            <validValue name="AWAITING_LOGOUT"
+                        description="Linger between logout request and a logout acknowledgement. You can do resend processing at this point, but no other messages.">7</validValue>
+            <validValue name="DISCONNECTING"
+                        description="Session is trying to disconnect, will retry disconnecting until not backpressured">8</validValue>
+            <validValue name="DISCONNECTED"
+                        description="Session has been disconnected and can't send messages.">9</validValue>
+            <validValue name="DISABLED"
+                        description="DISCONNECTED and unable to reconnect.">10</validValue>
+        </enum>
+        <enum name="SequenceNumberType" encodingType="uint8">
+            <validValue name="TRANSIENT">0</validValue>
+            <validValue name="PERSISTENT">1</validValue>
+            <validValue name="DETERMINE_AT_LOGON">2</validValue>
+        </enum>
+
+        <enum name="AcknowledgementStatus" encodingType="uint8">
+            <validValue name="OK">0</validValue>
+            <validValue name="WRONG_TERM">1</validValue>
+            <validValue name="MISSING_LOG_ENTRIES">2</validValue>
+        </enum>
+
+        <enum name="Vote" encodingType="uint8">
+            <validValue name="FOR">0</validValue>
+            <validValue name="AGAINST">1</validValue>
+        </enum>
+
+        <enum name="SessionReplyStatus" encodingType="uint8">
+            <validValue name="OK"
+                        description="Operation Succeeded">0</validValue>
+            <validValue name="UNKNOWN_SESSION"
+                        description="The gateway doesn't know about the specified connection id">1</validValue>
+            <validValue name="UNKNOWN_LIBRARY"
+                        description="The gateway doesn't know about your library">2</validValue>
+            <validValue name="OTHER_SESSION_OWNER"
+                        description="Another library owns that session">3</validValue>
+            <validValue name="SESSION_NOT_LOGGED_IN"
+                        description="The session hasn't logged in yet so you can't replay anything">4</validValue>
+            <validValue name="SEQUENCE_NUMBER_TOO_HIGH"
+                        description="Can't replay to that sequence number: haven't archived it yet">5</validValue>
+            <validValue name="MISSING_MESSAGES"
+                        description="We can't find the required number of messages in the log">6</validValue>
+        </enum>
+
+        <enum name="LogonStatus" encodingType="uint8">
+            <validValue name="NEW">0</validValue>
+            <validValue name="LIBRARY_NOTIFICATION">1</validValue>
+        </enum>
+    </types>
+
+    <!-- Messages From Library To Engine -->
+    <sbe:message name="InitiateConnection" id="11" description="Try to make an outbound connection">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="requestedInitialSequenceNumber" id="2" type="int32"/>
+        <field name="sequenceNumberType" id="3" type="SequenceNumberType"/>
+        <field name="port" id="4" type="int32"/>
+        <field name="heartbeatIntervalInS" id="5" type="int32"/>
+        <field name="resetSequenceNumber" id="6" type="ResetSequenceNumber"/>
+        <field name="correlationId" id="7" type="CorrelationId"/>
+        <data name="host" id="8" type="Utf8String"/>
+        <data name="senderCompId" id="9" type="Utf8String"/>
+        <data name="senderSubId" id="10" type="Utf8String"/>
+        <data name="senderLocationId" id="11" type="Utf8String"/>
+        <data name="targetCompId" id="12" type="Utf8String"/>
+        <data name="targetSubId" id="13" type="Utf8String"/>
+        <data name="targetLocationId" id="14" type="Utf8String"/>
+        <data name="username" id="15" type="Utf8String"/>
+        <data name="password" id="16" type="Utf8String"/>
+    </sbe:message>
+
+    <sbe:message name="RequestDisconnect" id="12" description="Request a connection be disconnected">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="correlationId" id="2" type="CorrelationId"/>
+        <field name="connection" id="3" type="ConnectionId"/>
+        <field name="reason" id="4" type="DisconnectReason"/>
+    </sbe:message>
+
+    <sbe:message name="LibraryConnect" id="17"
+                 description="Notify an engine that a new library has connected">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="correlationId" id="2" type="CorrelationId"/>
+        <data name="libraryName" id="3" type="Utf8String"/>
+    </sbe:message>
+
+    <sbe:message name="ReleaseSession" id="29"
+                 description="releases a session from the library's control to the gateway">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="sessionId" id="2" type="FixSessionId"/>
+        <field name="connection" id="3" type="ConnectionId"/>
+        <field name="correlationId" id="4" type="CorrelationId"/>
+        <field name="heartbeatIntervalInMs" id="5" type="int64"/>
+        <field name="state" id="6" type="SessionState"/>
+        <field name="lastSentSequenceNumber" id="7" type="int32"/>
+        <field name="lastReceivedSequenceNumber" id="8" type="int32"/>
+        <data name="username" id="9" type="Utf8String"/>
+        <data name="password" id="10" type="Utf8String"/>
+    </sbe:message>
+
+    <sbe:message name="RequestSession" id="31"
+                 description="requests control of a session for this library">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="correlationId" id="2" type="CorrelationId"/>
+        <field name="sessionId" id="3" type="FixSessionId"/>
+        <field name="lastReceivedSequenceNumber" id="4" type="int32"/>
+        <field name="sequenceIndex" id="5" type="SequenceIndex" />
+    </sbe:message>
+
+    <!-- Messages From Engine To Library -->
+    <sbe:message name="Disconnect" id="7" description="A connection has disconnected">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="reason" id="3" type="DisconnectReason"/>
+    </sbe:message>
+
+    <sbe:message name="Connect" id="33" description="We have accepted an inbound TCP Connection">
+        <field name="connection" id="1" type="ConnectionId"/>
+        <data name="address" id="2" type="Utf8String"/>
+    </sbe:message>
+
+    <!--
+    <sbe:message name="ManageConnection" id="10" description="Here's a connection to manage">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="session" id="10" type="FixSessionId"/>
+        <field name="logonTime" id="12" type="Timestamp" />
+        <field name="connectionType" id="3" type="ConnectionType"/>
+        <field name="lastSentSequenceNumber" id="4" type="int32"/>
+        <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
+        <field name="sessionState" id="6" type="SessionState"/>
+        <field name="heartbeatIntervalInS" id="7" type="int32"/>
+        <field name="replyToId" id="8" type="CorrelationId"/>
+        <field name="sequenceIndex" id="11" type="SequenceIndex" />
+        <data name="address" id="9" type="Utf8String"/>
+    </sbe:message>
+    -->
+
+    <sbe:message name="ResetSessionIds" id="36" description="All session ids have been reset">
+    </sbe:message>
+
+    <sbe:message name="ManageSession" id="8" description="Any event to manage a session from gateway to library">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="session" id="3" type="FixSessionId"/>
+        <field name="lastSentSequenceNumber" id="4" type="int32"/>
+        <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
+        <field name="logonTime" id="12" type="Timestamp" />
+        <field name="logonStatus" id="6" type="LogonStatus"/>
+        <field name="slowStatus" id="7" type="SlowStatus"/>
+        <field name="connectionType" id="3" type="ConnectionType"/>
+        <field name="sessionState" id="6" type="SessionState"/>
+        <field name="heartbeatIntervalInS" id="7" type="int32"/>
+        <field name="replyToId" id="8" type="CorrelationId"/>
+        <field name="sequenceIndex" id="11" type="SequenceIndex" />
+        <data name="localCompId" id="8" type="Utf8String"/>
+        <data name="localSubId" id="9" type="Utf8String"/>
+        <data name="localLocationId" id="10" type="Utf8String"/>
+        <data name="remoteCompId" id="11" type="Utf8String"/>
+        <data name="remoteSubId" id="12" type="Utf8String"/>
+        <data name="remoteLocationId" id="13" type="Utf8String"/>
+        <data name="address" id="9" type="Utf8String"/>
+    </sbe:message>
+
+    <!--
+    <sbe:message name="SessionExists" id="9" description="A session exists at the gateway">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connection" id="2" type="ConnectionId"/>
+        <field name="session" id="3" type="FixSessionId"/>
+        <field name="lastSentSequenceNumber" id="4" type="int32"/>
+        <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
+        <field name="logonStatus" id="6" type="LogonStatus"/>
+        <field name="slowStatus" id="7" type="SlowStatus"/>
+        <data name="localCompId" id="8" type="Utf8String"/>
+        <data name="localSubId" id="9" type="Utf8String"/>
+        <data name="localLocationId" id="10" type="Utf8String"/>
+        <data name="remoteCompId" id="11" type="Utf8String"/>
+        <data name="remoteSubId" id="12" type="Utf8String"/>
+        <data name="remoteLocationId" id="13" type="Utf8String"/>
+        <data name="username" id="14" type="Utf8String"/>
+        <data name="password" id="15" type="Utf8String"/>
+    </sbe:message>
+    -->
+
+    <sbe:message name="Error" id="13" description="An error has occurred">
+        <field name="errorType" id="1" type="GatewayError"/>
+        <field name="libraryId" id="2" type="LibraryId"/>
+        <field name="replyToId" id="3" type="CorrelationId"/>
+        <data name="message" id="4" type="Utf8String"/>
+    </sbe:message>
+
+    <sbe:message name="RequestSessionReply" id="32"
+                 description="response to ReleaseSession">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="replyToId" id="2" type="CorrelationId"/>
+        <field name="status" id="3" type="SessionReplyStatus"/>
+    </sbe:message>
+
+    <sbe:message name="ReleaseSessionReply" id="30"
+                 description="response to ReleaseSession">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="replyToId" id="2" type="CorrelationId"/>
+        <field name="status" id="3" type="SessionReplyStatus"/>
+    </sbe:message>
+
+    <sbe:message name="NewSentPosition" id="35" description="A notice of the owned position of the stream is">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="position" id="2" type="int64"/>
+    </sbe:message>
+
+    <sbe:message name="NotLeader" id="37" description="Let a library know that you aren't the leader">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="replyToId" id="2" type="CorrelationId"/>
+        <data name="libraryChannel" id="3" type="Utf8String"/>
+    </sbe:message>
+
+    <sbe:message name="EngineDescriptor" id="38" description="">
+        <data name="libraryChannel" id="1" type="Utf8String"/>
+    </sbe:message>
+
+    <sbe:message name="ControlNotification" id="39"
+                 description="notifies library instances of messages that have been acquired">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <group name="sessions" id="2" dimensionType="groupSizeEncoding">
+            <field name="sessionId" id="10" type="FixSessionId"/>
+        </group>
+    </sbe:message>
+
+    <sbe:message name="LibraryTimeout" id="40"
+                 description="notifies library instances that they have been timed out, added for monitoring purposes">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connectCorrelationId" id="2" type="CorrelationId"/>
+    </sbe:message>
+
+    <!-- Messages In Either Direction -->
+    <sbe:message name="FixMessage" id="1" description="A framed FIX message">
+        <field name="messageType" id="1" type="MessageType"/>
+        <field name="session" id="2" type="FixSessionId"/>
+        <field name="connection" id="3" type="ConnectionId"/>
+        <field name="timestamp" id="4" type="Timestamp"/>
+        <field name="status" id="5" type="MessageStatus"/>
+        <field name="libraryId" id="6" type="LibraryId"/>
+        <field name="bytesSent" id="7" type="int32" />
+        <field name="sequenceIndex" id="8" type="SequenceIndex" />
+        <data name="body" id="9" type="AsciiString"/>
+    </sbe:message>
+
+    <sbe:message name="ApplicationHeartbeat" id="16"
+                 description="A heartbeat message sent within the application protocol">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connectCorrelationId" id="2" type="CorrelationId"/>
+    </sbe:message>
+
+    <sbe:message name="ReplicatedMessage" id="41"
+                 description="A header for replicated messages">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="position" id="2" type="int64"/>
+    </sbe:message>
+
+    <sbe:message name="ResetSequenceNumber" id="42"
+                 description="Tells the sequence index to reset the sequence number of a logged out session">
+        <field name="session" id="2" type="FixSessionId"/>
+    </sbe:message>
+
+    <sbe:message name="ResetLibrarySequenceNumber" id="44"
+                 description="Tells the library to reset the sequence number of a session that it owns">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="session" id="2" type="FixSessionId"/>
+    </sbe:message>
+
+    <sbe:message name="SlowStatusNotification" id="43"
+                 description="Notification of sessions become slow or not">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connectionId" id="2" type="ConnectionId"/>
+        <field name="status" id="3" type="SlowStatus"/>
+    </sbe:message>
+
+</sbe:messageSchema>

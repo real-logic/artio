@@ -125,7 +125,7 @@ subprojects {
     }
 
     javadoc {
-        title = '<h1>Fix Gateway</h1>'
+        title = '<h1>Artio</h1>'
         options.bottom = '<i>Copyright &#169; 2015-2017 Real Logic Ltd. All Rights Reserved.</i>'
     }
 
@@ -166,9 +166,9 @@ subprojects {
     }
 }
 
-def validationXsdPath = project(':fix-gateway-codecs').projectDir.toString() + '/src/main/resources/fpl/sbe.xsd'
+def validationXsdPath = project(':artio-codecs').projectDir.toString() + '/src/main/resources/fpl/sbe.xsd'
 
-project(':fix-gateway-codecs') {
+project(':artio-codecs') {
     apply plugin: 'com.github.johnrengelman.shadow'
 
     def generatedDir = file("${buildDir}/generated-src")
@@ -194,9 +194,9 @@ project(':fix-gateway-codecs') {
             'sbe.validation.stop.on.error': 'true',
             'sbe.validation.xsd': validationXsdPath)
         args = [
-            'src/main/resources/uk/co/real_logic/fix_gateway/messages/message-schema.xml',
-            'src/main/resources/uk/co/real_logic/fix_gateway/replication/replication-message-schema.xml',
-            'src/main/resources/uk/co/real_logic/fix_gateway/storage/storage-message-schema.xml'
+            'src/main/resources/uk/co/real_logic/artio/messages/message-schema.xml',
+            'src/main/resources/uk/co/real_logic/artio/replication/replication-message-schema.xml',
+            'src/main/resources/uk/co/real_logic/artio/storage/storage-message-schema.xml'
         ]
     }
 
@@ -209,10 +209,10 @@ project(':fix-gateway-codecs') {
     jar.dependsOn compileGeneratedJava
 }
 
-project(':fix-gateway-session-codecs') {
+project(':artio-session-codecs') {
 
     dependencies {
-        compile project(path: ':fix-gateway-codecs')
+        compile project(path: ':artio-codecs')
     }
 
     def generatedDir = file("$buildDir/generated-src")
@@ -225,7 +225,7 @@ project(':fix-gateway-session-codecs') {
     compileGeneratedJava.classpath += sourceSets.main.runtimeClasspath
 
     task(generateCodecs, type: JavaExec) {
-        main = 'uk.co.real_logic.fix_gateway.dictionary.CodecGenerationTool'
+        main = 'uk.co.real_logic.artio.dictionary.CodecGenerationTool'
         classpath = sourceSets.main.runtimeClasspath
         args = [generatedDir, 'src/main/resources/session_dictionary.xml']
         outputs.dir generatedDir
@@ -240,15 +240,15 @@ project(':fix-gateway-session-codecs') {
     jar.dependsOn compileGeneratedJava
 }
 
-project(':fix-gateway-core') {
+project(':artio-core') {
     apply plugin: 'application'
 
-    mainClassName = 'uk.co.real_logic.fix_gateway.FixEngine'
+    mainClassName = 'uk.co.real_logic.artio.FixEngine'
 
     dependencies {
-        testCompile project(path: ':fix-gateway-codecs', configuration: 'tests')
-        compile project(':fix-gateway-session-codecs')
-        compile project(':fix-gateway-codecs')
+        testCompile project(path: ':artio-codecs', configuration: 'tests')
+        compile project(':artio-session-codecs')
+        compile project(':artio-codecs')
 
         compile "io.aeron:aeron-client:${aeronVersion}"
         compile "io.aeron:aeron-driver:${aeronVersion}"
@@ -269,13 +269,13 @@ project(':fix-gateway-core') {
 
     idea {
         dependencies {
-            compile project(':fix-gateway-session-codecs').sourceSets.generated.output
-            compile project(':fix-gateway-codecs').sourceSets.generated.output
+            compile project(':artio-session-codecs').sourceSets.generated.output
+            compile project(':artio-codecs').sourceSets.generated.output
         }
     }
 }
 
-project(':fix-gateway-system-tests') {
+project(':artio-system-tests') {
     apply plugin: 'com.github.johnrengelman.shadow'
 
     sourceSets {
@@ -283,10 +283,10 @@ project(':fix-gateway-system-tests') {
     }
 
     dependencies {
-        testCompile project(path: ':fix-gateway-core', configuration: 'tests')
-        testCompile project(path: ':fix-gateway-codecs', configuration: 'tests')
+        testCompile project(path: ':artio-core', configuration: 'tests')
+        testCompile project(path: ':artio-codecs', configuration: 'tests')
 
-        compile project(path: ':fix-gateway-core')
+        compile project(path: ':artio-core')
         compile "io.aeron:aeron-client:${aeronVersion}"
 
         perfCompile project
@@ -322,11 +322,11 @@ project(':fix-gateway-system-tests') {
     }
 }
 
-project(':fix-gateway-samples') {
+project(':artio-samples') {
     apply plugin: 'com.github.johnrengelman.shadow'
 
     dependencies {
-        compile project(':fix-gateway-core')
+        compile project(':artio-core')
     }
 
     shadowJar {
@@ -353,16 +353,16 @@ if (System.properties["uploadArchives"] != null) {
                     }
 
                     pom.project {
-                        name = 'Fix Gateway'
+                        name = 'artio'
                         packaging = 'pom'
                         description = 'Resilient High-Performance FIX Gateway'
 
-                        url = 'https://github.com/real-logic/fix-gateway'
+                        url = 'https://github.com/real-logic/artio'
 
                         scm {
-                            connection = 'scm:git:https://github.com/real-logic/fix-gateway.git'
-                            developerConnection = 'scm:git:https://github.com/real-logic/fix-gateway.git'
-                            url = 'https://github.com/real-logic/fix-gateway.git'
+                            connection = 'scm:git:https://github.com/real-logic/artio.git'
+                            developerConnection = 'scm:git:https://github.com/real-logic/artio.git'
+                            url = 'https://github.com/real-logic/artio.git'
                         }
 
                         licenses {

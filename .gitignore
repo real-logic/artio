@@ -35,7 +35,7 @@ timings.log
 hs_err_pid*
 
 *-logs
-fix-gateway-system-tests/logs/
+artio-system-tests/logs/
 logs/
 *acceptor-logs*
 acceptor_logs/

@@ -1,1 +1,1 @@
-include 'fix-gateway-core', 'fix-gateway-samples', 'fix-gateway-system-tests', 'fix-gateway-codecs', 'fix-gateway-session-codecs'
+include 'artio-core', 'artio-samples', 'artio-system-tests', 'artio-codecs', 'artio-session-codecs'
