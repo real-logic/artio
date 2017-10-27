@@ -67,6 +67,7 @@ public final class TestFixtures
             .threadingMode(SHARED)
             .sharedIdleStrategy(new YieldingIdleStrategy())
             .dirDeleteOnStart(dirsDeleteOnStart)
+            .warnIfDirectoryExists(false)
             .publicationTermBufferLength(termBufferLength)
             .ipcTermBufferLength(termBufferLength);
     }
