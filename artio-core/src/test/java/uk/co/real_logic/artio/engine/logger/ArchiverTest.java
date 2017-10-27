@@ -82,7 +82,7 @@ public class ArchiverTest
     private static final String CHANNEL = "aeron:udp?endpoint=localhost:9999";
     private static final String LOG_FILE_DIR = tmpLogsDirName() + "ArchiverTest-logs";
 
-    @Parameters(name = "{0},{1}")
+    @Parameters(name = "{0}")
     public static Collection<Object[]> data()
     {
         // TODO: enable more comprehensive testing in a CI environment
