@@ -27,7 +27,10 @@ import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.library.SessionHandler;
 import uk.co.real_logic.artio.session.Session;
 
+import java.io.File;
+
 import static java.util.Collections.singletonList;
+import static uk.co.real_logic.artio.CommonConfiguration.optimalTmpDirName;
 import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.artio.server.SampleServer.*;
 
@@ -41,7 +44,8 @@ public final class SampleClient
         final String aeronChannel = "aeron:udp?endpoint=localhost:10002";
         final EngineConfiguration configuration = new EngineConfiguration()
             .libraryAeronChannel(aeronChannel)
-            .bindTo("localhost", 10001);
+            .monitoringFile(optimalTmpDirName() + File.separator + "fix-client" + File.separator + "engineCounters")
+            .logFileDir("client-logs");
 
         cleanupOldLogFileDir(configuration);
 
