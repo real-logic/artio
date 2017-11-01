@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.session;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import org.agrona.DirectBuffer;
 import org.agrona.Verify;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
@@ -394,11 +395,7 @@ public class Session implements AutoCloseable
      */
     public long send(final Encoder encoder)
     {
-        if (!canSendMessage())
-        {
-            throw new IllegalStateException(
-                String.format("Session isn't active it's %s, and thus can't send a message", state));
-        }
+        validateCanSendMessage();
 
         final int sentSeqNum = newSentSeqNum();
         final HeaderEncoder header = (HeaderEncoder)encoder.header();
@@ -414,19 +411,35 @@ public class Session implements AutoCloseable
         final long result = encoder.encode(asciiBuffer, 0);
         final int length = Encoder.length(result);
         final int offset = Encoder.offset(result);
-        final long position = publication.saveMessage(
-            asciiBuffer, offset, length, libraryId, encoder.messageType(), id(), sequenceIndex(), connectionId, OK);
-        lastSentMsgSeqNum(sentSeqNum, position);
 
-        return position;
+        return send(asciiBuffer, offset, length, sentSeqNum, encoder.messageType());
     }
 
-    private void lastSentMsgSeqNum(final int sentSeqNum, final long position)
+    /**
+     * Send a message on this session.
+     *
+     * @param messageBuffer the buffer with the FIX message in to send
+     * @param offset the offset within the messageBuffer where the message starts
+     * @param length the length of the message within the messageBuffer
+     * @param seqNum the sequence number of the sent message
+     * @param messageType the int encoded message type.
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     */
+    public long send(
+        final DirectBuffer messageBuffer, final int offset, final int length, final int seqNum, final int messageType)
     {
-        if (position >= 0)
+        validateCanSendMessage();
+
+        final long position = publication.saveMessage(
+            messageBuffer, offset, length, libraryId, messageType, id(), sequenceIndex(), connectionId, OK);
+
+        if (position > 0)
         {
-            lastSentMsgSeqNum(sentSeqNum);
+            lastSentMsgSeqNum(seqNum, position);
         }
+
+        return position;
     }
 
     /**
@@ -619,6 +632,23 @@ public class Session implements AutoCloseable
     {
         logoutRejectReason = NO_LOGOUT_REJECT_REASON;
         state(DISCONNECTED);
+    }
+
+    private void lastSentMsgSeqNum(final int sentSeqNum, final long position)
+    {
+        if (position >= 0)
+        {
+            lastSentMsgSeqNum(sentSeqNum);
+        }
+    }
+
+    private void validateCanSendMessage()
+    {
+        if (!canSendMessage())
+        {
+            throw new IllegalStateException(
+                String.format("Session isn't active it's %s, and thus can't send a message", state));
+        }
     }
 
     Action onMessage(
