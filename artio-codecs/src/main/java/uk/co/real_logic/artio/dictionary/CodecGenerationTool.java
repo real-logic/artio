@@ -20,6 +20,7 @@ import uk.co.real_logic.artio.builder.Validation;
 import uk.co.real_logic.artio.dictionary.generation.*;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 
+import java.io.File;
 import java.io.FileInputStream;
 
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
@@ -28,17 +29,28 @@ public final class CodecGenerationTool
 {
     public static void main(final String[] args) throws Exception
     {
-        final String outputPath = args[0];
-        final String xmlPath = args[1];
-
         if (args.length < 2)
         {
-            System.err.println("Usage: CodecGenerationTool </path/to/output-directory> </path/to/xml/dictionary>");
-            System.exit(-1);
+            printUsageAndExit();
+        }
+
+        final String outputPath = args[0];
+        final File xmlFile = new File(args[1]);
+
+        if (!xmlFile.exists())
+        {
+            System.err.printf("xmlFile does not exist: %s", xmlFile.getAbsolutePath());
+            printUsageAndExit();
+        }
+
+        if (!xmlFile.isFile())
+        {
+            System.out.printf("xmlFile isn't a file, are the arguments the correct way around?");
+            printUsageAndExit();
         }
 
         final DictionaryParser parser = new DictionaryParser();
-        try (FileInputStream input = new FileInputStream(xmlPath))
+        try (FileInputStream input = new FileInputStream(xmlFile))
         {
             final Dictionary dictionary = parser.parse(input);
 
@@ -68,5 +80,11 @@ public final class CodecGenerationTool
             printerGenerator.generate();
             acceptorGenerator.generate();
         }
+    }
+
+    private static void printUsageAndExit()
+    {
+        System.err.println("Usage: CodecGenerationTool </path/to/output-directory> </path/to/xml/dictionary>");
+        System.exit(-1);
     }
 }
