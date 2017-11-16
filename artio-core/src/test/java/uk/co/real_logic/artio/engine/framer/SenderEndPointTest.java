@@ -486,7 +486,7 @@ public class SenderEndPointTest
             return null;
         };
 
-        final Answer<?> add = inv -> value.getAndAdd(inv.getArgument(0));
+        final Answer<?> add = (inv) -> value.getAndAdd(inv.getArgument(0));
 
         when(atomicCounter.get()).then(get);
         when(atomicCounter.getWeak()).then(get);
@@ -495,8 +495,8 @@ public class SenderEndPointTest
         doAnswer(set).when(atomicCounter).setOrdered(anyLong());
         doAnswer(set).when(atomicCounter).setWeak(anyLong());
 
-        when(atomicCounter.add(anyLong())).then(add);
-        when(atomicCounter.addOrdered(anyLong())).then(add);
+        when(atomicCounter.getAndAdd(anyLong())).then(add);
+        when(atomicCounter.getAndAddOrdered(anyLong())).then(add);
 
         return atomicCounter;
     }

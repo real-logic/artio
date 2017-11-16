@@ -324,7 +324,7 @@ class SenderEndPoint implements AutoCloseable
             ByteBufferUtil.position(buffer, dataOffset);
 
             final int written = channel.write(buffer);
-            bytesInBuffer.addOrdered(-written);
+            bytesInBuffer.getAndAddOrdered(-written);
 
             updateSendingTimeoutTimeInMs(timeInMs, written);
 

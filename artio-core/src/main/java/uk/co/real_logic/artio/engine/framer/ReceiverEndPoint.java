@@ -275,7 +275,7 @@ class ReceiverEndPoint
                         return offset;
                     }
 
-                    messagesRead.orderedIncrement();
+                    messagesRead.incrementOrdered();
                     if (saveMessage(offset, messageType, length))
                     {
                         return offset;
@@ -331,11 +331,12 @@ class ReceiverEndPoint
 
         logon.decode(buffer, offset, length);
 
-        final AuthenticationResult authResult = gatewaySessions.authenticateAndInitiate(logon,
-                                                                                  connectionId(),
-                                                                                  sentSequenceNumberIndex,
-                                                                                  receivedSequenceNumberIndex,
-                                                                                  gatewaySession);
+        final AuthenticationResult authResult = gatewaySessions.authenticateAndInitiate(
+            logon,
+            connectionId(),
+            sentSequenceNumberIndex,
+            receivedSequenceNumberIndex,
+            gatewaySession);
 
         if (authResult.isDuplicateSession())
         {
@@ -373,14 +374,14 @@ class ReceiverEndPoint
     private boolean saveMessage(final int offset, final int messageType, final int length)
     {
         final long position = publication.saveMessage(buffer,
-                                                      offset,
-                                                      length,
-                                                      libraryId,
-                                                      messageType,
-                                                      sessionId,
-                                                      sequenceIndex,
-                                                      connectionId,
-                                                      OK);
+            offset,
+            length,
+            libraryId,
+            messageType,
+            sessionId,
+            sequenceIndex,
+            connectionId,
+            OK);
         if (Pressure.isBackPressured(position))
         {
             moveRemainingDataToBufferStart(offset);
