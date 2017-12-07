@@ -43,7 +43,6 @@ acceptor_logs/
 
 *.jfr
 
-*.jar
 *.pem
 
 # Honest Profiler
