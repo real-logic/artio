@@ -260,7 +260,7 @@ project(':artio-core') {
     }
 
     build.doLast {
-        tasks.distZip.execute()
+        distZip
     }
 
     test {
@@ -317,7 +317,7 @@ project(':artio-system-tests') {
         }
 
         doLast {
-            shadowJar.execute()
+            shadowJar
         }
     }
 }
@@ -334,7 +334,7 @@ project(':artio-samples') {
     }
 
     build.doLast {
-        tasks.shadowJar.execute()
+        shadowJar
     }
 }
 
