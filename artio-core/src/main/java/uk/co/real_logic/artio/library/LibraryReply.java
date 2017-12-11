@@ -28,7 +28,7 @@ import uk.co.real_logic.artio.messages.GatewayError;
  */
 abstract class LibraryReply<T> implements Reply<T>
 {
-    private final long latestReplyArrivalTime;
+    private final long latestReplyArrivalTimeInMs;
 
     final LibraryPoller libraryPoller;
 
@@ -37,10 +37,10 @@ abstract class LibraryReply<T> implements Reply<T>
     private T result;
     private State state = State.EXECUTING;
 
-    LibraryReply(final LibraryPoller libraryPoller, final long latestReplyArrivalTime)
+    LibraryReply(final LibraryPoller libraryPoller, final long latestReplyArrivalTimeInMs)
     {
         this.libraryPoller = libraryPoller;
-        this.latestReplyArrivalTime = latestReplyArrivalTime;
+        this.latestReplyArrivalTimeInMs = latestReplyArrivalTimeInMs;
         register();
     }
 
@@ -87,7 +87,7 @@ abstract class LibraryReply<T> implements Reply<T>
      */
     boolean poll(final long timeInMs)
     {
-        if (timeInMs >= latestReplyArrivalTime)
+        if (timeInMs >= latestReplyArrivalTimeInMs)
         {
             state = State.TIMED_OUT;
             return true;
