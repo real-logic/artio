@@ -50,36 +50,37 @@ public final class CodecGenerationTool
         }
 
         final DictionaryParser parser = new DictionaryParser();
+        final Dictionary dictionary;
         try (FileInputStream input = new FileInputStream(xmlFile))
         {
-            final Dictionary dictionary = parser.parse(input);
-
-            final PackageOutputManager parent = new PackageOutputManager(outputPath, PARENT_PACKAGE);
-            final PackageOutputManager decoder = new PackageOutputManager(outputPath, DECODER_PACKAGE);
-
-            final EnumGenerator enumGenerator = new EnumGenerator(dictionary, parent);
-            final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, DECODER_PACKAGE, decoder);
-
-            final EncoderGenerator encoderGenerator = new EncoderGenerator(
-                dictionary,
-                1,
-                ENCODER_PACKAGE,
-                new PackageOutputManager(outputPath, ENCODER_PACKAGE), Validation.class);
-
-            final DecoderGenerator decoderGenerator = new DecoderGenerator(
-                dictionary, 1, DECODER_PACKAGE, decoder, Validation.class);
-            final PrinterGenerator printerGenerator = new PrinterGenerator(dictionary, DECODER_PACKAGE, decoder);
-            final AcceptorGenerator acceptorGenerator = new AcceptorGenerator(dictionary, DECODER_PACKAGE, decoder);
-
-            enumGenerator.generate();
-            constantGenerator.generate();
-
-            encoderGenerator.generate();
-
-            decoderGenerator.generate();
-            printerGenerator.generate();
-            acceptorGenerator.generate();
+            dictionary = parser.parse(input);
         }
+
+        final PackageOutputManager parent = new PackageOutputManager(outputPath, PARENT_PACKAGE);
+        final PackageOutputManager decoder = new PackageOutputManager(outputPath, DECODER_PACKAGE);
+
+        final EnumGenerator enumGenerator = new EnumGenerator(dictionary, parent);
+        final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, DECODER_PACKAGE, decoder);
+
+        final EncoderGenerator encoderGenerator = new EncoderGenerator(
+            dictionary,
+            1,
+            ENCODER_PACKAGE,
+            new PackageOutputManager(outputPath, ENCODER_PACKAGE), Validation.class);
+
+        final DecoderGenerator decoderGenerator = new DecoderGenerator(
+            dictionary, 1, DECODER_PACKAGE, decoder, Validation.class);
+        final PrinterGenerator printerGenerator = new PrinterGenerator(dictionary, DECODER_PACKAGE, decoder);
+        final AcceptorGenerator acceptorGenerator = new AcceptorGenerator(dictionary, DECODER_PACKAGE, decoder);
+
+        enumGenerator.generate();
+        constantGenerator.generate();
+
+        encoderGenerator.generate();
+
+        decoderGenerator.generate();
+        printerGenerator.generate();
+        acceptorGenerator.generate();
     }
 
     private static void printUsageAndExit()
