@@ -17,7 +17,7 @@ import org.gradle.plugins.ide.eclipse.model.Classpath
 
 buildscript {
     dependencies {
-        classpath "com.github.jengelman.gradle.plugins:shadow:1.2.4"
+        classpath "com.github.jengelman.gradle.plugins:shadow:2.0.1"
         classpath 'net.researchgate:gradle-release:2.6.0'
     }
 }
@@ -27,9 +27,9 @@ apply plugin: 'signing'
 apply plugin: 'net.researchgate.release'
 apply plugin: 'com.github.johnrengelman.shadow'
 
-def aeronVersion = '1.5.1'
-def agronaVersion = '0.9.9'
-def sbeVersion = '1.7.3'
+def aeronVersion = '1.6.0'
+def agronaVersion = '0.9.11'
+def sbeVersion = '1.7.5'
 
 defaultTasks 'clean', 'build', 'install'
 
@@ -81,16 +81,16 @@ subprojects {
     }
 
     dependencies {
-        checkstyle 'com.puppycrawl.tools:checkstyle:8.3'
+        checkstyle 'com.puppycrawl.tools:checkstyle:8.5'
 
         testCompile 'org.hamcrest:hamcrest-all:1.3'
         testCompile 'junit:junit:4.12'
-        testCompile 'org.mockito:mockito-core:2.11.0'
+        testCompile 'org.mockito:mockito-core:2.13.0'
     }
 
     checkstyle {
         configFile = new File(rootDir, 'config/checkstyle/checkstyle.xml')
-        toolVersion = "8.3"
+        toolVersion = "8.5"
     }
 
     test {
@@ -260,7 +260,7 @@ project(':artio-core') {
     }
 
     build.doLast {
-        tasks.distZip.execute()
+        distZip
     }
 
     test {
@@ -317,7 +317,7 @@ project(':artio-system-tests') {
         }
 
         doLast {
-            shadowJar.execute()
+            shadowJar
         }
     }
 }
@@ -334,7 +334,7 @@ project(':artio-samples') {
     }
 
     build.doLast {
-        tasks.shadowJar.execute()
+        shadowJar
     }
 }
 
@@ -394,6 +394,6 @@ if (System.properties["uploadArchives"] != null) {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '4.1'
+    gradleVersion = '4.4'
     distributionType = 'ALL'
 }
