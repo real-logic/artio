@@ -17,7 +17,7 @@ import org.gradle.plugins.ide.eclipse.model.Classpath
 
 buildscript {
     dependencies {
-        classpath "com.github.jengelman.gradle.plugins:shadow:2.0.1"
+        classpath "com.github.jengelman.gradle.plugins:shadow:2.0.2"
         classpath 'net.researchgate:gradle-release:2.6.0'
     }
 }
