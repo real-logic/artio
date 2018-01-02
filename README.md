@@ -1,4 +1,6 @@
 # Artio
+
+[![Join the chat at https://gitter.im/real-logic/artio](https://badges.gitter.im/real-logic/artio.svg)](https://gitter.im/real-logic/artio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 Resilient High-Performance FIX Gateway
 
 ## How to build
