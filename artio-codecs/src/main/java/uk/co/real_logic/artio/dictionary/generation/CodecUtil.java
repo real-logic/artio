@@ -57,12 +57,16 @@ public final class CodecUtil
      */
     public static byte[] toBytes(final char[] value, final byte[] oldBuffer, final int length)
     {
+        return toBytes(value, oldBuffer, 0, length);
+    }
+
+    public static byte[] toBytes(final char[] value, final byte[] oldBuffer, final int offset, final int length)
+    {
         final byte[] buffer = (oldBuffer.length < length) ? new byte[length] : oldBuffer;
         for (int i = 0; i < length; i++)
         {
-            buffer[i] = (byte)value[i];
+            buffer[i] = (byte)value[i + offset];
         }
-
         return buffer;
     }
 

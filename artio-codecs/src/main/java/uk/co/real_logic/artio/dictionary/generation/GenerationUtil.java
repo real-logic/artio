@@ -58,11 +58,13 @@ public final class GenerationUtil
     public static class Var
     {
         private final String type;
+        private final String methodArgsType;
         private final String name;
 
-        public Var(final String type, final String name)
+        public Var(final String type, final String methodArgsType, final String name)
         {
             this.type = type;
+            this.methodArgsType = methodArgsType;
             this.name = name;
         }
 
@@ -79,6 +81,11 @@ public final class GenerationUtil
         public String declaration()
         {
             return String.format("final %s %s", type, name);
+        }
+
+        public String methodArgsDeclaration()
+        {
+            return String.format("final %s %s", methodArgsType, name);
         }
     }
 
@@ -103,6 +110,12 @@ public final class GenerationUtil
     {
         return String.format("import %s;\n", cls.getCanonicalName());
     }
+
+    public static String importFor(final String className)
+    {
+        return String.format("import %s;\n", className);
+    }
+
 
     public static String importStaticFor(final Class<?> cls)
     {

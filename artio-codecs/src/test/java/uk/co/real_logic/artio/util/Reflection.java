@@ -20,7 +20,10 @@ import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Iterator;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 public final class Reflection
 {
@@ -32,6 +35,22 @@ public final class Reflection
         throws Exception
     {
         set(object, setter, int.class, value);
+    }
+
+    public static void setEnum(final Object object, final String setter, final Object value)
+        throws Exception
+    {
+        set(object, setter, value.getClass(), value);
+    }
+
+    public static void setEnumByRepresentation(final Object object,
+                                               final String setter,
+                                               final String enumClass,
+                                               final Object representation)
+        throws Exception
+    {
+        final Object enumValue = getEnumByRepresentation(object, enumClass, representation);
+        set(object, setter, enumValue.getClass(), enumValue);
     }
 
     public static void setFloat(final Object object, final String setter, final DecimalFloat value)
@@ -153,6 +172,23 @@ public final class Reflection
     public static Object getEgComponent(final Object object) throws Exception
     {
         return get(object, "egComponent");
+    }
+
+    public static Object getRepresentation(final Object object) throws Exception
+    {
+        return get(object, "representation");
+    }
+
+    public static Object getEnumByRepresentation(final Object containingObject,
+                                                 final String className,
+                                                 final Object representation)
+            throws Exception
+    {
+        final Class<?> enumClass = containingObject.getClass().getClassLoader().loadClass(className);
+        final Optional<Method> decodeMethod = Stream.of(enumClass.getMethods())
+                .filter(x -> x.getName().equals("decode"))
+                .findFirst();
+        return decodeMethod.get().invoke(null, representation);
     }
 
     public static byte[] getBytes(final Decoder decoder, final String field) throws Exception

@@ -80,17 +80,20 @@ public abstract class Generator
 
     protected final Dictionary dictionary;
     protected final String builderPackage;
+    private String builderCommonPackage;
     protected final OutputManager outputManager;
     protected final Class<?> validationClass;
 
     protected Generator(
         final Dictionary dictionary,
         final String builderPackage,
+        final String builderCommonPackage,
         final OutputManager outputManager,
         final Class<?> validationClass)
     {
         this.dictionary = dictionary;
         this.builderPackage = builderPackage;
+        this.builderCommonPackage = builderCommonPackage;
         this.outputManager = outputManager;
         this.validationClass = validationClass;
     }
@@ -139,6 +142,10 @@ public abstract class Generator
             .append(importFor(EncodingException.class))
             .append(importStaticFor(StandardCharsets.class, "US_ASCII"))
             .append(importStaticFor(validationClass, CODEC_VALIDATION_ENABLED));
+        if (!builderPackage.equals(builderCommonPackage) && !builderCommonPackage.isEmpty())
+        {
+            out.append(importFor(builderCommonPackage + ".*"));
+        }
     }
 
     protected String classDeclaration(

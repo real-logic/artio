@@ -45,6 +45,8 @@ public final class ExampleDictionary
     public static final String OTHER_ENUM = PARENT_PACKAGE + "." + "OtherEnum";
     public static final String STRING_ENUM = PARENT_PACKAGE + "." + "stringEnum";
 
+    public static final String TEST_PARENT_PACKAGE = PARENT_PACKAGE;
+
     public static final String TEST_PACKAGE = ENCODER_PACKAGE + ".test";
 
     public static final String HEARTBEAT_ENCODER = TEST_PACKAGE + ".HeartbeatEncoder";
@@ -63,15 +65,19 @@ public final class ExampleDictionary
     public static final String ABC = "abc";
     public static final byte[] VALUE_IN_BYTES = {97, 98, 99};
     public static final String TEST_REQ_ID = "testReqID";
+    public static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
     public static final String INT_FIELD = "intField";
+    public static final String CHAR_FIELD = "charField";
     public static final String FLOAT_FIELD = "floatField";
     public static final String BOOLEAN_FIELD = "booleanField";
     public static final String DATA_FIELD = "dataField";
     public static final String TEST_REQ_ID_LENGTH = "testReqIDLength";
+    public static final String ON_BEHALF_OF_COMP_ID_LENGTH = "onBehalfOfCompIDLength";
     public static final String SOME_TIME_FIELD = "someTimeField";
     public static final String COMPONENT_FIELD = "componentField";
 
     public static final String HAS_TEST_REQ_ID = "hasTestReqID";
+    public static final String HAS_ON_BEHALF_OF_COMP_ID = "hasonBehalfOfCompID";
     public static final String HAS_BOOLEAN_FIELD = "hasBooleanField";
     public static final String HAS_DATA_FIELD = "hasDataField";
     public static final String HAS_COMPONENT_FIELD = "hasComponentField";
@@ -284,7 +290,10 @@ public final class ExampleDictionary
         final Field booleanField = registerField(messageEgFields, 118, "BooleanField", Type.BOOLEAN);
         final Field dataField = registerField(messageEgFields, 119, "DataField", Type.DATA);
         final Field someTime = registerField(messageEgFields, 127,  "SomeTimeField", Type.UTCTIMESTAMP);
-        final Field charField = registerField(messageEgFields, 128,  "CharField", Type.CHAR);
+        final Field charField = registerField(messageEgFields, 128,  "CharField", Type.CHAR)
+            .addValue("a", "One")
+            .addValue("b", "Two");
+
         final Field dayOfMonthField = registerField(messageEgFields, 129,  "DayOfMonthField", Type.DAYOFMONTH);
 
         final Group nestedGroup = Group.of(registerField(messageEgFields, 122, "NoNestedGroup", INT));

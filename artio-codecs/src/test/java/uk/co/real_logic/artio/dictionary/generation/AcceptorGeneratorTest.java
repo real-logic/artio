@@ -36,8 +36,10 @@ public class AcceptorGeneratorTest
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
     private static ConstantGenerator constantGenerator =
         new ConstantGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
+    private static EnumGenerator enumGenerator =
+            new EnumGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static DecoderGenerator decoderGenerator =
-        new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager, ValidationOn.class);
+        new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, ValidationOn.class);
     private static AcceptorGenerator acceptorGenerator =
         new AcceptorGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static Class<?> acceptor;
@@ -49,6 +51,7 @@ public class AcceptorGeneratorTest
     public static void generate() throws Exception
     {
         constantGenerator.generate();
+        enumGenerator.generate();
         decoderGenerator.generate();
         acceptorGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();

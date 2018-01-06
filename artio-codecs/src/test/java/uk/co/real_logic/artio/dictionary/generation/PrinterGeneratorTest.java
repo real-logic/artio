@@ -33,8 +33,11 @@ public class PrinterGeneratorTest
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
     private static ConstantGenerator constantGenerator =
         new ConstantGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
+    private static EnumGenerator enumGenerator =
+            new EnumGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
+
     private static DecoderGenerator decoderGenerator =
-        new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager, ValidationOn.class);
+        new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, ValidationOn.class);
     private static PrinterGenerator printerGenerator =
         new PrinterGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static Class<?> printer;
@@ -45,6 +48,7 @@ public class PrinterGeneratorTest
     public static void generate() throws Exception
     {
         constantGenerator.generate();
+        enumGenerator.generate();
         decoderGenerator.generate();
         printerGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();

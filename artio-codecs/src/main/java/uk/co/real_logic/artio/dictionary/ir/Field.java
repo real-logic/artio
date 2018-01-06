@@ -92,7 +92,7 @@ public final class Field implements Element
             "number=" + number +
             ", name='" + name + '\'' +
             ", type=" + type +
-            "values=" + values +
+            ", values=" + values +
             '}';
     }
 

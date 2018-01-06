@@ -35,11 +35,13 @@ import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
 public final class EnumGenerator
 {
     private final Dictionary dictionary;
+    private final String builderPackage;
     private final OutputManager outputManager;
 
-    public EnumGenerator(final Dictionary dictionary, final OutputManager outputManager)
+    public EnumGenerator(final Dictionary dictionary, final String builderPackage, final OutputManager outputManager)
     {
         this.dictionary = dictionary;
+        this.builderPackage = builderPackage;
         this.outputManager = outputManager;
     }
 
@@ -64,7 +66,7 @@ public final class EnumGenerator
         {
             try
             {
-                out.append(fileHeader(PARENT_PACKAGE));
+                out.append(fileHeader(builderPackage));
                 out.append(importFor(CharArrayMap.class));
                 out.append(importFor(Map.class));
                 out.append(importFor(HashMap.class));
@@ -142,7 +144,7 @@ public final class EnumGenerator
                 "    }\n",
             optionalCharArrayDecode,
             name,
-            representation.declaration(),
+            representation.methodArgsDeclaration(),
             cases);
     }
 
@@ -200,6 +202,7 @@ public final class EnumGenerator
     private Var representation(final Type type)
     {
         final String typeValue;
+        final String argTypeValue;
         switch (type)
         {
             case STRING:
@@ -210,14 +213,17 @@ public final class EnumGenerator
             case UTCTIMEONLY:
             case UTCDATEONLY:
             case MONTHYEAR:
-                typeValue = "String";
+                argTypeValue = typeValue = "String";
                 break;
-
+            case CHAR:
+                typeValue = "char";
+                argTypeValue = "int";
+                break;
             default:
-                typeValue = "int";
+                argTypeValue = typeValue = "int";
         }
 
-        return new Var(typeValue, "representation");
+        return new Var(typeValue, argTypeValue, "representation");
     }
 
     private String literal(final Value value, final Type type)

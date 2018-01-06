@@ -86,6 +86,7 @@ public class EncoderGenerator extends Generator
         "        }\n";
 
     private static final int MAX_BODY_LENGTH_FIELD_LENGTH = String.valueOf(Integer.MAX_VALUE).length();
+    public static final String METHOD_DELIMITER = "\n\n";
 
     private static String encoderClassName(final String name)
     {
@@ -106,10 +107,11 @@ public class EncoderGenerator extends Generator
         final Dictionary dictionary,
         final int initialArraySize,
         final String builderPackage,
+        final String builderCommonPackage,
         final OutputManager outputManager,
         final Class<?> validationClass)
     {
-        super(dictionary, builderPackage, outputManager, validationClass);
+        super(dictionary, builderPackage, builderCommonPackage, outputManager, validationClass);
 
         final Component header = dictionary.header();
         validateHasField(header, BEGIN_STRING);
@@ -259,8 +261,10 @@ public class EncoderGenerator extends Generator
 
         final String hasAssign = String.format("        has%s = true;\n", name);
 
+        final String enumSetter = field.isEnum() ? enumSetter(className, fieldName, field.name()) : "";
+
         final Function<String, String> generateSetter =
-            (type) -> setter(name, type, fieldName, hasField, className, hasAssign);
+            (type) -> setter(name, type, fieldName, hasField, className, hasAssign, enumSetter);
 
         switch (field.type())
         {
@@ -269,7 +273,7 @@ public class EncoderGenerator extends Generator
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
-                return generateStringSetter(className, fieldName, name);
+                return generateStringSetter(className, fieldName, name, enumSetter);
 
             case BOOLEAN:
                 return generateSetter.apply("boolean");
@@ -361,7 +365,8 @@ public class EncoderGenerator extends Generator
     private String generateStringSetter(
         final String className,
         final String fieldName,
-        final String name)
+        final String name,
+        final String enumSetter)
     {
         return String.format(
             "%2$s" +
@@ -380,10 +385,18 @@ public class EncoderGenerator extends Generator
             "        %1$s = toBytes(value, %1$s, length);\n" +
             "        %1$sLength = length;\n" +
             "        return this;\n" +
-            "    }\n\n",
+            "    }\n\n" +
+            "    public %3$s %1$s(final char[] value, final int offset, final int length)\n" +
+            "    {\n" +
+            "        %1$s = toBytes(value, %1$s, offset, length);\n" +
+            "        %1$sLength = length;\n" +
+            "        return this;\n" +
+            "    }\n\n" +
+            "%4$s",
             fieldName,
             generateByteArraySetter(className, fieldName, name),
-            className);
+            className,
+            enumSetter);
     }
 
     private String setter(
@@ -392,7 +405,8 @@ public class EncoderGenerator extends Generator
         final String fieldName,
         final String optionalField,
         final String className,
-        final String optionalAssign)
+        final String optionalAssign,
+        final String enumSetter)
     {
         return String.format(
             "    %s %s %s;\n\n" +
@@ -402,14 +416,31 @@ public class EncoderGenerator extends Generator
             "        %3$s = value;\n" +
             "%s" +
             "        return this;\n" +
-            "    }\n\n",
+            "    }\n\n" +
+            "%7$s",
             isBodyLength(name) ? "public" : "private",
             type,
             fieldName,
             optionalField,
             className,
-            optionalAssign);
+            optionalAssign,
+            enumSetter);
     }
+
+    private String enumSetter(
+            final String className,
+            final String fieldName,
+            final String enumType)
+    {
+        return String.format(
+            "    public %s %2$s(%3$s value)\n" +
+            "    {\n" +
+            "        return %2$s(value.representation());\n" +
+            "    }\n\n",
+            className, fieldName, enumType
+        );
+    }
+
 
     private String encodeMethod(final List<Entry> entries, final AggregateType aggregateType)
     {

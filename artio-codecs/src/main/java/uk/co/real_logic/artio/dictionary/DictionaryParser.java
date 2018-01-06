@@ -33,6 +33,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Consumer;
 
 import static javax.xml.xpath.XPathConstants.NODESET;
@@ -163,6 +164,7 @@ public final class DictionaryParser
         forwardReferences.forEach((entry, name) ->
         {
             final Component component = components.get(name);
+            Verify.notNull(component, "element:" + name);
             entry.element(component);
         });
     }
@@ -335,7 +337,9 @@ public final class DictionaryParser
 
     private String getValue(final NamedNodeMap attributes, final String attributeName)
     {
-        return attributes.getNamedItem(attributeName).getNodeValue();
+        Objects.requireNonNull(attributes, "Null attributes for " + attributeName);
+        return Objects.requireNonNull(attributes.getNamedItem(attributeName), "Empty item for:" +
+            attributeName).getNodeValue();
     }
 
     private void extractNodes(
