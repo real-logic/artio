@@ -71,7 +71,7 @@ public class AcceptorGenerator
     private void generateAcceptorCallback(final Writer acceptorOutput, final Message message) throws IOException
     {
         acceptorOutput.append(String.format(
-            "    void on%1$s(final %2$s decoder);\n\n",
+            "    default void on%1$s(final %2$s decoder) {};\n\n",
             message.name(),
             decoderClassName(message)
         ));
@@ -79,7 +79,7 @@ public class AcceptorGenerator
 
     private void generateAcceptorSuffix(final Writer acceptorOutput) throws IOException
     {
-        acceptorOutput.append("\n}\n");
+        acceptorOutput.append("    default void onUnknownMessage(int messageType) {};\n}\n");
     }
 
     private void generateAcceptorClass(final Writer acceptorOutput) throws IOException
@@ -117,6 +117,7 @@ public class AcceptorGenerator
     private void generateDecoderSuffix(final Writer decoderOutput) throws IOException
     {
         decoderOutput.append(
+            "        default:\n            acceptor.onUnknownMessage(messageType);\n" +
             "        }\n" +
             "    }\n\n");
 
