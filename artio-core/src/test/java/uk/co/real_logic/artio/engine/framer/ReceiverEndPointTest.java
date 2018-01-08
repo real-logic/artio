@@ -72,14 +72,12 @@ public class ReceiverEndPointTest
     private GatewaySession gatewaySession = mock(GatewaySession.class);
     private Session session = mock(Session.class);
     private final LongHashSet replicatedConnectionIds = new LongHashSet();
-    private final AuthenticationResult authenticationResult = AuthenticationResult.authenticatedSession(gatewaySession,
-        1,
-        1);
+    private final AuthenticationResult authenticationResult = AuthenticationResult.authenticatedSession(
+        gatewaySession, 1, 1);
     private GatewaySessions mockGatewaySessions = mock(GatewaySessions.class);
-    private CompositeKey sessionKey = SessionIdStrategy.senderAndTarget()
-                                                       .onInitiateLogon("ACCEPTOR",
-                                                           "", "",
-                                                           "INIATOR", "", "");
+    private CompositeKey sessionKey = SessionIdStrategy
+        .senderAndTarget()
+        .onInitiateLogon("ACCEPTOR", "", "", "INIATOR", "", "");
 
     private ReceiverEndPoint endPoint = new ReceiverEndPoint(
         mockChannel, BUFFER_SIZE, libraryPublication, clusterablePublication,
@@ -392,11 +390,10 @@ public class ReceiverEndPointTest
 
     private void savesInvalidMessage(final int length, final VerificationMode mode)
     {
-        verify(libraryPublication, mode)
-            .saveMessage(
-                anyBuffer(), eq(0), eq(length), eq(LIBRARY_ID),
-                anyInt(), anyLong(), anyInt(), eq(CONNECTION_ID),
-                eq(INVALID));
+        verify(libraryPublication, mode).saveMessage(
+            anyBuffer(), eq(0), eq(length), eq(LIBRARY_ID),
+            anyInt(), anyLong(), anyInt(), eq(CONNECTION_ID),
+            eq(INVALID));
     }
 
     private void assertSavesDisconnect()
@@ -424,38 +421,37 @@ public class ReceiverEndPointTest
         final MessageStatus status,
         final int msgLen)
     {
-        verify(libraryPublication, times(numberOfMessages))
-            .saveMessage(
-                anyBuffer(), eq(0), eq(msgLen), eq(LIBRARY_ID),
-                eq(MESSAGE_TYPE), eq(SESSION_ID), eq(SEQUENCE_INDEX), eq(CONNECTION_ID),
-                eq(status));
+        verify(libraryPublication, times(numberOfMessages)).saveMessage(
+            anyBuffer(), eq(0), eq(msgLen), eq(LIBRARY_ID),
+            eq(MESSAGE_TYPE), eq(SESSION_ID), eq(SEQUENCE_INDEX), eq(CONNECTION_ID),
+            eq(status));
     }
 
     private void savesTwoFramedMessages(final int firstMessageSaveAttempts)
     {
         final InOrder inOrder = Mockito.inOrder(libraryPublication);
-        inOrder.verify(libraryPublication, times(firstMessageSaveAttempts))
-               .saveMessage(
-                   anyBuffer(),
-                   eq(0),
-                   eq(MSG_LEN),
-                   eq(LIBRARY_ID),
-                   eq(MESSAGE_TYPE),
-                   eq(SESSION_ID),
-                   eq(SEQUENCE_INDEX),
-                   eq(CONNECTION_ID),
-                   eq(OK));
-        inOrder.verify(libraryPublication, times(1))
-               .saveMessage(
-                   anyBuffer(),
-                   eq(MSG_LEN),
-                   eq(MSG_LEN),
-                   eq(LIBRARY_ID),
-                   eq(MESSAGE_TYPE),
-                   eq(SESSION_ID),
-                   eq(SEQUENCE_INDEX),
-                   eq(CONNECTION_ID),
-                   eq(OK));
+        inOrder.verify(libraryPublication, times(firstMessageSaveAttempts)).saveMessage(
+            anyBuffer(),
+            eq(0),
+            eq(MSG_LEN),
+            eq(LIBRARY_ID),
+            eq(MESSAGE_TYPE),
+            eq(SESSION_ID),
+            eq(SEQUENCE_INDEX),
+            eq(CONNECTION_ID),
+            eq(OK));
+
+        inOrder.verify(libraryPublication, times(1)).saveMessage(
+            anyBuffer(),
+            eq(MSG_LEN),
+            eq(MSG_LEN),
+            eq(LIBRARY_ID),
+            eq(MESSAGE_TYPE),
+            eq(SESSION_ID),
+            eq(SEQUENCE_INDEX),
+            eq(CONNECTION_ID),
+            eq(OK));
+
         inOrder.verifyNoMoreInteractions();
     }
 
@@ -509,8 +505,7 @@ public class ReceiverEndPointTest
         endpointBufferUpdatedWith(
             (buffer) ->
             {
-                buffer.put(EG_MESSAGE)
-                      .put(EG_MESSAGE, secondOffset, secondLength);
+                buffer.put(EG_MESSAGE).put(EG_MESSAGE, secondOffset, secondLength);
                 return MSG_LEN + secondLength;
             });
     }
@@ -549,17 +544,16 @@ public class ReceiverEndPointTest
 
     private void savesInvalidChecksumMessage(final VerificationMode mode)
     {
-        verify(libraryPublication, mode)
-            .saveMessage(
-                anyBuffer(),
-                eq(0),
-                eq(INVALID_CHECKSUM_LEN),
-                eq(LIBRARY_ID),
-                eq(MESSAGE_TYPE),
-                anyLong(),
-                anyInt(),
-                eq(CONNECTION_ID),
-                eq(INVALID_CHECKSUM));
+        verify(libraryPublication, mode).saveMessage(
+            anyBuffer(),
+            eq(0),
+            eq(INVALID_CHECKSUM_LEN),
+            eq(LIBRARY_ID),
+            eq(MESSAGE_TYPE),
+            anyLong(),
+            anyInt(),
+            eq(CONNECTION_ID),
+            eq(INVALID_CHECKSUM));
     }
 
     private void sessionReceivesOneMessage()
@@ -609,5 +603,4 @@ public class ReceiverEndPointTest
         when(mockGatewaySessions.authenticateAndInitiate(any(), anyLong(), any(), any(), any())).thenReturn(
             AuthenticationResult.DUPLICATE_SESSION);
     }
-
 }

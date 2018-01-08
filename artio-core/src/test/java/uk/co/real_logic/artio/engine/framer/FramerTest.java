@@ -116,8 +116,9 @@ public class FramerTest
     private final Image peekImage = mock(Image.class);
     private final Image normalImage = mock(Image.class);
     private final ClusterableStreams node = mock(ClusterableStreams.class);
-    private final CompositeKey sessionKey = SessionIdStrategy.senderAndTarget()
-                                                             .onInitiateLogon("local", "", "", "remote", "", "");
+    private final CompositeKey sessionKey = SessionIdStrategy
+        .senderAndTarget()
+        .onInitiateLogon("local", "", "", "remote", "", "");
 
     private FinalImagePositions finalImagePositions = mock(FinalImagePositions.class);
 
@@ -199,12 +200,11 @@ public class FramerTest
             finalImagePositions,
             mock(AgentInvoker.class));
 
-        when(sessionContexts.onLogon(any())).thenReturn(
-            new SessionContext(SESSION_ID,
-                SessionContext.UNKNOWN_SEQUENCE_INDEX,
-                Session.NO_LOGON_TIME,
-                sessionContexts,
-                0));
+        when(sessionContexts.onLogon(any())).thenReturn(new SessionContext(SESSION_ID,
+            SessionContext.UNKNOWN_SEQUENCE_INDEX,
+            Session.NO_LOGON_TIME,
+            sessionContexts,
+            0));
     }
 
     private void isLeader(final boolean value)

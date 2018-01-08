@@ -132,24 +132,25 @@ public class SessionContextsTest
     {
         final int requiredNumberOfWritesToSpanSector = 232;
 
-        final List<CompositeKey> keys =
-            IntStream.range(0, requiredNumberOfWritesToSpanSector)
-                     .mapToObj(i -> idStrategy.onInitiateLogon("b" + i, null, null, "a" + i, null, null))
-                     .collect(toList());
+        final List<CompositeKey> keys = IntStream
+            .range(0, requiredNumberOfWritesToSpanSector)
+            .mapToObj((i) -> idStrategy.onInitiateLogon("b" + i, null, null, "a" + i, null, null))
+            .collect(toList());
 
-        final List<SessionContext> contexts =
-            keys.stream()
-                         .map(sessionContexts::onLogon)
-                         .peek(SessionContext::onSequenceReset)
-                         .collect(toList());
+        final List<SessionContext> contexts = keys
+            .stream()
+            .map(sessionContexts::onLogon)
+            .peek(SessionContext::onSequenceReset)
+            .collect(toList());
 
         // Test an update of something not at the tail of the buffer.
         final SessionContext firstContext = contexts.get(0);
         firstContext.onSequenceReset();
 
         final SessionContexts contextsAfterRestart = newSessionContexts(buffer);
-        IntStream.range(0, requiredNumberOfWritesToSpanSector)
-                 .forEach(i -> assertValuesEqual(contexts.get(i), contextsAfterRestart.onLogon(keys.get(i))));
+        IntStream
+            .range(0, requiredNumberOfWritesToSpanSector)
+            .forEach((i) -> assertValuesEqual(contexts.get(i), contextsAfterRestart.onLogon(keys.get(i))));
     }
 
     @Test
@@ -251,5 +252,4 @@ public class SessionContextsTest
         assertEquals(sessionContext, secondSessionContext);
         assertEquals(sessionContext.sequenceIndex(), secondSessionContext.sequenceIndex());
     }
-
 }
