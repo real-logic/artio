@@ -640,29 +640,26 @@ public class DecoderGenerator extends Generator
         final Type type = field.type();
         final String optionalCheck = optionalCheck(entry);
 
-        final String asStringBody = String.format(
-            entry.required() ?
-                "new String(%1$s, 0, %1$sLength)" :
-                "has%2$s ? new String(%1$s, 0, %1$sLength) : null",
+        final String asStringBody = String.format(entry.required() ?
+            "new String(%1$s, 0, %1$sLength)" :
+            "has%2$s ? new String(%1$s, 0, %1$sLength) : null",
             fieldName,
             name);
 
-        final String suffix = type.isStringBased() ?
-            String.format(
-                "    private int %1$sLength;\n\n" +
-                "    public int %1$sLength()\n" +
-                "    {\n" +
-                "%2$s" +
-                "        return %1$sLength;\n" +
-                "    }\n\n" +
-                "    public String %1$sAsString()\n" +
-                "    {\n" +
-                "        return %3$s;\n" +
-                "    }\n\n",
-                fieldName,
-                optionalCheck,
-                asStringBody) :
-            "";
+        final String suffix = type.isStringBased() ? String.format(
+            "    private int %1$sLength;\n\n" +
+            "    public int %1$sLength()\n" +
+            "    {\n" +
+            "%2$s" +
+            "        return %1$sLength;\n" +
+            "    }\n\n" +
+            "    public String %1$sAsString()\n" +
+            "    {\n" +
+            "        return %3$s;\n" +
+            "    }\n\n",
+            fieldName,
+            optionalCheck,
+            asStringBody) : "";
 
         return String.format(
             "    private %s %s%s;\n\n" +
@@ -746,13 +743,12 @@ public class DecoderGenerator extends Generator
 
     private String optionalCheck(final Entry entry)
     {
-        return entry.required() ? "" :
-            String.format(
-                "        if (!has%s)\n" +
-                "        {\n" +
-                "            throw new IllegalArgumentException(\"No value for optional field: %1$s\");\n" +
-                "        }\n\n",
-                entry.name());
+        return entry.required() ? "" : String.format(
+            "        if (!has%s)\n" +
+            "        {\n" +
+            "            throw new IllegalArgumentException(\"No value for optional field: %1$s\");\n" +
+            "        }\n\n",
+            entry.name());
     }
 
     private String javaTypeOf(final Type type)
@@ -857,10 +853,9 @@ public class DecoderGenerator extends Generator
             "            switch (tag)\n" +
             "            {\n\n";
 
-        final String body =
-            entries.stream()
-                   .map(this::decodeEntry)
-                   .collect(joining("\n", "", "\n"));
+        final String body = entries.stream()
+            .map(this::decodeEntry)
+            .collect(joining("\n", "", "\n"));
 
         final String groupSuffix = aggregate.containsGroup() ? " && !" + GROUP_FIELDS + ".contains(tag)" : "";
 
@@ -890,10 +885,8 @@ public class DecoderGenerator extends Generator
 
     private String decodeTrailerOrReturn(final boolean hasCommonCompounds, final int indent)
     {
-        return
-            (hasCommonCompounds ?
-                indent(indent, "position += trailer.decode(buffer, position, end - position);\n") :
-                "") +
+        return (hasCommonCompounds ?
+            indent(indent, "position += trailer.decode(buffer, position, end - position);\n") : "") +
             indent(indent, "return position - offset;\n");
     }
 

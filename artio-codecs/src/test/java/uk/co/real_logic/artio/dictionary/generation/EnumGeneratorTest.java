@@ -139,11 +139,10 @@ public class EnumGeneratorTest
 
     private void assertRepresentation(final int expected, final Enum<?> enumElement) throws Exception
     {
-        final int representation =
-            (int)enumElement
-                .getDeclaringClass()
-                .getMethod("representation")
-                .invoke(enumElement);
+        final int representation = (int)enumElement
+            .getDeclaringClass()
+            .getMethod("representation")
+            .invoke(enumElement);
 
         assertEquals(expected, representation);
     }

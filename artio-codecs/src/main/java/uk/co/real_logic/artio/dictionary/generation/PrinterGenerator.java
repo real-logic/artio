@@ -23,6 +23,7 @@ import uk.co.real_logic.artio.dictionary.ir.Message;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.sbe.generation.java.JavaUtil;
 
+import java.util.function.Function;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.joining;
@@ -86,15 +87,14 @@ public class PrinterGenerator
 
     private String generateToString()
     {
-        final String cases =
-            messages()
-                .map((aggregate) -> String.format(
-                    "            case %s:\n" +
-                    "            %s.decode(input, offset, length);\n" +
-                    "            return %2$s.toString();\n\n",
-                    aggregate.packedType(),
-                    decoderFieldName(aggregate)))
-                .collect(joining());
+        final Function<Message, String> mapper = (aggregate) -> String.format(
+            "            case %s:\n" +
+            "            %s.decode(input, offset, length);\n" +
+            "            return %2$s.toString();\n\n",
+            aggregate.packedType(),
+            decoderFieldName(aggregate));
+
+        final String cases = messages().map(mapper).collect(joining());
 
         return
             "    public String toString(\n" +

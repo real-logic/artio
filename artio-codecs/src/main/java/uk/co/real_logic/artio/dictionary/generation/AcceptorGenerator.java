@@ -38,9 +38,10 @@ public class AcceptorGenerator
     private final String packageName;
     private final OutputManager outputManager;
 
-    public AcceptorGenerator(final Dictionary dictionary,
-                             final String packageName,
-                             final OutputManager outputManager)
+    public AcceptorGenerator(
+        final Dictionary dictionary,
+        final String packageName,
+        final OutputManager outputManager)
     {
         this.dictionary = dictionary;
         this.packageName = packageName;
@@ -55,7 +56,7 @@ public class AcceptorGenerator
 
     private void generateAcceptor()
     {
-        outputManager.withOutput(DICTIONARY_ACCEPTOR, acceptorOutput ->
+        outputManager.withOutput(DICTIONARY_ACCEPTOR, (acceptorOutput) ->
         {
             generateAcceptorClass(acceptorOutput);
 

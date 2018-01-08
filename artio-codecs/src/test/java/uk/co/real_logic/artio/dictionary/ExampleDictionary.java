@@ -135,9 +135,9 @@ public final class ExampleDictionary
 
     public static final String STRING_NO_OPTIONAL_MESSAGE_EXAMPLE =
         "{\n" +
-            "  \"MessageName\": \"Heartbeat\",\n" +
-            String.format(HEADER_TO_STRING, 53) +
-            STRING_NO_OPTIONAL_MESSAGE_SUFFIX;
+        "  \"MessageName\": \"Heartbeat\",\n" +
+        String.format(HEADER_TO_STRING, 53) +
+        STRING_NO_OPTIONAL_MESSAGE_SUFFIX;
 
     public static final String COMPONENT_TO_STRING =
         "  \"EgComponent\":  {\n" +
@@ -157,94 +157,94 @@ public final class ExampleDictionary
 
     public static final String ENCODED_MESSAGE =
         "8=FIX.4.4\0019=75\00135=0\001115=abc\001112=abc\001116=2\001117=1.1" +
-            "\001118=Y\001119=123\001127=19700101-00:00:00.001\00110=199\001";
+        "\001118=Y\001119=123\001127=19700101-00:00:00.001\00110=199\001";
 
     public static final String NO_OPTIONAL_MESSAGE =
         "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-            "\00110=043\001";
+        "\00110=043\001";
 
     public static final String MISSING_REQUIRED_FIELDS_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001117=1.1\001127=19700101-00:00:00.001" +
-            "\00110=161\001";
+        "\00110=161\001";
 
     public static final String INVALID_TAG_NUMBER_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-            "\0019999=9999\00110=161\001";
+        "\0019999=9999\00110=161\001";
 
     public static final String TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-            "\00199=9999\00110=161\001";
+        "\00199=9999\00110=161\001";
 
     public static final String TAG_SPECIFIED_WITHOUT_A_VALUE_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=\001117=1.1\001127=19700101-00:00:00.001" +
-            "\00110=161\001";
+        "\00110=161\001";
 
     public static final String TAG_SPECIFIED_WHERE_INT_VALUE_IS_INCORRECT_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=10\001117=1.1\001127=19700101-00:00:00.001" +
-            "\00110=161\001";
+        "\00110=161\001";
 
     public static final String TAG_SPECIFIED_WHERE_STRING_VALUE_IS_INCORRECT_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=ZZZZ\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-            "\00110=161\001";
+        "\00110=161\001";
 
     public static final String TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE =
         "35=0\0018=FIX.4.4\0019=0027\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-            "\00110=161\001";
+        "\00110=161\001";
 
     public static final byte[] TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES =
         TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE.getBytes(US_ASCII);
 
     public static final String TAG_APPEARS_MORE_THAN_ONCE_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001116=1\001117=1.1\001127=19700101-00:00:00.001" +
-            "\00110=161\001";
+        "\00110=161\001";
 
     public static final String DERIVED_FIELDS_MESSAGE =
-            "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-                "\00110=043\001";
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\00110=043\001";
 
     public static final String SHORTER_STRING_MESSAGE =
         "8=FIX.4.4\0019=52\00135=0\001115=ab\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-            "\00110=199\001";
+        "\00110=199\001";
 
     public static final String REPEATING_GROUP_MESSAGE =
         "8=FIX.4.4\0019=71\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-            "\001120=2\001121=1\001121=2\00110=053\001";
+        "\001120=2\001121=1\001121=2\00110=053\001";
 
     public static final String SINGLE_REPEATING_GROUP_MESSAGE =
         "8=FIX.4.4\0019=65\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-            "\001120=1\001121=2\00110=052\001";
+        "\001120=1\001121=2\00110=052\001";
 
     public static final String ZERO_REPEATING_GROUP_MESSAGE =
         "8=FIX.4.4\0019=59\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-            "\001120=0\00110=050\001";
+        "\001120=0\00110=050\001";
 
     public static final String NESTED_GROUP_MESSAGE =
         "8=FIX.4.4\0019=77\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-            "\001120=1\001121=1\001122=1\001123=1\00110=063\001";
+        "\001120=1\001121=1\001122=1\001123=1\00110=063\001";
 
     public static final String REPEATING_GROUP_MESSAGE_WITH_INVALID_TAG_NUMBER =
         "8=FIX.4.4\0019=0071\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-            "\001120=2\001121=1\0019999=9999\001121=2\00110=149\001";
+        "\001120=2\001121=1\0019999=9999\001121=2\00110=149\001";
 
     public static final String REPEATING_GROUP_MESSAGE_WITH_INVALID_TAG_NUMBER_FIELDS_AFTER =
         "8=FIX.4.4\0019=0071\00135=0\001127=19700101-00:00:00.001" +
-            "\001120=2\001121=1\0019999=9999\001121=2\001115=abc\001116=2\001117=1.1\00110=149\001";
+        "\001120=2\001121=1\0019999=9999\001121=2\001115=abc\001116=2\001117=1.1\00110=149\001";
 
     public static final String REPEATING_GROUP_MESSAGE_WITH_MISSING_REQUIRED_FIELDS_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001117=1.1\001127=19700101-00:00:00.001" +
-            "\001120=2\001121=1\001121=2\00110=161\001";
+        "\001120=2\001121=1\001121=2\00110=161\001";
 
     public static final String COMPONENT_MESSAGE =
         "8=FIX.4.4\0019=77\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-            "\001124=2\001130=2\001131=1\001131=2\00110=069\001";
+        "\001124=2\001130=2\001131=1\001131=2\00110=069\001";
 
     public static final String SHORT_TIMESTAMP_MESSAGE =
         "8=FIX.4.4\0019=49\00135=0\001115=abc\001116=2\001117=1.1" +
-            "\001127=19700101-00:00:00\00110=113\001";
+        "\001127=19700101-00:00:00\00110=113\001";
 
     public static final String EG_FIELDS_MESSAGE =
         "8=FIX.4.4\0019=0049\00135=Z\0011001=GBP\0011002=XLON\0011003=GB" +
-            "\0011004=GBP\0011005=XLON\0011006=GB\00110=209\001";
+        "\0011004=GBP\0011005=XLON\0011006=GB\00110=209\001";
 
     public static final String EG_NO_OPTIONAL_FIELDS_MESSAGE =
         "8=FIX.4.4\0019=0049\00135=Z\0011001=USD\0011002=N\0011003=US\00110=209\001";
@@ -318,9 +318,10 @@ public final class ExampleDictionary
         heartbeat.optionalEntry(dataFieldLength);
 
         final Component header = new Component("Header");
-        header.requiredEntry(beginString)
-              .requiredEntry(bodyLength)
-              .requiredEntry(msgType);
+        header
+            .requiredEntry(beginString)
+            .requiredEntry(bodyLength)
+            .requiredEntry(msgType);
 
         final Component trailer = new Component("Trailer");
         trailer.requiredEntry(checkSum);
