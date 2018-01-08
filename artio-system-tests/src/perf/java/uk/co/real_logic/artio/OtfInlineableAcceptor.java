@@ -52,10 +52,11 @@ public final class OtfInlineableAcceptor implements OtfMessageAcceptor
         return MessageControl.CONTINUE;
     }
 
-    public boolean onError(final ValidationError error,
-                           final int messageType,
-                           final int tagNumber,
-                           final AsciiFieldFlyweight value)
+    public boolean onError(
+        final ValidationError error,
+        final int messageType,
+        final int tagNumber,
+        final AsciiFieldFlyweight value)
     {
         return false;
     }

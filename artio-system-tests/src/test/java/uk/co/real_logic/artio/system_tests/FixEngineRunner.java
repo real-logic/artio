@@ -57,15 +57,14 @@ public class FixEngineRunner implements AutoCloseable
         libraryChannel = "aeron:udp?endpoint=224.0.1.1:" + libraryPort;
         frameDropper = new FrameDropper(ourId);
 
-        final MediaDriver.Context context =
-            mediaDriverContext(TestFixtures.TERM_BUFFER_LENGTH, true)
-                .aeronDirectoryName(aeronDirName(ourId))
-                .termBufferSparseFile(true)
-                .publicationUnblockTimeoutNs(TimeUnit.SECONDS.toNanos(100))
-                .receiveChannelEndpointSupplier(frameDropper.newReceiveChannelEndpointSupplier())
-                .sendChannelEndpointSupplier(frameDropper.newSendChannelEndpointSupplier())
-                .ipcTermBufferLength(TERM_BUFFER_LENGTH)
-                .publicationTermBufferLength(TERM_BUFFER_LENGTH);
+        final MediaDriver.Context context = mediaDriverContext(TestFixtures.TERM_BUFFER_LENGTH, true)
+            .aeronDirectoryName(aeronDirName(ourId))
+            .termBufferSparseFile(true)
+            .publicationUnblockTimeoutNs(TimeUnit.SECONDS.toNanos(100))
+            .receiveChannelEndpointSupplier(frameDropper.newReceiveChannelEndpointSupplier())
+            .sendChannelEndpointSupplier(frameDropper.newSendChannelEndpointSupplier())
+            .ipcTermBufferLength(TERM_BUFFER_LENGTH)
+            .publicationTermBufferLength(TERM_BUFFER_LENGTH);
 
         mediaDriver = MediaDriver.launch(context);
         final String aeronDirectoryName = context.aeronDirectoryName();

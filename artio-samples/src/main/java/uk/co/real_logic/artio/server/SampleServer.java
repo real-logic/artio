@@ -65,7 +65,7 @@ public final class SampleServer
             .threadingMode(SHARED)
             .dirDeleteOnStart(true);
         try (MediaDriver driver = MediaDriver.launch(context);
-             FixEngine gateway = FixEngine.launch(configuration))
+            FixEngine gateway = FixEngine.launch(configuration))
         {
             final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
             libraryConfiguration.authenticationStrategy(authenticationStrategy);

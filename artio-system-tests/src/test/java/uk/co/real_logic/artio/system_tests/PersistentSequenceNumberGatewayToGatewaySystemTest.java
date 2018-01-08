@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.session.Session;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Objects;
 
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
@@ -111,8 +112,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         resetSequenceNumbersOnLogon = true;
 
-        exchangeMessagesAroundARestart(
-                AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER);
+        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER);
 
         assertOnlyAcceptorSequenceReset();
     }
@@ -129,8 +129,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         resetSequenceNumbersOnLogon = true;
 
-        exchangeMessagesAroundARestart(
-                AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER);
+        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER);
 
         assertSequenceIndicesAre(1);
     }
@@ -182,8 +181,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         beforeReconnect = this::resetSessions;
 
-        exchangeMessagesAroundARestart(
-            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1);
+        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1);
 
         // Different sessions themselves, so we start again at 0
         assertSequenceIndicesAre(0);
@@ -194,8 +192,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         beforeReconnect = this::resetSequenceNumbers;
 
-        exchangeMessagesAroundARestart(
-            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 2);
+        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 2);
 
         assertSequenceIndicesAre(1);
     }
@@ -205,8 +202,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         resetSequenceNumbersOnLogon = true;
 
-        exchangeMessagesAroundARestart(
-            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1);
+        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1);
 
         acceptingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
         initiatingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
@@ -234,8 +230,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         mediaDriver = launchMediaDriver();
 
-        final EngineConfiguration config =
-            acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
+        final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
         config.sessionPersistenceStrategy(logon -> REPLICATED);
         config.printErrorMessages(printErrorMessages);
         acceptingEngine = FixEngine.launch(config);
@@ -244,12 +239,11 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         // Use so that the SharedLibraryScheduler is integration tested
         final DynamicLibraryScheduler libraryScheduler = new DynamicLibraryScheduler();
 
-        acceptingLibrary = connect(
-            acceptingLibraryConfig(acceptingHandler)
-                    .scheduler(libraryScheduler));
-        initiatingLibrary = connect(
-            initiatingLibraryConfig(libraryAeronPort, initiatingHandler)
-                    .scheduler(libraryScheduler));
+        acceptingLibrary = connect(acceptingLibraryConfig(acceptingHandler).scheduler(libraryScheduler));
+
+        initiatingLibrary = connect(initiatingLibraryConfig(libraryAeronPort, initiatingHandler)
+            .scheduler(libraryScheduler));
+
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         beforeConnect.run();
@@ -279,9 +273,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         acquireSession.run();
     }
 
-    private void exchangeMessagesAroundARestart(
-        final int initialSequenceNumber,
-        final int seqNumAfter)
+    private void exchangeMessagesAroundARestart(final int initialSequenceNumber, final int seqNumAfter)
     {
         launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, this::nothing, resetSequenceNumbersOnLogon);
 
@@ -316,7 +308,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private void nothing()
     {
-
     }
 
     private long getAcceptingSessionId()
@@ -392,9 +383,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final File dir = new File(ACCEPTOR_LOGS);
         if (dir.exists())
         {
-            Arrays.stream(dir.list())
-                .filter(name -> name.contains("archive"))
-                .forEach(name -> IoUtil.delete(new File(dir, name), false));
+            Arrays.stream(Objects.requireNonNull(dir.list()))
+                .filter((name) -> name.contains("archive"))
+                .forEach((name) -> IoUtil.delete(new File(dir, name), false));
         }
     }
 }

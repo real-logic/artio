@@ -37,8 +37,8 @@ public final class FixBenchmarkServer
         final EngineConfiguration configuration = engineConfiguration();
 
         try (MediaDriver mediaDriver = newMediaDriver();
-             FixEngine engine = FixEngine.launch(configuration);
-             FixLibrary library = FixLibrary.connect(libraryConfiguration()))
+            FixEngine engine = FixEngine.launch(configuration);
+            FixLibrary library = FixLibrary.connect(libraryConfiguration()))
         {
             final IdleStrategy idleStrategy = idleStrategy();
             System.out.printf("Using %s idle strategy%n", idleStrategy.getClass().getSimpleName());

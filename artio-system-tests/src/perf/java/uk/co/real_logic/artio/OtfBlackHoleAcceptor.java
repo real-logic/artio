@@ -82,10 +82,11 @@ public final class OtfBlackHoleAcceptor implements OtfMessageAcceptor
     }
 
     @CompilerControl(DONT_INLINE)
-    public boolean onError(final ValidationError error,
-                           final int messageType,
-                           final int tagNumber,
-                           final AsciiFieldFlyweight value)
+    public boolean onError(
+        final ValidationError error,
+        final int messageType,
+        final int tagNumber,
+        final AsciiFieldFlyweight value)
     {
         bh.consume(error);
         bh.consume(messageType);
