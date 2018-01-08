@@ -448,16 +448,14 @@ public abstract class Generator
 
     protected String toString(final Aggregate aggregate, final boolean hasCommonCompounds)
     {
-        final String entriesToString =
-            aggregate
-                .entries()
-                .stream()
-                .map(this::entryToString)
-                .collect(joining(" + \n"));
+        final String entriesToString = aggregate
+            .entries()
+            .stream()
+            .map(this::entryToString)
+            .collect(joining(" + \n"));
 
-        final String prefix =
-            !hasCommonCompounds ?
-                "" : "\"  \\\"header\\\": \" + header" + EXPAND_INDENT + " + \"\\n\" + ";
+        final String prefix = !hasCommonCompounds ?
+            "" : "\"  \\\"header\\\": \" + header" + EXPAND_INDENT + " + \"\\n\" + ";
 
         final String suffix;
         final String parameters;
@@ -603,7 +601,7 @@ public abstract class Generator
     protected String indent(final int times, final String suffix)
     {
         final StringBuilder sb = new StringBuilder(times * 4 + suffix.length());
-        IntStream.range(0, times).forEach(x -> sb.append("    "));
+        IntStream.range(0, times).forEach((ignore) -> sb.append("    "));
         sb.append(suffix);
 
         return sb.toString();

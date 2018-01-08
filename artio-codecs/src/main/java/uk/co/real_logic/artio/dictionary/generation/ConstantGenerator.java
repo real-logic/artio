@@ -55,7 +55,7 @@ public class ConstantGenerator
 
     public void generate()
     {
-        outputManager.withOutput(CLASS_NAME, out ->
+        outputManager.withOutput(CLASS_NAME, (out) ->
         {
             out.append(fileHeader(builderPackage));
             out.append(importFor(IntHashSet.class));
@@ -85,17 +85,16 @@ public class ConstantGenerator
                 {
                     if (isPrimitive)
                     {
-                        final String addValues =
-                            field.values()
-                                .stream()
-                                .map(Field.Value::representation)
-                                .map(repr -> isChar ? "'" + repr + "'" : repr)
-                                .map(repr -> String.format("        %1$s.add(%2$s);\n", valuesField, repr))
-                                .collect(joining());
+                        final String addValues = field.values()
+                            .stream()
+                            .map(Field.Value::representation)
+                            .map((repr) -> isChar ? "'" + repr + "'" : repr)
+                            .map((repr) -> String.format("        %1$s.add(%2$s);\n", valuesField, repr))
+                            .collect(joining());
 
                         out.append(String.format(
                             "    public static final IntHashSet %1$s = new IntHashSet(%3$s);\n" +
-                                "%2$s",
+                            "%2$s",
                             valuesField,
                             optionalStaticInit(addValues),
                             sizeHashSet(field.values())
@@ -103,11 +102,10 @@ public class ConstantGenerator
                     }
                     else if (type.isStringBased())
                     {
-                        final String addValues =
-                            field.values()
-                                .stream()
-                                .map(value -> "\"" + value.representation() + '"')
-                                .collect(joining(", "));
+                        final String addValues = field.values()
+                            .stream()
+                            .map((value) -> "\"" + value.representation() + '"')
+                            .collect(joining(", "));
 
                         out.append(String.format(
                             "    public static final CharArraySet %1$s = new CharArraySet(%2$s);\n",
@@ -171,7 +169,7 @@ public class ConstantGenerator
         return dictionary
             .messages()
             .stream()
-            .map(message ->
+            .map((message) ->
             {
                 final int type = message.packedType();
                 final String constantName = constantName(message.name());
@@ -225,10 +223,10 @@ public class ConstantGenerator
     private String constantName(final String name)
     {
         final String replacedName = name.replace("ID", "Id");
-        return toUpperCase(replacedName.charAt(0)) +
-            replacedName.substring(1)
-                .chars()
-                .mapToObj((codePoint) -> (isUpperCase(codePoint) ? "_" : "") + (char)toUpperCase(codePoint))
-                .collect(joining());
+        return toUpperCase(replacedName.charAt(0)) + replacedName
+            .substring(1)
+            .chars()
+            .mapToObj((codePoint) -> (isUpperCase(codePoint) ? "_" : "") + (char)toUpperCase(codePoint))
+            .collect(joining());
     }
 }

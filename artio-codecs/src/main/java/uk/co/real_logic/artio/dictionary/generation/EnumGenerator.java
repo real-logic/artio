@@ -62,7 +62,7 @@ public final class EnumGenerator
         final Type type = field.type();
         final List<Value> values = field.values();
 
-        outputManager.withOutput(enumName, out ->
+        outputManager.withOutput(enumName, (out) ->
         {
             try
             {
@@ -134,14 +134,14 @@ public final class EnumGenerator
 
         return format(
             "%s" +
-                "    public static %s decode(%s)\n" +
-                "    {\n" +
-                "        switch(representation)\n" +
-                "        {\n" +
-                "%s" +
-                "        default: throw new IllegalArgumentException(\"Unknown: \" + representation);\n" +
-                "        }\n" +
-                "    }\n",
+            "    public static %s decode(%s)\n" +
+            "    {\n" +
+            "        switch(representation)\n" +
+            "        {\n" +
+            "%s" +
+            "        default: throw new IllegalArgumentException(\"Unknown: \" + representation);\n" +
+            "        }\n" +
+            "    }\n",
             optionalCharArrayDecode,
             name,
             representation.methodArgsDeclaration(),
@@ -157,23 +157,22 @@ public final class EnumGenerator
 
                 final String entries = allValues
                     .stream()
-                    .map((value) ->
-                        format("        stringMap.put(%s, %s);\n", literal(value, type), value.description()))
+                    .map((v) -> format("        stringMap.put(%s, %s);\n", literal(v, type), v.description()))
                     .collect(joining());
 
                 return format(
                     "    private static final CharArrayMap<%1$s> charMap;\n" +
-                        "    static\n" +
-                        "    {\n" +
-                        "        final Map<String, %1$s> stringMap = new HashMap<>();\n" +
-                        "%2$s" +
-                        "        charMap = new CharArrayMap<>(stringMap);\n" +
-                        "    }\n" +
-                        "\n" +
-                        "    public static %1$s decode(final char[] representation, final int length)\n" +
-                        "    {\n" +
-                        "        return charMap.get(representation, length);" +
-                        "    }\n",
+                    "    static\n" +
+                    "    {\n" +
+                    "        final Map<String, %1$s> stringMap = new HashMap<>();\n" +
+                    "%2$s" +
+                    "        charMap = new CharArrayMap<>(stringMap);\n" +
+                    "    }\n" +
+                    "\n" +
+                    "    public static %1$s decode(final char[] representation, final int length)\n" +
+                    "    {\n" +
+                    "        return charMap.get(representation, length);" +
+                    "    }\n",
                     typeName,
                     entries);
 
@@ -261,8 +260,7 @@ public final class EnumGenerator
 
             default:
                 throw new IllegalArgumentException(
-                    "Unknown type for creating an enum from: " + type + " for value" + value.description());
+                    "Unknown type for creating an enum from: " + type + " for value " + value.description());
         }
     }
-
 }

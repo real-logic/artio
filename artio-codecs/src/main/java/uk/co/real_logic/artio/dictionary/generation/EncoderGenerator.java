@@ -466,10 +466,9 @@ public class EncoderGenerator extends Generator
                 break;
         }
 
-        final String body =
-            entries.stream()
-                .map(this::encodeEntry)
-                .collect(joining("\n"));
+        final String body = entries.stream()
+            .map(this::encodeEntry)
+            .collect(joining("\n"));
 
         String suffix;
         if (hasCommonCompounds)

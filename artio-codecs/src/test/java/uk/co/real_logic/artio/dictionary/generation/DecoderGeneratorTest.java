@@ -915,10 +915,10 @@ public class DecoderGeneratorTest
         assertHasMethod("componentField", int.class);
         assertHasMethod(HAS_COMPONENT_FIELD, boolean.class);
 
-        assertHasMethod(
-            "componentGroupGroup",
-            heartbeat.getClassLoader().loadClass(
-                "uk.co.real_logic.artio.builder.test.EgComponentDecoder$ComponentGroupGroupDecoder"));
+        final Class<?> clazz = heartbeat.getClassLoader().loadClass(
+            "uk.co.real_logic.artio.builder.test.EgComponentDecoder$ComponentGroupGroupDecoder");
+
+        assertHasMethod("componentGroupGroup", clazz);
     }
 
     private void assertHasMethod(final String name, final Class<?> expectedReturnType) throws NoSuchMethodException
