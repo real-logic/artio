@@ -69,12 +69,10 @@ final class DebugRaftHandler implements RaftHandler
             candidateId,
             candidateSessionId,
             leaderShipTerm,
-            lastAckedPosition
-        );
+            lastAckedPosition);
 
         return delegateHandler.onRequestVote(
-            candidateId, candidateSessionId, leaderShipTerm, lastAckedPosition
-        );
+            candidateId, candidateSessionId, leaderShipTerm, lastAckedPosition);
     }
 
     public Action onReplyVote(
@@ -93,8 +91,7 @@ final class DebugRaftHandler implements RaftHandler
             this.nodeId,
             senderNodeId,
             candidateId,
-            leaderShipTerm
-        );
+            leaderShipTerm);
 
         return delegateHandler.onReplyVote(
             senderNodeId, candidateId, leaderShipTerm, vote,
@@ -112,15 +109,14 @@ final class DebugRaftHandler implements RaftHandler
         DebugLogger.log(
             RAFT,
             "%d: ConsensusHeartbeat(nodeId=%d, leaderShipTerm=%d, pos=%d, " +
-                "transStartPos=%d, transPos=%d, leaderSessId=%d)%n",
+            "transStartPos=%d, transPos=%d, leaderSessId=%d)%n",
             this.nodeId,
             nodeId,
             leaderShipTerm,
             position,
             transportStartPosition,
             transportPosition,
-            leaderSessionId
-        );
+            leaderSessionId);
 
         return delegateHandler.onConsensusHeartbeat(
             nodeId,
@@ -146,11 +142,9 @@ final class DebugRaftHandler implements RaftHandler
             leaderSessionId,
             leaderShipTerm,
             startPosition,
-            bodyLength
-        );
+            bodyLength);
 
         return delegateHandler.onResend(
-            leaderSessionId, leaderShipTerm, startPosition, bodyBuffer, bodyOffset, bodyLength
-        );
+            leaderSessionId, leaderShipTerm, startPosition, bodyBuffer, bodyOffset, bodyLength);
     }
 }

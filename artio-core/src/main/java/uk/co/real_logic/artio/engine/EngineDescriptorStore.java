@@ -53,20 +53,17 @@ public class EngineDescriptorStore implements NodeStateHandler
         final int templateId = messageHeader.templateId();
         if (templateId != EngineDescriptorDecoder.TEMPLATE_ID)
         {
-            errorHandler.onError(
-                new IllegalArgumentException(
-                    String.format(
-                        "Invalid template Id, expected %d, but received %d from %d",
-                        EngineDescriptorDecoder.TEMPLATE_ID,
-                        templateId,
-                        nodeId)));
+            errorHandler.onError(new IllegalArgumentException(String.format(
+                "Invalid template Id, expected %d, but received %d from %d",
+                EngineDescriptorDecoder.TEMPLATE_ID,
+                templateId,
+                nodeId)));
             return;
         }
 
         offset += MessageHeaderDecoder.ENCODED_LENGTH;
 
-        engineDescriptor
-            .wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
+        engineDescriptor.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
 
         final int libraryChannelLength = engineDescriptor.libraryChannelLength();
         final UnsafeBuffer libraryChannel = new UnsafeBuffer(new byte[libraryChannelLength]);

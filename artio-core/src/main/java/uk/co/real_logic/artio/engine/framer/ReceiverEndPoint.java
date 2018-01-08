@@ -321,7 +321,6 @@ class ReceiverEndPoint
         return buffer.scan(startOfBodyLength + 1, usedBufferData - 1, START_OF_HEADER);
     }
 
-
     private boolean checkSessionId(final int offset, final int length)
     {
         if (sessionId != UNKNOWN)
@@ -360,7 +359,7 @@ class ReceiverEndPoint
         return false;
     }
 
-    private boolean stashIfBackpressured(final int offset, final long position)
+    private boolean stashIfBackPressured(final int offset, final long position)
     {
         final boolean backPressured = Pressure.isBackPressured(position);
         if (backPressured)
@@ -382,6 +381,7 @@ class ReceiverEndPoint
             sequenceIndex,
             connectionId,
             OK);
+
         if (Pressure.isBackPressured(position))
         {
             moveRemainingDataToBufferStart(offset);
@@ -445,36 +445,40 @@ class ReceiverEndPoint
 
     private boolean saveInvalidMessage(final int offset, final int startOfChecksumTag)
     {
-        return stashIfBackpressured(offset,
-            libraryPublication.saveMessage(buffer,
-                offset,
-                libraryId,
-                startOfChecksumTag,
-                UNKNOWN_MESSAGE_TYPE,
-                sessionId,
-                sequenceIndex,
-                connectionId,
-                INVALID_BODYLENGTH));
+        final long position = libraryPublication.saveMessage(
+            buffer,
+            offset,
+            libraryId,
+            startOfChecksumTag,
+            UNKNOWN_MESSAGE_TYPE,
+            sessionId,
+            sequenceIndex,
+            connectionId,
+            INVALID_BODYLENGTH);
+
+        return stashIfBackPressured(offset, position);
     }
 
     private boolean saveInvalidMessage(final int offset)
     {
-        final boolean backpressured = stashIfBackpressured(offset,
-            libraryPublication.saveMessage(buffer,
-                offset,
-                usedBufferData,
-                libraryId,
-                INVALID_MESSAGE_TYPE,
-                sessionId,
-                sequenceIndex,
-                connectionId,
-                INVALID));
+        final long position = libraryPublication.saveMessage(buffer,
+            offset,
+            usedBufferData,
+            libraryId,
+            INVALID_MESSAGE_TYPE,
+            sessionId,
+            sequenceIndex,
+            connectionId,
+            INVALID);
 
-        if (!backpressured)
+        final boolean backPressured = stashIfBackPressured(offset, position);
+
+        if (!backPressured)
         {
             clearBuffer();
         }
-        return backpressured;
+
+        return backPressured;
     }
 
     private void clearBuffer()
@@ -484,16 +488,17 @@ class ReceiverEndPoint
 
     private boolean saveInvalidChecksumMessage(final int offset, final int messageType, final int length)
     {
-        return stashIfBackpressured(offset,
-            libraryPublication.saveMessage(buffer,
-                offset,
-                length,
-                libraryId,
-                messageType,
-                sessionId,
-                sequenceIndex,
-                connectionId,
-                INVALID_CHECKSUM));
+        final long position = libraryPublication.saveMessage(buffer,
+            offset,
+            length,
+            libraryId,
+            messageType,
+            sessionId,
+            sequenceIndex,
+            connectionId,
+            INVALID_CHECKSUM);
+
+        return stashIfBackPressured(offset, position);
     }
 
     public void close(final DisconnectReason reason)

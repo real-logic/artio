@@ -214,10 +214,10 @@ public final class DebugLogger
     }
 
     public static void log(
-            final LogTag tag,
-            final String formatString,
-            final long first,
-            final Object second)
+        final LogTag tag,
+        final String formatString,
+        final long first,
+        final Object second)
     {
         if (isEnabled(tag))
         {
@@ -300,7 +300,7 @@ public final class DebugLogger
         if (isThreadEnabled(threadName))
         {
             OUTPUT.printf(System.currentTimeMillis() + ":" +
-                          threadName + "[" + tag.name() + "]"  + " : " + formatString, args);
+                threadName + "[" + tag.name() + "]" + " : " + formatString, args);
         }
     }
 

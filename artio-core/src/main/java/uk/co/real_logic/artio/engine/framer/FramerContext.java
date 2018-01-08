@@ -85,29 +85,29 @@ public class FramerContext
         this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "outboundPublication");
 
         gatewaySessions = new GatewaySessions(
-                clock,
-                outboundPublication,
-                sessionIdStrategy,
-                configuration.sessionCustomisationStrategy(),
-                fixCounters,
-                configuration.authenticationStrategy(),
-                configuration.messageValidationStrategy(),
-                configuration.sessionBufferSize(),
-                configuration.sendingTimeWindowInMs(),
-                configuration.reasonableTransmissionTimeInMs(),
-                errorHandler,
-                sessionContexts,
-                configuration.sessionPersistenceStrategy());
+            clock,
+            outboundPublication,
+            sessionIdStrategy,
+            configuration.sessionCustomisationStrategy(),
+            fixCounters,
+            configuration.authenticationStrategy(),
+            configuration.messageValidationStrategy(),
+            configuration.sessionBufferSize(),
+            configuration.sendingTimeWindowInMs(),
+            configuration.reasonableTransmissionTimeInMs(),
+            errorHandler,
+            sessionContexts,
+            configuration.sessionPersistenceStrategy());
 
         final EndPointFactory endPointFactory = new EndPointFactory(
-                configuration,
-                sessionContexts,
-                inboundLibraryPublication,
-                inboundClusterablePublication,
-                fixCounters,
-                errorHandler,
-                replicatedConnectionIds,
-                gatewaySessions);
+            configuration,
+            sessionContexts,
+            inboundLibraryPublication,
+            inboundClusterablePublication,
+            fixCounters,
+            errorHandler,
+            replicatedConnectionIds,
+            gatewaySessions);
 
         sentSequenceNumberIndex = new SequenceNumberIndexReader(
             configuration.sentSequenceNumberBuffer(), errorHandler);
@@ -126,9 +126,9 @@ public class FramerContext
             engineContext.outboundClusterSubscription(),
             engineContext.outboundClusterSubscription(),
             engineContext.outboundLibrarySubscription(
-                    "outboundLibrarySubscription", finalImagePositions),
+                "outboundLibrarySubscription", finalImagePositions),
             engineContext.outboundLibrarySubscription(
-                    "outboundSlowSubscription", null),
+                "outboundSlowSubscription", null),
             replayImage,
             slowReplayImage,
             engineContext.inboundReplayQuery(),
@@ -148,7 +148,7 @@ public class FramerContext
             engineContext.outboundLibraryCompletionPosition(),
             engineContext.outboundClusterCompletionPosition(),
             finalImagePositions,
-                conductorAgentInvoker);
+            conductorAgentInvoker);
     }
 
     public Agent framer()

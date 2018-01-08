@@ -36,7 +36,6 @@ import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.timing.LibraryTimers;
 import uk.co.real_logic.artio.timing.Timer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
-import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.util.AbstractList;
@@ -558,9 +557,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     //                     BEGIN EVENT HANDLERS
     // -----------------------------------------------------------------------
 
-    private final ControlledFragmentHandler outboundSubscription =
-        new ControlledFragmentAssembler(
-            ProtocolSubscription.of(this, new LibraryProtocolSubscription(this)));
+    private final ControlledFragmentHandler outboundSubscription = new ControlledFragmentAssembler(
+        ProtocolSubscription.of(this, new LibraryProtocolSubscription(this)));
 
     public Action onManageSession(
         final int libraryId,
@@ -609,12 +607,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     final boolean isInitiator = correlationIdToReply.get(correlationId) instanceof InitiateSessionReply;
                     final InitiateSessionReply reply = isInitiator ?
                         (InitiateSessionReply)correlationIdToReply.remove(correlationId) : null;
-                    final Session session = initiateSession(connection,
-                            lastSentSeqNum,
-                            lastRecvSeqNum,
-                            sessionState,
-                            isInitiator ? reply.configuration() : null,
-                            sequenceIndex);
+                    final Session session = initiateSession(
+                        connection,
+                        lastSentSeqNum,
+                        lastRecvSeqNum,
+                        sessionState,
+                        isInitiator ? reply.configuration() : null,
+                        sequenceIndex);
+
                     newSession(connection, sessionId, session);
                     if (isInitiator)
                     {
@@ -625,7 +625,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 {
                     DebugLogger.log(FIX_MESSAGE, "Acct Connect: %d, %d%n", connection, libraryId);
                     final Session session = acceptSession(
-                            connection, address, sessionState, heartbeatIntervalInS, sequenceIndex, logonTime);
+                        connection, address, sessionState, heartbeatIntervalInS, sequenceIndex, logonTime);
                     newSession(connection, sessionId, session);
                 }
 
@@ -645,16 +645,15 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     // I guess this could be not null in the case where
                     // the gateway restarted and the library already had the session,
                     // but has to reacquire it after a new connection to the gateway...
-                    final CompositeKey compositeKey = localCompId.length() == 0 ? null :
-                        sessionIdStrategy.onInitiateLogon(
-                            localCompId,
-                            localSubId,
-                            localLocationId,
-                            remoteCompId,
-                            remoteSubId,
-                            remoteLocationId);
+                    final CompositeKey key = localCompId.length() == 0 ? null : sessionIdStrategy.onInitiateLogon(
+                        localCompId,
+                        localSubId,
+                        localLocationId,
+                        remoteCompId,
+                        remoteSubId,
+                        remoteLocationId);
 
-                    subscriber.onLogon(sessionId, lastSentSeqNum, lastRecvSeqNum, compositeKey);
+                    subscriber.onLogon(sessionId, lastSentSeqNum, lastRecvSeqNum, key);
                     final SessionHandler handler = configuration.sessionAcquireHandler()
                         .onSessionAcquired(subscriber.session(), SlowStatus.SLOW == slowStatus);
                     subscriber.handler(handler);
@@ -787,8 +786,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public Action onReleaseSessionReply(final int libraryId, final long replyToId, final SessionReplyStatus status)
     {
-        final ReleaseToGatewayReply reply =
-            (ReleaseToGatewayReply)correlationIdToReply.remove(replyToId);
+        final ReleaseToGatewayReply reply = (ReleaseToGatewayReply)correlationIdToReply.remove(replyToId);
         if (reply != null)
         {
             reply.onComplete(status);
@@ -903,10 +901,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             // sessions that the gateway thinks you have, that you don't
             if (!sessionIds.isEmpty())
             {
+                final String msg = String.format(
+                    "The gateway thinks that we own the following session ids: %s", sessionIds);
                 configuration
                     .gatewayErrorHandler()
-                    .onError(GatewayError.UNKNOWN_SESSION, libraryId,
-                             String.format("The gateway thinks that we own the following session ids: %s", sessionIds));
+                    .onError(GatewayError.UNKNOWN_SESSION, libraryId, msg);
             }
 
             // Commit to ensure that you leave the poll loop having reconnected successfully
@@ -955,7 +954,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private void newSession(final long connectionId, final long sessionId, final Session session)
     {
         session.id(sessionId);
-        final AuthenticationStrategy authenticationStrategy = configuration.authenticationStrategy();
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
             session, sessionIdStrategy, validationStrategy, null);
@@ -995,8 +993,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             sessionConfiguration != null && sessionConfiguration.resetSeqNum(),
             configuration.reasonableTransmissionTimeInMs(),
             asciiBuffer)
-            .lastReceivedMsgSeqNum(
-                initiatorNewSequenceNumber(sessionConfiguration, lastReceivedSequenceNumber) - 1);
+            .lastReceivedMsgSeqNum(initiatorNewSequenceNumber(sessionConfiguration, lastReceivedSequenceNumber) - 1);
 
         if (sessionConfiguration != null)
         {

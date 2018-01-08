@@ -17,11 +17,12 @@ package uk.co.real_logic.artio;
 
 public class FileSystemCorruptionException extends IllegalStateException
 {
-    public FileSystemCorruptionException(final String fileName,
-                                         final int start,
-                                         final int end,
-                                         final int savedChecksum,
-                                         final int calculatedChecksum)
+    public FileSystemCorruptionException(
+        final String fileName,
+        final int start,
+        final int end,
+        final int savedChecksum,
+        final int calculatedChecksum)
     {
         super(String.format(
             "The %s file is corrupted between bytes %d and %d, saved checksum is %d, but %d was calculated",
@@ -30,8 +31,5 @@ public class FileSystemCorruptionException extends IllegalStateException
             end,
             savedChecksum,
             calculatedChecksum));
-
     }
-
-
 }

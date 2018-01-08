@@ -54,14 +54,16 @@ class RaftTransport
     {
         final StreamIdentifier data = configuration.dataStream();
         final StreamIdentifier acknowledgement = configuration.acknowledgementStream();
+        final Subscription leaderAcknowledgementSubscription = subscription(
+            acknowledgement.channel(), acknowledgement.streamId(), "leaderAcknowledgementSubscription");
+
+        final Subscription leaderDataSubscription = subscription(
+            data.spyChannel(), data.streamId(), "leaderDataSubscription");
+
         leader
-            .acknowledgementSubscription(
-                subscription(
-                    acknowledgement.channel(), acknowledgement.streamId(), "leaderAcknowledgementSubscription"))
+            .acknowledgementSubscription(leaderAcknowledgementSubscription)
             // The leader uses a spy subscription in order to avoid reading its own data
-            .dataSubscription(
-                subscription(
-                    data.spyChannel(), data.streamId(), "leaderDataSubscription"));
+            .dataSubscription(leaderDataSubscription);
     }
 
     Subscription dataSubscription()

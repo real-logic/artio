@@ -307,8 +307,8 @@ public class SessionParser
         final HeaderDecoder header = logon.header();
         final char[] beginString = header.beginString();
         final int beginStringLength = header.beginStringLength();
-        if (CODEC_VALIDATION_ENABLED && (!logon.validate() ||
-                                         !session.onBeginString(beginString, beginStringLength, true)))
+        if (CODEC_VALIDATION_ENABLED &&
+            (!logon.validate() || !session.onBeginString(beginString, beginStringLength, true)))
         {
             return onCodecInvalidMessage(logon, header, true);
         }
@@ -340,6 +340,7 @@ public class SessionParser
             strategyName,
             session.connectionId(),
             fixMessage);
+
         onError(new FixGatewayException(message, throwable));
     }
 

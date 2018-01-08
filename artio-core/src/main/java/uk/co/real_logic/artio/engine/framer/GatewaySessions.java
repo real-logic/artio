@@ -147,17 +147,14 @@ class GatewaySessions
         DebugLogger.log(FIX_MESSAGE, "Gateway Acquired Session %d%n", connectionId);
         if (sessionKey != null)
         {
-            gatewaySession.onLogon(
-                username,
-                password,
-                heartbeatIntervalInS);
+            gatewaySession.onLogon(username, password, heartbeatIntervalInS);
             session.lastReceivedMsgSeqNum(lastReceivedSequenceNumber);
         }
     }
 
     GatewaySession releaseBySessionId(final long sessionId)
     {
-        final int index = indexBySesionId(sessionId);
+        final int index = indexBySessionId(sessionId);
         if (index < 0)
         {
             return null;
@@ -168,7 +165,7 @@ class GatewaySessions
 
     GatewaySession sessionById(final long sessionId)
     {
-        final int index = indexBySesionId(sessionId);
+        final int index = indexBySessionId(sessionId);
         if (index < 0)
         {
             return null;
@@ -177,7 +174,7 @@ class GatewaySessions
         return sessions.get(index);
     }
 
-    private int indexBySesionId(final long sessionId)
+    private int indexBySessionId(final long sessionId)
     {
         final List<GatewaySession> sessions = this.sessions;
 
@@ -275,9 +272,9 @@ class GatewaySessions
         }
         catch (final Throwable throwable)
         {
-            final String message =
-                String.format("Exception thrown by persistence strategy for connectionId=%d, " +
-                              "defaulted to LOCAL_ARCHIVE", connectionId);
+            final String message = String.format(
+                "Exception thrown by persistence strategy for connectionId=%d, defaulted to LOCAL_ARCHIVE",
+                connectionId);
             errorHandler.onError(new FixGatewayException(message, throwable));
             persistenceLevel = PersistenceLevel.LOCAL_ARCHIVE;
         }

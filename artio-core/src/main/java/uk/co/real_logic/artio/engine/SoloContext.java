@@ -112,14 +112,13 @@ class SoloContext extends EngineContext
         }
         else
         {
-            final GatewayPublication replayGatewayPublication =
-                new GatewayPublication(
-                    ClusterablePublication.solo(replayPublication),
-                    fixCounters.failedReplayPublications(),
-                    configuration.archiverIdleStrategy(),
-                    nanoClock,
-                    configuration.outboundMaxClaimAttempts()
-                );
+            final GatewayPublication replayGatewayPublication = new GatewayPublication(
+                ClusterablePublication.solo(replayPublication),
+                fixCounters.failedReplayPublications(),
+                configuration.archiverIdleStrategy(),
+                nanoClock,
+                configuration.outboundMaxClaimAttempts());
+
             archivingAgent = new GapFiller(
                 inboundLibraryStreams.subscription("replayer"),
                 replayGatewayPublication,
