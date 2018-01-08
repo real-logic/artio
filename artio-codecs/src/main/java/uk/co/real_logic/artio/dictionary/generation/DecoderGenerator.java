@@ -664,15 +664,15 @@ public class DecoderGenerator extends Generator
 
         final String stringDecoder = type.isStringBased() ? String.format(
             "    private int %1$sLength;\n\n" +
-                    "    public int %1$sLength()\n" +
-                    "    {\n" +
-                    "%2$s" +
-                    "        return %1$sLength;\n" +
-                    "    }\n\n" +
-                    "    public String %1$sAsString()\n" +
-                    "    {\n" +
-                    "        return %3$s;\n" +
-                    "    }\n\n",
+            "    public int %1$sLength()\n" +
+            "    {\n" +
+            "%2$s" +
+            "        return %1$sLength;\n" +
+            "    }\n\n" +
+            "    public String %1$sAsString()\n" +
+            "    {\n" +
+            "        return %3$s;\n" +
+            "    }\n\n",
             fieldName,
             optionalCheck,
             asStringBody) : "";
