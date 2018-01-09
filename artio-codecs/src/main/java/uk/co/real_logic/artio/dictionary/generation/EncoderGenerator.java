@@ -428,9 +428,9 @@ public class EncoderGenerator extends Generator
     }
 
     private String enumSetter(
-            final String className,
-            final String fieldName,
-            final String enumType)
+        final String className,
+        final String fieldName,
+        final String enumType)
     {
         return String.format(
             "    public %s %2$s(%3$s value)\n" +
@@ -440,7 +440,6 @@ public class EncoderGenerator extends Generator
             className, fieldName, enumType
         );
     }
-
 
     private String encodeMethod(final List<Entry> entries, final AggregateType aggregateType)
     {

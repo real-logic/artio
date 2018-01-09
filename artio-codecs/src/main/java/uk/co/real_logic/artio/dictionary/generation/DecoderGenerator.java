@@ -649,15 +649,15 @@ public class DecoderGenerator extends Generator
 
         final String enumValueDecoder = String.format(
             type.isStringBased() ?
-                "%1$s.decode(%2$s, %2$sLength)" :
-                "%1$s.decode(%2$s)",
+            "%1$s.decode(%2$s, %2$sLength)" :
+            "%1$s.decode(%2$s)",
             name,
             fieldName);
 
         final String asEnumBody = String.format(
             entry.required() ?
-                "%1$s" :
-                "has%2$s ? %1$s : null",
+            "%1$s" :
+            "has%2$s ? %1$s : null",
             enumValueDecoder,
             name
         );
@@ -677,17 +677,15 @@ public class DecoderGenerator extends Generator
             optionalCheck,
             asStringBody) : "";
 
-        final String enumDecoder = field.isEnum() ?
-            String.format(
-                "    public %s %sAsEnum()\n" +
-                "    {\n" +
-                "        return %s;\n" +
-                "    }\n\n",
-                name,
-                fieldName,
-                asEnumBody
-            ) :
-            "";
+        final String enumDecoder = field.isEnum() ? String.format(
+            "    public %s %sAsEnum()\n" +
+            "    {\n" +
+            "        return %s;\n" +
+            "    }\n\n",
+            name,
+            fieldName,
+            asEnumBody
+        ) : "";
 
         return String.format(
             "    private %s %s%s;\n\n" +

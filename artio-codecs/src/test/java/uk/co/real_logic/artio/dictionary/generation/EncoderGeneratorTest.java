@@ -132,9 +132,9 @@ public class EncoderGeneratorTest
         final Object encoder = heartbeat.newInstance();
 
         setEnumByRepresentation(encoder,
-                ON_BEHALF_OF_COMP_ID,
-                PARENT_PACKAGE + ".OnBehalfOfCompID",
-                "abc");
+            ON_BEHALF_OF_COMP_ID,
+            PARENT_PACKAGE + ".OnBehalfOfCompID",
+            "abc");
         assertOnBehalfOfCompIDValue(encoder, "abc");
     }
 

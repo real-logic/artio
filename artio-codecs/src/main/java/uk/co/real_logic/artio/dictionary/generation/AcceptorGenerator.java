@@ -99,10 +99,10 @@ public class AcceptorGenerator
     private void generateDefaultAcceptorCallback(final Writer acceptorOutput, final Message message) throws IOException
     {
         acceptorOutput.append(String.format(
-                "    @Override\n" +
-                "    public void on%1$s(final %2$s decoder) {};\n\n",
-                message.name(),
-                decoderClassName(message)
+            "    @Override\n" +
+            "    public void on%1$s(final %2$s decoder) {};\n\n",
+            message.name(),
+            decoderClassName(message)
         ));
     }
 

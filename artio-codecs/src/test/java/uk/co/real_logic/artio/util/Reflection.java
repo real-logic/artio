@@ -43,10 +43,11 @@ public final class Reflection
         set(object, setter, value.getClass(), value);
     }
 
-    public static void setEnumByRepresentation(final Object object,
-                                               final String setter,
-                                               final String enumClass,
-                                               final Object representation)
+    public static void setEnumByRepresentation(
+        final Object object,
+        final String setter,
+        final String enumClass,
+        final Object representation)
         throws Exception
     {
         final Object enumValue = getEnumByRepresentation(object, enumClass, representation);
@@ -179,15 +180,16 @@ public final class Reflection
         return get(object, "representation");
     }
 
-    public static Object getEnumByRepresentation(final Object containingObject,
-                                                 final String className,
-                                                 final Object representation)
-            throws Exception
+    public static Object getEnumByRepresentation(
+        final Object containingObject,
+        final String className,
+        final Object representation)
+        throws Exception
     {
         final Class<?> enumClass = containingObject.getClass().getClassLoader().loadClass(className);
         final Optional<Method> decodeMethod = Stream.of(enumClass.getMethods())
-                .filter(x -> x.getName().equals("decode"))
-                .findFirst();
+            .filter(x -> x.getName().equals("decode"))
+            .findFirst();
         return decodeMethod.get().invoke(null, representation);
     }
 
