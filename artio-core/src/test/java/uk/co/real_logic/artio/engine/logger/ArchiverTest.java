@@ -67,6 +67,7 @@ import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_NUM_SETS;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_LOGGER_CACHE_SET_SIZE;
 import static uk.co.real_logic.artio.engine.logger.ArchiveDescriptor.alignTerm;
+import static uk.co.real_logic.artio.engine.logger.ArchiveDescriptor.nextTerm;
 import static uk.co.real_logic.artio.engine.logger.ArchiveReader.*;
 import static uk.co.real_logic.artio.replication.ReservedValue.NO_FILTER;
 
@@ -89,11 +90,8 @@ public class ArchiverTest
         return IntStream
             .of(1337, 6003/*, 129, 128, 4097*/)
             .boxed()
-            .flatMap((size) ->
-                Stream.of(
-                    //new UnsafeBuffer(ByteBuffer.allocateDirect(size)),
-                    new UnsafeBuffer(new byte[size])))
-            .map(buffer -> new Object[]{ buffer.capacity(), buffer })
+            .flatMap((size) -> Stream.of(new UnsafeBuffer(new byte[size])))
+            .map((buffer) -> new Object[]{ buffer.capacity(), buffer })
             .collect(Collectors.toList());
     }
 
@@ -179,7 +177,7 @@ public class ArchiverTest
         }
     }
 
-    public static String tmpLogsDirName()
+    private static String tmpLogsDirName()
     {
         String dirName = IoUtil.tmpDirName();
 
@@ -809,10 +807,8 @@ public class ArchiverTest
         final long endPosition = lengthCaptor
             .getAllValues()
             .stream()
-            .reduce(
-                position - HEADER_LENGTH,
-                (acc, len) -> ArchiveDescriptor.nextTerm(acc + HEADER_LENGTH, len),
-                Long::sum);
+            .reduce(position - HEADER_LENGTH, (acc, len) -> nextTerm(acc + HEADER_LENGTH, len), Long::sum);
+
         assertEquals(expectedEndPosition, endPosition);
     }
 

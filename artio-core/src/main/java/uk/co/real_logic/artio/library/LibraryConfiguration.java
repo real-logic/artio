@@ -42,13 +42,13 @@ public final class LibraryConfiguration extends CommonConfiguration
     public static final SentPositionHandler DEFAULT_SENT_POSITION_HANDLER = position -> CONTINUE;
     public static final SessionExistsHandler DEFAULT_SESSION_EXISTS_HANDLER =
         (library,
-         sessionId,
-         senderCompId,
-         senderSubId,
-         senderLocationId,
-         targetCompId,
-         remoteSubId,
-         remoteLocationId) -> {};
+        sessionId,
+        senderCompId,
+        senderSubId,
+        senderLocationId,
+        targetCompId,
+        remoteSubId,
+        remoteLocationId) -> {};
     public static final LibraryConnectHandler DEFAULT_LIBRARY_CONNECT_HANDLER = new LibraryConnectHandler()
     {
         public void onConnect(final FixLibrary library)
@@ -61,6 +61,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     };
 
     private final int libraryId;
+
     {
         int libraryId;
         do

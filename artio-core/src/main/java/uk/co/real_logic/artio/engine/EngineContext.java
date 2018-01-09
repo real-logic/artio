@@ -53,7 +53,7 @@ public abstract class EngineContext implements AutoCloseable
 
     private final SequenceNumberIndexWriter sentSequenceNumberIndex;
     private final SequenceNumberIndexWriter receivedSequenceNumberIndex;
-    private final CompletionPosition inboundcompletionPosition = new CompletionPosition();
+    private final CompletionPosition inboundCompletionPosition = new CompletionPosition();
     private final CompletionPosition outboundLibraryCompletionPosition = new CompletionPosition();
     private final CompletionPosition outboundClusterCompletionPosition = new CompletionPosition();
 
@@ -193,8 +193,7 @@ public abstract class EngineContext implements AutoCloseable
             configuration.loggerCacheNumSets(),
             configuration.loggerCacheSetSize(),
             streamId,
-            reservedValueFilter
-        );
+            reservedValueFilter);
     }
 
     protected Archiver archiver(final StreamIdentifier streamId, final CompletionPosition completionPosition)
@@ -209,7 +208,7 @@ public abstract class EngineContext implements AutoCloseable
     }
 
     protected Replayer newReplayer(
-            final ExclusivePublication replayPublication, final ArchiveReader outboundArchiveReader)
+        final ExclusivePublication replayPublication, final ArchiveReader outboundArchiveReader)
     {
         return new Replayer(
             newReplayQuery(outboundArchiveReader, configuration.archiverIdleStrategy()),
@@ -232,14 +231,14 @@ public abstract class EngineContext implements AutoCloseable
         final int cacheNumSets = configuration.loggerCacheNumSets();
         final String logFileDir = configuration.logFileDir();
 
+        final ReplayIndex replayIndex = newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, INBOUND_LIBRARY_STREAM);
+
         inboundIndexer = new Indexer(
-            asList(
-                newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, INBOUND_LIBRARY_STREAM),
-                receivedSequenceNumberIndex),
+            asList(replayIndex, receivedSequenceNumberIndex),
             inboundArchiveReader,
             inboundLibraryStreams.subscription("inboundIndexer"),
             configuration.agentNamePrefix(),
-            inboundcompletionPosition);
+            inboundCompletionPosition);
 
         final List<Index> outboundIndices = new ArrayList<>();
         outboundIndices.add(newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, OUTBOUND_LIBRARY_STREAM));
@@ -248,6 +247,7 @@ public abstract class EngineContext implements AutoCloseable
         {
             outboundIndices.add(extraOutboundIndex);
         }
+
         outboundIndexer = new Indexer(
             outboundIndices,
             outboundArchiveReader,
@@ -280,7 +280,7 @@ public abstract class EngineContext implements AutoCloseable
 
     public CompletionPosition inboundCompletionPosition()
     {
-        return inboundcompletionPosition;
+        return inboundCompletionPosition;
     }
 
     public CompletionPosition outboundLibraryCompletionPosition()
@@ -295,7 +295,7 @@ public abstract class EngineContext implements AutoCloseable
 
     void completeDuringStartup()
     {
-        inboundcompletionPosition.completeDuringStartup();
+        inboundCompletionPosition.completeDuringStartup();
         outboundLibraryCompletionPosition.completeDuringStartup();
         outboundClusterCompletionPosition.completeDuringStartup();
     }

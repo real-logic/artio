@@ -148,8 +148,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         // TODO: check that the passing place is used
 
-        /*assertTrue("Failed to recreate crash scenario",
-            new File(INDEX_FILE_PATH).renameTo(writer.passingPlace()));*/
+        //assertTrue("Failed to recreate crash scenario", new File(INDEX_FILE_PATH).renameTo(writer.passingPlace()));
 
         final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
         assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER, newReader);
@@ -171,8 +170,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         Mockito.verify(errorHandler, times(2)).onError(exception.capture());
         assertThat(
             exception.getValue().getMessage(),
-            Matchers.containsString(
-                "The SequenceNumberIndex file is corrupted"));
+            Matchers.containsString("The SequenceNumberIndex file is corrupted"));
         reset(errorHandler);
     }
 

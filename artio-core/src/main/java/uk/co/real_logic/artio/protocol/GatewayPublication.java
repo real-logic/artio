@@ -50,20 +50,20 @@ public class GatewayPublication extends ClaimablePublication
     private static final byte[] NO_BYTES = {};
 
     private static final int HEARTBEAT_LENGTH = HEADER_LENGTH + ApplicationHeartbeatEncoder.BLOCK_LENGTH;
-    private static final int LIBRARY_CONNECT_LENGTH = HEADER_LENGTH + LibraryConnectEncoder.BLOCK_LENGTH +
-            LibraryConnectEncoder.libraryNameHeaderLength();
+    private static final int LIBRARY_CONNECT_LENGTH =
+        HEADER_LENGTH + LibraryConnectEncoder.BLOCK_LENGTH + LibraryConnectEncoder.libraryNameHeaderLength();
     private static final int DISCONNECT_LENGTH = HEADER_LENGTH + DisconnectEncoder.BLOCK_LENGTH;
     private static final int RELEASE_SESSION_LENGTH = HEADER_LENGTH + ReleaseSessionEncoder.BLOCK_LENGTH +
         ReleaseSessionEncoder.usernameHeaderLength() + ReleaseSessionEncoder.passwordHeaderLength();
     private static final int RELEASE_SESSION_REPLY_LENGTH = HEADER_LENGTH + ReleaseSessionReplyDecoder.BLOCK_LENGTH;
     private static final int REQUEST_SESSION_LENGTH = HEADER_LENGTH + RequestSessionEncoder.BLOCK_LENGTH;
     private static final int REQUEST_SESSION_REPLY_LENGTH = HEADER_LENGTH + RequestSessionReplyEncoder.BLOCK_LENGTH;
-    private static final int CONNECT_FIXED_LENGTH = HEADER_LENGTH + ConnectEncoder.BLOCK_LENGTH +
-                                                    ConnectEncoder.addressHeaderLength();
-    private static final int NOT_LEADER_BLOCK_LENGTH = NotLeaderEncoder.BLOCK_LENGTH + HEADER_LENGTH +
-                                                       libraryChannelHeaderLength();
-    private static final int SLOW_STATUS_NOTIFICATION_LENGTH = HEADER_LENGTH +
-                                                               SlowStatusNotificationEncoder.BLOCK_LENGTH;
+    private static final int CONNECT_FIXED_LENGTH =
+        HEADER_LENGTH + ConnectEncoder.BLOCK_LENGTH + ConnectEncoder.addressHeaderLength();
+    private static final int NOT_LEADER_BLOCK_LENGTH =
+        NotLeaderEncoder.BLOCK_LENGTH + HEADER_LENGTH + libraryChannelHeaderLength();
+    private static final int SLOW_STATUS_NOTIFICATION_LENGTH =
+        HEADER_LENGTH + SlowStatusNotificationEncoder.BLOCK_LENGTH;
     private static final byte MIDDLE_FLAG = 0;
     private static final int MANAGE_SESSION_BLOCK_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
         ManageSessionEncoder.BLOCK_LENGTH + ManageSessionEncoder.localCompIdHeaderLength() * 7;
@@ -228,10 +228,10 @@ public class GatewayPublication extends ClaimablePublication
         final byte[] remoteLocationIdBytes = bytes(remoteLocationId);
         final byte[] addressBytes = bytes(address);
 
-        final long position =
-            claim(MANAGE_SESSION_BLOCK_LENGTH + localCompIdBytes.length + localSubIdBytes.length +
-                localLocationIdBytes.length + remoteCompIdBytes.length + remoteSubIdBytes.length +
-                remoteLocationIdBytes.length + addressBytes.length);
+        final long position = claim(
+            MANAGE_SESSION_BLOCK_LENGTH + localCompIdBytes.length + localSubIdBytes.length +
+            localLocationIdBytes.length + remoteCompIdBytes.length + remoteSubIdBytes.length +
+            remoteLocationIdBytes.length + addressBytes.length);
 
         if (position < 0)
         {
@@ -431,10 +431,10 @@ public class GatewayPublication extends ClaimablePublication
         final byte[] usernameBytes = bytes(username);
         final byte[] passwordBytes = bytes(password);
 
-        final long position =
-            claim(INITIATE_CONNECTION_LENGTH + hostBytes.length + senderCompIdBytes.length +
-                senderSubIdBytes.length + senderLocationIdBytes.length + targetCompIdBytes.length +
-                targetSubIdBytes.length + targetLocationIdBytes.length + usernameBytes.length + passwordBytes.length);
+        final long position = claim(
+            INITIATE_CONNECTION_LENGTH + hostBytes.length + senderCompIdBytes.length +
+            senderSubIdBytes.length + senderLocationIdBytes.length + targetCompIdBytes.length +
+            targetSubIdBytes.length + targetLocationIdBytes.length + usernameBytes.length + passwordBytes.length);
 
         if (position < 0)
         {

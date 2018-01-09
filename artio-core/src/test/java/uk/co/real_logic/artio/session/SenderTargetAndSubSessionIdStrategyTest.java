@@ -32,9 +32,9 @@ import static org.mockito.Mockito.when;
 import static uk.co.real_logic.artio.session.SenderAndTargetSessionIdStrategyTest.IDS;
 import static uk.co.real_logic.artio.session.SessionIdStrategy.INSUFFICIENT_SPACE;
 
+@SuppressWarnings("Indentation")
 public class SenderTargetAndSubSessionIdStrategyTest
 {
-
     private SenderTargetAndSubSessionIdStrategy strategy = new SenderTargetAndSubSessionIdStrategy();
 
     @Test

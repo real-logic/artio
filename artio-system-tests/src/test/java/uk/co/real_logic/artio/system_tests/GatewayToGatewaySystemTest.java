@@ -743,10 +743,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertThat(library.sessions(), hasSize(0));
 
         final List<SessionInfo> sessions = gatewayLibraryInfo(engine).sessions();
-        assertThat(sessions, contains(
-            allOf(
-                hasConnectionId(connectionId),
-                hasSessionId(sessionId))));
+        assertThat(sessions, contains(allOf(
+            hasConnectionId(connectionId),
+            hasSessionId(sessionId))));
     }
 
     private void reacquireSession(
@@ -821,11 +820,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         // Callbacks for the missing messages whilst the gateway managed them
         final String expectedSeqNum = String.valueOf(lastReceivedMsgSeqNum + 1);
-        assertEquals(messages.toString(), 1,
-            messages
-                .stream()
-                .filter((m) -> m.getMsgType().equals(TEST_REQUEST_AS_STR) && m.get(MSG_SEQ_NUM).equals(expectedSeqNum))
-                .count());
+        final long messageCount = messages
+            .stream()
+            .filter((m) -> m.getMsgType().equals(TEST_REQUEST_AS_STR) && m.get(MSG_SEQ_NUM).equals(expectedSeqNum))
+            .count();
+
+        assertEquals(messages.toString(), 1, messageCount);
     }
 
     private void disconnectSessions()

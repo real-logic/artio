@@ -61,8 +61,8 @@ public final class SampleClient
                 .build();
 
             try (FixLibrary library = SampleUtil.blockingConnect(new LibraryConfiguration()
-                    .sessionAcquireHandler(SampleClient::onConnect)
-                    .libraryAeronChannels(singletonList(aeronChannel))))
+                .sessionAcquireHandler(SampleClient::onConnect)
+                .libraryAeronChannels(singletonList(aeronChannel))))
             {
                 final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
                 final Reply<Session> reply = library.initiate(sessionConfig);

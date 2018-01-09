@@ -456,17 +456,17 @@ public class ClusterSubscriptionTest
     {
         when(otherLeaderArchiveReader.readUpTo(
             eq(streamStart + DataHeaderFlyweight.HEADER_LENGTH), eq(streamEnd), any()))
-            .then(
-                (inv) ->
-                {
-                    callHandler(
-                        streamEnd,
-                        (int)(streamEnd - streamStart),
-                        expectedAction,
-                        inv,
-                        2);
-                    return expectedAction == ABORT ? streamStart : streamEnd;
-                });
+            .then((inv) ->
+            {
+                callHandler(
+                    streamEnd,
+                    (int)(streamEnd - streamStart),
+                    expectedAction,
+                    inv,
+                    2);
+
+                return expectedAction == ABORT ? streamStart : streamEnd;
+            });
     }
 
     private void onResend(final long streamStartPosition, final int startPosition, final int resendLen)
@@ -588,19 +588,17 @@ public class ClusterSubscriptionTest
         final Integer leadershipSessionId,
         final long transportPosition)
     {
-        assertThat(clusterSubscription,
-            hasResult(
-                "currentLeadershipTerm",
-                ClusterSubscription::currentLeadershipTerm,
-                equalTo(currentLeadershipTerm)));
+        assertThat(clusterSubscription, hasResult(
+            "currentLeadershipTerm",
+            ClusterSubscription::currentLeadershipTerm,
+            equalTo(currentLeadershipTerm)));
 
         verify(dataSubscription, atLeastOnce()).imageBySessionId(eq(leadershipSessionId));
 
-        assertThat(clusterSubscription,
-            hasResult(
-                "transportPosition",
-                ClusterSubscription::transportPosition,
-                equalTo(transportPosition)));
+        assertThat(clusterSubscription, hasResult(
+            "transportPosition",
+            ClusterSubscription::transportPosition,
+            equalTo(transportPosition)));
     }
 
     private void verifyNoOtherFragmentsReceived()
@@ -636,6 +634,7 @@ public class ClusterSubscriptionTest
     private void imageAvailable(final Image image, final int aeronSessionId)
     {
         when(dataSubscription.imageBySessionId(aeronSessionId)).thenReturn(image);
+
         if (image != null)
         {
             when(image.sessionId()).thenReturn(aeronSessionId);
@@ -646,5 +645,4 @@ public class ClusterSubscriptionTest
     {
         imageAvailable(null, aeronSessionId);
     }
-
 }

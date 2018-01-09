@@ -83,7 +83,7 @@ public class ReplayIndexTest extends AbstractLogTest
             DEFAULT_LOG_FILE_DIR,
             DEFAULT_LOGGER_CACHE_NUM_SETS,
             DEFAULT_LOGGER_CACHE_SET_SIZE,
-                existingBufferFactory,
+            existingBufferFactory,
             mockReader,
             OUTBOUND_LIBRARY_STREAM,
             new NoOpIdleStrategy());
@@ -259,7 +259,7 @@ public class ReplayIndexTest extends AbstractLogTest
     {
         indexExampleMessage();
 
-        whenHandled().then(inv ->
+        whenHandled().then((inv) ->
         {
             indexExampleMessage(SEQUENCE_NUMBER + 1);
 
@@ -277,7 +277,7 @@ public class ReplayIndexTest extends AbstractLogTest
     {
         indexExampleMessage();
 
-        whenHandled().then(inv ->
+        whenHandled().then((inv) ->
         {
             IntStream.range(SEQUENCE_NUMBER + 1, totalMessages + 4).forEach(this::indexExampleMessage);
 
@@ -405,8 +405,7 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private void indexExampleMessage(final int endSequenceNumber)
     {
-        bufferContainsExampleMessage(
-                true, SESSION_ID, endSequenceNumber, SEQUENCE_INDEX);
+        bufferContainsExampleMessage(true, SESSION_ID, endSequenceNumber, SEQUENCE_INDEX);
         indexRecord();
     }
 

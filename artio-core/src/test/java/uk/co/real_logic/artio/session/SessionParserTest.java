@@ -31,14 +31,13 @@ import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT
 
 public class SessionParserTest
 {
-
     private Session mockSession = mock(Session.class);
     private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private AuthenticationStrategy mockAuthenticationStrategy = mock(AuthenticationStrategy.class);
     private MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId("das");
 
     private SessionParser parser = new SessionParser(
-            mockSession, mockSessionIdStrategy, validationStrategy, null);
+        mockSession, mockSessionIdStrategy, validationStrategy, null);
 
     @Before
     public void setUp()
@@ -96,5 +95,4 @@ public class SessionParserTest
     {
         return new UnsafeBuffer(str.getBytes(US_ASCII));
     }
-
 }

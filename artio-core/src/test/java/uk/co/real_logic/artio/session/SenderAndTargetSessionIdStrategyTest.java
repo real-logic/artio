@@ -30,6 +30,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.artio.session.SessionIdStrategy.INSUFFICIENT_SPACE;
 
+@SuppressWarnings("Indentation")
 public class SenderAndTargetSessionIdStrategyTest
 {
     public static final List<String> IDS = Arrays.asList("SIGMAX", "ABC_DEFG04", "LEH_LZJ02");

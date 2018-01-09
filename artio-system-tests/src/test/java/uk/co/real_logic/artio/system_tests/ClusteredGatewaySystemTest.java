@@ -31,6 +31,7 @@ import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
+import uk.co.real_logic.artio.engine.logger.FixMessagePredicate;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.library.SessionConfiguration;
@@ -193,11 +194,12 @@ public class ClusteredGatewaySystemTest
 
         logLeader(leader, "Elected new leader: (%s) [%s]%n");
 
+        final String msg = "Library Failed to connect, isConnected=" +
+            acceptingLibrary.isConnected() +
+            ", channel=" + acceptingLibrary.currentAeronChannel();
+
         assertEventuallyTrue(
-            () ->
-                "Library Failed to connect, isConnected=" +
-                acceptingLibrary.isConnected() +
-                ", channel=" + acceptingLibrary.currentAeronChannel(),
+            () -> msg,
             () ->
             {
                 testSystem.poll();
@@ -338,15 +340,16 @@ public class ClusteredGatewaySystemTest
                 final FixArchiveScanner scanner = new FixArchiveScanner(logFileDir);
 
                 final MessageCounter messageCounter = new MessageCounter();
+
+                final FixMessagePredicate predicate = messageTypeOf(TEST_REQUEST)
+                    .and(sessionOf(INITIATOR_ID, ACCEPTOR_ID))
+                    .and(sessionOf(sessionId))
+                    .and(between(begin, end));
+
                 scanner.scan(
                     configuration.clusterAeronChannel(),
                     SENT,
-                    filterBy(
-                        messageCounter,
-                        messageTypeOf(TEST_REQUEST)
-                            .and(sessionOf(INITIATOR_ID, ACCEPTOR_ID))
-                            .and(sessionOf(sessionId))
-                            .and(between(begin, end))),
+                    filterBy(messageCounter, predicate),
                     Throwable::printStackTrace);
 
                 if (messageCounter.messageCount() != 1)

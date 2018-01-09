@@ -66,12 +66,13 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
         private final String senderLocationId;
         private final String targetCompId;
 
-        private RequestInfo(final long connectionId,
-                           final Reply<SessionReplyStatus> reply,
-                           final String senderCompId,
-                           final String senderSubId,
-                           final String senderLocationId,
-                           final String targetCompId)
+        private RequestInfo(
+            final long connectionId,
+            final Reply<SessionReplyStatus> reply,
+            final String senderCompId,
+            final String senderSubId,
+            final String senderLocationId,
+            final String targetCompId)
         {
             this.connectionId = connectionId;
             this.reply = reply;

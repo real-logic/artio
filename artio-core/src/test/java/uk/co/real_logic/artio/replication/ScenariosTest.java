@@ -149,16 +149,13 @@ public class ScenariosTest
     @Test
     public void evaluateState()
     {
-        given:
         setup();
 
         role = roleFixture.apply(this);
         raftHandler = (RaftHandler)role;
 
-        when:
         stimulus.accept(this);
 
-        then:
         requiredEffect.check(this);
         requiredState.accept(termState);
     }
@@ -319,7 +316,7 @@ public class ScenariosTest
         return candidate;
     }
 
-    private static Effect voteForCandidate = namedEffect(st ->
+    private static Effect voteForCandidate = namedEffect((st) ->
         verify(st.controlPublication).saveReplyVote(ID, CANDIDATE_ID, NEW_TERM, FOR, NODE_STATE_BUFFER),
         "voteForCandidate");
 
@@ -353,46 +350,42 @@ public class ScenariosTest
             }, name);
     }
 
-    private static Effect transitionsToCandidate =
-        namedEffect(
-            (st) ->
-            {
-                ReplicationAsserts.transitionsToCandidate(st.clusterNode);
+    private static Effect transitionsToCandidate = namedEffect(
+        (st) ->
+        {
+            ReplicationAsserts.transitionsToCandidate(st.clusterNode);
 
-                ReplicationAsserts.neverTransitionsToFollower(st.clusterNode);
-                ReplicationAsserts.neverTransitionsToLeader(st.clusterNode);
-            },
-            "transitionsToCandidate");
+            ReplicationAsserts.neverTransitionsToFollower(st.clusterNode);
+            ReplicationAsserts.neverTransitionsToLeader(st.clusterNode);
+        },
+        "transitionsToCandidate");
 
-    private static Effect transitionsToLeader =
-        namedEffect(
-            (st) ->
-            {
-                ReplicationAsserts.transitionsToLeader(st.clusterNode);
+    private static Effect transitionsToLeader = namedEffect(
+        (st) ->
+        {
+            ReplicationAsserts.transitionsToLeader(st.clusterNode);
 
-                ReplicationAsserts.neverTransitionsToFollower(st.clusterNode);
-                ReplicationAsserts.neverTransitionsToCandidate(st.clusterNode);
-            },
-            "transitionsToLeader");
+            ReplicationAsserts.neverTransitionsToFollower(st.clusterNode);
+            ReplicationAsserts.neverTransitionsToCandidate(st.clusterNode);
+        },
+        "transitionsToLeader");
 
-    private static Effect neverTransitions =
-        namedEffect(
-            (st) ->
-            {
-                ReplicationAsserts.neverTransitionsToFollower(st.clusterNode);
-                ReplicationAsserts.neverTransitionsToLeader(st.clusterNode);
-                ReplicationAsserts.neverTransitionsToCandidate(st.clusterNode);
-            }, "neverTransitions");
+    private static Effect neverTransitions = namedEffect(
+        (st) ->
+        {
+            ReplicationAsserts.neverTransitionsToFollower(st.clusterNode);
+            ReplicationAsserts.neverTransitionsToLeader(st.clusterNode);
+            ReplicationAsserts.neverTransitionsToCandidate(st.clusterNode);
+        }, "neverTransitions");
 
-    public static Effect requestsVote =
-        namedEffect(
-            (st) ->
-            {
-                st.requestsVote(LEADERSHIP_TERM);
-                ReplicationAsserts.neverTransitionsToFollower(st.clusterNode);
-                ReplicationAsserts.neverTransitionsToCandidate(st.clusterNode);
-                ReplicationAsserts.neverTransitionsToLeader(st.clusterNode);
-            }, "requestsVote");
+    public static Effect requestsVote = namedEffect(
+        (st) ->
+        {
+            st.requestsVote(LEADERSHIP_TERM);
+            ReplicationAsserts.neverTransitionsToFollower(st.clusterNode);
+            ReplicationAsserts.neverTransitionsToCandidate(st.clusterNode);
+            ReplicationAsserts.neverTransitionsToLeader(st.clusterNode);
+        }, "requestsVote");
 
     public static Stimulus oldTermLeaderHeartbeat =
         receivesHeartbeat(NEW_LEADER_ID, OLD_LEADERSHIP_TERM, NEW_LEADER_SESSION_ID, "oldTermLeaderHeartbeat");
@@ -409,55 +402,52 @@ public class ScenariosTest
         final int dataSessionId,
         final String name)
     {
-        return namedStimulus(
-            (st) -> st.raftHandler.onConsensusHeartbeat(
-                leaderId, leaderShipTerm, POSITION, POSITION, POSITION, dataSessionId), name);
+        return namedStimulus((st) -> st.raftHandler.onConsensusHeartbeat(
+            leaderId, leaderShipTerm, POSITION, POSITION, POSITION, dataSessionId), name);
     }
 
     private static Stimulus timesOut =
         namedStimulus((st) -> st.role.poll(1, TIME + TIMEOUT_IN_MS * 2 + 1), "timesOut");
 
-    private static Stimulus heartbeatBeforeTimeout =
-        namedStimulus(
-            (st) ->
-            {
-                when(st.controlSubscription.controlledPoll(any(), anyInt())).thenAnswer(
-                    (inv) ->
-                    {
-                        st.raftHandler.onConsensusHeartbeat(
-                            NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, POSITION, POSITION, SESSION_ID);
+    private static Stimulus heartbeatBeforeTimeout = namedStimulus(
+        (st) ->
+        {
+            when(st.controlSubscription.controlledPoll(any(), anyInt())).thenAnswer(
+                (inv) ->
+                {
+                    st.raftHandler.onConsensusHeartbeat(
+                        NEW_LEADER_ID, LEADERSHIP_TERM, POSITION, POSITION, POSITION, SESSION_ID);
 
-                        return 1;
-                    });
+                    return 1;
+                });
 
-                long time = TIME + BELOW_TIMEOUT;
+            long time = TIME + BELOW_TIMEOUT;
 
-                st.role.poll(1, time);
+            st.role.poll(1, time);
 
-                time += BELOW_TIMEOUT;
+            time += BELOW_TIMEOUT;
 
-                st.role.poll(1, time);
+            st.role.poll(1, time);
 
-                time += BELOW_TIMEOUT;
+            time += BELOW_TIMEOUT;
 
-                st.role.poll(1, time);
-            },
-            "heartbeatBeforeTimeout");
+            st.role.poll(1, time);
+        },
+        "heartbeatBeforeTimeout");
 
     private static Stimulus startElection = namedStimulus((st) -> {}, "startElection");
 
-    private static Stimulus onMajority =
-        namedStimulus(
-            (st) ->
+    private static Stimulus onMajority = namedStimulus(
+        (st) ->
+        {
+            st.raftHandler.onReplyVote(
+                FOLLOWER_1_ID, ID, LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
+            if (st.clusterSize > 3)
             {
                 st.raftHandler.onReplyVote(
-                    FOLLOWER_1_ID, ID, LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
-                if (st.clusterSize > 3)
-                {
-                    st.raftHandler.onReplyVote(
-                        FOLLOWER_2_ID, ID, LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
-                }
-            }, "onMajority");
+                    FOLLOWER_2_ID, ID, LEADERSHIP_TERM, FOR, NODE_STATE_BUFFER, NODE_STATE_LENGTH, SESSION_ID);
+            }
+        }, "onMajority");
 
     private static Stimulus lowerPositionRequestVote =
         onRequestVote(CANDIDATE_ID, NEW_TERM, 0L, "lowerPositionRequestVote");

@@ -121,14 +121,14 @@ public class PossDupEnabler
             try
             {
                 if (addFields(
-                        srcBuffer,
-                        srcOffset,
-                        srcLength,
-                        messageOffset,
-                        messageLength,
-                        lengthDelta + lengthOfAddedFields,
-                        newBodyLength,
-                        newLength))
+                    srcBuffer,
+                    srcOffset,
+                    srcLength,
+                    messageOffset,
+                    messageLength,
+                    lengthDelta + lengthOfAddedFields,
+                    newBodyLength,
+                    newLength))
                 {
                     return commit();
                 }
@@ -383,8 +383,7 @@ public class PossDupEnabler
             bodyLengthClaimOffset, lengthOfUpdatedBodyLengthField, newBodyLength);
         // END Update body length
 
-        final int beforeChecksum =
-            bodyLengthClaimOffset + lengthOfUpdatedBodyLengthField + newBodyLength;
+        final int beforeChecksum = bodyLengthClaimOffset + lengthOfUpdatedBodyLengthField + newBodyLength;
         updateChecksum(messageClaimOffset, beforeChecksum, messageEndOffset);
     }
 
