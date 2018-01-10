@@ -87,10 +87,12 @@ public class DecoderGeneratorTest
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
         final ConstantGenerator constantGenerator = new ConstantGenerator(
             MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
+        final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
-            MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager, validationClass);
+            MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass);
 
         constantGenerator.generate();
+        enumGenerator.generate();
         decoderGenerator.generate();
         return outputManager.getSources();
     }
@@ -149,6 +151,16 @@ public class DecoderGeneratorTest
 
         assertValid(decoder);
     }
+
+    @Test
+    public void decodesPrimitiveValuesAsEnum() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_MESSAGE);
+        assertEquals(2, getRepresentation(get(decoder, INT_FIELD + "AsEnum")));
+        assertNull(get(decoder, CHAR_FIELD + "AsEnum"));
+        assertValid(decoder);
+    }
+
 
     @Test
     public void shouldIgnoreMissingOptionalValues() throws Exception
@@ -473,6 +485,16 @@ public class DecoderGeneratorTest
         assertEquals("abc", get(decoder, "onBehalfOfCompIDAsString"));
         assertNull(get(decoder, "testReqIDAsString"));
     }
+
+    @Test
+    public void shouldBeAbleToExtractEnumFromStringFields() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NO_OPTIONAL_MESSAGE);
+
+        final Object onBehalfEnum = get(decoder, "onBehalfOfCompIDAsEnum");
+        assertEquals("abc", getRepresentation(onBehalfEnum));
+    }
+
 
     @Test
     public void shouldProduceCorrectMessageTypeForTwoCharTypes() throws Exception

@@ -90,10 +90,11 @@ public class DecoderGenerator extends Generator
         final Dictionary dictionary,
         final int initialBufferSize,
         final String builderPackage,
+        final String builderCommonPackage,
         final OutputManager outputManager,
         final Class<?> validationClass)
     {
-        super(dictionary, builderPackage, outputManager, validationClass);
+        super(dictionary, builderPackage, builderCommonPackage, outputManager, validationClass);
         this.initialBufferSize = initialBufferSize;
     }
 
@@ -646,7 +647,22 @@ public class DecoderGenerator extends Generator
             fieldName,
             name);
 
-        final String suffix = type.isStringBased() ? String.format(
+        final String enumValueDecoder = String.format(
+            type.isStringBased() ?
+            "%1$s.decode(%2$s, %2$sLength)" :
+            "%1$s.decode(%2$s)",
+            name,
+            fieldName);
+
+        final String asEnumBody = String.format(
+            entry.required() ?
+            "%1$s" :
+            "has%2$s ? %1$s : null",
+            enumValueDecoder,
+            name
+        );
+
+        final String stringDecoder = type.isStringBased() ? String.format(
             "    private int %1$sLength;\n\n" +
             "    public int %1$sLength()\n" +
             "    {\n" +
@@ -661,6 +677,16 @@ public class DecoderGenerator extends Generator
             optionalCheck,
             asStringBody) : "";
 
+        final String enumDecoder = field.isEnum() ? String.format(
+            "    public %s %sAsEnum()\n" +
+            "    {\n" +
+            "        return %s;\n" +
+            "    }\n\n",
+            name,
+            fieldName,
+            asEnumBody
+        ) : "";
+
         return String.format(
             "    private %s %s%s;\n\n" +
             "%s" +
@@ -670,6 +696,7 @@ public class DecoderGenerator extends Generator
             "        return %2$s;\n" +
             "    }\n\n" +
             "%s\n" +
+            "%s\n" +
             "%s",
             javaTypeOf(type),
             fieldName,
@@ -677,7 +704,8 @@ public class DecoderGenerator extends Generator
             hasField(entry),
             optionalCheck,
             optionalGetter(entry),
-            suffix);
+            stringDecoder,
+            enumDecoder);
     }
 
     private String fieldInitialisation(final Type type)

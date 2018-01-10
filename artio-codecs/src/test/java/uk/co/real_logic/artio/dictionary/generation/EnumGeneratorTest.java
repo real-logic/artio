@@ -25,11 +25,12 @@ import java.lang.reflect.Method;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
 
 public class EnumGeneratorTest
 {
     private StringWriterOutputManager outputManager = new StringWriterOutputManager();
-    private EnumGenerator enumGenerator = new EnumGenerator(FIELD_EXAMPLE, outputManager);
+    private EnumGenerator enumGenerator = new EnumGenerator(FIELD_EXAMPLE, PARENT_PACKAGE, outputManager);
 
     @Before
     public void generate()
@@ -146,4 +147,15 @@ public class EnumGeneratorTest
 
         assertEquals(expected, representation);
     }
+
+    private void assertRepresentation(final char expected, final Enum<?> enumElement) throws Exception
+    {
+        final char representation = (char)enumElement
+            .getDeclaringClass()
+            .getMethod("representation")
+            .invoke(enumElement);
+
+        assertEquals(expected, representation);
+    }
+
 }

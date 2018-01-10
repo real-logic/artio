@@ -34,6 +34,7 @@ import static org.agrona.generation.CompilerUtil.compileInMemory;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
 import static uk.co.real_logic.artio.util.Reflection.*;
 
 public class EncoderGeneratorTest
@@ -64,8 +65,10 @@ public class EncoderGeneratorTest
     {
         final Class<?> validationClass = validation ? ValidationOn.class : ValidationOff.class;
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
+        final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final EncoderGenerator encoderGenerator =
-            new EncoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, outputManager, validationClass);
+            new EncoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass);
+        enumGenerator.generate();
         encoderGenerator.generate();
         return outputManager.getSources();
     }
@@ -83,9 +86,11 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void generatesSetters() throws NoSuchMethodException
+    public void generatesSetters() throws Exception
     {
-        heartbeat.getMethod("onBehalfOfCompID", CharSequence.class);
+        heartbeat.getMethod(ON_BEHALF_OF_COMP_ID, CharSequence.class);
+        final Class<?> stringEnumClass = heartbeat.getClassLoader().loadClass(PARENT_PACKAGE + ".OnBehalfOfCompID");
+        heartbeat.getMethod(ON_BEHALF_OF_COMP_ID, stringEnumClass);
     }
 
     @Test
@@ -122,6 +127,19 @@ public class EncoderGeneratorTest
     }
 
     @Test
+    public void stringSettersByEnumToFields() throws Exception
+    {
+        final Object encoder = heartbeat.newInstance();
+
+        setEnumByRepresentation(encoder,
+            ON_BEHALF_OF_COMP_ID,
+            PARENT_PACKAGE + ".OnBehalfOfCompID",
+            "abc");
+        assertOnBehalfOfCompIDValue(encoder, "abc");
+    }
+
+
+    @Test
     public void intSettersWriteToFields() throws Exception
     {
         final Object encoder = heartbeat.newInstance();
@@ -130,6 +148,16 @@ public class EncoderGeneratorTest
 
         assertEquals(1, getField(encoder, INT_FIELD));
     }
+
+    @Test
+    public void intSettersByEnumWriteToFields() throws Exception
+    {
+        final Object encoder = heartbeat.newInstance();
+        setEnumByRepresentation(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", 1);
+
+        assertEquals(1, getField(encoder, INT_FIELD));
+    }
+
 
     @Test
     public void floatSettersWriteToFields() throws Exception
@@ -226,7 +254,7 @@ public class EncoderGeneratorTest
 
         encoder.encode(buffer, 1);
 
-        setCharSequence(encoder, "onBehalfOfCompID", "ab");
+        setCharSequence(encoder, ON_BEHALF_OF_COMP_ID, "ab");
 
         assertEncodesTo(encoder, SHORTER_STRING_MESSAGE);
     }
@@ -238,7 +266,7 @@ public class EncoderGeneratorTest
 
         setRequiredFields(encoder);
 
-        setCharSequence(encoder, "onBehalfOfCompID", "ab");
+        setCharSequence(encoder, ON_BEHALF_OF_COMP_ID, "ab");
 
         assertThat(encoder.toString(), containsString("ab"));
         assertThat(encoder.toString(), not(containsString("abc")));
@@ -665,7 +693,7 @@ public class EncoderGeneratorTest
 
     private void setOnBehalfOfCompID(final Encoder encoder) throws Exception
     {
-        setCharSequence(encoder, "onBehalfOfCompID", "abc");
+        setCharSequence(encoder, ON_BEHALF_OF_COMP_ID, "abc");
     }
 
     private void setFloatField(final Encoder encoder) throws Exception
@@ -714,6 +742,13 @@ public class EncoderGeneratorTest
         assertArrayEquals(VALUE_IN_BYTES, (byte[])getField(encoder, TEST_REQ_ID));
         assertEquals(3, getField(encoder, TEST_REQ_ID_LENGTH));
     }
+
+    private void assertOnBehalfOfCompIDValue(final Object encoder, final String value) throws Exception
+    {
+        assertArrayEquals(value.getBytes(), (byte[])getField(encoder, ON_BEHALF_OF_COMP_ID));
+        assertEquals(value.length(), getField(encoder, ON_BEHALF_OF_COMP_ID_LENGTH));
+    }
+
 
     private boolean hasTestReqId(final Object encoder) throws Exception
     {
