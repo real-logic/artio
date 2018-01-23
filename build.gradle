@@ -290,8 +290,8 @@ project(':artio-system-tests') {
         compile "io.aeron:aeron-client:${aeronVersion}"
 
         perfCompile project
-        perfCompile 'org.openjdk.jmh:jmh-core:1.19'
-        perfCompile 'org.openjdk.jmh:jmh-generator-annprocess:1.19'
+        perfCompile 'org.openjdk.jmh:jmh-core:1.20'
+        perfCompile 'org.openjdk.jmh:jmh-generator-annprocess:1.20'
     }
 
     idea.module {
