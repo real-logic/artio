@@ -188,7 +188,8 @@ public final class Reflection
     {
         final Class<?> enumClass = containingObject.getClass().getClassLoader().loadClass(className);
         final Optional<Method> decodeMethod = Stream.of(enumClass.getMethods())
-            .filter(x -> x.getName().equals("decode"))
+            .filter(method -> method.getName().equals("decode"))
+            .filter(method -> method.getParameterCount() == 1)
             .findFirst();
         return decodeMethod.get().invoke(null, representation);
     }

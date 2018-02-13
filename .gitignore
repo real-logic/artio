@@ -50,3 +50,4 @@ liblagent.so
 *.hpl
 
 *attach_pid*
+file-leak-detector-*

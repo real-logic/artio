@@ -171,7 +171,7 @@ public final class EnumGenerator
                     "\n" +
                     "    public static %1$s decode(final char[] representation, final int length)\n" +
                     "    {\n" +
-                    "        return charMap.get(representation, length);" +
+                    "        return charMap.get(representation, length);\n" +
                     "    }\n",
                     typeName,
                     entries);
