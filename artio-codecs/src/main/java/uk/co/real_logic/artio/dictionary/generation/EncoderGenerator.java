@@ -32,6 +32,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.GROUP;
+import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.hasEnumGenerated;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.artio.util.MutableAsciiBuffer.LONGEST_INT_LENGTH;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatClassName;
@@ -261,7 +262,7 @@ public class EncoderGenerator extends Generator
 
         final String hasAssign = String.format("        has%s = true;\n", name);
 
-        final String enumSetter = field.isEnum() ? enumSetter(className, fieldName, field.name()) : "";
+        final String enumSetter = hasEnumGenerated(field) ? enumSetter(className, fieldName, field.name()) : "";
 
         final Function<String, String> generateSetter =
             (type) -> setter(name, type, fieldName, hasField, className, hasAssign, enumSetter);

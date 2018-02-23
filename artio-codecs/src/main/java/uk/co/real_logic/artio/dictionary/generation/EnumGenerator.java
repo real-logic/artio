@@ -51,9 +51,13 @@ public final class EnumGenerator
             .fields()
             .values()
             .stream()
-            .filter(Field::isEnum)
-            .filter(field -> field.type() != Type.BOOLEAN)
+            .filter(EnumGenerator::hasEnumGenerated)
             .forEach(this::generateEnum);
+    }
+
+    public static boolean hasEnumGenerated(final Field field)
+    {
+        return field.isEnum() && field.type() != Type.BOOLEAN;
     }
 
     private void generateEnum(final Field field)

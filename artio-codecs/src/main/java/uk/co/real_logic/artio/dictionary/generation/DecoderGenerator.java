@@ -358,6 +358,11 @@ public class DecoderGenerator extends Generator
     private CharSequence validateEnum(final Entry entry, final Writer out)
     {
         final Field field = (Field)entry.element();
+        if (!EnumGenerator.hasEnumGenerated(field))
+        {
+            return "";
+        }
+
         final String name = entry.name();
         final String valuesField = "valuesOf" + entry.name();
         final String optionalCheck = entry.required() ? "" : String.format("has%s && ", name);
@@ -677,7 +682,7 @@ public class DecoderGenerator extends Generator
             optionalCheck,
             asStringBody) : "";
 
-        final String enumDecoder = field.isEnum() ? String.format(
+        final String enumDecoder = EnumGenerator.hasEnumGenerated(field) ? String.format(
             "    public %s %sAsEnum()\n" +
             "    {\n" +
             "        return %s;\n" +
