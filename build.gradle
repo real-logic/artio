@@ -186,7 +186,7 @@ project(':artio-codecs') {
     compileGeneratedJava.dependsOn 'generateMessages'
     compileGeneratedJava.classpath += sourceSets.main.runtimeClasspath
 
-    task(generateMessages, type: JavaExec) {
+    task generateMessages(type: JavaExec) {
         main = 'uk.co.real_logic.sbe.SbeTool'
         classpath = sourceSets.main.runtimeClasspath
         systemProperties('sbe.output.dir': generatedDir,
@@ -224,7 +224,7 @@ project(':artio-session-codecs') {
     compileGeneratedJava.dependsOn 'generateCodecs'
     compileGeneratedJava.classpath += sourceSets.main.runtimeClasspath
 
-    task(generateCodecs, type: JavaExec) {
+    task generateCodecs(type: JavaExec) {
         main = 'uk.co.real_logic.artio.dictionary.CodecGenerationTool'
         classpath = sourceSets.main.runtimeClasspath
         args = [generatedDir, 'src/main/resources/session_dictionary.xml']
