@@ -88,7 +88,7 @@ public class ArchiverTest
     {
         // TODO: enable more comprehensive testing in a CI environment
         return IntStream
-            .of(1337, 6003/*, 129, 128, 4097*/)
+            .of(1337, 2112/*, 129, 128, 4097*/)
             .boxed()
             .flatMap((size) -> Stream.of(new UnsafeBuffer(new byte[size])))
             .map((buffer) -> new Object[]{ buffer.capacity(), buffer })

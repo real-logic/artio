@@ -26,7 +26,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.collections.Long2LongHashMap;
-import org.agrona.collections.Long2LongHashMap.LongIterator;
+import org.agrona.collections.Long2LongHashMap.KeyIterator;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentInvoker;
@@ -383,7 +383,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         int actions = 0;
         if (!resend.isEmpty())
         {
-            final LongIterator keyIterator = resend.keySet().iterator();
+            final KeyIterator keyIterator = resend.keySet().iterator();
             while (keyIterator.hasNext())
             {
                 final long connectionId = keyIterator.nextValue();

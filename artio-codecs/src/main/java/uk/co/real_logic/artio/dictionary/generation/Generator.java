@@ -17,7 +17,6 @@ package uk.co.real_logic.artio.dictionary.generation;
 
 import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.IntHashSet;
-import org.agrona.collections.IntIterator;
 import org.agrona.generation.OutputManager;
 import uk.co.real_logic.artio.EncodingException;
 import uk.co.real_logic.artio.dictionary.CharArraySet;
@@ -103,7 +102,7 @@ public abstract class Generator
         generateAggregateFile(dictionary.header(), AggregateType.HEADER);
         generateAggregateFile(dictionary.trailer(), AggregateType.TRAILER);
         dictionary.components().forEach((name, component) -> generateAggregateFile(component, COMPONENT));
-        dictionary.messages().forEach(msg -> generateAggregateFile(msg, MESSAGE));
+        dictionary.messages().forEach((msg) -> generateAggregateFile(msg, MESSAGE));
     }
 
     protected abstract void generateAggregateFile(Aggregate aggregate, AggregateType type);
@@ -137,7 +136,7 @@ public abstract class Generator
             .append(importFor(Arrays.class))
             .append(importFor(CharArraySet.class))
             .append(importFor(IntHashSet.class))
-            .append(importFor(IntIterator.class))
+            .append(importFor(IntHashSet.IntIterator.class))
             .append(importFor(Generated.class))
             .append(importFor(EncodingException.class))
             .append(importStaticFor(StandardCharsets.class, "US_ASCII"))

@@ -62,7 +62,7 @@ class QuorumAcknowledgementStrategy implements AcknowledgementStrategy
         }
 
         final Long2LongHashMap.Values values = sessionIdToPosition.values();
-        final Long2LongHashMap.LongIterator it = values.iterator();
+        final Long2LongHashMap.ValueIterator it = values.iterator();
         for (int i = 0; i < size; i++)
         {
             positions[i] = it.nextValue();
