@@ -418,6 +418,10 @@ public class EncoderGenerator extends Generator
             "%s" +
             "        return this;\n" +
             "    }\n\n" +
+            "    public %2$s %3$s()\n" +
+            "    {\n" +
+            "        return %3$s;\n" +
+            "    }\n\n" +
             "%7$s",
             isBodyLength(name) ? "public" : "private",
             type,
