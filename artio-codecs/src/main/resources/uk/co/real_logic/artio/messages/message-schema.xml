@@ -171,6 +171,7 @@
         <field name="requestedInitialSequenceNumber" id="2" type="int32"/>
         <field name="sequenceNumberType" id="3" type="SequenceNumberType"/>
         <field name="port" id="4" type="int32"/>
+        <field name="commonHeaderLength" id="20" type="int32"/>
         <field name="heartbeatIntervalInS" id="5" type="int32"/>
         <field name="resetSequenceNumber" id="6" type="ResetSequenceNumber"/>
         <field name="correlationId" id="7" type="CorrelationId"/>

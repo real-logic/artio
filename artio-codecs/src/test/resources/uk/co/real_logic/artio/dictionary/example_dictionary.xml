@@ -1,5 +1,5 @@
 <!-- Simple Data Dictionary for testing purposes -->
-<fix major="7" minor="2">
+<fix type="FIXR" major="7" minor="2">
     <header>
         <field name="BeginString" required="Y"/>
         <field name="BodyLength" required="Y"/>

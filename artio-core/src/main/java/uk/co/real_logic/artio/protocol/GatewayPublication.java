@@ -407,6 +407,7 @@ public class GatewayPublication extends ClaimablePublication
         final int libraryId,
         final String host,
         final int port,
+        final int commonHeaderLength,
         final String senderCompId,
         final String senderSubId,
         final String senderLocationId,
@@ -447,6 +448,7 @@ public class GatewayPublication extends ClaimablePublication
         initiateConnection.wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .port(port)
+            .commonHeaderLength(commonHeaderLength)
             .requestedInitialSequenceNumber(requestedInitialSequenceNumber)
             .sequenceNumberType(sequenceNumberType)
             .heartbeatIntervalInS(heartbeatIntervalInS)

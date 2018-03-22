@@ -19,6 +19,9 @@ public final class StandardFixConstants
 {
     public static final byte START_OF_HEADER = 0x01;
 
+    public static final int FIX4_HEADER_LENGHT = "8=FIX.4.2 ".length();
+    public static final int FIXT_HEADER_LENGHT = "8=FIXT.1.1 ".length();
+
     // Message Types
 
     public static final int HEARTBEAT = 0;

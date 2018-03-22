@@ -46,6 +46,7 @@ public class DictionaryParserTest
     @Test
     public void shouldParseVersionNumbers()
     {
+        assertEquals("FIXR", dictionary.specType());
         assertEquals(7, dictionary.majorVersion());
         assertEquals(2, dictionary.minorVersion());
     }

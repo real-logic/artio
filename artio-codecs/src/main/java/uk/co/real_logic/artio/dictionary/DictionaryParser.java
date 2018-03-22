@@ -93,13 +93,14 @@ public final class DictionaryParser
         reconnectForwardReferences(forwardReferences, components);
 
         final NamedNodeMap fixAttributes = document.getElementsByTagName("fix").item(0).getAttributes();
+        final String specType = getValue(fixAttributes, "type");
         final int majorVersion = getInt(fixAttributes, "major");
         final int minorVersion = getInt(fixAttributes, "minor");
 
         simplifyComponentsThatAreJustGroups(components, messages);
         correctMultiCharacterCharEnums(fields);
 
-        return new Dictionary(messages, fields, components, header, trailer, majorVersion, minorVersion);
+        return new Dictionary(messages, fields, components, header, trailer, specType, majorVersion, minorVersion);
     }
 
     private void correctMultiCharacterCharEnums(final Map<String, Field> fields)

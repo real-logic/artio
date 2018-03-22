@@ -61,8 +61,8 @@ class ReceiverEndPoint
 
     private static final byte BODY_LENGTH_FIELD = 9;
 
-    private static final int COMMON_PREFIX_LENGTH = "8=FIX.4.2 ".length();
-    private static final int START_OF_BODY_LENGTH = COMMON_PREFIX_LENGTH + 2;
+    private final int commonPrefixLength;
+    private final int startOfBodyLenght;
 
     private static final byte CHECKSUM0 = 1;
     private static final byte CHECKSUM1 = (byte)'1';
@@ -118,7 +118,8 @@ class ReceiverEndPoint
         final SequenceNumberType sequenceNumberType,
         final ConnectionType connectionType,
         final LongHashSet replicatedConnectionIds,
-        final GatewaySessions gatewaySessions)
+        final GatewaySessions gatewaySessions,
+        final int commonPrefixLength)
     {
         Objects.requireNonNull(clusterablePublication, "clusterablePublication");
         Objects.requireNonNull(libraryPublication, "libraryPublication");
@@ -143,7 +144,8 @@ class ReceiverEndPoint
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
         buffer = new MutableAsciiBuffer(byteBuffer);
-
+        this.commonPrefixLength = commonPrefixLength;
+        this.startOfBodyLenght = this.commonPrefixLength + 2;
         // Initiator sessions are persistent if the sequence numbers are expected to be persistent.
         if (connectionType == INITIATOR)
         {
@@ -209,7 +211,7 @@ class ReceiverEndPoint
         int offset = 0;
         while (true)
         {
-            final int startOfBodyLength = offset + START_OF_BODY_LENGTH;
+            final int startOfBodyLength = offset + startOfBodyLenght;
             if (usedBufferData < startOfBodyLength)
             {
                 // Need more data
@@ -414,15 +416,15 @@ class ReceiverEndPoint
 
     private int getBodyLength(final int offset, final int endOfBodyLength)
     {
-        return buffer.getNatural(offset + START_OF_BODY_LENGTH, endOfBodyLength);
+        return buffer.getNatural(offset + startOfBodyLenght, endOfBodyLength);
     }
 
     private boolean invalidBodyLengthTag(final int offset)
     {
         try
         {
-            return buffer.getDigit(offset + COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD ||
-                buffer.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
+            return buffer.getDigit(offset + commonPrefixLength) != BODY_LENGTH_FIELD ||
+                   buffer.getChar(offset + commonPrefixLength + 1) != '=';
         }
         catch (final IllegalArgumentException ex)
         {
@@ -440,7 +442,7 @@ class ReceiverEndPoint
 
     private void invalidateMessage(final int offset)
     {
-        DebugLogger.log(FIX_MESSAGE, "%s", buffer, offset, COMMON_PREFIX_LENGTH);
+        DebugLogger.log(FIX_MESSAGE, "%s", buffer, offset, commonPrefixLength);
     }
 
     private boolean saveInvalidMessage(final int offset, final int startOfChecksumTag)

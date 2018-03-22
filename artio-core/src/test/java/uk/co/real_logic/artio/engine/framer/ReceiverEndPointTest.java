@@ -26,6 +26,7 @@ import org.junit.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.artio.builder.TrailerEncoder;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.messages.*;
@@ -83,7 +84,8 @@ public class ReceiverEndPointTest
         mockChannel, BUFFER_SIZE, libraryPublication, clusterablePublication,
         CONNECTION_ID, UNKNOWN, SEQUENCE_INDEX, mockSessionContexts,
         sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID,
-        DETERMINE_AT_LOGON, ConnectionType.ACCEPTOR, replicatedConnectionIds, mockGatewaySessions);
+        DETERMINE_AT_LOGON, ConnectionType.ACCEPTOR, replicatedConnectionIds, mockGatewaySessions,
+        TrailerEncoder.HEADER_PREFIX_STRING.length - 2);
 
     @Before
     public void setUp()

@@ -119,7 +119,10 @@ public class EncoderGenerator extends Generator
         validateHasField(header, BODY_LENGTH);
 
         this.initialArraySize = initialArraySize;
-        headerPrefixString = String.format("8=FIX.%d.%d\0019=", dictionary.majorVersion(), dictionary.minorVersion());
+        headerPrefixString = String.format("8=%s.%d.%d\0019=",
+            dictionary.specType(),
+            dictionary.majorVersion(), dictionary.minorVersion());
+
         maxHeaderPrefixLength = headerPrefixString.length() + MAX_BODY_LENGTH_FIELD_LENGTH;
     }
 

@@ -554,7 +554,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             final long connectionId = this.nextConnectionId++;
             final GatewaySession session = setupConnection(
-                channel, connectionId, UNKNOWN_SESSION, null, ENGINE_LIBRARY_ID, ACCEPTOR, DETERMINE_AT_LOGON);
+                channel, connectionId, UNKNOWN_SESSION, null, ENGINE_LIBRARY_ID, ACCEPTOR,
+                configuration.fixMessageCommonHeaderLength(), DETERMINE_AT_LOGON);
 
             session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
 
@@ -596,6 +597,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int libraryId,
         final int port,
         final String host,
+        final int commonHeaderLength,
         final String senderCompId,
         final String senderSubId,
         final String senderLocationId,
@@ -658,6 +660,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
                     onConnectionOpen(
                         libraryId,
+                        commonHeaderLength,
                         senderCompId,
                         senderSubId,
                         senderLocationId,
@@ -691,6 +694,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void onConnectionOpen(
         final int libraryId,
+        final int fixCommonHeaderLength,
         final String senderCompId,
         final String senderSubId,
         final String senderLocationId,
@@ -727,6 +731,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 sessionKey,
                 libraryId,
                 INITIATOR,
+                fixCommonHeaderLength,
                 sequenceNumberType);
 
             library.addSession(session);
@@ -834,7 +839,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final CompositeKey sessionKey,
         final int libraryId,
         final ConnectionType connectionType,
-        final SequenceNumberType sequenceNumberType)
+        final int commonPrefixLength,
+        final SequenceNumberType sequenceNumberType
+    )
         throws IOException
     {
         final ReceiverEndPoint receiverEndPoint = endPointFactory.receiverEndPoint(
@@ -847,7 +854,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             sentSequenceNumberIndex,
             receivedSequenceNumberIndex,
             sequenceNumberType,
-            connectionType);
+            connectionType,
+            commonPrefixLength);
         receiverEndPoints.add(receiverEndPoint);
 
         final BlockablePosition libraryBlockablePosition = getLibraryBlockablePosition(libraryId);

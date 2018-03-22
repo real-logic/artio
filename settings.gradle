@@ -1,1 +1,2 @@
 include 'artio-core', 'artio-samples', 'artio-system-tests', 'artio-codecs', 'artio-session-codecs'
+include 'artio-session-fixt-codecs'

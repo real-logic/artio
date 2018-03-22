@@ -44,7 +44,7 @@ public class IntDictionaryTest
         heartbeat.optionalEntry(new Field(112, "TestReqID", Type.STRING));
 
         final List<Message> messages = Arrays.asList(heartbeat);
-        data = new Dictionary(messages, null, null, null, null, 4, 4);
+        data = new Dictionary(messages, null, null, null, null, "FIX", 4, 4);
     }
 
     @Test

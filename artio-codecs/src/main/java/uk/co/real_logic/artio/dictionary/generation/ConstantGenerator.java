@@ -153,8 +153,9 @@ public class ConstantGenerator
     private String generateVersion()
     {
         return String.format(
-            "    public static String VERSION = \"FIX.%d.%d\";\n" +
+            "    public static String VERSION = \"%s.%d.%d\";\n" +
             "    public static char[] VERSION_CHARS = VERSION.toCharArray();\n\n",
+            dictionary.specType(),
             dictionary.majorVersion(),
             dictionary.minorVersion());
     }

@@ -240,6 +240,37 @@ project(':artio-session-codecs') {
     jar.dependsOn compileGeneratedJava
 }
 
+project(':artio-session-fixt-codecs') {
+
+    dependencies {
+        compile project(path: ':artio-codecs')
+    }
+
+    def generatedDir = file("$buildDir/generated-src")
+    sourceSets {
+        generated.java.srcDir generatedDir
+    }
+
+    // Code Generation Configuration
+    compileGeneratedJava.dependsOn 'generateCodecs'
+    compileGeneratedJava.classpath += sourceSets.main.runtimeClasspath
+
+    task generateCodecs(type: JavaExec) {
+        main = 'uk.co.real_logic.artio.dictionary.CodecGenerationTool'
+        classpath = sourceSets.main.runtimeClasspath
+        args = [generatedDir, 'src/main/resources/FIXT11.xml']
+        outputs.dir generatedDir
+    }
+
+    jar {
+        from(sourceSets.generated.output) {
+            include '**/*.class'
+        }
+    }
+
+    jar.dependsOn compileGeneratedJava
+}
+
 project(':artio-core') {
     apply plugin: 'application'
 

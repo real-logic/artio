@@ -69,7 +69,8 @@ class EndPointFactory
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final SequenceNumberType sequenceNumberType,
-        final ConnectionType connectionType) throws IOException
+        final ConnectionType connectionType,
+        final int commonPrefixLength) throws IOException
     {
         return new ReceiverEndPoint(
             channel,
@@ -89,7 +90,8 @@ class EndPointFactory
             sequenceNumberType,
             connectionType,
             replicatedConnectionIds,
-            gatewaySessions
+            gatewaySessions,
+            commonPrefixLength
         );
     }
 

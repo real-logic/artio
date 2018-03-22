@@ -183,6 +183,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             libraryId,
             initiateConnection.port(),
             initiateConnection.host(),
+            initiateConnection.commonHeaderLength(),
             initiateConnection.senderCompId(),
             initiateConnection.senderSubId(),
             initiateConnection.senderLocationId(),
