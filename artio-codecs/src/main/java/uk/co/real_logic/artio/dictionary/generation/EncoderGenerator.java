@@ -356,6 +356,10 @@ public class EncoderGenerator extends Generator
             "    public boolean has%4$s()\n" +
             "    {\n" +
             "        return %1$sLength > 0;\n" +
+            "    }\n\n" +
+            "    public byte[] %1$s()\n" +
+            "    {\n" +
+            "        return %1$s;\n" +
             "    }\n\n",
             fieldName,
             className,
