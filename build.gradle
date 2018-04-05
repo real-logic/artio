@@ -291,7 +291,7 @@ project(':artio-system-tests') {
 
         perfCompile project
         perfCompile 'org.openjdk.jmh:jmh-core:1.20'
-        perfCompile 'org.openjdk.jmh:jmh-generator-annprocess:1.20'
+        annotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess:1.20'
     }
 
     idea.module {
@@ -394,6 +394,6 @@ if (System.properties["uploadArchives"] != null) {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '4.5.1'
+    gradleVersion = '4.6'
     distributionType = 'ALL'
 }
