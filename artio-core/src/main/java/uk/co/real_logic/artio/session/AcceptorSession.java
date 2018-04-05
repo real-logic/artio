@@ -52,10 +52,9 @@ public class AcceptorSession extends Session
             receivedMsgSeqNo,
             sentMsgSeqNo,
             libraryId,
-                initialSequenceNumber,
+            initialSequenceNumber,
             sequenceIndex,
             reasonableTransmissionTimeInMs,
             asciiBuffer);
     }
-
 }
