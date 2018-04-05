@@ -93,7 +93,7 @@ public final class DictionaryParser
         reconnectForwardReferences(forwardReferences, components);
 
         final NamedNodeMap fixAttributes = document.getElementsByTagName("fix").item(0).getAttributes();
-        final String specType = getValue(fixAttributes, "type");
+        final String specType = getValueOrDefault(fixAttributes, "type", "FIX");
         final int majorVersion = getInt(fixAttributes, "major");
         final int minorVersion = getInt(fixAttributes, "minor");
 
@@ -339,8 +339,22 @@ public final class DictionaryParser
     private String getValue(final NamedNodeMap attributes, final String attributeName)
     {
         Objects.requireNonNull(attributes, "Null attributes for " + attributeName);
-        return Objects.requireNonNull(attributes.getNamedItem(attributeName), "Empty item for:" +
-            attributeName).getNodeValue();
+        return Objects.requireNonNull(getOptionalValue(attributes, attributeName), "Empty item for:" +
+            attributeName);
+    }
+
+    private String getOptionalValue(final NamedNodeMap attributes, final String attributeName)
+    {
+        Objects.requireNonNull(attributes, "Null attributes for " + attributeName);
+        Node attributeNode = attributes.getNamedItem(attributeName);
+        return attributeNode == null ? null : attributeNode.getNodeValue();
+    }
+
+    private String getValueOrDefault(final NamedNodeMap attributes, final String attributeName, final String defaultValue)
+    {
+        Objects.requireNonNull(attributes, "Null attributes for " + attributeName);
+        String value = getOptionalValue(attributes, attributeName);
+        return value == null ? defaultValue : value;
     }
 
     private void extractNodes(

@@ -92,7 +92,7 @@ public final class Dictionary
     public String toString()
     {
         return "DataDictionary{" +
-               "specType=" + specType +
+                "specType=" + specType +
                 ", messages=" + messages +
                 ", fields=" + fields +
                 ", components=" + components +

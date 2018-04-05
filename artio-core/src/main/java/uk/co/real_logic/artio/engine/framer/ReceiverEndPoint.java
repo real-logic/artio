@@ -62,7 +62,7 @@ class ReceiverEndPoint
     private static final byte BODY_LENGTH_FIELD = 9;
 
     private final int commonPrefixLength;
-    private final int startOfBodyLenght;
+    private final int startOfBodyLength;
 
     private static final byte CHECKSUM0 = 1;
     private static final byte CHECKSUM1 = (byte)'1';
@@ -145,7 +145,7 @@ class ReceiverEndPoint
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
         buffer = new MutableAsciiBuffer(byteBuffer);
         this.commonPrefixLength = commonPrefixLength;
-        this.startOfBodyLenght = this.commonPrefixLength + 2;
+        this.startOfBodyLength = this.commonPrefixLength + 2;
         // Initiator sessions are persistent if the sequence numbers are expected to be persistent.
         if (connectionType == INITIATOR)
         {
@@ -211,7 +211,7 @@ class ReceiverEndPoint
         int offset = 0;
         while (true)
         {
-            final int startOfBodyLength = offset + startOfBodyLenght;
+            final int startOfBodyLength = offset + this.startOfBodyLength;
             if (usedBufferData < startOfBodyLength)
             {
                 // Need more data
@@ -416,7 +416,7 @@ class ReceiverEndPoint
 
     private int getBodyLength(final int offset, final int endOfBodyLength)
     {
-        return buffer.getNatural(offset + startOfBodyLenght, endOfBodyLength);
+        return buffer.getNatural(offset + startOfBodyLength, endOfBodyLength);
     }
 
     private boolean invalidBodyLengthTag(final int offset)
