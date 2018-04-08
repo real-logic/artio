@@ -21,7 +21,6 @@ import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
-import uk.co.real_logic.artio.dictionary.StandardFixConstants;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
 import uk.co.real_logic.artio.replication.ClusterConfiguration;
 import uk.co.real_logic.artio.replication.RoleHandler;
@@ -184,7 +183,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private SessionPersistenceStrategy sessionPersistenceStrategy;
     private long slowConsumerTimeoutInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
     private EngineScheduler scheduler = new DefaultEngineScheduler();
-    private int commonHeaderLength = StandardFixConstants.FIX4_HEADER_LENGHT;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -200,14 +198,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         Objects.requireNonNull(host, "host");
         this.host = host;
         this.port = port;
-        return this;
-    }
-
-    public EngineConfiguration useFixTTransport(final boolean fixTTransport)
-    {
-        commonHeaderLength = fixTTransport ?
-                             StandardFixConstants.FIXT_HEADER_LENGHT :
-                             StandardFixConstants.FIX4_HEADER_LENGHT;
         return this;
     }
 
@@ -779,10 +769,4 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     {
         return slowConsumerTimeoutInMs;
     }
-
-    public int fixMessageCommonHeaderLength()
-    {
-        return commonHeaderLength;
-    }
-
 }

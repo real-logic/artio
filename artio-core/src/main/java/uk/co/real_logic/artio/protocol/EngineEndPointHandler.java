@@ -33,7 +33,6 @@ public interface EngineEndPointHandler
         int libraryId,
         int port,
         String host,
-        int commonHeaderLength,
         String senderCompId,
         String senderSubId,
         String senderLocationId,

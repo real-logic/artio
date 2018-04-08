@@ -265,7 +265,8 @@ public class EncoderGenerator extends Generator
 
         final String hasAssign = String.format("        has%s = true;\n", name);
 
-        final String enumSetter = hasEnumGenerated(field) ? enumSetter(className, fieldName, field.name()) : "";
+        final String enumSetter = hasEnumGenerated(field) && !field.type().isMultiValue() ?
+            enumSetter(className, fieldName, field.name()) : "";
 
         final Function<String, String> generateSetter =
             (type) -> setter(name, type, fieldName, hasField, className, hasAssign, enumSetter);
@@ -274,11 +275,13 @@ public class EncoderGenerator extends Generator
         {
             case STRING:
             case MULTIPLEVALUESTRING:
+            case MULTIPLESTRINGVALUE:
+            case MULTIPLECHARVALUE:
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
+            case LANGUAGE:
                 return generateStringSetter(className, fieldName, name, enumSetter);
-
             case BOOLEAN:
                 return generateSetter.apply("boolean");
 
@@ -301,6 +304,7 @@ public class EncoderGenerator extends Generator
                 return generateSetter.apply("DecimalFloat");
 
             case DATA:
+            case XMLDATA:
                 // DATA fields always come with their own Length field defined by the schema
                 return generateSetter.apply("byte[]");
 
@@ -309,6 +313,8 @@ public class EncoderGenerator extends Generator
             case UTCDATEONLY:
             case UTCTIMEONLY:
             case MONTHYEAR:
+            case TZTIMEONLY:
+            case TZTIMESTAMP:
                 return generateByteArraySetter(className, fieldName, name);
 
             default: throw new UnsupportedOperationException("Unknown type: " + field.type());
@@ -607,17 +613,23 @@ public class EncoderGenerator extends Generator
 
             case STRING:
             case MULTIPLEVALUESTRING:
+            case MULTIPLESTRINGVALUE:
+            case MULTIPLECHARVALUE:
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
+            case LANGUAGE:
             case LOCALMKTDATE:
             case UTCTIMESTAMP:
             case MONTHYEAR:
             case UTCTIMEONLY:
             case UTCDATEONLY:
+            case TZTIMEONLY:
+            case TZTIMESTAMP:
                 return stringPut(fieldName, enablingSuffix, tag);
 
             case DATA:
+            case XMLDATA:
                 return String.format(
                     "%s" +
                     "        buffer.putBytes(position, %s);\n" +

@@ -22,6 +22,9 @@ public final class StandardFixConstants
     public static final int FIX4_HEADER_LENGHT = "8=FIX.4.2 ".length();
     public static final int FIXT_HEADER_LENGHT = "8=FIXT.1.1 ".length();
 
+    // header and message length tag
+    public static final int MIN_MESSAGE_SIZE = FIXT_HEADER_LENGHT + 6;
+
     // Message Types
 
     public static final int HEARTBEAT = 0;

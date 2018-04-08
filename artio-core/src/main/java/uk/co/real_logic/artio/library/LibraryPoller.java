@@ -244,7 +244,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             libraryId,
             host,
             port,
-            configuration.commonHeaderLength(),
             configuration.senderCompId(),
             configuration.senderSubId(),
             configuration.senderLocationId(),

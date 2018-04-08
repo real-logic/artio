@@ -35,25 +35,18 @@ public final class CodecGenerationTool
         }
 
         final String outputPath = args[0];
-        final File xmlFile = new File(args[1]);
-
-        if (!xmlFile.exists())
+        final String files = args[1];
+        final  String[] fileNames = files.split(";");
+        if (fileNames.length > 2)
         {
-            System.err.printf("xmlFile does not exist: %s", xmlFile.getAbsolutePath());
+            System.err.printf("Two many dictionary files(1 or 2 dictionaries supported).%s", files);
             printUsageAndExit();
         }
-
-        if (!xmlFile.isFile())
+        Dictionary dictionary = null;
+        for (final String fileName : fileNames)
         {
-            System.out.printf("xmlFile isn't a file, are the arguments the correct way around?");
-            printUsageAndExit();
-        }
-
-        final DictionaryParser parser = new DictionaryParser();
-        final Dictionary dictionary;
-        try (FileInputStream input = new FileInputStream(xmlFile))
-        {
-            dictionary = parser.parse(input);
+            final File xmlFile = new File(fileName);
+            dictionary = parseDictionary(xmlFile, dictionary);
         }
 
         final PackageOutputManager parent = new PackageOutputManager(outputPath, PARENT_PACKAGE);
@@ -84,9 +77,30 @@ public final class CodecGenerationTool
         acceptorGenerator.generate();
     }
 
+    private static Dictionary parseDictionary(final File xmlFile, final Dictionary parentDictionary) throws Exception
+    {
+        final DictionaryParser parser = new DictionaryParser();
+        if (!xmlFile.exists())
+        {
+            System.err.printf("xmlFile does not exist: %s\n", xmlFile.getAbsolutePath());
+            printUsageAndExit();
+        }
+
+        if (!xmlFile.isFile())
+        {
+            System.out.printf("xmlFile isn't a file, are the arguments the correct way around?\n");
+            printUsageAndExit();
+        }
+        try (FileInputStream input = new FileInputStream(xmlFile))
+        {
+            return parser.parse(input, parentDictionary);
+        }
+    }
+
     private static void printUsageAndExit()
     {
-        System.err.println("Usage: CodecGenerationTool </path/to/output-directory> </path/to/xml/dictionary>");
+        System.err.println("Usage: CodecGenerationTool </path/to/output-directory> " +
+            "<[/path/to/fixt-xml/dictionary;]/path/to/xml/dictionary>");
         System.exit(-1);
     }
 }

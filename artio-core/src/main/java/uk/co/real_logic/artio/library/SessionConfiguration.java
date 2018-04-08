@@ -17,8 +17,6 @@ package uk.co.real_logic.artio.library;
 
 import org.agrona.collections.IntArrayList;
 import uk.co.real_logic.artio.CommonConfiguration;
-import uk.co.real_logic.artio.builder.TrailerEncoder;
-import uk.co.real_logic.artio.dictionary.StandardFixConstants;
 import uk.co.real_logic.artio.messages.SequenceNumberType;
 
 import java.util.ArrayList;
@@ -50,7 +48,6 @@ public final class SessionConfiguration
     private final int initialSequenceNumber;
     private final long timeoutInMs;
     private final boolean resetSeqNum;
-    private final int commonHeaderLength;
 
     public static Builder builder()
     {
@@ -60,7 +57,6 @@ public final class SessionConfiguration
     private SessionConfiguration(
         final List<String> hosts,
         final IntArrayList ports,
-        final int commonHeaderLength,
         final String username,
         final String password,
         final String senderCompId,
@@ -86,7 +82,6 @@ public final class SessionConfiguration
         requireNonEmpty(hosts, "hosts");
         requireNonEmpty(ports, "ports");
 
-        this.commonHeaderLength = commonHeaderLength;
         this.senderCompId = senderCompId;
         this.senderSubId = senderSubId;
         this.senderLocationId = senderLocationId;
@@ -135,7 +130,6 @@ public final class SessionConfiguration
     {
         return senderCompId;
     }
-
 
     public String senderSubId()
     {
@@ -192,11 +186,6 @@ public final class SessionConfiguration
         return resetSeqNum;
     }
 
-    public int commonHeaderLength()
-    {
-        return commonHeaderLength;
-    }
-
     public static final class Builder
     {
         private String username;
@@ -213,7 +202,6 @@ public final class SessionConfiguration
         private int initialSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
         private long timeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
         private boolean resetSeqNum = DEFAULT_RESET_SEQ_NUM;
-        private int commonHeaderLength = TrailerEncoder.HEADER_PREFIX_STRING.length - 2;
 
         private Builder()
         {
@@ -249,21 +237,6 @@ public final class SessionConfiguration
             ports.addInt(port);
             return this;
         }
-
-        public Builder commonHeaderLength(final int commonHeaderLength)
-        {
-            this.commonHeaderLength = commonHeaderLength;
-            return this;
-        }
-
-        public Builder useFixTTransport(final boolean useFixTTransport)
-        {
-            this.commonHeaderLength = useFixTTransport ?
-                                      StandardFixConstants.FIXT_HEADER_LENGHT :
-                                      StandardFixConstants.FIX4_HEADER_LENGHT;
-            return this;
-        }
-
 
         /**
          * Sets the sender company id used by messages in this session.
@@ -390,7 +363,6 @@ public final class SessionConfiguration
             return new SessionConfiguration(
                 hosts,
                 ports,
-                commonHeaderLength,
                 username,
                 password,
                 senderCompId,

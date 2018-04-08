@@ -32,7 +32,6 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.Timing;
-import uk.co.real_logic.artio.dictionary.StandardFixConstants;
 import uk.co.real_logic.artio.engine.CompletionPosition;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.EngineDescriptorStore;
@@ -150,7 +149,7 @@ public class FramerTest
 
         when(mockEndPointFactory.receiverEndPoint(
             any(), connectionId.capture(), anyLong(), anyInt(), anyInt(), any(),
-            eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any(), any(), anyInt()))
+            eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any(), any()))
             .thenReturn(mockReceiverEndPoint);
 
         when(mockEndPointFactory.senderEndPoint(any(), anyLong(), anyInt(), any(), any()))
@@ -840,7 +839,6 @@ public class FramerTest
             LIBRARY_ID,
             TEST_ADDRESS.getPort(),
             TEST_ADDRESS.getHostName(),
-            StandardFixConstants.FIX4_HEADER_LENGHT,
             "LEH_LZJ02",
             null,
             null,
@@ -932,7 +930,7 @@ public class FramerTest
     {
         verify(mockEndPointFactory).receiverEndPoint(
             notNull(), anyLong(), anyLong(), anyInt(), eq(ENGINE_LIBRARY_ID), eq(framer),
-            eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any(), any(), anyInt());
+            eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any(), any());
 
         verify(mockEndPointFactory).senderEndPoint(
             notNull(), anyLong(), eq(ENGINE_LIBRARY_ID), any(LibrarySlowPeeker.class), eq(framer));
