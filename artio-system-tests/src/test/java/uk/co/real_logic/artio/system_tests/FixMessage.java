@@ -21,7 +21,7 @@ import uk.co.real_logic.artio.decoder.Constants;
 import uk.co.real_logic.artio.session.Session;
 
 import static org.hamcrest.Matchers.equalTo;
-import static uk.co.real_logic.artio.decoder.Constants.MSG_LOGON_AS_STR;
+import static uk.co.real_logic.artio.decoder.Constants.LOGON_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.util.CustomMatchers.hasResult;
 
 /**
@@ -49,7 +49,7 @@ public class FixMessage extends Int2ObjectHashMap<String>
 
     boolean isLogon()
     {
-        return MSG_LOGON_AS_STR.equals(getMsgType());
+        return LOGON_MESSAGE_AS_STR.equals(getMsgType());
     }
 
     String getPossDup()

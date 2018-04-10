@@ -98,7 +98,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final int sequenceNumber = acceptorSendsResendRequest(message.getMessageSequenceNumber());
 
-        final FixMessage resentMessage = assertMessageResent(sequenceNumber, MSG_EXAMPLE_MESSAGE_AS_STR, false);
+        final FixMessage resentMessage = assertMessageResent(sequenceNumber, EXAMPLE_MESSAGE_MESSAGE_AS_STR, false);
         assertEquals(testReqID, resentMessage.getTestReqId());
 
         assertSequenceIndicesAre(0);
@@ -116,7 +116,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             {
                 testSystem.poll();
 
-                return acceptingOtfAcceptor.hasReceivedMessage(MSG_EXAMPLE_MESSAGE_AS_STR).findFirst();
+                return acceptingOtfAcceptor.hasReceivedMessage(EXAMPLE_MESSAGE_MESSAGE_AS_STR).findFirst();
             },
             1000);
     }
@@ -130,7 +130,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final int sequenceNumber = acceptorSendsResendRequest();
 
-        assertMessageResent(sequenceNumber, MSG_SEQUENCE_RESET_AS_STR, true);
+        assertMessageResent(sequenceNumber, SEQUENCE_RESET_MESSAGE_AS_STR, true);
 
         assertSequenceIndicesAre(0);
     }
@@ -385,7 +385,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         if (expectedStatus == OK)
         {
             final FixMessage replayedExampleMessage = acceptingOtfAcceptor.messages().get(1);
-            assertEquals(Constants.MSG_EXAMPLE_MESSAGE_AS_STR, replayedExampleMessage.getMsgType());
+            assertEquals(Constants.EXAMPLE_MESSAGE_MESSAGE_AS_STR, replayedExampleMessage.getMsgType());
             assertThat(replayedExampleMessage, hasMessageSequenceNumber(2));
             assertEquals(0, replayedExampleMessage.sequenceIndex());
             assertEquals("Y", replayedExampleMessage.getPossDup());
@@ -822,7 +822,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final String expectedSeqNum = String.valueOf(lastReceivedMsgSeqNum + 1);
         final long messageCount = messages
             .stream()
-            .filter((m) -> m.getMsgType().equals(MSG_TEST_REQUEST_AS_STR) && m.get(MSG_SEQ_NUM).equals(expectedSeqNum))
+            .filter((m) -> m.getMsgType().equals(TEST_REQUEST_MESSAGE_AS_STR) &&
+            m.get(MSG_SEQ_NUM).equals(expectedSeqNum))
             .count();
 
         assertEquals(messages.toString(), 1, messageCount);

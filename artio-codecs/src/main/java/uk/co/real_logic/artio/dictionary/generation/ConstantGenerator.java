@@ -173,7 +173,7 @@ public class ConstantGenerator
             .map((message) ->
             {
                 final int type = message.packedType();
-                final String constantName = "MSG_" + constantName(message.name());
+                final String constantName = constantName(message.name()) + "_MESSAGE";
                 final String stringConstantName = constantName + "_AS_STR";
                 return generateMessageTypeConstant(stringConstantName, type) + generateIntConstant(constantName, type);
             })

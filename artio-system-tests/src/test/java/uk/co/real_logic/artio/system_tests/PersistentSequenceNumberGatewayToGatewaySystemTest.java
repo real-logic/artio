@@ -37,7 +37,7 @@ import java.util.Objects;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.*;
-import static uk.co.real_logic.artio.decoder.Constants.MSG_SEQUENCE_RESET_AS_STR;
+import static uk.co.real_logic.artio.decoder.Constants.SEQUENCE_RESET_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.MISSING_MESSAGES;
@@ -157,7 +157,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             () ->
             {
                 testSystem.poll();
-                return initiatingOtfAcceptor.hasReceivedMessage(MSG_SEQUENCE_RESET_AS_STR).findFirst();
+                return initiatingOtfAcceptor.hasReceivedMessage(SEQUENCE_RESET_MESSAGE_AS_STR).findFirst();
             },
             2_000);
 

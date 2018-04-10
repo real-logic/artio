@@ -53,7 +53,7 @@ import static uk.co.real_logic.artio.LogTag.GATEWAY_CLUSTER_TEST;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.Timing.withTimeout;
-import static uk.co.real_logic.artio.decoder.Constants.MSG_TEST_REQUEST;
+import static uk.co.real_logic.artio.decoder.Constants.TEST_REQUEST_MESSAGE;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.closeAll;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SESSION_ID_FILE;
 import static uk.co.real_logic.artio.engine.logger.FixArchiveScanner.MessageType.SENT;
@@ -341,7 +341,7 @@ public class ClusteredGatewaySystemTest
 
                 final MessageCounter messageCounter = new MessageCounter();
 
-                final FixMessagePredicate predicate = messageTypeOf(MSG_TEST_REQUEST)
+                final FixMessagePredicate predicate = messageTypeOf(TEST_REQUEST_MESSAGE)
                     .and(sessionOf(INITIATOR_ID, ACCEPTOR_ID))
                     .and(sessionOf(sessionId))
                     .and(between(begin, end));
