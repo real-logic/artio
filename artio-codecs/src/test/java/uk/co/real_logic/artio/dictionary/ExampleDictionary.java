@@ -351,7 +351,7 @@ public final class ExampleDictionary
         final Map<String, Component> components = new HashMap<>();
         components.put(EG_COMPONENT, egComponent);
 
-        return new Dictionary(messages, messageEgFields, components, header, trailer, 4, 4);
+        return new Dictionary(messages, messageEgFields, components, header, trailer, "FIX", 4, 4);
     }
 
     private static Dictionary buildFieldExample()
@@ -375,6 +375,7 @@ public final class ExampleDictionary
         fieldEgFields.put("stringEnum", stringEnum);
         fieldEgFields.put("egNotEnum", new Field(125, "EgNotEnum", Type.CHAR));
 
-        return new Dictionary(emptyList(), fieldEgFields, emptyMap(), null, null, 4, 4);
+        return new Dictionary(emptyList(), fieldEgFields, emptyMap(), null, null,
+            "FIX", 4, 4);
     }
 }

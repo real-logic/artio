@@ -682,7 +682,8 @@ public class DecoderGenerator extends Generator
             optionalCheck,
             asStringBody) : "";
 
-        final String enumDecoder = EnumGenerator.hasEnumGenerated(field) ? String.format(
+        final String enumDecoder = EnumGenerator.hasEnumGenerated(field) && !field.type().isMultiValue() ?
+            String.format(
             "    public %s %sAsEnum()\n" +
             "    {\n" +
             "        return %s;\n" +
@@ -719,9 +720,12 @@ public class DecoderGenerator extends Generator
         {
             case STRING:
             case MULTIPLEVALUESTRING:
+            case MULTIPLESTRINGVALUE:
+            case MULTIPLECHARVALUE:
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
+            case LANGUAGE:
                 return String.format(" = new char[%d]", initialBufferSize);
 
             case FLOAT:
@@ -742,6 +746,7 @@ public class DecoderGenerator extends Generator
                 return "";
 
             case DATA:
+            case XMLDATA:
                 return initByteArray(initialBufferSize);
 
             case UTCTIMESTAMP:
@@ -758,6 +763,12 @@ public class DecoderGenerator extends Generator
 
             case MONTHYEAR:
                 return initByteArray(MonthYear.LONG_LENGTH);
+
+            case TZTIMEONLY:
+                return initByteArray(UtcTimeOnlyDecoder.LONG_LENGTH + 7);
+
+            case TZTIMESTAMP:
+                return initByteArray(UtcTimestampDecoder.LONG_LENGTH + 7);
 
             default:
                 throw new UnsupportedOperationException("Unknown type: " + type);
@@ -808,20 +819,26 @@ public class DecoderGenerator extends Generator
 
             case STRING:
             case MULTIPLEVALUESTRING:
+            case MULTIPLESTRINGVALUE:
+            case MULTIPLECHARVALUE:
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
+            case LANGUAGE:
                 return "char[]";
 
             case BOOLEAN:
                 return "boolean";
 
             case DATA:
+            case XMLDATA:
             case UTCTIMESTAMP:
             case UTCTIMEONLY:
             case UTCDATEONLY:
             case MONTHYEAR:
             case LOCALMKTDATE:
+            case TZTIMEONLY:
+            case TZTIMESTAMP:
                 return "byte[]";
 
             default:
@@ -1089,19 +1106,25 @@ public class DecoderGenerator extends Generator
 
             case STRING:
             case MULTIPLEVALUESTRING:
+            case MULTIPLESTRINGVALUE:
+            case MULTIPLECHARVALUE:
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
+            case LANGUAGE:
                 return String.format("getChars(%s, valueOffset, valueLength", fieldName);
 
             case BOOLEAN:
                 return "getBoolean(valueOffset";
 
             case DATA:
+            case XMLDATA:
             case UTCTIMESTAMP:
             case LOCALMKTDATE:
             case UTCTIMEONLY:
             case UTCDATEONLY:
+            case TZTIMEONLY:
+            case TZTIMESTAMP:
             case MONTHYEAR:
                 return String.format("getBytes(%s, valueOffset, valueLength", fieldName);
 

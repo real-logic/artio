@@ -1,5 +1,5 @@
 <!-- Simple Data Dictionary for testing purposes -->
-<fix major="7" minor="2">
+<fix type="FIXR" major="7" minor="2">
     <header>
         <field name="BeginString" required="Y"/>
         <field name="BodyLength" required="Y"/>
@@ -45,6 +45,7 @@
             <field name="LeavesQty" required="Y"/>
             <field name="CumQty" required="Y"/>
             <field name="AvgPx" required="Y"/>
+            <field name="OpenCloseSettlFlag" required="N"/>
         </message>
     </messages>
     <components>
@@ -193,5 +194,14 @@
         <field number="102" name="NoMemberSubIDs" type="NUMINGROUP"/>
         <field number="103" name="MemberSubIDType" type="INT"/>
         <field number="104" name="MemberSubID" type="INT"/>
+        <field number="286" name="OpenCloseSettlFlag" type="MULTIPLECHARVALUE">
+            <value enum="0" description="DAILY_OPEN_CLOSE_SETTLEMENT_ENTRY"/>
+            <value enum="1" description="SESSION_OPEN_CLOSE_SETTLEMENT_ENTRY"/>
+            <value enum="2" description="DELIVERY_SETTLEMENT_ENTRY"/>
+            <value enum="3" description="EXPECTED_ENTRY"/>
+            <value enum="4" description="ENTRY_FROM_PREVIOUS_BUSINESS_DAY"/>
+            <value enum="5" description="THEORETICAL_PRICE_VALUE"/>
+        </field>
+
     </fields>
 </fix>

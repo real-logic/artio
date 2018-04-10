@@ -310,6 +310,7 @@ public abstract class Generator
                 return resetFieldValue(name, "MISSING_CHAR");
 
             case DATA:
+            case XMLDATA:
                 return resetFieldValue(name, "null");
 
             case BOOLEAN:
@@ -317,9 +318,12 @@ public abstract class Generator
 
             case STRING:
             case MULTIPLEVALUESTRING:
+            case MULTIPLESTRINGVALUE:
+            case MULTIPLECHARVALUE:
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
+            case LANGUAGE:
                 return resetLength(name);
 
             case UTCTIMESTAMP:
@@ -327,6 +331,8 @@ public abstract class Generator
             case UTCTIMEONLY:
             case UTCDATEONLY:
             case MONTHYEAR:
+            case TZTIMEONLY:
+            case TZTIMESTAMP:
                 return resetTemporalValue(name);
 
             default:
@@ -552,17 +558,23 @@ public abstract class Generator
         {
             case STRING:
             case MULTIPLEVALUESTRING:
+            case MULTIPLESTRINGVALUE:
+            case MULTIPLECHARVALUE:
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
+            case LANGUAGE:
             case UTCTIMEONLY:
             case UTCDATEONLY:
             case UTCTIMESTAMP:
             case LOCALMKTDATE:
             case MONTHYEAR:
+            case TZTIMEONLY:
+            case TZTIMESTAMP:
                 return stringToString(fieldName);
 
             case DATA:
+            case XMLDATA:
                 return String.format("Arrays.toString(%s)", fieldName);
 
             default:

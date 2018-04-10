@@ -25,6 +25,7 @@ public final class Dictionary
     private final Map<String, Component> components;
     private final Component header;
     private final Component trailer;
+    private final String specType;
     private final int majorVersion;
     private final int minorVersion;
 
@@ -34,6 +35,7 @@ public final class Dictionary
         final Map<String, Component> components,
         final Component header,
         final Component trailer,
+        final String specType,
         final int majorVersion,
         final int minorVersion)
     {
@@ -42,6 +44,7 @@ public final class Dictionary
         this.components = components;
         this.header = header;
         this.trailer = trailer;
+        this.specType = specType;
         this.majorVersion = majorVersion;
         this.minorVersion = minorVersion;
     }
@@ -81,10 +84,16 @@ public final class Dictionary
         return majorVersion;
     }
 
+    public String specType()
+    {
+        return specType;
+    }
+
     public String toString()
     {
         return "DataDictionary{" +
-                "messages=" + messages +
+                "specType=" + specType +
+                ", messages=" + messages +
                 ", fields=" + fields +
                 ", components=" + components +
                 ", header=" + header +

@@ -158,7 +158,7 @@ public final class EnumGenerator
         {
             case STRING:
             case MULTIPLEVALUESTRING:
-
+            case MULTIPLESTRINGVALUE:
                 final String entries = allValues
                     .stream()
                     .map((v) -> format("        stringMap.put(%s, %s);\n", literal(v, type), v.description()))
@@ -179,7 +179,18 @@ public final class EnumGenerator
                     "    }\n",
                     typeName,
                     entries);
-
+            case MULTIPLECHARVALUE:
+                return format(
+                    "    public static %1$s decode(String representation)\n" +
+                    "    {\n" +
+                    "        return decode(representation.charAt(0));\n" +
+                    "    }\n" +
+                    "\n" +
+                    "    public static %1$s decode(final char[] representation, final int length)\n" +
+                    "    {\n" +
+                    "        return decode(representation[0]);\n" +
+                    "    }\n",
+                    typeName);
             default:
                 return "";
         }
@@ -192,6 +203,7 @@ public final class EnumGenerator
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
+            case LANGUAGE:
             case UTCTIMEONLY:
             case UTCDATEONLY:
             case MONTHYEAR:
@@ -210,14 +222,17 @@ public final class EnumGenerator
         {
             case STRING:
             case MULTIPLEVALUESTRING:
+            case MULTIPLESTRINGVALUE:
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
+            case LANGUAGE:
             case UTCTIMEONLY:
             case UTCDATEONLY:
             case MONTHYEAR:
                 argTypeValue = typeValue = "String";
                 break;
+            case MULTIPLECHARVALUE:
             case CHAR:
                 typeValue = "char";
                 argTypeValue = "int";
@@ -246,14 +261,17 @@ public final class EnumGenerator
 
             case STRING:
             case MULTIPLEVALUESTRING:
+            case MULTIPLESTRINGVALUE:
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
+            case LANGUAGE:
             case UTCTIMEONLY:
             case UTCDATEONLY:
             case MONTHYEAR:
                 return '"' + representation + '"';
 
+            case MULTIPLECHARVALUE:
             case CHAR:
                 if (representation.length() > 1)
                 {

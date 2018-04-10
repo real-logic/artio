@@ -21,6 +21,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.dictionary.StandardFixConstants;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
@@ -38,6 +39,7 @@ import java.util.Objects;
 
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.StandardFixConstants.MIN_MESSAGE_SIZE;
 import static uk.co.real_logic.artio.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.DisconnectReason.*;
@@ -60,9 +62,7 @@ class ReceiverEndPoint
     private static final char INVALID_MESSAGE_TYPE = '-';
 
     private static final byte BODY_LENGTH_FIELD = 9;
-
-    private static final int COMMON_PREFIX_LENGTH = "8=FIX.4.2 ".length();
-    private static final int START_OF_BODY_LENGTH = COMMON_PREFIX_LENGTH + 2;
+    private static final byte BEGIN_STRING_FIELD = 8;
 
     private static final byte CHECKSUM0 = 1;
     private static final byte CHECKSUM1 = (byte)'1';
@@ -143,7 +143,6 @@ class ReceiverEndPoint
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
         buffer = new MutableAsciiBuffer(byteBuffer);
-
         // Initiator sessions are persistent if the sequence numbers are expected to be persistent.
         if (connectionType == INITIATOR)
         {
@@ -204,34 +203,32 @@ class ReceiverEndPoint
         return dataRead;
     }
 
+
     private int frameMessages()
     {
         int offset = 0;
         while (true)
         {
-            final int startOfBodyLength = offset + START_OF_BODY_LENGTH;
-            if (usedBufferData < startOfBodyLength)
+            if (usedBufferData < offset + StandardFixConstants.MIN_MESSAGE_SIZE) // Need more data
             {
                 // Need more data
                 break;
             }
-
             try
             {
-                if (invalidBodyLengthTag(offset))
+                final int startOfBodyLength = scanForBodyLength(offset);
+                if (startOfBodyLength == UNKNOWN_INDEX)
                 {
-                    invalidateMessage(offset);
                     return offset;
                 }
 
                 final int endOfBodyLength = scanEndOfBodyLength(startOfBodyLength);
-                if (endOfBodyLength == UNKNOWN_INDEX)
+                if (endOfBodyLength == UNKNOWN_INDEX) // Need more data
                 {
-                    // Need more data
                     break;
                 }
 
-                final int startOfChecksumTag = endOfBodyLength + getBodyLength(offset, endOfBodyLength);
+                final int startOfChecksumTag = endOfBodyLength + getBodyLength(startOfBodyLength, endOfBodyLength);
 
                 final int endOfChecksumTag = startOfChecksumTag + 3;
                 if (endOfChecksumTag >= usedBufferData)
@@ -316,10 +313,39 @@ class ReceiverEndPoint
         return buffer.scan(startOfChecksumValue, usedBufferData - 1, START_OF_HEADER);
     }
 
+    private int scanForBodyLength(final int offset)
+    {
+        if (invalidTag(offset, BEGIN_STRING_FIELD))
+        {
+            invalidateMessage(offset);
+            return UNKNOWN_INDEX;
+        }
+        final int endOfCommonPrefix = scanNextField(offset + 2);
+        if (endOfCommonPrefix == UNKNOWN_INDEX)
+        {
+            // no header end within MIN_MESSAGE_SIZE
+            invalidateMessage(offset);
+            return UNKNOWN_INDEX;
+        }
+        final int startOfBodyTag = endOfCommonPrefix + 1;
+        if (invalidTag(startOfBodyTag, BODY_LENGTH_FIELD))
+        {
+            invalidateMessage(offset);
+            return UNKNOWN_INDEX;
+        }
+        return startOfBodyTag + 2;
+    }
+
     private int scanEndOfBodyLength(final int startOfBodyLength)
     {
         return buffer.scan(startOfBodyLength + 1, usedBufferData - 1, START_OF_HEADER);
     }
+
+    private int scanNextField(final int startScan)
+    {
+        return buffer.scan(startScan + 1, usedBufferData - 1, START_OF_HEADER);
+    }
+
 
     private boolean checkSessionId(final int offset, final int length)
     {
@@ -412,17 +438,17 @@ class ReceiverEndPoint
         return buffer.getMessageType(start + 1, 2);
     }
 
-    private int getBodyLength(final int offset, final int endOfBodyLength)
+    private int getBodyLength(final int startOfBodyLength, final int endOfBodyLength)
     {
-        return buffer.getNatural(offset + START_OF_BODY_LENGTH, endOfBodyLength);
+        return buffer.getNatural(startOfBodyLength, endOfBodyLength);
     }
 
-    private boolean invalidBodyLengthTag(final int offset)
+    private boolean invalidTag(final int startOfBodyTag, final byte tagId)
     {
         try
         {
-            return buffer.getDigit(offset + COMMON_PREFIX_LENGTH) != BODY_LENGTH_FIELD ||
-                buffer.getChar(offset + COMMON_PREFIX_LENGTH + 1) != '=';
+            return buffer.getDigit(startOfBodyTag) != tagId ||
+                   buffer.getChar(startOfBodyTag + 1) != '=';
         }
         catch (final IllegalArgumentException ex)
         {
@@ -440,7 +466,8 @@ class ReceiverEndPoint
 
     private void invalidateMessage(final int offset)
     {
-        DebugLogger.log(FIX_MESSAGE, "%s", buffer, offset, COMMON_PREFIX_LENGTH);
+        DebugLogger.log(FIX_MESSAGE, "%s", buffer, offset, MIN_MESSAGE_SIZE);
+        saveInvalidMessage(offset);
     }
 
     private boolean saveInvalidMessage(final int offset, final int startOfChecksumTag)

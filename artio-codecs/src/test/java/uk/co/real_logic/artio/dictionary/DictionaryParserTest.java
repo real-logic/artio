@@ -46,6 +46,7 @@ public class DictionaryParserTest
     @Test
     public void shouldParseVersionNumbers()
     {
+        assertEquals("FIXR", dictionary.specType());
         assertEquals(7, dictionary.majorVersion());
         assertEquals(2, dictionary.minorVersion());
     }
@@ -83,7 +84,7 @@ public class DictionaryParserTest
     @Test
     public void shouldParseAllFields()
     {
-        assertEquals(37, dictionary.fields().size());
+        assertEquals(38, dictionary.fields().size());
     }
 
     @Test
@@ -106,7 +107,7 @@ public class DictionaryParserTest
     @Test
     public void shouldParseAllEnum()
     {
-        assertEquals(9, countEnumFields());
+        assertEquals(10, countEnumFields());
     }
 
     @Test
@@ -205,7 +206,7 @@ public class DictionaryParserTest
 
     private Dictionary parseExample() throws Exception
     {
-        return new DictionaryParser().parse(DictionaryParserTest.class.getResourceAsStream(EXAMPLE_FILE));
+        return new DictionaryParser().parse(DictionaryParserTest.class.getResourceAsStream(EXAMPLE_FILE), null);
     }
 
     private <T> Matcher<T> withElement(final Matcher<?> valueMatcher)
