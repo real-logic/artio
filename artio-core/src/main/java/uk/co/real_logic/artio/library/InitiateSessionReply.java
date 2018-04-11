@@ -41,7 +41,10 @@ class InitiateSessionReply extends LibraryReply<Session>
     {
         super(libraryPoller, latestReplyArrivalTime);
         this.configuration = configuration;
-        sendMessage();
+        if (libraryPoller.isConnected())
+        {
+            sendMessage();
+        }
     }
 
     private void sendMessage()

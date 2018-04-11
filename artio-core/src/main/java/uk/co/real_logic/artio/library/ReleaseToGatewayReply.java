@@ -32,7 +32,10 @@ class ReleaseToGatewayReply extends LibraryReply<SessionReplyStatus>
     {
         super(libraryPoller, latestReplyArrivalTime);
         this.session = session;
-        sendMessage();
+        if (libraryPoller.isConnected())
+        {
+            sendMessage();
+        }
     }
 
     private void sendMessage()

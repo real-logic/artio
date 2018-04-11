@@ -40,7 +40,10 @@ class RequestSessionReply extends LibraryReply<SessionReplyStatus>
         this.sessionId = sessionId;
         this.lastReceivedSequenceNumber = lastReceivedSequenceNumber;
         this.sequenceIndex = sequenceIndex;
-        sendMessage();
+        if (libraryPoller.isConnected())
+        {
+            sendMessage();
+        }
     }
 
     private void sendMessage()

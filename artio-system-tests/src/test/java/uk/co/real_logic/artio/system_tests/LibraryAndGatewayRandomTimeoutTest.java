@@ -28,6 +28,8 @@ import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
 
 import java.io.File;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.instanceOf;
@@ -56,7 +58,7 @@ public class LibraryAndGatewayRandomTimeoutTest
     }
 
     @After
-    public void close() throws Exception
+    public void close()
     {
         closeAll(initiatingLibrary, initiatingEngine);
         cleanupMediaDriver(mediaDriver);
@@ -80,19 +82,17 @@ public class LibraryAndGatewayRandomTimeoutTest
         launchLibrary();
         initiatingEngine.close();
 
-        final Reply<Session> reply1 = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
-        awaitLibraryReply(initiatingLibrary, reply1);
+        final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+        awaitLibraryReply(initiatingLibrary, reply);
 
-        final Reply<Session> reply = reply1;
         assertEquals(TIMED_OUT, reply.state());
     }
 
     private void initiateResultsInError()
     {
-        final Reply<Session> reply1 = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
-        awaitLibraryReply(initiatingLibrary, reply1);
+        final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+        awaitLibraryReply(initiatingLibrary, reply);
 
-        final Reply<Session> reply = reply1;
         assertEquals(ERRORED, reply.state());
         assertThat(reply.error(), instanceOf(FixGatewayException.class));
     }

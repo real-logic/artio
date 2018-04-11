@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.library;
 
+import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.messages.GatewayError;
 
@@ -29,7 +30,6 @@ import uk.co.real_logic.artio.messages.GatewayError;
 abstract class LibraryReply<T> implements Reply<T>
 {
     private final long latestReplyArrivalTimeInMs;
-
     final LibraryPoller libraryPoller;
 
     long correlationId;
@@ -41,7 +41,15 @@ abstract class LibraryReply<T> implements Reply<T>
     {
         this.libraryPoller = libraryPoller;
         this.latestReplyArrivalTimeInMs = latestReplyArrivalTimeInMs;
-        register();
+
+        if (libraryPoller.isConnected())
+        {
+            register();
+        }
+        else
+        {
+            onError(new FixGatewayException("Not connected to the Gateway"));
+        }
     }
 
     protected void register()
