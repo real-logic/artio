@@ -28,8 +28,6 @@ import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
 
 import java.io.File;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.LockSupport;
 
 import static java.util.Collections.singletonList;
 import static org.hamcrest.Matchers.instanceOf;
