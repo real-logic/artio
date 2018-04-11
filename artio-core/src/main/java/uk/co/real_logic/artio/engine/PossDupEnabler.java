@@ -130,7 +130,7 @@ public class PossDupEnabler
                     newBodyLength,
                     newLength))
                 {
-                    return commit();
+                    return commit(true);
                 }
                 else
                 {
@@ -159,7 +159,7 @@ public class PossDupEnabler
                 setPossDupFlag(possDupSrcOffset, messageOffset, writeOffset, writeBuffer);
                 updateSendingTime(messageOffset);
 
-                return commit();
+                return commit(false);
             }
             catch (final Exception ex)
             {
@@ -197,8 +197,9 @@ public class PossDupEnabler
         }
     }
 
-    private Action commit()
+    private Action commit(final boolean hasAlteredBodyLength)
     {
+        final int logLengthOffset = hasAlteredBodyLength ? FRAME_LENGTH : 0;
         if (isProcessingFragmentedMessage())
         {
             int fragmentOffset = FRAGMENTED_MESSAGE_BUFFER_OFFSET;
@@ -208,8 +209,8 @@ public class PossDupEnabler
                 CATCHUP,
                 "Resending: %s%n",
                 fragmentedMessageBuffer,
-                fragmentOffset + FRAME_LENGTH,
-                fragmentedMessageLength - FRAME_LENGTH);
+                fragmentOffset + logLengthOffset,
+                fragmentedMessageLength - logLengthOffset);
 
             while (fragmentedMessageLength > 0)
             {
@@ -254,8 +255,8 @@ public class PossDupEnabler
                 CATCHUP,
                 "Resending: %s%n",
                 buffer,
-                offset + FRAME_LENGTH,
-                bufferClaim.length() - FRAME_LENGTH);
+                offset + logLengthOffset,
+                bufferClaim.length() - logLengthOffset);
 
             onPreCommit.onPreCommit(buffer, offset);
             bufferClaim.commit();
