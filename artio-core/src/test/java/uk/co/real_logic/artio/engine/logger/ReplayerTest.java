@@ -33,6 +33,7 @@ import org.mockito.stubbing.OngoingStubbing;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.*;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
 import uk.co.real_logic.artio.replication.ClusterableSubscription;
@@ -95,7 +96,8 @@ public class ReplayerTest extends AbstractLogTest
             MAX_CLAIM_ATTEMPTS,
             subscription,
             DEFAULT_NAME_PREFIX,
-            clock);
+            clock,
+            EngineConfiguration.DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES);
 
         verify(publication).maxPayloadLength();
     }

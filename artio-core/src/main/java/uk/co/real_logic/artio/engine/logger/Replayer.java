@@ -30,6 +30,7 @@ import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.*;
+import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.engine.PossDupEnabler;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.ProtocolHandler;
@@ -37,6 +38,8 @@ import uk.co.real_logic.artio.protocol.ProtocolSubscription;
 import uk.co.real_logic.artio.replication.ClusterableSubscription;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
+
+import java.util.Set;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
@@ -58,18 +61,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     public static final int POLL_LIMIT = 10;
     public static final int MOST_RECENT_MESSAGE = 0;
 
-    private static final IntHashSet ADMIN_MESSAGE_TYPES = new IntHashSet();
     private static final int NONE = -1;
-
-    static
-    {
-        ADMIN_MESSAGE_TYPES.add(LogonDecoder.MESSAGE_TYPE);
-        ADMIN_MESSAGE_TYPES.add(LogoutDecoder.MESSAGE_TYPE);
-        ADMIN_MESSAGE_TYPES.add(ResendRequestDecoder.MESSAGE_TYPE);
-        ADMIN_MESSAGE_TYPES.add(HeartbeatDecoder.MESSAGE_TYPE);
-        ADMIN_MESSAGE_TYPES.add(TestRequestDecoder.MESSAGE_TYPE);
-        ADMIN_MESSAGE_TYPES.add(SequenceResetDecoder.MESSAGE_TYPE);
-    }
 
     private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
@@ -95,6 +87,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     private final int maxClaimAttempts;
     private final ClusterableSubscription subscription;
     private final String agentNamePrefix;
+    private final IntHashSet gapFillMessageTypes;
 
     private int currentMessageOffset;
     private int currentMessageLength;
@@ -115,7 +108,8 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         final int maxClaimAttempts,
         final ClusterableSubscription subscription,
         final String agentNamePrefix,
-        final EpochClock clock)
+        final EpochClock clock,
+        final Set<String> gapfillOnReplayMessageTypes)
     {
         this.replayQuery = replayQuery;
         this.publication = publication;
@@ -134,6 +128,10 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
             this::onException,
             clock,
             publication.maxPayloadLength());
+
+        gapFillMessageTypes = new IntHashSet();
+        gapfillOnReplayMessageTypes.forEach(messageTypeAsString ->
+            gapFillMessageTypes.add(GenerationUtil.packMessageType(messageTypeAsString)));
     }
 
     private void onPreCommit(final MutableDirectBuffer buffer, final int offset)
@@ -265,7 +263,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         fixHeader.decode(asciiBuffer, messageOffset, messageLength);
         final int msgSeqNum = fixHeader.msgSeqNum();
 
-        if (ADMIN_MESSAGE_TYPES.contains(fixMessage.messageType()))
+        if (gapFillMessageTypes.contains(fixMessage.messageType()))
         {
             if (beginGapFillSeqNum == NONE)
             {

@@ -555,7 +555,8 @@ public class DecoderGenerator extends Generator
     {
         return String.format(
             "    public static final int MESSAGE_TYPE = %1$d;\n\n" +
-            "    public static final byte[] MESSAGE_TYPE_BYTES = \"%2$s\".getBytes(US_ASCII);\n\n",
+            "    public static final String MESSAGE_TYPE_AS_STRING = \"%2$s\";\n\n" +
+            "    public static final byte[] MESSAGE_TYPE_BYTES = MESSAGE_TYPE_AS_STRING.getBytes(US_ASCII);\n\n",
             packedType,
             fullType);
     }

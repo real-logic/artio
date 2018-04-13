@@ -21,6 +21,7 @@ import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
 import uk.co.real_logic.artio.replication.ClusterConfiguration;
 import uk.co.real_logic.artio.replication.RoleHandler;
@@ -29,7 +30,10 @@ import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 
 import static java.lang.Integer.getInteger;
@@ -136,6 +140,20 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final short NO_NODE_ID = -1;
     public static final long DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS = 10_000;
 
+    /** Unmodifiable set of defaults, please make a copy if you wish to modify them. */
+    public static final Set<String> DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES;
+    static
+    {
+        final Set<String> defaultGapFillOnReplayMessageTypes = new HashSet<>();
+        defaultGapFillOnReplayMessageTypes.add(LogonDecoder.MESSAGE_TYPE_AS_STRING);
+        defaultGapFillOnReplayMessageTypes.add(LogoutDecoder.MESSAGE_TYPE_AS_STRING);
+        defaultGapFillOnReplayMessageTypes.add(ResendRequestDecoder.MESSAGE_TYPE_AS_STRING);
+        defaultGapFillOnReplayMessageTypes.add(HeartbeatDecoder.MESSAGE_TYPE_AS_STRING);
+        defaultGapFillOnReplayMessageTypes.add(TestRequestDecoder.MESSAGE_TYPE_AS_STRING);
+        defaultGapFillOnReplayMessageTypes.add(SequenceResetDecoder.MESSAGE_TYPE_AS_STRING);
+        DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES = Collections.unmodifiableSet(defaultGapFillOnReplayMessageTypes);
+    }
+
     private String host = null;
     private int port;
     private int replayIndexFileSize = getInteger(REPLAY_INDEX_FILE_SIZE_PROP, DEFAULT_REPLAY_INDEX_FILE_SIZE);
@@ -151,6 +169,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private MappedFile sentSequenceNumberIndex;
     private MappedFile receivedSequenceNumberIndex;
     private MappedFile sessionIdBuffer;
+    private Set<String> gapfillOnReplayMessageTypes = new HashSet<>(DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES);
     private String clusterAeronChannel = null;
     private short nodeId = NO_NODE_ID;
     private IntHashSet otherNodes = new IntHashSet();
@@ -501,6 +520,27 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Sets the types of message that are gapfilled instead of replayed.
+     *
+     * When a resend request (2) arrives the gateway can choose to gap fill certain messages
+     * instead of replaying them. A gap fill is implemented by sending a sequence reset message (4)
+     * with it's gap fill flag set to true. This tells the FIX counter party that we won't be resending
+     * those messages.
+     *
+     * By default Artio only gap fills administrative messages as the FIX spec demands. This method allows
+     * you to customise it according to your needs.
+     *
+     * @see EngineConfiguration#DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES
+     * @param gapfillOnReplayMessageTypes the message types to gap fill
+     * @return this
+     */
+    public EngineConfiguration gapfillOnReplayMessageTypes(final Set<String> gapfillOnReplayMessageTypes)
+    {
+        this.gapfillOnReplayMessageTypes = gapfillOnReplayMessageTypes;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -604,6 +644,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public MappedFile sessionIdBuffer()
     {
         return sessionIdBuffer;
+    }
+
+    public Set<String> gapfillOnReplayMessageTypes()
+    {
+        return gapfillOnReplayMessageTypes;
     }
 
     public int senderMaxBytesInBuffer()
