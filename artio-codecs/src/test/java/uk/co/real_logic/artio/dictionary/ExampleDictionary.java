@@ -255,6 +255,9 @@ public final class ExampleDictionary
     public static final String EG_NO_OPTIONAL_FIELDS_MESSAGE =
         "8=FIX.4.4\0019=0049\00135=Z\0011001=USD\0011002=N\0011003=US\00110=209\001";
 
+    public static final String EG_HIGH_NUMBER_FIELD_MESSAGE =
+        "8=FIX.4.4\0019=0049\00135=Z\0019001=1\0011001=USD\0011002=N\0011003=US\00110=209\001";
+
     public static final int TEST_REQ_ID_TAG = 112;
 
     public static final String OTHER_MESSAGE_TYPE = "AB";
@@ -345,6 +348,7 @@ public final class ExampleDictionary
         fieldsMessage.optionalEntry(registerField(messageEgFields, 1004, "OptionalCurrencyField", CURRENCY));
         fieldsMessage.optionalEntry(registerField(messageEgFields, 1005, "OptionalExchangeField", EXCHANGE));
         fieldsMessage.optionalEntry(registerField(messageEgFields, 1006, "OptionalCountryField", COUNTRY));
+        fieldsMessage.optionalEntry(registerField(messageEgFields, 9001, "HighNumberField", INT));
 
         final List<Message> messages = asList(heartbeat, otherMessage, fieldsMessage);
 

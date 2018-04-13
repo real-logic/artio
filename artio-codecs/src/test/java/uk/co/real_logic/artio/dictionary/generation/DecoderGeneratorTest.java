@@ -735,6 +735,18 @@ public class DecoderGeneratorTest
         assertValid(decoder);
     }
 
+    @Test
+    public void shouldSupportHighNumberedFields() throws Exception
+    {
+        final Decoder decoder = (Decoder)fieldsMessage.newInstance();
+        decode(EG_HIGH_NUMBER_FIELD_MESSAGE, decoder);
+
+        assertValid(decoder);
+
+        final int highNumberField = getInt(decoder, "highNumberField");
+        assertEquals(highNumberField, 1);
+    }
+
     private void assertRepeatingGroupAndFieldsDecoded(final Decoder decoder) throws Exception
     {
         assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
