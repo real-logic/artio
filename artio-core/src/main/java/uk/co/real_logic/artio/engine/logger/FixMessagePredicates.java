@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.BufferAsciiSequence;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import java.util.Arrays;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
@@ -51,8 +52,13 @@ public final class FixMessagePredicates
     {
         return (message, buffer, offset, length, header) ->
         {
+            final int actingVersion = message.sbeSchemaVersion();
+            final int actingBlockLength = message.sbeBlockLength();
+
             if (predicate.test(message))
             {
+                // Rewrap incase the predicate.test() method has altered the limit()
+                message.wrap(buffer, offset, actingBlockLength, actingVersion);
                 consumer.onMessage(message, buffer, offset, length, header);
             }
         };
