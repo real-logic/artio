@@ -29,9 +29,9 @@ import java.io.PrintStream;
 
 /**
  * Eg: -Dlogging.dir=/home/richard/monotonic/Fix-Engine/artio-system-tests/client-logs \
- * ArchivePrinter 'UDP-00000000-0-7f000001-10048' 0
+ * uk.co.real_logic.artio.engine.logger.RawArchivePrinter 'UDP-00000000-0-7f000001-10048' 0
  */
-public class ArchivePrinter implements FragmentHandler
+public class RawArchivePrinter implements FragmentHandler
 {
     private static final int CHANNEL_ARG = 0;
     private static final int ID_ARG = 1;
@@ -52,10 +52,10 @@ public class ArchivePrinter implements FragmentHandler
         final EngineConfiguration configuration = new EngineConfiguration();
         final String logFileDir = configuration.logFileDir();
         final ArchiveScanner scanner = new ArchiveScanner(logFileDir);
-        scanner.forEachFragment(streamId, new ArchivePrinter(System.out), Throwable::printStackTrace);
+        scanner.forEachFragment(streamId, new RawArchivePrinter(System.out), Throwable::printStackTrace);
     }
 
-    public ArchivePrinter(final PrintStream output)
+    public RawArchivePrinter(final PrintStream output)
     {
         this.output = output;
     }

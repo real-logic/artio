@@ -60,13 +60,31 @@ public final class FixMessagePredicates
      *
      * @return the resulting predicate
      */
-    public static FixMessagePredicate between(final long beginTimestampInclusive, final long endTimestampExclusive)
+    public static FixMessagePredicate between(
+        final long beginTimestampInclusiveInMs,
+        final long endTimestampExclusiveInMs)
     {
-        return (message) ->
-        {
-            final long timestamp = message.timestamp();
-            return timestamp >= beginTimestampInclusive && timestamp < endTimestampExclusive;
-        };
+        return from(beginTimestampInclusiveInMs).and(to(endTimestampExclusiveInMs));
+    }
+
+    /**
+     * Filters a timestamp from a given begin time.
+     *
+     * @return the resulting predicate
+     */
+    public static FixMessagePredicate from(final long beginTimestampInclusiveInMs)
+    {
+        return (message) -> message.timestamp() >= beginTimestampInclusiveInMs;
+    }
+
+    /**
+     * Filters a timestamp to a given end time.
+     *
+     * @return the resulting predicate
+     */
+    public static FixMessagePredicate to(final long endTimestampExclusiveInMs)
+    {
+        return (message) -> message.timestamp() < endTimestampExclusiveInMs;
     }
 
     /**
@@ -154,5 +172,10 @@ public final class FixMessagePredicates
             sequence.wrap(buffer, 0, length);
             return pattern.matcher(sequence).matches();
         };
+    }
+
+    public static FixMessagePredicate alwaysTrue()
+    {
+        return message -> true;
     }
 }
