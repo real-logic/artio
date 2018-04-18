@@ -28,6 +28,10 @@ import static uk.co.real_logic.artio.engine.logger.FixArchiveScanner.MessageType
 import static uk.co.real_logic.artio.engine.logger.FixMessagePredicates.*;
 
 /**
+ * Eg:
+ * java uk.co.real_logic.artio.engine.logger.FixArchivePrinter \
+ *   --log-file-dir=artio-system-tests/acceptor-logs/ \
+ *   --aeron-channel=aeron:ipc
  */
 public final class FixArchivePrinter
 {
@@ -43,8 +47,25 @@ public final class FixArchivePrinter
         for (final String arg : args)
         {
             final int eqIndex = arg.indexOf('=');
-            final String optionName = arg.substring(2, eqIndex);
-            final String optionValue = arg.substring(eqIndex);
+            final String optionName = eqIndex != -1 ? arg.substring(2, eqIndex) : arg;
+
+            // Options without arguments
+            switch (optionName)
+            {
+                case "help":
+                    printHelp();
+                    return;
+            }
+
+            // Options with arguments
+            if (eqIndex == -1)
+            {
+                System.err.println("--help is the only option that doesn't take a value");
+                printHelp();
+                System.exit(-1);
+            }
+
+            final String optionValue = arg.substring(eqIndex + 1);
 
             switch (optionName)
             {
@@ -96,14 +117,10 @@ public final class FixArchivePrinter
                 case "aeron-channel":
                     aeronChannel = optionValue;
                     break;
-
-                case "help":
-                    printHelp();
-                    return;
             }
         }
 
-        requiredArgument(logFileDir, "log-file-directory");
+        requiredArgument(logFileDir, "log-file-dir");
         requiredArgument(aeronChannel, "aeron-channel");
 
         if (headerPredicate != null)
@@ -132,6 +149,7 @@ public final class FixArchivePrinter
     private static void printHelp()
     {
         System.out.println("FixArchivePrinter Options");
+        System.out.println("All options are specified in the form: --optionName=optionValue");
 
         printOption(
             "log-file-dir",
@@ -195,7 +213,7 @@ public final class FixArchivePrinter
 
     private static void printOption(final String name, final String description, final boolean required)
     {
-        System.out.printf("  --%15s - %s, [%s] %n", name, description, required ? "required" : "optional");
+        System.out.printf("  --%-20s [%s] - %s%n", name, required ? "required" : "optional", description);
     }
 
     private static <T> Predicate<T> safeAnd(final Predicate<T> left, final Predicate<T> right)
