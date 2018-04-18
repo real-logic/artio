@@ -24,7 +24,6 @@ import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.BufferAsciiSequence;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import java.util.Arrays;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;

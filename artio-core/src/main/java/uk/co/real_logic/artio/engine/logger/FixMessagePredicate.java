@@ -17,8 +17,6 @@ package uk.co.real_logic.artio.engine.logger;
 
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 
-import java.util.function.Predicate;
-
 /**
  * A criteria for filtering fix messages.
  *
