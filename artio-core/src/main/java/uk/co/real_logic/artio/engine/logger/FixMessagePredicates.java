@@ -24,6 +24,9 @@ import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.BufferAsciiSequence;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import java.util.function.Function;
+import java.util.function.Predicate;
+import java.util.function.ToIntFunction;
 import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -132,8 +135,56 @@ public final class FixMessagePredicates
         final String senderCompId,
         final String targetCompId)
     {
-        final char[] expectedSenderCompId = senderCompId.toCharArray();
-        final char[] expectedTargetCompId = targetCompId.toCharArray();
+        return whereHeader(senderCompIdOf(senderCompId).and(targetCompIdOf(targetCompId)));
+    }
+
+    public static Predicate<HeaderDecoder> senderCompIdOf(final String senderCompId)
+    {
+        return headerMatches(senderCompId, HeaderDecoder::senderCompID, HeaderDecoder::senderCompIDLength);
+    }
+
+    public static Predicate<HeaderDecoder> targetCompIdOf(final String targetCompId)
+    {
+        return headerMatches(targetCompId, HeaderDecoder::targetCompID, HeaderDecoder::targetCompIDLength);
+    }
+
+    public static Predicate<HeaderDecoder> senderSubIdOf(final String senderSubId)
+    {
+        return headerMatches(senderSubId, HeaderDecoder::senderSubID, HeaderDecoder::senderSubIDLength);
+    }
+
+    public static Predicate<HeaderDecoder> targetSubIdOf(final String targetSubId)
+    {
+        return headerMatches(targetSubId, HeaderDecoder::targetSubID, HeaderDecoder::targetSubIDLength);
+    }
+
+    public static Predicate<HeaderDecoder> senderLocationIdOf(final String senderLocationId)
+    {
+        return headerMatches(senderLocationId, HeaderDecoder::senderLocationID, HeaderDecoder::senderLocationIDLength);
+    }
+
+    public static Predicate<HeaderDecoder> targetLocationIdOf(final String targetLocationId)
+    {
+        return headerMatches(targetLocationId, HeaderDecoder::targetLocationID, HeaderDecoder::targetLocationIDLength);
+    }
+
+    public static Predicate<HeaderDecoder> headerMatches(
+        final String value,
+        final Function<HeaderDecoder, char[]> charExtractor,
+        final ToIntFunction<HeaderDecoder> lengthExtractor)
+    {
+        final char[] expectedChars = value.toCharArray();
+        return header ->
+        {
+            final char[] actualChars = charExtractor.apply(header);
+            final int length = lengthExtractor.applyAsInt(header);
+            return CodecUtil.equals(actualChars, expectedChars, length);
+        };
+    }
+
+    public static FixMessagePredicate whereHeader(
+        final Predicate<HeaderDecoder> matches)
+    {
         final HeaderDecoder header = new HeaderDecoder();
         final ExpandableArrayBuffer buffer = new ExpandableArrayBuffer(1024);
         final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
@@ -144,8 +195,7 @@ public final class FixMessagePredicates
             message.getBody(buffer, 0, length);
             asciiBuffer.wrap(buffer);
             header.decode(asciiBuffer, 0, length);
-            return CodecUtil.equals(header.senderCompID(), expectedSenderCompId, header.senderCompIDLength()) &&
-                CodecUtil.equals(header.targetCompID(), expectedTargetCompId, header.targetCompIDLength());
+            return matches.test(header);
         };
     }
 

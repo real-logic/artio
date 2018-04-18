@@ -15,46 +15,30 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.engine.logger.FixArchiveScanner.MessageType;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
-import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.replication.StreamIdentifier;
-import uk.co.real_logic.artio.sbe_util.MessageDumper;
-import uk.co.real_logic.artio.sbe_util.MessageSchemaIr;
-import uk.co.real_logic.sbe.json.JsonPrinter;
 
-import java.io.PrintStream;
-import java.time.ZonedDateTime;
+import java.util.function.Predicate;
 
 import static java.lang.Long.parseLong;
 import static uk.co.real_logic.artio.engine.logger.FixArchiveScanner.MessageType.SENT;
 import static uk.co.real_logic.artio.engine.logger.FixMessagePredicates.*;
 
 /**
- * Eg: -Dlogging.dir=/home/richard/monotonic/Fix-Engine/artio-system-tests/client-logs \
- * uk.co.real_logic.artio.engine.logger.ArchivePrinter
  */
-public class FixArchivePrinter
+public final class FixArchivePrinter
 {
     public static void main(final String[] args)
     {
-        if (args.length < 2)
-        {
-            System.err.println("Usage: ArchivePrinter <channel> <streamId>");
-            System.exit(-1);
-        }
-
         String logFileDir = null;
+        String aeronChannel = null;
         MessageType direction = SENT;
-        FixMessageConsumer consumer = FixArchivePrinter::print;
         FixMessagePredicate predicate = FixMessagePredicates.alwaysTrue();
 
-        String senderCompId = null;
-        String targetCompId = null;
+        Predicate<HeaderDecoder> headerPredicate = null;
 
         for (final String arg : args)
         {
@@ -78,36 +62,145 @@ public class FixArchivePrinter
                     break;
 
                 case "sender-comp-id":
-                    senderCompId = optionValue;
+                    headerPredicate = safeAnd(headerPredicate, senderCompIdOf(optionValue));
                     break;
 
                 case "target-comp-id":
-                    targetCompId = optionValue;
+                    headerPredicate = safeAnd(headerPredicate, targetCompIdOf(optionValue));
+                    break;
+
+                case "sender-sub-id":
+                    headerPredicate = safeAnd(headerPredicate, senderSubIdOf(optionValue));
+                    break;
+
+                case "target-sub-id":
+                    headerPredicate = safeAnd(headerPredicate, targetSubIdOf(optionValue));
+                    break;
+
+                case "sender-location-id":
+                    headerPredicate = safeAnd(headerPredicate, senderLocationIdOf(optionValue));
+                    break;
+
+                case "target-location-id":
+                    headerPredicate = safeAnd(headerPredicate, targetLocationIdOf(optionValue));
                     break;
 
                 case "direction":
-                    direction = MessageType.valueOf(optionValue);
+                    direction = MessageType.valueOf(optionValue.toUpperCase());
                     break;
 
-                case "log-file-directory":
+                case "log-file-dir":
                     logFileDir = optionValue;
                     break;
+
+                case "aeron-channel":
+                    aeronChannel = optionValue;
+                    break;
+
+                case "help":
+                    printHelp();
+                    return;
             }
         }
 
-        if (logFileDir == null)
-        {
-            System.err.println("Missing required --log-file-directory argument");
-            System.exit(-1);
-        }
+        requiredArgument(logFileDir, "log-file-directory");
+        requiredArgument(aeronChannel, "aeron-channel");
 
-        if (senderCompId != null && targetCompId != null)
+        if (headerPredicate != null)
         {
-            predicate = sessionOf(senderCompId, targetCompId).and(predicate);
+            predicate = whereHeader(headerPredicate).and(predicate);
         }
 
         final FixArchiveScanner scanner = new FixArchiveScanner(logFileDir);
-        scanner.scan("TODO", direction, filterBy(consumer, predicate), Throwable::printStackTrace);
+        scanner.scan(
+            aeronChannel,
+            direction,
+            filterBy(FixArchivePrinter::print, predicate),
+            Throwable::printStackTrace);
+    }
+
+    private static void requiredArgument(final String argument, final String description)
+    {
+        if (argument == null)
+        {
+            System.err.printf("Missing required --%s argument%n", description);
+            printHelp();
+            System.exit(-1);
+        }
+    }
+
+    private static void printHelp()
+    {
+        System.out.println("FixArchivePrinter Options");
+
+        printOption(
+            "log-file-dir",
+            "Specifies the directory to look in, should be the same as your configuration.logFileDir()",
+            true);
+        printOption(
+            "aeron-channel",
+            "Specifies the aeron channel that was used to by the engine",
+            true);
+
+        printOption(
+            "from",
+            "Time in milliseconds that messages are not earlier than",
+            false);
+        printOption(
+            "from",
+            "Time in milliseconds that messages are not earlier than",
+            false);
+        printOption(
+            "to",
+            "Time in milliseconds that messages are not later than",
+            false);
+        printOption(
+            "message-types",
+            "Comma separated list of the message types (35=) that are printed",
+            false);
+        printOption(
+            "sender-comp-id",
+            "Only print messages where the header's sender comp id field matches this",
+            false);
+        printOption(
+            "target-comp-id",
+            "Only print messages where the header's sender comp id field matches this",
+            false);
+        printOption(
+            "sender-sub-id",
+            "Only print messages where the header's sender comp id field matches this",
+            false);
+        printOption(
+            "target-sub-id",
+            "Only print messages where the header's sender comp id field matches this",
+            false);
+        printOption(
+            "sender-location-id",
+            "Only print messages where the header's sender comp id field matches this",
+            false);
+        printOption(
+            "target-location-id",
+            "Only print messages where the header's sender comp id field matches this",
+            false);
+        printOption(
+            "direction",
+            "Only print messages where the direction matches this. Must be either 'sent' or 'received'." +
+            "Defaults to sent.",
+            false);
+        printOption(
+            "help",
+            "Only prints this help message.",
+            false);
+    }
+
+    private static void printOption(final String name, final String description, final boolean required)
+    {
+        System.out.printf("  --%15s - %s, [%s] %n", name, description, required ? "required" : "optional");
+    }
+
+    private static <T> Predicate<T> safeAnd(final Predicate<T> left, final Predicate<T> right)
+    {
+        return left == null ? right : left.and(right);
     }
 
     private static void print(
