@@ -30,9 +30,9 @@ apply plugin: 'signing'
 apply plugin: 'net.researchgate.release'
 apply plugin: 'com.github.johnrengelman.shadow'
 
-def aeronVersion = '1.8.2'
-def agronaVersion = '0.9.15'
-def sbeVersion = '1.7.9'
+def aeronVersion = '1.9.0'
+def agronaVersion = '0.9.16'
+def sbeVersion = '1.7.10'
 
 defaultTasks 'clean', 'build', 'install'
 
