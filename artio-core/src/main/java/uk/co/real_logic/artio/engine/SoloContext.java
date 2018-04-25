@@ -100,8 +100,16 @@ class SoloContext extends EngineContext
 
             final Replayer replayer = newReplayer(replayPublication, outboundArchiveReader);
 
-            archiverSubscription(inboundArchiver, inboundStreamId);
-            archiverSubscription(outboundArchiver, outboundStreamId);
+            if (configuration.logInboundMessages())
+            {
+                archiverSubscription(inboundArchiver, inboundStreamId);
+            }
+
+
+            if (configuration.logOutboundMessages())
+            {
+                archiverSubscription(outboundArchiver, outboundStreamId);
+            }
 
             final List<Agent> agents = new ArrayList<>(archivers);
             agents.add(inboundIndexer);
