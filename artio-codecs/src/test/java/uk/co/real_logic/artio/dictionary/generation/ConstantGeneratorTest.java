@@ -42,7 +42,7 @@ public class ConstantGeneratorTest
         final Map<String, CharSequence> sources = outputManager.getSources();
         //System.out.println(sources);
         final Class<?> constantsClass = compileInMemory(TEST_PACKAGE + "." + ConstantGenerator.CLASS_NAME, sources);
-        constants = constantsClass.newInstance();
+        constants = constantsClass.getConstructor().newInstance();
     }
 
     @Test

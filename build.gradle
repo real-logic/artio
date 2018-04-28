@@ -127,6 +127,9 @@ subprojects {
     javadoc {
         title = '<h1>Artio</h1>'
         options.bottom = '<i>Copyright &#169; 2015-2018 Real Logic Ltd. All Rights Reserved.</i>'
+        if (JavaVersion.current() == JavaVersion.VERSION_1_10) {
+            options.addBooleanOption 'html5', true
+        }
     }
 
     task sourcesJar(type: Jar) {
@@ -425,6 +428,6 @@ if (System.properties["uploadArchives"] != null) {
 }
 
 task wrapper(type: Wrapper) {
-    gradleVersion = '4.6'
+    gradleVersion = '4.7'
     distributionType = 'ALL'
 }

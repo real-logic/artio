@@ -21,6 +21,7 @@ import org.junit.Test;
 import uk.co.real_logic.artio.builder.Printer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 
 import static org.agrona.generation.CompilerUtil.compileInMemory;
@@ -67,8 +68,9 @@ public class PrinterGeneratorTest
         assertThat(string, containsString(STRING_ENCODED_MESSAGE_EXAMPLE));
     }
 
-    private Printer printer() throws InstantiationException, IllegalAccessException
+    private Printer printer()
+        throws InstantiationException, IllegalAccessException, NoSuchMethodException, InvocationTargetException
     {
-        return (Printer)PrinterGeneratorTest.printer.newInstance();
+        return (Printer)PrinterGeneratorTest.printer.getConstructor().newInstance();
     }
 }

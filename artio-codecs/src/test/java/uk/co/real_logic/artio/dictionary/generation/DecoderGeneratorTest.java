@@ -118,7 +118,7 @@ public class DecoderGeneratorTest
     @Test
     public void stringGettersReadFromFields() throws Exception
     {
-        final Decoder decoder = (Decoder)heartbeat.newInstance();
+        final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
         setField(decoder, ON_BEHALF_OF_COMP_ID, ABC);
         setField(decoder, ON_BEHALF_OF_COMP_ID + "Length", 3);
 
@@ -128,14 +128,14 @@ public class DecoderGeneratorTest
     @Test
     public void flagsForOptionalFieldsInitiallyUnset() throws Exception
     {
-        final Object decoder = heartbeat.newInstance();
+        final Object decoder = heartbeat.getConstructor().newInstance();
         assertFalse("hasTestReqId initially true", hasTestReqId(decoder));
     }
 
     @Test(expected = InvocationTargetException.class)
     public void missingOptionalFieldCausesGetterToThrow() throws Exception
     {
-        final Object decoder = heartbeat.newInstance();
+        final Object decoder = heartbeat.getConstructor().newInstance();
 
         Reflection.get(decoder, TEST_REQ_ID);
     }
@@ -375,7 +375,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldGenerateRequiredFieldsDictionary() throws Exception
     {
-        final Decoder decoder = (Decoder)heartbeat.newInstance();
+        final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
         final Object allFieldsField = getRequiredFields(decoder);
         assertThat(allFieldsField, instanceOf(IntHashSet.class));
 
@@ -533,7 +533,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldGenerateAllFieldsSet() throws Exception
     {
-        final Decoder decoder = (Decoder)heartbeat.newInstance();
+        final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
         final Object allFieldsField = getField(decoder, ALL_FIELDS);
         assertThat(allFieldsField, instanceOf(IntHashSet.class));
 
@@ -547,7 +547,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldDecodeDifferentFieldTypes() throws Exception
     {
-        final Decoder decoder = (Decoder)fieldsMessage.newInstance();
+        final Decoder decoder = (Decoder)fieldsMessage.getConstructor().newInstance();
         decode(EG_FIELDS_MESSAGE, decoder);
 
         assertRequiredFieldsMessageFieldsDecoded(decoder, "GBP", "XLON", "GB");
@@ -570,7 +570,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldDecodeDifferentFieldTypesWithoutOptionalFields() throws Exception
     {
-        final Decoder decoder = (Decoder)fieldsMessage.newInstance();
+        final Decoder decoder = (Decoder)fieldsMessage.getConstructor().newInstance();
         decode(EG_NO_OPTIONAL_FIELDS_MESSAGE, decoder);
 
         assertRequiredFieldsMessageFieldsDecoded(decoder, "USD", "N", "US");
@@ -583,7 +583,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldResetDifferentFieldTypes() throws Exception
     {
-        final Decoder decoder = (Decoder)fieldsMessage.newInstance();
+        final Decoder decoder = (Decoder)fieldsMessage.getConstructor().newInstance();
         decode(EG_FIELDS_MESSAGE, decoder);
 
         decoder.reset();
@@ -738,7 +738,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldSupportHighNumberedFields() throws Exception
     {
-        final Decoder decoder = (Decoder)fieldsMessage.newInstance();
+        final Decoder decoder = (Decoder)fieldsMessage.getConstructor().newInstance();
         decode(EG_HIGH_NUMBER_FIELD_MESSAGE, decoder);
 
         assertValid(decoder);
@@ -976,14 +976,14 @@ public class DecoderGeneratorTest
 
     private Decoder decodeHeartbeat(final String example) throws Exception
     {
-        final Decoder decoder = (Decoder)heartbeat.newInstance();
+        final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
         decode(example, decoder);
         return decoder;
     }
 
     private Decoder decodeHeartbeatWithoutValidation(final String example) throws Exception
     {
-        final Decoder decoder = (Decoder)heartbeatWithoutValidation.newInstance();
+        final Decoder decoder = (Decoder)heartbeatWithoutValidation.getConstructor().newInstance();
         decode(example, decoder);
         return decoder;
     }
