@@ -29,7 +29,6 @@ import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import javax.annotation.Generated;
 import java.io.IOException;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
@@ -137,7 +136,6 @@ public abstract class Generator
             .append(importFor(CharArraySet.class))
             .append(importFor(IntHashSet.class))
             .append(importFor(IntHashSet.IntIterator.class))
-            .append(importFor(Generated.class))
             .append(importFor(EncodingException.class))
             .append(importStaticFor(StandardCharsets.class, "US_ASCII"))
             .append(importStaticFor(validationClass, CODEC_VALIDATION_ENABLED));
@@ -155,10 +153,8 @@ public abstract class Generator
         final String interfaceList = interfaces.isEmpty() ? "" : " implements " + String.join(", ", interfaces);
 
         return String.format(
-            "\n\n@Generated(\"%1$s\")\n" +
-            "public %4$sclass %2$s%3$s\n" +
+            "\n\npublic %3$sclass %1$s%2$s\n" +
             "{\n",
-            getClass().getName(),
             className,
             interfaceList,
             isStatic ? "static " : "");
