@@ -965,8 +965,7 @@ public class DecoderGenerator extends Generator
                 "                {\n" +
                 "                    next = new %1$s(trailer);\n" +
                 "                }\n" +
-                "                final int thisGroupEntryLength = position - offset;\n" +
-                "                return thisGroupEntryLength + next.decode(buffer, position, end - position);\n" +
+                "                return position - offset;\n" +
                 "            }\n",
                 decoderClassName(aggregate));
         }
@@ -1035,10 +1034,16 @@ public class DecoderGenerator extends Generator
             "                {\n" +
             "                    %1$s = new %2$s(trailer);\n" +
             "                }\n" +
+            "                %2$s %1$sCurrent = %1$s;\n" +
             "                position = endOfField + 1;\n" +
-            "                position += %1$s.decode(buffer, position, end - endOfField);\n",
+            "                for (int i = 0; i < %3$s && position < end; i++)\n" +
+            "                {\n" +
+            "                    position += %1$sCurrent.decode(buffer, position, end - position);\n" +
+            "                    %1$sCurrent = %1$sCurrent.next();\n" +
+            "                }\n",
             formatPropertyName(group.name()),
-            decoderClassName(group));
+            decoderClassName(group),
+            formatPropertyName(group.numberField().name()));
 
         return decodeField(group.numberField(), parseGroup);
     }
