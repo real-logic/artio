@@ -47,6 +47,10 @@
             <field name="AvgPx" required="Y"/>
             <field name="OpenCloseSettlFlag" required="N"/>
         </message>
+        <message name="DedupeFieldsTest" msgtype="U1" msgcat="app">
+            <component name="NextComponent" required="N"/>
+            <field name="MemberSubID" required="N"/>
+        </message>
     </messages>
     <components>
         <component name="Members">
@@ -203,5 +207,26 @@
             <value enum="5" description="THEORETICAL_PRICE_VALUE"/>
         </field>
 
+        <field number='635' name='ClearingFeeIndicator' type='STRING'>
+            <value enum='B' description='CBOE_MEMBER' />
+            <value enum='C' description='NON_MEMBER_AND_CUSTOMER' />
+            <value enum='E' description='EQUITY_MEMBER_AND_CLEARING_MEMBER' />
+            <value enum='F' description='FULL_AND_ASSOCIATE_MEMBER_TRADING_FOR_OWN_ACCOUNT_AND_AS_FLOOR_BROKERS' />
+            <value enum='H' description='106H_AND_106J_FIRMS' />
+            <value enum='I' description='GIM_IDEM_AND_COM_MEMBERSHIP_INTEREST_HOLDERS' />
+            <value enum='L' description='LESSEE_AND_106F_EMPLOYEES' />
+            <value enum='M' description='ALL_OTHER_OWNERSHIP_TYPES' />
+            <value enum='1' description='1ST_YEAR_DELEGATE_TRADING_FOR_HIS_OWN_ACCOUNT' />
+            <value enum='2' description='2ND_YEAR_DELEGATE_TRADING_FOR_HIS_OWN_ACCOUNT' />
+            <value enum='3' description='3RD_YEAR_DELEGATE_TRADING_FOR_HIS_OWN_ACCOUNT' />
+            <value enum='4' description='4TH_YEAR_DELEGATE_TRADING_FOR_HIS_OWN_ACCOUNT' />
+            <value enum='5' description='5TH_YEAR_DELEGATE_TRADING_FOR_HIS_OWN_ACCOUNT' />
+            <value enum='9' description='6TH_YEAR_AND_BEYOND_DELEGATE_TRADING_FOR_HIS_OWN_ACCOUNT' />
+        </field>
+
+        <field number="2669" name="TrdRegPublicationType" type="INT">
+            <value enum="0" description="Pre-trade transparency waiver"/>
+            <value enum="1" description="Post-trade deferral"/>
+        </field>
     </fields>
 </fix>
