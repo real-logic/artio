@@ -28,11 +28,16 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
+import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -87,8 +92,7 @@ public final class DictionaryParser
         final List<Message> messages = parseMessages(document, fields, components, forwardReferences);
 
         reconnectForwardReferences(forwardReferences, components);
-        simplifyComponentsThatAreJustGroups(components, messages);
-        correctMultiCharacterCharEnums(fields);
+        sanitizeDictionary(fields, components, messages);
 
         if (fixtDictionary != null)
         {
@@ -241,7 +245,7 @@ public final class DictionaryParser
                 final NamedNodeMap attributes = node.getAttributes();
                 final String representation = getValue(attributes, "enum");
                 final String description = getValue(attributes, "description");
-                values.add(new Value(representation, description));
+                values.add(new Value(representation, enumDescriptionToJavaName(description)));
             });
     }
 
@@ -397,5 +401,89 @@ public final class DictionaryParser
                 handler.accept(node);
             }
         }
+    }
+
+    private void sanitizeDictionary(final Map<String, Field> fields,
+        final Map<String, Component> components,
+        final List<Message> messages)
+    {
+        simplifyComponentsThatAreJustGroups(components, messages);
+        correctMultiCharacterCharEnums(fields);
+        removeDuplicateFields(messages);
+    }
+
+    // Some dodgy ECNs extend off-the-shelf QuickFIX dictionary, and include same field into message/group twice:
+    // once via component, once explicitly. Duplicate field can be safely discarded.
+    private void removeDuplicateFields(final List<Message> messages)
+    {
+        for (final Message message : messages)
+        {
+            removeDuplicateFields(message);
+        }
+    }
+
+    private static void removeDuplicateFields(final Aggregate aggregate)
+    {
+        // Collect all fields included via components
+        final Set<String> componentFields = new HashSet<>();
+        try
+        {
+            for (final Entry e : aggregate.entries())
+            {
+                e.forEach(
+                    (field) -> {},
+                    (group) -> removeDuplicateFields(group),
+                    (component) -> component.allChildEntries().forEach((ce) -> componentFields.add(ce.name()))
+                );
+            }
+        }
+        catch (final IOException e)
+        {
+            throw new UncheckedIOException(e);
+        }
+
+        // Now go through all fields listed explicitly, and remove those which are included via components
+        for (final Iterator<Entry> itr = aggregate.entries().iterator(); itr.hasNext(); )
+        {
+            final Entry e = itr.next();
+            if (e.isField() && componentFields.contains(e.name()))
+            {
+                itr.remove();
+            }
+        }
+    }
+
+    private static String enumDescriptionToJavaName(final String enumDescription)
+    {
+        final StringBuilder enumName = new StringBuilder();
+
+        final char firstChar = enumDescription.charAt(0);
+        if (Character.isJavaIdentifierStart(firstChar))
+        {
+            enumName.append(firstChar);
+        }
+        else if (Character.isJavaIdentifierPart(firstChar))
+        {
+            enumName.append('_').append(firstChar);
+        }
+        else
+        {
+            enumName.append('_');
+        }
+
+        for (int i = 1; i < enumDescription.length(); i++)
+        {
+            final char nextChar = enumDescription.charAt(i);
+            if (Character.isJavaIdentifierPart(nextChar))
+            {
+                enumName.append(nextChar);
+            }
+            else
+            {
+                enumName.append('_');
+            }
+        }
+
+        return enumName.toString();
     }
 }

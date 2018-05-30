@@ -23,10 +23,13 @@ import uk.co.real_logic.artio.dictionary.ir.Field.Type;
 import uk.co.real_logic.artio.dictionary.ir.Field.Value;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
+import static uk.co.real_logic.artio.dictionary.ir.Category.APP;
+import static uk.co.real_logic.artio.dictionary.ir.Field.Type.INT;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.STRING;
 import static uk.co.real_logic.artio.util.CustomMatchers.hasFluentProperty;
 
@@ -84,7 +87,7 @@ public class DictionaryParserTest
     @Test
     public void shouldParseAllFields()
     {
-        assertEquals(38, dictionary.fields().size());
+        assertEquals(40, dictionary.fields().size());
     }
 
     @Test
@@ -105,9 +108,46 @@ public class DictionaryParserTest
     }
 
     @Test
+    public void shouldParseEnumFieldWhereDescriptionIsNotAValidJavaIdentifierAtStart()
+    {
+        final Field msgType = field("ClearingFeeIndicator");
+
+        assertNotNull("Hasn't found ClearingFeeIndicator", msgType);
+        assertEquals("ClearingFeeIndicator", msgType.name());
+        assertEquals(635, msgType.number());
+        assertEquals(STRING, msgType.type());
+
+        final List<Value> values = msgType.values();
+
+        assertEquals(new Value("H", "_106H_AND_106J_FIRMS"), values.get(4));
+        assertEquals(new Value("1", "_1ST_YEAR_DELEGATE_TRADING_FOR_HIS_OWN_ACCOUNT"), values.get(8));
+        assertEquals(new Value("2", "_2ND_YEAR_DELEGATE_TRADING_FOR_HIS_OWN_ACCOUNT"), values.get(9));
+        assertEquals(new Value("3", "_3RD_YEAR_DELEGATE_TRADING_FOR_HIS_OWN_ACCOUNT"), values.get(10));
+        assertEquals(new Value("4", "_4TH_YEAR_DELEGATE_TRADING_FOR_HIS_OWN_ACCOUNT"), values.get(11));
+        assertEquals(new Value("5", "_5TH_YEAR_DELEGATE_TRADING_FOR_HIS_OWN_ACCOUNT"), values.get(12));
+        assertEquals(new Value("9", "_6TH_YEAR_AND_BEYOND_DELEGATE_TRADING_FOR_HIS_OWN_ACCOUNT"), values.get(13));
+    }
+
+    @Test
+    public void shouldParseEnumFieldWhereDescriptionIsNotAValidJavaIdentifierInMiddle()
+    {
+        final Field msgType = field("TrdRegPublicationType");
+
+        assertNotNull("Hasn't found TrdRegPublicationType", msgType);
+        assertEquals("TrdRegPublicationType", msgType.name());
+        assertEquals(2669, msgType.number());
+        assertEquals(INT, msgType.type());
+
+        final List<Value> values = msgType.values();
+
+        assertEquals(new Value("0", "Pre_trade_transparency_waiver"), values.get(0));
+        assertEquals(new Value("1", "Post_trade_deferral"), values.get(1));
+    }
+
+    @Test
     public void shouldParseAllEnum()
     {
-        assertEquals(10, countEnumFields());
+        assertEquals(12, countEnumFields());
     }
 
     @Test
@@ -126,7 +166,7 @@ public class DictionaryParserTest
     @Test
     public void shouldParseAllMessages()
     {
-        assertEquals(3, dictionary.messages().size());
+        assertEquals(4, dictionary.messages().size());
     }
 
     @Test
@@ -177,6 +217,20 @@ public class DictionaryParserTest
         final Entry noMemberSubIDs = noMemberIDs.entries().get(1);
         assertFalse(noMemberSubIDs.required());
         assertThat(noMemberSubIDs.element(), instanceOf(Group.class));
+    }
+
+    @Test
+    public void shouldDedupeFieldsIncludedTwice()
+    {
+        final Message testMessage = dictionary.messages().get(3);
+
+        assertEquals("DedupeFieldsTest", testMessage.name());
+        assertEquals(12629, testMessage.packedType());
+        assertEquals(APP, testMessage.category());
+
+        final List<Entry> childEntries = testMessage.allChildEntries().collect(Collectors.toList());
+        assertThat(childEntries.size(), is(1));
+        assertThat(childEntries.get(0), isField("MemberSubID"));
     }
 
     private Component component(final String name)
