@@ -39,7 +39,6 @@ import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.CompletionPosition;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.EngineDescriptorStore;
-import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
@@ -70,9 +69,9 @@ import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static java.util.Collections.emptyList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.collections.CollectionUtil.removeIf;
+import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
 import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.LogTag.APPLICATION_HEARTBEAT;
 import static uk.co.real_logic.artio.LogTag.CLUSTER_MANAGEMENT;
@@ -97,14 +96,7 @@ import static uk.co.real_logic.artio.messages.SessionState.CONNECTED;
  */
 class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 {
-    // TODO(Nick): This is a copy of the one from LibraryPoller,
-    // TODO(Nick): This is a copy of the one from LibraryPoller,
-    // but that one is also private so we can't access. Combine somewhere.
-    // Combine somewhere.
-    static final long NO_CORRELATION_ID = 0;
-
     private static final ByteBuffer CONNECT_ERROR;
-    private static final List<SessionInfo> NO_SESSIONS = emptyList();
 
     static
     {

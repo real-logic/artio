@@ -36,6 +36,9 @@ public class GatewayProcess implements AutoCloseable
     public static final int OUTBOUND_LIBRARY_STREAM = 2;
     public static final int OUTBOUND_REPLAY_STREAM = 3;
 
+    /** Common id used by messages in both engine and library */
+    public static final long NO_CORRELATION_ID = 0;
+
     private static long startTimeInMs = System.currentTimeMillis();
 
     protected CommonConfiguration configuration;

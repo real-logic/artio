@@ -139,7 +139,7 @@ public class Session implements AutoCloseable
 
     private boolean incorrectBeginString = false;
 
-    protected SessionLogonListener logonListener;
+    private SessionLogonListener logonListener;
 
     private int logoutRejectReason = NO_LOGOUT_REJECT_REASON;
 
@@ -181,7 +181,6 @@ public class Session implements AutoCloseable
         this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
 
         this.asciiBuffer = asciiBuffer;
-        this.logonListener = logonListener;
 
         state(state);
         heartbeatIntervalInS(heartbeatIntervalInS);
@@ -917,11 +916,11 @@ public class Session implements AutoCloseable
             heartbeatInterval, newSentSeqNum(), null, null, false, sequenceIndex()));
     }
 
-    protected void notifyLogonListener()
+    void notifyLogonListener()
     {
-        if (null != this.logonListener)
+        if (logonListener != null)
         {
-            this.logonListener.onLogon(this);
+            logonListener.onLogon(this);
         }
     }
 

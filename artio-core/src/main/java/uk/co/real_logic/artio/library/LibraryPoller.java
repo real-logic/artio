@@ -46,6 +46,7 @@ import java.util.function.ToIntFunction;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.util.Objects.requireNonNull;
+import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
@@ -77,8 +78,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
      * Was explicitly closed
      */
     private static final int CLOSED = 4;
-
-    private static final long NO_CORRELATION_ID = 0;
 
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private Session[] sessions = new Session[0];
