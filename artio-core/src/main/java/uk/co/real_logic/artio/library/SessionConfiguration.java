@@ -45,7 +45,8 @@ public final class SessionConfiguration
     private final String targetSubId;
     private final String targetLocationId;
     private final boolean sequenceNumbersPersistent;
-    private final int initialSequenceNumber;
+    private final int initialReceivedSequenceNumber;
+    private final int initialSentSequenceNumber;
     private final long timeoutInMs;
     private final boolean resetSeqNum;
 
@@ -66,7 +67,8 @@ public final class SessionConfiguration
         final String targetSubId,
         final String targetLocationId,
         final boolean sequenceNumbersPersistent,
-        final int initialSequenceNumber,
+        final int initialReceivedSequenceNumber,
+        final int initialSentSequenceNumber,
         final long timeoutInMs,
         final boolean resetSeqNum)
     {
@@ -94,7 +96,8 @@ public final class SessionConfiguration
         this.username = username;
         this.password = password;
         this.sequenceNumbersPersistent = sequenceNumbersPersistent;
-        this.initialSequenceNumber = initialSequenceNumber;
+        this.initialReceivedSequenceNumber = initialReceivedSequenceNumber;
+        this.initialSentSequenceNumber = initialSentSequenceNumber;
         this.resetSeqNum = resetSeqNum;
     }
 
@@ -166,14 +169,14 @@ public final class SessionConfiguration
         return sequenceNumbersPersistent ? SequenceNumberType.PERSISTENT : SequenceNumberType.TRANSIENT;
     }
 
-    public int initialSequenceNumber()
+    public int initialReceivedSequenceNumber()
     {
-        return initialSequenceNumber;
+        return initialReceivedSequenceNumber;
     }
 
-    public boolean hasCustomInitialSequenceNumber()
+    public int initialSentSequenceNumber()
     {
-        return initialSequenceNumber != AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+        return initialSentSequenceNumber;
     }
 
     public long timeoutInMs()
@@ -199,7 +202,8 @@ public final class SessionConfiguration
         private String targetSubId = "";
         private String targetLocationId = "";
         private boolean sequenceNumbersPersistent = DEFAULT_SEQUENCE_NUMBERS_PERSISTENT;
-        private int initialSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+        private int initialReceivedSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+        private int initialSentSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
         private long timeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
         private boolean resetSeqNum = DEFAULT_RESET_SEQ_NUM;
 
@@ -309,7 +313,8 @@ public final class SessionConfiguration
          * @param sequenceNumbersPersistent true to make sequence numbers persistent
          * @return this builder
          *
-         * @see this#initialSequenceNumber(int)
+         * @see this#initialReceivedSequenceNumber(int)
+         * @see this#initialSentSequenceNumber(int)
          */
         public Builder sequenceNumbersPersistent(final boolean sequenceNumbersPersistent)
         {
@@ -318,16 +323,32 @@ public final class SessionConfiguration
         }
 
         /**
-         * Sets the initial sequence number that you use when connecting to an acceptor.
+         * Sets the initial sequence number that you expect from use an acceptor when connecting to it.
          *
-         * @param initialSequenceNumber the msg sequence number to use when you send your logon message.
+         * @param initialReceivedSequenceNumber the msg sequence number to expect from their logon message.
          * @return this builder
          *
          * @see this#sequenceNumbersPersistent(boolean)
+         * @see this#initialSentSequenceNumber(int)
          */
-        public Builder initialSequenceNumber(final int initialSequenceNumber)
+        public Builder initialReceivedSequenceNumber(final int initialReceivedSequenceNumber)
         {
-            this.initialSequenceNumber = initialSequenceNumber;
+            this.initialReceivedSequenceNumber = initialReceivedSequenceNumber;
+            return this;
+        }
+
+        /**
+         * Sets the initial sequence number that you use for your logon message when connecting to an acceptor.
+         *
+         * @param initialSentSequenceNumber the msg sequence number to use when you send your logon message.
+         * @return this builder
+         *
+         * @see this#sequenceNumbersPersistent(boolean)
+         * @see this#initialReceivedSequenceNumber(int)
+         */
+        public Builder initialSentSequenceNumber(final int initialSentSequenceNumber)
+        {
+            this.initialReceivedSequenceNumber = initialSentSequenceNumber;
             return this;
         }
 
@@ -372,7 +393,8 @@ public final class SessionConfiguration
                 targetSubId,
                 targetLocationId,
                 sequenceNumbersPersistent,
-                initialSequenceNumber,
+                initialReceivedSequenceNumber,
+                initialSentSequenceNumber,
                 timeoutInMs,
                 resetSeqNum);
         }

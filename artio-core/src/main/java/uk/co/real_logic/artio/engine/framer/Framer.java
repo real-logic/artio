@@ -102,6 +102,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     // but that one is also private so we can't access. Combine somewhere.
     // Combine somewhere.
     static final long NO_CORRELATION_ID = 0;
+
     private static final ByteBuffer CONNECT_ERROR;
     private static final List<SessionInfo> NO_SESSIONS = emptyList();
 
@@ -603,7 +604,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final String targetSubId,
         final String targetLocationId,
         final SequenceNumberType sequenceNumberType,
-        final int requestedInitialSequenceNumber,
+        final int requestedInitialReceivedSequenceNumber,
+        final int requestedInitialSentSequenceNumber,
         final boolean resetSequenceNumber,
         final String username,
         final String password,

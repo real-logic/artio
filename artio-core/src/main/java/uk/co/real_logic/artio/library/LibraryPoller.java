@@ -42,11 +42,13 @@ import java.util.AbstractList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.ToIntFunction;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 
 final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, AutoCloseable
@@ -252,7 +254,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             configuration.targetLocationId(),
             configuration.sequenceNumberType(),
             configuration.resetSeqNum(),
-            configuration.initialSequenceNumber(),
+            configuration.initialReceivedSequenceNumber(),
+            configuration.initialSentSequenceNumber(),
             configuration.username(),
             configuration.password(),
             this.configuration.defaultHeartbeatIntervalInS(),
@@ -976,6 +979,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int sessionBufferSize = configuration.sessionBufferSize();
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
         final SessionProxy sessionProxy = sessionProxy(connectionId, asciiBuffer);
+        final int initialReceivedSequenceNumber = initiatorNewSequenceNumber(
+            sessionConfiguration, SessionConfiguration::initialReceivedSequenceNumber, lastReceivedSequenceNumber);
+        final int initialSentSequenceNumber = initiatorNewSequenceNumber(
+            sessionConfiguration, SessionConfiguration::initialSentSequenceNumber, lastSentSequenceNumber);
+
         final Session session = new InitiatorSession(
             defaultInterval,
             connectionId,
@@ -987,13 +995,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             fixCounters.receivedMsgSeqNo(connectionId),
             fixCounters.sentMsgSeqNo(connectionId),
             libraryId,
-            initiatorNewSequenceNumber(sessionConfiguration, lastSentSequenceNumber),
+            initialSentSequenceNumber,
             sequenceIndex,
             state,
             sessionConfiguration != null && sessionConfiguration.resetSeqNum(),
             configuration.reasonableTransmissionTimeInMs(),
             asciiBuffer)
-            .lastReceivedMsgSeqNum(initiatorNewSequenceNumber(sessionConfiguration, lastReceivedSequenceNumber) - 1);
+            .lastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
 
         if (sessionConfiguration != null)
         {
@@ -1015,7 +1023,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     }
 
     private int initiatorNewSequenceNumber(
-        final SessionConfiguration sessionConfiguration, final int lastSequenceNumber)
+        final SessionConfiguration sessionConfiguration,
+        final ToIntFunction<SessionConfiguration> initialSequenceNumberGetter,
+        final int lastSequenceNumber)
     {
         final int newSequenceNumber = lastSequenceNumber + 1;
         if (sessionConfiguration == null)
@@ -1023,9 +1033,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             return newSequenceNumber;
         }
 
-        if (sessionConfiguration.hasCustomInitialSequenceNumber())
+        final int initialSequenceNumber = initialSequenceNumberGetter.applyAsInt(sessionConfiguration);
+        if (initialSequenceNumber != AUTOMATIC_INITIAL_SEQUENCE_NUMBER)
         {
-            return sessionConfiguration.initialSequenceNumber();
+            return initialSequenceNumber;
         }
 
         if (sessionConfiguration.sequenceNumbersPersistent() && lastSequenceNumber != SessionInfo.UNK_SESSION)

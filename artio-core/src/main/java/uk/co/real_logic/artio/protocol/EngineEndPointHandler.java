@@ -41,6 +41,7 @@ public interface EngineEndPointHandler
         String targetLocationId,
         SequenceNumberType sequenceNumberType,
         int requestedInitialSequenceNumber,
+        int requestedInitialSentSequenceNumber,
         boolean resetSequenceNumber,
         String username,
         String password,

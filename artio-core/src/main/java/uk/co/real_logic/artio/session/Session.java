@@ -155,7 +155,7 @@ public class Session implements AutoCloseable
         final AtomicCounter receivedMsgSeqNo,
         final AtomicCounter sentMsgSeqNo,
         final int libraryId,
-        final int initialSequenceNumber,
+        final int initialSentSequenceNumber,
         final int sequenceIndex,
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer)
@@ -177,7 +177,7 @@ public class Session implements AutoCloseable
         this.sentMsgSeqNo = sentMsgSeqNo;
         this.libraryId = libraryId;
         sequenceIndex(sequenceIndex);
-        this.lastSentMsgSeqNum = initialSequenceNumber - 1;
+        this.lastSentMsgSeqNum = initialSentSequenceNumber - 1;
         this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
 
         this.asciiBuffer = asciiBuffer;

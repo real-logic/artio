@@ -259,7 +259,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             .senderCompId(INITIATOR_ID)
             .targetCompId(ACCEPTOR_ID)
             .sequenceNumbersPersistent(true)
-            .initialSequenceNumber(initialSequenceNumber)
+            .initialReceivedSequenceNumber(initialSequenceNumber)
+            .initialSentSequenceNumber(initialSequenceNumber)
             .resetSeqNum(resetSeqNum)
             .build();
 

@@ -847,6 +847,7 @@ public class FramerTest
             null,
             TRANSIENT,
             AUTOMATIC_INITIAL_SEQUENCE_NUMBER,
+            AUTOMATIC_INITIAL_SEQUENCE_NUMBER,
             false,
             "",
             "",
