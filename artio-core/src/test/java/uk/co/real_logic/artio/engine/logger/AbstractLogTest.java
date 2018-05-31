@@ -146,6 +146,7 @@ public class AbstractLogTest
             .session(sessionId)
             .connection(CONNECTION_ID)
             .sequenceIndex(sequenceIndex)
+            .libraryId(LIBRARY_ID)
             .putBody(asciiBuffer, 0, logEntryLength);
 
         offset += MessageHeaderEncoder.ENCODED_LENGTH + messageFrame.sbeBlockLength() + SIZE_OF_LENGTH_FIELD;

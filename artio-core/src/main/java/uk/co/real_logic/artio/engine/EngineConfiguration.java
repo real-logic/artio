@@ -28,7 +28,6 @@ import uk.co.real_logic.artio.replication.RoleHandler;
 import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.HashSet;
@@ -139,6 +138,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final String DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE = "sequence_numbers_received";
     public static final short NO_NODE_ID = -1;
     public static final long DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS = 10_000;
+    public static final ReplayHandler DEFAULT_REPLAY_HANDLER =
+        (buffer, offset, length, libraryId, sessionId, sequenceIndex, messageType) ->
+        {
+        };
 
     /** Unmodifiable set of defaults, please make a copy if you wish to modify them. */
     public static final Set<String> DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES;
@@ -202,6 +205,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private SessionPersistenceStrategy sessionPersistenceStrategy;
     private long slowConsumerTimeoutInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
     private EngineScheduler scheduler = new DefaultEngineScheduler();
+    private ReplayHandler replayHandler = DEFAULT_REPLAY_HANDLER;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -541,6 +545,18 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Sets a handler that will be invoked when a message is replayed.
+     *
+     * @param replayHandler the replay handler
+     * @return this
+     */
+    public EngineConfiguration replayHandler(final ReplayHandler replayHandler)
+    {
+        this.replayHandler = replayHandler;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -701,6 +717,16 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return scheduler;
     }
 
+    public long slowConsumerTimeoutInMs()
+    {
+        return slowConsumerTimeoutInMs;
+    }
+
+    public ReplayHandler replayHandler()
+    {
+        return replayHandler;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -793,25 +819,20 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return MappedFile.map(logFileDir() + File.separator + file, size);
     }
 
-    public void close()
-    {
-        CloseHelper.close(sentSequenceNumberIndex);
-        CloseHelper.close(receivedSequenceNumberIndex);
-        CloseHelper.close(sessionIdBuffer);
-    }
-
     public String libraryAeronChannel()
     {
         return libraryAeronChannel;
     }
 
-    public TcpChannelSupplier channelSupplier() throws IOException
+    public TcpChannelSupplier channelSupplier()
     {
         return channelSupplierFactory.apply(this);
     }
 
-    public long slowConsumerTimeoutInMs()
+    public void close()
     {
-        return slowConsumerTimeoutInMs;
+        CloseHelper.close(sentSequenceNumberIndex);
+        CloseHelper.close(receivedSequenceNumberIndex);
+        CloseHelper.close(sessionIdBuffer);
     }
 }

@@ -168,15 +168,6 @@ public class FramerContext
         return null;
     }
 
-    private void sendAdminCommand(final IdleStrategy idleStrategy, final AdminCommand query)
-    {
-        while (!adminCommands.offer(query))
-        {
-            idleStrategy.idle();
-        }
-        idleStrategy.reset();
-    }
-
     public Reply<?> resetSequenceNumber(final long sessionId)
     {
         final ResetSequenceNumberCommand reply = new ResetSequenceNumberCommand(

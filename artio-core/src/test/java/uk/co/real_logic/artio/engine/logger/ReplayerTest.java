@@ -20,6 +20,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import io.aeron.protocol.DataHeaderFlyweight;
+import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
@@ -34,9 +35,11 @@ import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
 import uk.co.real_logic.artio.replication.ClusterableSubscription;
+import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.regex.Matcher;
@@ -49,6 +52,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_NAME_PREFIX;
+import static uk.co.real_logic.artio.decoder.ExampleMessageDecoder.MESSAGE_TYPE;
 import static uk.co.real_logic.artio.engine.PossDupEnabler.ORIG_SENDING_TIME_PREFIX_AS_STR;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
@@ -75,6 +79,7 @@ public class ReplayerTest extends AbstractLogTest
     private ArgumentCaptor<ControlledFragmentHandler> handler =
         ArgumentCaptor.forClass(ControlledFragmentHandler.class);
     private Header fragmentHeader = mock(Header.class);
+    private ReplayHandler replayHandler = mock(ReplayHandler.class);
 
     private Replayer replayer;
 
@@ -97,7 +102,8 @@ public class ReplayerTest extends AbstractLogTest
             subscription,
             DEFAULT_NAME_PREFIX,
             clock,
-            EngineConfiguration.DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES);
+            EngineConfiguration.DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES,
+            replayHandler);
 
         verify(publication).maxPayloadLength();
     }
@@ -218,6 +224,9 @@ public class ReplayerTest extends AbstractLogTest
         });
     }
 
+    /**
+     * Replays two example messages, sequence number of BEGIN_SEQ_NO and BEGIN_SEQ_NO + 1
+     */
     @Test
     public void shouldResendTwoAppMessages()
     {
@@ -235,6 +244,34 @@ public class ReplayerTest extends AbstractLogTest
 
             return 2;
         });
+
+        assertReplayHandlerInvoked(endSeqNo);
+    }
+
+    private void assertReplayHandlerInvoked(final int endSeqNo)
+    {
+        final ArgumentCaptor<DirectBuffer> bufferCaptor = ArgumentCaptor.forClass(DirectBuffer.class);
+        final ArgumentCaptor<Integer> offsetCaptor = ArgumentCaptor.forClass(Integer.class);
+        final ArgumentCaptor<Integer> lengthCaptor = ArgumentCaptor.forClass(Integer.class);
+
+        verify(replayHandler, times(2)).onReplayedMessage(
+            bufferCaptor.capture(),
+            offsetCaptor.capture(),
+            lengthCaptor.capture(),
+            eq(LIBRARY_ID),
+            eq(SESSION_ID),
+            eq(SEQUENCE_INDEX),
+            eq(MESSAGE_TYPE));
+
+        final HeaderDecoder fixHeader = new HeaderDecoder();
+        final AsciiBuffer asciiBuffer = new MutableAsciiBuffer(bufferCaptor.getValue());
+        fixHeader.decode(asciiBuffer, offsetCaptor.getValue(), lengthCaptor.getValue());
+
+        assertEquals(Constants.VERSION, fixHeader.beginStringAsString());
+        assertEquals(BUFFER_SENDER, fixHeader.senderCompIDAsString());
+        assertEquals(BUFFER_TARGET, fixHeader.targetCompIDAsString());
+        assertEquals(ExampleMessageDecoder.MESSAGE_TYPE_AS_STRING, fixHeader.msgTypeAsString());
+        assertEquals(endSeqNo, fixHeader.msgSeqNum());
     }
 
     @Test
@@ -649,6 +686,6 @@ public class ReplayerTest extends AbstractLogTest
     {
         logEntryLength = message.length;
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(message);
-        bufferContainsMessage(SESSION_ID, SEQUENCE_NUMBER, asciiBuffer, ExampleMessageDecoder.MESSAGE_TYPE);
+        bufferContainsMessage(SESSION_ID, SEQUENCE_NUMBER, asciiBuffer, MESSAGE_TYPE);
     }
 }

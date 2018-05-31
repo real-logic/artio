@@ -324,14 +324,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }
         }));
 
-        try
-        {
-            channelSupplier = configuration.channelSupplier();
-        }
-        catch (final IOException ex)
-        {
-            throw new IllegalArgumentException(ex);
-        }
+        channelSupplier = configuration.channelSupplier();
     }
 
     private LibrarySlowPeeker getOutboundSlowPeeker(final GatewayPublication outboundPublication)

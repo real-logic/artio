@@ -220,7 +220,8 @@ public abstract class EngineContext implements AutoCloseable
             inboundLibraryStreams.subscription("replayer"),
             configuration.agentNamePrefix(),
             new SystemEpochClock(),
-            configuration.gapfillOnReplayMessageTypes());
+            configuration.gapfillOnReplayMessageTypes(),
+            configuration.replayHandler());
     }
 
     protected void newIndexers(

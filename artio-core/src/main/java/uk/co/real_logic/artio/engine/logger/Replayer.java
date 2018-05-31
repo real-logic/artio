@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.engine.PossDupEnabler;
+import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.ProtocolHandler;
 import uk.co.real_logic.artio.protocol.ProtocolSubscription;
@@ -55,11 +56,11 @@ import static uk.co.real_logic.artio.messages.MessageStatus.OK;
  */
 public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Agent
 {
-    public static final int MESSAGE_FRAME_BLOCK_LENGTH =
+    static final int MESSAGE_FRAME_BLOCK_LENGTH =
         MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
-    public static final int SIZE_OF_LENGTH_FIELD = 2;
-    public static final int POLL_LIMIT = 10;
-    public static final int MOST_RECENT_MESSAGE = 0;
+    static final int SIZE_OF_LENGTH_FIELD = 2;
+    static final int MOST_RECENT_MESSAGE = 0;
+    private static final int POLL_LIMIT = 10;
 
     private static final int NONE = -1;
 
@@ -88,6 +89,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     private final ClusterableSubscription subscription;
     private final String agentNamePrefix;
     private final IntHashSet gapFillMessageTypes;
+    private final ReplayHandler replayHandler;
 
     private int currentMessageOffset;
     private int currentMessageLength;
@@ -109,7 +111,8 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         final ClusterableSubscription subscription,
         final String agentNamePrefix,
         final EpochClock clock,
-        final Set<String> gapfillOnReplayMessageTypes)
+        final Set<String> gapfillOnReplayMessageTypes,
+        final ReplayHandler replayHandler)
     {
         this.replayQuery = replayQuery;
         this.publication = publication;
@@ -119,6 +122,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         this.maxClaimAttempts = maxClaimAttempts;
         this.subscription = subscription;
         this.agentNamePrefix = agentNamePrefix;
+        this.replayHandler = replayHandler;
 
         possDupEnabler = new PossDupEnabler(
             bufferClaim,
@@ -262,8 +266,18 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         asciiBuffer.wrap(srcBuffer);
         fixHeader.decode(asciiBuffer, messageOffset, messageLength);
         final int msgSeqNum = fixHeader.msgSeqNum();
+        final int messageType = fixMessage.messageType();
 
-        if (gapFillMessageTypes.contains(fixMessage.messageType()))
+        replayHandler.onReplayedMessage(
+            asciiBuffer,
+            messageOffset,
+            messageLength,
+            fixMessage.libraryId(),
+            fixMessage.session(),
+            fixMessage.sequenceIndex(),
+            messageType);
+
+        if (gapFillMessageTypes.contains(messageType))
         {
             if (beginGapFillSeqNum == NONE)
             {
