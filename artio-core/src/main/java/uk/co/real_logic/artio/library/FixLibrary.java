@@ -19,6 +19,7 @@ import io.aeron.Aeron;
 import io.aeron.exceptions.ConductorServiceTimeoutException;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
+import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.SystemEpochClock;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.FixGatewayException;
@@ -265,7 +266,7 @@ public class FixLibrary extends GatewayProcess
      *         {@link FixGatewayException}
      *         if you're unable to connect to the accepting gateway.
      *         This probably indicates a configuration problem related to the external gateway.
-     * @see LibraryUtil#initiate(FixLibrary, SessionConfiguration, int)
+     * @see LibraryUtil#initiate(FixLibrary, SessionConfiguration, int, IdleStrategy)
      */
     public Reply<Session> initiate(final SessionConfiguration configuration)
     {

@@ -189,6 +189,28 @@ public final class SessionConfiguration
         return resetSeqNum;
     }
 
+    @Override
+    public String toString()
+    {
+        return "SessionConfiguration{" +
+            "hosts=" + hosts +
+            ", ports=" + ports +
+            ", username='" + username + '\'' +
+            ", password='" + password + '\'' +
+            ", senderCompId='" + senderCompId + '\'' +
+            ", senderSubId='" + senderSubId + '\'' +
+            ", senderLocationId='" + senderLocationId + '\'' +
+            ", targetCompId='" + targetCompId + '\'' +
+            ", targetSubId='" + targetSubId + '\'' +
+            ", targetLocationId='" + targetLocationId + '\'' +
+            ", sequenceNumbersPersistent=" + sequenceNumbersPersistent +
+            ", initialReceivedSequenceNumber=" + initialReceivedSequenceNumber +
+            ", initialSentSequenceNumber=" + initialSentSequenceNumber +
+            ", timeoutInMs=" + timeoutInMs +
+            ", resetSeqNum=" + resetSeqNum +
+            '}';
+    }
+
     public static final class Builder
     {
         private String username;
@@ -348,7 +370,7 @@ public final class SessionConfiguration
          */
         public Builder initialSentSequenceNumber(final int initialSentSequenceNumber)
         {
-            this.initialReceivedSequenceNumber = initialSentSequenceNumber;
+            this.initialSentSequenceNumber = initialSentSequenceNumber;
             return this;
         }
 

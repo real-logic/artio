@@ -108,4 +108,15 @@ abstract class LibraryReply<T> implements Reply<T>
 
         return false;
     }
+
+    @Override
+    public String toString()
+    {
+        return getClass().getSimpleName() + "{" +
+            "latestReplyArrivalTimeInMs=" + latestReplyArrivalTimeInMs +
+            ", error=" + error +
+            ", result=" + result +
+            ", state=" + state +
+            '}';
+    }
 }

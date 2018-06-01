@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.system_tests;
 import org.agrona.IoUtil;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
@@ -33,6 +34,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
@@ -55,11 +57,18 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private File backupLocation = null;
 
-    private Runnable acquireSession = () ->
+    private Runnable onAcquireSession = () ->
     {
         final long sessionId = getAcceptingSessionId();
 
         acquireSession(sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
+    };
+
+    private Consumer<Reply<Session>> onInitiateReply = reply ->
+    {
+        initiatingSession = reply.resultIfPresent();
+        assertConnected(initiatingSession);
+        sessionLogsOn(testSystem, initiatingSession, DEFAULT_TIMEOUT_IN_MS);
     };
 
     private Runnable duringRestart = this::nothing;
@@ -95,7 +104,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT)
     public void previousMessagesAreReplayed()
     {
-        acquireSession = this::requestReplayWhenReacquiringSession;
+        onAcquireSession = this::requestReplayWhenReacquiringSession;
 
         exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DEFAULT_SEQ_NUM_AFTER);
 
@@ -108,7 +117,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         duringRestart = this::deleteAcceptorLogs;
 
-        acquireSession = () -> assertFailStatusWhenReplayRequested(SEQUENCE_NUMBER_TOO_HIGH);
+        onAcquireSession = () -> assertFailStatusWhenReplayRequested(SEQUENCE_NUMBER_TOO_HIGH);
 
         resetSequenceNumbersOnLogon = true;
 
@@ -125,7 +134,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         duringRestart = this::deleteArchiveOfAcceptorLogs;
 
-        acquireSession = () -> assertFailStatusWhenReplayRequested(MISSING_MESSAGES);
+        onAcquireSession = () -> assertFailStatusWhenReplayRequested(MISSING_MESSAGES);
 
         resetSequenceNumbersOnLogon = true;
 
@@ -209,6 +218,13 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertSequenceIndicesAre(1);
     }
 
+    @Ignore
+    @Test(timeout = TEST_TIMEOUT)
+    public void shouldReceiveRelevantErrorsDuringConnect()
+    {
+        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, this::nothing, false);
+    }
+
     private void resetSequenceNumbers()
     {
         testSystem.awaitCompletedReplies(
@@ -266,12 +282,10 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         final Reply<Session> reply = initiatingLibrary.initiate(config);
         awaitLibraryReply(initiatingLibrary, reply);
-        initiatingSession = reply.resultIfPresent();
 
-        assertConnected(initiatingSession);
-        sessionLogsOn(testSystem, initiatingSession, DEFAULT_TIMEOUT_IN_MS);
+        onInitiateReply.accept(reply);
 
-        acquireSession.run();
+        onAcquireSession.run();
     }
 
     private void exchangeMessagesAroundARestart(final int initialSequenceNumber, final int seqNumAfter)
