@@ -609,10 +609,9 @@ public class DecoderGenerator extends Generator
             "    private %1$s %2$s = new %1$s();\n\n" +
             "    public %1$s %2$s()\n" +
             "    {\n" +
-            "        %2$s.reset();\n" +
-            "        return %2$s;\n" +
+            "        return %2$s.iterator();\n" +
             "    }\n\n" +
-            "    public class %1$s implements java.util.Iterator<%4$s>\n" +
+            "    public class %1$s implements Iterable<%4$s>, java.util.Iterator<%4$s>\n" +
             "    {\n" +
             "        private int remainder;\n" +
             "        private %4$s current;\n" +
@@ -631,6 +630,11 @@ public class DecoderGenerator extends Generator
             "        {\n" +
             "            remainder = %3$s;\n" +
             "            current = %5$s();\n" +
+            "        }\n" +
+            "        public %1$s iterator()\n" +
+            "        {\n" +
+            "            reset();\n" +
+            "            return this;\n" +
             "        }\n" +
             "    }\n\n",
             iteratorClassName(group),
