@@ -629,7 +629,7 @@ public class DecoderGenerator extends Generator
             "        }\n" +
             "        public void reset()\n" +
             "        {\n" +
-            "            remainder = %3$s();\n" +
+            "            remainder = %3$s;\n" +
             "            current = %5$s();\n" +
             "        }\n" +
             "    }\n\n",
