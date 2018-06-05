@@ -219,18 +219,22 @@ public final class EnumGenerator
                     "    public static %1$s decode(final char[] representation, final int length)\n" +
                     "    {\n" +
                             "        final %1$s value = charMap.get(representation, length);\n" +
-                            "        if (" + CODEC_ENUM_SENTINEL_VALUE_ENABLED + " && value == null)\n" +
+                            "        if (" + CODEC_ENUM_SENTINEL_VALUE_ENABLED + ")\n" +
                             "        {\n" +
-                            "            return " + UNKNOWN_REPRESENTATION + ";\n" +
+                            "            if (value == null)\n" +
+                            "            {\n" +
+                            "                return " + UNKNOWN_REPRESENTATION + ";\n" +
+                            "            }\n" +
+                            "            return value;\n" +
                             "        }\n" +
                             "        else\n" +
                             "        {\n" +
-                            "            final %1$s value = charMap.get(representation, length);\n" +
                             "            if (value == null)\n" +
                             "            {\n" +
-                            "                throw new IllegalArgumentException(\"Unknown: \" + new String(representation, 0, length));\n" +
+                            "                throw new IllegalArgumentException" +
+                                             "(\"Unknown: \" + new String(representation, 0, length));\n" +
                             "            }\n" +
-                            "            return charMap.get(representation, length);\n" +
+                            "            return value;\n" +
                             "        }\n" +
                     "    }\n",
                     typeName,

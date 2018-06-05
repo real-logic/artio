@@ -134,14 +134,16 @@ public class EnumGeneratorTest
     }
 
     @Test
-    public void shouldReturnNullWhenDecodingUnknownRepresentationCharArray() throws Exception
+    public void shouldThrowWhenDecodingUnknownRepresentationCharArray() throws Throwable
     {
         final Class<?> clazz = compile(STRING_ENUM, sources);
+        expectedException.expect(IllegalArgumentException.class);
+        expectedException.expectMessage("Unknown: UnknownRepresentation");
 
         final Method decode = clazz.getMethod("decode", char[].class, int.class);
 
-        final String unknownRepresentation = "UnknownRepresentation";
-        assertNull(decode.invoke(null, unknownRepresentation.toCharArray(), unknownRepresentation.length()));
+        final char[] unknownRepresentation = "UnknownRepresentation".toCharArray();
+        invoke(decode, unknownRepresentation, unknownRepresentation.length);
     }
 
     @Test
@@ -214,7 +216,7 @@ public class EnumGeneratorTest
         final Class<?> sentinelValueClass = useEnumSentinelValue ? EnumSentinelOn.class : EnumSentinelOff.class;
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
         final EnumGenerator enumGenerator = new EnumGenerator(FIELD_EXAMPLE, PARENT_PACKAGE, outputManager,
-                sentinelValueClass);
+            sentinelValueClass);
         enumGenerator.generate();
         return outputManager.getSources();
     }
