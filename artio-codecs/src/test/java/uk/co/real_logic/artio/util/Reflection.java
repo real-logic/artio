@@ -155,6 +155,11 @@ public final class Reflection
         return (Iterator<?>)get(decoder, "egGroupGroupIterator");
     }
 
+    public static Iterable<?> getEgGroupIterable(final Decoder decoder) throws Exception
+    {
+        return (Iterable<?>)get(decoder, "egGroupGroupIterator");
+    }
+
     public static Object getComponentGroup(final Object stub, final int numberOfElements) throws Exception
     {
         return get(stub, "componentGroupGroup", numberOfElements);
