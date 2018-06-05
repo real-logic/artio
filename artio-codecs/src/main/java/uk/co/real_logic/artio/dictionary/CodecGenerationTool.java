@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.dictionary;
 
 import org.agrona.generation.PackageOutputManager;
+import uk.co.real_logic.artio.builder.EnumSentinel;
 import uk.co.real_logic.artio.builder.Validation;
 import uk.co.real_logic.artio.dictionary.generation.*;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
@@ -52,7 +53,7 @@ public final class CodecGenerationTool
         final PackageOutputManager parent = new PackageOutputManager(outputPath, PARENT_PACKAGE);
         final PackageOutputManager decoder = new PackageOutputManager(outputPath, DECODER_PACKAGE);
 
-        final EnumGenerator enumGenerator = new EnumGenerator(dictionary, PARENT_PACKAGE, parent);
+        final EnumGenerator enumGenerator = new EnumGenerator(dictionary, PARENT_PACKAGE, parent, EnumSentinel.class);
         final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, DECODER_PACKAGE, decoder);
 
         final EncoderGenerator encoderGenerator = new EncoderGenerator(

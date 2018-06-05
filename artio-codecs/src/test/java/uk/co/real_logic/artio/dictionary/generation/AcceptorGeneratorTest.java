@@ -37,7 +37,7 @@ public class AcceptorGeneratorTest
     private static ConstantGenerator constantGenerator =
         new ConstantGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static EnumGenerator enumGenerator =
-        new EnumGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
+        new EnumGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager, EnumSentinelOff.class);
     private static DecoderGenerator decoderGenerator =
         new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, ValidationOn.class);
     private static AcceptorGenerator acceptorGenerator =

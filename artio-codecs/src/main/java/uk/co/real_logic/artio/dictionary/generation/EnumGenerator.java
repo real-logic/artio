@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.dictionary.ir.Field.Type;
 import uk.co.real_logic.artio.dictionary.ir.Field.Value;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,15 +35,28 @@ import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
 
 public final class EnumGenerator
 {
+
+    private static final String CODEC_ENUM_SENTINEL_VALUE_ENABLED = "CODEC_ENUM_SENTINEL_VALUE_ENABLED";
+    private static final String UNKNOWN_REPRESENTATION = "UNKNOWN_REPRESENTATION";
+    private static final String SENTINEL_VALUE_CHAR = "\u0000";
+    private static final String SENTINEL_VALUE_INT = Integer.toString(Integer.MIN_VALUE);
+    private static final String SENTINEL_VALUE_STRING = "";
+
     private final Dictionary dictionary;
     private final String builderPackage;
     private final OutputManager outputManager;
+    private final Class<?> sentinelValueClass;
 
-    public EnumGenerator(final Dictionary dictionary, final String builderPackage, final OutputManager outputManager)
+    public EnumGenerator(
+        final Dictionary dictionary,
+        final String builderPackage,
+        final OutputManager outputManager,
+        final Class<?> sentinelValueClass)
     {
         this.dictionary = dictionary;
         this.builderPackage = builderPackage;
         this.outputManager = outputManager;
+        this.sentinelValueClass = sentinelValueClass;
     }
 
     public void generate()
@@ -64,7 +78,27 @@ public final class EnumGenerator
     {
         final String enumName = field.name();
         final Type type = field.type();
-        final List<Value> values = field.values();
+        final List<Value> fieldValues = field.values();
+        final List<Value> values = new ArrayList<>(fieldValues.size() + 1);
+        final String sentinelValue;
+        if (type == Type.CHAR)
+        {
+            sentinelValue = SENTINEL_VALUE_CHAR;
+        }
+        else if (type.isIntBased())
+        {
+            sentinelValue = SENTINEL_VALUE_INT;
+        }
+        else if (type.isStringBased())
+        {
+            sentinelValue = SENTINEL_VALUE_STRING;
+        }
+        else
+        {
+            throw new IllegalArgumentException("Field type is invalid for Enum generation " + field);
+        }
+        values.addAll(fieldValues);
+        values.add(new Value(sentinelValue, UNKNOWN_REPRESENTATION));
 
         outputManager.withOutput(enumName, (out) ->
         {
@@ -74,6 +108,7 @@ public final class EnumGenerator
                 out.append(importFor(CharArrayMap.class));
                 out.append(importFor(Map.class));
                 out.append(importFor(HashMap.class));
+                out.append(importStaticFor(sentinelValueClass, CODEC_ENUM_SENTINEL_VALUE_ENABLED));
                 out.append(generateEnumDeclaration(enumName));
 
                 out.append(generateEnumValues(values, type));
@@ -143,7 +178,15 @@ public final class EnumGenerator
             "        switch(representation)\n" +
             "        {\n" +
             "%s" +
-            "        default: throw new IllegalArgumentException(\"Unknown: \" + representation);\n" +
+                    "        default:\n" +
+                    "            if (" + CODEC_ENUM_SENTINEL_VALUE_ENABLED + ")\n" +
+                    "            {\n" +
+                    "                return " + UNKNOWN_REPRESENTATION + ";\n" +
+                    "            }\n" +
+                    "            else\n" +
+                    "            {\n" +
+                    "                throw new IllegalArgumentException(\"Unknown: \" + representation);\n" +
+                    "            }\n" +
             "        }\n" +
             "    }\n",
             optionalCharArrayDecode,
@@ -175,7 +218,20 @@ public final class EnumGenerator
                     "\n" +
                     "    public static %1$s decode(final char[] representation, final int length)\n" +
                     "    {\n" +
-                    "        return charMap.get(representation, length);\n" +
+                            "        final %1$s value = charMap.get(representation, length);\n" +
+                            "        if (" + CODEC_ENUM_SENTINEL_VALUE_ENABLED + " && value == null)\n" +
+                            "        {\n" +
+                            "            return " + UNKNOWN_REPRESENTATION + ";\n" +
+                            "        }\n" +
+                            "        else\n" +
+                            "        {\n" +
+                            "            final %1$s value = charMap.get(representation, length);\n" +
+                            "            if (value == null)\n" +
+                            "            {\n" +
+                            "                throw new IllegalArgumentException(\"Unknown: \" + new String(representation, 0, length));\n" +
+                            "            }\n" +
+                            "            return charMap.get(representation, length);\n" +
+                            "        }\n" +
                     "    }\n",
                     typeName,
                     entries);
