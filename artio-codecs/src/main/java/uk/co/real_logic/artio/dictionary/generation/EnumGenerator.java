@@ -35,10 +35,10 @@ import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
 
 public final class EnumGenerator
 {
-    private static final String UNKNOWN_REPRESENTATION = "UNKNOWN_REPRESENTATION";
-    private static final String SENTINEL_VALUE_CHAR = "\u0000";
-    private static final String SENTINEL_VALUE_INT = Integer.toString(Integer.MIN_VALUE);
-    private static final String SENTINEL_VALUE_STRING = "";
+    private static final String UNKNOWN_VALUE_NAME = "UNKNOWN";
+    private static final String UNKNOWN_VALUE_CHAR = "\u0000";
+    private static final String UNKNOWN_VALUE_INT = Integer.toString(Integer.MIN_VALUE);
+    private static final String UNKNOWN_VALUE_STRING = "";
 
     private final Dictionary dictionary;
     private final String builderPackage;
@@ -78,22 +78,22 @@ public final class EnumGenerator
         final String sentinelValue;
         if (type == Type.CHAR)
         {
-            sentinelValue = SENTINEL_VALUE_CHAR;
+            sentinelValue = UNKNOWN_VALUE_CHAR;
         }
         else if (type.isIntBased())
         {
-            sentinelValue = SENTINEL_VALUE_INT;
+            sentinelValue = UNKNOWN_VALUE_INT;
         }
         else if (type.isStringBased())
         {
-            sentinelValue = SENTINEL_VALUE_STRING;
+            sentinelValue = UNKNOWN_VALUE_STRING;
         }
         else
         {
             throw new IllegalArgumentException("Field type is invalid for Enum generation " + field);
         }
         values.addAll(fieldValues);
-        values.add(new Value(sentinelValue, UNKNOWN_REPRESENTATION));
+        values.add(new Value(sentinelValue, UNKNOWN_VALUE_NAME));
 
         outputManager.withOutput(enumName, (out) ->
         {
@@ -173,7 +173,7 @@ public final class EnumGenerator
             "        {\n" +
             "%s" +
             "        default:\n" +
-            "            return " + UNKNOWN_REPRESENTATION + ";\n" +
+            "            return " + UNKNOWN_VALUE_NAME + ";\n" +
             "        }\n" +
             "    }\n",
             optionalCharArrayDecode,
@@ -208,7 +208,7 @@ public final class EnumGenerator
                             "        final %1$s value = charMap.get(representation, length);\n" +
                             "        if (value == null)\n" +
                             "        {\n" +
-                            "            return " + UNKNOWN_REPRESENTATION + ";\n" +
+                            "            return " + UNKNOWN_VALUE_NAME + ";\n" +
                             "        }\n" +
                             "        return value;\n" +
                     "    }\n",

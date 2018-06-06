@@ -66,7 +66,7 @@ public class EnumGeneratorTest
         assertRepresentation('a', values[0]);
         assertEquals("AnotherEntry", values[1].name());
         assertRepresentation('b', values[1]);
-        assertEquals("UNKNOWN_REPRESENTATION", values[2].name());
+        assertEquals("UNKNOWN", values[2].name());
         assertRepresentation('\u0000', values[2]);
     }
 
