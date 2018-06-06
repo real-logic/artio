@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.dictionary.generation;
 
 import org.agrona.LangUtil;
+import org.agrona.collections.IntHashSet;
 import org.agrona.generation.OutputManager;
 import uk.co.real_logic.artio.dictionary.CharArrayMap;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
@@ -72,6 +73,7 @@ public final class EnumGenerator
             {
                 out.append(fileHeader(builderPackage));
                 out.append(importFor(CharArrayMap.class));
+                out.append(importFor(IntHashSet.class));
                 out.append(importFor(Map.class));
                 out.append(importFor(HashMap.class));
                 out.append(generateEnumDeclaration(enumName));
@@ -176,10 +178,22 @@ public final class EnumGenerator
                     "    public static %1$s decode(final char[] representation, final int length)\n" +
                     "    {\n" +
                     "        return charMap.get(representation, length);\n" +
+                    "    }\n" +
+                    "\n" +
+                    "    public static boolean isValid(final char[] representation, final int length)\n" +
+                    "    {\n" +
+                    "        return charMap.containsKey(representation, length);\n" +
                     "    }\n",
                     typeName,
                     entries);
             case MULTIPLECHARVALUE:
+                final String multiCharValues = allValues
+                    .stream()
+                    .map(Field.Value::representation)
+                    .map((repr) -> String.format("'%1$s'",  repr))
+                    .map((repr) -> String.format("        intSet.add(%1$s);\n",  repr))
+                    .collect(joining());
+
                 return format(
                     "    public static %1$s decode(String representation)\n" +
                     "    {\n" +
@@ -189,10 +203,35 @@ public final class EnumGenerator
                     "    public static %1$s decode(final char[] representation, final int length)\n" +
                     "    {\n" +
                     "        return decode(representation[0]);\n" +
+                    "    }\n" +
+                    "\n" +
+                    "    private static final IntHashSet intSet = new IntHashSet(%3$s);\n" +
+                    "    %2$s\n" +
+                    "\n" +
+                    "    public static boolean isValid(final char[] representation, final int length)\n" +
+                    "    {\n" +
+                    "        return intSet.contains(representation[0]);\n" +
                     "    }\n",
-                    typeName);
+                    typeName,
+                    optionalStaticInit(multiCharValues),
+                    ConstantGenerator.sizeHashSet(allValues));
             default:
-                return "";
+                final String primitiveValues = allValues
+                    .stream()
+                    .map(value -> literal(value, type))
+                    .map((repr) -> String.format("        intSet.add(%1$s);\n",  repr))
+                    .collect(joining());
+
+                return format(
+                    "    private static final IntHashSet intSet = new IntHashSet(%2$s);\n" +
+                    "    %1$s\n" +
+                    "\n" +
+                    "    public static boolean isValid(final int representation)\n" +
+                    "    {\n" +
+                    "        return intSet.contains(representation);\n" +
+                    "    }\n",
+                    optionalStaticInit(primitiveValues),
+                    ConstantGenerator.sizeHashSet(allValues));
         }
     }
 

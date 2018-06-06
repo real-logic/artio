@@ -15,22 +15,18 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
-import org.agrona.LangUtil;
 import org.agrona.collections.IntHashSet;
 import org.agrona.generation.OutputManager;
 import uk.co.real_logic.artio.dictionary.CharArraySet;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Field;
 
-import java.io.IOException;
-import java.io.Writer;
 import java.util.Collection;
 
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.addField;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.optionalStaticInit;
 
 public class ConstantGenerator
 {
@@ -63,65 +59,8 @@ public class ConstantGenerator
             out.append(generateMessageTypes());
             out.append(generateFieldTags());
             out.append(generateAllFieldsDictionary());
-            generateEnumDictionaries(out);
             out.append("}\n");
         });
-    }
-
-    private void generateEnumDictionaries(final Writer out)
-    {
-        for (final Field field : dictionary.fields().values())
-        {
-            if (field.isEnum())
-            {
-                final String name = field.name();
-                final String valuesField = constantValuesOfField(name);
-                final Field.Type type = field.type();
-                final boolean isChar = type == Field.Type.CHAR;
-                final boolean isPrimitive = type.isIntBased() || isChar;
-                try
-                {
-                    if (isPrimitive)
-                    {
-                        final String addValues = field.values()
-                            .stream()
-                            .map(Field.Value::representation)
-                            .map((repr) -> isChar ? "'" + repr + "'" : repr)
-                            .map((repr) -> String.format("        %1$s.add(%2$s);\n", valuesField, repr))
-                            .collect(joining());
-
-                        out.append(String.format(
-                            "    public static final IntHashSet %1$s = new IntHashSet(%3$s);\n" +
-                            "%2$s",
-                            valuesField,
-                            optionalStaticInit(addValues),
-                            sizeHashSet(field.values())
-                        ));
-                    }
-                    else if (type.isStringBased())
-                    {
-                        final String addValues = field.values()
-                            .stream()
-                            .map((value) -> "\"" + value.representation() + '"')
-                            .collect(joining(", "));
-
-                        out.append(String.format(
-                            "    public static final CharArraySet %1$s = new CharArraySet(%2$s);\n",
-                            valuesField,
-                            addValues));
-                    }
-                }
-                catch (final IOException ex)
-                {
-                    LangUtil.rethrowUnchecked(ex);
-                }
-            }
-        }
-    }
-
-    static String constantValuesOfField(final String name)
-    {
-        return "VALUES_OF_" + name;
     }
 
     private String generateAllFieldsDictionary()
