@@ -35,10 +35,15 @@ import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
 
 public final class EnumGenerator
 {
+    private static final String NULL_VALUE_NAME = "NULL_VAL";
+    private static final String NULL_VALUE_CHAR = "\u0000";
+    private static final String NULL_VALUE_INT = Integer.toString(Integer.MIN_VALUE);
+    private static final String NULL_VALUE_STRING = "";
+
     private static final String UNKNOWN_VALUE_NAME = "UNKNOWN";
-    private static final String UNKNOWN_VALUE_CHAR = "\u0000";
-    private static final String UNKNOWN_VALUE_INT = Integer.toString(Integer.MIN_VALUE);
-    private static final String UNKNOWN_VALUE_STRING = "";
+    private static final String UNKNOWN_VALUE_CHAR = "\u0002";
+    private static final String UNKNOWN_VALUE_INT = Integer.toString(Integer.MAX_VALUE);
+    private static final String UNKNOWN_VALUE_STRING = "\u0002";
 
     private final Dictionary dictionary;
     private final String builderPackage;
@@ -75,25 +80,30 @@ public final class EnumGenerator
         final Type type = field.type();
         final List<Value> fieldValues = field.values();
         final List<Value> values = new ArrayList<>(fieldValues.size() + 1);
-        final String sentinelValue;
+        final String nullValue;
+        final String unknownValue;
         if (type == Type.CHAR)
         {
-            sentinelValue = UNKNOWN_VALUE_CHAR;
+            nullValue = NULL_VALUE_CHAR;
+            unknownValue = UNKNOWN_VALUE_CHAR;
         }
         else if (type.isIntBased())
         {
-            sentinelValue = UNKNOWN_VALUE_INT;
+            nullValue = NULL_VALUE_INT;
+            unknownValue = UNKNOWN_VALUE_INT;
         }
         else if (type.isStringBased())
         {
-            sentinelValue = UNKNOWN_VALUE_STRING;
+            nullValue = NULL_VALUE_STRING;
+            unknownValue = UNKNOWN_VALUE_STRING;
         }
         else
         {
             throw new IllegalArgumentException("Field type is invalid for Enum generation " + field);
         }
         values.addAll(fieldValues);
-        values.add(new Value(sentinelValue, UNKNOWN_VALUE_NAME));
+        values.add(new Value(nullValue, NULL_VALUE_NAME));
+        values.add(new Value(unknownValue, UNKNOWN_VALUE_NAME));
 
         outputManager.withOutput(enumName, (out) ->
         {

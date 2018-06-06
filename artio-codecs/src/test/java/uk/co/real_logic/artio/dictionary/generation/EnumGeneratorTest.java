@@ -60,14 +60,16 @@ public class EnumGeneratorTest
         final Class<?> clazz = compileEgEnum(sources);
         final Enum[] values = (Enum[])clazz.getEnumConstants();
 
-        assertThat(values, arrayWithSize(3));
+        assertThat(values, arrayWithSize(4));
 
         assertEquals("AnEntry", values[0].name());
         assertRepresentation('a', values[0]);
         assertEquals("AnotherEntry", values[1].name());
         assertRepresentation('b', values[1]);
-        assertEquals("UNKNOWN", values[2].name());
+        assertEquals("NULL_VAL", values[2].name());
         assertRepresentation('\u0000', values[2]);
+        assertEquals("UNKNOWN", values[3].name());
+        assertRepresentation('\u0002', values[3]);
     }
 
     @Test

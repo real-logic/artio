@@ -157,7 +157,7 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_MESSAGE);
         assertEquals(2, getRepresentation(get(decoder, INT_FIELD + "AsEnum")));
-        assertNull(get(decoder, CHAR_FIELD + "AsEnum"));
+        assertEquals('\u0000', getRepresentation(get(decoder, CHAR_FIELD + "AsEnum")));
         assertValid(decoder);
     }
 
