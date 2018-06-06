@@ -35,8 +35,6 @@ import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
 
 public final class EnumGenerator
 {
-
-    private static final String CODEC_ENUM_SENTINEL_VALUE_ENABLED = "CODEC_ENUM_SENTINEL_VALUE_ENABLED";
     private static final String UNKNOWN_REPRESENTATION = "UNKNOWN_REPRESENTATION";
     private static final String SENTINEL_VALUE_CHAR = "\u0000";
     private static final String SENTINEL_VALUE_INT = Integer.toString(Integer.MIN_VALUE);
@@ -45,18 +43,15 @@ public final class EnumGenerator
     private final Dictionary dictionary;
     private final String builderPackage;
     private final OutputManager outputManager;
-    private final Class<?> sentinelValueClass;
 
     public EnumGenerator(
         final Dictionary dictionary,
         final String builderPackage,
-        final OutputManager outputManager,
-        final Class<?> sentinelValueClass)
+        final OutputManager outputManager)
     {
         this.dictionary = dictionary;
         this.builderPackage = builderPackage;
         this.outputManager = outputManager;
-        this.sentinelValueClass = sentinelValueClass;
     }
 
     public void generate()
@@ -108,7 +103,6 @@ public final class EnumGenerator
                 out.append(importFor(CharArrayMap.class));
                 out.append(importFor(Map.class));
                 out.append(importFor(HashMap.class));
-                out.append(importStaticFor(sentinelValueClass, CODEC_ENUM_SENTINEL_VALUE_ENABLED));
                 out.append(generateEnumDeclaration(enumName));
 
                 out.append(generateEnumValues(values, type));
@@ -178,15 +172,8 @@ public final class EnumGenerator
             "        switch(representation)\n" +
             "        {\n" +
             "%s" +
-                    "        default:\n" +
-                    "            if (" + CODEC_ENUM_SENTINEL_VALUE_ENABLED + ")\n" +
-                    "            {\n" +
-                    "                return " + UNKNOWN_REPRESENTATION + ";\n" +
-                    "            }\n" +
-                    "            else\n" +
-                    "            {\n" +
-                    "                throw new IllegalArgumentException(\"Unknown: \" + representation);\n" +
-                    "            }\n" +
+            "        default:\n" +
+            "            return " + UNKNOWN_REPRESENTATION + ";\n" +
             "        }\n" +
             "    }\n",
             optionalCharArrayDecode,
@@ -219,23 +206,11 @@ public final class EnumGenerator
                     "    public static %1$s decode(final char[] representation, final int length)\n" +
                     "    {\n" +
                             "        final %1$s value = charMap.get(representation, length);\n" +
-                            "        if (" + CODEC_ENUM_SENTINEL_VALUE_ENABLED + ")\n" +
+                            "        if (value == null)\n" +
                             "        {\n" +
-                            "            if (value == null)\n" +
-                            "            {\n" +
-                            "                return " + UNKNOWN_REPRESENTATION + ";\n" +
-                            "            }\n" +
-                            "            return value;\n" +
+                            "            return " + UNKNOWN_REPRESENTATION + ";\n" +
                             "        }\n" +
-                            "        else\n" +
-                            "        {\n" +
-                            "            if (value == null)\n" +
-                            "            {\n" +
-                            "                throw new IllegalArgumentException" +
-                                             "(\"Unknown: \" + new String(representation, 0, length));\n" +
-                            "            }\n" +
-                            "            return value;\n" +
-                            "        }\n" +
+                            "        return value;\n" +
                     "    }\n",
                     typeName,
                     entries);

@@ -65,8 +65,7 @@ public class EncoderGeneratorTest
     {
         final Class<?> validationClass = validation ? ValidationOn.class : ValidationOff.class;
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
-        final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager,
-            EnumSentinelOff.class);
+        final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final EncoderGenerator encoderGenerator =
             new EncoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass);
         enumGenerator.generate();

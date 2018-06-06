@@ -35,7 +35,6 @@ public class EnumGeneratorTest
 {
 
     private Map<String, CharSequence> sources;
-    private Map<String, CharSequence> sourcesWithSentinelValue;
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
@@ -43,8 +42,7 @@ public class EnumGeneratorTest
     @Before
     public void generate()
     {
-        sources = generateEnums(false);
-        sourcesWithSentinelValue = generateEnums(true);
+        sources = generateEnums();
     }
 
     @Test
@@ -134,34 +132,9 @@ public class EnumGeneratorTest
     }
 
     @Test
-    public void shouldThrowWhenDecodingUnknownRepresentationCharArray() throws Throwable
-    {
-        final Class<?> clazz = compile(STRING_ENUM, sources);
-        expectedException.expect(IllegalArgumentException.class);
-        expectedException.expectMessage("Unknown: UnknownRepresentation");
-
-        final Method decode = clazz.getMethod("decode", char[].class, int.class);
-
-        final char[] unknownRepresentation = "UnknownRepresentation".toCharArray();
-        invoke(decode, unknownRepresentation, unknownRepresentation.length);
-    }
-
-    @Test
-    public void shouldThrowWhenDecodingUnknownRepresentationString() throws Throwable
-    {
-        final Class<?> clazz = compile(STRING_ENUM, sources);
-        expectedException.expect(IllegalArgumentException.class);
-        expectedException.expectMessage("Unknown: UnknownRepresentation");
-
-        final Method decode = clazz.getMethod("decode", String.class);
-
-        invoke(decode, "UnknownRepresentation");
-    }
-
-    @Test
     public void shouldReturnSentinelValueWhenDecodingUnknownRepresentation() throws Exception
     {
-        final Class<?> clazz = compile(STRING_ENUM, sourcesWithSentinelValue);
+        final Class<?> clazz = compile(STRING_ENUM, sources);
         final Enum[] values = (Enum[])clazz.getEnumConstants();
 
         final Method decodeCharArray = clazz.getMethod("decode", char[].class, int.class);
@@ -211,12 +184,10 @@ public class EnumGeneratorTest
         }
     }
 
-    private Map<String, CharSequence> generateEnums(final boolean useEnumSentinelValue)
+    private Map<String, CharSequence> generateEnums()
     {
-        final Class<?> sentinelValueClass = useEnumSentinelValue ? EnumSentinelOn.class : EnumSentinelOff.class;
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
-        final EnumGenerator enumGenerator = new EnumGenerator(FIELD_EXAMPLE, PARENT_PACKAGE, outputManager,
-            sentinelValueClass);
+        final EnumGenerator enumGenerator = new EnumGenerator(FIELD_EXAMPLE, PARENT_PACKAGE, outputManager);
         enumGenerator.generate();
         return outputManager.getSources();
     }
