@@ -102,7 +102,7 @@ class GatewaySession implements SessionInfo
     {
         this.sessionParser = sessionParser;
         this.session = session;
-        this.session.logonListener(this.logonListener);
+        this.session.logonListener(logonListener);
         receiverEndPoint.libraryId(ENGINE_LIBRARY_ID);
         senderEndPoint.libraryId(ENGINE_LIBRARY_ID, blockablePosition);
     }

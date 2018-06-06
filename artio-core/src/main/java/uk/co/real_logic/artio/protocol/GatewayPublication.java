@@ -415,7 +415,8 @@ public class GatewayPublication extends ClaimablePublication
         final String targetLocationId,
         final SequenceNumberType sequenceNumberType,
         final boolean resetSequenceNumber,
-        final int requestedInitialSequenceNumber,
+        final int requestedInitialReceivedSequenceNumber,
+        final int requestedInitialSentSequenceNumber,
         final String username,
         final String password,
         final int heartbeatIntervalInS,
@@ -447,7 +448,8 @@ public class GatewayPublication extends ClaimablePublication
         initiateConnection.wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
             .port(port)
-            .requestedInitialSequenceNumber(requestedInitialSequenceNumber)
+            .requestedInitialReceivedSequenceNumber(requestedInitialReceivedSequenceNumber)
+            .requestedInitialSentSequenceNumber(requestedInitialSentSequenceNumber)
             .sequenceNumberType(sequenceNumberType)
             .heartbeatIntervalInS(heartbeatIntervalInS)
             .resetSequenceNumber(resetSequenceNumber ? ResetSequenceNumber.YES : ResetSequenceNumber.NO)

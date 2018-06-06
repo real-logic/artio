@@ -265,6 +265,7 @@ public class FixLibrary extends GatewayProcess
      *         {@link FixGatewayException}
      *         if you're unable to connect to the accepting gateway.
      *         This probably indicates a configuration problem related to the external gateway.
+     * @see LibraryUtil#initiate(FixLibrary, SessionConfiguration, int)
      */
     public Reply<Session> initiate(final SessionConfiguration configuration)
     {

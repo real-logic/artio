@@ -532,6 +532,32 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void shouldGenerateIterableForRepeatingGroups() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
+
+        canIterateOverGroupUsingForEach(decoder);
+
+        canIterateOverGroupUsingForEach(decoder);
+    }
+
+    @Test
+    public void shouldBeAbleToUseIteratorForZeroRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(ZERO_REPEATING_GROUP_MESSAGE);
+
+        canNotIteratorOverRepeatingGroup(decoder);
+    }
+
+    @Test
+    public void shouldBeAbleToUseIteratorForNoRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NO_REPEATING_GROUP_MESSAGE);
+
+        canNotIteratorOverRepeatingGroup(decoder);
+    }
+
+    @Test
     public void shouldGenerateAllFieldsSet() throws Exception
     {
         final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
@@ -883,6 +909,32 @@ public class DecoderGeneratorTest
         group = iterator.next();
         assertEquals(2, getGroupField(group));
 
+        canNotIteratorOverRepeatingGroup(iterator);
+    }
+
+    private void canIterateOverGroupUsingForEach(final Decoder decoder) throws Exception
+    {
+        final Iterable<?> iterator = getEgGroupIterable(decoder);
+        int count = 0;
+
+        for (final Object group : iterator)
+        {
+            count++;
+            assertEquals(count, getGroupField(group));
+        }
+
+        assertEquals(2, count);
+
+    }
+
+    private void canNotIteratorOverRepeatingGroup(final Decoder decoder) throws Exception
+    {
+        final Iterator<?> iterator = getEgGroupIterator(decoder);
+        canNotIteratorOverRepeatingGroup(iterator);
+    }
+
+    private void canNotIteratorOverRepeatingGroup(final Iterator<?> iterator)
+    {
         assertFalse(iterator.hasNext());
     }
 

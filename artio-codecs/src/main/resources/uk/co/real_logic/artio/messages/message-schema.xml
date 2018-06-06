@@ -168,12 +168,13 @@
     <!-- Messages From Library To Engine -->
     <sbe:message name="InitiateConnection" id="11" description="Try to make an outbound connection">
         <field name="libraryId" id="1" type="LibraryId"/>
-        <field name="requestedInitialSequenceNumber" id="2" type="int32"/>
+        <field name="requestedInitialReceivedSequenceNumber" id="2" type="int32"/>
         <field name="sequenceNumberType" id="3" type="SequenceNumberType"/>
         <field name="port" id="4" type="int32"/>
         <field name="heartbeatIntervalInS" id="5" type="int32"/>
         <field name="resetSequenceNumber" id="6" type="ResetSequenceNumber"/>
         <field name="correlationId" id="7" type="CorrelationId"/>
+        <field name="requestedInitialSentSequenceNumber" id="17" type="int32"/>
         <data name="host" id="8" type="Utf8String"/>
         <data name="senderCompId" id="9" type="Utf8String"/>
         <data name="senderSubId" id="10" type="Utf8String"/>

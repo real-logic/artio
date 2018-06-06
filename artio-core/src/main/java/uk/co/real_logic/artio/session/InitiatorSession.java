@@ -40,7 +40,7 @@ public class InitiatorSession extends Session
         final AtomicCounter receivedMsgSeqNo,
         final AtomicCounter sentMsgSeqNo,
         final int libraryId,
-        final int initialSequenceNumber,
+        final int initialSentSequenceNumber,
         final int sequenceIndex,
         final SessionState state,
         final boolean resetSeqNum,
@@ -59,7 +59,7 @@ public class InitiatorSession extends Session
             receivedMsgSeqNo,
             sentMsgSeqNo,
             libraryId,
-            initialSequenceNumber,
+            initialSentSequenceNumber,
             sequenceIndex,
             reasonableTransmissionTimeInMs,
             asciiBuffer);
