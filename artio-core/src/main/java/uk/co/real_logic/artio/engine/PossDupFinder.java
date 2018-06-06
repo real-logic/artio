@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.artio.engine;
 
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.ValidationError;
-import uk.co.real_logic.artio.decoder.Constants;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.otf.MessageControl;
 import uk.co.real_logic.artio.otf.OtfMessageAcceptor;

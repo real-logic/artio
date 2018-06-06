@@ -26,8 +26,6 @@ import java.io.IOException;
 import java.io.Writer;
 import java.util.Collection;
 
-import static java.lang.Character.isUpperCase;
-import static java.lang.Character.toUpperCase;
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.addField;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
@@ -173,7 +171,7 @@ public class ConstantGenerator
             .map((message) ->
             {
                 final int type = message.packedType();
-                final String constantName = constantName(message.name()) + "_MESSAGE";
+                final String constantName = GenerationUtil.constantName(message.name()) + "_MESSAGE";
                 final String stringConstantName = constantName + "_AS_STR";
                 return generateMessageTypeConstant(stringConstantName, type) + generateIntConstant(constantName, type);
             })
@@ -184,7 +182,7 @@ public class ConstantGenerator
     {
         return fields()
             .stream()
-            .map(field -> generateIntConstant(constantName(field.name()), field.number()))
+            .map(field -> generateIntConstant(GenerationUtil.constantName(field.name()), field.number()))
             .collect(joining());
     }
 
@@ -219,15 +217,5 @@ public class ConstantGenerator
             "    public static final int %1$s = %2$d;\n\n",
             name,
             number);
-    }
-
-    private String constantName(final String name)
-    {
-        final String replacedName = name.replace("ID", "Id");
-        return toUpperCase(replacedName.charAt(0)) + replacedName
-            .substring(1)
-            .chars()
-            .mapToObj((codePoint) -> (isUpperCase(codePoint) ? "_" : "") + (char)toUpperCase(codePoint))
-            .collect(joining());
     }
 }

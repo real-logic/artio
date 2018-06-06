@@ -17,11 +17,11 @@ package uk.co.real_logic.artio.system_tests;
 
 import org.agrona.collections.Int2ObjectHashMap;
 import org.hamcrest.Matcher;
-import uk.co.real_logic.artio.decoder.Constants;
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.session.Session;
 
 import static org.hamcrest.Matchers.equalTo;
-import static uk.co.real_logic.artio.decoder.Constants.LOGON_MESSAGE_AS_STR;
+import static uk.co.real_logic.artio.Constants.LOGON_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.util.CustomMatchers.hasResult;
 
 /**
