@@ -35,6 +35,7 @@ import static uk.co.real_logic.artio.dictionary.generation.AggregateType.*;
 import static uk.co.real_logic.artio.dictionary.generation.ConstantGenerator.constantValuesOfField;
 import static uk.co.real_logic.artio.dictionary.generation.ConstantGenerator.sizeHashSet;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.rethrown;
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.constantName;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
@@ -349,10 +350,12 @@ public class DecoderGenerator extends Generator
 
     public static String addField(final Field field, final String name)
     {
+        final String fieldName = formatPropertyName(field.name());
+
         return String.format(
-            "        %1$s.add(%2$d);\n",
+            "        %1$s.add(Constants.%2$s);\n",
             name,
-            field.number());
+            constantName(fieldName));
     }
 
     private CharSequence validateEnum(final Entry entry, final Writer out)
@@ -1061,18 +1064,17 @@ public class DecoderGenerator extends Generator
         // int endOfField = the end index of the value
 
         final Field field = (Field)entry.element();
-        final int tag = field.number();
         final String name = entry.name();
         final String fieldName = formatPropertyName(name);
 
         return String.format(
-            "            case %d:\n" +
+            "            case Constants.%s:\n" +
             "%s" +
             "                %s = buffer.%s);\n" +
             "%s" +
             "%s" +
             "                break;\n",
-            tag,
+            constantName(fieldName),
             optionalAssign(entry),
             fieldName,
             decodeMethodFor(field.type(), fieldName),

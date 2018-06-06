@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.system_tests;
 import org.hamcrest.Matcher;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.ValidationError;
-import uk.co.real_logic.artio.decoder.Constants;
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.otf.MessageControl;
 import uk.co.real_logic.artio.otf.OtfMessageAcceptor;
@@ -32,7 +32,7 @@ import java.util.stream.Stream;
 
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.artio.LogTag.FIX_TEST;
-import static uk.co.real_logic.artio.decoder.Constants.MSG_TYPE;
+import static uk.co.real_logic.artio.Constants.MSG_TYPE;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasSequenceIndex;
 

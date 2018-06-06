@@ -26,7 +26,7 @@ import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.artio.decoder.Constants.TARGET_COMP_ID;
+import static uk.co.real_logic.artio.Constants.TARGET_COMP_ID;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 
 public class SessionParserTest
