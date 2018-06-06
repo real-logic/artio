@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
-import org.agrona.LangUtil;
 import org.agrona.generation.OutputManager;
 import org.agrona.generation.ResourceConsumer;
 import uk.co.real_logic.artio.builder.Decoder;
@@ -32,7 +31,6 @@ import java.util.stream.Stream;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.*;
-import static uk.co.real_logic.artio.dictionary.generation.ConstantGenerator.constantValuesOfField;
 import static uk.co.real_logic.artio.dictionary.generation.ConstantGenerator.sizeHashSet;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.rethrown;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.constantName;
@@ -367,7 +365,6 @@ public class DecoderGenerator extends Generator
         }
 
         final String name = entry.name();
-        final String valuesField = "valuesOf" + entry.name();
         final String optionalCheck = entry.required() ? "" : String.format("has%s && ", name);
         final int tagNumber = field.number();
         final Type type = field.type();
@@ -375,38 +372,17 @@ public class DecoderGenerator extends Generator
 
         final boolean isChar = type == Type.CHAR;
         final boolean isPrimitive = type.isIntBased() || isChar;
-        final String copyFrom = "Constants." + constantValuesOfField(name);
-        try
-        {
-            if (isPrimitive)
-            {
-                out.append(intHashSetCopy(
-                    sizeHashSet(field.values()), valuesField, copyFrom));
-            }
-            else if (type.isStringBased())
-            {
-                out.append(String.format(
-                    "    public final CharArraySet %1$s = new CharArraySet(%2$s);\n", valuesField, copyFrom));
-            }
-            else
-            {
-                return "";
-            }
-        }
-        catch (final IOException ex)
-        {
-            LangUtil.rethrowUnchecked(ex);
-        }
+
 
         return String.format(
-            "        if (%1$s!%2$s.contains(%3$s%5$s))\n" +
+            "        if (%1$s!%2$s.isValid(%3$s%5$s))\n" +
             "        {\n" +
             "            invalidTagId = %4$s;\n" +
             "            rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
             "            return false;\n" +
             "        }\n",
             optionalCheck,
-            valuesField,
+            name,
             propertyName,
             tagNumber,
             isPrimitive ? "" : ", " + propertyName + "Length");

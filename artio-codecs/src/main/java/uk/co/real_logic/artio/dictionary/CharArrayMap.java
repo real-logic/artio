@@ -36,4 +36,10 @@ public final class CharArrayMap<V>
         wrapper.wrap(value, length);
         return map.get(wrapper);
     }
+
+    public boolean containsKey(final char[] value, final int length)
+    {
+        wrapper.wrap(value, length);
+        return map.containsKey(wrapper);
+    }
 }
