@@ -50,6 +50,9 @@ public class DecoderGeneratorTest
     private static final char[] ABC = "abc".toCharArray();
     private static final char[] AB = "ab".toCharArray();
     private static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
+    private static final char[] MULTI_CHAR_VALUE = "a b".toCharArray();
+    private static final char[] MULTI_CHAR_VALUE_NO_ENUM = "a b z f".toCharArray();
+    private static final char[] MULTI_VALUE_STRING = "ab cd".toCharArray();
 
     private static Class<?> heartbeatWithoutValidation;
     private static Class<?> heartbeat;
@@ -691,6 +694,53 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void decodesMultiCharValue() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MULTI_CHAR_VALUE_MESSAGE);
+        assertArrayEquals(MULTI_CHAR_VALUE, getMultiCharField(decoder));
+
+        assertValid(decoder);
+    }
+
+    @Test
+    public void doesNotValidateIfNoEnumValuesPresent() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MULTI_CHAR_VALUE_NO_ENUM_MESSAGE);
+        assertArrayEquals(MULTI_CHAR_VALUE_NO_ENUM, getMultiCharNoEnumField(decoder));
+
+        assertValid(decoder);
+    }
+
+    @Test
+    public void multiCharValueThatFailsValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(INVALID_MULTI_CHAR_VALUE_MESSAGE);
+
+        assertInvalid(decoder);
+    }
+
+    @Test
+    public void decodesMultiValueString() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MULTI_VALUE_STRING_MESSAGE);
+
+        assertArrayEquals(MULTI_VALUE_STRING, getMultiValStringField(decoder));
+
+        assertValid(decoder);
+    }
+
+    //This is the same as MultipleValueString (it was renamed in FIX 5)
+    @Test
+    public void decodesMultiStringValue() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MULTI_STRING_VALUE_MESSAGE);
+
+        assertArrayEquals(MULTI_VALUE_STRING, getMultiStringValField(decoder));
+
+        assertValid(decoder);
+    }
+
+    @Test
     public void shouldIgnoreMissingOptionalValuesWithoutValidation() throws Exception
     {
         final Decoder decoder = decodeHeartbeatWithoutValidation(DERIVED_FIELDS_MESSAGE);
@@ -867,6 +917,26 @@ public class DecoderGeneratorTest
     private char[] getCountryField(final Decoder decoder) throws Exception
     {
         return getChars(decoder, "countryField");
+    }
+
+    private char[] getMultiCharField(final Decoder decoder) throws Exception
+    {
+        return getChars(decoder, "multiCharField");
+    }
+
+    private char[] getMultiCharNoEnumField(final Decoder decoder) throws Exception
+    {
+        return getChars(decoder, "multiValueCharNoEnumField");
+    }
+
+    private char[] getMultiValStringField(final Decoder decoder) throws Exception
+    {
+        return getChars(decoder, "multiValueStringField");
+    }
+
+    private char[] getMultiStringValField(final Decoder decoder) throws Exception
+    {
+        return getChars(decoder, "multiStringValueField");
     }
 
     private char[] getExchangeField(final Decoder decoder) throws Exception
@@ -1122,6 +1192,14 @@ public class DecoderGeneratorTest
     {
         final boolean isValid = decoder.validate();
         assertTrue(String.format(
+            "Decoder fails validation due to: %s for tag: %d", decoder.rejectReason(), decoder.invalidTagId()),
+            isValid);
+    }
+
+    private void assertInvalid(final Decoder decoder)
+    {
+        final boolean isValid = decoder.validate();
+        assertFalse(String.format(
             "Decoder fails validation due to: %s for tag: %d", decoder.rejectReason(), decoder.invalidTagId()),
             isValid);
     }
