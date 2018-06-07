@@ -21,7 +21,7 @@ import org.junit.After;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Reply.State;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
-import uk.co.real_logic.artio.decoder.Constants;
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.session.Session;
@@ -33,7 +33,7 @@ import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.unusedPort;
 import static uk.co.real_logic.artio.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.artio.decoder.Constants.*;
+import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 

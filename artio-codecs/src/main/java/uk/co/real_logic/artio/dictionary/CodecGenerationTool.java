@@ -53,7 +53,7 @@ public final class CodecGenerationTool
         final PackageOutputManager decoder = new PackageOutputManager(outputPath, DECODER_PACKAGE);
 
         final EnumGenerator enumGenerator = new EnumGenerator(dictionary, PARENT_PACKAGE, parent);
-        final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, DECODER_PACKAGE, decoder);
+        final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, PARENT_PACKAGE, parent);
 
         final EncoderGenerator encoderGenerator = new EncoderGenerator(
             dictionary,

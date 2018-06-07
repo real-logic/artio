@@ -104,6 +104,7 @@ public final class Reflection
             .invoke(value);
     }
 
+
     public static Object get(final Object value, final String name, final int parameter) throws Exception
     {
         return value.getClass()
@@ -217,5 +218,14 @@ public final class Reflection
     public static String getString(final Decoder decoder, final String field) throws Exception
     {
         return (String)get(decoder, field);
+    }
+
+    public static AsciiSequenceView getAsciiSequenceView(final Object value, final String name) throws Exception
+    {
+        final AsciiSequenceView view = new AsciiSequenceView();
+        value.getClass()
+                .getMethod(name, AsciiSequenceView.class)
+                .invoke(value, view);
+        return view;
     }
 }

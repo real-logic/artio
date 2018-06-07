@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.validation;
 
-import uk.co.real_logic.artio.decoder.Constants;
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.dictionary.CharArraySet;
 

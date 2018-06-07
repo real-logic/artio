@@ -44,6 +44,7 @@ public final class ExampleDictionary
     public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
     public static final String OTHER_ENUM = PARENT_PACKAGE + "." + "OtherEnum";
     public static final String STRING_ENUM = PARENT_PACKAGE + "." + "stringEnum";
+    public static final String MULTI_STRING_VALUE_ENUM = PARENT_PACKAGE + "." + "multiStringValueEnum";
 
     public static final String TEST_PARENT_PACKAGE = PARENT_PACKAGE;
 
@@ -208,6 +209,26 @@ public final class ExampleDictionary
         "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
         "\00110=043\001";
 
+    public static final String MULTI_CHAR_VALUE_MESSAGE =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001132=a b\00110=043\001";
+
+    public static final String MULTI_CHAR_VALUE_NO_ENUM_MESSAGE =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001134=a b z f\00110=043\001";
+
+    public static final String INVALID_MULTI_CHAR_VALUE_MESSAGE =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001132=a b c\00110=043\001";
+
+    public static final String MULTI_VALUE_STRING_MESSAGE =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001133=ab cd\00110=043\001";
+
+    public static final String MULTI_STRING_VALUE_MESSAGE =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001135=ab cd\00110=043\001";
+
     public static final String SHORTER_STRING_MESSAGE =
         "8=FIX.4.4\0019=52\00135=0\001115=ab\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
         "\00110=199\001";
@@ -274,6 +295,7 @@ public final class ExampleDictionary
         MESSAGE_EXAMPLE = buildMessageExample();
     }
 
+    @SuppressWarnings("MethodLength")
     private static Dictionary buildMessageExample()
     {
         final Map<String, Field> messageEgFields = new HashMap<>();
@@ -300,6 +322,22 @@ public final class ExampleDictionary
         final Field charField = registerField(messageEgFields, 128,  "CharField", Type.CHAR)
             .addValue("a", "One")
             .addValue("b", "Two");
+        final Field multiCharField = registerField(messageEgFields, 132,  "MultiCharField", Type.MULTIPLECHARVALUE)
+            .addValue("a", "One")
+            .addValue("b", "Two");
+
+        final Field multiValStringField = registerField(messageEgFields, 133,  "MultiValueStringField",
+            Type.MULTIPLEVALUESTRING)
+            .addValue("ab", "One")
+            .addValue("cd", "Two");
+
+        final Field multiStringValField = registerField(messageEgFields, 135,  "MultiStringValueField",
+            Type.MULTIPLEVALUESTRING)
+            .addValue("ab", "One")
+            .addValue("cd", "Two");
+
+        final Field multiCharFieldNotAnEnum = registerField(messageEgFields, 134,  "MultiValueCharNoEnumField",
+            Type.MULTIPLECHARVALUE);
 
         final Field dayOfMonthField = registerField(messageEgFields, 129,  "DayOfMonthField", Type.DAYOFMONTH);
 
@@ -319,6 +357,7 @@ public final class ExampleDictionary
 
         final Field dataFieldLength = registerField(messageEgFields, 200, "DataFieldLength", Type.LENGTH);
 
+
         final Message heartbeat = new Message("Heartbeat", "0", ADMIN);
         heartbeat.requiredEntry(onBehalfOfCompID);
         heartbeat.optionalEntry(testReqID);
@@ -327,6 +366,10 @@ public final class ExampleDictionary
         heartbeat.optionalEntry(booleanField);
         heartbeat.optionalEntry(dataField);
         heartbeat.optionalEntry(charField);
+        heartbeat.optionalEntry(multiCharField);
+        heartbeat.optionalEntry(multiValStringField);
+        heartbeat.optionalEntry(multiStringValField);
+        heartbeat.optionalEntry(multiCharFieldNotAnEnum);
         heartbeat.optionalEntry(dayOfMonthField);
         heartbeat.requiredEntry(someTime);
         heartbeat.optionalEntry(egGroup);
@@ -377,10 +420,16 @@ public final class ExampleDictionary
             .addValue("A", "_A")
             .addValue("AA", "_AAA");
 
+        final Field multiStringValueEnum = new Field(126, "multiStringValueEnum", Type.MULTIPLESTRINGVALUE)
+            .addValue("0", "_0")
+            .addValue("A", "_A")
+            .addValue("AA", "_AAA");
+
         final Map<String, Field> fieldEgFields = new HashMap<>();
         fieldEgFields.put("EgEnum", egEnum);
         fieldEgFields.put("OtherEnum", otherEnum);
         fieldEgFields.put("stringEnum", stringEnum);
+        fieldEgFields.put("multiStringValueEnum", multiStringValueEnum);
         fieldEgFields.put("egNotEnum", new Field(125, "EgNotEnum", Type.CHAR));
 
         return new Dictionary(emptyList(), fieldEgFields, emptyMap(), null, null,

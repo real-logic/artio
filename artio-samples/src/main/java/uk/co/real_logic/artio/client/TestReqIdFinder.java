@@ -30,7 +30,7 @@ import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.artio.decoder.Constants.TEST_REQ_ID;
+import static uk.co.real_logic.artio.Constants.TEST_REQ_ID;
 
 public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
 {
