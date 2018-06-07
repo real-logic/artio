@@ -27,6 +27,7 @@ import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.LocalMktDateEncoder;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.AsciiBuffer;
+import uk.co.real_logic.artio.util.AsciiSequenceView;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.IOException;
@@ -115,6 +116,7 @@ public abstract class Generator
     {
         out
             .append(importFor(MutableDirectBuffer.class))
+            .append(importFor(AsciiSequenceView.class))
             .append(importStaticFor(CodecUtil.class))
             .append(importStaticFor(StandardFixConstants.class))
             .append(importFor(topType(MESSAGE)));
@@ -320,7 +322,7 @@ public abstract class Generator
             case EXCHANGE:
             case COUNTRY:
             case LANGUAGE:
-                return resetLength(name);
+                return resetStringBasedData(name);
 
             case UTCTIMESTAMP:
             case LOCALMKTDATE:
@@ -343,6 +345,8 @@ public abstract class Generator
     protected abstract String resetTemporalValue(String name);
 
     protected abstract String resetComponents(List<Entry> entries, StringBuilder methods);
+
+    protected abstract String resetStringBasedData(String name);
 
     protected String nameOfResetMethod(final String name)
     {
@@ -435,7 +439,7 @@ public abstract class Generator
             nameOfResetMethod(name));
     }
 
-    public String resetFieldValue(final String name, final String resetValue)
+    protected String resetFieldValue(final String name, final String resetValue)
     {
         return String.format(
             "    public void %1$s()\n" +

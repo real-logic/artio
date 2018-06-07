@@ -15,13 +15,18 @@
  */
 package uk.co.real_logic.artio.dictionary;
 
-import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
-import uk.co.real_logic.artio.dictionary.ir.*;
-import uk.co.real_logic.artio.dictionary.ir.Field.Type;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+
+import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
+import uk.co.real_logic.artio.dictionary.ir.Component;
+import uk.co.real_logic.artio.dictionary.ir.Dictionary;
+import uk.co.real_logic.artio.dictionary.ir.Field;
+import uk.co.real_logic.artio.dictionary.ir.Field.Type;
+import uk.co.real_logic.artio.dictionary.ir.Group;
+import uk.co.real_logic.artio.dictionary.ir.Message;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
@@ -30,7 +35,13 @@ import static java.util.Collections.emptyMap;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.ENCODER_PACKAGE;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
 import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
-import static uk.co.real_logic.artio.dictionary.ir.Field.Type.*;
+import static uk.co.real_logic.artio.dictionary.ir.Category.APP;
+import static uk.co.real_logic.artio.dictionary.ir.Field.Type.CHAR;
+import static uk.co.real_logic.artio.dictionary.ir.Field.Type.COUNTRY;
+import static uk.co.real_logic.artio.dictionary.ir.Field.Type.CURRENCY;
+import static uk.co.real_logic.artio.dictionary.ir.Field.Type.EXCHANGE;
+import static uk.co.real_logic.artio.dictionary.ir.Field.Type.INT;
+import static uk.co.real_logic.artio.dictionary.ir.Field.Type.STRING;
 import static uk.co.real_logic.artio.dictionary.ir.Field.registerField;
 
 public final class ExampleDictionary
@@ -59,6 +70,7 @@ public final class ExampleDictionary
     public static final String COMPONENT_DECODER = TEST_PACKAGE + "." + EG_COMPONENT + "Decoder";
     public static final String OTHER_MESSAGE_DECODER = TEST_PACKAGE + ".OtherMessageDecoder";
     public static final String OTHER_MESSAGE_ENCODER = TEST_PACKAGE + ".OtherMessageEncoder";
+    public static final String ENUM_TEST_MESSAGE_DECODER = TEST_PACKAGE + ".EnumTestMessageDecoder";
 
     public static final String PRINTER = TEST_PACKAGE + ".PrinterImpl";
 
@@ -262,11 +274,25 @@ public final class ExampleDictionary
     public static final String EG_HIGH_NUMBER_FIELD_MESSAGE =
         "8=FIX.4.4\0019=0049\00135=Z\0019001=1\0011001=USD\0011002=N\0011003=US\00110=209\001";
 
+    public static final String ET_ALL_FIELDS =
+        "8=FIX.4.4\0019=0049\00135=ET\001501=a\001502=10\001503=alpha\001511=c\001512=30\001513=gamma\00110=209\001";
+
+    public static final String ET_ONLY_REQ_FIELDS =
+        "8=FIX.4.4\0019=0049\00135=ET\001511=d\001512=40\001513=delta\00110=209\001";
+
+    public static final String ET_ONLY_REQ_FIELDS_WITH_BAD_VALUES =
+        "8=FIX.4.4\0019=0049\00135=ET\001511=X\001512=-1\001513=X\00110=209\001";
+
+    public static final String ET_MISSING_REQ_FIELD =
+        "8=FIX.4.4\0019=0049\00135=ET\001511=d\001512=40\00110=209\001";
+
     public static final int TEST_REQ_ID_TAG = 112;
 
     public static final String OTHER_MESSAGE_TYPE = "AB";
     public static final byte[] OTHER_MESSAGE_TYPE_BYTES = OTHER_MESSAGE_TYPE.getBytes(US_ASCII);
     public static final int OTHER_MESSAGE_TYPE_PACKED = GenerationUtil.packMessageType(OTHER_MESSAGE_TYPE);
+    private static final String ENUM_TEST_MESSAGE = "EnumTestMessage";
+    private static final String ENUM_TEST_MESSAGE_TYPE = "ET";
 
     static
     {
@@ -274,6 +300,7 @@ public final class ExampleDictionary
         MESSAGE_EXAMPLE = buildMessageExample();
     }
 
+    @SuppressWarnings("MethodLength")
     private static Dictionary buildMessageExample()
     {
         final Map<String, Field> messageEgFields = new HashMap<>();
@@ -354,7 +381,27 @@ public final class ExampleDictionary
         fieldsMessage.optionalEntry(registerField(messageEgFields, 1006, "OptionalCountryField", COUNTRY));
         fieldsMessage.optionalEntry(registerField(messageEgFields, 9001, "HighNumberField", INT));
 
-        final List<Message> messages = asList(heartbeat, otherMessage, fieldsMessage);
+        final Message enumTestMessage = new Message(ENUM_TEST_MESSAGE, ENUM_TEST_MESSAGE_TYPE, APP);
+        enumTestMessage.optionalEntry(registerField(messageEgFields, 501, "CharEnumOpt", CHAR)
+            .addValue("a", "A")
+            .addValue("b", "B"));
+        enumTestMessage.optionalEntry(registerField(messageEgFields, 502, "IntEnumOpt", INT)
+            .addValue("10", "TEN")
+            .addValue("20", "TWENTY"));
+        enumTestMessage.optionalEntry(registerField(messageEgFields, 503, "StringEnumOpt", STRING)
+            .addValue("alpha", "ALPHA")
+            .addValue("beta", "BETA"));
+        enumTestMessage.requiredEntry(registerField(messageEgFields, 511, "CharEnumReq", CHAR)
+            .addValue("c", "C")
+            .addValue("d", "D"));
+        enumTestMessage.requiredEntry(registerField(messageEgFields, 512, "IntEnumReq", INT)
+            .addValue("30", "THIRTY")
+            .addValue("40", "FORTY"));
+        enumTestMessage.requiredEntry(registerField(messageEgFields, 513, "StringEnumReq", STRING)
+            .addValue("gamma", "GAMMA")
+            .addValue("delta", "DELTA"));
+
+        final List<Message> messages = asList(heartbeat, otherMessage, fieldsMessage, enumTestMessage);
 
         final Map<String, Component> components = new HashMap<>();
         components.put(EG_COMPONENT, egComponent);
