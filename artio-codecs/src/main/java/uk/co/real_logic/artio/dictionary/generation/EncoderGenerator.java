@@ -813,6 +813,12 @@ public class EncoderGenerator extends Generator
             .collect(joining());
     }
 
+    @Override
+    protected String resetStringBasedData(final String name)
+    {
+        return resetLength(name);
+    }
+
     protected String groupEntryToString(final Group element, final String name)
     {
         final Entry numberField = element.numberField();

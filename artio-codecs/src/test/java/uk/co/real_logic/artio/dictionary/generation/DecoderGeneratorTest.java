@@ -23,6 +23,7 @@ import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
+import uk.co.real_logic.artio.util.AsciiSequenceView;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.util.Reflection;
 
@@ -490,6 +491,17 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void shouldBeAbleToExtractStringsAsAsciiSequenceViewFromStringFields() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NO_OPTIONAL_MESSAGE);
+
+        final AsciiSequenceView actual = getAsciiSequenceView(decoder, "onBehalfOfCompID");
+        assertEquals("abc", actual.toString());
+        assertThrows(() -> getAsciiSequenceView(decoder, "testReqID"), IllegalArgumentException.class,
+            "No value for optional field: TestReqID");
+    }
+
+    @Test
     public void shouldBeAbleToExtractEnumFromStringFields() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(NO_OPTIONAL_MESSAGE);
@@ -592,6 +604,10 @@ public class DecoderGeneratorTest
         assertEquals("GBP", getOptionalCurrencyFieldAsString(decoder));
         assertEquals("XLON", getOptionalExchangeFieldAsString(decoder));
         assertEquals("GB", getOptionalCountryFieldAsString(decoder));
+
+        assertEquals("GBP", getOptionalCurrencyFieldAsView(decoder).toString());
+        assertEquals("XLON", getOptionalExchangeFieldAsView(decoder).toString());
+        assertEquals("GB", getOptionalCountryFieldAsView(decoder).toString());
 
         assertValid(decoder);
     }
@@ -859,6 +875,7 @@ public class DecoderGeneratorTest
         assertArrayEquals(countryChars, Arrays.copyOf(getCountryField(decoder), countryFieldLength));
 
         assertRequiredFieldsMessageFieldsAsStringDecoded(decoder, currency, exchange, country);
+        assertRequiredFieldsMessageFieldsAsViewDecoded(decoder, currency, exchange, country);
     }
 
     private void assertRequiredFieldsMessageFieldsAsStringDecoded(
@@ -867,6 +884,14 @@ public class DecoderGeneratorTest
         assertEquals(currency, getCurrencyFieldAsString(decoder));
         assertEquals(exchange, getExchangeFieldAsString(decoder));
         assertEquals(country, getCountryFieldAsString(decoder));
+    }
+
+    private void assertRequiredFieldsMessageFieldsAsViewDecoded(
+        final Decoder decoder, final String currency, final String exchange, final String country) throws Exception
+    {
+        assertEquals(currency, getCurrencyFieldAsView(decoder).toString());
+        assertEquals(exchange, getExchangeFieldAsView(decoder).toString());
+        assertEquals(country, getCountryFieldAsView(decoder).toString());
     }
 
     private String getOptionalCountryFieldAsString(final Decoder decoder) throws Exception
@@ -947,6 +972,36 @@ public class DecoderGeneratorTest
     private char[] getCurrencyField(final Decoder decoder) throws Exception
     {
         return getChars(decoder, "currencyField");
+    }
+
+    private AsciiSequenceView getOptionalCountryFieldAsView(final Decoder decoder) throws Exception
+    {
+        return getAsciiSequenceView(decoder, "countryField");
+    }
+
+    private AsciiSequenceView getOptionalExchangeFieldAsView(final Decoder decoder) throws Exception
+    {
+        return getAsciiSequenceView(decoder, "exchangeField");
+    }
+
+    private AsciiSequenceView getOptionalCurrencyFieldAsView(final Decoder decoder) throws Exception
+    {
+        return getAsciiSequenceView(decoder, "currencyField");
+    }
+
+    private AsciiSequenceView getCountryFieldAsView(final Decoder decoder) throws Exception
+    {
+        return getAsciiSequenceView(decoder, "countryField");
+    }
+
+    private AsciiSequenceView getExchangeFieldAsView(final Decoder decoder) throws Exception
+    {
+        return getAsciiSequenceView(decoder, "exchangeField");
+    }
+
+    private AsciiSequenceView getCurrencyFieldAsView(final Decoder decoder) throws Exception
+    {
+        return getAsciiSequenceView(decoder, "currencyField");
     }
 
     private int getCurrencyFieldLength(final Decoder decoder) throws Exception
@@ -1204,8 +1259,33 @@ public class DecoderGeneratorTest
             isValid);
     }
 
+    private <T extends Exception> void assertThrows(
+        final ExceptionThrowingCommand throwableCommand,
+        final Class<T> exception,
+        final String message)
+    {
+        try
+        {
+            throwableCommand.execute();
+            fail(String.format("Expected exception %s with message %s but was no exception thrown",
+                exception, message));
+        }
+        catch (final Exception e)
+        {
+            final Throwable actualException = e.getCause();
+            assertThat(e.getClass(), typeCompatibleWith(InvocationTargetException.class));
+            assertThat(actualException.getClass(), typeCompatibleWith(exception));
+            assertThat(actualException.getMessage(), is(message));
+        }
+    }
+
     private Object getRequiredFields(final Decoder decoder) throws IllegalAccessException, NoSuchFieldException
     {
         return heartbeat.getField(REQUIRED_FIELDS).get(decoder);
+    }
+
+    private interface ExceptionThrowingCommand
+    {
+        void execute() throws Exception;
     }
 }
