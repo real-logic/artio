@@ -40,7 +40,7 @@ public final class EnumGenerator
     private static final String NULL_VALUE_INT = Integer.toString(Integer.MIN_VALUE);
     private static final String NULL_VALUE_STRING = "";
 
-    private static final String UNKNOWN_VALUE_NAME = "UNKNOWN";
+    private static final String UNKNOWN_VALUE_NAME = "UNKNOWN_REPRESENTATION";
     private static final String UNKNOWN_VALUE_CHAR = "\u0002";
     private static final String UNKNOWN_VALUE_INT = Integer.toString(Integer.MAX_VALUE);
     private static final String UNKNOWN_VALUE_STRING = "\u0002";
@@ -79,7 +79,7 @@ public final class EnumGenerator
         final String enumName = field.name();
         final Type type = field.type();
         final List<Value> fieldValues = field.values();
-        final List<Value> values = new ArrayList<>(fieldValues.size() + 1);
+        final List<Value> values = new ArrayList<>(fieldValues.size() + 2);
         final String nullValue;
         final String unknownValue;
         if (type == Type.CHAR)

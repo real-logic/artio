@@ -15,17 +15,6 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
-import org.agrona.collections.IntHashSet;
-import org.agrona.generation.StringWriterOutputManager;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import uk.co.real_logic.artio.builder.Decoder;
-import uk.co.real_logic.artio.dictionary.ExampleDictionary;
-import uk.co.real_logic.artio.fields.DecimalFloat;
-import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
-import uk.co.real_logic.artio.util.MutableAsciiBuffer;
-import uk.co.real_logic.artio.util.Reflection;
-
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
@@ -33,29 +22,134 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 
+import org.agrona.collections.IntHashSet;
+import org.agrona.generation.StringWriterOutputManager;
+import org.junit.BeforeClass;
+import org.junit.Test;
+
+import static org.agrona.generation.CompilerUtil.compileInMemory;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasToString;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+
+
+import uk.co.real_logic.artio.builder.Decoder;
+import uk.co.real_logic.artio.dictionary.ExampleDictionary;
+import uk.co.real_logic.artio.fields.DecimalFloat;
+import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
+import uk.co.real_logic.artio.util.Reflection;
+
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
-import static org.agrona.generation.CompilerUtil.compileInMemory;
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.builder.Decoder.NO_ERROR;
-import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.BOOLEAN_FIELD;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.COMPONENT_DECODER;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.COMPONENT_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.DATA_FIELD;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.DERIVED_FIELDS_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.EG_FIELDS_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.EG_HIGH_NUMBER_FIELD_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.EG_NO_OPTIONAL_FIELDS_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.ENCODED_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.ENUM_TEST_MESSAGE_DECODER;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.ET_ALL_FIELDS;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.ET_MISSING_REQ_FIELD;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.ET_ONLY_REQ_FIELDS;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.ET_ONLY_REQ_FIELDS_WITH_BAD_VALUES;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.FIELDS_MESSAGE_DECODER;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.FLOAT_FIELD;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.HAS_BOOLEAN_FIELD;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.HAS_COMPONENT_FIELD;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.HAS_DATA_FIELD;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.HAS_TEST_REQ_ID;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.HEADER_DECODER;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.HEARTBEAT_DECODER;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.HEARTBEAT_TYPE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.INT_FIELD;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.INVALID_TAG_NUMBER_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.MESSAGE_EXAMPLE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.MISSING_REQUIRED_FIELDS_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.NESTED_GROUP_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.NO_OPTIONAL_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.NO_REPEATING_GROUP_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.OTHER_MESSAGE_DECODER;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.OTHER_MESSAGE_TYPE_BYTES;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.OTHER_MESSAGE_TYPE_PACKED;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.REPEATING_GROUP_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.REPEATING_GROUP_MESSAGE_WITH_INVALID_TAG_NUMBER;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.REPEATING_GROUP_MESSAGE_WITH_INVALID_TAG_NUMBER_FIELDS_AFTER;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.REPEATING_GROUP_MESSAGE_WITH_MISSING_REQUIRED_FIELDS_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.SHORTER_STRING_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.SHORT_TIMESTAMP_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.SINGLE_REPEATING_GROUP_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.SOME_TIME_FIELD;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.STRING_ENCODED_MESSAGE_EXAMPLE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.STRING_GROUP_TWO_ELEMENTS;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.STRING_NO_OPTIONAL_MESSAGE_EXAMPLE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TAG_APPEARS_MORE_THAN_ONCE_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TAG_SPECIFIED_WHERE_INT_VALUE_IS_INCORRECT_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TAG_SPECIFIED_WHERE_STRING_VALUE_IS_INCORRECT_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TAG_SPECIFIED_WITHOUT_A_VALUE_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TEST_PACKAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TEST_PARENT_PACKAGE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TEST_REQ_ID;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.ZERO_REPEATING_GROUP_MESSAGE;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
-import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.*;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.ALL_FIELDS;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.CODEC_LOGGING;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.INVALID_TAG_NUMBER;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.REQUIRED_FIELDS;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.REQUIRED_TAG_MISSING;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_APPEARS_MORE_THAN_ONCE;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_SPECIFIED_WITHOUT_A_VALUE;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.VALUE_IS_INCORRECT;
 import static uk.co.real_logic.artio.fields.DecimalFloat.MISSING_FLOAT;
-import static uk.co.real_logic.artio.util.Reflection.*;
+import static uk.co.real_logic.artio.util.Reflection.get;
+import static uk.co.real_logic.artio.util.Reflection.getBytes;
+import static uk.co.real_logic.artio.util.Reflection.getChars;
+import static uk.co.real_logic.artio.util.Reflection.getEgGroup;
+import static uk.co.real_logic.artio.util.Reflection.getEgGroupIterable;
+import static uk.co.real_logic.artio.util.Reflection.getEgGroupIterator;
+import static uk.co.real_logic.artio.util.Reflection.getField;
+import static uk.co.real_logic.artio.util.Reflection.getInt;
+import static uk.co.real_logic.artio.util.Reflection.getNestedGroup;
+import static uk.co.real_logic.artio.util.Reflection.getRepresentation;
+import static uk.co.real_logic.artio.util.Reflection.getString;
+import static uk.co.real_logic.artio.util.Reflection.next;
+import static uk.co.real_logic.artio.util.Reflection.setField;
 
 public class DecoderGeneratorTest
 {
     private static final char[] ABC = "abc".toCharArray();
     private static final char[] AB = "ab".toCharArray();
     private static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
+    private static final String CHAR_ENUM_OPT = "charEnumOpt";
+    private static final String INT_ENUM_OPT = "intEnumOpt";
+    private static final String STRING_ENUM_OPT = "stringEnumOpt";
+    private static final String CHAR_ENUM_REQ = "charEnumReq";
+    private static final String INT_ENUM_REQ = "intEnumReq";
+    private static final String STRING_ENUM_REQ = "stringEnumReq";
 
     private static Class<?> heartbeatWithoutValidation;
     private static Class<?> heartbeat;
     private static Class<?> component;
     private static Class<?> otherMessage;
     private static Class<?> fieldsMessage;
+    private static Class<?> enumTestMessage;
 
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
@@ -73,6 +167,7 @@ public class DecoderGeneratorTest
         fieldsMessage = heartbeat.getClassLoader().loadClass(FIELDS_MESSAGE_DECODER);
         compileInMemory(HEADER_DECODER, sourcesWithValidation);
         otherMessage = compileInMemory(OTHER_MESSAGE_DECODER, sourcesWithValidation);
+        enumTestMessage = compileInMemory(ENUM_TEST_MESSAGE_DECODER, sourcesWithValidation);
 
         heartbeatWithoutValidation = compileInMemory(HEARTBEAT_DECODER, sourcesWithoutValidation);
         if (heartbeatWithoutValidation == null || CODEC_LOGGING)
@@ -153,14 +248,49 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void decodesPrimitiveValuesAsEnum() throws Exception
+    public void decodesEnumValuesUsingAsEnumMethods() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_MESSAGE);
-        assertEquals(2, getRepresentation(get(decoder, INT_FIELD + "AsEnum")));
-        assertEquals('\u0000', getRepresentation(get(decoder, CHAR_FIELD + "AsEnum")));
+        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        decode(ET_ALL_FIELDS, decoder);
+        assertEquals('a', getRepresentation(get(decoder, CHAR_ENUM_OPT + "AsEnum")));
+        assertEquals(10, getRepresentation(get(decoder, INT_ENUM_OPT + "AsEnum")));
+        assertEquals("alpha", getRepresentation(get(decoder, STRING_ENUM_OPT + "AsEnum")));
+        assertEquals('c', getRepresentation(get(decoder, CHAR_ENUM_REQ + "AsEnum")));
+        assertEquals(30, getRepresentation(get(decoder, INT_ENUM_REQ + "AsEnum")));
+        assertEquals("gamma", getRepresentation(get(decoder, STRING_ENUM_REQ + "AsEnum")));
         assertValid(decoder);
     }
 
+    @Test
+    public void decodesMissingOptionalEnumValuesAsSentinelsUsingAsEnumMethods() throws Exception
+    {
+        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        decode(ET_ONLY_REQ_FIELDS, decoder);
+        assertEquals('\u0000', getRepresentation(get(decoder, CHAR_ENUM_OPT + "AsEnum")));
+        assertEquals(Integer.MIN_VALUE, getRepresentation(get(decoder, INT_ENUM_OPT + "AsEnum")));
+        assertEquals("", getRepresentation(get(decoder, STRING_ENUM_OPT + "AsEnum")));
+        assertValid(decoder);
+    }
+
+    @Test
+    public void decodesBadEnumValuesAsSentinelsUsingAsEnumMethods() throws Exception
+    {
+        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        decode(ET_ONLY_REQ_FIELDS_WITH_BAD_VALUES, decoder);
+        assertEquals('\u0002', getRepresentation(get(decoder, CHAR_ENUM_REQ + "AsEnum")));
+        assertEquals(Integer.MAX_VALUE, getRepresentation(get(decoder, INT_ENUM_REQ + "AsEnum")));
+        assertEquals("\u0002", getRepresentation(get(decoder, STRING_ENUM_REQ + "AsEnum")));
+        assertInvalid(decoder);
+    }
+
+    @Test
+    public void decodesMissingRequiredEnumFieldUsingAsEnumMethod() throws Exception
+    {
+        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        decode(ET_MISSING_REQ_FIELD, decoder);
+        assertEquals("", getRepresentation(get(decoder, STRING_ENUM_REQ + "AsEnum")));
+        assertInvalid(decoder);
+    }
 
     @Test
     public void shouldIgnoreMissingOptionalValues() throws Exception
@@ -1124,6 +1254,12 @@ public class DecoderGeneratorTest
         assertTrue(String.format(
             "Decoder fails validation due to: %s for tag: %d", decoder.rejectReason(), decoder.invalidTagId()),
             isValid);
+    }
+
+    private void assertInvalid(final Decoder decoder)
+    {
+        final boolean isValid = decoder.validate();
+        assertTrue("Decoder erroneously passes validation for all tags.", !isValid);
     }
 
     private Object getRequiredFields(final Decoder decoder) throws IllegalAccessException, NoSuchFieldException
