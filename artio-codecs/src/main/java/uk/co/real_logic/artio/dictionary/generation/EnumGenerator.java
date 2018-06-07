@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.dictionary.ir.Field.Type;
 import uk.co.real_logic.artio.dictionary.ir.Field.Value;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,11 +35,24 @@ import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
 
 public final class EnumGenerator
 {
+    private static final String NULL_VALUE_NAME = "NULL_VAL";
+    private static final String NULL_VALUE_CHAR = "\u0000";
+    private static final String NULL_VALUE_INT = Integer.toString(Integer.MIN_VALUE);
+    private static final String NULL_VALUE_STRING = "";
+
+    private static final String UNKNOWN_VALUE_NAME = "UNKNOWN_REPRESENTATION";
+    private static final String UNKNOWN_VALUE_CHAR = "\u0002";
+    private static final String UNKNOWN_VALUE_INT = Integer.toString(Integer.MAX_VALUE);
+    private static final String UNKNOWN_VALUE_STRING = "\u0002";
+
     private final Dictionary dictionary;
     private final String builderPackage;
     private final OutputManager outputManager;
 
-    public EnumGenerator(final Dictionary dictionary, final String builderPackage, final OutputManager outputManager)
+    public EnumGenerator(
+        final Dictionary dictionary,
+        final String builderPackage,
+        final OutputManager outputManager)
     {
         this.dictionary = dictionary;
         this.builderPackage = builderPackage;
@@ -64,7 +78,32 @@ public final class EnumGenerator
     {
         final String enumName = field.name();
         final Type type = field.type();
-        final List<Value> values = field.values();
+        final List<Value> fieldValues = field.values();
+        final List<Value> values = new ArrayList<>(fieldValues.size() + 2);
+        final String nullValue;
+        final String unknownValue;
+        if (type == Type.CHAR)
+        {
+            nullValue = NULL_VALUE_CHAR;
+            unknownValue = UNKNOWN_VALUE_CHAR;
+        }
+        else if (type.isIntBased())
+        {
+            nullValue = NULL_VALUE_INT;
+            unknownValue = UNKNOWN_VALUE_INT;
+        }
+        else if (type.isStringBased())
+        {
+            nullValue = NULL_VALUE_STRING;
+            unknownValue = UNKNOWN_VALUE_STRING;
+        }
+        else
+        {
+            throw new IllegalArgumentException("Field type is invalid for Enum generation " + field);
+        }
+        values.addAll(fieldValues);
+        values.add(new Value(nullValue, NULL_VALUE_NAME));
+        values.add(new Value(unknownValue, UNKNOWN_VALUE_NAME));
 
         outputManager.withOutput(enumName, (out) ->
         {
@@ -143,7 +182,8 @@ public final class EnumGenerator
             "        switch(representation)\n" +
             "        {\n" +
             "%s" +
-            "        default: throw new IllegalArgumentException(\"Unknown: \" + representation);\n" +
+            "        default:\n" +
+            "            return " + UNKNOWN_VALUE_NAME + ";\n" +
             "        }\n" +
             "    }\n",
             optionalCharArrayDecode,
@@ -175,7 +215,12 @@ public final class EnumGenerator
                     "\n" +
                     "    public static %1$s decode(final char[] representation, final int length)\n" +
                     "    {\n" +
-                    "        return charMap.get(representation, length);\n" +
+                            "        final %1$s value = charMap.get(representation, length);\n" +
+                            "        if (value == null)\n" +
+                            "        {\n" +
+                            "            return " + UNKNOWN_VALUE_NAME + ";\n" +
+                            "        }\n" +
+                            "        return value;\n" +
                     "    }\n",
                     typeName,
                     entries);
