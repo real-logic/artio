@@ -644,7 +644,7 @@ public class DecoderGenerator extends Generator
         final String asEnumBody = String.format(
             entry.required() ?
             "%1$s" :
-            "has%2$s ? %1$s : null",
+            "has%2$s ? %1$s : %2$s.NULL_VAL",
             enumValueDecoder,
             name
         );
