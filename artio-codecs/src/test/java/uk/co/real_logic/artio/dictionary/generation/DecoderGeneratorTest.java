@@ -23,6 +23,7 @@ import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
+import uk.co.real_logic.artio.util.AsciiSequenceView;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.util.Reflection;
 
@@ -50,6 +51,9 @@ public class DecoderGeneratorTest
     private static final char[] ABC = "abc".toCharArray();
     private static final char[] AB = "ab".toCharArray();
     private static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
+    private static final char[] MULTI_CHAR_VALUE = "a b".toCharArray();
+    private static final char[] MULTI_CHAR_VALUE_NO_ENUM = "a b z f".toCharArray();
+    private static final char[] MULTI_VALUE_STRING = "ab cd".toCharArray();
 
     private static Class<?> heartbeatWithoutValidation;
     private static Class<?> heartbeat;
@@ -487,6 +491,17 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void shouldBeAbleToExtractStringsAsAsciiSequenceViewFromStringFields() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NO_OPTIONAL_MESSAGE);
+
+        final AsciiSequenceView actual = getAsciiSequenceView(decoder, "onBehalfOfCompID");
+        assertEquals("abc", actual.toString());
+        assertThrows(() -> getAsciiSequenceView(decoder, "testReqID"), IllegalArgumentException.class,
+            "No value for optional field: TestReqID");
+    }
+
+    @Test
     public void shouldBeAbleToExtractEnumFromStringFields() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(NO_OPTIONAL_MESSAGE);
@@ -531,6 +546,32 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void shouldGenerateIterableForRepeatingGroups() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
+
+        canIterateOverGroupUsingForEach(decoder);
+
+        canIterateOverGroupUsingForEach(decoder);
+    }
+
+    @Test
+    public void shouldBeAbleToUseIteratorForZeroRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(ZERO_REPEATING_GROUP_MESSAGE);
+
+        canNotIteratorOverRepeatingGroup(decoder);
+    }
+
+    @Test
+    public void shouldBeAbleToUseIteratorForNoRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NO_REPEATING_GROUP_MESSAGE);
+
+        canNotIteratorOverRepeatingGroup(decoder);
+    }
+
+    @Test
     public void shouldGenerateAllFieldsSet() throws Exception
     {
         final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
@@ -563,6 +604,10 @@ public class DecoderGeneratorTest
         assertEquals("GBP", getOptionalCurrencyFieldAsString(decoder));
         assertEquals("XLON", getOptionalExchangeFieldAsString(decoder));
         assertEquals("GB", getOptionalCountryFieldAsString(decoder));
+
+        assertEquals("GBP", getOptionalCurrencyFieldAsView(decoder).toString());
+        assertEquals("XLON", getOptionalExchangeFieldAsView(decoder).toString());
+        assertEquals("GB", getOptionalCountryFieldAsView(decoder).toString());
 
         assertValid(decoder);
     }
@@ -660,6 +705,53 @@ public class DecoderGeneratorTest
         assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
         assertEquals(2, getIntField(decoder));
         assertEquals(new DecimalFloat(11, 1), getFloatField(decoder));
+
+        assertValid(decoder);
+    }
+
+    @Test
+    public void decodesMultiCharValue() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MULTI_CHAR_VALUE_MESSAGE);
+        assertArrayEquals(MULTI_CHAR_VALUE, getMultiCharField(decoder));
+
+        assertValid(decoder);
+    }
+
+    @Test
+    public void doesNotValidateIfNoEnumValuesPresent() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MULTI_CHAR_VALUE_NO_ENUM_MESSAGE);
+        assertArrayEquals(MULTI_CHAR_VALUE_NO_ENUM, getMultiCharNoEnumField(decoder));
+
+        assertValid(decoder);
+    }
+
+    @Test
+    public void multiCharValueThatFailsValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(INVALID_MULTI_CHAR_VALUE_MESSAGE);
+
+        assertInvalid(decoder);
+    }
+
+    @Test
+    public void decodesMultiValueString() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MULTI_VALUE_STRING_MESSAGE);
+
+        assertArrayEquals(MULTI_VALUE_STRING, getMultiValStringField(decoder));
+
+        assertValid(decoder);
+    }
+
+    //This is the same as MultipleValueString (it was renamed in FIX 5)
+    @Test
+    public void decodesMultiStringValue() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MULTI_STRING_VALUE_MESSAGE);
+
+        assertArrayEquals(MULTI_VALUE_STRING, getMultiStringValField(decoder));
 
         assertValid(decoder);
     }
@@ -783,6 +875,7 @@ public class DecoderGeneratorTest
         assertArrayEquals(countryChars, Arrays.copyOf(getCountryField(decoder), countryFieldLength));
 
         assertRequiredFieldsMessageFieldsAsStringDecoded(decoder, currency, exchange, country);
+        assertRequiredFieldsMessageFieldsAsViewDecoded(decoder, currency, exchange, country);
     }
 
     private void assertRequiredFieldsMessageFieldsAsStringDecoded(
@@ -791,6 +884,14 @@ public class DecoderGeneratorTest
         assertEquals(currency, getCurrencyFieldAsString(decoder));
         assertEquals(exchange, getExchangeFieldAsString(decoder));
         assertEquals(country, getCountryFieldAsString(decoder));
+    }
+
+    private void assertRequiredFieldsMessageFieldsAsViewDecoded(
+        final Decoder decoder, final String currency, final String exchange, final String country) throws Exception
+    {
+        assertEquals(currency, getCurrencyFieldAsView(decoder).toString());
+        assertEquals(exchange, getExchangeFieldAsView(decoder).toString());
+        assertEquals(country, getCountryFieldAsView(decoder).toString());
     }
 
     private String getOptionalCountryFieldAsString(final Decoder decoder) throws Exception
@@ -843,6 +944,26 @@ public class DecoderGeneratorTest
         return getChars(decoder, "countryField");
     }
 
+    private char[] getMultiCharField(final Decoder decoder) throws Exception
+    {
+        return getChars(decoder, "multiCharField");
+    }
+
+    private char[] getMultiCharNoEnumField(final Decoder decoder) throws Exception
+    {
+        return getChars(decoder, "multiValueCharNoEnumField");
+    }
+
+    private char[] getMultiValStringField(final Decoder decoder) throws Exception
+    {
+        return getChars(decoder, "multiValueStringField");
+    }
+
+    private char[] getMultiStringValField(final Decoder decoder) throws Exception
+    {
+        return getChars(decoder, "multiStringValueField");
+    }
+
     private char[] getExchangeField(final Decoder decoder) throws Exception
     {
         return getChars(decoder, "exchangeField");
@@ -851,6 +972,36 @@ public class DecoderGeneratorTest
     private char[] getCurrencyField(final Decoder decoder) throws Exception
     {
         return getChars(decoder, "currencyField");
+    }
+
+    private AsciiSequenceView getOptionalCountryFieldAsView(final Decoder decoder) throws Exception
+    {
+        return getAsciiSequenceView(decoder, "countryField");
+    }
+
+    private AsciiSequenceView getOptionalExchangeFieldAsView(final Decoder decoder) throws Exception
+    {
+        return getAsciiSequenceView(decoder, "exchangeField");
+    }
+
+    private AsciiSequenceView getOptionalCurrencyFieldAsView(final Decoder decoder) throws Exception
+    {
+        return getAsciiSequenceView(decoder, "currencyField");
+    }
+
+    private AsciiSequenceView getCountryFieldAsView(final Decoder decoder) throws Exception
+    {
+        return getAsciiSequenceView(decoder, "countryField");
+    }
+
+    private AsciiSequenceView getExchangeFieldAsView(final Decoder decoder) throws Exception
+    {
+        return getAsciiSequenceView(decoder, "exchangeField");
+    }
+
+    private AsciiSequenceView getCurrencyFieldAsView(final Decoder decoder) throws Exception
+    {
+        return getAsciiSequenceView(decoder, "currencyField");
     }
 
     private int getCurrencyFieldLength(final Decoder decoder) throws Exception
@@ -882,6 +1033,32 @@ public class DecoderGeneratorTest
         group = iterator.next();
         assertEquals(2, getGroupField(group));
 
+        canNotIteratorOverRepeatingGroup(iterator);
+    }
+
+    private void canIterateOverGroupUsingForEach(final Decoder decoder) throws Exception
+    {
+        final Iterable<?> iterator = getEgGroupIterable(decoder);
+        int count = 0;
+
+        for (final Object group : iterator)
+        {
+            count++;
+            assertEquals(count, getGroupField(group));
+        }
+
+        assertEquals(2, count);
+
+    }
+
+    private void canNotIteratorOverRepeatingGroup(final Decoder decoder) throws Exception
+    {
+        final Iterator<?> iterator = getEgGroupIterator(decoder);
+        canNotIteratorOverRepeatingGroup(iterator);
+    }
+
+    private void canNotIteratorOverRepeatingGroup(final Iterator<?> iterator)
+    {
         assertFalse(iterator.hasNext());
     }
 
@@ -1074,8 +1251,41 @@ public class DecoderGeneratorTest
             isValid);
     }
 
+    private void assertInvalid(final Decoder decoder)
+    {
+        final boolean isValid = decoder.validate();
+        assertFalse(String.format(
+            "Decoder fails validation due to: %s for tag: %d", decoder.rejectReason(), decoder.invalidTagId()),
+            isValid);
+    }
+
+    private <T extends Exception> void assertThrows(
+        final ExceptionThrowingCommand throwableCommand,
+        final Class<T> exception,
+        final String message)
+    {
+        try
+        {
+            throwableCommand.execute();
+            fail(String.format("Expected exception %s with message %s but was no exception thrown",
+                exception, message));
+        }
+        catch (final Exception e)
+        {
+            final Throwable actualException = e.getCause();
+            assertThat(e.getClass(), typeCompatibleWith(InvocationTargetException.class));
+            assertThat(actualException.getClass(), typeCompatibleWith(exception));
+            assertThat(actualException.getMessage(), is(message));
+        }
+    }
+
     private Object getRequiredFields(final Decoder decoder) throws IllegalAccessException, NoSuchFieldException
     {
         return heartbeat.getField(REQUIRED_FIELDS).get(decoder);
+    }
+
+    private interface ExceptionThrowingCommand
+    {
+        void execute() throws Exception;
     }
 }

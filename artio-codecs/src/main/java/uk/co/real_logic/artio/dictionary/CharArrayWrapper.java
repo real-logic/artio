@@ -21,6 +21,7 @@ final class CharArrayWrapper
 {
     private char[] values;
     private int length;
+    private int offset;
     private int hashcode;
 
     CharArrayWrapper()
@@ -30,6 +31,7 @@ final class CharArrayWrapper
     CharArrayWrapper(final CharArrayWrapper other)
     {
         this.values = other.values;
+        this.offset = other.offset;
         this.length = other.length;
         this.hashcode = other.hashcode;
     }
@@ -40,11 +42,17 @@ final class CharArrayWrapper
         wrap(values, values.length);
     }
 
-    void wrap(final char[] values, final int length)
+    void wrap(final char[] value, final int length)
     {
-        this.values = values;
+        wrap(value, 0, length);
+    }
+
+    void wrap(final char[] value, final int offset, final int length)
+    {
+        this.values = value;
+        this.offset = offset;
         this.length = length;
-        hashcode = CodecUtil.hashCode(values, length);
+        hashcode = CodecUtil.hashCode(values, offset, length);
     }
 
     public boolean equals(final Object o)
@@ -61,12 +69,12 @@ final class CharArrayWrapper
 
         final CharArrayWrapper that = (CharArrayWrapper)o;
 
-        return this.length == that.length && CodecUtil.equals(values, that.values, this.length);
+        return this.length == that.length && CodecUtil.equals(values, that.values, offset, that.offset, this.length);
     }
 
     public String toString()
     {
-        return new String(values, 0, length);
+        return new String(values, offset, length);
     }
 
     public int hashCode()

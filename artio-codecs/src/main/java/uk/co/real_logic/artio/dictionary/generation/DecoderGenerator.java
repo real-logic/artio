@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
-import org.agrona.LangUtil;
 import org.agrona.generation.OutputManager;
 import org.agrona.generation.ResourceConsumer;
 import uk.co.real_logic.artio.builder.Decoder;
@@ -32,9 +31,9 @@ import java.util.stream.Stream;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.*;
-import static uk.co.real_logic.artio.dictionary.generation.ConstantGenerator.constantValuesOfField;
 import static uk.co.real_logic.artio.dictionary.generation.ConstantGenerator.sizeHashSet;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.rethrown;
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.constantName;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
@@ -350,9 +349,9 @@ public class DecoderGenerator extends Generator
     public static String addField(final Field field, final String name)
     {
         return String.format(
-            "        %1$s.add(%2$d);\n",
+            "        %1$s.add(Constants.%2$s);\n",
             name,
-            field.number());
+            constantName(field.name()));
     }
 
     private CharSequence validateEnum(final Entry entry, final Writer out)
@@ -364,7 +363,6 @@ public class DecoderGenerator extends Generator
         }
 
         final String name = entry.name();
-        final String valuesField = "valuesOf" + entry.name();
         final String optionalCheck = entry.required() ? "" : String.format("has%s && ", name);
         final int tagNumber = field.number();
         final Type type = field.type();
@@ -372,38 +370,17 @@ public class DecoderGenerator extends Generator
 
         final boolean isChar = type == Type.CHAR;
         final boolean isPrimitive = type.isIntBased() || isChar;
-        final String copyFrom = "Constants." + constantValuesOfField(name);
-        try
-        {
-            if (isPrimitive)
-            {
-                out.append(intHashSetCopy(
-                    sizeHashSet(field.values()), valuesField, copyFrom));
-            }
-            else if (type.isStringBased())
-            {
-                out.append(String.format(
-                    "    public final CharArraySet %1$s = new CharArraySet(%2$s);\n", valuesField, copyFrom));
-            }
-            else
-            {
-                return "";
-            }
-        }
-        catch (final IOException ex)
-        {
-            LangUtil.rethrowUnchecked(ex);
-        }
+
 
         return String.format(
-            "        if (%1$s!%2$s.contains(%3$s%5$s))\n" +
+            "        if (%1$s!%2$s.isValid(%3$s%5$s))\n" +
             "        {\n" +
             "            invalidTagId = %4$s;\n" +
             "            rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
             "            return false;\n" +
             "        }\n",
             optionalCheck,
-            valuesField,
+            name,
             propertyName,
             tagNumber,
             isPrimitive ? "" : ", " + propertyName + "Length");
@@ -609,10 +586,9 @@ public class DecoderGenerator extends Generator
             "    private %1$s %2$s = new %1$s();\n\n" +
             "    public %1$s %2$s()\n" +
             "    {\n" +
-            "        %2$s.reset();\n" +
-            "        return %2$s;\n" +
+            "        return %2$s.iterator();\n" +
             "    }\n\n" +
-            "    public class %1$s implements java.util.Iterator<%4$s>\n" +
+            "    public class %1$s implements Iterable<%4$s>, java.util.Iterator<%4$s>\n" +
             "    {\n" +
             "        private int remainder;\n" +
             "        private %4$s current;\n" +
@@ -629,8 +605,13 @@ public class DecoderGenerator extends Generator
             "        }\n" +
             "        public void reset()\n" +
             "        {\n" +
-            "            remainder = %3$s();\n" +
+            "            remainder = %3$s;\n" +
             "            current = %5$s();\n" +
+            "        }\n" +
+            "        public %1$s iterator()\n" +
+            "        {\n" +
+            "            reset();\n" +
+            "            return this;\n" +
             "        }\n" +
             "    }\n\n",
             iteratorClassName(group),
@@ -670,6 +651,7 @@ public class DecoderGenerator extends Generator
 
         final String stringDecoder = type.isStringBased() ? String.format(
             "    private int %1$sLength;\n\n" +
+            "    private int %1$sOffset;\n\n" +
             "    public int %1$sLength()\n" +
             "    {\n" +
             "%2$s" +
@@ -678,6 +660,11 @@ public class DecoderGenerator extends Generator
             "    public String %1$sAsString()\n" +
             "    {\n" +
             "        return %3$s;\n" +
+            "    }\n\n" +
+            "    public void %1$s(final AsciiSequenceView view)\n" +
+            "    {\n" +
+            "%2$s" +
+            "        view.wrap(buffer, %1$sOffset, %1$sLength);\n" +
             "    }\n\n",
             fieldName,
             optionalCheck,
@@ -855,6 +842,7 @@ public class DecoderGenerator extends Generator
         final String endGroupCheck = endGroupCheck(aggregate, isGroup);
 
         final String prefix =
+            "    private AsciiBuffer buffer;\n\n" +
             "    public int decode(final AsciiBuffer buffer, final int offset, final int length)\n" +
             "    {\n" +
             "        // Decode " + aggregate.name() + "\n" +
@@ -864,6 +852,7 @@ public class DecoderGenerator extends Generator
             "            missingRequiredFields.copy(" + REQUIRED_FIELDS + ");\n" +
             "            alreadyVisitedFields.clear();\n" +
             "        }\n" +
+            "        this.buffer = buffer;\n" +
             "        final int end = offset + length;\n" +
             "        int position = offset;\n" +
             (hasCommonCompounds ? "        position += header.decode(buffer, position, length);\n" : "") +
@@ -1057,29 +1046,37 @@ public class DecoderGenerator extends Generator
         // int endOfField = the end index of the value
 
         final Field field = (Field)entry.element();
-        final int tag = field.number();
         final String name = entry.name();
         final String fieldName = formatPropertyName(name);
 
         return String.format(
-            "            case %d:\n" +
+            "            case Constants.%s:\n" +
             "%s" +
             "                %s = buffer.%s);\n" +
             "%s" +
             "%s" +
+            "%s" +
             "                break;\n",
-            tag,
+            constantName(name),
             optionalAssign(entry),
             fieldName,
             decodeMethodFor(field.type(), fieldName),
-            storeLengthForArrays(field.type(), fieldName),
+            storeOffsetForStrings(field.type(), fieldName),
+            storeLengthForVariableLength(field.type(), fieldName),
             suffix);
     }
 
-    private String storeLengthForArrays(final Type type, final String fieldName)
+    private String storeLengthForVariableLength(final Type type, final String fieldName)
     {
         return type.hasLengthField() ?
             String.format("                %sLength = valueLength;\n", fieldName) :
+            "";
+    }
+
+    private String storeOffsetForStrings(final Type type, final String fieldName)
+    {
+        return type.hasOffsetField() ?
+            String.format("                %sOffset = valueOffset;\n", fieldName) :
             "";
     }
 
@@ -1161,6 +1158,19 @@ public class DecoderGenerator extends Generator
             .filter(Entry::isComponent)
             .map((entry) -> resetEntries(((Component)entry.element()).entries(), methods))
             .collect(joining());
+    }
+
+    @Override
+    protected String resetStringBasedData(final String name)
+    {
+        return String.format(
+            "    public void %1$s()\n" +
+                    "    {\n" +
+                    "        %2$sOffset = 0;\n" +
+                    "        %2$sLength = 0;\n" +
+                    "    }\n\n",
+            nameOfResetMethod(name),
+            formatPropertyName(name));
     }
 
     protected String groupEntryToString(final Group element, final String name)

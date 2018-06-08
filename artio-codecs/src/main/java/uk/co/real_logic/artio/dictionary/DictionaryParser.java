@@ -43,6 +43,7 @@ import java.util.function.Consumer;
 
 import static javax.xml.xpath.XPathConstants.NODESET;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.CHAR;
+import static uk.co.real_logic.artio.dictionary.ir.Field.Type.NUMINGROUP;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.STRING;
 
 /**
@@ -223,13 +224,23 @@ public final class DictionaryParser
                 final String name = name(attributes);
                 final int number = getInt(attributes, "number");
                 final Type type = Type.lookup(getValue(attributes, "type"));
-                final Field field = new Field(number, name, type);
+                final String normalisedFieldName = ensureNumInGroupStartsWithNo(name, type);
+                final Field field = new Field(number, normalisedFieldName, type);
 
                 extractEnumValues(field.values(), node.getChildNodes());
                 fields.put(name, field);
             });
 
         return fields;
+    }
+
+    private static String ensureNumInGroupStartsWithNo(final String name, final Type type)
+    {
+        if (type == NUMINGROUP)
+        {
+            return name.startsWith("No") ? name : "No" + name;
+        }
+        return name;
     }
 
     private int getInt(final NamedNodeMap attributes, final String attributeName)
