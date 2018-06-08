@@ -60,6 +60,7 @@ public class DecoderGeneratorTest
     private static Class<?> component;
     private static Class<?> otherMessage;
     private static Class<?> fieldsMessage;
+    private static Class<?> allReqFieldTypesMessage;
 
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
@@ -79,6 +80,7 @@ public class DecoderGeneratorTest
         otherMessage = compileInMemory(OTHER_MESSAGE_DECODER, sourcesWithValidation);
 
         heartbeatWithoutValidation = compileInMemory(HEARTBEAT_DECODER, sourcesWithoutValidation);
+        allReqFieldTypesMessage = compileInMemory(ALL_REQ_FIELD_TYPES_MESSAGE_DECODER, sourcesWithoutValidation);
         if (heartbeatWithoutValidation == null || CODEC_LOGGING)
         {
             System.out.println("sourcesWithoutValidation = " + sourcesWithoutValidation);
@@ -142,6 +144,96 @@ public class DecoderGeneratorTest
         final Object decoder = heartbeat.getConstructor().newInstance();
 
         Reflection.get(decoder, TEST_REQ_ID);
+    }
+
+    @Test
+    public void shouldNotRetainStringFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
+    {
+        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        decode(RF_ALL_FIELDS, decoder);
+        assertEquals("one", getMethod(decoder, STRING_RF + "AsString"));
+
+        decoder.reset();
+        decode(RF_NO_FIELDS, decoder);
+        assertEquals("", getMethod(decoder, STRING_RF + "AsString"));
+    }
+
+    @Test
+    public void shouldNotRetainIntegerFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
+    {
+        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        decode(RF_ALL_FIELDS, decoder);
+        assertEquals(10, getMethod(decoder, INT_RF));
+
+        decoder.reset();
+        decode(RF_NO_FIELDS, decoder);
+        assertEquals(Integer.MIN_VALUE, getMethod(decoder, INT_RF));
+    }
+
+    @Test
+    public void shouldNotRetainCharFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
+    {
+        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        decode(RF_ALL_FIELDS, decoder);
+        assertEquals('b', getMethod(decoder, CHAR_RF));
+
+        decoder.reset();
+        decode(RF_NO_FIELDS, decoder);
+        assertEquals('\u0001', getMethod(decoder, CHAR_RF));
+    }
+
+    @Test
+    public void shouldNotRetainDecimalFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
+    {
+        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        decode(RF_ALL_FIELDS, decoder);
+        assertEquals(new DecimalFloat(123456, 3), getMethod(decoder, DECIMAL_RF));
+
+        decoder.reset();
+        decode(RF_NO_FIELDS, decoder);
+        // TODO: we propose changing decimal sentinel to something like
+        // new DecimalFloat(Long.MAX_VALUE, Integer.MAX_VALUE) or new DecimalFloat(Long.MAX_VALUE, Integer.MIN_VALUE)
+        assertEquals(DecimalFloat.MISSING_FLOAT, getMethod(decoder, DECIMAL_RF));
+        assertEquals(DecimalFloat.ZERO, getMethod(decoder, DECIMAL_RF));
+    }
+
+    @Test
+    public void shouldNotRetainStringEnumFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
+    {
+        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        decode(RF_ALL_FIELDS, decoder);
+        assertEquals("one", getMethod(decoder, STRING_ENUM_RF + "AsString"));
+        assertEquals("ONE", getMethod(decoder, STRING_ENUM_RF + "AsEnum").toString());
+
+        decoder.reset();
+        decode(RF_NO_FIELDS, decoder);
+        assertEquals("", getMethod(decoder, STRING_ENUM_RF + "AsString"));
+    }
+
+    @Test
+    public void shouldNotRetainIntEnumFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
+    {
+        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        decode(RF_ALL_FIELDS, decoder);
+        assertEquals(10, getMethod(decoder, INT_ENUM_RF));
+        assertEquals("TEN", getMethod(decoder, INT_ENUM_RF + "AsEnum").toString());
+
+        decoder.reset();
+        decode(RF_NO_FIELDS, decoder);
+        assertEquals(Integer.MIN_VALUE, getMethod(decoder, INT_ENUM_RF));
+    }
+
+    @Test
+    public void shouldNotRetainCharEnumFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
+    {
+        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        decode(RF_ALL_FIELDS, decoder);
+        assertEquals('b', getMethod(decoder, CHAR_ENUM_RF));
+        assertEquals("BANANA", getMethod(decoder, CHAR_ENUM_RF + "AsEnum").toString());
+
+        decoder.reset();
+        decode(RF_NO_FIELDS, decoder);
+        assertEquals('\u0001', getMethod(decoder, CHAR_ENUM_RF));
     }
 
     @Test
@@ -1283,6 +1375,14 @@ public class DecoderGeneratorTest
     {
         return heartbeat.getField(REQUIRED_FIELDS).get(decoder);
     }
+
+    private Object getMethod(final Object decoder, final String fieldName) throws Throwable
+    {
+        final char[] chars = fieldName.toCharArray();
+        chars[0] = Character.toLowerCase(chars[0]);
+        return get(decoder, new String(chars));
+    }
+
 
     private interface ExceptionThrowingCommand
     {
