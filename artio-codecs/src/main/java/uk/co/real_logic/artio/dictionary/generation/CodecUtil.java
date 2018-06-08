@@ -33,9 +33,6 @@ public final class CodecUtil
 
     /**
      * NB: only valid for ASCII bytes.
-     *
-     * @param value
-     * @return
      */
     public static byte[] toBytes(final CharSequence value, final byte[] oldBuffer)
     {
@@ -51,9 +48,6 @@ public final class CodecUtil
 
     /**
      * NB: only valid for ASCII bytes.
-     *
-     * @param value
-     * @return
      */
     public static byte[] toBytes(final char[] value, final byte[] oldBuffer, final int length)
     {
@@ -81,7 +75,8 @@ public final class CodecUtil
         return buffer;
     }
 
-    public static boolean equals(final char[] value, final char[] expected, final int length)
+    public static boolean equals(final char[] value, final char[] expected, final int offset,
+        final int expectedOffset, final int length)
     {
         if (value.length < length || expected.length < length)
         {
@@ -90,7 +85,7 @@ public final class CodecUtil
 
         for (int i = 0; i < length; i++)
         {
-            if (value[i] != expected[i])
+            if (value[i + offset] != expected[i + expectedOffset])
             {
                 return false;
             }
@@ -99,10 +94,15 @@ public final class CodecUtil
         return true;
     }
 
-    public static int hashCode(final char[] value, final int length)
+    public static boolean equals(final char[] value, final char[] expected, final int length)
+    {
+        return equals(value, expected, 0, 0, length);
+    }
+
+    public static int hashCode(final char[] value, final int offset, final int length)
     {
         int result = 1;
-        for (int i = 0; i < length; i++)
+        for (int i = offset; i < offset + length; i++)
         {
             result = 31 * result + value[i];
         }

@@ -15,18 +15,36 @@
  */
 package uk.co.real_logic.artio.dictionary;
 
-import org.hamcrest.Matcher;
-import org.junit.Before;
-import org.junit.Test;
-import uk.co.real_logic.artio.dictionary.ir.*;
-import uk.co.real_logic.artio.dictionary.ir.Field.Type;
-import uk.co.real_logic.artio.dictionary.ir.Field.Value;
-
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
+import org.hamcrest.Matcher;
+import org.junit.Before;
+import org.junit.Test;
+
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+
+
+import uk.co.real_logic.artio.dictionary.ir.Component;
+import uk.co.real_logic.artio.dictionary.ir.Dictionary;
+import uk.co.real_logic.artio.dictionary.ir.Entry;
+import uk.co.real_logic.artio.dictionary.ir.Field;
+import uk.co.real_logic.artio.dictionary.ir.Field.Type;
+import uk.co.real_logic.artio.dictionary.ir.Field.Value;
+import uk.co.real_logic.artio.dictionary.ir.Group;
+import uk.co.real_logic.artio.dictionary.ir.Message;
+
 import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
 import static uk.co.real_logic.artio.dictionary.ir.Category.APP;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.INT;
@@ -87,7 +105,7 @@ public class DictionaryParserTest
     @Test
     public void shouldParseAllFields()
     {
-        assertEquals(40, dictionary.fields().size());
+        assertEquals(44, dictionary.fields().size());
     }
 
     @Test
@@ -166,7 +184,21 @@ public class DictionaryParserTest
     @Test
     public void shouldParseAllMessages()
     {
-        assertEquals(4, dictionary.messages().size());
+        assertEquals(5, dictionary.messages().size());
+    }
+
+    @Test
+    public void shouldPrependNumInGroupWithNoForFix44RepeatingGroup()
+    {
+        final Field field = field("LinesOfText");
+        assertThat(field.name(), is("NoLinesOfText"));
+        final Message newsMessage = dictionary.messages().stream()
+            .filter(m -> m.name().equals("News")).findFirst().orElseThrow(() -> new AssertionError(
+            "Did not find news message"));
+        final Entry linesOfText = newsMessage.entries().get(0);
+        assertTrue(linesOfText.isGroup());
+        assertThat(((Group)linesOfText.element()).numberField().name(), is("NoLinesOfTextGroupCounter"));
+
     }
 
     @Test

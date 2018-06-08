@@ -15,16 +15,28 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import java.lang.reflect.Method;
+
 import org.agrona.generation.CompilerUtil;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.lang.reflect.Method;
+import static org.hamcrest.Matchers.arrayWithSize;
+import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.Matchers.not;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
-import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
+
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.EG_ENUM;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.FIELD_EXAMPLE;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.MULTI_STRING_VALUE_ENUM;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.OTHER_ENUM;
+import static uk.co.real_logic.artio.dictionary.ExampleDictionary.STRING_ENUM;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
 
 public class EnumGeneratorTest
@@ -120,6 +132,19 @@ public class EnumGeneratorTest
         assertEquals(values[0], decode.invoke(null, "0".toCharArray(), 1));
         assertEquals(values[1], decode.invoke(null, "A".toCharArray(), 1));
         assertEquals(values[2], decode.invoke(null, "AA ".toCharArray(), 2));
+    }
+
+    @Test
+    public void generateMultiStringValueValidation() throws Exception
+    {
+        final Class<?> clazz = compile(MULTI_STRING_VALUE_ENUM);
+
+        final Method isValid = clazz.getMethod("isValid", char[].class, int.class);
+
+        final char[] validArr = "0 AA".toCharArray();
+        assertTrue((boolean)isValid.invoke(null, validArr, validArr.length));
+        final char[] invalidArr = "0 AA B".toCharArray();
+        assertFalse((boolean)isValid.invoke(null, invalidArr, invalidArr.length));
     }
 
     private Method stringDecode(final Class<?> clazz) throws NoSuchMethodException

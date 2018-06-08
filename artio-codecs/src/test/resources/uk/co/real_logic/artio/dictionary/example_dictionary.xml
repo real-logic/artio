@@ -51,6 +51,13 @@
             <component name="NextComponent" required="N"/>
             <field name="MemberSubID" required="N"/>
         </message>
+        <message name="News" msgtype="B" msgcat="app">
+            <group name="LinesOfText" required="Y">
+                <field name="Text" required="Y"/>
+                <field name="EncodedTextLen" required="N"/>
+                <field name="EncodedText" required="N"/>
+            </group>
+        </message>
     </messages>
     <components>
         <component name="Members">
@@ -131,6 +138,10 @@
             <value enum="P" description="PEGGED"/>
         </field>
         <field number="37" name="OrderID" type="STRING"/>
+        <field number="33" name="LinesOfText" type="NUMINGROUP"/>
+        <field number="58" name="Text" type="STRING"/>
+        <field number="354" name="EncodedTextLen" type="LENGTH"/>
+        <field number="355" name="EncodedText" type="DATA"/>
         <field number="382" name="NoContraBrokers" type="INT"/>
         <field number="375" name="ContraBroker" type="STRING"/>
         <field number="337" name="ContraTrader" type="STRING"/>

@@ -32,6 +32,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.stubbing.OngoingStubbing;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.EngineConfiguration;

@@ -15,24 +15,18 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
-import org.agrona.LangUtil;
 import org.agrona.collections.IntHashSet;
 import org.agrona.generation.OutputManager;
 import uk.co.real_logic.artio.dictionary.CharArraySet;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Field;
 
-import java.io.IOException;
-import java.io.Writer;
 import java.util.Collection;
 
-import static java.lang.Character.isUpperCase;
-import static java.lang.Character.toUpperCase;
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.addField;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.optionalStaticInit;
 
 public class ConstantGenerator
 {
@@ -65,65 +59,8 @@ public class ConstantGenerator
             out.append(generateMessageTypes());
             out.append(generateFieldTags());
             out.append(generateAllFieldsDictionary());
-            generateEnumDictionaries(out);
             out.append("}\n");
         });
-    }
-
-    private void generateEnumDictionaries(final Writer out)
-    {
-        for (final Field field : dictionary.fields().values())
-        {
-            if (field.isEnum())
-            {
-                final String name = field.name();
-                final String valuesField = constantValuesOfField(name);
-                final Field.Type type = field.type();
-                final boolean isChar = type == Field.Type.CHAR;
-                final boolean isPrimitive = type.isIntBased() || isChar;
-                try
-                {
-                    if (isPrimitive)
-                    {
-                        final String addValues = field.values()
-                            .stream()
-                            .map(Field.Value::representation)
-                            .map((repr) -> isChar ? "'" + repr + "'" : repr)
-                            .map((repr) -> String.format("        %1$s.add(%2$s);\n", valuesField, repr))
-                            .collect(joining());
-
-                        out.append(String.format(
-                            "    public static final IntHashSet %1$s = new IntHashSet(%3$s);\n" +
-                            "%2$s",
-                            valuesField,
-                            optionalStaticInit(addValues),
-                            sizeHashSet(field.values())
-                        ));
-                    }
-                    else if (type.isStringBased())
-                    {
-                        final String addValues = field.values()
-                            .stream()
-                            .map((value) -> "\"" + value.representation() + '"')
-                            .collect(joining(", "));
-
-                        out.append(String.format(
-                            "    public static final CharArraySet %1$s = new CharArraySet(%2$s);\n",
-                            valuesField,
-                            addValues));
-                    }
-                }
-                catch (final IOException ex)
-                {
-                    LangUtil.rethrowUnchecked(ex);
-                }
-            }
-        }
-    }
-
-    static String constantValuesOfField(final String name)
-    {
-        return "VALUES_OF_" + name;
     }
 
     private String generateAllFieldsDictionary()
@@ -173,7 +110,7 @@ public class ConstantGenerator
             .map((message) ->
             {
                 final int type = message.packedType();
-                final String constantName = constantName(message.name()) + "_MESSAGE";
+                final String constantName = GenerationUtil.constantName(message.name()) + "_MESSAGE";
                 final String stringConstantName = constantName + "_AS_STR";
                 return generateMessageTypeConstant(stringConstantName, type) + generateIntConstant(constantName, type);
             })
@@ -184,7 +121,7 @@ public class ConstantGenerator
     {
         return fields()
             .stream()
-            .map(field -> generateIntConstant(constantName(field.name()), field.number()))
+            .map(field -> generateIntConstant(GenerationUtil.constantName(field.name()), field.number()))
             .collect(joining());
     }
 
@@ -219,15 +156,5 @@ public class ConstantGenerator
             "    public static final int %1$s = %2$d;\n\n",
             name,
             number);
-    }
-
-    private String constantName(final String name)
-    {
-        final String replacedName = name.replace("ID", "Id");
-        return toUpperCase(replacedName.charAt(0)) + replacedName
-            .substring(1)
-            .chars()
-            .mapToObj((codePoint) -> (isUpperCase(codePoint) ? "_" : "") + (char)toUpperCase(codePoint))
-            .collect(joining());
     }
 }

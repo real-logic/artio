@@ -19,6 +19,8 @@ import org.agrona.Verify;
 
 import java.util.stream.Stream;
 
+import static java.lang.Character.isUpperCase;
+import static java.lang.Character.toUpperCase;
 import static java.util.stream.Collectors.joining;
 
 public final class GenerationUtil
@@ -53,6 +55,17 @@ public final class GenerationUtil
         }
 
         return packed;
+    }
+
+    public static String constantName(final String name)
+    {
+        final String replacedName = name.replace("ID", "Id")
+            .replace("GroupCounter", "");
+        return toUpperCase(replacedName.charAt(0)) + replacedName
+            .substring(1)
+            .chars()
+            .mapToObj((codePoint) -> (isUpperCase(codePoint) ? "_" : "") + (char)toUpperCase(codePoint))
+            .collect(joining());
     }
 
     public static class Var
