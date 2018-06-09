@@ -195,14 +195,15 @@ public final class EnumGenerator
             "        {\n" +
             "%s" +
             "        default:\n" +
-            "            return " + UNKNOWN_VALUE_NAME + ";\n" +
+            "            return %s;\n" +
             "        }\n" +
             "    }\n",
             optionalCharArrayDecode,
             enumValidation,
             name,
             representation.methodArgsDeclaration(),
-            cases);
+            cases,
+            UNKNOWN_VALUE_NAME);
     }
 
     private String enumValidation(final String typeName, final List<Value> allValues, final Type type)
