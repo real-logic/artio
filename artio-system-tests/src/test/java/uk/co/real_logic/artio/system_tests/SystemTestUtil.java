@@ -253,7 +253,8 @@ public final class SystemTestUtil
             .sessionExistsHandler(sessionHandler)
             .sessionAcquireHandler(sessionHandler)
             .sentPositionHandler(sessionHandler)
-            .libraryAeronChannels(singletonList(IPC_CHANNEL));
+            .libraryAeronChannels(singletonList(IPC_CHANNEL))
+            .libraryName("accepting");
 
         return libraryConfiguration;
     }
@@ -336,7 +337,8 @@ public final class SystemTestUtil
             .sessionAcquireHandler(sessionHandler)
             .sentPositionHandler(sessionHandler)
             .sessionExistsHandler(sessionHandler)
-            .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort));
+            .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort))
+            .libraryName("initiating");
     }
 
     public static FixLibrary connect(final LibraryConfiguration configuration)

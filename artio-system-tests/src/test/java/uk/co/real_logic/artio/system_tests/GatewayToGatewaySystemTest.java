@@ -474,15 +474,19 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             "Library failed to disconnect",
             () ->
             {
-                poll(acceptingLibrary, initiatingLibrary);
+                testSystem.poll();
+
                 return !acceptingLibrary.isConnected();
             });
 
-        launchAcceptingEngine();
-
         testSystem.close(acceptingLibrary);
 
+        launchAcceptingEngine();
+
         acceptingLibrary = testSystem.add(newAcceptingLibrary(acceptingHandler));
+
+        assertTrue("acceptingLibrary has failed to connect", acceptingLibrary.isConnected());
+        assertTrue("initiatingLibrary is no longer connected", initiatingLibrary.isConnected());
 
         wireSessions();
 
