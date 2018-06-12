@@ -1176,12 +1176,13 @@ public class DecoderGenerator extends Generator
     protected String groupEntryToString(final Group element, final String name)
     {
         return String.format(
-            "                (%2$s != null ? String.format(\"  \\\"%1$s\\\": [\\n" +
+            "                (has%3$s ? String.format(\"  \\\"%1$s\\\": [\\n" +
             "  %%s" +
             "\\n  ]" +
             "\\n\", %2$s.toString().replace(\"\\n\", \"\\n  \")" + ") : \"\")",
             name,
-            formatPropertyName(name));
+            formatPropertyName(name),
+            element.numberField().name());
     }
 
     protected String optionalReset(final Field field, final String name)
