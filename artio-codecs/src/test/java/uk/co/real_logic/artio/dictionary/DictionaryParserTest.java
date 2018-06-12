@@ -28,6 +28,7 @@ import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.typeCompatibleWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -364,7 +365,7 @@ public class DictionaryParserTest
         }
         catch (final Exception e)
         {
-//            assertTrue(e.getClass() instanceof T);
+            assertThat(e.getClass(), typeCompatibleWith(expectedException));
             assertThat(e.getMessage(), is(message));
         }
     }
