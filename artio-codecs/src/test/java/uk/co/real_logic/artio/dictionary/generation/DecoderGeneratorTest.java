@@ -492,6 +492,32 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void shouldValidateMissingRequiredFieldsInRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE);
+
+        assertFalse("Passed validation with missing fields", decoder.validate());
+        assertEquals("Wrong tag id", 138, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", REQUIRED_TAG_MISSING, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateIfNoRequiredFieldsMissingInRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE);
+
+        assertTrue("Failed validation when it should have passed", decoder.validate());
+    }
+
+    @Test
+    public void shouldValidateIfNoRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NO_REPEATING_GROUP_IN_REPEATING_GROUP_MESSAGE);
+
+        assertTrue("Failed validation when it should have passed", decoder.validate());
+    }
+
+    @Test
     public void shouldValidateTagNumbers() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(INVALID_TAG_NUMBER_MESSAGE);

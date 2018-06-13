@@ -38,6 +38,7 @@ public final class ExampleDictionary
 {
 
     public static final String NO_EG_GROUP = "NoEgGroup";
+    public static final String NO_SECOND_EG_GROUP = "NoSecondEgGroup";
     public static final String NO_COMPONENT_GROUP = "NoComponentGroup";
     public static final String EG_COMPONENT = "EgComponent";
     public static final String FIELDS_MESSAGE = "FieldsMessage";
@@ -185,6 +186,18 @@ public final class ExampleDictionary
     public static final String MISSING_REQUIRED_FIELDS_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001117=1.1\001127=19700101-00:00:00.001" +
         "\00110=161\001";
+
+    public static final String MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001136=1\001137=TOM\00110=043\001";
+
+    public static final String NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001136=1\001138=180\001137=TOM\00110=043\001";
+
+    public static final String NO_REPEATING_GROUP_IN_REPEATING_GROUP_MESSAGE =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\00110=043\001";
 
     public static final String INVALID_TAG_NUMBER_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
@@ -367,6 +380,10 @@ public final class ExampleDictionary
         egGroup.optionalEntry(registerField(messageEgFields, 121, "GroupField", INT));
         egGroup.optionalEntry(nestedGroup);
 
+        final Group groupWithRequiredField = Group.of(registerField(messageEgFields, 136, NO_SECOND_EG_GROUP, INT));
+        groupWithRequiredField.optionalEntry(registerField(messageEgFields, 137, "SecondGroupField", STRING));
+        groupWithRequiredField.requiredEntry(registerField(messageEgFields, 138, "ThirdGroupField", INT));
+
         final Group componentGroup = Group.of(registerField(messageEgFields, 130, NO_COMPONENT_GROUP, INT));
         componentGroup.optionalEntry(registerField(messageEgFields, 131, "ComponentGroupField", INT));
 
@@ -394,6 +411,7 @@ public final class ExampleDictionary
         heartbeat.optionalEntry(egGroup);
         heartbeat.requiredEntry(egComponent);
         heartbeat.optionalEntry(dataFieldLength);
+        heartbeat.optionalEntry(groupWithRequiredField);
 
         final Component header = new Component("Header");
         header
