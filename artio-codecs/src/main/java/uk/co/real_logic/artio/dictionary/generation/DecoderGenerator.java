@@ -265,7 +265,6 @@ public class DecoderGenerator extends Generator
 
         final String groupValidation = aggregate
             .entriesWith(element -> element instanceof Group)
-            .filter(Entry::isGroup)
             .map((entry) -> validateGroup(entry, out))
             .collect(joining("\n"));
 
@@ -409,8 +408,7 @@ public class DecoderGenerator extends Generator
             "            }\n" +
             "        }\n",
             decoderClassName(group),
-            iteratorFieldName(group),
-            group.name());
+            iteratorFieldName(group));
 
         if (entry.required())
         {
