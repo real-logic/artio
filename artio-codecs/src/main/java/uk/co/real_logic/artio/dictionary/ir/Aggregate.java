@@ -63,14 +63,14 @@ public abstract class Aggregate
                 ));
     }
 
-    public Stream<Field> allGroupFields()
+    public Stream<Field> allDescendantFields()
     {
         return entries.stream()
             .flatMap(
                 (entry) -> entry.match(
                     (ele, field) -> Stream.of(field),
-                    (ele, group) -> group.allGroupFields(),
-                    (ele, component) -> component.allGroupFields()
+                    (ele, group) -> group.allDescendantFields(),
+                    (ele, component) -> component.allDescendantFields()
                 ));
     }
 
