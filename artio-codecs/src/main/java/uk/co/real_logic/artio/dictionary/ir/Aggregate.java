@@ -63,17 +63,6 @@ public abstract class Aggregate
                 ));
     }
 
-    public Stream<Field> allDescendantFields()
-    {
-        return entries.stream()
-            .flatMap(
-                (entry) -> entry.match(
-                    (ele, field) -> Stream.of(field),
-                    (ele, group) -> group.allDescendantFields(),
-                    (ele, component) -> component.allDescendantFields()
-                ));
-    }
-
     public Aggregate optionalEntry(final Entry.Element element)
     {
         entries().add(Entry.optional(element));
