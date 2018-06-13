@@ -263,6 +263,12 @@ public class DecoderGenerator extends Generator
             .map((entry) -> validateEnum(entry, out))
             .collect(joining("\n"));
 
+        final String groupValidation = aggregate
+            .entriesWith(element -> element instanceof Group)
+            .filter(Entry::isGroup)
+            .map((entry) -> validateGroup(entry, out))
+            .collect(joining("\n"));
+
         final boolean isMessage = type == MESSAGE;
         final String messageValidation = isMessage ?
             "        else if (unknownFieldsIterator.hasNext())\n" +
@@ -287,7 +293,7 @@ public class DecoderGenerator extends Generator
             "";
 
         out.append(String.format(
-            "    private final IntHashSet alreadyVisitedFields = new IntHashSet(%4$d);\n\n" +
+            "    private final IntHashSet alreadyVisitedFields = new IntHashSet(%5$d);\n\n" +
             "    private final IntHashSet missingRequiredFields = new IntHashSet(%1$d);\n\n" +
             "    private final IntHashSet unknownFields = new IntHashSet(10);\n\n" +
             "    private int invalidTagId = NO_ERROR;\n\n" +
@@ -317,11 +323,13 @@ public class DecoderGenerator extends Generator
             "        }\n" +
             "%2$s" +
             "%3$s" +
+            "%4$s" +
             "        return true;\n" +
             "    }\n\n",
             sizeHashSet(requiredFields),
             messageValidation,
             enumValidation,
+            groupValidation,
             2 * aggregate.allChildEntries().count()));
     }
 
@@ -384,6 +392,41 @@ public class DecoderGenerator extends Generator
             propertyName,
             tagNumber,
             isPrimitive ? "" : ", " + propertyName + "Length");
+    }
+
+    private CharSequence validateGroup(final Entry entry, final Writer out)
+    {
+        final Group group = (Group)entry.element();
+        final String numberFieldName = group.numberField().name();
+        final String validationCode = String.format(
+            "        for (final %1$s iterator : %2$s)\n" +
+            "        {\n" +
+            "            if (!iterator.validate())\n" +
+            "            {\n" +
+            "                invalidTagId = iterator.invalidTagId();\n" +
+            "                rejectReason = iterator.rejectReason();\n" +
+            "                return false;\n" +
+            "            }\n" +
+            "        }\n",
+            decoderClassName(group),
+            iteratorFieldName(group),
+            group.name());
+
+        if (entry.required())
+        {
+            return validationCode;
+        }
+        else
+        {
+            return String.format(
+                "        if (has%1$s)\n" +
+                "        {\n" +
+                "            %2$s" +
+                "        }\n",
+                numberFieldName,
+                validationCode
+            );
+        }
     }
 
     private Stream<Field> requiredFields(final List<Entry> entries)
