@@ -252,7 +252,11 @@ public class DecoderGenerator extends Generator
 
         if (aggregate.containsGroup())
         {
-            final List<Field> groupFields = aggregate.allDescendantFields().collect(toList());
+            final List<Field> groupFields = aggregate
+                .allChildEntries()
+                .map(Entry::element)
+                .map(element -> (Field)element)
+                .collect(toList());
             final String groupFieldString = generateFieldDictionary(groupFields, GROUP_FIELDS);
             out.append(groupFieldString);
         }
