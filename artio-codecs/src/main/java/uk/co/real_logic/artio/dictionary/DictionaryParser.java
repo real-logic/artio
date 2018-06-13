@@ -15,11 +15,16 @@
  */
 package uk.co.real_logic.artio.dictionary;
 
-import org.agrona.Verify;
-import org.w3c.dom.*;
-import uk.co.real_logic.artio.dictionary.ir.*;
-import uk.co.real_logic.artio.dictionary.ir.Field.Type;
-import uk.co.real_logic.artio.dictionary.ir.Field.Value;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Consumer;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -28,18 +33,26 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.UncheckedIOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.Objects;
-import java.util.function.Consumer;
+
+import org.agrona.LangUtil;
+import org.agrona.Verify;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+
+import uk.co.real_logic.artio.dictionary.ir.Aggregate;
+import uk.co.real_logic.artio.dictionary.ir.Category;
+import uk.co.real_logic.artio.dictionary.ir.Component;
+import uk.co.real_logic.artio.dictionary.ir.Dictionary;
+import uk.co.real_logic.artio.dictionary.ir.Entry;
+import uk.co.real_logic.artio.dictionary.ir.Field;
+import uk.co.real_logic.artio.dictionary.ir.Field.Type;
+import uk.co.real_logic.artio.dictionary.ir.Field.Value;
+import uk.co.real_logic.artio.dictionary.ir.Group;
+import uk.co.real_logic.artio.dictionary.ir.Message;
 
 import static javax.xml.xpath.XPathConstants.NODESET;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.CHAR;
@@ -371,7 +384,7 @@ public final class DictionaryParser
     {
         Objects.requireNonNull(attributes, "Null attributes for " + attributeName);
         return Objects.requireNonNull(getOptionalValue(attributes, attributeName), "Empty item for:" +
-            attributeName);
+           attributeName);
     }
 
     private String getOptionalValue(final NamedNodeMap attributes, final String attributeName)
@@ -420,47 +433,78 @@ public final class DictionaryParser
     {
         simplifyComponentsThatAreJustGroups(components, messages);
         correctMultiCharacterCharEnums(fields);
-        removeDuplicateFields(messages);
+        identifyDuplicateFieldDefinitionsForMessages(messages);
     }
 
     // Some dodgy ECNs extend off-the-shelf QuickFIX dictionary, and include same field into message/group twice:
     // once via component, once explicitly. Duplicate field can be safely discarded.
-    private void removeDuplicateFields(final List<Message> messages)
+    private void identifyDuplicateFieldDefinitionsForMessages(final List<Message> messages)
     {
+        final StringBuilder errorMessage = new StringBuilder();
         for (final Message message : messages)
         {
-            removeDuplicateFields(message);
+            final Set<Integer> allFieldsForMessage = new HashSet<>();
+            identifyDuplicateFieldDefinitionsForMessage(message.name(), message, allFieldsForMessage, errorMessage);
+        }
+
+        if (errorMessage.length() > 0)
+        {
+            throw new IllegalStateException(errorMessage.toString());
         }
     }
 
-    private static void removeDuplicateFields(final Aggregate aggregate)
+    private static void identifyDuplicateFieldDefinitionsForMessage(
+        final String messageName,
+        final Aggregate aggregate,
+        final Set<Integer> allFields,
+        final StringBuilder errorCollector)
     {
-        // Collect all fields included via components
-        final Set<String> componentFields = new HashSet<>();
         try
         {
             for (final Entry e : aggregate.entries())
             {
                 e.forEach(
-                    (field) -> {},
-                    (group) -> removeDuplicateFields(group),
-                    (component) -> component.allChildEntries().forEach((ce) -> componentFields.add(ce.name()))
+                    (field) -> addField(messageName, field, allFields, errorCollector),
+                    (group) -> identifyDuplicateFieldDefinitionsForMessage(
+                    messageName,
+                    group,
+                    allFields,
+                    errorCollector),
+                    (component) -> identifyDuplicateFieldDefinitionsForMessage(
+                    messageName,
+                    component,
+                    allFields,
+                    errorCollector)
                 );
             }
         }
         catch (final IOException e)
         {
-            throw new UncheckedIOException(e);
+            LangUtil.rethrowUnchecked(e);
         }
+    }
 
-        // Now go through all fields listed explicitly, and remove those which are included via components
-        for (final Iterator<Entry> itr = aggregate.entries().iterator(); itr.hasNext(); )
+    private static void addField(
+        final String messageName,
+        final Field field,
+        final Set<Integer> fieldsForMessage,
+        final StringBuilder errorCollector)
+    {
+        if (!fieldsForMessage.add(field.number()))
         {
-            final Entry e = itr.next();
-            if (e.isField() && componentFields.contains(e.name()))
+            if (errorCollector.length() == 0)
             {
-                itr.remove();
+                errorCollector.append(
+                    "Cannot have the same field defined more than once on a message; this is " +
+                    "against the FIX spec. Details to follow:\n");
             }
+            errorCollector.append("Message: ")
+                .append(messageName)
+                .append(" Field : ")
+                .append(field.name())
+                .append(" (")
+                .append(field.number())
+                .append(")\n");
         }
     }
 

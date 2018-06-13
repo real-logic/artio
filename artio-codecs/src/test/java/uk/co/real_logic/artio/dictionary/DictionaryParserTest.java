@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.dictionary;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.hamcrest.Matcher;
 import org.junit.Before;
@@ -29,11 +28,13 @@ import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.typeCompatibleWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 
 import uk.co.real_logic.artio.dictionary.ir.Component;
@@ -46,7 +47,6 @@ import uk.co.real_logic.artio.dictionary.ir.Group;
 import uk.co.real_logic.artio.dictionary.ir.Message;
 
 import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
-import static uk.co.real_logic.artio.dictionary.ir.Category.APP;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.INT;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.STRING;
 import static uk.co.real_logic.artio.util.CustomMatchers.hasFluentProperty;
@@ -184,7 +184,7 @@ public class DictionaryParserTest
     @Test
     public void shouldParseAllMessages()
     {
-        assertEquals(5, dictionary.messages().size());
+        assertEquals(4, dictionary.messages().size());
     }
 
     @Test
@@ -254,15 +254,22 @@ public class DictionaryParserTest
     @Test
     public void shouldDedupeFieldsIncludedTwice()
     {
-        final Message testMessage = dictionary.messages().get(3);
+        shouldThrow(() -> parseDictionary("example_invalid_dictionary_2.xml"),
+            IllegalStateException.class,
+            "Cannot have the same field defined more than once on a message; this is against the FIX spec. " +
+            "Details to follow:\n" +
+            "Message: DedupeFieldsTest Field : MemberSubID (104)\n");
+    }
 
-        assertEquals("DedupeFieldsTest", testMessage.name());
-        assertEquals(12629, testMessage.packedType());
-        assertEquals(APP, testMessage.category());
-
-        final List<Entry> childEntries = testMessage.allChildEntries().collect(Collectors.toList());
-        assertThat(childEntries.size(), is(1));
-        assertThat(childEntries.get(0), isField("MemberSubID"));
+    @Test
+    public void shouldFailIfTwoFieldsAppearInSameMessage()
+    {
+        shouldThrow(() -> parseDictionary("example_invalid_dictionary.xml"),
+            IllegalStateException.class,
+            "Cannot have the same field defined more than once on a message; this is against the FIX spec. " +
+            "Details to follow:\n" +
+            "Message: PoorlyDefinedMessage Field : MemberSubID (104)\n" +
+            "Message: PoorlyDefinedMessage Field : MemberSubID (104)\n");
     }
 
     private Component component(final String name)
@@ -292,7 +299,13 @@ public class DictionaryParserTest
 
     private Dictionary parseExample() throws Exception
     {
-        return new DictionaryParser().parse(DictionaryParserTest.class.getResourceAsStream(EXAMPLE_FILE), null);
+        return parseDictionary(EXAMPLE_FILE);
+    }
+
+    private Dictionary parseDictionary(final String name) throws Exception
+    {
+        return new DictionaryParser()
+            .parse(DictionaryParserTest.class.getResourceAsStream(name), null);
     }
 
     private <T> Matcher<T> withElement(final Matcher<?> valueMatcher)
@@ -338,5 +351,27 @@ public class DictionaryParserTest
     private <T> Matcher<T> isGroup(final String name, final Matcher<T> valueMatcher)
     {
         return allOf(instanceOf(Group.class), withName(equalTo(name)), valueMatcher);
+    }
+
+    private static <T extends Exception> void shouldThrow(
+        final ThrowingRunnable runnable,
+        final Class<T> expectedException,
+        final String message)
+    {
+        try
+        {
+            runnable.run();
+            fail("Expected exception " + expectedException + " with message '" + message + "' but nothing was thrown");
+        }
+        catch (final Exception e)
+        {
+            assertThat(e.getClass(), typeCompatibleWith(expectedException));
+            assertThat(e.getMessage(), is(message));
+        }
+    }
+
+    private interface ThrowingRunnable
+    {
+        void run() throws Exception;
     }
 }
