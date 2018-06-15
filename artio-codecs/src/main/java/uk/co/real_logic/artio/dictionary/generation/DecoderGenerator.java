@@ -1072,8 +1072,11 @@ public class DecoderGenerator extends Generator
             "                position = endOfField + 1;\n" +
             "                for (int i = 0; i < %3$s && position < end; i++)\n" +
             "                {\n" +
-            "                    position += %1$sCurrent.decode(buffer, position, end - position);\n" +
-            "                    %1$sCurrent = %1$sCurrent.next();\n" +
+            "                    if (%1$sCurrent != null)\n" +
+            "                    {\n" +
+            "                        position += %1$sCurrent.decode(buffer, position, end - position);\n" +
+            "                        %1$sCurrent = %1$sCurrent.next();\n" +
+            "                    }\n" +
             "                }\n",
             formatPropertyName(group.name()),
             decoderClassName(group),
