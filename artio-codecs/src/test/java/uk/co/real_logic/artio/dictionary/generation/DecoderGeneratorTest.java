@@ -122,16 +122,6 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void stringGettersReadFromFields() throws Exception
-    {
-        final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
-        setField(decoder, ON_BEHALF_OF_COMP_ID, ABC);
-        setField(decoder, ON_BEHALF_OF_COMP_ID + "Length", 3);
-
-        assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
-    }
-
-    @Test
     public void flagsForOptionalFieldsInitiallyUnset() throws Exception
     {
         final Object decoder = heartbeat.getConstructor().newInstance();

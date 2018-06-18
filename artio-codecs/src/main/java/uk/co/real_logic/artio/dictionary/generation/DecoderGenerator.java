@@ -373,7 +373,7 @@ public class DecoderGenerator extends Generator
 
 
         return String.format(
-            "        if (%1$s!%2$s.isValid(%3$s%5$s))\n" +
+            "        if (%1$s!%2$s.isValid(%3$s()%5$s))\n" +
             "        {\n" +
             "            invalidTagId = %4$s;\n" +
             "            rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
@@ -629,14 +629,14 @@ public class DecoderGenerator extends Generator
         final String optionalCheck = optionalCheck(entry);
 
         final String asStringBody = String.format(entry.required() ?
-            "new String(%1$s, 0, %1$sLength)" :
-            "has%2$s ? new String(%1$s, 0, %1$sLength) : null",
+            "buffer.getStringWithoutLengthAscii(%1$sOffset, %1$sLength)" :
+            "has%2$s ? buffer.getStringWithoutLengthAscii(%1$sOffset, %1$sLength) : null",
             fieldName,
             name);
 
         final String enumValueDecoder = String.format(
             type.isStringBased() ?
-            "%1$s.decode(%2$s, %2$sLength)" :
+            "%1$s.decode(%2$s(), %2$sLength)" :
             "%1$s.decode(%2$s)",
             name,
             fieldName);
@@ -681,17 +681,20 @@ public class DecoderGenerator extends Generator
             asEnumBody
         ) : "";
 
+        final String lazyStringInitialisation = thing(fieldName, type);
+
         return String.format(
-            "    private %s %s%s;\n\n" +
-            "%s" +
+            "    private %1$s %2$s%3$s;\n\n" +
+            "%4$s" +
             "    public %1$s %2$s()\n" +
             "    {\n" +
-            "%s" +
+            "%5$s" +
+            "%9$s" +
             "        return %2$s;\n" +
             "    }\n\n" +
-            "%s\n" +
-            "%s\n" +
-            "%s",
+            "%6$s\n" +
+            "%7$s\n" +
+            "%8$s",
             javaTypeOf(type),
             fieldName,
             fieldInitialisation(type),
@@ -699,7 +702,49 @@ public class DecoderGenerator extends Generator
             optionalCheck,
             optionalGetter(entry),
             stringDecoder,
-            enumDecoder);
+            enumDecoder,
+            lazyStringInitialisation);
+    }
+
+    private static String thing(final String fieldName, final Type type)
+    {
+        switch (type)
+        {
+            case STRING:
+            case MULTIPLEVALUESTRING:
+            case MULTIPLESTRINGVALUE:
+            case MULTIPLECHARVALUE:
+            case CURRENCY:
+            case EXCHANGE:
+            case COUNTRY:
+            case LANGUAGE:
+                return String.format("        %1$s = buffer.getChars(%1$s, %1$sOffset, %1$sLength);\n", fieldName);
+
+            case FLOAT:
+            case PRICE:
+            case PRICEOFFSET:
+            case QTY:
+            case PERCENTAGE:
+            case AMT:
+            case BOOLEAN:
+            case INT:
+            case LENGTH:
+            case SEQNUM:
+            case NUMINGROUP:
+            case DAYOFMONTH:
+            case CHAR:
+            case DATA:
+            case XMLDATA:
+            case UTCTIMESTAMP:
+            case LOCALMKTDATE:
+            case UTCTIMEONLY:
+            case UTCDATEONLY:
+            case MONTHYEAR:
+            case TZTIMEONLY:
+            case TZTIMESTAMP:
+            default:
+                return "";
+        }
     }
 
     private String fieldInitialisation(final Type type)
@@ -1052,14 +1097,13 @@ public class DecoderGenerator extends Generator
         return String.format(
             "            case Constants.%s:\n" +
             "%s" +
-            "                %s = buffer.%s);\n" +
+            "%s" +
             "%s" +
             "%s" +
             "%s" +
             "                break;\n",
             constantName(name),
             optionalAssign(entry),
-            fieldName,
             decodeMethodFor(field.type(), fieldName),
             storeOffsetForStrings(field.type(), fieldName),
             storeLengthForVariableLength(field.type(), fieldName),
@@ -1087,6 +1131,8 @@ public class DecoderGenerator extends Generator
 
     private String decodeMethodFor(final Type type, final String fieldName)
     {
+        final String field = String.format("                %s = ", fieldName);
+        final String decodeMethod;
         switch (type)
         {
             case INT:
@@ -1094,19 +1140,19 @@ public class DecoderGenerator extends Generator
             case SEQNUM:
             case NUMINGROUP:
             case DAYOFMONTH:
-                return "getInt(valueOffset, endOfField";
-
+                decodeMethod = "buffer.getInt(valueOffset, endOfField)";
+                break;
             case FLOAT:
             case PRICE:
             case PRICEOFFSET:
             case QTY:
             case PERCENTAGE:
             case AMT:
-                return String.format("getFloat(%s, valueOffset, valueLength", fieldName);
-
+                decodeMethod = String.format("buffer.getFloat(%s, valueOffset, valueLength)", fieldName);
+                break;
             case CHAR:
-                return "getChar(valueOffset";
-
+                decodeMethod = "buffer.getChar(valueOffset)";
+                break;
             case STRING:
             case MULTIPLEVALUESTRING:
             case MULTIPLESTRINGVALUE:
@@ -1115,11 +1161,11 @@ public class DecoderGenerator extends Generator
             case EXCHANGE:
             case COUNTRY:
             case LANGUAGE:
-                return String.format("getChars(%s, valueOffset, valueLength", fieldName);
+                return "";
 
             case BOOLEAN:
-                return "getBoolean(valueOffset";
-
+                decodeMethod = "buffer.getBoolean(valueOffset)";
+                break;
             case DATA:
             case XMLDATA:
             case UTCTIMESTAMP:
@@ -1129,16 +1175,18 @@ public class DecoderGenerator extends Generator
             case TZTIMEONLY:
             case TZTIMESTAMP:
             case MONTHYEAR:
-                return String.format("getBytes(%s, valueOffset, valueLength", fieldName);
+                decodeMethod = String.format("buffer.getBytes(%s, valueOffset, valueLength)", fieldName);
+                break;
 
             default:
                 throw new UnsupportedOperationException("Unknown type: " + type);
         }
+        return field + decodeMethod + ";\n";
     }
 
     protected String stringToString(final String fieldName)
     {
-        return String.format("new String(%s, 0, %1$sLength)", fieldName);
+        return String.format("%1$sAsString()", fieldName);
     }
 
     protected boolean hasFlag(final Entry entry, final Field field)

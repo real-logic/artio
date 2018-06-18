@@ -89,14 +89,6 @@ public final class Reflection
             .invoke(object, value);
     }
 
-    public static void setField(
-        final Object object,
-        final String fieldName,
-        final Object value) throws Exception
-    {
-        field(object, fieldName).set(object, value);
-    }
-
     public static Object get(final Object value, final String name) throws Exception
     {
         return value.getClass()
