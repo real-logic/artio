@@ -510,6 +510,16 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void shouldFailValidationForUnknownFieldInsideRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
+
+        assertFalse("Passed validation with missing fields", decoder.validate());
+        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
+    }
+
+    @Test
     public void shouldValidateIfNoRepeatingGroup() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(NO_REPEATING_GROUP_IN_REPEATING_GROUP_MESSAGE);
