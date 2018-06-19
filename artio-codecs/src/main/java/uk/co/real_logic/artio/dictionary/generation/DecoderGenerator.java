@@ -105,8 +105,6 @@ public class DecoderGenerator extends Generator
 
     private String generateAllFieldsDictionary()
     {
-        final int hashMapSize = sizeHashSet(dictionary.fields().values());
-
         return intHashSetCopy(ALL_FIELDS, "Constants.ALL_FIELDS");
     }
 
