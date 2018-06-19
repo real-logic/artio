@@ -107,20 +107,15 @@ public class DecoderGenerator extends Generator
     {
         final int hashMapSize = sizeHashSet(dictionary.fields().values());
 
-        return intHashSetCopy(hashMapSize, ALL_FIELDS, "Constants.ALL_FIELDS");
+        return intHashSetCopy(ALL_FIELDS, "Constants.ALL_FIELDS");
     }
 
     private String intHashSetCopy(
-        final int hashMapSize,
         final String name,
         final String from)
     {
         return String.format(
-            "    public final IntHashSet %2$s = new IntHashSet(%1$d);\n" +
-            "    {\n" +
-            "        %2$s.copy(%3$s);\n" +
-            "    }\n\n",
-            hashMapSize,
+            "    public final IntHashSet %1$s = %2$s;\n\n",
             name,
             from);
     }
