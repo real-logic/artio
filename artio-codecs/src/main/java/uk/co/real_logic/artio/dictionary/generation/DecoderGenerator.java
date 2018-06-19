@@ -156,6 +156,7 @@ public class DecoderGenerator extends Generator
         currentAggregate = aggregate;
 
         final boolean isMessage = type == MESSAGE;
+        final boolean isGroup = type == GROUP;
         final List<String> interfaces = aggregate
             .entriesWith((element) -> element instanceof Component)
             .map((comp) -> decoderClassName((Aggregate)comp.element()))
@@ -175,7 +176,7 @@ public class DecoderGenerator extends Generator
         headerMethods(out, aggregate, type);
         getters(out, aggregate.entries());
         out.append(decodeMethod(aggregate.entries(), aggregate, type));
-        out.append(completeResetMethod(isMessage, aggregate.entries(), resetValidation()));
+        out.append(completeResetMethod(isMessage, aggregate.entries(), resetValidation(isGroup)));
         out.append(toString(aggregate, isMessage));
         out.append("}\n");
         currentAggregate = parentAggregate;
@@ -230,7 +231,7 @@ public class DecoderGenerator extends Generator
             "        }\n";
     }
 
-    private String resetValidation()
+    private String resetValidation(final boolean isGroup)
     {
         return
             "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
@@ -238,8 +239,9 @@ public class DecoderGenerator extends Generator
             "            invalidTagId = NO_ERROR;\n" +
             "            rejectReason = NO_ERROR;\n" +
             "            missingRequiredFields.clear();\n" +
+            (isGroup ? "" :
             "            unknownFields.clear();\n" +
-            "            alreadyVisitedFields.clear();\n" +
+            "            alreadyVisitedFields.clear();\n") +
             "        }\n";
     }
 
@@ -273,6 +275,7 @@ public class DecoderGenerator extends Generator
             .collect(joining("\n"));
 
         final boolean isMessage = type == MESSAGE;
+        final boolean isGroup = type == GROUP;
         final String messageValidation = isMessage ?
             "        if (unknownFieldsIterator.hasNext())\n" +
             "        {\n" +
@@ -296,9 +299,10 @@ public class DecoderGenerator extends Generator
             "";
 
         out.append(String.format(
+            (isGroup ? "" :
             "    private final IntHashSet alreadyVisitedFields = new IntHashSet(%5$d);\n\n" +
+            "    private final IntHashSet unknownFields = new IntHashSet(10);\n\n") +
             "    private final IntHashSet missingRequiredFields = new IntHashSet(%1$d);\n\n" +
-            "    private final IntHashSet unknownFields = new IntHashSet(10);\n\n" +
             "    private int invalidTagId = NO_ERROR;\n\n" +
             "    public int invalidTagId()\n" +
             "    {\n" +
@@ -895,7 +899,7 @@ public class DecoderGenerator extends Generator
             "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
             "        {\n" +
             "            missingRequiredFields.copy(" + REQUIRED_FIELDS + ");\n" +
-            "            alreadyVisitedFields.clear();\n" +
+            (isGroup ? "" : "            alreadyVisitedFields.clear();\n") +
             "        }\n" +
             "        this.buffer = buffer;\n" +
             "        final int end = offset + length;\n" +
@@ -946,10 +950,11 @@ public class DecoderGenerator extends Generator
 
         final String suffix =
             "            default:\n" +
+            (isGroup ? "" :
             "                if (" + CODEC_VALIDATION_ENABLED + isTrailerTag(type) + groupSuffix + ")\n" +
             "                {\n" +
             "                    unknownFields.add(tag);\n" +
-            "                }\n" +
+            "                }\n") +
             // Skip the thing if it's a completely unknown field and you aren't validating messages
             "                if (" + CODEC_VALIDATION_ENABLED + " || allFields.contains(tag))\n" +
             "                {\n" +
