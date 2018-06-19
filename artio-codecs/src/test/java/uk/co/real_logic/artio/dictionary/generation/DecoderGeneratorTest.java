@@ -528,6 +528,16 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void shouldFailValidationRegardingUnknownFieldRatherThanMissingRequiredField() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(UNKNOWN_FIELD_MESSAGE);
+
+        assertFalse("Passed validation with invalid tag number ", decoder.validate());
+        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
+    }
+
+    @Test
     public void shouldValidateTagNumbersDefinedForThisMessage() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE_MESSAGE);
