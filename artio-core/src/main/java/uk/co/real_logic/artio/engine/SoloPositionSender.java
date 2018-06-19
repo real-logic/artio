@@ -25,7 +25,7 @@ import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
-class SoloPositionSender implements Index
+public class SoloPositionSender implements Index
 {
     private static final int MISSING_LIBRARY = -1;
 
@@ -38,7 +38,7 @@ class SoloPositionSender implements Index
 
     private int resendCount;
 
-    SoloPositionSender(final GatewayPublication publication)
+    public SoloPositionSender(final GatewayPublication publication)
     {
         this.publication = publication;
     }
@@ -60,11 +60,11 @@ class SoloPositionSender implements Index
 
             fixMessage.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
 
-            indexFixMessage(fixMessage.libraryId(), endPosition);
+            newPosition(fixMessage.libraryId(), endPosition);
         }
     }
 
-    void indexFixMessage(final int libraryId, final long endPosition)
+    public void newPosition(final int libraryId, final long endPosition)
     {
         libraryIdToPosition.put(libraryId, endPosition);
     }
