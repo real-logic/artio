@@ -52,7 +52,6 @@ public class DecoderGenerator extends Generator
 
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
     public static final String GROUP_FIELDS = "GROUP_FIELDS";
-    public static final String ALL_FIELDS = "allFields";
 
     public static final int INVALID_TAG_NUMBER =
         RejectReason.INVALID_TAG_NUMBER.representation();
@@ -83,8 +82,6 @@ public class DecoderGenerator extends Generator
 
     private final int initialBufferSize;
 
-    private String allFieldsDictionary;
-
     public DecoderGenerator(
         final Dictionary dictionary,
         final int initialBufferSize,
@@ -95,34 +92,6 @@ public class DecoderGenerator extends Generator
     {
         super(dictionary, builderPackage, builderCommonPackage, outputManager, validationClass);
         this.initialBufferSize = initialBufferSize;
-    }
-
-    public void generate()
-    {
-        allFieldsDictionary = generateAllFieldsDictionary();
-        super.generate();
-    }
-
-    private String generateAllFieldsDictionary()
-    {
-        final int hashMapSize = sizeHashSet(dictionary.fields().values());
-
-        return intHashSetCopy(hashMapSize, ALL_FIELDS, "Constants.ALL_FIELDS");
-    }
-
-    private String intHashSetCopy(
-        final int hashMapSize,
-        final String name,
-        final String from)
-    {
-        return String.format(
-            "    public final IntHashSet %2$s = new IntHashSet(%1$d);\n" +
-            "    {\n" +
-            "        %2$s.copy(%3$s);\n" +
-            "    }\n\n",
-            hashMapSize,
-            name,
-            from);
     }
 
     protected void generateAggregateFile(final Aggregate aggregate, final AggregateType type)
@@ -250,7 +219,6 @@ public class DecoderGenerator extends Generator
     {
         final List<Field> requiredFields = requiredFields(aggregate.entries()).collect(toList());
         out.append(generateFieldDictionary(requiredFields, REQUIRED_FIELDS));
-        out.append(allFieldsDictionary);
 
         if (aggregate.containsGroup())
         {
@@ -280,7 +248,7 @@ public class DecoderGenerator extends Generator
             "        else if (unknownFieldsIterator.hasNext())\n" +
             "        {\n" +
             "            invalidTagId = unknownFieldsIterator.nextValue();\n" +
-            "            rejectReason = allFields.contains(invalidTagId) ? " +
+            "            rejectReason = Constants.ALL_FIELDS.contains(invalidTagId) ? " +
             TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE + " : " + INVALID_TAG_NUMBER + ";\n" +
             "            return false;\n" +
             "        }\n" +
@@ -956,7 +924,7 @@ public class DecoderGenerator extends Generator
             "                    unknownFields.add(tag);\n" +
             "                }\n") +
             // Skip the thing if it's a completely unknown field and you aren't validating messages
-            "                if (" + CODEC_VALIDATION_ENABLED + " || allFields.contains(tag))\n" +
+            "                if (" + CODEC_VALIDATION_ENABLED + " || Constants.ALL_FIELDS.contains(tag))\n" +
             "                {\n" +
             decodeTrailerOrReturn(hasCommonCompounds, 5) +
             "                }\n" +
