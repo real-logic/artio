@@ -710,20 +710,6 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void shouldGenerateAllFieldsSet() throws Exception
-    {
-        final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
-        final Object allFieldsField = getField(decoder, ALL_FIELDS);
-        assertThat(allFieldsField, instanceOf(IntHashSet.class));
-
-        @SuppressWarnings("unchecked") final Set<Integer> allFields = (Set<Integer>)allFieldsField;
-        assertThat(allFields, hasItem(123));
-        assertThat(allFields, hasItem(124));
-        assertThat(allFields, hasItem(35));
-        assertThat(allFields, not(hasItem(999)));
-    }
-
-    @Test
     public void shouldDecodeDifferentFieldTypes() throws Exception
     {
         final Decoder decoder = (Decoder)fieldsMessage.getConstructor().newInstance();

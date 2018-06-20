@@ -15,15 +15,25 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+
 import uk.co.real_logic.artio.util.Reflection;
 
 import java.util.Map;
+import java.util.Set;
 
 import static org.agrona.generation.CompilerUtil.compileInMemory;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.not;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+
+
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.artio.util.Reflection.getField;
 
@@ -70,6 +80,19 @@ public class ConstantGeneratorTest
         final Object version = getField(constants, ConstantGenerator.VERSION);
 
         assertEquals("FIX.4.4", version);
+    }
+
+    @Test
+    public void shouldGenerateAllFieldsSet() throws Exception
+    {
+        final Object allFieldsField = getField(constants, "ALL_FIELDS");
+        assertThat(allFieldsField, instanceOf(IntHashSet.class));
+
+        @SuppressWarnings("unchecked") final Set<Integer> allFields = (Set<Integer>)allFieldsField;
+        assertThat(allFields, hasItem(123));
+        assertThat(allFields, hasItem(124));
+        assertThat(allFields, hasItem(35));
+        assertThat(allFields, not(hasItem(999)));
     }
 
     @Test(expected = NoSuchFieldException.class)
