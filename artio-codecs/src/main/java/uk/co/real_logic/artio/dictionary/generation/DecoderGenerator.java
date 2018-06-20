@@ -277,7 +277,7 @@ public class DecoderGenerator extends Generator
         final boolean isMessage = type == MESSAGE;
         final boolean isGroup = type == GROUP;
         final String messageValidation = isMessage ?
-            "        if (unknownFieldsIterator.hasNext())\n" +
+            "        else if (unknownFieldsIterator.hasNext())\n" +
             "        {\n" +
             "            invalidTagId = unknownFieldsIterator.nextValue();\n" +
             "            rejectReason = allFields.contains(invalidTagId) ? " +
@@ -322,13 +322,13 @@ public class DecoderGenerator extends Generator
             "        }\n" +
             "        final IntIterator missingFieldsIterator = missingRequiredFields.iterator();\n" +
             (isMessage ? "        final IntIterator unknownFieldsIterator = unknownFields.iterator();\n" : "") +
-            "%2$s" +
             "        if (missingFieldsIterator.hasNext())\n" +
             "        {\n" +
             "            invalidTagId = missingFieldsIterator.nextValue();\n" +
             "            rejectReason = " + REQUIRED_TAG_MISSING + ";\n" +
             "            return false;\n" +
             "        }\n" +
+            "%2$s" +
             "%3$s" +
             "%4$s" +
             "        return true;\n" +
