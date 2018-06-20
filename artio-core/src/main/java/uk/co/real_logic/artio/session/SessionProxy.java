@@ -142,7 +142,7 @@ public class SessionProxy
         return send(result, ResendRequestDecoder.MESSAGE_TYPE, sequenceIndex, resendRequest);
     }
 
-    public long requestDisconnect(final long connectionId, final DisconnectReason reason)
+    long requestDisconnect(final long connectionId, final DisconnectReason reason)
     {
         return gatewayPublication.saveRequestDisconnect(libraryId, connectionId, reason);
     }

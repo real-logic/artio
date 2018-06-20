@@ -43,6 +43,7 @@ public class FakeHandler
     private boolean hasDisconnected = false;
     private long sentPosition;
     private boolean lastSessionWasSlow;
+    private DisconnectReason lastDisconnectReason = null;
 
     public FakeHandler(final FakeOtfAcceptor acceptor)
     {
@@ -89,6 +90,7 @@ public class FakeHandler
     {
         sessions.remove(session);
         hasDisconnected = true;
+        lastDisconnectReason = reason;
         return CONTINUE;
     }
 
@@ -223,5 +225,10 @@ public class FakeHandler
     public boolean lastSessionWasSlow()
     {
         return lastSessionWasSlow;
+    }
+
+    public DisconnectReason lastDisconnectReason()
+    {
+        return lastDisconnectReason;
     }
 }
