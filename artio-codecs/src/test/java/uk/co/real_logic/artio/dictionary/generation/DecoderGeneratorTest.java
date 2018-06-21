@@ -46,7 +46,6 @@ import static uk.co.real_logic.artio.builder.Decoder.NO_ERROR;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_CHAR;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
-import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.ALL_FIELDS;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.CODEC_LOGGING;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.INVALID_TAG_NUMBER;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.REQUIRED_FIELDS;
