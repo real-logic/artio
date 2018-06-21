@@ -51,6 +51,7 @@ import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
+import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 
 final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, AutoCloseable
 {
@@ -81,6 +82,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private Session[] sessions = new Session[0];
+    private Session[] pendingInitiatorSessions = new Session[0];
+
     private final List<Session> unmodifiableSessions = new AbstractList<Session>()
     {
         public Session get(final int index)
@@ -312,6 +315,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         operations += inboundSubscription.controlledPoll(outboundSubscription, fragmentLimit);
         operations += livenessDetector.poll(timeInMs);
         operations += pollSessions(timeInMs);
+        operations += pollPendingInitiatorSessions(timeInMs);
         operations += checkReplies(timeInMs);
         return operations;
     }
@@ -521,6 +525,30 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return total;
     }
 
+    private int pollPendingInitiatorSessions(final long timeInMs)
+    {
+        Session[] pendingSessions = this.pendingInitiatorSessions;
+        int total = 0;
+
+        for (int i = 0, size = pendingSessions.length; i < size;)
+        {
+            final Session session = pendingSessions[i];
+            total += session.poll(timeInMs);
+            if (session.state() == ACTIVE)
+            {
+                this.pendingInitiatorSessions = pendingSessions = ArrayUtil.remove(pendingSessions, i);
+                size--;
+                sessions = ArrayUtil.add(sessions, session);
+            }
+            else
+            {
+                i++;
+            }
+        }
+
+        return total;
+    }
+
     private long timeInMs()
     {
         return clock.time();
@@ -606,22 +634,21 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 if (connectionType == INITIATOR)
                 {
                     DebugLogger.log(FIX_MESSAGE, "Init Connect: %d, %d%n", connection, libraryId);
+                    // TODO: can this ever be false?
                     final boolean isInitiator = correlationIdToReply.get(correlationId) instanceof InitiateSessionReply;
                     final InitiateSessionReply reply = isInitiator ?
                         (InitiateSessionReply)correlationIdToReply.remove(correlationId) : null;
-                    final Session session = initiateSession(
+                    final InitiatorSession session = newInitiatorSession(
                         connection,
                         lastSentSeqNum,
                         lastRecvSeqNum,
                         sessionState,
                         isInitiator ? reply.configuration() : null,
-                        sequenceIndex);
+                        sequenceIndex
+                    );
 
-                    newSession(connection, sessionId, session);
-                    if (isInitiator)
-                    {
-                        reply.onComplete(session);
-                    }
+                    newSession(connection, sessionId, session).reply(reply);
+                    pendingInitiatorSessions = ArrayUtil.add(pendingInitiatorSessions, session);
                 }
                 else
                 {
@@ -629,6 +656,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     final Session session = acceptSession(
                         connection, address, sessionState, heartbeatIntervalInS, sequenceIndex, logonTime);
                     newSession(connection, sessionId, session);
+                    sessions = ArrayUtil.add(sessions, session);
                 }
 
                 // ie the initial part of this library getting hold of this session.
@@ -734,6 +762,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 {
                     final Session session = subscriber.session();
                     session.close();
+                    // session will be in either pendingInitiatorSessions or sessions
+                    pendingInitiatorSessions = ArrayUtil.remove(pendingInitiatorSessions, session);
                     sessions = ArrayUtil.remove(sessions, session);
                 }
 
@@ -859,7 +889,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 libraryId,
                 timeInMs);
 
-            // TODO(Nick): This should be a new set,
             // TODO(Nick): This should be a new set, not the actual
             // set as we remove all the ids to check for existence..
             // Weirdly looks like this.sessionIds is never used anywhere else?
@@ -953,7 +982,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     //                     END EVENT HANDLERS
     // -----------------------------------------------------------------------
 
-    private void newSession(final long connectionId, final long sessionId, final Session session)
+    private SessionSubscriber newSession(final long connectionId, final long sessionId, final Session session)
     {
         session.id(sessionId);
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
@@ -961,10 +990,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             session, sessionIdStrategy, validationStrategy, null);
         final SessionSubscriber subscriber = new SessionSubscriber(parser, session, receiveTimer, sessionTimer);
         connectionIdToSession.put(connectionId, subscriber);
-        sessions = ArrayUtil.add(sessions, session);
+        return subscriber;
     }
 
-    private Session initiateSession(
+    private InitiatorSession newInitiatorSession(
         final long connectionId,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
@@ -983,7 +1012,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int initialSentSequenceNumber = initiatorNewSequenceNumber(
             sessionConfiguration, SessionConfiguration::initialSentSequenceNumber, lastSentSequenceNumber);
 
-        final Session session = new InitiatorSession(
+        final InitiatorSession session = new InitiatorSession(
             defaultInterval,
             connectionId,
             clock,
@@ -999,8 +1028,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             state,
             sessionConfiguration != null && sessionConfiguration.resetSeqNum(),
             configuration.reasonableTransmissionTimeInMs(),
-            asciiBuffer)
-            .lastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
+            asciiBuffer);
+        session.lastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
 
         if (sessionConfiguration != null)
         {

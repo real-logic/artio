@@ -19,11 +19,14 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
-import uk.co.real_logic.artio.session.*;
+import uk.co.real_logic.artio.session.AcceptorSession;
+import uk.co.real_logic.artio.session.CompositeKey;
+import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.session.SessionParser;
 import uk.co.real_logic.artio.timing.Timer;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
+import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_LOGON;
 
 class SessionSubscriber implements AutoCloseable
 {
@@ -33,6 +36,7 @@ class SessionSubscriber implements AutoCloseable
     private final Timer sessionTimer;
 
     private SessionHandler handler;
+    private InitiateSessionReply initiateSessionReply;
 
     SessionSubscriber(
         final SessionParser parser,
@@ -108,8 +112,18 @@ class SessionSubscriber implements AutoCloseable
 
     Action onDisconnect(final int libraryId, final DisconnectReason reason)
     {
-        session.onDisconnect();
-        return handler.onDisconnect(libraryId, session, reason);
+        final Action action = handler.onDisconnect(libraryId, session, reason);
+        if (action != ABORT)
+        {
+            session.onDisconnect();
+            // We've been disconnected before an initiator session has finished logging on, eg: wrong msgSeqNum in logon
+            if (initiateSessionReply != null)
+            {
+                initiateSessionReply.onError(UNABLE_TO_LOGON, "Disconnected before session active");
+                initiateSessionReply = null;
+            }
+        }
+        return action;
     }
 
     void onLogon(
@@ -142,6 +156,13 @@ class SessionSubscriber implements AutoCloseable
         {
             handler.onSessionStart(session);
         }
+        if (initiateSessionReply != null)
+        {
+            initiateSessionReply.onComplete(session);
+            // Don't want to hold a reference to the reply object for the
+            // lifetime of the Session
+            initiateSessionReply = null;
+        }
     }
 
     void onTimeout(final int libraryId)
@@ -167,5 +188,10 @@ class SessionSubscriber implements AutoCloseable
     void handler(final SessionHandler handler)
     {
         this.handler = handler;
+    }
+
+    void reply(final InitiateSessionReply reply)
+    {
+        this.initiateSessionReply = reply;
     }
 }

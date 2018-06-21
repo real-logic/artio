@@ -309,7 +309,6 @@ public class ClusteredGatewaySystemTest
         initiatingSession = reply.resultIfPresent();
 
         assertConnected(initiatingSession);
-        sessionLogsOn(testSystem, initiatingSession, 10_000);
         final long sessionId = acceptingHandler.awaitSessionIdFor(INITIATOR_ID, ACCEPTOR_ID,
             () ->
             {

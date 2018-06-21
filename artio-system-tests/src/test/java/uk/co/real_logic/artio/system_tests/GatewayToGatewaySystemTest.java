@@ -38,7 +38,7 @@ import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixMatchers.*;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.artio.Timing.*;
+import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
@@ -220,7 +220,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             final Session session2 = reply.resultIfPresent();
 
             assertConnected(session2);
-            sessionLogsOn(testSystem, session2, DEFAULT_TIMEOUT_IN_MS);
 
             final long sessionId = acceptingHandler.awaitSessionIdFor(
                 INITIATOR_ID2,

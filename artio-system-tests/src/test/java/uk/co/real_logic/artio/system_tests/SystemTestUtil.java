@@ -20,9 +20,9 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.YieldingIdleStrategy;
 import org.hamcrest.Matcher;
 import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.TestRequestEncoder;
-import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
@@ -310,22 +310,6 @@ public final class SystemTestUtil
         return session;
     }
 
-    static void sessionLogsOn(
-        final TestSystem testSystem,
-        final Session session,
-        final long timeoutInMs)
-    {
-        assertEventuallyTrue("Session has failed to logon",
-            () ->
-            {
-                testSystem.poll();
-                testSystem.assertConnected();
-
-                assertEquals(ACTIVE, session.state());
-            },
-            timeoutInMs);
-    }
-
     static FixLibrary newInitiatingLibrary(final int libraryAeronPort, final FakeHandler sessionHandler)
     {
         return connect(initiatingLibraryConfig(libraryAeronPort, sessionHandler));
@@ -366,7 +350,7 @@ public final class SystemTestUtil
     static void assertConnected(final Session session)
     {
         assertNotNull("Session is null", session);
-        assertTrue("Session has failed to connect", session.isConnected());
+        assertEquals("Session has failed to connect", ACTIVE, session.state());
     }
 
     static List<LibraryInfo> libraries(final FixEngine engine)

@@ -18,22 +18,21 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
 import org.junit.After;
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Reply.State;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
-import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.session.Session;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixMatchers.hasSequenceIndex;
 import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.unusedPort;
-import static uk.co.real_logic.artio.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
@@ -153,7 +152,6 @@ public class AbstractGatewayToGatewaySystemTest
 
         assertEquals(State.COMPLETED, reply.state());
         assertConnected(initiatingSession);
-        sessionLogsOn(testSystem, initiatingSession, DEFAULT_TIMEOUT_IN_MS);
     }
 
     FixMessage assertMessageResent(final int sequenceNumber, final String msgType, final boolean isGapFill)

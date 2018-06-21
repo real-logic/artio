@@ -39,7 +39,7 @@ import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.Constants.SEQUENCE_RESET_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.artio.Timing.*;
+import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.MISSING_MESSAGES;
@@ -68,7 +68,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         initiatingSession = reply.resultIfPresent();
         assertConnected(initiatingSession);
-        sessionLogsOn(testSystem, initiatingSession, DEFAULT_TIMEOUT_IN_MS);
     };
 
     private Runnable duringRestart = this::nothing;
@@ -217,9 +216,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         onInitiateReply = reply ->
         {
             initiatingSession = reply.resultIfPresent();
-            assertConnected(initiatingSession);
-
-            assertSessionDisconnected(initiatingSession);
+            assertTrue("reply did not end in an error", reply.hasErrored());
         };
 
         onAcquireSession = this::nothing;
@@ -227,17 +224,15 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         // connect but fail to logon because the initial sequence number is invalid.
         launch(0, this::nothing, false);
 
+        // No session established due to error during logon
+        assertNull(initiatingSession);
+
         // In this case we just get immediately disconnected.
         final FixMessage lastMessage = testSystem.await(initiatingOtfAcceptor, LOGOUT_MESSAGE_AS_STR);
 
         assertEquals(LOGOUT_MESSAGE_AS_STR, lastMessage.getMsgType());
         assertEquals(1, lastMessage.getMessageSequenceNumber());
         assertEquals("MsgSeqNum too low, expecting 1 but received 0", lastMessage.get(Constants.TEXT));
-
-        // TODO: evaluate the disconnect reason side of things.
-        // Currently its a REMOTE_DISCONNECT, but could be an EXCEPTION if a message is sent
-        // before the REMOTE_DISCONNECT is detected.
-        // We requestDisconnect a LOGOFF - is that correct?
     }
 
     private void resetSequenceNumbers()
@@ -296,7 +291,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             .build();
 
         final Reply<Session> reply = initiatingLibrary.initiate(config);
-        awaitLibraryReply(initiatingLibrary, reply);
+        testSystem.awaitReply(reply);
 
         onInitiateReply.accept(reply);
 
