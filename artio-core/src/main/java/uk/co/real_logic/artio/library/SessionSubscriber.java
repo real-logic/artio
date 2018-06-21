@@ -72,21 +72,17 @@ class SessionSubscriber implements AutoCloseable
                         return BREAK;
                     }
 
-                    if (session.isConnected())
-                    {
-                        return handler.onMessage(
-                            buffer,
-                            offset,
-                            length,
-                            libraryId,
-                            session,
-                            sequenceIndex,
-                            messageType,
-                            timestamp,
-                            position);
-                    }
-
-                    return action;
+                    // Can receive messages when no longer disconnected.
+                    return handler.onMessage(
+                        buffer,
+                        offset,
+                        length,
+                        libraryId,
+                        session,
+                        sequenceIndex,
+                        messageType,
+                        timestamp,
+                        position);
 
                 case CATCHUP_REPLAY:
                     return handler.onMessage(

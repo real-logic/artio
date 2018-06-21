@@ -16,9 +16,9 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.hamcrest.Matcher;
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.ValidationError;
-import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.otf.MessageControl;
 import uk.co.real_logic.artio.otf.OtfMessageAcceptor;
@@ -31,8 +31,8 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.assertThat;
-import static uk.co.real_logic.artio.LogTag.FIX_TEST;
 import static uk.co.real_logic.artio.Constants.MSG_TYPE;
+import static uk.co.real_logic.artio.LogTag.FIX_TEST;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasSequenceIndex;
 
@@ -41,7 +41,7 @@ import static uk.co.real_logic.artio.system_tests.FixMessage.hasSequenceIndex;
  */
 public class FakeOtfAcceptor implements OtfMessageAcceptor
 {
-    private final List<FixMessage> messages = new ArrayList<>();
+    private final List<FixMessage> receivedMessages = new ArrayList<>();
 
     private ValidationError error;
     private boolean isCompleted;
@@ -60,7 +60,7 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
     public MessageControl onComplete()
     {
         isCompleted = true;
-        messages.add(message);
+        receivedMessages.add(message);
         message = null;
         return MessageControl.CONTINUE;
     }
@@ -106,7 +106,7 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
 
     public List<FixMessage> messages()
     {
-        return messages;
+        return receivedMessages;
     }
 
     public String lastSenderCompId()
@@ -138,9 +138,9 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         }
     }
 
-    public FixMessage lastMessage()
+    public FixMessage lastReceivedMessage()
     {
-        return messages.get(messages.size() - 1);
+        return receivedMessages.get(receivedMessages.size() - 1);
     }
 
     public Stream<FixMessage> hasReceivedMessage(final String messageType)
@@ -162,7 +162,7 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
 
     private void messages(final Matcher<FixMessage> matcher, final Predicate<? super FixMessage> predicate)
     {
-        messages.stream()
+        receivedMessages.stream()
             .filter(predicate)
             .forEach((message) -> assertThat(message.toString(), message, matcher));
     }

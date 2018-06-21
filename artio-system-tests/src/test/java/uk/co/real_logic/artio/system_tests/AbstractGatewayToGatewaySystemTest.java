@@ -164,7 +164,7 @@ public class AbstractGatewayToGatewaySystemTest
             {
                 testSystem.poll();
 
-                final FixMessage message = acceptingOtfAcceptor.lastMessage();
+                final FixMessage message = acceptingOtfAcceptor.lastReceivedMessage();
                 assertEquals(msgType, message.getMsgType());
                 if (isGapFill)
                 {
@@ -181,7 +181,7 @@ public class AbstractGatewayToGatewaySystemTest
                 assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());
             });
 
-        return acceptingOtfAcceptor.lastMessage();
+        return acceptingOtfAcceptor.lastReceivedMessage();
     }
 
     int acceptorSendsResendRequest()

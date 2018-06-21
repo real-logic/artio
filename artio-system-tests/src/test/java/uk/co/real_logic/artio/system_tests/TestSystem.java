@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.engine.LockStepFramerEngineScheduler;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -124,5 +125,16 @@ public class TestSystem
             });
 
         return reply;
+    }
+
+    public FixMessage await(final FakeOtfAcceptor otfAcceptor, final String messageType)
+    {
+        return Timing.withTimeout("Never received " + messageType, () ->
+        {
+            poll();
+
+            return otfAcceptor.hasReceivedMessage(messageType).findFirst();
+        },
+        Timing.DEFAULT_TIMEOUT_IN_MS);
     }
 }

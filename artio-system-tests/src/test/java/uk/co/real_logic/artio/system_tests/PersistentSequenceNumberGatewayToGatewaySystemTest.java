@@ -36,12 +36,12 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
+import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.Constants.SEQUENCE_RESET_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.*;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
-import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
@@ -161,14 +161,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
                 return initiatingSession.send(resendRequest) > 0;
             });
 
-        final FixMessage message = withTimeout(
-            "Failed to receive reply",
-            () ->
-            {
-                testSystem.poll();
-                return initiatingOtfAcceptor.hasReceivedMessage(SEQUENCE_RESET_MESSAGE_AS_STR).findFirst();
-            },
-            2_000);
+        final FixMessage message = testSystem.await(initiatingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
 
         assertEquals(message.get(Constants.MSG_SEQ_NUM), "1");
         assertEquals(message.get(Constants.SENDER_COMP_ID), ACCEPTOR_ID);
@@ -219,7 +212,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     }
 
     @Test(timeout = TEST_TIMEOUT)
-    public void shouldReceiveRelevantErrorsDuringConnect()
+    public void shouldReceiveRelevantLogoutErrorTextDuringConnect()
     {
         onInitiateReply = reply ->
         {
@@ -235,7 +228,16 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         launch(0, this::nothing, false);
 
         // In this case we just get immediately disconnected.
-        assertEquals(REMOTE_DISCONNECT, initiatingHandler.lastDisconnectReason());
+        final FixMessage lastMessage = testSystem.await(initiatingOtfAcceptor, LOGOUT_MESSAGE_AS_STR);
+
+        assertEquals(LOGOUT_MESSAGE_AS_STR, lastMessage.getMsgType());
+        assertEquals(1, lastMessage.getMessageSequenceNumber());
+        assertEquals("MsgSeqNum too low, expecting 1 but received 0", lastMessage.get(Constants.TEXT));
+
+        // TODO: evaluate the disconnect reason side of things.
+        // Currently its a REMOTE_DISCONNECT, but could be an EXCEPTION if a message is sent
+        // before the REMOTE_DISCONNECT is detected.
+        // We requestDisconnect a LOGOFF - is that correct?
     }
 
     private void resetSequenceNumbers()

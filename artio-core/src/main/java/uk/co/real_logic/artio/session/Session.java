@@ -39,10 +39,10 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.lang.Integer.MIN_VALUE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_DISABLED;
-import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.artio.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.artio.Constants.VERSION_CHARS;
+import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_DISABLED;
+import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.fields.RejectReason.*;
@@ -732,13 +732,18 @@ public class Session implements AutoCloseable
             }
             else if (expectedSeqNo > msgSeqNo && !isPossDupOrResend)
             {
-                return checkPositionAndDisconnect(
-                    proxy.lowSequenceNumberLogout(newSentSeqNum(), expectedSeqNo, msgSeqNo, sequenceIndex()),
-                    MSG_SEQ_NO_TOO_LOW);
+                return msgSeqNumTooLow(msgSeqNo, expectedSeqNo);
             }
         }
 
         return CONTINUE;
+    }
+
+    private Action msgSeqNumTooLow(final int msgSeqNo, final int expectedSeqNo)
+    {
+        return checkPositionAndDisconnect(
+            proxy.lowSequenceNumberLogout(newSentSeqNum(), expectedSeqNo, msgSeqNo, sequenceIndex()),
+            MSG_SEQ_NO_TOO_LOW);
     }
 
     private Action checkPosition(final long position)
@@ -810,8 +815,8 @@ public class Session implements AutoCloseable
             }
             else
             {
-                final int expectedSeqNo = expectedReceivedSeqNum();
-                if (expectedSeqNo == msgSeqNo)
+                final int expectedMsgSeqNo = expectedReceivedSeqNum();
+                if (expectedMsgSeqNo == msgSeqNo)
                 {
                     // Send outbound logon message and check if backpressured on the outward client side.
                     action = replyToLogon(heartbeatInterval);
@@ -829,7 +834,7 @@ public class Session implements AutoCloseable
                         logonTime(logonTime);
                     }
                 }
-                else if (expectedSeqNo < msgSeqNo)
+                else if (expectedMsgSeqNo < msgSeqNo)
                 {
                     // If their sequence number is higher than expected, we still accept the logon.
                     action = replyToLogon(heartbeatInterval);
@@ -842,6 +847,10 @@ public class Session implements AutoCloseable
                     // Above call sets state to ACTIVE, but we aren't really quite ACTIVE.
                     // We need to request a replay here. This is done in the onMessage call below I believe.
                     state(SessionState.AWAITING_RESEND);
+                }
+                else // (msgSeqNo < expectedMsgSeqNo)
+                {
+                    return msgSeqNumTooLow(msgSeqNo, expectedMsgSeqNo);
                 }
             }
         }
@@ -1079,9 +1088,7 @@ public class Session implements AutoCloseable
         {
             if (!possDupFlag)
             {
-                return checkPositionAndDisconnect(
-                    proxy.lowSequenceNumberLogout(newSentSeqNum(), expectedMsgSeqNo, receivedMsgSeqNo, sequenceIndex()),
-                    MSG_SEQ_NO_TOO_LOW);
+                return msgSeqNumTooLow(receivedMsgSeqNo, expectedMsgSeqNo);
             }
         }
         else

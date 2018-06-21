@@ -78,7 +78,6 @@ public class InitiatorSession extends Session
         final boolean isPossDupOrResend,
         final boolean resetSeqNumFlag)
     {
-
         // We aren't checking CODEC_VALIDATION_ENABLED here because these are required values in order to
         // have a stable FIX connection.
         Action action = validateOrRejectHeartbeat(heartbeatInterval);
@@ -126,7 +125,6 @@ public class InitiatorSession extends Session
         }
         else
         {
-
             // Shouldn't this be an error case?...
             // I guess onMessage will check that the session is logged in and it isn't so it will disconnect...
             // Its pretty opaque...

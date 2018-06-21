@@ -65,7 +65,7 @@ public class FakeHandler
         final long position)
     {
         parser.onMessage(buffer, offset, length);
-        acceptor.lastMessage().sequenceIndex(sequenceIndex);
+        acceptor.lastReceivedMessage().sequenceIndex(sequenceIndex);
         acceptor.forSession(session);
         return CONTINUE;
     }

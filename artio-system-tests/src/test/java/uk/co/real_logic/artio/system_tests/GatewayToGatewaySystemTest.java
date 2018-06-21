@@ -111,14 +111,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final long position = initiatingSession.send(exampleMessage);
         assertThat(position, greaterThan(0L));
 
-        return withTimeout("Failed to receive the example message",
-            () ->
-            {
-                testSystem.poll();
-
-                return acceptingOtfAcceptor.hasReceivedMessage(EXAMPLE_MESSAGE_MESSAGE_AS_STR).findFirst();
-            },
-            1000);
+        return testSystem.await(acceptingOtfAcceptor, EXAMPLE_MESSAGE_MESSAGE_AS_STR);
     }
 
     @Test
@@ -258,8 +251,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         initiatingSession.startLogout();
 
         assertSequenceIndicesAre(0);
-        clearMessages();
         assertSessionsDisconnected();
+        clearMessages();
 
         wireSessions();
 
