@@ -17,9 +17,9 @@ package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
-import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
@@ -35,10 +35,10 @@ import java.util.function.IntSupplier;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
+import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixMatchers.*;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.*;
-import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
@@ -474,15 +474,19 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             "Library failed to disconnect",
             () ->
             {
-                poll(acceptingLibrary, initiatingLibrary);
+                testSystem.poll();
+
                 return !acceptingLibrary.isConnected();
             });
 
-        launchAcceptingEngine();
-
         testSystem.close(acceptingLibrary);
 
+        launchAcceptingEngine();
+
         acceptingLibrary = testSystem.add(newAcceptingLibrary(acceptingHandler));
+
+        assertTrue("acceptingLibrary has failed to connect", acceptingLibrary.isConnected());
+        assertTrue("initiatingLibrary is no longer connected", initiatingLibrary.isConnected());
 
         wireSessions();
 

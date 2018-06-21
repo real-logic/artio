@@ -48,20 +48,20 @@ public class MessageBasedSystemTest
     // < [8=FIX.4.4|9=0070|35=2|49=acceptor|56=initiator|34=3|52=20160825-10:25:27.766|7=1|16=0|10=061]
 
     @Test
-    public void shouldComplyWIthLogonBasedSequenceNumberResetOn()
+    public void shouldComplyWithLogonBasedSequenceNumberResetOn()
         throws IOException
     {
-        shouldComplyWIthLogonBasedSequenceNumberReset(true);
+        shouldComplyWithLogonBasedSequenceNumberReset(true);
     }
 
     @Test
-    public void shouldComplyWIthLogonBasedSequenceNumberResetOff()
+    public void shouldComplyWithLogonBasedSequenceNumberResetOff()
         throws IOException
     {
-        shouldComplyWIthLogonBasedSequenceNumberReset(false);
+        shouldComplyWithLogonBasedSequenceNumberReset(false);
     }
 
-    private void shouldComplyWIthLogonBasedSequenceNumberReset(final boolean sequenceNumberReset)
+    private void shouldComplyWithLogonBasedSequenceNumberReset(final boolean sequenceNumberReset)
         throws IOException
     {
         setup(sequenceNumberReset);

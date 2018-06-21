@@ -19,9 +19,9 @@ public class SoloPositionSenderTest
     @Test
     public void shouldSendUpdatedPositions()
     {
-        positionSender.indexFixMessage(LIBRARY_ID, 1024);
-        positionSender.indexFixMessage(LIBRARY_ID, 2048);
-        positionSender.indexFixMessage(OTHER_LIBRARY_ID, 768);
+        positionSender.newPosition(LIBRARY_ID, 1024);
+        positionSender.newPosition(LIBRARY_ID, 2048);
+        positionSender.newPosition(OTHER_LIBRARY_ID, 768);
 
         doThreeWorks();
 
@@ -46,7 +46,7 @@ public class SoloPositionSenderTest
         when(publication.saveNewSentPosition(LIBRARY_ID, 1024))
             .thenReturn(saveResponse, 100L);
 
-        positionSender.indexFixMessage(LIBRARY_ID, 1024);
+        positionSender.newPosition(LIBRARY_ID, 1024);
 
         doThreeWorks();
 

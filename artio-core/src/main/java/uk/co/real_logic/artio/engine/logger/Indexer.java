@@ -61,7 +61,7 @@ public class Indexer implements Agent, ClusterFragmentHandler
         catchIndexUp();
     }
 
-    public int doWork() throws Exception
+    public int doWork()
     {
         return subscription.poll(this, LIMIT) + CollectionUtil.sum(indices, Index::doWork);
     }

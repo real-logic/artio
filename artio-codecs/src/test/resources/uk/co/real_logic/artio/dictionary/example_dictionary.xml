@@ -47,10 +47,6 @@
             <field name="AvgPx" required="Y"/>
             <field name="OpenCloseSettlFlag" required="N"/>
         </message>
-        <message name="DedupeFieldsTest" msgtype="U1" msgcat="app">
-            <component name="NextComponent" required="N"/>
-            <field name="MemberSubID" required="N"/>
-        </message>
         <message name="News" msgtype="B" msgcat="app">
             <group name="LinesOfText" required="Y">
                 <field name="Text" required="Y"/>
@@ -67,7 +63,7 @@
                     <field name="MemberSubID" required="N"/>
                 </group>
             </group>
-            <component name="NextComponent" required="N"/>
+            <field name="Text" required="N"/>
         </component>
         <component name="NextComponent">
             <field name="MemberSubID" required="N"/>

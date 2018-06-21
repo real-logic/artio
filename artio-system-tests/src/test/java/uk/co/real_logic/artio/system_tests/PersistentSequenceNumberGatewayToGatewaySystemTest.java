@@ -18,11 +18,10 @@ package uk.co.real_logic.artio.system_tests;
 import org.agrona.IoUtil;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
-import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.DynamicLibraryScheduler;
@@ -37,11 +36,12 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
+import static uk.co.real_logic.artio.Constants.SEQUENCE_RESET_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.*;
-import static uk.co.real_logic.artio.Constants.SEQUENCE_RESET_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
@@ -218,11 +218,24 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertSequenceIndicesAre(1);
     }
 
-    @Ignore
     @Test(timeout = TEST_TIMEOUT)
     public void shouldReceiveRelevantErrorsDuringConnect()
     {
-        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, this::nothing, false);
+        onInitiateReply = reply ->
+        {
+            initiatingSession = reply.resultIfPresent();
+            assertConnected(initiatingSession);
+
+            assertSessionDisconnected(initiatingSession);
+        };
+
+        onAcquireSession = this::nothing;
+
+        // connect but fail to logon because the initial sequence number is invalid.
+        launch(0, this::nothing, false);
+
+        // In this case we just get immediately disconnected.
+        assertEquals(REMOTE_DISCONNECT, initiatingHandler.lastDisconnectReason());
     }
 
     private void resetSequenceNumbers()

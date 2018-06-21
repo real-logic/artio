@@ -552,12 +552,58 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void shouldValidateMissingRequiredFieldsInRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE);
+
+        assertFalse("Passed validation with missing fields", decoder.validate());
+        assertEquals("Wrong tag id", 138, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", REQUIRED_TAG_MISSING, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateIfNoRequiredFieldsMissingInRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE);
+
+        assertTrue("Failed validation when it should have passed", decoder.validate());
+    }
+
+    @Test
+    public void shouldFailValidationForUnknownFieldInsideRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
+
+        assertFalse("Passed validation with missing fields", decoder.validate());
+        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateIfNoRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NO_REPEATING_GROUP_IN_REPEATING_GROUP_MESSAGE);
+
+        assertTrue("Failed validation when it should have passed", decoder.validate());
+    }
+
+    @Test
     public void shouldValidateTagNumbers() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(INVALID_TAG_NUMBER_MESSAGE);
 
         assertFalse("Passed validation with invalid tag number", decoder.validate());
         assertEquals("Wrong tag id", 9999, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldFailValidationRegardingUnknownFieldRatherThanMissingRequiredField() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(UNKNOWN_FIELD_MESSAGE);
+
+        assertFalse("Passed validation with invalid tag number ", decoder.validate());
+        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
         assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
     }
 
@@ -721,20 +767,6 @@ public class DecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(NO_REPEATING_GROUP_MESSAGE);
 
         canNotIteratorOverRepeatingGroup(decoder);
-    }
-
-    @Test
-    public void shouldGenerateAllFieldsSet() throws Exception
-    {
-        final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
-        final Object allFieldsField = getField(decoder, ALL_FIELDS);
-        assertThat(allFieldsField, instanceOf(IntHashSet.class));
-
-        @SuppressWarnings("unchecked") final Set<Integer> allFields = (Set<Integer>)allFieldsField;
-        assertThat(allFields, hasItem(123));
-        assertThat(allFields, hasItem(124));
-        assertThat(allFields, hasItem(35));
-        assertThat(allFields, not(hasItem(999)));
     }
 
     @Test

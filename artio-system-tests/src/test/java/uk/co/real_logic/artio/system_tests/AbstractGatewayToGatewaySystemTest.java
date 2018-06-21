@@ -113,7 +113,7 @@ public class AbstractGatewayToGatewaySystemTest
             });
     }
 
-    private void assertSessionDisconnected(final Session session)
+    protected void assertSessionDisconnected(final Session session)
     {
         assertEventuallyTrue("Session is still connected",
             () ->
