@@ -392,6 +392,7 @@ public abstract class AbstractSessionTest
         assertEquals(4, session().expectedReceivedSeqNum());
         verifyNoFurtherMessages();
         verifyConnected();
+        assertState(ACTIVE);
 
         verifyCanRoundtripTestMessage();
     }
@@ -542,12 +543,17 @@ public abstract class AbstractSessionTest
     public void shouldRequestResendIfHighSeqNo()
     {
         givenActive();
-        session().id(SESSION_ID);
 
+        // when high sequence number message
         onMessage(3);
 
+        // then sends a resend request
         verify(mockProxy).resendRequest(1, 1, 0, SEQUENCE_INDEX);
         assertState(AWAITING_RESEND);
+
+        // Receives gapfill
+        session().onSequenceReset(1, 3, true, true);
+        assertState(ACTIVE);
     }
 
     @Test

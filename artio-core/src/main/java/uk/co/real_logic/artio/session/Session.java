@@ -726,11 +726,12 @@ public class Session implements AutoCloseable
             }
             else if (expectedSeqNo < msgSeqNo)
             {
+                // if (true) throw new RuntimeException("HERE!");
                 state(AWAITING_RESEND);
                 return checkPosition(
                     proxy.resendRequest(newSentSeqNum(), expectedSeqNo, 0, sequenceIndex()));
             }
-            else if (expectedSeqNo > msgSeqNo && !isPossDupOrResend)
+            else if /* expectedSeqNo > msgSeqNo */ (!isPossDupOrResend)
             {
                 return msgSeqNumTooLow(msgSeqNo, expectedSeqNo);
             }
@@ -1074,6 +1075,7 @@ public class Session implements AutoCloseable
     private Action gapFill(final int receivedMsgSeqNo, final int newSeqNo, final boolean possDupFlag)
     {
         final int expectedMsgSeqNo = expectedReceivedSeqNum();
+        // The gapfill has the wrong sequence number.
         if (receivedMsgSeqNo > expectedMsgSeqNo)
         {
             final Action action = checkPosition(
@@ -1086,6 +1088,7 @@ public class Session implements AutoCloseable
         }
         else if (receivedMsgSeqNo < expectedMsgSeqNo)
         {
+            // Ignore the gapfill if it's a possibly a duplicate
             if (!possDupFlag)
             {
                 return msgSeqNumTooLow(receivedMsgSeqNo, expectedMsgSeqNo);
@@ -1094,6 +1097,11 @@ public class Session implements AutoCloseable
         else
         {
             lastReceivedMsgSeqNum(newSeqNo - 1);
+            // A Resend Request would have put it in the AWAITING_RESEND state, we're now active again.
+            if (state() == AWAITING_RESEND)
+            {
+                state(ACTIVE);
+            }
         }
 
         return CONTINUE;
