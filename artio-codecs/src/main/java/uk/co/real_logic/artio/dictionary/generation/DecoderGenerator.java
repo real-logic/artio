@@ -923,11 +923,12 @@ public class DecoderGenerator extends Generator
             "                {\n" +
             "                    unknownFields.add(tag);\n" +
             "                }\n") +
-            // Skip the thing if it's a completely unknown field and you aren't validating messages
-            "                if (" + CODEC_VALIDATION_ENABLED + " || Constants.ALL_FIELDS.contains(tag))\n" +
+            (hasCommonCompounds ?
+            "                if (" + CODEC_VALIDATION_ENABLED + ")\n" +
             "                {\n" +
             decodeTrailerOrReturn(hasCommonCompounds, 5) +
-            "                }\n" +
+            "                }\n" :
+            decodeTrailerOrReturn(hasCommonCompounds, 5)) +
             "\n" +
             "            }\n\n" +
             "            if (position < (endOfField + 1))\n" +
