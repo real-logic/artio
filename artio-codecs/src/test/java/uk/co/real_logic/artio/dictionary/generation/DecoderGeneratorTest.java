@@ -805,20 +805,20 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void shouldIgnoreInvalidTagNumberInGroupsWithoutValidation() throws Exception
+    public void shouldStopDecodingGroupIfInvalidTagNumberReachedIrrespectiveOfValidation() throws Exception
     {
         final Decoder decoder = decodeHeartbeatWithoutValidation(REPEATING_GROUP_MESSAGE_WITH_INVALID_TAG_NUMBER);
 
-        assertRepeatingGroupAndFieldsDecoded(decoder);
+        assertInvalidRepeatingGroupAndFieldsDecoded(decoder);
     }
 
     @Test
-    public void shouldIgnoreInvalidTagNumberInGroupsFieldAfterWithoutValidation() throws Exception
+    public void shouldStopDecodingGroupIfInvalidTAgReachedButDecodeMessageIrrespectiveOfValidation() throws Exception
     {
         final Decoder decoder = decodeHeartbeatWithoutValidation(
             REPEATING_GROUP_MESSAGE_WITH_INVALID_TAG_NUMBER_FIELDS_AFTER);
 
-        assertRepeatingGroupAndFieldsDecoded(decoder);
+        assertInvalidRepeatingGroupAndFieldsDecoded(decoder);
     }
 
     @Test
@@ -963,13 +963,13 @@ public class DecoderGeneratorTest
         assertEquals(highNumberField, 1);
     }
 
-    private void assertRepeatingGroupAndFieldsDecoded(final Decoder decoder) throws Exception
+    private void assertInvalidRepeatingGroupAndFieldsDecoded(final Decoder decoder) throws Exception
     {
         assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
         assertEquals(2, getIntField(decoder));
         assertEquals(new DecimalFloat(11, 1), getFloatField(decoder));
 
-        assertValidRepeatingGroupDecoded(decoder);
+        assertInValidRepeatingGroupDecoded(decoder);
     }
 
     private void assertOptionalDifferentFieldsNotDecoded(final Decoder decoder) throws Exception
@@ -1191,6 +1191,17 @@ public class DecoderGeneratorTest
         assertRepeatingGroupDecoded(decoder);
 
         assertValid(decoder);
+    }
+
+    private void assertInValidRepeatingGroupDecoded(final Decoder decoder) throws Exception
+    {
+        assertEquals(2, getNoEgGroupGroupCounter(decoder));
+
+        final Object group = getEgGroup(decoder);
+        assertEquals(
+            heartbeat.getName() + "$EgGroupGroupDecoder",
+            group.getClass().getName());
+        assertEquals(1, getGroupField(group));
     }
 
     private void assertRepeatingGroupDecoded(final Decoder decoder) throws Exception
