@@ -44,8 +44,7 @@ import static java.lang.reflect.Modifier.isPublic;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.builder.Decoder.NO_ERROR;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
-import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_CHAR;
-import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.*;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.CODEC_LOGGING;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.INVALID_TAG_NUMBER;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.REQUIRED_FIELDS;
@@ -55,6 +54,7 @@ import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_SPECIFIED_WITHOUT_A_VALUE;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.VALUE_IS_INCORRECT;
+import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.UNKNOWN_NAME;
 import static uk.co.real_logic.artio.fields.DecimalFloat.MISSING_FLOAT;
 import static uk.co.real_logic.artio.util.Reflection.*;
 
@@ -228,7 +228,7 @@ public class DecoderGeneratorTest
         decoder.reset();
         decode(RF_NO_FIELDS, decoder);
         assertEquals("", getMethod(decoder, STRING_ENUM_RF + "AsString"));
-        assertEquals("UNKNOWN_REPRESENTATION", getMethod(decoder, STRING_ENUM_RF + "AsEnum").toString());
+        assertEquals(UNKNOWN_NAME, getMethod(decoder, STRING_ENUM_RF + "AsEnum").toString());
     }
 
     @Test
@@ -242,7 +242,7 @@ public class DecoderGeneratorTest
         decoder.reset();
         decode(RF_NO_FIELDS, decoder);
         assertEquals(MISSING_INT, getMethod(decoder, INT_ENUM_RF));
-        assertEquals("UNKNOWN_REPRESENTATION", getMethod(decoder, INT_ENUM_RF + "AsEnum").toString());
+        assertEquals(UNKNOWN_NAME, getMethod(decoder, INT_ENUM_RF + "AsEnum").toString());
     }
 
     @Test
@@ -256,7 +256,7 @@ public class DecoderGeneratorTest
         decoder.reset();
         decode(RF_NO_FIELDS, decoder);
         assertEquals(MISSING_CHAR, getMethod(decoder, CHAR_ENUM_RF));
-        assertEquals("UNKNOWN_REPRESENTATION", getMethod(decoder, CHAR_ENUM_RF + "AsEnum").toString());
+        assertEquals(UNKNOWN_NAME, getMethod(decoder, CHAR_ENUM_RF + "AsEnum").toString());
     }
 
     @Test
@@ -290,9 +290,9 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
         decode(ET_ONLY_REQ_FIELDS, decoder);
-        assertEquals('\u0001', getRepresentation(get(decoder, CHAR_ENUM_OPT + "AsEnum")));
-        assertEquals(Integer.MIN_VALUE, getRepresentation(get(decoder, INT_ENUM_OPT + "AsEnum")));
-        assertEquals("", getRepresentation(get(decoder, STRING_ENUM_OPT + "AsEnum")));
+        assertEquals(ENUM_MISSING_CHAR, getRepresentation(get(decoder, CHAR_ENUM_OPT + "AsEnum")));
+        assertEquals(ENUM_MISSING_INT, getRepresentation(get(decoder, INT_ENUM_OPT + "AsEnum")));
+        assertEquals(ENUM_MISSING_STRING, getRepresentation(get(decoder, STRING_ENUM_OPT + "AsEnum")));
         assertValid(decoder);
     }
 
@@ -301,9 +301,9 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
         decode(ET_ONLY_REQ_FIELDS_WITH_BAD_VALUES, decoder);
-        assertEquals('\u0002', getRepresentation(get(decoder, CHAR_ENUM_REQ + "AsEnum")));
-        assertEquals(Integer.MAX_VALUE, getRepresentation(get(decoder, INT_ENUM_REQ + "AsEnum")));
-        assertEquals("\u0002", getRepresentation(get(decoder, STRING_ENUM_REQ + "AsEnum")));
+        assertEquals(ENUM_UNKNOWN_CHAR, getRepresentation(get(decoder, CHAR_ENUM_REQ + "AsEnum")));
+        assertEquals(ENUM_UNKNOWN_INT, getRepresentation(get(decoder, INT_ENUM_REQ + "AsEnum")));
+        assertEquals(ENUM_UNKNOWN_STRING, getRepresentation(get(decoder, STRING_ENUM_REQ + "AsEnum")));
         assertInvalid(decoder);
     }
 
@@ -312,8 +312,8 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
         decode(ET_MISSING_REQ_FIELD, decoder);
-        assertEquals("UNKNOWN_REPRESENTATION", get(decoder, STRING_ENUM_REQ + "AsEnum").toString());
-        assertEquals("\u0002", getRepresentation(get(decoder, STRING_ENUM_REQ + "AsEnum")));
+        assertEquals(UNKNOWN_NAME, get(decoder, STRING_ENUM_REQ + "AsEnum").toString());
+        assertEquals(ENUM_UNKNOWN_STRING, getRepresentation(get(decoder, STRING_ENUM_REQ + "AsEnum")));
         assertInvalid(decoder);
     }
 

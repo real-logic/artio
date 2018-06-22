@@ -33,6 +33,10 @@ import static org.hamcrest.Matchers.arrayWithSize;
 import static org.hamcrest.Matchers.hasKey;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.ENUM_MISSING_CHAR;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.ENUM_UNKNOWN_CHAR;
+import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.NULL_VAL_NAME;
+import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.UNKNOWN_NAME;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
 
 public class EnumGeneratorTest
@@ -70,10 +74,10 @@ public class EnumGeneratorTest
         assertRepresentation('a', values[0]);
         assertEquals("AnotherEntry", values[1].name());
         assertRepresentation('b', values[1]);
-        assertEquals("NULL_VAL", values[2].name());
-        assertRepresentation('\u0001', values[2]);
-        assertEquals("UNKNOWN_REPRESENTATION", values[3].name());
-        assertRepresentation('\u0002', values[3]);
+        assertEquals(NULL_VAL_NAME, values[2].name());
+        assertRepresentation(ENUM_MISSING_CHAR, values[2]);
+        assertEquals(UNKNOWN_NAME, values[3].name());
+        assertRepresentation(ENUM_UNKNOWN_CHAR, values[3]);
     }
 
     @Test

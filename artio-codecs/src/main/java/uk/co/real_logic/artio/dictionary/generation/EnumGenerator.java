@@ -32,21 +32,20 @@ import java.util.Map;
 
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
-import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_CHAR;
-import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.*;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
 
 public final class EnumGenerator
 {
-    static final String NULL_VALUE_NAME = "NULL_VAL";
+    static final String NULL_VAL_NAME = "NULL_VAL";
+    public static final String NULL_VAL_CHAR_AS_STRING = Character.toString(ENUM_MISSING_CHAR);
+    public static final String NULL_VAL_INT_AS_STRING = Integer.toString(ENUM_MISSING_INT);
+    public static final String NULL_VAL_STRING = ENUM_MISSING_STRING;
 
-    private static final String NULL_VALUE_CHAR = Character.toString(MISSING_CHAR);
-    private static final String NULL_VALUE_INT = Integer.toString(MISSING_INT);
-    private static final String NULL_VALUE_STRING = "";
-    private static final String UNKNOWN_VALUE_NAME = "UNKNOWN_REPRESENTATION";
-    private static final String UNKNOWN_VALUE_CHAR = "\u0002";
-    private static final String UNKNOWN_VALUE_INT = Integer.toString(Integer.MAX_VALUE);
-    private static final String UNKNOWN_VALUE_STRING = "\u0002";
+    static final String UNKNOWN_NAME = "ARTIO_UNKNOWN";
+    public static final String UNKNOWN_CHAR_AS_STRING = Character.toString(ENUM_UNKNOWN_CHAR);
+    public static final String UNKNOWN_INT_AS_STRING = Integer.toString(ENUM_UNKNOWN_INT);
+    public static final String UNKNOWN_STRING = ENUM_UNKNOWN_STRING;
 
     private final Dictionary dictionary;
     private final String builderPackage;
@@ -86,18 +85,18 @@ public final class EnumGenerator
         final String unknownValue;
         if (isCharBased(type))
         {
-            nullValue = NULL_VALUE_CHAR;
-            unknownValue = UNKNOWN_VALUE_CHAR;
+            nullValue = NULL_VAL_CHAR_AS_STRING;
+            unknownValue = UNKNOWN_CHAR_AS_STRING;
         }
         else if (type.isIntBased())
         {
-            nullValue = NULL_VALUE_INT;
-            unknownValue = UNKNOWN_VALUE_INT;
+            nullValue = NULL_VAL_INT_AS_STRING;
+            unknownValue = UNKNOWN_INT_AS_STRING;
         }
         else if (type.isStringBased())
         {
-            nullValue = NULL_VALUE_STRING;
-            unknownValue = UNKNOWN_VALUE_STRING;
+            nullValue = NULL_VAL_STRING;
+            unknownValue = UNKNOWN_STRING;
         }
         else
         {
@@ -106,8 +105,8 @@ public final class EnumGenerator
         }
 
         final List<Value> valuesWithSentinels = new ArrayList<>(values);
-        valuesWithSentinels.add(new Value(nullValue, NULL_VALUE_NAME));
-        valuesWithSentinels.add(new Value(unknownValue, UNKNOWN_VALUE_NAME));
+        valuesWithSentinels.add(new Value(nullValue, NULL_VAL_NAME));
+        valuesWithSentinels.add(new Value(unknownValue, UNKNOWN_NAME));
 
         outputManager.withOutput(enumName, (out) ->
         {
@@ -203,7 +202,7 @@ public final class EnumGenerator
             name,
             representation.methodArgsDeclaration(),
             cases,
-            UNKNOWN_VALUE_NAME);
+            UNKNOWN_NAME);
     }
 
     private String enumValidation(final String typeName, final List<Value> allValues, final Type type)
@@ -308,7 +307,7 @@ public final class EnumGenerator
                     "    }\n",
                     typeName,
                     entries,
-                    UNKNOWN_VALUE_NAME);
+                    UNKNOWN_NAME);
             case MULTIPLECHARVALUE:
 
                 return format(

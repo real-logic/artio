@@ -32,7 +32,7 @@ import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.*;
 import static uk.co.real_logic.artio.dictionary.generation.ConstantGenerator.sizeHashSet;
-import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.NULL_VALUE_NAME;
+import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.NULL_VAL_NAME;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.rethrown;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.constantName;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
@@ -665,7 +665,7 @@ public class DecoderGenerator extends Generator
             "has%2$s ? %1$s : %2$s.%3$s",
             enumValueDecoder,
             name,
-            NULL_VALUE_NAME
+            NULL_VAL_NAME
         );
 
         final String stringDecoder = type.isStringBased() ? String.format(
