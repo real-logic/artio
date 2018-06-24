@@ -31,6 +31,14 @@ public final class CodecUtil
     public static final char MISSING_CHAR = '\001';
     public static final long MISSING_LONG = Long.MIN_VALUE;
 
+    public static final char ENUM_MISSING_CHAR = MISSING_CHAR;
+    public static final int ENUM_MISSING_INT = MISSING_INT;
+    public static final String ENUM_MISSING_STRING = Character.toString(ENUM_MISSING_CHAR);
+
+    public static final char ENUM_UNKNOWN_CHAR = '\002';
+    public static final int ENUM_UNKNOWN_INT = Integer.MAX_VALUE;
+    public static final String ENUM_UNKNOWN_STRING = Character.toString(ENUM_UNKNOWN_CHAR);
+
     /**
      * NB: only valid for ASCII bytes.
      */

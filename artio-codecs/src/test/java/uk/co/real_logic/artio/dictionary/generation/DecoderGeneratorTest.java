@@ -15,10 +15,22 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+
 import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+import static org.agrona.generation.CompilerUtil.compileInMemory;
+import static org.hamcrest.Matchers.*;
+
+
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 import uk.co.real_logic.artio.fields.DecimalFloat;
@@ -27,22 +39,22 @@ import uk.co.real_logic.artio.util.AsciiSequenceView;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.util.Reflection;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
-import static org.agrona.generation.CompilerUtil.compileInMemory;
-import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.builder.Decoder.NO_ERROR;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
-import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
-import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.*;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.*;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.CODEC_LOGGING;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.INVALID_TAG_NUMBER;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.REQUIRED_FIELDS;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.REQUIRED_TAG_MISSING;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_APPEARS_MORE_THAN_ONCE;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_SPECIFIED_WITHOUT_A_VALUE;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.VALUE_IS_INCORRECT;
+import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.UNKNOWN_NAME;
 import static uk.co.real_logic.artio.fields.DecimalFloat.MISSING_FLOAT;
 import static uk.co.real_logic.artio.util.Reflection.*;
 
@@ -54,6 +66,12 @@ public class DecoderGeneratorTest
     private static final char[] MULTI_CHAR_VALUE = "a b".toCharArray();
     private static final char[] MULTI_CHAR_VALUE_NO_ENUM = "a b z f".toCharArray();
     private static final char[] MULTI_VALUE_STRING = "ab cd".toCharArray();
+    private static final String CHAR_ENUM_OPT = "charEnumOpt";
+    private static final String INT_ENUM_OPT = "intEnumOpt";
+    private static final String STRING_ENUM_OPT = "stringEnumOpt";
+    private static final String CHAR_ENUM_REQ = "charEnumReq";
+    private static final String INT_ENUM_REQ = "intEnumReq";
+    private static final String STRING_ENUM_REQ = "stringEnumReq";
 
     private static Class<?> heartbeatWithoutValidation;
     private static Class<?> heartbeat;
@@ -61,6 +79,7 @@ public class DecoderGeneratorTest
     private static Class<?> otherMessage;
     private static Class<?> fieldsMessage;
     private static Class<?> allReqFieldTypesMessage;
+    private static Class<?> enumTestMessage;
 
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
@@ -78,6 +97,7 @@ public class DecoderGeneratorTest
         fieldsMessage = heartbeat.getClassLoader().loadClass(FIELDS_MESSAGE_DECODER);
         compileInMemory(HEADER_DECODER, sourcesWithValidation);
         otherMessage = compileInMemory(OTHER_MESSAGE_DECODER, sourcesWithValidation);
+        enumTestMessage = compileInMemory(ENUM_TEST_MESSAGE_DECODER, sourcesWithValidation);
 
         heartbeatWithoutValidation = compileInMemory(HEARTBEAT_DECODER, sourcesWithoutValidation);
         allReqFieldTypesMessage = compileInMemory(ALL_REQ_FIELD_TYPES_MESSAGE_DECODER, sourcesWithoutValidation);
@@ -149,7 +169,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldNotRetainStringFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
     {
-        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        final Decoder decoder = createRequiredFieldMessageDecoder();
         decode(RF_ALL_FIELDS, decoder);
         assertEquals("one", getMethod(decoder, STRING_RF + "AsString"));
 
@@ -161,7 +181,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldNotRetainIntegerFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
     {
-        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        final Decoder decoder = createRequiredFieldMessageDecoder();
         decode(RF_ALL_FIELDS, decoder);
         assertEquals(10, getMethod(decoder, INT_RF));
 
@@ -173,7 +193,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldNotRetainCharFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
     {
-        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        final Decoder decoder = createRequiredFieldMessageDecoder();
         decode(RF_ALL_FIELDS, decoder);
         assertEquals('b', getMethod(decoder, CHAR_RF));
 
@@ -185,7 +205,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldNotRetainDecimalFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
     {
-        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        final Decoder decoder = createRequiredFieldMessageDecoder();
         decode(RF_ALL_FIELDS, decoder);
         assertEquals(new DecimalFloat(123456, 3), getMethod(decoder, DECIMAL_RF));
 
@@ -200,7 +220,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldNotRetainStringEnumFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
     {
-        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        final Decoder decoder = createRequiredFieldMessageDecoder();
         decode(RF_ALL_FIELDS, decoder);
         assertEquals("one", getMethod(decoder, STRING_ENUM_RF + "AsString"));
         assertEquals("ONE", getMethod(decoder, STRING_ENUM_RF + "AsEnum").toString());
@@ -208,32 +228,35 @@ public class DecoderGeneratorTest
         decoder.reset();
         decode(RF_NO_FIELDS, decoder);
         assertEquals("", getMethod(decoder, STRING_ENUM_RF + "AsString"));
+        assertEquals(UNKNOWN_NAME, getMethod(decoder, STRING_ENUM_RF + "AsEnum").toString());
     }
 
     @Test
     public void shouldNotRetainIntEnumFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
     {
-        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        final Decoder decoder = createRequiredFieldMessageDecoder();
         decode(RF_ALL_FIELDS, decoder);
         assertEquals(10, getMethod(decoder, INT_ENUM_RF));
         assertEquals("TEN", getMethod(decoder, INT_ENUM_RF + "AsEnum").toString());
 
         decoder.reset();
         decode(RF_NO_FIELDS, decoder);
-        assertEquals(Integer.MIN_VALUE, getMethod(decoder, INT_ENUM_RF));
+        assertEquals(MISSING_INT, getMethod(decoder, INT_ENUM_RF));
+        assertEquals(UNKNOWN_NAME, getMethod(decoder, INT_ENUM_RF + "AsEnum").toString());
     }
 
     @Test
     public void shouldNotRetainCharEnumFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
     {
-        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        final Decoder decoder = createRequiredFieldMessageDecoder();
         decode(RF_ALL_FIELDS, decoder);
         assertEquals('b', getMethod(decoder, CHAR_ENUM_RF));
         assertEquals("BANANA", getMethod(decoder, CHAR_ENUM_RF + "AsEnum").toString());
 
         decoder.reset();
         decode(RF_NO_FIELDS, decoder);
-        assertEquals('\u0001', getMethod(decoder, CHAR_ENUM_RF));
+        assertEquals(MISSING_CHAR, getMethod(decoder, CHAR_ENUM_RF));
+        assertEquals(UNKNOWN_NAME, getMethod(decoder, CHAR_ENUM_RF + "AsEnum").toString());
     }
 
     @Test
@@ -249,14 +272,50 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void decodesPrimitiveValuesAsEnum() throws Exception
+    public void decodesEnumValuesUsingAsEnumMethods() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_MESSAGE);
-        assertEquals(2, getRepresentation(get(decoder, INT_FIELD + "AsEnum")));
-        assertNull(get(decoder, CHAR_FIELD + "AsEnum"));
+        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        decode(ET_ALL_FIELDS, decoder);
+        assertEquals('a', getRepresentation(get(decoder, CHAR_ENUM_OPT + "AsEnum")));
+        assertEquals(10, getRepresentation(get(decoder, INT_ENUM_OPT + "AsEnum")));
+        assertEquals("alpha", getRepresentation(get(decoder, STRING_ENUM_OPT + "AsEnum")));
+        assertEquals('c', getRepresentation(get(decoder, CHAR_ENUM_REQ + "AsEnum")));
+        assertEquals(30, getRepresentation(get(decoder, INT_ENUM_REQ + "AsEnum")));
+        assertEquals("gamma", getRepresentation(get(decoder, STRING_ENUM_REQ + "AsEnum")));
         assertValid(decoder);
     }
 
+    @Test
+    public void decodesMissingOptionalEnumValuesAsSentinelsUsingAsEnumMethods() throws Exception
+    {
+        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        decode(ET_ONLY_REQ_FIELDS, decoder);
+        assertEquals(ENUM_MISSING_CHAR, getRepresentation(get(decoder, CHAR_ENUM_OPT + "AsEnum")));
+        assertEquals(ENUM_MISSING_INT, getRepresentation(get(decoder, INT_ENUM_OPT + "AsEnum")));
+        assertEquals(ENUM_MISSING_STRING, getRepresentation(get(decoder, STRING_ENUM_OPT + "AsEnum")));
+        assertValid(decoder);
+    }
+
+    @Test
+    public void decodesBadEnumValuesAsSentinelsUsingAsEnumMethods() throws Exception
+    {
+        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        decode(ET_ONLY_REQ_FIELDS_WITH_BAD_VALUES, decoder);
+        assertEquals(ENUM_UNKNOWN_CHAR, getRepresentation(get(decoder, CHAR_ENUM_REQ + "AsEnum")));
+        assertEquals(ENUM_UNKNOWN_INT, getRepresentation(get(decoder, INT_ENUM_REQ + "AsEnum")));
+        assertEquals(ENUM_UNKNOWN_STRING, getRepresentation(get(decoder, STRING_ENUM_REQ + "AsEnum")));
+        assertInvalid(decoder);
+    }
+
+    @Test
+    public void decodesMissingRequiredEnumFieldUsingAsEnumMethod() throws Exception
+    {
+        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        decode(ET_MISSING_REQ_FIELD, decoder);
+        assertEquals(UNKNOWN_NAME, get(decoder, STRING_ENUM_REQ + "AsEnum").toString());
+        assertEquals(ENUM_UNKNOWN_STRING, getRepresentation(get(decoder, STRING_ENUM_REQ + "AsEnum")));
+        assertInvalid(decoder);
+    }
 
     @Test
     public void shouldIgnoreMissingOptionalValues() throws Exception
@@ -1415,6 +1474,10 @@ public class DecoderGeneratorTest
         return get(decoder, new String(chars));
     }
 
+    private Decoder createRequiredFieldMessageDecoder() throws Exception
+    {
+        return (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+    }
 
     private interface ExceptionThrowingCommand
     {
