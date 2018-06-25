@@ -315,6 +315,12 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
     private Action sendGapFill(final int msgSeqNo, final int newSeqNo)
     {
+        /*
+         FIXME: this is going to copy data from ResendRequestDecoder, but the underlying buffer (AsciiBuffer) has been altered due to the test code.
+         This occurs (for shouldGapFillAdminMessages) onReplay, where the onTestRequest is processed by the ControlledFragmentAssembler owned by
+         the Replayer (captured via ReplayerTest::handler ArgumentCapture), which delegates back to the Replayer instance that then mutates AsciiBuffer
+         through Replayer::onFragment
+        */
         final long result = gapFillEncoder.encode(resendRequest.header(), msgSeqNo, newSeqNo);
         final int gapFillLength = Encoder.length(result);
         final int gapFillOffset = Encoder.offset(result);
