@@ -80,12 +80,13 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
         final DirectBuffer buffer,
         final int offset,
         final int length,
+        final int sequenceNumber,
         final long position)
     {
         final SenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
-            endPoint.onOutboundMessage(libraryId, buffer, offset, length, position, timeInMs);
+            endPoint.onOutboundMessage(libraryId, buffer, offset, length, sequenceNumber, position, timeInMs);
         }
     }
 

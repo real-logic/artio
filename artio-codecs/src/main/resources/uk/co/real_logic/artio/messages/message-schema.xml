@@ -236,23 +236,6 @@
         <data name="address" id="2" type="Utf8String"/>
     </sbe:message>
 
-    <!--
-    <sbe:message name="ManageConnection" id="10" description="Here's a connection to manage">
-        <field name="libraryId" id="1" type="LibraryId"/>
-        <field name="connection" id="2" type="ConnectionId"/>
-        <field name="session" id="10" type="FixSessionId"/>
-        <field name="logonTime" id="12" type="Timestamp" />
-        <field name="connectionType" id="3" type="ConnectionType"/>
-        <field name="lastSentSequenceNumber" id="4" type="int32"/>
-        <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
-        <field name="sessionState" id="6" type="SessionState"/>
-        <field name="heartbeatIntervalInS" id="7" type="int32"/>
-        <field name="replyToId" id="8" type="CorrelationId"/>
-        <field name="sequenceIndex" id="11" type="SequenceIndex" />
-        <data name="address" id="9" type="Utf8String"/>
-    </sbe:message>
-    -->
-
     <sbe:message name="ResetSessionIds" id="36" description="All session ids have been reset">
     </sbe:message>
 
@@ -262,42 +245,22 @@
         <field name="session" id="3" type="FixSessionId"/>
         <field name="lastSentSequenceNumber" id="4" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
-        <field name="logonTime" id="12" type="Timestamp" />
-        <field name="logonStatus" id="6" type="LogonStatus"/>
-        <field name="slowStatus" id="7" type="SlowStatus"/>
-        <field name="connectionType" id="3" type="ConnectionType"/>
-        <field name="sessionState" id="6" type="SessionState"/>
-        <field name="heartbeatIntervalInS" id="7" type="int32"/>
-        <field name="replyToId" id="8" type="CorrelationId"/>
-        <field name="sequenceIndex" id="11" type="SequenceIndex" />
-        <data name="localCompId" id="8" type="Utf8String"/>
-        <data name="localSubId" id="9" type="Utf8String"/>
-        <data name="localLocationId" id="10" type="Utf8String"/>
-        <data name="remoteCompId" id="11" type="Utf8String"/>
-        <data name="remoteSubId" id="12" type="Utf8String"/>
-        <data name="remoteLocationId" id="13" type="Utf8String"/>
-        <data name="address" id="9" type="Utf8String"/>
+        <field name="logonTime" id="6" type="Timestamp" />
+        <field name="logonStatus" id="7" type="LogonStatus"/>
+        <field name="slowStatus" id="8" type="SlowStatus"/>
+        <field name="connectionType" id="9" type="ConnectionType"/>
+        <field name="sessionState" id="10" type="SessionState"/>
+        <field name="heartbeatIntervalInS" id="11" type="int32"/>
+        <field name="replyToId" id="12" type="CorrelationId"/>
+        <field name="sequenceIndex" id="13" type="SequenceIndex" />
+        <data name="localCompId" id="14" type="Utf8String"/>
+        <data name="localSubId" id="15" type="Utf8String"/>
+        <data name="localLocationId" id="16" type="Utf8String"/>
+        <data name="remoteCompId" id="17" type="Utf8String"/>
+        <data name="remoteSubId" id="18" type="Utf8String"/>
+        <data name="remoteLocationId" id="19" type="Utf8String"/>
+        <data name="address" id="20" type="Utf8String"/>
     </sbe:message>
-
-    <!--
-    <sbe:message name="SessionExists" id="9" description="A session exists at the gateway">
-        <field name="libraryId" id="1" type="LibraryId"/>
-        <field name="connection" id="2" type="ConnectionId"/>
-        <field name="session" id="3" type="FixSessionId"/>
-        <field name="lastSentSequenceNumber" id="4" type="int32"/>
-        <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
-        <field name="logonStatus" id="6" type="LogonStatus"/>
-        <field name="slowStatus" id="7" type="SlowStatus"/>
-        <data name="localCompId" id="8" type="Utf8String"/>
-        <data name="localSubId" id="9" type="Utf8String"/>
-        <data name="localLocationId" id="10" type="Utf8String"/>
-        <data name="remoteCompId" id="11" type="Utf8String"/>
-        <data name="remoteSubId" id="12" type="Utf8String"/>
-        <data name="remoteLocationId" id="13" type="Utf8String"/>
-        <data name="username" id="14" type="Utf8String"/>
-        <data name="password" id="15" type="Utf8String"/>
-    </sbe:message>
-    -->
 
     <sbe:message name="Error" id="13" description="An error has occurred">
         <field name="errorType" id="1" type="GatewayError"/>
@@ -359,7 +322,9 @@
         <field name="libraryId" id="6" type="LibraryId"/>
         <field name="bytesSent" id="7" type="int32" />
         <field name="sequenceIndex" id="8" type="SequenceIndex" />
-        <data name="body" id="9" type="AsciiString"/>
+        <!-- only visible outbound -->
+        <field name="sequenceNumber" id="9" type="int32" />
+        <data name="body" id="10" type="AsciiString"/>
     </sbe:message>
 
     <sbe:message name="ApplicationHeartbeat" id="16"

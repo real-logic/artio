@@ -331,6 +331,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * <p>
      * Default: true.
      *
+     * NB: if this configuration parameter is switched off then any replay requests will be gap filled.
+     *
      * @param logInboundMessages logging of inbound messages.
      * @return this
      */

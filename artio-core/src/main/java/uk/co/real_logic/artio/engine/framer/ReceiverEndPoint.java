@@ -25,7 +25,9 @@ import uk.co.real_logic.artio.dictionary.StandardFixConstants;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.artio.messages.*;
+import uk.co.real_logic.artio.messages.ConnectionType;
+import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.messages.SequenceNumberType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.PersistenceLevel;
@@ -406,7 +408,8 @@ class ReceiverEndPoint
             sessionId,
             sequenceIndex,
             connectionId,
-            OK);
+            OK,
+            0);
 
         if (Pressure.isBackPressured(position))
         {
@@ -481,7 +484,8 @@ class ReceiverEndPoint
             sessionId,
             sequenceIndex,
             connectionId,
-            INVALID_BODYLENGTH);
+            INVALID_BODYLENGTH,
+            0);
 
         return stashIfBackPressured(offset, position);
     }
@@ -496,7 +500,8 @@ class ReceiverEndPoint
             sessionId,
             sequenceIndex,
             connectionId,
-            INVALID);
+            INVALID,
+            0);
 
         final boolean backPressured = stashIfBackPressured(offset, position);
 
@@ -523,7 +528,8 @@ class ReceiverEndPoint
             sessionId,
             sequenceIndex,
             connectionId,
-            INVALID_CHECKSUM);
+            INVALID_CHECKSUM,
+            0);
 
         return stashIfBackPressured(offset, position);
     }

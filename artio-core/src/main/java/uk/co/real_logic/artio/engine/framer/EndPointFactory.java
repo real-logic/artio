@@ -19,12 +19,11 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.LongHashSet;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.SequenceNumberType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
-
-import java.io.IOException;
 
 class EndPointFactory
 {
@@ -36,6 +35,7 @@ class EndPointFactory
     private final ErrorHandler errorHandler;
     private final LongHashSet replicatedConnectionIds;
     private final GatewaySessions gatewaySessions;
+    private final SenderSequenceNumbers senderSequenceNumbers;
 
     private SlowPeeker replaySlowPeeker;
 
@@ -47,7 +47,8 @@ class EndPointFactory
         final FixCounters fixCounters,
         final ErrorHandler errorHandler,
         final LongHashSet replicatedConnectionIds,
-        final GatewaySessions gatewaySessions)
+        final GatewaySessions gatewaySessions,
+        final SenderSequenceNumbers senderSequenceNumbers)
     {
         this.configuration = configuration;
         this.sessionContexts = sessionContexts;
@@ -57,6 +58,7 @@ class EndPointFactory
         this.errorHandler = errorHandler;
         this.replicatedConnectionIds = replicatedConnectionIds;
         this.gatewaySessions = gatewaySessions;
+        this.senderSequenceNumbers = senderSequenceNumbers;
     }
 
     ReceiverEndPoint receiverEndPoint(
@@ -69,7 +71,7 @@ class EndPointFactory
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final SequenceNumberType sequenceNumberType,
-        final ConnectionType connectionType) throws IOException
+        final ConnectionType connectionType)
     {
         return new ReceiverEndPoint(
             channel,
@@ -98,7 +100,7 @@ class EndPointFactory
         final long connectionId,
         final int libraryId,
         final BlockablePosition libraryBlockablePosition,
-        final Framer framer) throws IOException
+        final Framer framer)
     {
         final String remoteAddress = channel.remoteAddress();
         return new SenderEndPoint(
@@ -113,8 +115,8 @@ class EndPointFactory
             framer,
             configuration.senderMaxBytesInBuffer(),
             configuration.slowConsumerTimeoutInMs(),
-            System.currentTimeMillis()
-        );
+            System.currentTimeMillis(),
+            senderSequenceNumbers.onNewSender(connectionId));
     }
 
     void replaySlowPeeker(final SlowPeeker replaySlowPeeker)

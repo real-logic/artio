@@ -432,7 +432,7 @@ public class Session implements AutoCloseable
         validateCanSendMessage();
 
         final long position = publication.saveMessage(
-            messageBuffer, offset, length, libraryId, messageType, id(), sequenceIndex(), connectionId, OK);
+            messageBuffer, offset, length, libraryId, messageType, id(), sequenceIndex(), connectionId, OK, seqNum);
 
         if (position > 0)
         {
@@ -1042,7 +1042,7 @@ public class Session implements AutoCloseable
         }
         else if (newSeqNo > msgSeqNo)
         {
-            return gapFill(msgSeqNo, newSeqNo, possDupFlag);
+            return onGapFill(msgSeqNo, newSeqNo, possDupFlag);
         }
         else
         {
@@ -1072,7 +1072,7 @@ public class Session implements AutoCloseable
         return CONTINUE;
     }
 
-    private Action gapFill(final int receivedMsgSeqNo, final int newSeqNo, final boolean possDupFlag)
+    private Action onGapFill(final int receivedMsgSeqNo, final int newSeqNo, final boolean possDupFlag)
     {
         final int expectedMsgSeqNo = expectedReceivedSeqNum();
         // The gapfill has the wrong sequence number.

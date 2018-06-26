@@ -282,6 +282,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 final int messageType,
                 final long timestamp,
                 final MessageStatus status,
+                final int sequenceNumber,
                 final long position)
             {
                 return senderEndPoints.onReplayMessage(connectionId, buffer, offset, length, position);
@@ -309,6 +310,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 final int messageType,
                 final long timestamp,
                 final MessageStatus status,
+                final int sequenceNumber,
                 final long position)
             {
                 return senderEndPoints.onSlowReplayMessage(connectionId, buffer, offset, length, position);
@@ -814,6 +816,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int messageType,
         final long timestamp,
         final MessageStatus status,
+        final int sequenceNumber,
         final long position)
     {
         final long now = outboundTimer.recordSince(timestamp);
@@ -823,7 +826,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             sessionContexts.onSentFollowerMessage(sessionId, sequenceIndex, messageType, buffer, offset, length);
         }
 
-        senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length, position);
+        senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length, sequenceNumber, position);
 
         if (nonLoggingPositionSender != null)
         {
@@ -843,7 +846,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int libraryId,
         final ConnectionType connectionType,
         final SequenceNumberType sequenceNumberType)
-        throws IOException
     {
         final ReceiverEndPoint receiverEndPoint = endPointFactory.receiverEndPoint(
             channel,

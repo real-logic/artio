@@ -50,6 +50,7 @@ public abstract class EngineContext implements AutoCloseable
     protected final ErrorHandler errorHandler;
     protected final FixCounters fixCounters;
     protected final Aeron aeron;
+    protected final SenderSequenceNumbers senderSequenceNumbers;
 
     private final SequenceNumberIndexWriter sentSequenceNumberIndex;
     private final SequenceNumberIndexWriter receivedSequenceNumberIndex;
@@ -110,6 +111,8 @@ public abstract class EngineContext implements AutoCloseable
         this.fixCounters = fixCounters;
         this.aeron = aeron;
         this.nanoClock = configuration.nanoClock();
+
+        senderSequenceNumbers = new SenderSequenceNumbers(configuration.framerIdleStrategy());
 
         try
         {
@@ -221,7 +224,8 @@ public abstract class EngineContext implements AutoCloseable
             configuration.agentNamePrefix(),
             new SystemEpochClock(),
             configuration.gapfillOnReplayMessageTypes(),
-            configuration.replayHandler());
+            configuration.replayHandler(),
+            senderSequenceNumbers);
     }
 
     protected void newIndexers(
@@ -305,5 +309,10 @@ public abstract class EngineContext implements AutoCloseable
     Agent archivingAgent()
     {
         return archivingAgent;
+    }
+
+    public SenderSequenceNumbers senderSequenceNumbers()
+    {
+        return senderSequenceNumbers;
     }
 }

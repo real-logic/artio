@@ -37,6 +37,7 @@ import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.ReplayHandler;
+import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
 import uk.co.real_logic.artio.replication.ClusterableSubscription;
@@ -81,6 +82,7 @@ public class ReplayerTest extends AbstractLogTest
         ArgumentCaptor.forClass(ControlledFragmentHandler.class);
     private Header fragmentHeader = mock(Header.class);
     private ReplayHandler replayHandler = mock(ReplayHandler.class);
+    private SenderSequenceNumbers senderSequenceNumbers = mock(SenderSequenceNumbers.class);
 
     private Replayer replayer;
 
@@ -104,7 +106,8 @@ public class ReplayerTest extends AbstractLogTest
             DEFAULT_NAME_PREFIX,
             clock,
             EngineConfiguration.DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES,
-            replayHandler);
+            replayHandler,
+            senderSequenceNumbers);
 
         verify(publication).maxPayloadLength();
     }
@@ -405,10 +408,6 @@ public class ReplayerTest extends AbstractLogTest
         verifyIllegalStateException();
     }
 
-    // TODO: implications of back pressure
-    //          failure to commit the gapfill (retry gapfill on abort?)
-    //          failure to commit the messages
-
     @Test
     public void shouldReplayMessageWithExpandingBodyLength()
     {
@@ -679,7 +678,7 @@ public class ReplayerTest extends AbstractLogTest
         final int offset = Encoder.offset(result);
         final Action action = replayer.onMessage(
             buffer, offset, length,
-            LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX, messageType, 0L, OK, 0L);
+            LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX, messageType, 0L, OK, 0, 0L);
         assertEquals(expectedAction, action);
     }
 

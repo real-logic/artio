@@ -107,7 +107,8 @@ public class FramerContext
             fixCounters,
             errorHandler,
             replicatedConnectionIds,
-            gatewaySessions);
+            gatewaySessions,
+            engineContext.senderSequenceNumbers());
 
         sentSequenceNumberIndex = new SequenceNumberIndexReader(
             configuration.sentSequenceNumberBuffer(), errorHandler);

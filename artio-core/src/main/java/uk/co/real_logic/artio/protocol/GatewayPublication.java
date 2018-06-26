@@ -45,6 +45,7 @@ import static uk.co.real_logic.artio.messages.NotLeaderEncoder.libraryChannelHea
 public class GatewayPublication extends ClaimablePublication
 {
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
+
     private static final int FRAMED_MESSAGE_SIZE = MessageHeaderEncoder.ENCODED_LENGTH + FRAME_SIZE;
 
     private static final byte[] NO_BYTES = {};
@@ -121,7 +122,8 @@ public class GatewayPublication extends ClaimablePublication
         final long sessionId,
         final int sequenceIndex,
         final long connectionId,
-        final MessageStatus status)
+        final MessageStatus status,
+        final int sequenceNumber)
     {
         final ExclusiveBufferClaim bufferClaim = this.bufferClaim;
         final long timestamp = nanoClock.nanoTime();
@@ -156,6 +158,7 @@ public class GatewayPublication extends ClaimablePublication
             .connection(connectionId)
             .timestamp(timestamp)
             .status(status)
+            .sequenceNumber(sequenceNumber)
             .putBody(srcBuffer, srcFragmentOffset, srcFragmentLength);
 
         if (!fragmented)

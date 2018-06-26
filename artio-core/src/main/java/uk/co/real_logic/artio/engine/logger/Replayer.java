@@ -33,6 +33,7 @@ import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.engine.PossDupEnabler;
 import uk.co.real_logic.artio.engine.ReplayHandler;
+import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.ProtocolHandler;
 import uk.co.real_logic.artio.protocol.ProtocolSubscription;
@@ -90,6 +91,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     private final String agentNamePrefix;
     private final IntHashSet gapFillMessageTypes;
     private final ReplayHandler replayHandler;
+    private final SenderSequenceNumbers senderSequenceNumbers;
 
     private int currentMessageOffset;
     private int currentMessageLength;
@@ -112,7 +114,8 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         final String agentNamePrefix,
         final EpochClock clock,
         final Set<String> gapfillOnReplayMessageTypes,
-        final ReplayHandler replayHandler)
+        final ReplayHandler replayHandler,
+        final SenderSequenceNumbers senderSequenceNumbers)
     {
         this.replayQuery = replayQuery;
         this.publication = publication;
@@ -123,6 +126,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         this.subscription = subscription;
         this.agentNamePrefix = agentNamePrefix;
         this.replayHandler = replayHandler;
+        this.senderSequenceNumbers = senderSequenceNumbers;
 
         possDupEnabler = new PossDupEnabler(
             bufferClaim,
@@ -157,6 +161,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         final int messageType,
         final long timestamp,
         final MessageStatus status,
+        final int sequenceNumber,
         final long position)
     {
         if (messageType == ResendRequestDecoder.MESSAGE_TYPE && status == OK)
@@ -166,6 +171,8 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
             asciiBuffer.wrap(srcBuffer);
             currentMessageOffset = srcOffset;
             currentMessageLength = limit;
+
+            resendRequest.reset();
             resendRequest.decode(asciiBuffer, srcOffset, limit);
 
             final int beginSeqNo;
@@ -186,7 +193,9 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
             }
 
             final int endSeqNo = resendRequest.endSeqNo();
-            if (endSeqNo != MOST_RECENT_MESSAGE && endSeqNo < beginSeqNo)
+            final boolean replayUpToMostRecent = endSeqNo == MOST_RECENT_MESSAGE;
+            // Validate endSeqNo
+            if (!replayUpToMostRecent && endSeqNo < beginSeqNo)
             {
                 onIllegalState(
                     "[%s] Error in resend request, endSeqNo (%d) < beginSeqNo (%d)",
@@ -213,9 +222,13 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
                 return ABORT;
             }
 
+            // If the last N messages were admin messages then we need to send a gapfill
+            // after the replay query has run.
             if (beginGapFillSeqNum != NONE)
             {
-                final Action action = sendGapFill(beginGapFillSeqNum, endSeqNo);
+                final int newSequenceNumber =
+                    replayUpToMostRecent ? senderSequenceNumbers.lastSentSequenceNumber(connectionId) : endSeqNo;
+                final Action action = sendGapFill(beginGapFillSeqNum, newSequenceNumber);
                 if (action == ABORT)
                 {
                     backpressured = true;
@@ -223,7 +236,9 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
                 }
             }
 
-            if (endSeqNo != MOST_RECENT_MESSAGE)
+            // Validate that we've replayed the correct number of messages.
+            // If we have missing messages for some reason then just gap fill them.
+            if (!replayUpToMostRecent)
             {
                 final int expectedCount = endSeqNo - beginSeqNo + 1;
                 if (count != expectedCount)
@@ -247,6 +262,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         return CONTINUE;
     }
 
+    // Callback for the ReplayQuery:
     public Action onFragment(
         final DirectBuffer srcBuffer, final int srcOffset, final int srcLength, final Header header)
     {

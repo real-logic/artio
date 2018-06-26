@@ -130,7 +130,8 @@ class SoloContext extends EngineContext
             archivingAgent = new GapFiller(
                 inboundLibraryStreams.subscription("replayer"),
                 replayGatewayPublication,
-                configuration.agentNamePrefix());
+                configuration.agentNamePrefix(),
+                senderSequenceNumbers);
         }
     }
 

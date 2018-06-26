@@ -98,8 +98,8 @@ public abstract class AbstractSessionTest
             anyLong(),
             anyInt(),
             anyLong(),
-            any()
-        )).thenReturn(POSITION);
+            any(),
+            anyInt())).thenReturn(POSITION);
     }
 
     @Test

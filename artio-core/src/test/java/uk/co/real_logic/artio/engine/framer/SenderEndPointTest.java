@@ -23,6 +23,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.artio.engine.SenderSequenceNumber;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 import java.io.IOException;
@@ -48,7 +49,7 @@ public class SenderEndPointTest
     private static final int BODY_LENGTH = 84;
     private static final int LENGTH = FRAME_SIZE + BODY_LENGTH;
     private static final int FRAGMENT_LENGTH = alignTerm(HEADER_LENGTH + FRAME_SIZE + BODY_LENGTH);
-    private static final long BEGIN_POSITION = POSITION - FRAGMENT_LENGTH;
+    private static final long BEGIN_POSITION = 8000;
     private static final int MAX_BYTES_IN_BUFFER = 3 * BODY_LENGTH;
 
     private TcpChannel tcpChannel = mock(TcpChannel.class);
@@ -60,6 +61,7 @@ public class SenderEndPointTest
     private UnsafeBuffer buffer = new UnsafeBuffer(byteBuffer);
     private BlockablePosition libraryBlockablePosition = mock(BlockablePosition.class);
     private BlockablePosition replayBlockablePosition = mock(BlockablePosition.class);
+    private SenderSequenceNumber senderSequenceNumber = mock(SenderSequenceNumber.class);
 
     private SenderEndPoint endPoint = new SenderEndPoint(
         CONNECTION_ID,
@@ -73,10 +75,11 @@ public class SenderEndPointTest
         framer,
         MAX_BYTES_IN_BUFFER,
         DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS,
-        0);
+        0,
+        senderSequenceNumber);
 
     @Test
-    public void shouldRetrySlowConsumerMessage() throws IOException
+    public void shouldRetrySlowConsumerMessage()
     {
         becomeSlowConsumer();
 
@@ -89,7 +92,7 @@ public class SenderEndPointTest
     }
 
     @Test
-    public void shouldBeAbleToFragmentSlowConsumerRetries() throws IOException
+    public void shouldBeAbleToFragmentSlowConsumerRetries()
     {
         becomeSlowConsumer();
 
@@ -397,7 +400,7 @@ public class SenderEndPointTest
 
     private void onOutboundMessage(final long timeInMs, final long position)
     {
-        endPoint.onOutboundMessage(LIBRARY_ID, buffer, 0, BODY_LENGTH, position, timeInMs);
+        endPoint.onOutboundMessage(LIBRARY_ID, buffer, 0, BODY_LENGTH, 0, position, timeInMs);
     }
 
     private void onReplayMessage(final long timeInMs, final long position)

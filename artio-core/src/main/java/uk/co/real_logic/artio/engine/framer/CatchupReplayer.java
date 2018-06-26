@@ -244,7 +244,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
             encodeBuffer, encodedOffset, encodedLength,
             libraryId, SequenceResetDecoder.MESSAGE_TYPE,
             messageDecoder.session(), replayFromSequenceIndex, libraryId,
-            CATCHUP_REPLAY) > 0;
+            CATCHUP_REPLAY, heartbeatRangeSequenceNumberEnd) > 0;
 
         if (sent)
         {

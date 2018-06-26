@@ -378,7 +378,8 @@ public class SessionProxy
         final int length = Encoder.length(result);
         final int offset = Encoder.offset(result);
         final long position = gatewayPublication.saveMessage(
-            buffer, offset, length, libraryId, messageType, sessionId, sequenceIndex, connectionId, OK);
+            buffer, offset, length,
+            libraryId, messageType, sessionId, sequenceIndex, connectionId, OK, 0);
         encoder.resetMessage();
         return position;
     }

@@ -368,7 +368,8 @@ public class ReceiverEndPointTest
     private void firstSaveAttemptIsBackPressured()
     {
         when(libraryPublication
-            .saveMessage(anyBuffer(), anyInt(), anyInt(), anyInt(), anyInt(), anyLong(), anyInt(), anyLong(), any()))
+            .saveMessage(
+                anyBuffer(), anyInt(), anyInt(), anyInt(), anyInt(), anyLong(), anyInt(), anyLong(), any(), anyInt()))
             .thenReturn(BACK_PRESSURED, POSITION);
     }
 
@@ -393,7 +394,7 @@ public class ReceiverEndPointTest
         verify(libraryPublication, mode).saveMessage(
             anyBuffer(), eq(0), eq(length), eq(LIBRARY_ID),
             anyInt(), anyLong(), anyInt(), eq(CONNECTION_ID),
-            eq(INVALID));
+            eq(INVALID), eq(0));
     }
 
     private void assertSavesDisconnect()
@@ -424,7 +425,7 @@ public class ReceiverEndPointTest
         verify(libraryPublication, times(numberOfMessages)).saveMessage(
             anyBuffer(), eq(0), eq(msgLen), eq(LIBRARY_ID),
             eq(MESSAGE_TYPE), eq(SESSION_ID), eq(SEQUENCE_INDEX), eq(CONNECTION_ID),
-            eq(status));
+            eq(status), eq(0));
     }
 
     private void savesTwoFramedMessages(final int firstMessageSaveAttempts)
@@ -439,7 +440,8 @@ public class ReceiverEndPointTest
             eq(SESSION_ID),
             eq(SEQUENCE_INDEX),
             eq(CONNECTION_ID),
-            eq(OK));
+            eq(OK),
+            eq(0));
 
         inOrder.verify(libraryPublication, times(1)).saveMessage(
             anyBuffer(),
@@ -450,7 +452,8 @@ public class ReceiverEndPointTest
             eq(SESSION_ID),
             eq(SEQUENCE_INDEX),
             eq(CONNECTION_ID),
-            eq(OK));
+            eq(OK),
+            eq(0));
 
         inOrder.verifyNoMoreInteractions();
     }
@@ -553,7 +556,8 @@ public class ReceiverEndPointTest
             anyLong(),
             anyInt(),
             eq(CONNECTION_ID),
-            eq(INVALID_CHECKSUM));
+            eq(INVALID_CHECKSUM),
+            eq(0));
     }
 
     private void sessionReceivesOneMessage()
