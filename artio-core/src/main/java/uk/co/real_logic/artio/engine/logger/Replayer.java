@@ -227,7 +227,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
             if (beginGapFillSeqNum != NONE)
             {
                 final int newSequenceNumber =
-                    replayUpToMostRecent ? senderSequenceNumbers.lastSentSequenceNumber(connectionId) : endSeqNo;
+                    replayUpToMostRecent ? newSeqNo(connectionId) : endSeqNo + 1;
                 final Action action = sendGapFill(beginGapFillSeqNum, newSequenceNumber);
                 if (action == ABORT)
                 {
@@ -260,6 +260,11 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         }
 
         return CONTINUE;
+    }
+
+    private int newSeqNo(final long connectionId)
+    {
+        return senderSequenceNumbers.lastSentSequenceNumber(connectionId) + 1;
     }
 
     // Callback for the ReplayQuery:
@@ -307,11 +312,11 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         {
             if (beginGapFillSeqNum != NONE)
             {
-                sendGapFill(beginGapFillSeqNum, msgSeqNum);
+                sendGapFill(beginGapFillSeqNum, msgSeqNum + 1);
             }
             else if (msgSeqNum > lastSeqNo + 1)
             {
-                sendGapFill(lastSeqNo, msgSeqNum);
+                sendGapFill(lastSeqNo, msgSeqNum + 1);
             }
 
             final Action action = possDupEnabler.enablePossDupFlag(
@@ -407,9 +412,9 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         return false;
     }
 
-    public int doWork() throws Exception
+    public int doWork()
     {
-        return subscription.poll(protocolSubscription, POLL_LIMIT);
+        return senderSequenceNumbers.poll() + subscription.poll(protocolSubscription, POLL_LIMIT);
     }
 
     public void onClose()

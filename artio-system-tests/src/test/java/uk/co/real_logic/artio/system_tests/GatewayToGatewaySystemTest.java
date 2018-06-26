@@ -20,6 +20,7 @@ import org.junit.Test;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
+import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
@@ -694,6 +695,26 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertInitSeqNum(1, 1, 1);
         assertAccSeqNum(1, 1, 1);
+    }
+
+    @Test
+    public void shouldCombineGapFilledReplays()
+    {
+        messagesCanBeExchanged();
+
+        messagesCanBeExchanged();
+
+        final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
+        resendRequest.beginSeqNo(1).endSeqNo(0);
+
+        initiatingOtfAcceptor.messages().clear();
+
+        testSystem.send(initiatingSession, resendRequest);
+
+        final FixMessage message = testSystem.await(initiatingOtfAcceptor, Constants.SEQUENCE_RESET_MESSAGE_AS_STR);
+
+        // Logon + two heartbeats gets to 3, next is 4.
+        assertEquals("4", message.get(Constants.NEW_SEQ_NO));
     }
 
     private void assertInitSeqNum(

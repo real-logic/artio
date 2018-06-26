@@ -62,7 +62,7 @@ public class GapFiller implements ProtocolHandler, Agent
 
     public int doWork()
     {
-        return inboundSubscription.poll(protocolSubscription, FRAGMENT_LIMIT);
+        return senderSequenceNumbers.poll() + inboundSubscription.poll(protocolSubscription, FRAGMENT_LIMIT);
     }
 
     public String roleName()
@@ -92,7 +92,7 @@ public class GapFiller implements ProtocolHandler, Agent
             final HeaderDecoder reqHeader = resendRequest.header();
             final int beginSeqNo = resendRequest.beginSeqNo();
             final int endSeqNo = resendRequest.endSeqNo();
-            final int lastSentSeqNo = senderSequenceNumbers.lastSentSequenceNumber(connectionId);
+            final int lastSentSeqNo = newSeqNo(connectionId);
 
             // If the request was for an infinite replay then reply with the next expected sequence number
             final int newSeqNo = endSeqNo == 0 ? lastSentSeqNo : endSeqNo;
@@ -112,6 +112,11 @@ public class GapFiller implements ProtocolHandler, Agent
         }
 
         return Action.CONTINUE;
+    }
+
+    private int newSeqNo(final long connectionId)
+    {
+        return senderSequenceNumbers.lastSentSequenceNumber(connectionId) + 1;
     }
 
     public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)

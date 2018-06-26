@@ -39,7 +39,6 @@ import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.Constants.SEQUENCE_RESET_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.MISSING_MESSAGES;
@@ -152,13 +151,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         initiatingOtfAcceptor.messages().clear();
 
-        assertEventuallyTrue(
-            "Unable to send resend request",
-            () ->
-            {
-                testSystem.poll();
-                return initiatingSession.send(resendRequest) > 0;
-            });
+        testSystem.send(initiatingSession, resendRequest);
 
         final FixMessage message = testSystem.await(initiatingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
 

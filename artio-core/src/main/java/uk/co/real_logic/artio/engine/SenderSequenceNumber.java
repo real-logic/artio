@@ -37,7 +37,7 @@ public class SenderSequenceNumber
 
     public void onNewMessage(final int sequenceNumber)
     {
-        lastSentSequenceNumber.lazySet(sequenceNumber);
+        lastSentSequenceNumber.set(sequenceNumber);
     }
 
     public int lastSentSequenceNumber()

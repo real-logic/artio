@@ -139,7 +139,7 @@ public class SessionProxy
         resendRequest.beginSeqNo(beginSeqNo)
                      .endSeqNo(endSeqNo);
         final long result = resendRequest.encode(buffer, 0);
-        return send(result, ResendRequestDecoder.MESSAGE_TYPE, sequenceIndex, resendRequest);
+        return send(result, ResendRequestDecoder.MESSAGE_TYPE, sequenceIndex, resendRequest, msgSeqNo);
     }
 
     long requestDisconnect(final long connectionId, final DisconnectReason reason)
@@ -174,7 +174,7 @@ public class SessionProxy
         customisationStrategy.configureLogon(logon, sessionId);
 
         final long result = logon.encode(buffer, 0);
-        return send(result, LogonDecoder.MESSAGE_TYPE, sequenceIndex, logon);
+        return send(result, LogonDecoder.MESSAGE_TYPE, sequenceIndex, logon, msgSeqNo);
     }
 
     private boolean nullOrEmpty(final String string)
@@ -209,7 +209,8 @@ public class SessionProxy
         }
 
         customisationStrategy.configureLogout(logout, sessionId);
-        return send(logout.encode(buffer, 0), LogoutDecoder.MESSAGE_TYPE, sequenceIndex, logout);
+        final long result = logout.encode(buffer, 0);
+        return send(result, LogoutDecoder.MESSAGE_TYPE, sequenceIndex, logout, msgSeqNo);
     }
 
     public long lowSequenceNumberLogout(
@@ -271,7 +272,8 @@ public class SessionProxy
             heartbeat.resetTestReqID();
         }
 
-        return send(heartbeat.encode(buffer, 0), HeartbeatDecoder.MESSAGE_TYPE, sequenceIndex, heartbeat);
+        final long result = heartbeat.encode(buffer, 0);
+        return send(result, HeartbeatDecoder.MESSAGE_TYPE, sequenceIndex, heartbeat, msgSeqNo);
     }
 
     public long reject(
@@ -338,7 +340,8 @@ public class SessionProxy
         reject.refSeqNum(refSeqNum);
         reject.sessionRejectReason(rejectReason);
 
-        return send(reject.encode(buffer, 0), RejectDecoder.MESSAGE_TYPE, sequenceIndex, reject);
+        final long result = reject.encode(buffer, 0);
+        return send(result, RejectDecoder.MESSAGE_TYPE, sequenceIndex, reject, msgSeqNo);
     }
 
     public long testRequest(final int msgSeqNo, final CharSequence testReqID, final int sequenceIndex)
@@ -348,7 +351,8 @@ public class SessionProxy
 
         testRequest.testReqID(testReqID);
 
-        return send(testRequest.encode(buffer, 0), TestRequestDecoder.MESSAGE_TYPE, sequenceIndex, testRequest);
+        final long result = testRequest.encode(buffer, 0);
+        return send(result, TestRequestDecoder.MESSAGE_TYPE, sequenceIndex, testRequest, msgSeqNo);
     }
 
     public long sequenceReset(final int msgSeqNo, final int newSeqNo, final int sequenceIndex)
@@ -358,7 +362,8 @@ public class SessionProxy
 
         sequenceReset.newSeqNo(newSeqNo);
 
-        return send(sequenceReset.encode(buffer, 0), SequenceResetDecoder.MESSAGE_TYPE, sequenceIndex, sequenceReset);
+        final long result = sequenceReset.encode(buffer, 0);
+        return send(result, SequenceResetDecoder.MESSAGE_TYPE, sequenceIndex, sequenceReset, msgSeqNo);
     }
 
     private void setupHeader(final HeaderEncoder header, final int msgSeqNo)
@@ -368,7 +373,12 @@ public class SessionProxy
         header.msgSeqNum(msgSeqNo);
     }
 
-    private long send(final long result, final int messageType, final int sequenceIndex, final Encoder encoder)
+    private long send(
+        final long result,
+        final int messageType,
+        final int sequenceIndex,
+        final Encoder encoder,
+        final int msgSeqNo)
     {
         if (!libraryConnected)
         {
@@ -379,7 +389,7 @@ public class SessionProxy
         final int offset = Encoder.offset(result);
         final long position = gatewayPublication.saveMessage(
             buffer, offset, length,
-            libraryId, messageType, sessionId, sequenceIndex, connectionId, OK, 0);
+            libraryId, messageType, sessionId, sequenceIndex, connectionId, OK, msgSeqNo);
         encoder.resetMessage();
         return position;
     }

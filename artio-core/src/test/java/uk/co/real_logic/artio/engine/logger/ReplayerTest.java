@@ -166,7 +166,7 @@ public class ReplayerTest extends AbstractLogTest
             return 1;
         });
 
-        assertReSentGapFill(SEQUENCE_NUMBER, END_SEQ_NO, offset, times(1));
+        assertReSentGapFill(SEQUENCE_NUMBER, END_SEQ_NO + 1, offset, times(1));
     }
 
     @Test
@@ -184,7 +184,7 @@ public class ReplayerTest extends AbstractLogTest
             return 2;
         });
 
-        assertReSentGapFill(SEQUENCE_NUMBER, endSeqNo, offset, times(1));
+        assertReSentGapFill(SEQUENCE_NUMBER, endSeqNo + 1, offset, times(1));
     }
 
     @Test
@@ -349,7 +349,7 @@ public class ReplayerTest extends AbstractLogTest
             return 1;
         });
 
-        assertReSentGapFill(endSeqNo, endSeqNo, offset, times(1));
+        assertReSentGapFill(endSeqNo, endSeqNo + 1, offset, times(1));
     }
 
     private void assertBeginSeqNo(final int endSeqNo, final InvocationOnMock inv)
