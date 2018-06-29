@@ -76,6 +76,7 @@ import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
 import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.LogTag.APPLICATION_HEARTBEAT;
 import static uk.co.real_logic.artio.LogTag.CLUSTER_MANAGEMENT;
+import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
 import static uk.co.real_logic.artio.Pressure.isBackPressured;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
@@ -643,6 +644,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         try
         {
+            DebugLogger.log(
+                FIX_CONNECTION,
+                "Connecting to %s:%d from library %d%n", host, port, libraryId);
+
             final InetSocketAddress address = new InetSocketAddress(host, port);
             channelSupplier.open(address,
                 (channel, ex) ->
@@ -711,7 +716,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         try
         {
             DebugLogger.log(
-                CLUSTER_MANAGEMENT,
+                FIX_CONNECTION,
                 "Initiating session %s from library %s%n", sessionContext.sessionId(), library.libraryId());
 
             final long connectionId = this.nextConnectionId++;

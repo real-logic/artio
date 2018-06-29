@@ -726,10 +726,7 @@ public class Session implements AutoCloseable
             }
             else if (expectedSeqNo < msgSeqNo)
             {
-                // if (true) throw new RuntimeException("HERE!");
-                state(AWAITING_RESEND);
-                return checkPosition(
-                    proxy.resendRequest(newSentSeqNum(), expectedSeqNo, 0, sequenceIndex()));
+                return requestResend(expectedSeqNo);
             }
             else if /* expectedSeqNo > msgSeqNo */ (!isPossDupOrResend)
             {
@@ -740,7 +737,14 @@ public class Session implements AutoCloseable
         return CONTINUE;
     }
 
-    private Action msgSeqNumTooLow(final int msgSeqNo, final int expectedSeqNo)
+    Action requestResend(final int expectedSeqNo)
+    {
+        state(AWAITING_RESEND);
+        return checkPosition(
+            proxy.resendRequest(newSentSeqNum(), expectedSeqNo, 0, sequenceIndex()));
+    }
+
+    Action msgSeqNumTooLow(final int msgSeqNo, final int expectedSeqNo)
     {
         return checkPositionAndDisconnect(
             proxy.lowSequenceNumberLogout(newSentSeqNum(), expectedSeqNo, msgSeqNo, sequenceIndex()),
@@ -869,6 +873,7 @@ public class Session implements AutoCloseable
         return onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
     }
 
+    // Always resets the sequence number to 1
     Action onResetSeqNumLogon(
         final int heartbeatInterval,
         final String username,

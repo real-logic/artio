@@ -103,31 +103,51 @@ public class InitiatorSession extends Session
             return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime);
         }
 
-        if (msgSeqNo == expectedReceivedSeqNum() && state() == SessionState.SENT_LOGON)
+        if (state() == SessionState.SENT_LOGON)
         {
-            setupSession(sessionId, sessionKey);
-            setLogonState(heartbeatInterval, username, password);
-
-            if (INITIAL_SEQUENCE_NUMBER == msgSeqNo)
+            final int expectedSeqNo = expectedReceivedSeqNum();
+            if (msgSeqNo == expectedSeqNo)
             {
-                // Outgoing connections could be exchanging logons because of a network disconnection
-                // So we still only want this to occur on the initial logon.
-                logonTime(logonTime);
+                setupSession(sessionId, sessionKey);
+                setLogonState(heartbeatInterval, username, password);
+
+                if (INITIAL_SEQUENCE_NUMBER == msgSeqNo)
+                {
+                    // Outgoing connections could be exchanging logons because of a network disconnection
+                    // So we still only want this to occur on the initial logon.
+                    logonTime(logonTime);
+                }
+
+                notifyLogonListener();
+                action = onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+
+                if (action == ABORT)
+                {
+                    return ABORT;
+                }
             }
-
-            notifyLogonListener();
-            action = onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
-
-            if (action == ABORT)
+            // Received the wrong sequence number from the acceptor
+            else if (expectedSeqNo < msgSeqNo)
             {
-                return ABORT;
+                // Setup the session and request a resend
+
+                setupSession(sessionId, sessionKey);
+                setLogonState(heartbeatInterval, username, password);
+                notifyLogonListener();
+
+                return requestResend(expectedSeqNo);
+            }
+            else /* expectedSeqNo > msgSeqNo */
+            {
+                // Disconnect with an error.
+
+                return msgSeqNumTooLow(msgSeqNo, expectedSeqNo);
             }
         }
         else
         {
-            // Shouldn't this be an error case?...
-            // I guess onMessage will check that the session is logged in and it isn't so it will disconnect...
-            // Its pretty opaque...
+            // TODO: This is an error case, what is the right behaviour?
+            // You've received a logon and you weren't expecting one and it hasn't got the resetSeqNumFlag set
             return onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
         }
 

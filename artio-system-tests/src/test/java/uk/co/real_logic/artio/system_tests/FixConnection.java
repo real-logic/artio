@@ -19,20 +19,22 @@ import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.builder.*;
+import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.LogTag.FIX_TEST;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_ID;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.INITIATOR_ID;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
-class FixConnection implements AutoCloseable
+final class FixConnection implements AutoCloseable
 {
     private static final int BUFFER_SIZE = 8 * 1024;
     private static final int OFFSET = 0;
@@ -46,25 +48,68 @@ class FixConnection implements AutoCloseable
     private final HeartbeatEncoder heartbeatEncoder = new HeartbeatEncoder();
 
     private final SocketChannel socket;
+    private final String senderCompID;
+    private final String targetCompID;
 
     private int msgSeqNum = 1;
 
-    FixConnection(final int port) throws IOException
+    static FixConnection initiate(final int port) throws IOException
     {
-        socket = SocketChannel.open(new InetSocketAddress("localhost", port));
+        return new FixConnection(
+            SocketChannel.open(new InetSocketAddress("localhost", port)),
+            INITIATOR_ID,
+            ACCEPTOR_ID);
     }
 
-    void logon(final long timestamp)
+    static FixConnection accept(final int port, final Runnable connectOperation) throws IOException
     {
+        try (ServerSocketChannel server = ServerSocketChannel
+            .open()
+            .bind(new InetSocketAddress("localhost", port)))
+        {
+            server.configureBlocking(false);
+
+            connectOperation.run();
+
+            SocketChannel socket;
+            while ((socket = server.accept()) == null)
+            {
+                ADMIN_IDLE_STRATEGY.idle();
+            }
+            ADMIN_IDLE_STRATEGY.reset();
+
+            return new FixConnection(
+                socket,
+                ACCEPTOR_ID,
+                INITIATOR_ID);
+        }
+    }
+
+    private FixConnection(final SocketChannel socket, final String senderCompID, final String targetCompID)
+    {
+        this.socket = socket;
+        this.senderCompID = senderCompID;
+        this.targetCompID = targetCompID;
+    }
+
+    void logon(final boolean resetSeqNumFlag)
+    {
+        final long timestamp = System.currentTimeMillis();
         setupHeader(logon.header(), timestamp);
 
         logon
-            .resetSeqNumFlag(true)
+            .resetSeqNumFlag(resetSeqNumFlag)
             .encryptMethod(0)
             .heartBtInt(30)
             .maxMessageSize(9999);
 
         send(logon);
+    }
+
+    public FixConnection msgSeqNum(final int msgSeqNum)
+    {
+        this.msgSeqNum = msgSeqNum;
+        return this;
     }
 
     void heartbeat(final long timestamp)
@@ -86,8 +131,8 @@ class FixConnection implements AutoCloseable
         final int timestampLength = timestampEncoder.encode(timestamp);
 
         header
-            .senderCompID(INITIATOR_ID)
-            .targetCompID(ACCEPTOR_ID)
+            .senderCompID(senderCompID)
+            .targetCompID(targetCompID)
             .msgSeqNum(msgSeqNum++)
             .sendingTime(timestampEncoder.buffer(), timestampLength);
     }
@@ -127,6 +172,16 @@ class FixConnection implements AutoCloseable
         {
             LangUtil.rethrowUnchecked(ex);
         }
+    }
+
+    public LogonDecoder readLogonReply()
+    {
+        final LogonDecoder logon = new LogonDecoder();
+        readMessage(logon);
+
+        assertTrue(logon.validate());
+
+        return logon;
     }
 
     public void close()

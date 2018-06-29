@@ -35,7 +35,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.LOCAL_ARCHIVE;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.REPLICATED;
 
-public class MessageBasedSystemTest
+public class MessageBasedAcceptorSystemTest
 {
     private int port = unusedPort();
 
@@ -80,7 +80,7 @@ public class MessageBasedSystemTest
         final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
         try (FixLibrary library = newAcceptingLibrary(fakeHandler))
         {
-            try (FixConnection connection = new FixConnection(port))
+            try (FixConnection connection = FixConnection.initiate(port))
             {
                 library.poll(10);
 
@@ -109,7 +109,7 @@ public class MessageBasedSystemTest
 
     private void logonThenLogout() throws IOException
     {
-        final FixConnection connection = new FixConnection(port);
+        final FixConnection connection = FixConnection.initiate(port);
 
         logon(connection);
 
@@ -127,9 +127,10 @@ public class MessageBasedSystemTest
 
     private void logon(final FixConnection connection)
     {
-        connection.logon(System.currentTimeMillis());
+        connection.logon(true);
 
-        readLogonReply(connection);
+        final LogonDecoder logon = connection.readLogonReply();
+        assertTrue(logon.resetSeqNumFlag());
     }
 
     private void readLogoutReply(final FixConnection connection)
@@ -139,15 +140,6 @@ public class MessageBasedSystemTest
 
         assertFalse(logon.textAsString(), logon.hasText());
         assertTrue(logon.validate());
-    }
-
-    private void readLogonReply(final FixConnection connection)
-    {
-        final LogonDecoder logon = new LogonDecoder();
-        connection.readMessage(logon);
-
-        assertTrue(logon.validate());
-        assertTrue(logon.resetSeqNumFlag());
     }
 
     @After
