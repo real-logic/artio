@@ -177,6 +177,40 @@ public class DecoderGenerator extends Generator
         return Decoder.class;
     }
 
+    @Override
+    protected String resetGroup(final Entry entry)
+    {
+        final Group group = (Group)entry.element();
+        final String name = group.name();
+
+        final Entry numberField = group.numberField();
+        return String.format(
+                "    public void %1$s()\n" +
+                "    {\n" +
+                "        for (final %2$s iterator : %5$s.iterator())\n" +
+                "        {\n" +
+                "            iterator.reset();\n" +
+                "        }\n" +
+                "        %3$s = 0;\n" +
+                "        has%4$s = false;\n" +
+                "    }\n\n",
+                nameOfResetMethod(name),
+                decoderClassName(name),
+                formatPropertyName(numberField.name()),
+                numberField.name(),
+                iteratorFieldName(group));
+    }
+
+    private static String iteratorClassName(final Group group)
+    {
+        return group.name() + "Iterator";
+    }
+
+    private static String iteratorFieldName(final Group group)
+    {
+        return formatPropertyName(iteratorClassName(group));
+    }
+
     protected String resetRequiredFloat(final String name)
     {
         return resetByMethod(name);
@@ -375,7 +409,7 @@ public class DecoderGenerator extends Generator
         final Group group = (Group)entry.element();
         final String numberFieldName = group.numberField().name();
         final String validationCode = String.format(
-            "        for (final %1$s iterator : %2$s)\n" +
+            "        for (final %1$s iterator : %2$s.iterator())\n" +
             "        {\n" +
             "            if (!iterator.validate())\n" +
             "            {\n" +
@@ -534,16 +568,6 @@ public class DecoderGenerator extends Generator
             "        this.trailer = trailer;\n" +
             "    }\n\n",
             decoderClassName(aggregate)));
-    }
-
-    private String iteratorClassName(final Group group)
-    {
-        return group.name() + "Iterator";
-    }
-
-    private String iteratorFieldName(final Group group)
-    {
-        return formatPropertyName(iteratorClassName(group));
     }
 
     private String messageType(final String fullType, final int packedType)

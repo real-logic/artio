@@ -718,6 +718,52 @@ public class DecoderGeneratorTest
         assertArrayEquals(OTHER_MESSAGE_TYPE_BYTES, messageTypeBytes);
     }
 
+
+    @Test
+    public void shouldResetAllRepeatingGroupEntries() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MULTIPLE_ENTRY_REPEATING_GROUP);
+        Object group = get(decoder, "secondEgGroupGroup");
+        assertEquals("TOM", get(group, "secondGroupFieldAsString"));
+
+        group = next(group);
+        assertEquals("ANDREY", get(group, "secondGroupFieldAsString"));
+
+        decoder.reset();
+        decode(MULTIPLE_ENTRY_REPEATING_GROUP_WITHOUT_OPTIONAL, decoder);
+
+        group = get(decoder, "secondEgGroupGroup");
+        assertNull(get(group, "secondGroupFieldAsString"));
+
+        group = next(group);
+        assertNull(get(group, "secondGroupFieldAsString"));
+    }
+
+    @Test
+    public void shouldResetAllNestedRepeatingGroupEntries() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MULTI_ENTRY_NESTED_GROUP_MESSAGE);
+        assertEquals(2, getNoEgGroupGroupCounter(decoder));
+
+        Object group = getEgGroup(decoder);
+        assertNestedRepeating(group, 1, 1, 2);
+
+        group = next(group);
+        assertNestedRepeating(group, 2, 3, 4);
+
+        decoder.reset();
+
+        decode(MULTI_ENTRY_NESTED_GROUP_MESSAGE_WITHOUT_NESTED_FIELDS, decoder);
+        assertEquals(2, getNoEgGroupGroupCounter(decoder));
+
+        group = getEgGroup(decoder);
+
+        assertNestedRepeating(group, 1, CodecUtil.MISSING_INT, CodecUtil.MISSING_INT);
+
+        group = next(group);
+        assertNestedRepeating(group, 2, CodecUtil.MISSING_INT, CodecUtil.MISSING_INT);
+    }
+
     @Test
     public void shouldDecodeShortTimestampMessageCorrectly() throws Exception
     {
@@ -1379,6 +1425,11 @@ public class DecoderGeneratorTest
         return (boolean)getField(decoder, HAS_BOOLEAN_FIELD);
     }
 
+    private boolean hasNestedField(final Decoder decoder) throws Exception
+    {
+        return (boolean)getField(decoder, HAS_BOOLEAN_FIELD);
+    }
+
     private Object getFloatField(final Decoder decoder) throws Exception
     {
         return get(decoder, FLOAT_FIELD);
@@ -1477,6 +1528,33 @@ public class DecoderGeneratorTest
     private Decoder createRequiredFieldMessageDecoder() throws Exception
     {
         return (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+    }
+
+    private void assertNestedRepeating(final Object group, final int groupField,
+                                       final int nestedValue1, final int nestedValue2)
+            throws Exception
+    {
+        assertEquals(groupField, getGroupField(group));
+
+        Object nestedGroup = getNestedGroup(group);
+        assertEquals(
+                heartbeat.getName() + "$EgGroupGroupDecoder$NestedGroupGroupDecoder",
+                nestedGroup.getClass().getName());
+
+        final boolean expectingValue1 = nestedValue1 != CodecUtil.MISSING_INT;
+        assertEquals(expectingValue1, get(nestedGroup, "hasNestedField"));
+        if (expectingValue1)
+        {
+            assertEquals(nestedValue1, get(nestedGroup, "nestedField"));
+        }
+
+        nestedGroup = next(nestedGroup);
+        final boolean expectingValue2 = nestedValue2 != CodecUtil.MISSING_INT;
+        assertEquals(expectingValue2, get(nestedGroup, "hasNestedField"));
+        if (expectingValue2)
+        {
+            assertEquals(nestedValue2, get(nestedGroup, "nestedField"));
+        }
     }
 
     private interface ExceptionThrowingCommand
