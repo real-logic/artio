@@ -1531,15 +1531,15 @@ public class DecoderGeneratorTest
     }
 
     private void assertNestedRepeating(final Object group, final int groupField,
-                                       final int nestedValue1, final int nestedValue2)
-            throws Exception
+        final int nestedValue1, final int nestedValue2)
+        throws Exception
     {
         assertEquals(groupField, getGroupField(group));
 
         Object nestedGroup = getNestedGroup(group);
         assertEquals(
-                heartbeat.getName() + "$EgGroupGroupDecoder$NestedGroupGroupDecoder",
-                nestedGroup.getClass().getName());
+            heartbeat.getName() + "$EgGroupGroupDecoder$NestedGroupGroupDecoder",
+            nestedGroup.getClass().getName());
 
         final boolean expectingValue1 = nestedValue1 != CodecUtil.MISSING_INT;
         assertEquals(expectingValue1, get(nestedGroup, "hasNestedField"));
