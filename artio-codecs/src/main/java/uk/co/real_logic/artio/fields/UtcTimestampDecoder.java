@@ -19,6 +19,7 @@ import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.artio.fields.CalendricalUtil.MILLIS_IN_DAY;
+import static uk.co.real_logic.artio.fields.UtcDateOnlyDecoder.LENGTH;
 
 /**
  * Parser for Fix's UTC timestamps - see http://fixwiki.org/fixwiki/UTCTimestampDataType for details
@@ -49,15 +50,15 @@ public final class UtcTimestampDecoder
     }
 
     /**
-     * @param timestamp
-     * @param offset
-     * @param length
+     * @param timestamp a buffer containing the FIX encoded value of the timestamp in ASCII
+     * @param offset the offset within the timestamp buffer where the value starts
+     * @param length the length of the FIX encoded value in bytes / ASCII characters
      * @return the number of milliseconds since the Unix Epoch that represents this timestamp
      */
     public static long decode(final AsciiBuffer timestamp, final int offset, final int length)
     {
         final long epochDay = UtcDateOnlyDecoder.decode(timestamp, offset);
-        final long millisecondOfDay = UtcTimeOnlyDecoder.decode(timestamp, offset, length);
+        final long millisecondOfDay = UtcTimeOnlyDecoder.decode(timestamp, offset + LENGTH + 1, length);
         return epochDay * MILLIS_IN_DAY + millisecondOfDay;
     }
 

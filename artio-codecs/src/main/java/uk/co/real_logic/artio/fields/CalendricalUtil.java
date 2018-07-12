@@ -36,19 +36,16 @@ final class CalendricalUtil
 
     // ------------ Date Constants ------------
 
-    static final int MAX_DAYS_IN_YEAR = 365;
-    static final int MONTHS_IN_YEAR = 12;
-    static final int DAYS_IN_400_YEAR_CYCLE = 146097;
-    static final int DAYS_UNTIL_START_OF_UNIX_EPOCH = 719528;
+    private static final int MAX_DAYS_IN_YEAR = 365;
+    private static final int MONTHS_IN_YEAR = 12;
+    private static final int DAYS_IN_400_YEAR_CYCLE = 146097;
+    private static final int DAYS_UNTIL_START_OF_UNIX_EPOCH = 719528;
 
-    static final int MIN_MONTH = 1;
-    static final int MAX_MONTH = 12;
+    private static final int MIN_MONTH = 1;
+    private static final int MAX_MONTH = 12;
 
-    static final int MIN_DAY_OF_MONTH = 1;
-    static final int MAX_DAY_OF_MONTH = 31;
-
-    static final int MIN_WEEK_OF_MONTH = 1;
-    static final int MAX_WEEK_OF_MONTH = 5;
+    private static final int MIN_DAY_OF_MONTH = 1;
+    private static final int MAX_DAY_OF_MONTH = 31;
 
     // ------------ Decoding ------------
 
@@ -60,11 +57,6 @@ final class CalendricalUtil
     public static boolean isValidDayOfMonth(final int dayOfMonth)
     {
         return dayOfMonth >= MIN_DAY_OF_MONTH && dayOfMonth <= MAX_DAY_OF_MONTH;
-    }
-
-    public static boolean isValidWeekOfMonth(final int weekOfMonth)
-    {
-        return weekOfMonth >= MIN_WEEK_OF_MONTH && weekOfMonth <= MAX_WEEK_OF_MONTH;
     }
 
     static int getValidInt(

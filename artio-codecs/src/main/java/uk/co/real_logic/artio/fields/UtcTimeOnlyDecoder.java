@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ public final class UtcTimeOnlyDecoder
 
     public static long decode(final AsciiBuffer time, final int offset, final int length)
     {
-        final int startHour = offset + LENGTH + 1;
+        final int startHour = offset;
         final int endHour = startHour + 2;
 
         final int startMinute = endHour + 1;
