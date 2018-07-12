@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
+import static uk.co.real_logic.artio.fields.CalendricalUtil.MICROS_IN_MILLIS;
 import static uk.co.real_logic.artio.fields.UtcTimestampDecoderValidCasesTest.toEpochMillis;
 import static uk.co.real_logic.artio.util.CustomMatchers.sequenceEqualsAscii;
 
@@ -31,10 +32,12 @@ import static uk.co.real_logic.artio.util.CustomMatchers.sequenceEqualsAscii;
 public class UtcTimestampEncoderValidCasesTest
 {
 
-    private final UtcTimestampEncoder encoder = new UtcTimestampEncoder();
     private final String expectedTimestamp;
+    private final String expectedTimestampMicros;
     private final long epochMillis;
+    private final long epochMicros;
     private final int expectedLength;
+    private final int expectedLengthMicros;
 
     @Parameters(name = "{0}")
     public static Iterable<String[]> data()
@@ -47,10 +50,23 @@ public class UtcTimestampEncoderValidCasesTest
         this.expectedTimestamp = timestamp;
         epochMillis = toEpochMillis(expectedTimestamp);
         expectedLength = expectedTimestamp.length();
+
+        if (expectedLength == UtcTimestampEncoder.LENGTH_WITHOUT_MILLISECONDS)
+        {
+            expectedLengthMicros = expectedLength;
+            expectedTimestampMicros = expectedTimestamp;
+            epochMicros = epochMillis * MICROS_IN_MILLIS;
+        }
+        else
+        {
+            expectedLengthMicros = expectedLength + 3;
+            expectedTimestampMicros = expectedTimestamp + "001";
+            epochMicros = epochMillis * MICROS_IN_MILLIS + 1;
+        }
     }
 
     @Test
-    public void canStaticEncodeTimestamp()
+    public void canStaticEncodeTimestampWithOffset()
     {
         final MutableAsciiBuffer string = new MutableAsciiBuffer(new byte[expectedLength + 2]);
 
@@ -63,10 +79,32 @@ public class UtcTimestampEncoderValidCasesTest
     @Test
     public void canInstanceEncodeTimestamp()
     {
+        final UtcTimestampEncoder encoder = new UtcTimestampEncoder(true);
         final int length = encoder.encode(epochMillis);
 
         assertEquals("encoded wrong length", expectedLength, length);
         assertEquals(new String(encoder.buffer(), 0, length, US_ASCII), expectedTimestamp);
+    }
+
+    @Test
+    public void canStaticEncodeTimestampWithOffsetMicros()
+    {
+        final MutableAsciiBuffer string = new MutableAsciiBuffer(new byte[expectedLengthMicros + 2]);
+
+        final int length = UtcTimestampEncoder.encodeMicros(epochMicros, string, 1);
+
+        assertEquals("encoded wrong length", expectedLengthMicros, length);
+        assertThat(string, sequenceEqualsAscii(expectedTimestampMicros, 1, length));
+    }
+
+    @Test
+    public void canInstanceEncodeTimestampMicros()
+    {
+        final UtcTimestampEncoder encoder = new UtcTimestampEncoder(false);
+        final int length = encoder.encode(epochMicros);
+
+        assertEquals("encoded wrong length", expectedLengthMicros, length);
+        assertEquals(new String(encoder.buffer(), 0, length, US_ASCII), expectedTimestampMicros);
     }
 
 }

@@ -27,8 +27,11 @@ final class CalendricalUtil
     static final int SECONDS_IN_MINUTE = 60;
     static final int SECONDS_IN_HOUR = SECONDS_IN_MINUTE * 60;
     static final int SECONDS_IN_DAY = SECONDS_IN_HOUR * 24;
-    static final long MILLIS_IN_SECOND = 1000;
+    static final long MILLIS_IN_SECOND = 1_000L;
+    static final long MICROS_IN_MILLIS = 1_000L;
+    static final long MICROS_IN_SECOND = MILLIS_IN_SECOND * MICROS_IN_MILLIS;
     static final long MILLIS_IN_DAY = SECONDS_IN_DAY * MILLIS_IN_SECOND;
+    static final long MICROS_IN_DAY = SECONDS_IN_DAY * MICROS_IN_SECOND;
 
     private CalendricalUtil()
     {

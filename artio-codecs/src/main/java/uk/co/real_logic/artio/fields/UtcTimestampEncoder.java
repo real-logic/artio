@@ -17,74 +17,136 @@ package uk.co.real_logic.artio.fields;
 
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import java.util.concurrent.TimeUnit;
-
 import static uk.co.real_logic.artio.fields.CalendricalUtil.*;
+import static uk.co.real_logic.artio.fields.UtcTimeOnlyDecoder.MICROS_FIELD_LENGTH;
+import static uk.co.real_logic.artio.fields.UtcTimeOnlyDecoder.MILLIS_FIELD_LENGTH;
 
 public final class UtcTimestampEncoder
 {
     public static final long MIN_EPOCH_MILLIS = UtcTimestampDecoder.MIN_EPOCH_MILLIS;
     public static final long MAX_EPOCH_MILLIS = UtcTimestampDecoder.MAX_EPOCH_MILLIS;
+    public static final long MIN_EPOCH_MICROS = UtcTimestampDecoder.MIN_EPOCH_MICROS;
+    public static final long MAX_EPOCH_MICROS = UtcTimestampDecoder.MAX_EPOCH_MICROS;
 
-    public static final long DAY_IN_MILLIS = TimeUnit.DAYS.toMillis(1);
-    public static final int LENGTH_WITH_MILLISECONDS = 21;
-    public static final int LENGTH_WITHOUT_MILLISECONDS = 17;
-    public static final int LENGTH_OF_DATE = 8;
-    public static final int LENGTH_OF_DATE_AND_DASH = LENGTH_OF_DATE + 1;
+    public static final int LENGTH_WITHOUT_MILLISECONDS = UtcTimestampDecoder.LENGTH_WITHOUT_MILLISECONDS;
+    public static final int LENGTH_WITH_MILLISECONDS = UtcTimestampDecoder.LENGTH_WITH_MILLISECONDS;
+    public static final int LENGTH_WITH_MICROSECONDS = UtcTimestampDecoder.LENGTH_WITH_MICROSECONDS;
 
-    private final byte[] bytes = new byte[LENGTH_WITH_MILLISECONDS];
+    private static final int LENGTH_OF_DATE = 8;
+    private static final int LENGTH_OF_DATE_AND_DASH = LENGTH_OF_DATE + 1;
+
+    private final boolean usesMilliseconds;
+    private final byte[] bytes = new byte[LENGTH_WITH_MICROSECONDS];
     private final MutableAsciiBuffer flyweight = new MutableAsciiBuffer(bytes);
 
-    private long startOfNextDayInMs;
-    private long beginningOfDayInMs;
+    private long startOfNextDayInFraction;
+    private long beginningOfDayInFraction;
 
     public UtcTimestampEncoder()
     {
+        this(true);
+    }
+
+    public UtcTimestampEncoder(final boolean usesMilliseconds)
+    {
+        this.usesMilliseconds = usesMilliseconds;
         flyweight.wrap(bytes);
     }
 
     /**
      * Encode the current time into the buffer as an ascii UTC String
      *
-     * @param epochMillis the current time as the number of milliseconds since the start of the UNIX Epoch.
+     * @param epochFraction the current time as the number of milliseconds since the start of the UNIX Epoch.
      * @return the length of the encoded data in the flyweight.
      */
-    public int encode(final long epochMillis)
+    public int encode(final long epochFraction)
     {
-        return encode(epochMillis, flyweight, 0);
+        if (usesMilliseconds)
+        {
+            return encode(epochFraction, flyweight, 0);
+        }
+        else
+        {
+            return encodeMicros(epochFraction, flyweight, 0);
+        }
     }
 
-    public int initialise(final long epochMillis)
+    public int initialise(final long epochFraction)
     {
-        validate(epochMillis);
+        final long minEpochFraction;
+        final long maxEpochFraction;
+        final long fractionInSecond;
+        final long fractionInDay;
+        final int fractionFieldLength;
+        final int lengthWithFraction;
 
-        final long localSecond = localSecond(epochMillis);
+        if (usesMilliseconds)
+        {
+            minEpochFraction = MIN_EPOCH_MILLIS;
+            maxEpochFraction = MAX_EPOCH_MILLIS;
+            fractionInSecond = MILLIS_IN_SECOND;
+            fractionInDay = MILLIS_IN_DAY;
+            fractionFieldLength = MILLIS_FIELD_LENGTH;
+            lengthWithFraction = LENGTH_WITH_MILLISECONDS;
+        }
+        else
+        {
+            minEpochFraction = MIN_EPOCH_MICROS;
+            maxEpochFraction = MAX_EPOCH_MICROS;
+            fractionInSecond = MICROS_IN_SECOND;
+            fractionInDay = MICROS_IN_DAY;
+            fractionFieldLength = MICROS_FIELD_LENGTH;
+            lengthWithFraction = LENGTH_WITH_MICROSECONDS;
+        }
+
+        validate(epochFraction, minEpochFraction, maxEpochFraction);
+
+        final long localSecond = localSecond(epochFraction, fractionInSecond);
         final long epochDay = epochDay(localSecond);
-        final int fractionOfSecond = fractionOfSecond(epochMillis);
+        final int fractionOfSecond = fractionOfSecond(epochFraction, fractionInSecond);
 
-        startOfNextDayInMs = (epochDay + 1) * DAY_IN_MILLIS;
-        beginningOfDayInMs = startOfNextDayInMs - DAY_IN_MILLIS;
+        startOfNextDayInFraction = (epochDay + 1) * fractionInDay;
+        beginningOfDayInFraction = startOfNextDayInFraction - fractionInDay;
 
         encodeDate(epochDay, flyweight, 0);
         flyweight.putChar(LENGTH_OF_DATE, '-');
-        UtcTimeOnlyEncoder.encode(localSecond, fractionOfSecond, flyweight, LENGTH_OF_DATE_AND_DASH);
+        UtcTimeOnlyEncoder.encodeFraction(
+            localSecond, fractionOfSecond, flyweight, LENGTH_OF_DATE_AND_DASH, fractionFieldLength);
 
-        return fractionOfSecond > 0 ? LENGTH_WITH_MILLISECONDS : LENGTH_WITHOUT_MILLISECONDS;
+        return fractionOfSecond > 0 ? lengthWithFraction : LENGTH_WITHOUT_MILLISECONDS;
     }
 
-    public int update(final long epochMillis)
+    public int update(final long epochFraction)
     {
-        if (epochMillis > startOfNextDayInMs || epochMillis < beginningOfDayInMs)
+        if (epochFraction > startOfNextDayInFraction || epochFraction < beginningOfDayInFraction)
         {
-            return initialise(epochMillis);
+            return initialise(epochFraction);
         }
 
-        final long localSecond = localSecond(epochMillis);
-        final int fractionOfSecond = fractionOfSecond(epochMillis);
+        final long fractionInSecond;
+        final int fractionFieldLength;
+        final int lengthWithFraction;
 
-        UtcTimeOnlyEncoder.encode(localSecond, fractionOfSecond, flyweight, LENGTH_OF_DATE_AND_DASH);
+        if (usesMilliseconds)
+        {
+            fractionInSecond = MILLIS_IN_SECOND;
+            fractionFieldLength = MILLIS_FIELD_LENGTH;
+            lengthWithFraction = LENGTH_WITH_MILLISECONDS;
+        }
+        else
+        {
+            fractionInSecond = MICROS_IN_SECOND;
+            fractionFieldLength = MICROS_FIELD_LENGTH;
+            lengthWithFraction = LENGTH_WITH_MICROSECONDS;
+        }
 
-        return fractionOfSecond > 0 ? LENGTH_WITH_MILLISECONDS : LENGTH_WITHOUT_MILLISECONDS;
+        final long localSecond = localSecond(epochFraction, fractionInSecond);
+        final int fractionOfSecond = fractionOfSecond(epochFraction, fractionInSecond);
+
+        UtcTimeOnlyEncoder.encodeFraction(
+            localSecond, fractionOfSecond, flyweight, LENGTH_OF_DATE_AND_DASH, fractionFieldLength);
+
+        return fractionOfSecond > 0 ? lengthWithFraction : LENGTH_WITHOUT_MILLISECONDS;
     }
 
     public byte[] buffer()
@@ -92,19 +154,64 @@ public final class UtcTimestampEncoder
         return bytes;
     }
 
-    public static int encode(final long epochMillis, final MutableAsciiBuffer string, final int offset)
+    public static int encode(
+        final long epochMillis,
+        final MutableAsciiBuffer string,
+        final int offset)
     {
-        validate(epochMillis);
+        return encodeFraction(
+            epochMillis,
+            string,
+            offset,
+            MIN_EPOCH_MILLIS,
+            MAX_EPOCH_MILLIS,
+            MILLIS_IN_SECOND,
+            LENGTH_WITH_MILLISECONDS,
+            MILLIS_FIELD_LENGTH);
+    }
 
-        final long localSecond = localSecond(epochMillis);
+    public static int encodeMicros(
+        final long epochMicros,
+        final MutableAsciiBuffer string,
+        final int offset)
+    {
+        return encodeFraction(
+            epochMicros,
+            string,
+            offset,
+            MIN_EPOCH_MICROS,
+            MAX_EPOCH_MICROS,
+            MICROS_IN_SECOND,
+            LENGTH_WITH_MICROSECONDS,
+            MICROS_FIELD_LENGTH);
+    }
+
+    private static int encodeFraction(
+        final long epochFraction,
+        final MutableAsciiBuffer string,
+        final int offset,
+        final long minEpochFraction,
+        final long maxEpochFraction,
+        final long fractionInSecond,
+        final int lengthWithFraction,
+        final int fractionFieldLength)
+    {
+        validate(epochFraction, minEpochFraction, maxEpochFraction);
+
+        final long localSecond = localSecond(epochFraction, fractionInSecond);
         final long epochDay = epochDay(localSecond);
-        final int fractionOfSecond = fractionOfSecond(epochMillis);
+        final int fractionOfSecond = fractionOfSecond(epochFraction, fractionInSecond);
 
         encodeDate(epochDay, string, offset);
         string.putChar(offset + LENGTH_OF_DATE, '-');
-        UtcTimeOnlyEncoder.encode(localSecond, fractionOfSecond, string, offset + LENGTH_OF_DATE_AND_DASH);
+        UtcTimeOnlyEncoder.encodeFraction(
+            localSecond,
+            fractionOfSecond,
+            string,
+            offset + LENGTH_OF_DATE_AND_DASH,
+            fractionFieldLength);
 
-        return fractionOfSecond > 0 ? LENGTH_WITH_MILLISECONDS : LENGTH_WITHOUT_MILLISECONDS;
+        return fractionOfSecond > 0 ? lengthWithFraction : LENGTH_WITHOUT_MILLISECONDS;
     }
 
     private static long epochDay(final long localSecond)
@@ -112,21 +219,21 @@ public final class UtcTimestampEncoder
         return Math.floorDiv(localSecond, SECONDS_IN_DAY);
     }
 
-    private static int fractionOfSecond(final long epochMillis)
+    private static int fractionOfSecond(final long epochFraction, final long fractionInSecond)
     {
-        return (int)(Math.floorMod(epochMillis, MILLIS_IN_SECOND));
+        return (int)(Math.floorMod(epochFraction, fractionInSecond));
     }
 
-    private static long localSecond(final long epochMillis)
+    private static long localSecond(final long epochFraction, final long fractionInSecond)
     {
-        return Math.floorDiv(epochMillis, MILLIS_IN_SECOND);
+        return Math.floorDiv(epochFraction, fractionInSecond);
     }
 
-    private static void validate(final long epochMillis)
+    private static void validate(final long epochFraction, final long minEpochFraction, final long maxEpochFraction)
     {
-        if (epochMillis < MIN_EPOCH_MILLIS || epochMillis > MAX_EPOCH_MILLIS)
+        if (epochFraction < minEpochFraction || epochFraction > maxEpochFraction)
         {
-            throw new IllegalArgumentException(epochMillis + " is outside of the valid range for this encoder");
+            throw new IllegalArgumentException(epochFraction + " is outside of the valid range for this encoder");
         }
     }
 }

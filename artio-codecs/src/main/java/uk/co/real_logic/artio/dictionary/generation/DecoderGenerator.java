@@ -757,7 +757,7 @@ public class DecoderGenerator extends Generator
                 return initByteArray(initialBufferSize);
 
             case UTCTIMESTAMP:
-                return initByteArray(UtcTimestampDecoder.LONG_LENGTH);
+                return initByteArray(UtcTimestampDecoder.LENGTH_WITH_MICROSECONDS);
 
             case LOCALMKTDATE:
                 return initByteArray(LocalMktDateDecoder.LENGTH);
@@ -775,7 +775,7 @@ public class DecoderGenerator extends Generator
                 return initByteArray(UtcTimeOnlyDecoder.LONG_LENGTH + 7);
 
             case TZTIMESTAMP:
-                return initByteArray(UtcTimestampDecoder.LONG_LENGTH + 7);
+                return initByteArray(UtcTimestampDecoder.LENGTH_WITH_MICROSECONDS + 7);
 
             default:
                 throw new UnsupportedOperationException("Unknown type: " + type);

@@ -19,7 +19,6 @@ import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.artio.fields.CalendricalUtil.*;
-import static uk.co.real_logic.artio.fields.UtcDateOnlyDecoder.LENGTH;
 
 /**
  * "HH:mm:ss[.SSS]"
@@ -28,6 +27,10 @@ public final class UtcTimeOnlyDecoder
 {
     public static final int SHORT_LENGTH = 8;
     public static final int LONG_LENGTH = 12;
+    public static final int LONG_LENGTH_MICROS = 15;
+
+    static final int MILLIS_FIELD_LENGTH = 3;
+    static final int MICROS_FIELD_LENGTH = 6;
 
     private final AsciiBuffer buffer = new MutableAsciiBuffer();
 
@@ -37,12 +40,39 @@ public final class UtcTimeOnlyDecoder
         return decode(buffer, 0, length);
     }
 
+    public long decodeMicros(final byte[] bytes, final int length)
+    {
+        buffer.wrap(bytes);
+        return decodeMicros(buffer, 0, length);
+    }
+
     public long decode(final byte[] bytes)
     {
         return decode(bytes, bytes.length);
     }
 
+    public long decodeMicros(final byte[] bytes)
+    {
+        return decodeMicros(bytes, bytes.length);
+    }
+
     public static long decode(final AsciiBuffer time, final int offset, final int length)
+    {
+        return decodeFraction(time, offset, length, MILLIS_FIELD_LENGTH, MILLIS_IN_SECOND);
+    }
+
+    public static long decodeMicros(final AsciiBuffer time, final int offset, final int length)
+    {
+        return decodeFraction(time, offset, length, MICROS_FIELD_LENGTH, MICROS_IN_SECOND);
+    }
+
+    // A fraction could be a millisecond or a microsecond
+    private static long decodeFraction(
+        final AsciiBuffer time,
+        final int offset,
+        final int length,
+        final int fractionsLength,
+        final long fractionsInSecond)
     {
         final int startHour = offset;
         final int endHour = startHour + 2;
@@ -53,24 +83,24 @@ public final class UtcTimeOnlyDecoder
         final int startSecond = endMinute + 1;
         final int endSecond = startSecond + 2;
 
-        final int startMillisecond = endSecond + 1;
-        final int endMillisecond = startMillisecond + 3;
+        final int startFraction = endSecond + 1;
+        final int endFraction = startFraction + fractionsLength;
 
         final int hour = getValidInt(time, startHour, endHour, 0, 23);
         final int minute = getValidInt(time, startMinute, endMinute, 0, 59);
         final int second = getValidInt(time, startSecond, endSecond, 0, 60);
-        final int millisecond;
-        if (offset + length > endSecond && time.isDigit(startMillisecond))
+        final int fraction;
+        if (offset + length > endSecond && time.isDigit(startFraction))
         {
-            millisecond = time.getNatural(startMillisecond, endMillisecond);
+            fraction = time.getNatural(startFraction, endFraction);
         }
         else
         {
-            millisecond = 0;
+            fraction = 0;
         }
 
         final int secondOfDay = hour * SECONDS_IN_HOUR + minute * SECONDS_IN_MINUTE + second;
 
-        return secondOfDay * MILLIS_IN_SECOND + millisecond;
+        return secondOfDay * fractionsInSecond + fraction;
     }
 }

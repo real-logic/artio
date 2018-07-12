@@ -19,14 +19,17 @@ import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.artio.fields.CalendricalUtil.*;
+import static uk.co.real_logic.artio.fields.UtcTimeOnlyDecoder.MICROS_FIELD_LENGTH;
+import static uk.co.real_logic.artio.fields.UtcTimeOnlyDecoder.MILLIS_FIELD_LENGTH;
 
 /**
  * .
  */
 public final class UtcTimeOnlyEncoder
 {
-    public static final int LENGTH_WITH_MILLISECONDS = 12;
     public static final int LENGTH_WITHOUT_MILLISECONDS = 8;
+    public static final int LENGTH_WITH_MILLISECONDS = 12;
+    public static final int LENGTH_WITH_MICROSECONDS = 15;
 
     private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
     private final MutableAsciiBuffer flyweight = new MutableAsciiBuffer(buffer);
@@ -45,16 +48,48 @@ public final class UtcTimeOnlyEncoder
         final long localSecond = Math.floorDiv(millisecondOfDay, MILLIS_IN_SECOND);
         final int fractionOfSecond = (int)(Math.floorMod(millisecondOfDay, MILLIS_IN_SECOND));
 
-        encode(localSecond, fractionOfSecond, string, offset + 9);
+        encodeFraction(localSecond, fractionOfSecond, string, offset, MILLIS_FIELD_LENGTH);
 
         return fractionOfSecond > 0 ? LENGTH_WITH_MILLISECONDS : LENGTH_WITHOUT_MILLISECONDS;
     }
 
-    static void encode(
-        final long epochSecond,
-        final int epochMillis,
+    public static int encodeMicros(
+        final long millisecondOfDay,
         final MutableAsciiBuffer string,
         final int offset)
+    {
+        final long localSecond = Math.floorDiv(millisecondOfDay, MICROS_IN_SECOND);
+        final int fractionOfSecond = (int)(Math.floorMod(millisecondOfDay, MICROS_IN_SECOND));
+
+        encodeFraction(localSecond, fractionOfSecond, string, offset, MICROS_FIELD_LENGTH);
+
+        return fractionOfSecond > 0 ? LENGTH_WITH_MICROSECONDS : LENGTH_WITHOUT_MILLISECONDS;
+    }
+
+    /*static void encode(
+        final long epochSecond,
+        final int millisOfSecond,
+        final MutableAsciiBuffer string,
+        final int offset)
+    {
+        encodeFraction(epochSecond, millisOfSecond, string, offset, MILLIS_FIELD_LENGTH);
+    }
+
+    static void encodeMicros(
+        final long epochSecond,
+        final int microsOfSecond,
+        final MutableAsciiBuffer string,
+        final int offset)
+    {
+        encodeFraction(epochSecond, microsOfSecond, string, offset, MICROS_FIELD_LENGTH);
+    }*/
+
+    static void encodeFraction(
+        final long epochSecond,
+        final int fractionOfSecond,
+        final MutableAsciiBuffer string,
+        final int offset,
+        final int fractionFieldLength)
     {
         int secondOfDay = (int)Math.floorMod(epochSecond, SECONDS_IN_DAY);
         final int hours = secondOfDay / SECONDS_IN_HOUR;
@@ -68,10 +103,10 @@ public final class UtcTimeOnlyEncoder
         string.putChar(offset + 5, ':');
         string.putNatural(offset + 6, 2, secondOfDay);
 
-        if (epochMillis > 0)
+        if (fractionOfSecond > 0)
         {
             string.putChar(offset + 8, '.');
-            string.putNatural(offset + 9, 3, epochMillis);
+            string.putNatural(offset + 9, fractionFieldLength, fractionOfSecond);
         }
     }
 }
