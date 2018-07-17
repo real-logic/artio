@@ -105,6 +105,7 @@ public final class ExampleDictionary
     public static final String HAS_TEST_REQ_ID = "hasTestReqID";
     public static final String HAS_ON_BEHALF_OF_COMP_ID = "hasonBehalfOfCompID";
     public static final String HAS_BOOLEAN_FIELD = "hasBooleanField";
+    public static final String HAS_NESTED_FIELD = "hasNestedField";
     public static final String HAS_DATA_FIELD = "hasDataField";
     public static final String HAS_COMPONENT_FIELD = "hasComponentField";
 
@@ -202,6 +203,22 @@ public final class ExampleDictionary
     public static final String MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE =
         "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
         "\001136=1\001137=TOM\00110=043\001";
+
+    public static final String MULTIPLE_ENTRY_REPEATING_GROUP =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001136=2\001137=TOM\001138=2\001137=ANDREY\001138=13\00110=043\001";
+
+    public static final String MULTIPLE_ENTRY_REPEATING_GROUP_WITHOUT_OPTIONAL =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001136=2\001138=2\001138=13\00110=043\001";
+
+    public static final String MULTI_ENTRY_NESTED_GROUP_MESSAGE =
+        "8=FIX.4.4\0019=77\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001120=2\001121=1\001122=2\001123=1\001123=2\001121=2\001122=2\001123=3\001123=4\00110=063\001";
+
+    public static final String MULTI_ENTRY_NESTED_GROUP_MESSAGE_WITHOUT_NESTED_FIELDS =
+        "8=FIX.4.4\0019=77\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001120=2\001121=1\001121=2\00110=063\001";
 
     public static final String NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE =
         "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +

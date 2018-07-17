@@ -252,26 +252,7 @@ public abstract class Generator
             this::callResetMethod);
     }
 
-    private String resetGroup(final Entry entry)
-    {
-        final Group group = (Group)entry.element();
-        final String name = group.name();
-        final Entry numberField = group.numberField();
-        return String.format(
-            "    public void %1$s()\n" +
-            "    {\n" +
-            "        if (%2$s != null)\n" +
-            "        {\n" +
-            "            %2$s.reset();\n" +
-            "        }\n" +
-            "        %3$s = 0;\n" +
-            "        has%4$s = false;\n" +
-            "    }\n\n",
-            nameOfResetMethod(name),
-            formatPropertyName(name),
-            formatPropertyName(numberField.name()),
-            numberField.name());
-    }
+    protected abstract String resetGroup(Entry entry);
 
     private String resetField(final boolean isRequired, final Field field)
     {
