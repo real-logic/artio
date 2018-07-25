@@ -162,15 +162,11 @@ public final class FixArchivePrinter
 
         printOption(
             "from",
-            "Time in milliseconds that messages are not earlier than",
-            false);
-        printOption(
-            "from",
-            "Time in milliseconds that messages are not earlier than",
+            "Time in nanoseconds that messages are not earlier than",
             false);
         printOption(
             "to",
-            "Time in milliseconds that messages are not later than",
+            "Time in nanoseconds that messages are not later than",
             false);
         printOption(
             "message-types",

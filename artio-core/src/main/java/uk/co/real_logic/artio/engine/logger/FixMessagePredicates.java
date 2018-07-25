@@ -69,10 +69,10 @@ public final class FixMessagePredicates
      * @return the resulting predicate
      */
     public static FixMessagePredicate between(
-        final long beginTimestampInclusiveInMs,
-        final long endTimestampExclusiveInMs)
+        final long beginTimestampInclusiveInNs,
+        final long endTimestampExclusiveInNs)
     {
-        return from(beginTimestampInclusiveInMs).and(to(endTimestampExclusiveInMs));
+        return from(beginTimestampInclusiveInNs).and(to(endTimestampExclusiveInNs));
     }
 
     /**
@@ -80,9 +80,9 @@ public final class FixMessagePredicates
      *
      * @return the resulting predicate
      */
-    public static FixMessagePredicate from(final long beginTimestampInclusiveInMs)
+    public static FixMessagePredicate from(final long beginTimestampInclusiveInNs)
     {
-        return (message) -> message.timestamp() >= beginTimestampInclusiveInMs;
+        return (message) -> message.timestamp() >= beginTimestampInclusiveInNs;
     }
 
     /**
@@ -90,9 +90,9 @@ public final class FixMessagePredicates
      *
      * @return the resulting predicate
      */
-    public static FixMessagePredicate to(final long endTimestampExclusiveInMs)
+    public static FixMessagePredicate to(final long endTimestampExclusiveInNs)
     {
-        return (message) -> message.timestamp() < endTimestampExclusiveInMs;
+        return (message) -> message.timestamp() < endTimestampExclusiveInNs;
     }
 
     /**
