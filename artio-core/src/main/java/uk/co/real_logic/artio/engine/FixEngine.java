@@ -151,7 +151,7 @@ public final class FixEngine extends GatewayProcess
     {
         try
         {
-            timers = new EngineTimers(configuration.nanoClock());
+            timers = new EngineTimers(configuration.clock());
             scheduler = configuration.scheduler();
             scheduler.configure(configuration.aeronContext());
             init(configuration);

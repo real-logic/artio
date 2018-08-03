@@ -66,13 +66,15 @@ public final class FixMessagePredicates
     /**
      * Filters a timestamp to be between these begin and end times.
      *
+     * Timestamps filtered in precision of CommonConfiguration.clock().
+     *
      * @return the resulting predicate
      */
     public static FixMessagePredicate between(
-        final long beginTimestampInclusiveInNs,
-        final long endTimestampExclusiveInNs)
+        final long beginTimestampInclusive,
+        final long endTimestampExclusive)
     {
-        return from(beginTimestampInclusiveInNs).and(to(endTimestampExclusiveInNs));
+        return from(beginTimestampInclusive).and(to(endTimestampExclusive));
     }
 
     /**
@@ -80,23 +82,27 @@ public final class FixMessagePredicates
      *
      * @return the resulting predicate
      */
-    public static FixMessagePredicate from(final long beginTimestampInclusiveInNs)
+    public static FixMessagePredicate from(final long beginTimestampInclusive)
     {
-        return (message) -> message.timestamp() >= beginTimestampInclusiveInNs;
+        return (message) -> message.timestamp() >= beginTimestampInclusive;
     }
 
     /**
      * Filters a timestamp to a given end time.
      *
+     * Timestamps filtered in precision of CommonConfiguration.clock().
+     *
      * @return the resulting predicate
      */
-    public static FixMessagePredicate to(final long endTimestampExclusiveInNs)
+    public static FixMessagePredicate to(final long endTimestampExclusive)
     {
-        return (message) -> message.timestamp() < endTimestampExclusiveInNs;
+        return (message) -> message.timestamp() < endTimestampExclusive;
     }
 
     /**
      * Filter messages by the message type of their fix message.
+     *
+     * Timestamps filtered in precision of CommonConfiguration.clock().
      *
      * @param messageTypes the fix message type strings that you see in the message.
      * @return the resulting predicate

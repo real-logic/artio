@@ -162,11 +162,11 @@ public final class FixArchivePrinter
 
         printOption(
             "from",
-            "Time in nanoseconds that messages are not earlier than",
+            "Time in precision of CommonConfiguration.clock() that messages are not earlier than",
             false);
         printOption(
             "to",
-            "Time in nanoseconds that messages are not later than",
+            "Time in precision of CommonConfiguration.clock() that messages are not later than",
             false);
         printOption(
             "message-types",

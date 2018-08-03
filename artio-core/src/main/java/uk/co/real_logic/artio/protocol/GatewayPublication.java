@@ -19,8 +19,8 @@ import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.NanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.*;
@@ -96,7 +96,7 @@ public class GatewayPublication extends ClaimablePublication
         new ResetLibrarySequenceNumberEncoder();
     private final SlowStatusNotificationEncoder slowStatusNotification = new SlowStatusNotificationEncoder();
 
-    private final NanoClock nanoClock;
+    private final Clock clock;
     private final int maxPayloadLength;
     private final int maxInitialBodyLength;
 
@@ -104,11 +104,11 @@ public class GatewayPublication extends ClaimablePublication
         final ClusterablePublication dataPublication,
         final AtomicCounter fails,
         final IdleStrategy idleStrategy,
-        final NanoClock nanoClock,
+        final Clock clock,
         final int maxClaimAttempts)
     {
         super(maxClaimAttempts, idleStrategy, fails, dataPublication);
-        this.nanoClock = nanoClock;
+        this.clock = clock;
         this.maxPayloadLength = dataPublication.maxPayloadLength();
         this.maxInitialBodyLength = maxPayloadLength - FRAMED_MESSAGE_SIZE;
     }
@@ -126,7 +126,7 @@ public class GatewayPublication extends ClaimablePublication
         final int sequenceNumber)
     {
         final ExclusiveBufferClaim bufferClaim = this.bufferClaim;
-        final long timestamp = nanoClock.nanoTime();
+        final long timestamp = clock.time();
         final int framedLength = FRAMED_MESSAGE_SIZE + srcLength;
         final boolean fragmented = framedLength > maxPayloadLength;
         final int claimLength = fragmented ? maxPayloadLength : framedLength;

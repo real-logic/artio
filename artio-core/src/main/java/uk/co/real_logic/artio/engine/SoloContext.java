@@ -124,7 +124,7 @@ class SoloContext extends EngineContext
                 ClusterablePublication.solo(replayPublication),
                 fixCounters.failedReplayPublications(),
                 configuration.archiverIdleStrategy(),
-                nanoClock,
+                clock,
                 configuration.outboundMaxClaimAttempts());
 
             archivingAgent = new GapFiller(

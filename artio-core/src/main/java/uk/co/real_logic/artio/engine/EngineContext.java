@@ -23,8 +23,8 @@ import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.NanoClock;
 import org.agrona.concurrent.SystemEpochClock;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.StreamInformation;
 import uk.co.real_logic.artio.engine.logger.*;
@@ -45,7 +45,7 @@ import static uk.co.real_logic.artio.replication.ReservedValue.NO_FILTER;
 
 public abstract class EngineContext implements AutoCloseable
 {
-    protected final NanoClock nanoClock;
+    protected final Clock clock;
     protected final EngineConfiguration configuration;
     protected final ErrorHandler errorHandler;
     protected final FixCounters fixCounters;
@@ -110,7 +110,7 @@ public abstract class EngineContext implements AutoCloseable
         this.errorHandler = errorHandler;
         this.fixCounters = fixCounters;
         this.aeron = aeron;
-        this.nanoClock = configuration.nanoClock();
+        this.clock = configuration.clock();
 
         senderSequenceNumbers = new SenderSequenceNumbers(configuration.framerIdleStrategy());
 
@@ -138,10 +138,10 @@ public abstract class EngineContext implements AutoCloseable
     protected void newStreams(final ClusterableStreams node)
     {
         inboundLibraryStreams = new Streams(
-            node, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,
+            node, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, clock,
             configuration.inboundMaxClaimAttempts());
         outboundLibraryStreams = new Streams(
-            node, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock,
+            node, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, clock,
             configuration.outboundMaxClaimAttempts());
     }
 

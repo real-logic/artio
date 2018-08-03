@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.library;
 
 import io.aeron.Aeron;
 import io.aeron.Subscription;
-import org.agrona.concurrent.NanoClock;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.StreamInformation;
@@ -34,7 +34,7 @@ class LibraryTransport
     private final LibraryConfiguration configuration;
     private final FixCounters fixCounters;
     private final Aeron aeron;
-    private final NanoClock nanoClock;
+    private final Clock clock;
 
     private Subscription inboundSubscription;
     private GatewayPublication outboundPublication;
@@ -47,7 +47,7 @@ class LibraryTransport
         this.configuration = configuration;
         this.fixCounters = fixCounters;
         this.aeron = aeron;
-        this.nanoClock = configuration.nanoClock();
+        this.clock = configuration.clock();
     }
 
     void initStreams(final String aeronChannel)
@@ -57,7 +57,7 @@ class LibraryTransport
         DebugLogger.log(LIBRARY_CONNECT, "Directed streams at %s%n", aeronChannel);
 
         final Streams outboundLibraryStreams = new Streams(
-            soloNode, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock,
+            soloNode, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, clock,
             configuration.outboundMaxClaimAttempts());
 
         if (isReconnect())

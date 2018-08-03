@@ -16,8 +16,8 @@
 package uk.co.real_logic.artio.protocol;
 
 import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.NanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.replication.ClusterablePublication;
 import uk.co.real_logic.artio.replication.ClusterableStreams;
 import uk.co.real_logic.artio.replication.ClusterableSubscription;
@@ -25,7 +25,7 @@ import uk.co.real_logic.artio.replication.ClusterableSubscription;
 public final class Streams
 {
     private final int streamId;
-    private final NanoClock nanoClock;
+    private final Clock clock;
     private final ClusterableStreams node;
     private final AtomicCounter failedPublications;
     private final int maxClaimAttempts;
@@ -34,13 +34,13 @@ public final class Streams
         final ClusterableStreams node,
         final AtomicCounter failedPublications,
         final int streamId,
-        final NanoClock nanoClock,
+        final Clock clock,
         final int maxClaimAttempts)
     {
         this.node = node;
         this.failedPublications = failedPublications;
         this.streamId = streamId;
-        this.nanoClock = nanoClock;
+        this.clock = clock;
         this.maxClaimAttempts = maxClaimAttempts;
     }
 
@@ -50,7 +50,7 @@ public final class Streams
             dataPublication(name),
             failedPublications,
             idleStrategy,
-            nanoClock,
+            clock,
             maxClaimAttempts
         );
     }

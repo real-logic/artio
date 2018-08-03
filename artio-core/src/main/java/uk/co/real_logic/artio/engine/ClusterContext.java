@@ -176,7 +176,7 @@ class ClusterContext extends EngineContext
             ClusterablePublication.solo(inboundPublication),
             fixCounters.failedInboundPublications(),
             configuration.framerIdleStrategy(),
-            nanoClock,
+            clock,
             configuration.inboundMaxClaimAttempts());
     }
 
