@@ -84,7 +84,7 @@ subprojects {
         checkstyle 'com.puppycrawl.tools:checkstyle:8.11'
 
         testCompile 'junit:junit:4.12'
-        testCompile 'org.mockito:mockito-core:2.20.1'
+        testCompile 'org.mockito:mockito-core:2.21.0'
         testCompile 'org.hamcrest:hamcrest-library:1.3'
     }
 
@@ -389,7 +389,7 @@ if (System.properties["uploadArchives"] != null) {
                     pom.project {
                         name = 'artio'
                         packaging = 'pom'
-                        description = 'Resilient High-Performance FIX Gateway'
+                        description = 'High-Performance FIX Gateway'
 
                         url = 'https://github.com/real-logic/artio'
 
