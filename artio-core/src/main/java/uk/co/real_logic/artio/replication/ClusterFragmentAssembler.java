@@ -22,7 +22,6 @@ import org.agrona.collections.Int2ObjectHashMap;
 
 import java.util.function.IntFunction;
 
-import static io.aeron.BufferBuilder.MIN_ALLOCATED_CAPACITY;
 import static io.aeron.logbuffer.FrameDescriptor.*;
 
 /**
@@ -37,7 +36,7 @@ public class ClusterFragmentAssembler implements ClusterFragmentHandler
     public ClusterFragmentAssembler(final ClusterFragmentHandler delegate)
     {
         this.delegate = delegate;
-        this.builderFunc = ignore -> new BufferBuilder(MIN_ALLOCATED_CAPACITY, true);
+        this.builderFunc = (ignore) -> new BufferBuilder(4096, true);
     }
 
     public Action onFragment(
