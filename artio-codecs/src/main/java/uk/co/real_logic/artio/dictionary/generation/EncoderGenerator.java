@@ -121,7 +121,8 @@ public class EncoderGenerator extends Generator
         this.initialArraySize = initialArraySize;
         headerPrefixString = String.format("8=%s.%d.%d\0019=",
             dictionary.specType(),
-            dictionary.majorVersion(), dictionary.minorVersion());
+            dictionary.majorVersion(),
+            dictionary.minorVersion());
 
         maxHeaderPrefixLength = headerPrefixString.length() + MAX_BODY_LENGTH_FIELD_LENGTH;
     }
@@ -194,6 +195,7 @@ public class EncoderGenerator extends Generator
             final Group group = (Group)aggregate;
             out.append(nextMethod(group));
         }
+
         precomputedHeaders(out, aggregate.entries());
         setters(out, className, aggregate.entries());
         out.append(encodeMethod(aggregate.entries(), type));
@@ -205,7 +207,7 @@ public class EncoderGenerator extends Generator
     private String completeResetMethod(
         final Aggregate aggregate, final boolean isMessage, final AggregateType type)
     {
-        final String additionalReset =  type == GROUP ? RESET_NEXT_GROUP : "";
+        final String additionalReset = type == GROUP ? RESET_NEXT_GROUP : "";
         return super.completeResetMethod(isMessage, aggregate.entries(), additionalReset);
     }
 

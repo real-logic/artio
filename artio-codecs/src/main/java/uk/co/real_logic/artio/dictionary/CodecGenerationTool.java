@@ -36,10 +36,10 @@ public final class CodecGenerationTool
 
         final String outputPath = args[0];
         final String files = args[1];
-        final  String[] fileNames = files.split(";");
+        final String[] fileNames = files.split(";");
         if (fileNames.length > 2)
         {
-            System.err.printf("Two many dictionary files(1 or 2 dictionaries supported).%s", files);
+            System.err.print("Two many dictionary files(1 or 2 dictionaries supported)." + files);
             printUsageAndExit();
         }
         Dictionary dictionary = null;
@@ -82,13 +82,13 @@ public final class CodecGenerationTool
         final DictionaryParser parser = new DictionaryParser();
         if (!xmlFile.exists())
         {
-            System.err.printf("xmlFile does not exist: %s\n", xmlFile.getAbsolutePath());
+            System.err.println("xmlFile does not exist: " + xmlFile.getAbsolutePath());
             printUsageAndExit();
         }
 
         if (!xmlFile.isFile())
         {
-            System.out.printf("xmlFile isn't a file, are the arguments the correct way around?\n");
+            System.out.println("xmlFile isn't a file, are the arguments the correct way around?");
             printUsageAndExit();
         }
         try (FileInputStream input = new FileInputStream(xmlFile))

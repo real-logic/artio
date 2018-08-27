@@ -36,9 +36,10 @@ public final class Group extends Aggregate implements Element
     {
         final String name = field.name();
         final String normalisedName = name.startsWith("No") ? name.substring(2) : name;
-        final String fieldName =  name + "GroupCounter";
-        final String groupName =  normalisedName + "Group";
+        final String fieldName = name + "GroupCounter";
+        final String groupName = normalisedName + "Group";
         final Field numberField = new Field(field.number(), fieldName, Field.Type.NUMINGROUP);
+
         return new Group(groupName, new Entry(false, numberField));
     }
 }

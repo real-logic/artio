@@ -15,10 +15,7 @@
  */
 package uk.co.real_logic.artio.builder;
 
-/**
- * .
- */
-public enum  OrdType
+public enum OrdType
 {
     Market,
     Limit,

@@ -127,7 +127,7 @@ public class SenderEndPointTest
         channelWillWrite(0);
         onOutboundMessage(timeInMs, position);
 
-        timeInMs += DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  + 1;
+        timeInMs += DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS + 1;
 
         endPoint.checkTimeouts(timeInMs);
 
@@ -142,7 +142,7 @@ public class SenderEndPointTest
         channelWillWrite(BODY_LENGTH);
         onOutboundMessage(timeInMs, POSITION);
 
-        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1);
+        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS - 1);
 
         endPoint.checkTimeouts(timeInMs);
 
@@ -159,13 +159,13 @@ public class SenderEndPointTest
         channelWillWrite(0);
         onOutboundMessage(timeInMs, POSITION);
 
-        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1);
+        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS - 1);
 
         channelWillWrite(replayWrites);
         onSlowOutboundMessage(timeInMs);
         verifyBlocksLibraryAt(BEGIN_POSITION);
 
-        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1);
+        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS - 1);
 
         endPoint.checkTimeouts(timeInMs);
 
@@ -176,7 +176,7 @@ public class SenderEndPointTest
     @Test
     public void shouldNotDisconnectAtStartDueToTimeout()
     {
-        final long timeInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1;
+        final long timeInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS - 1;
 
         endPoint.checkTimeouts(timeInMs);
 
@@ -192,7 +192,7 @@ public class SenderEndPointTest
         channelWillWrite(BODY_LENGTH);
         onOutboundMessage(timeInMs, POSITION);
 
-        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  + 1);
+        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS + 1);
 
         endPoint.checkTimeouts(timeInMs);
 
@@ -215,7 +215,7 @@ public class SenderEndPointTest
         onSlowOutboundMessage();
         verifyBlocksLibraryAt(BEGIN_POSITION);
 
-        endPoint.checkTimeouts(DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  + 101);
+        endPoint.checkTimeouts(DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS + 101);
 
         verifySlowConsumerDisconnect(times(1));
         errorLogged();

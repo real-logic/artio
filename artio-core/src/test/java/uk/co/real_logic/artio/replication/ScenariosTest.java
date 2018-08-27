@@ -87,7 +87,7 @@ public class ScenariosTest
     public static Iterable<Object[]> parameters()
     {
         final IntStream clusterSizes = IntStream.of(3, 5);
-        return clusterSizes.boxed().flatMap(size ->  Stream.of(
+        return clusterSizes.boxed().flatMap((size) -> Stream.of(
             scenario(size, leader, newLeaderHeartbeat, transitionsToFollower, hasNewLeader(NEW_LEADER_SESSION_ID)),
 
             scenario(size, leader, oldTermLeaderHeartbeat, neverTransitions, ignored),
@@ -393,8 +393,7 @@ public class ScenariosTest
     public static Stimulus newLeaderHeartbeat =
         receivesHeartbeat(NEW_LEADER_ID, NEW_TERM, NEW_LEADER_SESSION_ID, "newLeaderHeartbeat");
 
-    public static Stimulus selfHeartbeat =
-        receivesHeartbeat(ID, NEW_TERM, SESSION_ID, "selfHeartbeat");
+    public static Stimulus selfHeartbeat = receivesHeartbeat(ID, NEW_TERM, SESSION_ID, "selfHeartbeat");
 
     private static Stimulus receivesHeartbeat(
         final short leaderId,

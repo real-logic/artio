@@ -401,28 +401,28 @@ public final class ExampleDictionary
         final Field floatField = registerField(messageEgFields, 117, "FloatField", Type.PRICE);
         final Field booleanField = registerField(messageEgFields, 118, "BooleanField", Type.BOOLEAN);
         final Field dataField = registerField(messageEgFields, 119, "DataField", Type.DATA);
-        final Field someTime = registerField(messageEgFields, 127,  "SomeTimeField", Type.UTCTIMESTAMP);
-        final Field charField = registerField(messageEgFields, 128,  "CharField", Type.CHAR)
+        final Field someTime = registerField(messageEgFields, 127, "SomeTimeField", Type.UTCTIMESTAMP);
+        final Field charField = registerField(messageEgFields, 128, "CharField", Type.CHAR)
             .addValue("a", "One")
             .addValue("b", "Two");
-        final Field multiCharField = registerField(messageEgFields, 132,  "MultiCharField", Type.MULTIPLECHARVALUE)
+        final Field multiCharField = registerField(messageEgFields, 132, "MultiCharField", Type.MULTIPLECHARVALUE)
             .addValue("a", "One")
             .addValue("b", "Two");
 
-        final Field multiValStringField = registerField(messageEgFields, 133,  "MultiValueStringField",
+        final Field multiValStringField = registerField(messageEgFields, 133, "MultiValueStringField",
             Type.MULTIPLEVALUESTRING)
             .addValue("ab", "One")
             .addValue("cd", "Two");
 
-        final Field multiStringValField = registerField(messageEgFields, 135,  "MultiStringValueField",
+        final Field multiStringValField = registerField(messageEgFields, 135, "MultiStringValueField",
             Type.MULTIPLEVALUESTRING)
             .addValue("ab", "One")
             .addValue("cd", "Two");
 
-        final Field multiCharFieldNotAnEnum = registerField(messageEgFields, 134,  "MultiValueCharNoEnumField",
+        final Field multiCharFieldNotAnEnum = registerField(messageEgFields, 134, "MultiValueCharNoEnumField",
             Type.MULTIPLECHARVALUE);
 
-        final Field dayOfMonthField = registerField(messageEgFields, 129,  "DayOfMonthField", Type.DAYOFMONTH);
+        final Field dayOfMonthField = registerField(messageEgFields, 129, "DayOfMonthField", Type.DAYOFMONTH);
 
         final Group nestedGroup = Group.of(registerField(messageEgFields, 122, "NoNestedGroup", INT));
         nestedGroup.optionalEntry(registerField(messageEgFields, 123, "NestedField", INT));
@@ -555,7 +555,6 @@ public final class ExampleDictionary
         fieldEgFields.put("multiStringValueEnum", multiStringValueEnum);
         fieldEgFields.put("egNotEnum", new Field(125, "EgNotEnum", Type.CHAR));
 
-        return new Dictionary(emptyList(), fieldEgFields, emptyMap(), null, null,
-            "FIX", 4, 4);
+        return new Dictionary(emptyList(), fieldEgFields, emptyMap(), null, null, "FIX", 4, 4);
     }
 }
