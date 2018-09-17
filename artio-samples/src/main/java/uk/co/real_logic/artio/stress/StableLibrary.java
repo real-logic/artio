@@ -26,7 +26,7 @@ import static java.util.Collections.singletonList;
 
 public final class StableLibrary
 {
-    public static void main(final String[] args) throws IOException
+    public static void main(final String[] args)
     {
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration()
             .libraryAeronChannels(singletonList(SoleEngine.AERON_CHANNEL))
