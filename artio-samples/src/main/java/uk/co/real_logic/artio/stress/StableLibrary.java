@@ -20,8 +20,6 @@ import uk.co.real_logic.artio.SampleUtil;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 
-import java.io.IOException;
-
 import static java.util.Collections.singletonList;
 
 public final class StableLibrary
