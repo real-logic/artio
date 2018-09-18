@@ -20,13 +20,11 @@ import uk.co.real_logic.artio.SampleUtil;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 
-import java.io.IOException;
-
 import static java.util.Collections.singletonList;
 
 public final class StableLibrary
 {
-    public static void main(final String[] args) throws IOException
+    public static void main(final String[] args)
     {
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration()
             .libraryAeronChannels(singletonList(SoleEngine.AERON_CHANNEL))

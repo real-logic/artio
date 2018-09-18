@@ -43,6 +43,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S;
 import static uk.co.real_logic.artio.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.fields.RejectReason.*;
 import static uk.co.real_logic.artio.messages.DisconnectReason.APPLICATION_DISCONNECT;
 import static uk.co.real_logic.artio.messages.SessionState.*;
@@ -197,18 +198,43 @@ public abstract class AbstractSessionTest
     @Test
     public void shouldNotifyClientUponSequenceReset()
     {
-        final int newSeqNo = 10;
+        final int newSentSeqNo = 10;
+        final int newReceivedSeqNo = 10;
 
         onLogon(1);
 
         assertThat(session().lastSentMsgSeqNum(), lessThanOrEqualTo(1));
 
-        session().sendSequenceReset(newSeqNo);
+        session().sendSequenceReset(newSentSeqNo, newReceivedSeqNo);
 
         final int nextSequenceIndex = SEQUENCE_INDEX + 1;
-        verify(mockProxy).sequenceReset(anyInt(), eq(newSeqNo), eq(nextSequenceIndex));
-        assertEquals(newSeqNo - 1, session().lastSentMsgSeqNum());
+        verify(mockProxy).sequenceReset(anyInt(), eq(newSentSeqNo), eq(nextSequenceIndex));
+        assertEquals(newSentSeqNo - 1, session().lastSentMsgSeqNum());
         assertSequenceIndexIs(nextSequenceIndex);
+    }
+
+    @Test
+    public void shouldResetReceivingSequenceNumbers()
+    {
+        final int newSentSeqNo = 10;
+        final int newReceivedSeqNo = 10;
+
+        givenActive();
+
+        session().sendSequenceReset(newSentSeqNo, newReceivedSeqNo);
+
+        final String testReqId = "hello";
+
+        session().onTestRequest(
+            newReceivedSeqNo,
+            testReqId.toCharArray(),
+            testReqId.length(),
+            sendingTime(),
+            MISSING_LONG,
+            false);
+
+        verifyConnected();
+        assertState(ACTIVE);
     }
 
     @Test

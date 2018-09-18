@@ -36,7 +36,7 @@ import static uk.co.real_logic.artio.stress.StressConfiguration.*;
 
 public final class SerialConnections
 {
-    public static void main(final String[] args) throws Exception
+    public static void main(final String[] args)
     {
         loadPropertiesFiles(args);
 

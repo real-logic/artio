@@ -464,11 +464,31 @@ public class Session implements AutoCloseable
      *                                      sent.
      * @return the position in the stream that corresponds to the end of this message.
      */
-    public long sendSequenceReset(final int nextSentMessageSequenceNumber)
+    public long sendSequenceReset(
+        final int nextSentMessageSequenceNumber)
     {
         nextSequenceIndex();
         final long position = proxy.sequenceReset(lastSentMsgSeqNum, nextSentMessageSequenceNumber, sequenceIndex());
         lastSentMsgSeqNum(nextSentMessageSequenceNumber - 1, position);
+
+        return position;
+    }
+
+    /**
+     * Acts like {@link #sendSequenceReset(int, int)} but also resets the received sequence number.
+     *
+     * @param nextSentMessageSequenceNumber the new sequence number of the next message to be
+     *                                      sent.
+     * @param nextReceivedMessageSequenceNumber the new sequence number of the next message to be
+     *                                          received.
+     * @return the position in the stream that corresponds to the end of this message.
+     */
+    public long sendSequenceReset(
+        final int nextSentMessageSequenceNumber,
+        final int nextReceivedMessageSequenceNumber)
+    {
+        final long position = sendSequenceReset(nextSentMessageSequenceNumber);
+        lastReceivedMsgSeqNum(nextReceivedMessageSequenceNumber - 1);
 
         return position;
     }
@@ -482,7 +502,7 @@ public class Session implements AutoCloseable
      * Resets both the receiver and sender sequence numbers of this session. This is equivalent to
      * sending a Logon message with ResetSeqNum flag set to Y.
      * <p>
-     * If you want to send a sequence reset message then you should use {@link #sendSequenceReset(int)}.
+     * If you want to send a sequence reset message then you should use {@link #sendSequenceReset(int, int)}.
      *
      * @return the position in the stream that corresponds to the end of this message.
      */
