@@ -185,7 +185,11 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
         final int position2 = roundtripABuffer();
         pollUntilRead(leader, 1);
         pollLeaderSubscription();
-        leaderCommitted(position1, position2 - position1, secondValue);
+
+        final DirectBuffer buffer = leaderPolled(HEADER_LENGTH, position2 - position1);
+        assertEquals(secondValue, buffer.getInt(position1 + HEADER_LENGTH + OFFSET));
+
+        pollLeaderSubscription();
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -333,15 +337,19 @@ public class LeaderAndFollowersTest extends AbstractReplicationTest
     }
 
     @SuppressWarnings("FinalParameters")
-    private void leaderCommitted(int offset, int length, final int value)
+    private void leaderCommitted(int offset, final int length, final int value)
     {
         offset += HEADER_LENGTH;
-        length -= HEADER_LENGTH;
+        final DirectBuffer buffer = leaderPolled(offset, length);
+        assertEquals(value, buffer.getInt(offset + OFFSET));
+    }
+
+    private DirectBuffer leaderPolled(final int offset, final int length)
+    {
         final ArgumentCaptor<DirectBuffer> bufferCaptor = ArgumentCaptor.forClass(DirectBuffer.class);
         verify(leaderHandler, atLeastOnce())
-            .onFragment(bufferCaptor.capture(), eq(offset), eq(length), any());
-        final DirectBuffer buffer = bufferCaptor.getValue();
-        assertEquals(value, buffer.getInt(offset + OFFSET));
+            .onFragment(bufferCaptor.capture(), eq(offset), eq(length - HEADER_LENGTH), any());
+        return bufferCaptor.getValue();
     }
 
     private void leaderNeverCommitted()
