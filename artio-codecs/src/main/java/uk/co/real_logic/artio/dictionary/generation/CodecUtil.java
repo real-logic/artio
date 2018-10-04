@@ -23,8 +23,6 @@ public final class CodecUtil
     {
     }
 
-    public static final int BODY_LENGTH_GAP = 4;
-    public static final int BODY_LENGTH_SIZE = BODY_LENGTH_GAP + 1;
     public static final byte[] BODY_LENGTH = "9=0000\001".getBytes(US_ASCII);
 
     public static final int MISSING_INT = Integer.MIN_VALUE;

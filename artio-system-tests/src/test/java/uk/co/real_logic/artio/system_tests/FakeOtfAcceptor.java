@@ -109,11 +109,6 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         return receivedMessages;
     }
 
-    public String lastSenderCompId()
-    {
-        return senderCompId;
-    }
-
     public ValidationError lastError()
     {
         return error;

@@ -45,7 +45,6 @@ final class FixConnection implements AutoCloseable
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
     private final LogonEncoder logon = new LogonEncoder();
     private final LogoutEncoder logout = new LogoutEncoder();
-    private final HeartbeatEncoder heartbeatEncoder = new HeartbeatEncoder();
 
     private final SocketChannel socket;
     private final String senderCompID;
@@ -110,13 +109,6 @@ final class FixConnection implements AutoCloseable
     {
         this.msgSeqNum = msgSeqNum;
         return this;
-    }
-
-    void heartbeat(final long timestamp)
-    {
-        setupHeader(heartbeatEncoder.header(), timestamp);
-
-        send(heartbeatEncoder);
     }
 
     void logout()

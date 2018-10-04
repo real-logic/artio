@@ -73,7 +73,7 @@ public class ReceiverEndPointTest
     private Session session = mock(Session.class);
     private final LongHashSet replicatedConnectionIds = new LongHashSet();
     private final AuthenticationResult authenticationResult = AuthenticationResult.authenticatedSession(
-        gatewaySession, 1, 1);
+        gatewaySession);
     private GatewaySessions mockGatewaySessions = mock(GatewaySessions.class);
     private CompositeKey sessionKey = SessionIdStrategy
         .senderAndTarget()

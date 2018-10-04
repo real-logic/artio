@@ -65,7 +65,6 @@ public final class ExampleDictionary
 
     public static final String HEARTBEAT_ENCODER = TEST_PACKAGE + ".HeartbeatEncoder";
     public static final String COMPONENT_ENCODER = TEST_PACKAGE + "." + EG_COMPONENT + "Encoder";
-    public static final String HEADER_ENCODER = TEST_PACKAGE + ".HeaderEncoder";
 
     public static final String HEARTBEAT_DECODER = TEST_PACKAGE + ".HeartbeatDecoder";
     public static final String ALL_REQ_FIELD_TYPES_MESSAGE_DECODER = TEST_PACKAGE + ".AllReqFieldTypesMessageDecoder";
@@ -83,7 +82,6 @@ public final class ExampleDictionary
     public static final String TEST_REQ_ID = "testReqID";
     public static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
     public static final String INT_FIELD = "intField";
-    public static final String CHAR_FIELD = "charField";
     public static final String FLOAT_FIELD = "floatField";
     public static final String BOOLEAN_FIELD = "booleanField";
     public static final String DATA_FIELD = "dataField";
@@ -103,9 +101,7 @@ public final class ExampleDictionary
     public static final String CHAR_ENUM_RF = "CharEnumRF";
 
     public static final String HAS_TEST_REQ_ID = "hasTestReqID";
-    public static final String HAS_ON_BEHALF_OF_COMP_ID = "hasonBehalfOfCompID";
     public static final String HAS_BOOLEAN_FIELD = "hasBooleanField";
-    public static final String HAS_NESTED_FIELD = "hasNestedField";
     public static final String HAS_DATA_FIELD = "hasDataField";
     public static final String HAS_COMPONENT_FIELD = "hasComponentField";
 

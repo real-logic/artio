@@ -22,7 +22,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Map;
 
@@ -193,18 +192,6 @@ public class EnumGeneratorTest
             .invoke(enumElement);
 
         assertEquals(expected, representation);
-    }
-
-    private void invoke(final Method method, final Object... argument) throws Throwable
-    {
-        try
-        {
-            method.invoke(null, argument);
-        }
-        catch (final InvocationTargetException e)
-        {
-            throw e.getCause();
-        }
     }
 
     private Map<String, CharSequence> generateEnums()

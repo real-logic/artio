@@ -176,7 +176,7 @@ public final class EnumGenerator
         }
 
         final String optionalCharArrayDecode = optionalCharArrayDecode(name, allValues, type);
-        final String enumValidation = enumValidation(name, allValues, type);
+        final String enumValidation = enumValidation(allValues, type);
 
         final Var representation = representation(type);
 
@@ -205,7 +205,7 @@ public final class EnumGenerator
             UNKNOWN_NAME);
     }
 
-    private String enumValidation(final String typeName, final List<Value> allValues, final Type type)
+    private String enumValidation(final List<Value> allValues, final Type type)
     {
         switch (type)
         {

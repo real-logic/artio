@@ -13,35 +13,25 @@ final class AuthenticationResult
     }
 
     final GatewaySession session;
-    final int sentSequenceNumber;
-    final int receivedSequenceNumber;
     final AuthenticationError error;
 
     private AuthenticationResult(final AuthenticationError error)
     {
         this.session = null;
         this.error = error;
-        sentSequenceNumber = -1;
-        receivedSequenceNumber = -1;
     }
 
     private AuthenticationResult(
-        final GatewaySession session,
-        final int sentSequenceNumber,
-        final int receivedSequenceNumber)
+        final GatewaySession session)
     {
         this.session = session;
-        this.sentSequenceNumber = sentSequenceNumber;
-        this.receivedSequenceNumber = receivedSequenceNumber;
         this.error = null;
     }
 
     static AuthenticationResult authenticatedSession(
-        final GatewaySession session,
-        final int sentSequenceNumber,
-        final int receivedSequenceNumber)
+        final GatewaySession session)
     {
-        return new AuthenticationResult(session, sentSequenceNumber, receivedSequenceNumber);
+        return new AuthenticationResult(session);
     }
 
     boolean isDuplicateSession()

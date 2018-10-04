@@ -456,15 +456,5 @@ public class ArchiveReader implements AutoCloseable
                 IoUtil.unmap((MappedByteBuffer)buffer);
             }
         }
-
-        public int sessionId()
-        {
-            return sessionId;
-        }
-
-        public int reservedValueFilter()
-        {
-            return reservedValueFilter;
-        }
     }
 }

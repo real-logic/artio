@@ -292,7 +292,7 @@ class GatewaySessions
         gatewaySession.acceptorSequenceNumbers(sentSequenceNumber, receivedSequenceNumber);
         gatewaySession.persistenceLevel(persistenceLevel);
 
-        return AuthenticationResult.authenticatedSession(gatewaySession, sentSequenceNumber, receivedSequenceNumber);
+        return AuthenticationResult.authenticatedSession(gatewaySession);
     }
 
     private int sequenceNumber(

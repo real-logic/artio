@@ -410,13 +410,6 @@ public class ArchiverTest
         assertBlockReadsValueAt(HEADER_LENGTH);
     }
 
-    public void shouldBlockReadFilteredDataThatWasWritten()
-    {
-        writeAndArchiveBuffer(INITIAL_VALUE, RESERVED_VALUE);
-
-        assertBlockReadsValueAt(INITIAL_VALUE, HEADER_LENGTH, filteredArchiveReader);
-    }
-
     @Test
     public void shouldBlockFilteredDataThatWasWritten()
     {
