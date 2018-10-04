@@ -37,7 +37,7 @@ import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.CompletionPosition;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.SoloPositionSender;
+import uk.co.real_logic.artio.engine.PositionSender;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
@@ -141,7 +141,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Long2LongHashMap resendSlowStatus = new Long2LongHashMap(-1);
     private final Long2LongHashMap resendNotSlowStatus = new Long2LongHashMap(-1);
     private final AgentInvoker conductorAgentInvoker;
-    private final SoloPositionSender nonLoggingPositionSender;
+    private final PositionSender nonLoggingPositionSender;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
@@ -213,7 +213,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             0,
             true);
         nonLoggingPositionSender = configuration.logOutboundMessages() ?
-            null : new SoloPositionSender(inboundPublication);
+            null : new PositionSender(inboundPublication);
 
         // We lookup replayed message by session id, since the connection id may have changed
         // if it's a persistent session.

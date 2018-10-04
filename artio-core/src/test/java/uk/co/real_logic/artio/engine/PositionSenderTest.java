@@ -8,13 +8,13 @@ import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.Publication.CLOSED;
 import static org.mockito.Mockito.*;
 
-public class SoloPositionSenderTest
+public class PositionSenderTest
 {
     private static final int LIBRARY_ID = 1;
     private static final int OTHER_LIBRARY_ID = 2;
 
     private GatewayPublication publication = mock(GatewayPublication.class);
-    private SoloPositionSender positionSender = new SoloPositionSender(publication);
+    private PositionSender positionSender = new PositionSender(publication);
 
     @Test
     public void shouldSendUpdatedPositions()

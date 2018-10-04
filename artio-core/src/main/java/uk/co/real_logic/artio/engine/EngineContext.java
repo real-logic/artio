@@ -22,11 +22,13 @@ import io.aeron.UnavailableImageHandler;
 import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.CompositeAgent;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.SystemEpochClock;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.StreamInformation;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.logger.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.StreamIdentifier;
@@ -41,27 +43,35 @@ import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.suppressingClose;
 import static uk.co.real_logic.artio.protocol.ReservedValue.NO_FILTER;
 
-public abstract class EngineContext implements AutoCloseable
+public class EngineContext implements AutoCloseable
 {
-    protected final Clock clock;
-    protected final EngineConfiguration configuration;
-    protected final ErrorHandler errorHandler;
-    protected final FixCounters fixCounters;
-    protected final Aeron aeron;
-    protected final SenderSequenceNumbers senderSequenceNumbers;
-
+    private final Clock clock;
+    private final EngineConfiguration configuration;
+    private final ErrorHandler errorHandler;
+    private final FixCounters fixCounters;
+    private final Aeron aeron;
+    private final SenderSequenceNumbers senderSequenceNumbers;
+    private final ExclusivePublication replayPublication;
+    private final StreamIdentifier inboundStreamId;
     private final SequenceNumberIndexWriter sentSequenceNumberIndex;
     private final SequenceNumberIndexWriter receivedSequenceNumberIndex;
     private final CompletionPosition inboundCompletionPosition = new CompletionPosition();
     private final CompletionPosition outboundLibraryCompletionPosition = new CompletionPosition();
     private final CompletionPosition outboundClusterCompletionPosition = new CompletionPosition();
+    private final List<Archiver> archivers = new ArrayList<>();
+    private final StreamIdentifier outboundStreamId;
 
-    protected Streams inboundLibraryStreams;
-    protected Streams outboundLibraryStreams;
+    private ArchiveReader outboundArchiveReader;
+    private ArchiveReader inboundArchiveReader;
+    private Archiver inboundArchiver;
+    private Archiver outboundArchiver;
+    private Streams inboundLibraryStreams;
+    private Streams outboundLibraryStreams;
+
     // Indexers are owned by the archivingAgent
-    protected Indexer inboundIndexer;
-    protected Indexer outboundIndexer;
-    protected Agent archivingAgent;
+    private Indexer inboundIndexer;
+    private Indexer outboundIndexer;
+    private Agent archivingAgent;
 
     public static EngineContext of(
         final EngineConfiguration configuration,
@@ -70,7 +80,7 @@ public abstract class EngineContext implements AutoCloseable
         final FixCounters fixCounters,
         final Aeron aeron)
     {
-        return new SoloContext(
+        return new EngineContext(
             configuration,
             errorHandler,
             replayPublication,
@@ -81,6 +91,7 @@ public abstract class EngineContext implements AutoCloseable
     public EngineContext(
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
+        final ExclusivePublication replayPublication,
         final FixCounters fixCounters,
         final Aeron aeron)
     {
@@ -107,6 +118,28 @@ public abstract class EngineContext implements AutoCloseable
         }
         catch (final Exception e)
         {
+            suppressingClose(this, e);
+
+            throw e;
+        }
+
+
+        try
+        {
+            this.replayPublication = replayPublication;
+
+            final String channel = configuration.libraryAeronChannel();
+            this.inboundStreamId = new StreamIdentifier(channel, INBOUND_LIBRARY_STREAM);
+            this.outboundStreamId = new StreamIdentifier(channel, OUTBOUND_LIBRARY_STREAM);
+
+            newStreams();
+            newArchival();
+            newArchivingAgent();
+        }
+        catch (final Exception e)
+        {
+            completeDuringStartup();
+
             suppressingClose(this, e);
 
             throw e;
@@ -166,12 +199,6 @@ public abstract class EngineContext implements AutoCloseable
             archiveReader,
             streamId,
             idleStrategy);
-    }
-
-    public void close()
-    {
-        sentSequenceNumberIndex.close();
-        receivedSequenceNumberIndex.close();
     }
 
     protected ArchiveReader archiveReader(final StreamIdentifier streamId)
@@ -252,9 +279,91 @@ public abstract class EngineContext implements AutoCloseable
             outboundLibraryCompletionPosition);
     }
 
-    public abstract uk.co.real_logic.artio.protocol.Streams outboundLibraryStreams();
+    protected void newArchivingAgent()
+    {
+        if (configuration.logOutboundMessages())
+        {
+            newIndexers(
+                inboundArchiveReader,
+                outboundArchiveReader,
+                new PositionSender(inboundLibraryPublication()));
 
-    public abstract uk.co.real_logic.artio.protocol.Streams inboundLibraryStreams();
+            final Replayer replayer = newReplayer(replayPublication, outboundArchiveReader);
+
+            if (configuration.logInboundMessages())
+            {
+                archiverSubscription(inboundArchiver, inboundStreamId);
+            }
+
+
+            if (configuration.logOutboundMessages())
+            {
+                archiverSubscription(outboundArchiver, outboundStreamId);
+            }
+
+            final List<Agent> agents = new ArrayList<>(archivers);
+            agents.add(inboundIndexer);
+            agents.add(outboundIndexer);
+            agents.add(replayer);
+
+            archivingAgent = new CompositeAgent(agents);
+        }
+        else
+        {
+            final GatewayPublication replayGatewayPublication = new GatewayPublication(
+                replayPublication,
+                fixCounters.failedReplayPublications(),
+                configuration.archiverIdleStrategy(),
+                clock,
+                configuration.outboundMaxClaimAttempts());
+
+            archivingAgent = new GapFiller(
+                inboundLibraryStreams.subscription("replayer"),
+                replayGatewayPublication,
+                configuration.agentNamePrefix(),
+                senderSequenceNumbers);
+        }
+    }
+
+    private void archiverSubscription(final Archiver archiver, final StreamIdentifier streamId)
+    {
+
+        final Subscription subscription = aeron.addSubscription(streamId.channel(), streamId.streamId());
+        StreamInformation.print("Archiver", subscription, configuration);
+        archiver.subscription(subscription);
+    }
+
+    public void newArchival()
+    {
+        if (configuration.logInboundMessages())
+        {
+            inboundArchiver = addArchiver(inboundStreamId, inboundCompletionPosition());
+            inboundArchiveReader = archiveReader(inboundStreamId);
+        }
+
+        if (configuration.logOutboundMessages())
+        {
+            outboundArchiver = addArchiver(outboundStreamId, outboundLibraryCompletionPosition());
+            outboundArchiveReader = archiveReader(outboundStreamId);
+        }
+    }
+
+    private Archiver addArchiver(final StreamIdentifier streamId, final CompletionPosition completionPosition)
+    {
+        final Archiver archiver = archiver(streamId, completionPosition);
+        archivers.add(archiver);
+        return archiver;
+    }
+
+    public Streams outboundLibraryStreams()
+    {
+        return outboundLibraryStreams;
+    }
+
+    public Streams inboundLibraryStreams()
+    {
+        return inboundLibraryStreams;
+    }
 
     // Each invocation should return a new instance of the subscription
     public Subscription outboundLibrarySubscription(
@@ -266,9 +375,22 @@ public abstract class EngineContext implements AutoCloseable
         return subscription;
     }
 
-    public abstract ReplayQuery inboundReplayQuery();
+    public ReplayQuery inboundReplayQuery()
+    {
+        if (!configuration.logInboundMessages())
+        {
+            return null;
+        }
 
-    public abstract GatewayPublication inboundLibraryPublication();
+        final ArchiveReader archiveReader = archiveReader(inboundStreamId);
+        return newReplayQuery(archiveReader, configuration.framerIdleStrategy());
+    }
+
+    public GatewayPublication inboundLibraryPublication()
+    {
+        return inboundLibraryStreams.gatewayPublication(
+            configuration.framerIdleStrategy(), "inboundLibraryPublication");
+    }
 
     public CompletionPosition inboundCompletionPosition()
     {
@@ -300,5 +422,11 @@ public abstract class EngineContext implements AutoCloseable
     public SenderSequenceNumbers senderSequenceNumbers()
     {
         return senderSequenceNumbers;
+    }
+
+    public void close()
+    {
+        Exceptions.closeAll(
+            sentSequenceNumberIndex, receivedSequenceNumberIndex, inboundArchiveReader, outboundArchiveReader);
     }
 }
