@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.ControlledFragmentAssembler;
 import io.aeron.ExclusivePublication;
+import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ExclusiveBufferClaim;
 import io.aeron.logbuffer.Header;
@@ -39,7 +40,6 @@ import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.ProtocolHandler;
 import uk.co.real_logic.artio.protocol.ProtocolSubscription;
-import uk.co.real_logic.artio.replication.ClusterableSubscription;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -89,7 +89,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     private final IdleStrategy idleStrategy;
     private final ErrorHandler errorHandler;
     private final int maxClaimAttempts;
-    private final ClusterableSubscription subscription;
+    private final Subscription subscription;
     private final String agentNamePrefix;
     private final IntHashSet gapFillMessageTypes;
     private final ReplayHandler replayHandler;
@@ -112,7 +112,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         final IdleStrategy idleStrategy,
         final ErrorHandler errorHandler,
         final int maxClaimAttempts,
-        final ClusterableSubscription subscription,
+        final Subscription subscription,
         final String agentNamePrefix,
         final EpochClock clock,
         final Set<String> gapfillOnReplayMessageTypes,
@@ -416,7 +416,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
     public int doWork()
     {
-        return senderSequenceNumbers.poll() + subscription.poll(protocolSubscription, POLL_LIMIT);
+        return senderSequenceNumbers.poll() + subscription.controlledPoll(protocolSubscription, POLL_LIMIT);
     }
 
     public void onClose()

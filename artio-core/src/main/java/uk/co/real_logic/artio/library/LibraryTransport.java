@@ -23,7 +23,6 @@ import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.StreamInformation;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
-import uk.co.real_logic.artio.replication.ClusterableStreams;
 
 import static uk.co.real_logic.artio.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
@@ -52,12 +51,15 @@ class LibraryTransport
 
     void initStreams(final String aeronChannel)
     {
-        final ClusterableStreams soloNode = ClusterableStreams.solo(
-            aeron, aeronChannel, configuration.printAeronStreamIdentifiers());
         DebugLogger.log(LIBRARY_CONNECT, "Directed streams at %s%n", aeronChannel);
 
         final Streams outboundLibraryStreams = new Streams(
-            soloNode, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, clock,
+            aeron,
+            aeronChannel,
+            configuration.printAeronStreamIdentifiers(),
+            fixCounters.failedOutboundPublications(),
+            OUTBOUND_LIBRARY_STREAM,
+            clock,
             configuration.outboundMaxClaimAttempts());
 
         if (isReconnect())
@@ -65,6 +67,7 @@ class LibraryTransport
             inboundSubscription.close();
             outboundPublication.close();
         }
+
         inboundSubscription = aeron.addSubscription(aeronChannel, INBOUND_LIBRARY_STREAM);
         StreamInformation.print(
             "library " + configuration.libraryId() + " inboundSubscription", inboundSubscription, configuration);

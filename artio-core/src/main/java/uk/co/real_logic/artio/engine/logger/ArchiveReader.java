@@ -25,8 +25,8 @@ import org.agrona.collections.Int2ObjectCache;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
-import uk.co.real_logic.artio.replication.ReservedValue;
-import uk.co.real_logic.artio.replication.StreamIdentifier;
+import uk.co.real_logic.artio.protocol.ReservedValue;
+import uk.co.real_logic.artio.protocol.StreamIdentifier;
 import uk.co.real_logic.artio.storage.messages.ArchiveMetaDataDecoder;
 
 import java.io.File;

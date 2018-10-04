@@ -21,7 +21,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.replication.StreamIdentifier;
+import uk.co.real_logic.artio.protocol.StreamIdentifier;
 
 import static uk.co.real_logic.artio.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;

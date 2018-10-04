@@ -29,9 +29,8 @@ import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.StreamInformation;
 import uk.co.real_logic.artio.engine.logger.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.protocol.StreamIdentifier;
 import uk.co.real_logic.artio.protocol.Streams;
-import uk.co.real_logic.artio.replication.ClusterableStreams;
-import uk.co.real_logic.artio.replication.StreamIdentifier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +39,7 @@ import static java.util.Arrays.asList;
 import static uk.co.real_logic.artio.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.suppressingClose;
-import static uk.co.real_logic.artio.replication.ReservedValue.NO_FILTER;
+import static uk.co.real_logic.artio.protocol.ReservedValue.NO_FILTER;
 
 public abstract class EngineContext implements AutoCloseable
 {
@@ -114,13 +113,25 @@ public abstract class EngineContext implements AutoCloseable
         }
     }
 
-    protected void newStreams(final ClusterableStreams node)
+    protected void newStreams()
     {
+        final String libraryAeronChannel = configuration.libraryAeronChannel();
+        final boolean printAeronStreamIdentifiers = configuration.printAeronStreamIdentifiers();
+
         inboundLibraryStreams = new Streams(
-            node, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, clock,
+            aeron,
+            libraryAeronChannel,
+            printAeronStreamIdentifiers,
+            fixCounters.failedInboundPublications(),
+            INBOUND_LIBRARY_STREAM,
+            clock,
             configuration.inboundMaxClaimAttempts());
         outboundLibraryStreams = new Streams(
-            node, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, clock,
+            aeron,
+            libraryAeronChannel,
+            printAeronStreamIdentifiers,
+            fixCounters.failedOutboundPublications(),
+            OUTBOUND_LIBRARY_STREAM, clock,
             configuration.outboundMaxClaimAttempts());
     }
 
@@ -241,9 +252,9 @@ public abstract class EngineContext implements AutoCloseable
             outboundLibraryCompletionPosition);
     }
 
-    public abstract Streams outboundLibraryStreams();
+    public abstract uk.co.real_logic.artio.protocol.Streams outboundLibraryStreams();
 
-    public abstract Streams inboundLibraryStreams();
+    public abstract uk.co.real_logic.artio.protocol.Streams inboundLibraryStreams();
 
     // Each invocation should return a new instance of the subscription
     public Subscription outboundLibrarySubscription(
@@ -256,8 +267,6 @@ public abstract class EngineContext implements AutoCloseable
     }
 
     public abstract ReplayQuery inboundReplayQuery();
-
-    public abstract ClusterableStreams streams();
 
     public abstract GatewayPublication inboundLibraryPublication();
 

@@ -26,10 +26,8 @@ import uk.co.real_logic.artio.StreamInformation;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.logger.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.protocol.StreamIdentifier;
 import uk.co.real_logic.artio.protocol.Streams;
-import uk.co.real_logic.artio.replication.ClusterablePublication;
-import uk.co.real_logic.artio.replication.ClusterableStreams;
-import uk.co.real_logic.artio.replication.StreamIdentifier;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,7 +42,6 @@ class SoloContext extends EngineContext
     private final List<Archiver> archivers = new ArrayList<>();
     private final StreamIdentifier inboundStreamId;
     private final StreamIdentifier outboundStreamId;
-    private final ClusterableStreams node;
 
     private ArchiveReader outboundArchiveReader;
     private ArchiveReader inboundArchiveReader;
@@ -67,8 +64,7 @@ class SoloContext extends EngineContext
             this.inboundStreamId = new StreamIdentifier(channel, INBOUND_LIBRARY_STREAM);
             this.outboundStreamId = new StreamIdentifier(channel, OUTBOUND_LIBRARY_STREAM);
 
-            node = newNode();
-            newStreams(node);
+            newStreams();
             newArchival();
             newArchivingAgent();
         }
@@ -80,12 +76,6 @@ class SoloContext extends EngineContext
 
             throw e;
         }
-    }
-
-    private ClusterableStreams newNode()
-    {
-        return ClusterableStreams.solo(
-            aeron, configuration.libraryAeronChannel(), configuration.printAeronStreamIdentifiers());
     }
 
     private void newArchivingAgent()
@@ -120,7 +110,7 @@ class SoloContext extends EngineContext
         else
         {
             final GatewayPublication replayGatewayPublication = new GatewayPublication(
-                ClusterablePublication.solo(replayPublication),
+                replayPublication,
                 fixCounters.failedReplayPublications(),
                 configuration.archiverIdleStrategy(),
                 clock,
@@ -172,11 +162,6 @@ class SoloContext extends EngineContext
     public Streams inboundLibraryStreams()
     {
         return inboundLibraryStreams;
-    }
-
-    public ClusterableStreams streams()
-    {
-        return node;
     }
 
     public ReplayQuery inboundReplayQuery()

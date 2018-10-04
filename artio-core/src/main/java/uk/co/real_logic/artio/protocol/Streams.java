@@ -15,29 +15,36 @@
  */
 package uk.co.real_logic.artio.protocol;
 
+import io.aeron.Aeron;
+import io.aeron.ExclusivePublication;
+import io.aeron.Subscription;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Clock;
-import uk.co.real_logic.artio.replication.ClusterablePublication;
-import uk.co.real_logic.artio.replication.ClusterableStreams;
-import uk.co.real_logic.artio.replication.ClusterableSubscription;
+import uk.co.real_logic.artio.StreamInformation;
 
 public final class Streams
 {
     private final int streamId;
     private final Clock clock;
-    private final ClusterableStreams node;
+    private final Aeron aeron;
+    private final String aeronChannel;
+    private final boolean printAeronStreamIdentifiers;
     private final AtomicCounter failedPublications;
     private final int maxClaimAttempts;
 
     public Streams(
-        final ClusterableStreams node,
+        final Aeron aeron,
+        final String aeronChannel,
+        final boolean printAeronStreamIdentifiers,
         final AtomicCounter failedPublications,
         final int streamId,
         final Clock clock,
         final int maxClaimAttempts)
     {
-        this.node = node;
+        this.aeron = aeron;
+        this.aeronChannel = aeronChannel;
+        this.printAeronStreamIdentifiers = printAeronStreamIdentifiers;
         this.failedPublications = failedPublications;
         this.streamId = streamId;
         this.clock = clock;
@@ -55,13 +62,17 @@ public final class Streams
         );
     }
 
-    private ClusterablePublication dataPublication(final String name)
+    private ExclusivePublication dataPublication(final String name)
     {
-        return node.publication(streamId, name);
+        final ExclusivePublication publication = aeron.addExclusivePublication(aeronChannel, streamId);
+        StreamInformation.print(name, publication, printAeronStreamIdentifiers);
+        return publication;
     }
 
-    public ClusterableSubscription subscription(final String name)
+    public Subscription subscription(final String name)
     {
-        return node.subscription(streamId, name);
+        final Subscription subscription = aeron.addSubscription(aeronChannel, streamId);
+        StreamInformation.print(name, subscription, printAeronStreamIdentifiers);
+        return subscription;
     }
 }

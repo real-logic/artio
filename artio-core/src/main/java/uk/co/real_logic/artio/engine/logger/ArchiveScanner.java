@@ -21,7 +21,7 @@ import io.aeron.logbuffer.LogBufferDescriptor;
 import io.aeron.logbuffer.TermReader;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.artio.replication.StreamIdentifier;
+import uk.co.real_logic.artio.protocol.StreamIdentifier;
 
 import java.io.File;
 import java.nio.ByteBuffer;

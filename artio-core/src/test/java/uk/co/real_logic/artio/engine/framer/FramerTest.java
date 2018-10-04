@@ -39,7 +39,6 @@ import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
-import uk.co.real_logic.artio.replication.ClusterableStreams;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
@@ -113,7 +112,6 @@ public class FramerTest
     private final Image replaySlowImage = mock(Image.class);
     private final Image peekImage = mock(Image.class);
     private final Image normalImage = mock(Image.class);
-    private final ClusterableStreams node = mock(ClusterableStreams.class);
     private final CompositeKey sessionKey = SessionIdStrategy
         .senderAndTarget()
         .onInitiateLogon("local", "", "", "remote", "", "");
@@ -164,15 +162,12 @@ public class FramerTest
         when(session.logonTime()).thenReturn(-1L);
         when(session.compositeKey()).thenReturn(sessionKey);
 
-        isLeader(true);
-
         framer = new Framer(
             mockClock,
             mock(Timer.class),
             mock(Timer.class),
             engineConfiguration,
             mockEndPointFactory,
-            node,
             outboundLibrarySubscription,
             outboundSlowSubscription,
             replayImage,
@@ -199,11 +194,6 @@ public class FramerTest
             Session.NO_LOGON_TIME,
             sessionContexts,
             0));
-    }
-
-    private void isLeader(final boolean value)
-    {
-        when(node.isLeader()).thenReturn(value);
     }
 
     @After
@@ -507,19 +497,6 @@ public class FramerTest
         releaseConnection(CONTINUE);
 
         verifySessionsAcquired(ACTIVE);
-    }
-
-    @Test
-    public void shouldDisconnectConnectionsToFollowers() throws Exception
-    {
-        isLeader(false);
-
-        openSocket();
-
-        framer.doWork();
-
-        verifyClientDisconnected();
-        verify(errorHandler).onError(any(IllegalStateException.class));
     }
 
     @Test

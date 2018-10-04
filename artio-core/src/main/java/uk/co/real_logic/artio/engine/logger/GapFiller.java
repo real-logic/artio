@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.Agent;
@@ -29,7 +30,6 @@ import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.ProtocolHandler;
 import uk.co.real_logic.artio.protocol.ProtocolSubscription;
-import uk.co.real_logic.artio.replication.ClusterableSubscription;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -43,13 +43,13 @@ public class GapFiller implements ProtocolHandler, Agent
     private final GapFillEncoder encoder = new GapFillEncoder();
 
     private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
-    private final ClusterableSubscription inboundSubscription;
+    private final Subscription inboundSubscription;
     private final GatewayPublication publication;
     private final String agentNamePrefix;
     private final SenderSequenceNumbers senderSequenceNumbers;
 
     public GapFiller(
-        final ClusterableSubscription inboundSubscription,
+        final Subscription inboundSubscription,
         final GatewayPublication publication,
         final String agentNamePrefix,
         final SenderSequenceNumbers senderSequenceNumbers)
@@ -62,7 +62,7 @@ public class GapFiller implements ProtocolHandler, Agent
 
     public int doWork()
     {
-        return senderSequenceNumbers.poll() + inboundSubscription.poll(protocolSubscription, FRAGMENT_LIMIT);
+        return senderSequenceNumbers.poll() + inboundSubscription.controlledPoll(protocolSubscription, FRAGMENT_LIMIT);
     }
 
     public String roleName()

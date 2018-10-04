@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.Subscription;
 import io.aeron.driver.Configuration;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
@@ -40,7 +41,6 @@ import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
-import uk.co.real_logic.artio.replication.ClusterableSubscription;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -74,7 +74,7 @@ public class ReplayerTest extends AbstractLogTest
     private static final int MAX_CLAIM_ATTEMPTS = 100;
 
     private ReplayQuery replayQuery = mock(ReplayQuery.class);
-    private ClusterableSubscription subscription = mock(ClusterableSubscription.class);
+    private Subscription subscription = mock(Subscription.class);
     private IdleStrategy idleStrategy = mock(IdleStrategy.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private EpochClock clock = mock(EpochClock.class);

@@ -13,22 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.replication;
+package uk.co.real_logic.artio.protocol;
 
 import io.aeron.CommonContext;
 import io.aeron.Subscription;
 import io.aeron.driver.media.UdpChannel;
 
-import static io.aeron.CommonContext.SPY_PREFIX;
-
-/**
- * .
- */
 public final class StreamIdentifier
 {
     private final int streamId;
     private final String channel;
-    private final String spyChannel;
     private final String canonicalForm;
 
     public StreamIdentifier(final Subscription subscription)
@@ -40,7 +34,6 @@ public final class StreamIdentifier
     {
         this.streamId = streamId;
         this.channel = channel;
-        spyChannel = SPY_PREFIX + channel;
         if (CommonContext.IPC_CHANNEL.equals(channel))
         {
             canonicalForm = "aeron_ipc";
@@ -59,11 +52,6 @@ public final class StreamIdentifier
     public String channel()
     {
         return channel;
-    }
-
-    public String spyChannel()
-    {
-        return spyChannel;
     }
 
     public String canonicalForm()

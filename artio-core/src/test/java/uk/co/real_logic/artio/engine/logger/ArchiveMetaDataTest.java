@@ -19,7 +19,7 @@ import org.agrona.IoUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.artio.replication.StreamIdentifier;
+import uk.co.real_logic.artio.protocol.StreamIdentifier;
 import uk.co.real_logic.artio.storage.messages.ArchiveMetaDataDecoder;
 
 import java.io.File;

@@ -15,11 +15,11 @@
  */
 package uk.co.real_logic.artio.protocol;
 
+import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
-import uk.co.real_logic.artio.replication.ClusterablePublication;
 
 import static io.aeron.Publication.CLOSED;
 
@@ -34,7 +34,7 @@ class ClaimablePublication implements AutoCloseable
     private final AtomicCounter fails;
     protected final MessageHeaderEncoder header = new MessageHeaderEncoder();
     protected final ExclusiveBufferClaim bufferClaim = new ExclusiveBufferClaim();
-    protected final ClusterablePublication dataPublication;
+    protected final ExclusivePublication dataPublication;
 
     protected final IdleStrategy idleStrategy;
 
@@ -42,7 +42,7 @@ class ClaimablePublication implements AutoCloseable
         final int maxClaimAttempts,
         final IdleStrategy idleStrategy,
         final AtomicCounter fails,
-        final ClusterablePublication dataPublication)
+        final ExclusivePublication dataPublication)
     {
         this.maxClaimAttempts = maxClaimAttempts;
         this.idleStrategy = idleStrategy;

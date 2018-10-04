@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
@@ -24,7 +25,6 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.CompletionPosition;
-import uk.co.real_logic.artio.replication.ClusterableSubscription;
 
 import java.util.List;
 
@@ -41,14 +41,14 @@ public class Indexer implements Agent, ControlledFragmentHandler
 
     private final List<Index> indices;
     private final ArchiveReader archiveReader;
-    private final ClusterableSubscription subscription;
+    private final Subscription subscription;
     private final String agentNamePrefix;
     private final CompletionPosition completionPosition;
 
     public Indexer(
         final List<Index> indices,
         final ArchiveReader archiveReader,
-        final ClusterableSubscription subscription,
+        final Subscription subscription,
         final String agentNamePrefix,
         final CompletionPosition completionPosition)
     {
@@ -62,7 +62,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
 
     public int doWork()
     {
-        return subscription.poll(this, LIMIT) + CollectionUtil.sum(indices, Index::doWork);
+        return subscription.controlledPoll(this, LIMIT) + CollectionUtil.sum(indices, Index::doWork);
     }
 
     private void catchIndexUp()
@@ -125,7 +125,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
         }
 
         // We know that any remaining data to quiesce at this point must be in the subscription.
-        subscription.poll(this::quiesceFragment, Integer.MAX_VALUE);
+        subscription.controlledPoll(this::quiesceFragment, Integer.MAX_VALUE);
     }
 
     private Action quiesceFragment(

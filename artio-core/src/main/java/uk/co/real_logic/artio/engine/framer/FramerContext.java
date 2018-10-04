@@ -27,7 +27,6 @@ import uk.co.real_logic.artio.engine.EngineContext;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
-import uk.co.real_logic.artio.replication.ClusterableStreams;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.timing.EngineTimers;
 
@@ -68,7 +67,6 @@ public class FramerContext
         final AgentInvoker conductorAgentInvoker)
     {
         this.conductorAgentInvoker = conductorAgentInvoker;
-        final ClusterableStreams streams = engineContext.streams();
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
         this.sessionContexts = new SessionContexts(configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
@@ -121,7 +119,6 @@ public class FramerContext
             timers.sendTimer(),
             configuration,
             endPointFactory,
-            streams,
             engineContext.outboundLibrarySubscription(
                 "outboundLibrarySubscription", finalImagePositions),
             engineContext.outboundLibrarySubscription(

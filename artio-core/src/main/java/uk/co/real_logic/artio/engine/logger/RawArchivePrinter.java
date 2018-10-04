@@ -20,7 +20,7 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.replication.StreamIdentifier;
+import uk.co.real_logic.artio.protocol.StreamIdentifier;
 import uk.co.real_logic.artio.sbe_util.MessageDumper;
 import uk.co.real_logic.artio.sbe_util.MessageSchemaIr;
 import uk.co.real_logic.sbe.json.JsonPrinter;

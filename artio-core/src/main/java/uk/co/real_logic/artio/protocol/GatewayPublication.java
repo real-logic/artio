@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.protocol;
 
+import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
@@ -25,7 +26,6 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationEncoder.SessionsEncoder;
-import uk.co.real_logic.artio.replication.ClusterablePublication;
 
 import java.util.List;
 
@@ -101,7 +101,7 @@ public class GatewayPublication extends ClaimablePublication
     private final int maxInitialBodyLength;
 
     public GatewayPublication(
-        final ClusterablePublication dataPublication,
+        final ExclusivePublication dataPublication,
         final AtomicCounter fails,
         final IdleStrategy idleStrategy,
         final Clock clock,
@@ -783,7 +783,7 @@ public class GatewayPublication extends ClaimablePublication
 
     public int id()
     {
-        return dataPublication.id();
+        return dataPublication.sessionId();
     }
 
     public long position()

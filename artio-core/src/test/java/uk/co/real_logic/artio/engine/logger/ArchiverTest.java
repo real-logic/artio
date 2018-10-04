@@ -36,8 +36,8 @@ import org.junit.runners.Parameterized.Parameters;
 import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.engine.CompletionPosition;
-import uk.co.real_logic.artio.replication.ReservedValue;
-import uk.co.real_logic.artio.replication.StreamIdentifier;
+import uk.co.real_logic.artio.protocol.ReservedValue;
+import uk.co.real_logic.artio.protocol.StreamIdentifier;
 
 import java.io.File;
 import java.io.IOException;
@@ -69,7 +69,7 @@ import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_LOGGER_C
 import static uk.co.real_logic.artio.engine.logger.ArchiveDescriptor.alignTerm;
 import static uk.co.real_logic.artio.engine.logger.ArchiveDescriptor.nextTerm;
 import static uk.co.real_logic.artio.engine.logger.ArchiveReader.*;
-import static uk.co.real_logic.artio.replication.ReservedValue.NO_FILTER;
+import static uk.co.real_logic.artio.protocol.ReservedValue.NO_FILTER;
 
 @RunWith(Parameterized.class)
 public class ArchiverTest

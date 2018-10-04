@@ -26,7 +26,6 @@ import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.StreamInformation;
 import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
-import uk.co.real_logic.artio.replication.ClusterableStreams;
 import uk.co.real_logic.artio.timing.EngineTimers;
 
 import java.io.File;
@@ -39,7 +38,7 @@ import static uk.co.real_logic.artio.dictionary.generation.Exceptions.suppressin
 /**
  * A FIX Engine is a process in the gateway that accepts or initiates FIX connections and
  * hands them off to different FixLibrary instances. The engine can replicate and/or durably
- * store streams of FIX messages for replay, archival, administrative or analytics purposes.
+ * store streams2 of FIX messages for replay, archival, administrative or analytics purposes.
  * <p>
  * Each engine can have one or more associated libraries that manage sessions and perform business
  * logic. These may run in the same JVM process or a different JVM process.
@@ -58,7 +57,6 @@ public final class FixEngine extends GatewayProcess
     private EngineScheduler scheduler;
     private FramerContext framerContext;
     private EngineContext engineContext;
-    private ClusterableStreams streams;
 
     /**
      * Launch the engine. This method starts up the engine threads and then returns.
@@ -164,7 +162,6 @@ public final class FixEngine extends GatewayProcess
                 fixCounters,
                 aeron
             );
-            streams = engineContext.streams();
             initFramer(configuration, fixCounters, replayPublication.sessionId());
             initMonitoringAgent(timers.all(), configuration);
         }
@@ -201,21 +198,6 @@ public final class FixEngine extends GatewayProcess
             replayImage("slow-replay", replaySessionId),
             timers,
             aeron.conductorAgentInvoker());
-    }
-
-    /**
-     * Check whether this node believes itself to bethe leader of a cluster. NB: if you aren't running in a cluster
-     * this will always return true.
-     *
-     * NB: This is provided on a "best effort" basis. If this node has become netsplit from other members in a cluster
-     * and they have timed it out, and elected a new leader, this method may return true when another node is actually
-     * considered the leader by a quorum of members.
-     *
-     * @return true if this node believes itself to be a cluster leader, false otherwise
-     */
-    public boolean isLeader()
-    {
-        return streams.isLeader();
     }
 
     private Image replayImage(final String name, final int replaySessionId)

@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import uk.co.real_logic.artio.replication.StreamIdentifier;
+import uk.co.real_logic.artio.protocol.StreamIdentifier;
 
 import java.io.File;
 import java.util.Arrays;

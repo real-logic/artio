@@ -28,8 +28,8 @@ import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.CompletionPosition;
-import uk.co.real_logic.artio.replication.ReservedValue;
-import uk.co.real_logic.artio.replication.StreamIdentifier;
+import uk.co.real_logic.artio.protocol.ReservedValue;
+import uk.co.real_logic.artio.protocol.StreamIdentifier;
 
 import java.io.File;
 import java.io.IOException;
@@ -83,12 +83,6 @@ public class Archiver implements Agent, RawBlockHandler
         this.agentNamePrefix = agentNamePrefix;
         this.completionPosition = completionPosition;
         sessionIdToArchive = new Int2ObjectCache<>(cacheNumSets, cacheSetSize, SessionArchiver::close);
-    }
-
-    public Archiver positionHandler(final ArchivedPositionHandler positionHandler)
-    {
-        this.positionHandler = positionHandler;
-        return this;
     }
 
     public Archiver subscription(final Subscription subscription)
@@ -456,8 +450,8 @@ public class Archiver implements Agent, RawBlockHandler
 
         private void writeChecksum(final DataHeaderFlyweight header)
         {
-            final int clusterStreamId = ReservedValue.clusterStreamId(header.reservedValue());
             final int checksumValue = (int)checksum.getValue();
+            final int clusterStreamId = ReservedValue.clusterStreamId(header.reservedValue());
             header.reservedValue(ReservedValue.of(clusterStreamId, checksumValue));
         }
 

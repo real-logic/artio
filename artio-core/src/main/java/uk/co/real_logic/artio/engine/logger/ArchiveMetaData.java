@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import org.agrona.IoUtil;
 import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.artio.replication.StreamIdentifier;
+import uk.co.real_logic.artio.protocol.StreamIdentifier;
 import uk.co.real_logic.artio.storage.messages.ArchiveMetaDataDecoder;
 import uk.co.real_logic.artio.storage.messages.ArchiveMetaDataEncoder;
 import uk.co.real_logic.artio.storage.messages.MessageHeaderDecoder;

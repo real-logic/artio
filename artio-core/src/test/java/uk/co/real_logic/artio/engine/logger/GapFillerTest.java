@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.Subscription;
 import org.agrona.DirectBuffer;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -23,7 +24,6 @@ import uk.co.real_logic.artio.decoder.ResendRequestDecoder;
 import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
-import uk.co.real_logic.artio.replication.ClusterableSubscription;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -38,7 +38,7 @@ import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 public class GapFillerTest extends AbstractLogTest
 {
     private GatewayPublication publication = mock(GatewayPublication.class);
-    private ClusterableSubscription subscription = mock(ClusterableSubscription.class);
+    private Subscription subscription = mock(Subscription.class);
     private SenderSequenceNumbers senderSequenceNumbers = mock(SenderSequenceNumbers.class);
     private GapFiller gapFiller = new GapFiller(subscription, publication, DEFAULT_NAME_PREFIX, senderSequenceNumbers);
 

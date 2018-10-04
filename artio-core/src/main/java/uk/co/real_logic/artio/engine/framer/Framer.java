@@ -44,7 +44,6 @@ import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.*;
-import uk.co.real_logic.artio.replication.ClusterableStreams;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
@@ -53,7 +52,6 @@ import uk.co.real_logic.artio.timing.Timer;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -64,7 +62,6 @@ import java.util.function.Predicate;
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.collections.CollectionUtil.removeIf;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
@@ -90,14 +87,6 @@ import static uk.co.real_logic.artio.messages.SessionState.CONNECTED;
  */
 class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 {
-    private static final ByteBuffer CONNECT_ERROR;
-
-    static
-    {
-        final byte[] errorBytes =
-            "This is not the cluster's leader node, please connect to the leader".getBytes(US_ASCII);
-        CONNECT_ERROR = ByteBuffer.wrap(errorBytes);
-    }
 
     private final RetryManager retryManager = new RetryManager();
     private final List<ResetSequenceNumberCommand> replies = new ArrayList<>();
@@ -122,7 +111,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private final EngineConfiguration configuration;
     private final EndPointFactory endPointFactory;
-    private final ClusterableStreams clusterableStreams;
     private final Subscription librarySubscription;
     private final SubscriptionSlowPeeker librarySlowPeeker;
     private final Image replayImage;
@@ -163,7 +151,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final Timer sendTimer,
         final EngineConfiguration configuration,
         final EndPointFactory endPointFactory,
-        final ClusterableStreams clusterableStreams,
         final Subscription librarySubscription,
         final Subscription slowSubscription,
         final Image replayImage,
@@ -197,7 +184,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.errorHandler = errorHandler;
         this.outboundPublication = outboundPublication;
         this.inboundPublication = inboundPublication;
-        this.clusterableStreams = clusterableStreams;
         this.agentNamePrefix = agentNamePrefix;
         this.inboundCompletionPosition = inboundCompletionPosition;
         this.outboundLibraryCompletionPosition = outboundLibraryCompletionPosition;
@@ -499,45 +485,30 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void onNewConnection(final long timeInMs, final TcpChannel channel) throws IOException
     {
-        if (clusterableStreams.isLeader())
+        final long connectionId = this.nextConnectionId++;
+        final GatewaySession session = setupConnection(
+            channel, connectionId, UNKNOWN_SESSION, null, ENGINE_LIBRARY_ID, ACCEPTOR, DETERMINE_AT_LOGON);
+
+        session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
+
+        gatewaySessions.acquire(
+            session,
+            CONNECTED,
+            configuration.defaultHeartbeatIntervalInS(),
+            UNK_SESSION,
+            UNK_SESSION,
+            null,
+            null,
+            engineBlockablePosition);
+
+        final String address = channel.remoteAddress();
+        // In this case the save connect is simply logged for posterities sake
+        // So in the back-pressure we should just drop it
+        final long position = inboundPublication.saveConnect(connectionId, address);
+        if (isBackPressured(position))
         {
-            final long connectionId = this.nextConnectionId++;
-            final GatewaySession session = setupConnection(
-                channel, connectionId, UNKNOWN_SESSION, null, ENGINE_LIBRARY_ID, ACCEPTOR, DETERMINE_AT_LOGON);
-
-            session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
-
-            gatewaySessions.acquire(
-                session,
-                CONNECTED,
-                configuration.defaultHeartbeatIntervalInS(),
-                UNK_SESSION,
-                UNK_SESSION,
-                null,
-                null,
-                engineBlockablePosition);
-
-            final String address = channel.remoteAddress();
-            // In this case the save connect is simply logged for posterities sake
-            // So in the back-pressure we should just drop it
-            final long position = inboundPublication.saveConnect(connectionId, address);
-            if (isBackPressured(position))
-            {
-                errorHandler.onError(new IllegalStateException(
-                    "Failed to log connect from " + address + " due to backpressure"));
-            }
-        }
-        else
-        {
-            final String address = channel.remoteAddress();
             errorHandler.onError(new IllegalStateException(
-                String.format("Attempted connection from %s whilst follower", address)));
-
-            // NB: channel is still blocking at this point, so will be placed in buffer
-            // NB: Writing error message is best effort, possible that other end closes
-            // Before receipt.
-            channel.write(CONNECT_ERROR);
-            channel.close();
+                "Failed to log connect from " + address + " due to backpressure"));
         }
     }
 
@@ -777,10 +748,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         final long now = outboundTimer.recordSince(timestamp);
 
-        if (!clusterableStreams.isLeader())
-        {
-            sessionContexts.onSentFollowerMessage(sessionId, sequenceIndex, messageType, buffer, offset, length);
-        }
+        sessionContexts.onSentFollowerMessage(sessionId, sequenceIndex, messageType, buffer, offset, length);
 
         senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length, sequenceNumber, position);
 
