@@ -276,7 +276,7 @@ class GatewaySessions
                 "Exception thrown by persistence strategy for connectionId=%d, defaulted to LOCAL_ARCHIVE",
                 connectionId);
             errorHandler.onError(new FixGatewayException(message, throwable));
-            persistenceLevel = PersistenceLevel.LOCAL_ARCHIVE;
+            persistenceLevel = PersistenceLevel.UNINDEXED;
         }
 
         final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();

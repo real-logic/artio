@@ -197,7 +197,6 @@ project(':artio-codecs') {
             'sbe.validation.xsd': validationXsdPath)
         args = [
             'src/main/resources/uk/co/real_logic/artio/messages/message-schema.xml',
-            'src/main/resources/uk/co/real_logic/artio/replication/replication-message-schema.xml',
             'src/main/resources/uk/co/real_logic/artio/storage/storage-message-schema.xml'
         ]
     }

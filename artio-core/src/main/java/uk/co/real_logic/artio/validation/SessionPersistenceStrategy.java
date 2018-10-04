@@ -17,8 +17,8 @@ package uk.co.real_logic.artio.validation;
 
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 
-import static uk.co.real_logic.artio.validation.PersistenceLevel.LOCAL_ARCHIVE;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.REPLICATED;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
 
 /**
  * Determines whether a session should be replicated or not.
@@ -28,21 +28,21 @@ public interface SessionPersistenceStrategy
 {
     static SessionPersistenceStrategy alwaysReplicated()
     {
-        return (logon) -> REPLICATED;
+        return (logon) -> INDEXED;
     }
 
     static SessionPersistenceStrategy alwaysLocallyArchive()
     {
-        return (logon) -> LOCAL_ARCHIVE;
+        return (logon) -> UNINDEXED;
     }
 
     static boolean resetSequenceNumbersUponLogon(final PersistenceLevel persistenceLevel)
     {
         switch (persistenceLevel)
         {
-            case REPLICATED:
+            case INDEXED:
                 return false;
-            case LOCAL_ARCHIVE:
+            case UNINDEXED:
                 return true;
             default:
                 throw new IllegalArgumentException("persistenceLevel=" + persistenceLevel);

@@ -17,9 +17,14 @@ package uk.co.real_logic.artio.validation;
 
 public enum PersistenceLevel
 {
-    /** Locally archive messages to disk, does not replicate or index them, resets sequence numbers upon connect */
-    LOCAL_ARCHIVE,
+    /**
+     * Locally archive messages to disk, but does not index them, automatically resets
+     * sequence numbers upon connect
+     */
+    UNINDEXED,
 
-    /** archives messages to disk, replicates them, persists sequence numbers over reconnects */
-    REPLICATED
+    /**
+     *  Indexes archived messages and persists sequence numbers over reconnects
+     */
+    INDEXED
 }

@@ -46,7 +46,7 @@ import static uk.co.real_logic.artio.messages.SessionReplyStatus.SEQUENCE_NUMBER
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasSequenceIndex;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.REPLICATED;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
 
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
@@ -250,7 +250,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         mediaDriver = launchMediaDriver();
 
         final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
-        config.sessionPersistenceStrategy(logon -> REPLICATED);
+        config.sessionPersistenceStrategy(logon -> INDEXED);
         config.printErrorMessages(printErrorMessages);
         acceptingEngine = FixEngine.launch(config);
         initiatingEngine = launchInitiatingEngineWithSameLogs(libraryAeronPort);

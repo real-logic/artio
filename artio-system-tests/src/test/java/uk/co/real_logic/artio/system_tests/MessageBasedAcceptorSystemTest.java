@@ -32,8 +32,8 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.LOCAL_ARCHIVE;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.REPLICATED;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
 
 public class MessageBasedAcceptorSystemTest
 {
@@ -103,7 +103,7 @@ public class MessageBasedAcceptorSystemTest
             .libraryAeronChannel(IPC_CHANNEL)
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(ACCEPTOR_LOGS)
-            .sessionPersistenceStrategy(logon -> sequenceNumberReset ? LOCAL_ARCHIVE : REPLICATED);
+            .sessionPersistenceStrategy(logon -> sequenceNumberReset ? UNINDEXED : INDEXED);
         engine = FixEngine.launch(config);
     }
 

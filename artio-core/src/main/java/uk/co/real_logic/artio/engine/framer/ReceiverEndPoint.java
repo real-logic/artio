@@ -49,8 +49,8 @@ import static uk.co.real_logic.artio.messages.MessageStatus.*;
 import static uk.co.real_logic.artio.messages.SequenceNumberType.TRANSIENT;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
 import static uk.co.real_logic.artio.util.AsciiBuffer.UNKNOWN_INDEX;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.LOCAL_ARCHIVE;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.REPLICATED;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
 
 /**
  * Handles incoming data from sockets.
@@ -148,7 +148,7 @@ class ReceiverEndPoint
         // Initiator sessions are persistent if the sequence numbers are expected to be persistent.
         if (connectionType == INITIATOR)
         {
-            choosePublication(sequenceNumberType == TRANSIENT ? LOCAL_ARCHIVE : REPLICATED);
+            choosePublication(sequenceNumberType == TRANSIENT ? UNINDEXED : INDEXED);
         }
     }
 
@@ -630,7 +630,7 @@ class ReceiverEndPoint
 
     private void choosePublication(final PersistenceLevel persistenceLevel)
     {
-        if (persistenceLevel == REPLICATED)
+        if (persistenceLevel == INDEXED)
         {
             publication = clusterablePublication;
             replicatedConnectionIds.add(connectionId);
