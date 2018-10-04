@@ -17,8 +17,8 @@ package uk.co.real_logic.artio.validation;
 
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 
-import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
 
 /**
  * Determines whether a session should be replicated or not.

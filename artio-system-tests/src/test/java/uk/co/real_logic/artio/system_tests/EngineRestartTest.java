@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import io.aeron.driver.MediaDriver;
+import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.Test;
 import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -23,9 +23,9 @@ import uk.co.real_logic.artio.engine.FixEngine;
 public class EngineRestartTest
 {
     @Test
-    public void shouldRestartWithoutSessions() throws Exception
+    public void shouldRestartWithoutSessions()
     {
-        MediaDriver mediaDriver = null;
+        ArchivingMediaDriver mediaDriver = null;
         try
         {
             mediaDriver = TestFixtures.launchMediaDriver();

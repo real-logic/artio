@@ -15,18 +15,13 @@
  */
 package uk.co.real_logic.artio.dictionary;
 
+import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
+import uk.co.real_logic.artio.dictionary.ir.*;
+import uk.co.real_logic.artio.dictionary.ir.Field.Type;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-
-import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
-import uk.co.real_logic.artio.dictionary.ir.Component;
-import uk.co.real_logic.artio.dictionary.ir.Dictionary;
-import uk.co.real_logic.artio.dictionary.ir.Field;
-import uk.co.real_logic.artio.dictionary.ir.Field.Type;
-import uk.co.real_logic.artio.dictionary.ir.Group;
-import uk.co.real_logic.artio.dictionary.ir.Message;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
@@ -36,12 +31,6 @@ import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.ENCODE
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
 import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
 import static uk.co.real_logic.artio.dictionary.ir.Category.APP;
-import static uk.co.real_logic.artio.dictionary.ir.Field.Type.CHAR;
-import static uk.co.real_logic.artio.dictionary.ir.Field.Type.COUNTRY;
-import static uk.co.real_logic.artio.dictionary.ir.Field.Type.CURRENCY;
-import static uk.co.real_logic.artio.dictionary.ir.Field.Type.EXCHANGE;
-import static uk.co.real_logic.artio.dictionary.ir.Field.Type.INT;
-import static uk.co.real_logic.artio.dictionary.ir.Field.Type.STRING;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.*;
 import static uk.co.real_logic.artio.dictionary.ir.Field.registerField;
 

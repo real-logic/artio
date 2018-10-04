@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import io.aeron.driver.MediaDriver;
+import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.IoUtil;
 import org.junit.After;
 import org.junit.Before;
@@ -42,7 +42,7 @@ public class LibraryAndGatewayRandomTimeoutTest
 {
     private int aeronPort = unusedPort();
     private int port = unusedPort();
-    private MediaDriver mediaDriver;
+    private ArchivingMediaDriver mediaDriver;
     private FixEngine initiatingEngine;
     private FixLibrary initiatingLibrary;
 

@@ -49,8 +49,8 @@ import static uk.co.real_logic.artio.messages.MessageStatus.*;
 import static uk.co.real_logic.artio.messages.SequenceNumberType.TRANSIENT;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
 import static uk.co.real_logic.artio.util.AsciiBuffer.UNKNOWN_INDEX;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
 
 /**
  * Handles incoming data from sockets.

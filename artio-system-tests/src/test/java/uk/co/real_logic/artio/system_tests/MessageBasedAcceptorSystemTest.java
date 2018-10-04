@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import io.aeron.driver.MediaDriver;
+import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
@@ -32,14 +32,14 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
 
 public class MessageBasedAcceptorSystemTest
 {
     private int port = unusedPort();
 
-    private MediaDriver mediaDriver;
+    private ArchivingMediaDriver mediaDriver;
     private FixEngine engine;
 
     // Trying to reproduce

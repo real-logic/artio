@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import io.aeron.driver.MediaDriver;
+import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.junit.After;
 import uk.co.real_logic.artio.Constants;
@@ -40,7 +40,7 @@ public class AbstractGatewayToGatewaySystemTest
 {
     protected int port = unusedPort();
     protected int libraryAeronPort = unusedPort();
-    protected MediaDriver mediaDriver;
+    protected ArchivingMediaDriver mediaDriver;
     protected TestSystem testSystem;
 
     FixEngine acceptingEngine;

@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import io.aeron.archive.Archive;
+import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.driver.MediaDriver;
 import org.junit.Before;
 import org.junit.Test;
@@ -63,7 +65,7 @@ public class MediaDriverRestartTest extends AbstractGatewayToGatewaySystemTest
         context.driverTimeoutMs(DRIVER_TIMEOUT_MS);
         context.warnIfDirectoryExists(false);
 
-        mediaDriver = MediaDriver.launch(context);
+        mediaDriver = ArchivingMediaDriver.launch(context, new Archive.Context());
         final String aeronDirectoryName = context.aeronDirectoryName();
         CloseChecker.onOpen(aeronDirectoryName, mediaDriver);
 

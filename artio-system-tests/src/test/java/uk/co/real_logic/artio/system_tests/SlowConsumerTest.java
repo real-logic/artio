@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import io.aeron.driver.MediaDriver;
+import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.Timing;
@@ -55,7 +55,7 @@ public class SlowConsumerTest
     private static final int TEST_TIMEOUT = 20_000;
 
     private int port = unusedPort();
-    private MediaDriver mediaDriver;
+    private ArchivingMediaDriver mediaDriver;
     private FixEngine engine;
     private FixLibrary library;
     private FakeOtfAcceptor acceptingOtfAcceptor = new FakeOtfAcceptor();

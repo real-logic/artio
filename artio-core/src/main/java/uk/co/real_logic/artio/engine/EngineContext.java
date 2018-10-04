@@ -51,6 +51,7 @@ public class EngineContext implements AutoCloseable
     private final FixCounters fixCounters;
     private final Aeron aeron;
     private final SenderSequenceNumbers senderSequenceNumbers;
+    private final StartRecordingCoordinator startRecordingCoordinator;
     private final ExclusivePublication replayPublication;
     private final StreamIdentifier inboundStreamId;
     private final SequenceNumberIndexWriter sentSequenceNumberIndex;
@@ -73,33 +74,21 @@ public class EngineContext implements AutoCloseable
     private Indexer outboundIndexer;
     private Agent archivingAgent;
 
-    public static EngineContext of(
-        final EngineConfiguration configuration,
-        final ErrorHandler errorHandler,
-        final ExclusivePublication replayPublication,
-        final FixCounters fixCounters,
-        final Aeron aeron)
-    {
-        return new EngineContext(
-            configuration,
-            errorHandler,
-            replayPublication,
-            fixCounters,
-            aeron);
-    }
-
     public EngineContext(
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
         final ExclusivePublication replayPublication,
         final FixCounters fixCounters,
-        final Aeron aeron)
+        final Aeron aeron,
+        final StartRecordingCoordinator startRecordingCoordinator)
     {
         this.configuration = configuration;
         this.errorHandler = errorHandler;
         this.fixCounters = fixCounters;
         this.aeron = aeron;
         this.clock = configuration.clock();
+        this.replayPublication = replayPublication;
+        this.startRecordingCoordinator = startRecordingCoordinator;
 
         senderSequenceNumbers = new SenderSequenceNumbers(configuration.framerIdleStrategy());
 
@@ -115,18 +104,6 @@ public class EngineContext implements AutoCloseable
                 configuration.receivedSequenceNumberIndex(),
                 errorHandler,
                 INBOUND_LIBRARY_STREAM);
-        }
-        catch (final Exception e)
-        {
-            suppressingClose(this, e);
-
-            throw e;
-        }
-
-
-        try
-        {
-            this.replayPublication = replayPublication;
 
             final String channel = configuration.libraryAeronChannel();
             this.inboundStreamId = new StreamIdentifier(channel, INBOUND_LIBRARY_STREAM);
@@ -158,14 +135,16 @@ public class EngineContext implements AutoCloseable
             fixCounters.failedInboundPublications(),
             INBOUND_LIBRARY_STREAM,
             clock,
-            configuration.inboundMaxClaimAttempts());
+            configuration.inboundMaxClaimAttempts(),
+            startRecordingCoordinator);
         outboundLibraryStreams = new Streams(
             aeron,
             libraryAeronChannel,
             printAeronStreamIdentifiers,
             fixCounters.failedOutboundPublications(),
             OUTBOUND_LIBRARY_STREAM, clock,
-            configuration.outboundMaxClaimAttempts());
+            configuration.outboundMaxClaimAttempts(),
+            startRecordingCoordinator);
     }
 
     protected ReplayIndex newReplayIndex(

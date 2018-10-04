@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.engine;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
 import io.aeron.Subscription;
+import io.aeron.archive.client.AeronArchive;
 import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.FixCounters;
@@ -53,6 +54,8 @@ public final class FixEngine extends GatewayProcess
 
     private final EngineTimers timers;
     private final EngineConfiguration configuration;
+    private final AeronArchive aeronArchive;
+    private final StartRecordingCoordinator startRecordingCoordinator;
 
     private EngineScheduler scheduler;
     private FramerContext framerContext;
@@ -153,17 +156,21 @@ public final class FixEngine extends GatewayProcess
             scheduler.configure(configuration.aeronContext());
             init(configuration);
             this.configuration = configuration;
+            aeronArchive = AeronArchive.connect();
+            startRecordingCoordinator = new StartRecordingCoordinator(
+                aeronArchive, configuration.libraryAeronChannel());
 
             final ExclusivePublication replayPublication = replayPublication();
-            engineContext = EngineContext.of(
+            engineContext = new EngineContext(
                 configuration,
                 errorHandler,
                 replayPublication,
                 fixCounters,
-                aeron
-            );
+                aeron,
+                startRecordingCoordinator);
             initFramer(configuration, fixCounters, replayPublication.sessionId());
             initMonitoringAgent(timers.all(), configuration);
+            startRecordingCoordinator.awaitReady();
         }
         catch (final Exception e)
         {
@@ -254,7 +261,7 @@ public final class FixEngine extends GatewayProcess
     {
         synchronized (CLOSE_MUTEX)
         {
-            closeAll(scheduler, engineContext, configuration, super::close);
+            closeAll(scheduler, engineContext, configuration, aeronArchive, super::close);
         }
     }
 

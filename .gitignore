@@ -51,3 +51,5 @@ liblagent.so
 
 *attach_pid*
 file-leak-detector-*
+
+*/aeron-archive/*

@@ -15,16 +15,13 @@
  */
 package uk.co.real_logic.artio.dictionary;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.function.Consumer;
+import org.agrona.LangUtil;
+import org.agrona.Verify;
+import org.w3c.dom.*;
+import uk.co.real_logic.artio.dictionary.ir.*;
+import uk.co.real_logic.artio.dictionary.ir.Dictionary;
+import uk.co.real_logic.artio.dictionary.ir.Field.Type;
+import uk.co.real_logic.artio.dictionary.ir.Field.Value;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -33,31 +30,13 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-
-import org.agrona.LangUtil;
-import org.agrona.Verify;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-
-
-import uk.co.real_logic.artio.dictionary.ir.Aggregate;
-import uk.co.real_logic.artio.dictionary.ir.Category;
-import uk.co.real_logic.artio.dictionary.ir.Component;
-import uk.co.real_logic.artio.dictionary.ir.Dictionary;
-import uk.co.real_logic.artio.dictionary.ir.Entry;
-import uk.co.real_logic.artio.dictionary.ir.Field;
-import uk.co.real_logic.artio.dictionary.ir.Field.Type;
-import uk.co.real_logic.artio.dictionary.ir.Field.Value;
-import uk.co.real_logic.artio.dictionary.ir.Group;
-import uk.co.real_logic.artio.dictionary.ir.Message;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.*;
+import java.util.function.Consumer;
 
 import static javax.xml.xpath.XPathConstants.NODESET;
-import static uk.co.real_logic.artio.dictionary.ir.Field.Type.CHAR;
-import static uk.co.real_logic.artio.dictionary.ir.Field.Type.NUMINGROUP;
-import static uk.co.real_logic.artio.dictionary.ir.Field.Type.STRING;
+import static uk.co.real_logic.artio.dictionary.ir.Field.Type.*;
 
 /**
  * Parses XML format dictionary files and into instances of

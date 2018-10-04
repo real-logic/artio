@@ -19,21 +19,15 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-
 import uk.co.real_logic.artio.util.Reflection;
 
 import java.util.Map;
 import java.util.Set;
 
 import static org.agrona.generation.CompilerUtil.compileInMemory;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-
-
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.artio.util.Reflection.getField;
 

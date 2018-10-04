@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio;
 
+import io.aeron.archive.Archive;
+import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.driver.MediaDriver;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.YieldingIdleStrategy;
@@ -41,19 +43,19 @@ public final class TestFixtures
         throw new IllegalStateException("The test framework has run out of ports");
     }
 
-    public static MediaDriver launchMediaDriver()
+    public static ArchivingMediaDriver launchMediaDriver()
     {
         return launchMediaDriver(TERM_BUFFER_LENGTH);
     }
 
-    public static MediaDriver launchMediaDriver(final int termBufferLength)
+    public static ArchivingMediaDriver launchMediaDriver(final int termBufferLength)
     {
         return launchMediaDriver(mediaDriverContext(termBufferLength, true));
     }
 
-    public static MediaDriver launchMediaDriver(final MediaDriver.Context context)
+    public static ArchivingMediaDriver launchMediaDriver(final MediaDriver.Context context)
     {
-        final MediaDriver mediaDriver = MediaDriver.launch(context);
+        final ArchivingMediaDriver mediaDriver = ArchivingMediaDriver.launch(context, new Archive.Context());
         final String aeronDirectoryName = context.aeronDirectoryName();
         CloseChecker.onOpen(aeronDirectoryName, mediaDriver);
 
@@ -72,7 +74,7 @@ public final class TestFixtures
             .ipcTermBufferLength(termBufferLength);
     }
 
-    public static void cleanupMediaDriver(final MediaDriver mediaDriver)
+    public static void cleanupMediaDriver(final ArchivingMediaDriver mediaDriver)
     {
         if (mediaDriver != null)
         {
@@ -87,16 +89,12 @@ public final class TestFixtures
         }
     }
 
-    public static String closeMediaDriver(final MediaDriver mediaDriver)
+    public static String closeMediaDriver(final ArchivingMediaDriver archivingMediaDriver)
     {
-        final String aeronDirectoryName = mediaDriver.aeronDirectoryName();
-        CloseChecker.onClose(aeronDirectoryName, mediaDriver);
-        mediaDriver.close();
+        final String aeronDirectoryName = archivingMediaDriver.mediaDriver().aeronDirectoryName();
+        CloseChecker.onClose(aeronDirectoryName, archivingMediaDriver);
+        archivingMediaDriver.close();
         return aeronDirectoryName;
     }
 
-    public static String clusteredAeronChannel()
-    {
-        return "aeron:udp?endpoint=224.0.1.1:" + unusedPort();
-    }
 }

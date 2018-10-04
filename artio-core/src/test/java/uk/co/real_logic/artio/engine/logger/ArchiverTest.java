@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.Aeron;
 import io.aeron.Publication;
-import io.aeron.driver.MediaDriver;
+import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.logbuffer.BlockHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.protocol.DataHeaderFlyweight;
@@ -110,7 +110,7 @@ public class ArchiverTest
     private final UnsafeBuffer writeBuffer;
 
     private LogDirectoryDescriptor logDirectoryDescriptor;
-    private MediaDriver mediaDriver;
+    private ArchivingMediaDriver mediaDriver;
     private Aeron aeron;
     private Archiver archiver;
     private ArchiveReader archiveReader;

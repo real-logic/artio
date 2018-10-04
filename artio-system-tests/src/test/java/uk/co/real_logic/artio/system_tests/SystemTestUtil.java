@@ -232,7 +232,7 @@ public final class SystemTestUtil
 
         return configuration
             .bindTo("localhost", port)
-            .libraryAeronChannel("aeron:ipc")
+            .libraryAeronChannel(IPC_CHANNEL)
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(acceptorLogs)
             .scheduler(new LowResourceEngineScheduler());

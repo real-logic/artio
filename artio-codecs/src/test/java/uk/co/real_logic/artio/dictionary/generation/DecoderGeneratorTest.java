@@ -15,22 +15,10 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Set;
-
 import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import static org.agrona.generation.CompilerUtil.compileInMemory;
-import static org.hamcrest.Matchers.*;
-
-
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 import uk.co.real_logic.artio.fields.DecimalFloat;
@@ -39,21 +27,22 @@ import uk.co.real_logic.artio.util.AsciiSequenceView;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.util.Reflection;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
+
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
+import static org.agrona.generation.CompilerUtil.compileInMemory;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.builder.Decoder.NO_ERROR;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.*;
-import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.CODEC_LOGGING;
-import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.INVALID_TAG_NUMBER;
-import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.REQUIRED_FIELDS;
-import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.REQUIRED_TAG_MISSING;
-import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_APPEARS_MORE_THAN_ONCE;
-import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE;
-import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER;
-import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_SPECIFIED_WITHOUT_A_VALUE;
-import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.VALUE_IS_INCORRECT;
+import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.*;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.UNKNOWN_NAME;
 import static uk.co.real_logic.artio.fields.DecimalFloat.MISSING_FLOAT;
 import static uk.co.real_logic.artio.util.Reflection.*;

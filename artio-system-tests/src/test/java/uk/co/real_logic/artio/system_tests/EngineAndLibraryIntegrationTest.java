@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import io.aeron.driver.MediaDriver;
+import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.hamcrest.Matcher;
 import org.junit.After;
@@ -46,7 +46,7 @@ public class EngineAndLibraryIntegrationTest
 {
     private static final int SHORT_TIMEOUT_IN_MS = 100;
 
-    private MediaDriver mediaDriver;
+    private ArchivingMediaDriver mediaDriver;
     private FixEngine engine;
     private FixLibrary library;
     private FixLibrary library2;

@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import io.aeron.driver.MediaDriver;
+import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -45,7 +45,7 @@ public class MessageBasedInitiatorSystemTest
     private final int fixPort = unusedPort();
     private final int libraryAeronPort = unusedPort();
 
-    private MediaDriver mediaDriver;
+    private ArchivingMediaDriver mediaDriver;
     private FixEngine engine;
     private FixLibrary library;
     private TestSystem testSystem;

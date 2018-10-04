@@ -60,7 +60,8 @@ class LibraryTransport
             fixCounters.failedOutboundPublications(),
             OUTBOUND_LIBRARY_STREAM,
             clock,
-            configuration.outboundMaxClaimAttempts());
+            configuration.outboundMaxClaimAttempts(),
+            null);
 
         if (isReconnect())
         {

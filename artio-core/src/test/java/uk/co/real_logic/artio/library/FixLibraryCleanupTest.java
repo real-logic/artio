@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.library;
 
-import io.aeron.driver.MediaDriver;
+import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.exceptions.DriverTimeoutException;
 import org.agrona.CloseHelper;
 import org.agrona.IoUtil;
@@ -34,7 +34,7 @@ public class FixLibraryCleanupTest
     @Test
     public void shouldCleanupLibrary()
     {
-        final MediaDriver mediaDriver = TestFixtures.launchMediaDriver();
+        final ArchivingMediaDriver mediaDriver = TestFixtures.launchMediaDriver();
         try
         {
             final LibraryConfiguration configuration = new LibraryConfiguration()

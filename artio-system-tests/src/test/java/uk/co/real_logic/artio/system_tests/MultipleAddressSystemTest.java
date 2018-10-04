@@ -46,7 +46,7 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
         delete(ACCEPTOR_LOGS);
         acceptingEngine = FixEngine.launch(
             acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
-                .scheduler(new LowResourceEngineScheduler(mediaDriver.sharedAgentInvoker())));
+                .scheduler(new LowResourceEngineScheduler(mediaDriver.mediaDriver().sharedAgentInvoker())));
 
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 
