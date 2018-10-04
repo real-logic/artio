@@ -15,9 +15,11 @@
  */
 package uk.co.real_logic.artio.replication;
 
+import io.aeron.logbuffer.ControlledFragmentHandler;
+
 public abstract class ClusterableSubscription implements AutoCloseable
 {
-    public abstract int poll(ClusterFragmentHandler fragmentHandler, int fragmentLimit);
+    public abstract int poll(ControlledFragmentHandler fragmentHandler, int fragmentLimit);
 
     public abstract void close();
 }

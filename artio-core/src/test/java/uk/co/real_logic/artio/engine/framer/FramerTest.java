@@ -21,7 +21,6 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
-import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.QueuedPipe;
 import org.hamcrest.Matcher;
@@ -34,7 +33,6 @@ import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.engine.CompletionPosition;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.EngineDescriptorStore;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
@@ -175,8 +173,6 @@ public class FramerTest
             engineConfiguration,
             mockEndPointFactory,
             node,
-            null,
-            null,
             outboundLibrarySubscription,
             outboundSlowSubscription,
             replayImage,
@@ -191,8 +187,6 @@ public class FramerTest
             receivedSequenceNumberIndex,
             gatewaySessions,
             errorHandler,
-            mock(EngineDescriptorStore.class),
-            new LongHashSet(),
             DEFAULT_NAME_PREFIX,
             mock(CompletionPosition.class),
             mock(CompletionPosition.class),

@@ -23,14 +23,12 @@ import uk.co.real_logic.artio.messages.DisconnectDecoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.messages.ReplicatedMessageDecoder;
-import uk.co.real_logic.artio.replication.ClusterFragmentHandler;
-import uk.co.real_logic.artio.replication.ClusterHeader;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.protocol.GatewayPublication.FRAME_SIZE;
 
-public final class ProtocolSubscription implements ControlledFragmentHandler, ClusterFragmentHandler
+public final class ProtocolSubscription implements ControlledFragmentHandler
 {
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
 
@@ -69,12 +67,6 @@ public final class ProtocolSubscription implements ControlledFragmentHandler, Cl
     {
         this.protocolHandler = protocolHandler;
         this.defaultAction = defaultAction;
-    }
-
-    public Action onFragment(
-        final DirectBuffer buffer, final int offset, final int length, final ClusterHeader header)
-    {
-        return onFragment(buffer, offset, length, header.position());
     }
 
     public Action onFragment(

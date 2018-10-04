@@ -24,7 +24,6 @@ import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.EngineContext;
-import uk.co.real_logic.artio.engine.EngineDescriptorStore;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
@@ -65,7 +64,6 @@ public class FramerContext
         final ErrorHandler errorHandler,
         final Image replayImage,
         final Image slowReplayImage,
-        final EngineDescriptorStore engineDescriptorStore,
         final EngineTimers timers,
         final AgentInvoker conductorAgentInvoker)
     {
@@ -124,8 +122,6 @@ public class FramerContext
             configuration,
             endPointFactory,
             streams,
-            engineContext.outboundClusterSubscription(),
-            engineContext.outboundClusterSubscription(),
             engineContext.outboundLibrarySubscription(
                 "outboundLibrarySubscription", finalImagePositions),
             engineContext.outboundLibrarySubscription(
@@ -142,8 +138,6 @@ public class FramerContext
             receivedSequenceNumberIndex,
             gatewaySessions,
             errorHandler,
-            engineDescriptorStore,
-            replicatedConnectionIds,
             configuration.agentNamePrefix(),
             engineContext.inboundCompletionPosition(),
             engineContext.outboundLibraryCompletionPosition(),

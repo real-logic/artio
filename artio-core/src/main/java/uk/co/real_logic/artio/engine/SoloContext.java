@@ -27,7 +27,6 @@ import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.logger.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
-import uk.co.real_logic.artio.replication.ClusterSubscription;
 import uk.co.real_logic.artio.replication.ClusterablePublication;
 import uk.co.real_logic.artio.replication.ClusterableStreams;
 import uk.co.real_logic.artio.replication.StreamIdentifier;
@@ -173,11 +172,6 @@ class SoloContext extends EngineContext
     public Streams inboundLibraryStreams()
     {
         return inboundLibraryStreams;
-    }
-
-    public ClusterSubscription outboundClusterSubscription()
-    {
-        return null;
     }
 
     public ClusterableStreams streams()

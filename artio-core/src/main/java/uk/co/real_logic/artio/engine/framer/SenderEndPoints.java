@@ -23,14 +23,12 @@ import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.replication.ClusterFragmentHandler;
-import uk.co.real_logic.artio.replication.ClusterHeader;
 
 import java.util.function.LongToIntFunction;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
-class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, ClusterFragmentHandler
+class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
 {
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
 
@@ -132,11 +130,6 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
 
     @SuppressWarnings("FinalParameters")
     public Action onFragment(final DirectBuffer buffer, int offset, final int length, final Header header)
-    {
-        return onSlowConsumerMessageFragment(buffer, offset, length, header.position());
-    }
-
-    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final ClusterHeader header)
     {
         return onSlowConsumerMessageFragment(buffer, offset, length, header.position());
     }

@@ -17,40 +17,27 @@ package uk.co.real_logic.artio.replication;
 
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.logbuffer.Header;
-import org.agrona.DirectBuffer;
 
 /**
  * NB: left exposed as a public class because it the additional functionality over
  * {@link ClusterableSubscription} of being able to lookup the position of a session.
  */
-class SoloSubscription extends ClusterableSubscription implements ControlledFragmentHandler
+class SoloSubscription extends ClusterableSubscription
 {
     private final Subscription subscription;
-    private final ClusterHeader clusterHeader;
-
-    private ClusterFragmentHandler fragmentHandler;
 
     SoloSubscription(final Subscription subscription)
     {
         this.subscription = subscription;
-        clusterHeader = new ClusterHeader(subscription.streamId());
     }
 
-    public int poll(final ClusterFragmentHandler fragmentHandler, final int fragmentLimit)
+    public int poll(final ControlledFragmentHandler fragmentHandler, final int fragmentLimit)
     {
-        this.fragmentHandler = fragmentHandler;
-        return subscription.controlledPoll(this, fragmentLimit);
+        return subscription.controlledPoll(fragmentHandler, fragmentLimit);
     }
 
     public void close()
     {
         subscription.close();
-    }
-
-    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
-    {
-        clusterHeader.update(header.position(), header.sessionId(), header.flags());
-        return fragmentHandler.onFragment(buffer, offset, length, clusterHeader);
     }
 }

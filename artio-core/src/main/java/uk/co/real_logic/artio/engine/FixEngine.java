@@ -54,7 +54,6 @@ public final class FixEngine extends GatewayProcess
 
     private final EngineTimers timers;
     private final EngineConfiguration configuration;
-    private final EngineDescriptorStore engineDescriptorStore;
 
     private EngineScheduler scheduler;
     private FramerContext framerContext;
@@ -156,7 +155,6 @@ public final class FixEngine extends GatewayProcess
             scheduler.configure(configuration.aeronContext());
             init(configuration);
             this.configuration = configuration;
-            engineDescriptorStore = new EngineDescriptorStore(errorHandler);
 
             final ExclusivePublication replayPublication = replayPublication();
             engineContext = EngineContext.of(
@@ -164,8 +162,8 @@ public final class FixEngine extends GatewayProcess
                 errorHandler,
                 replayPublication,
                 fixCounters,
-                aeron,
-                engineDescriptorStore);
+                aeron
+            );
             streams = engineContext.streams();
             initFramer(configuration, fixCounters, replayPublication.sessionId());
             initMonitoringAgent(timers.all(), configuration);
@@ -201,7 +199,6 @@ public final class FixEngine extends GatewayProcess
             errorHandler,
             replayImage("replay", replaySessionId),
             replayImage("slow-replay", replaySessionId),
-            engineDescriptorStore,
             timers,
             aeron.conductorAgentInvoker());
     }

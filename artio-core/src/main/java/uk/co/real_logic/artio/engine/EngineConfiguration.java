@@ -16,15 +16,12 @@
 package uk.co.real_logic.artio.engine;
 
 import org.agrona.CloseHelper;
-import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
-import uk.co.real_logic.artio.replication.ClusterConfiguration;
-import uk.co.real_logic.artio.replication.RoleHandler;
 import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
 
 import java.io.File;
@@ -40,7 +37,6 @@ import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysLocallyArchive;
-import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysReplicated;
 
 /**
  * Configuration that exists for the entire duration of a fix gateway. Some options are configurable via
@@ -173,10 +169,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private MappedFile receivedSequenceNumberIndex;
     private MappedFile sessionIdBuffer;
     private Set<String> gapfillOnReplayMessageTypes = new HashSet<>(DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES);
-    private String clusterAeronChannel = null;
-    private short nodeId = NO_NODE_ID;
-    private IntHashSet otherNodes = new IntHashSet();
-    private long clusterTimeoutIntervalInMs = DEFAULT_CLUSTER_TIMEOUT_IN_MS;
 
     private int outboundLibraryFragmentLimit =
         getInteger(OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP, DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT);
@@ -201,7 +193,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     private String libraryAeronChannel = null;
     private Function<EngineConfiguration, TcpChannelSupplier> channelSupplierFactory = TcpChannelSupplier::new;
-    private RoleHandler roleHandler = ClusterConfiguration.DEFAULT_NODE_HANDLER;
     private SessionPersistenceStrategy sessionPersistenceStrategy;
     private long slowConsumerTimeoutInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
     private EngineScheduler scheduler = new DefaultEngineScheduler();
@@ -440,71 +431,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
-    /**
-     * Sets the aeron channel to use for clustered communications.
-     *
-     * @param clusterAeronChannel the aeron channel to use for clustered communications.
-     * @return this
-     */
-    public EngineConfiguration clusterAeronChannel(final String clusterAeronChannel)
-    {
-        this.clusterAeronChannel = clusterAeronChannel;
-        return this;
-    }
-
-    /**
-     * Sets the node id for this node in the cluster.
-     *
-     * @param nodeId the node id for this node in the cluster.
-     * @return this
-     */
-    public EngineConfiguration nodeId(final short nodeId)
-    {
-        if (nodeId == NO_NODE_ID)
-        {
-            throw new IllegalArgumentException(NO_NODE_ID + " is reserved to mean that you don't have a node id");
-        }
-        this.nodeId = nodeId;
-        return this;
-    }
-
-    /**
-     * Adds the specified node ids of the other nodes in this cluster.
-     *
-     * @param otherNodes the ids to be added
-     * @return this
-     */
-    public EngineConfiguration addOtherNodes(final int... otherNodes)
-    {
-        for (final int otherNode : otherNodes)
-        {
-            this.otherNodes.add(otherNode);
-        }
-
-        return this;
-    }
-
-    /**
-     * Set the timeout interval on the cluster in milliseconds.
-     *
-     * @param clusterTimeoutIntervalInMs the timeout interval on the cluster in milliseconds.
-     * @return this
-     */
-    public EngineConfiguration clusterTimeoutIntervalInMs(final long clusterTimeoutIntervalInMs)
-    {
-        this.clusterTimeoutIntervalInMs = clusterTimeoutIntervalInMs;
-        return this;
-    }
-
     public EngineConfiguration channelSupplierFactory(final Function<EngineConfiguration, TcpChannelSupplier> value)
     {
         this.channelSupplierFactory = value;
-        return this;
-    }
-
-    public EngineConfiguration roleHandler(final RoleHandler roleHandler)
-    {
-        this.roleHandler = roleHandler;
         return this;
     }
 
@@ -679,36 +608,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return noLogonDisconnectTimeoutInMs;
     }
 
-    public String clusterAeronChannel()
-    {
-        return clusterAeronChannel;
-    }
-
-    public boolean isClustered()
-    {
-        return clusterAeronChannel() != null;
-    }
-
-    public short nodeId()
-    {
-        return nodeId;
-    }
-
-    public IntHashSet otherNodes()
-    {
-        return otherNodes;
-    }
-
-    public long clusterTimeoutIntervalInMs()
-    {
-        return clusterTimeoutIntervalInMs;
-    }
-
-    public RoleHandler roleHandler()
-    {
-        return roleHandler;
-    }
-
     public SessionPersistenceStrategy sessionPersistenceStrategy()
     {
         return sessionPersistenceStrategy;
@@ -810,7 +709,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
         if (sessionPersistenceStrategy() == null)
         {
-            sessionPersistenceStrategy(isClustered() ? alwaysReplicated() : alwaysLocallyArchive());
+            sessionPersistenceStrategy(alwaysLocallyArchive());
         }
 
         return this;

@@ -30,7 +30,6 @@ import uk.co.real_logic.artio.StreamInformation;
 import uk.co.real_logic.artio.engine.logger.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
-import uk.co.real_logic.artio.replication.ClusterSubscription;
 import uk.co.real_logic.artio.replication.ClusterableStreams;
 import uk.co.real_logic.artio.replication.StreamIdentifier;
 
@@ -70,34 +69,14 @@ public abstract class EngineContext implements AutoCloseable
         final ErrorHandler errorHandler,
         final ExclusivePublication replayPublication,
         final FixCounters fixCounters,
-        final Aeron aeron,
-        final EngineDescriptorStore engineDescriptorStore)
+        final Aeron aeron)
     {
-        if (configuration.isClustered())
-        {
-            if (!configuration.logInboundMessages() || !configuration.logOutboundMessages())
-            {
-                throw new IllegalArgumentException(
-                    "If you are enabling clustering, then you must enable both inbound and outbound logging");
-            }
-
-            return new ClusterContext(
-                configuration,
-                errorHandler,
-                replayPublication,
-                fixCounters,
-                aeron,
-                engineDescriptorStore);
-        }
-        else
-        {
-            return new SoloContext(
-                configuration,
-                errorHandler,
-                replayPublication,
-                fixCounters,
-                aeron);
-        }
+        return new SoloContext(
+            configuration,
+            errorHandler,
+            replayPublication,
+            fixCounters,
+            aeron);
     }
 
     public EngineContext(
@@ -265,8 +244,6 @@ public abstract class EngineContext implements AutoCloseable
     public abstract Streams outboundLibraryStreams();
 
     public abstract Streams inboundLibraryStreams();
-
-    public abstract ClusterSubscription outboundClusterSubscription();
 
     // Each invocation should return a new instance of the subscription
     public Subscription outboundLibrarySubscription(

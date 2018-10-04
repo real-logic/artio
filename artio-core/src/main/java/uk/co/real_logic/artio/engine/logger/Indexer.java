@@ -15,7 +15,8 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.CollectionUtil;
 import org.agrona.concurrent.Agent;
@@ -23,8 +24,6 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.CompletionPosition;
-import uk.co.real_logic.artio.replication.ClusterFragmentHandler;
-import uk.co.real_logic.artio.replication.ClusterHeader;
 import uk.co.real_logic.artio.replication.ClusterableSubscription;
 
 import java.util.List;
@@ -36,7 +35,7 @@ import static uk.co.real_logic.artio.engine.logger.ArchiveDescriptor.alignTerm;
 /**
  * Incrementally builds indexes by polling a subscription.
  */
-public class Indexer implements Agent, ClusterFragmentHandler
+public class Indexer implements Agent, ControlledFragmentHandler
 {
     private static final int LIMIT = 20;
 
@@ -87,7 +86,7 @@ public class Indexer implements Agent, ClusterFragmentHandler
         }
     }
 
-    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final ClusterHeader header)
+    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         final int streamId = header.streamId();
         final int aeronSessionId = header.sessionId();
@@ -130,7 +129,7 @@ public class Indexer implements Agent, ClusterFragmentHandler
     }
 
     private Action quiesceFragment(
-        final DirectBuffer buffer, final int offset, final int length, final ClusterHeader header)
+        final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         if (completedPosition(header.sessionId()) <= header.position())
         {
