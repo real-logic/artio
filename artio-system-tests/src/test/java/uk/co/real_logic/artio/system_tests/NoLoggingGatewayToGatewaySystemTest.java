@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -23,6 +24,7 @@ import uk.co.real_logic.artio.library.LibraryConfiguration;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
+@Ignore
 public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
     private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();

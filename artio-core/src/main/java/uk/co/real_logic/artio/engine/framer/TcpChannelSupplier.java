@@ -129,7 +129,7 @@ public class TcpChannelSupplier implements AutoCloseable
         }
     }
 
-    public void close() throws Exception
+    public void close()
     {
         CloseHelper.close(listeningChannel);
         CloseHelper.close(selector);

@@ -25,7 +25,6 @@ import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.session.Session;
 
-import static io.aeron.driver.ThreadingMode.INVOKER;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -40,13 +39,13 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
         final int libraryAeronPort = unusedPort();
 
         final MediaDriver.Context context = mediaDriverContext(TestFixtures.TERM_BUFFER_LENGTH, true);
-        context.threadingMode(INVOKER);
+        //context.threadingMode(INVOKER);
         mediaDriver = launchMediaDriver(context);
 
         delete(ACCEPTOR_LOGS);
         acceptingEngine = FixEngine.launch(
             acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
-                .scheduler(new LowResourceEngineScheduler(mediaDriver.mediaDriver().sharedAgentInvoker())));
+                .scheduler(new LowResourceEngineScheduler(/*mediaDriver.mediaDriver().sharedAgentInvoker())*/)));
 
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 

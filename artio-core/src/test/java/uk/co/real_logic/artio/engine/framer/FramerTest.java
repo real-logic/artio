@@ -33,6 +33,7 @@ import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.engine.CompletionPosition;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
@@ -185,9 +186,9 @@ public class FramerTest
             DEFAULT_NAME_PREFIX,
             mock(CompletionPosition.class),
             mock(CompletionPosition.class),
-            mock(CompletionPosition.class),
             finalImagePositions,
-            mock(AgentInvoker.class));
+            mock(AgentInvoker.class),
+            mock(RecordingCoordinator.class));
 
         when(sessionContexts.onLogon(any())).thenReturn(new SessionContext(SESSION_ID,
             SessionContext.UNKNOWN_SEQUENCE_INDEX,

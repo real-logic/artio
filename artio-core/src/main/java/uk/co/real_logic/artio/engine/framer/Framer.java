@@ -38,6 +38,7 @@ import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.CompletionPosition;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.PositionSender;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
@@ -141,6 +142,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Long2LongHashMap resendSlowStatus = new Long2LongHashMap(-1);
     private final Long2LongHashMap resendNotSlowStatus = new Long2LongHashMap(-1);
     private final AgentInvoker conductorAgentInvoker;
+    private final RecordingCoordinator recordingCoordinator;
     private final PositionSender nonLoggingPositionSender;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
@@ -168,9 +170,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final String agentNamePrefix,
         final CompletionPosition inboundCompletionPosition,
         final CompletionPosition outboundLibraryCompletionPosition,
-        final CompletionPosition outboundClusterCompletionPosition,
         final FinalImagePositions finalImagePositions,
-        final AgentInvoker conductorAgentInvoker)
+        final AgentInvoker conductorAgentInvoker,
+        final RecordingCoordinator recordingCoordinator)
     {
         this.clock = clock;
         this.outboundTimer = outboundTimer;
@@ -189,6 +191,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.outboundLibraryCompletionPosition = outboundLibraryCompletionPosition;
         this.senderEndPoints = new SenderEndPoints(errorHandler);
         this.conductorAgentInvoker = conductorAgentInvoker;
+        this.recordingCoordinator = recordingCoordinator;
         this.senderEndPointAssembler = new ControlledFragmentAssembler(senderEndPoints, 0, true);
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionContexts = sessionContexts;
@@ -1290,8 +1293,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void quiesce()
     {
+        final Long2LongHashMap completionPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
+
         final Long2LongHashMap inboundPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
         inboundPositions.put(inboundPublication.id(), inboundPublication.position());
+        completionPositions.put(inboundPublication.id(), inboundPublication.position());
         inboundCompletionPosition.complete(inboundPositions);
 
         final Long2LongHashMap outboundPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
@@ -1303,10 +1309,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             {
                 final long position = image.position();
                 outboundPositions.put(aeronSessionId, position);
+                //completionPositions.put(aeronSessionId, position);
             }
         });
 
         outboundLibraryCompletionPosition.complete(outboundPositions);
+
+        recordingCoordinator.completionPositions(completionPositions);
     }
 
     public String roleName()

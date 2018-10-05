@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.EngineContext;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
@@ -54,7 +55,7 @@ public class FramerContext
     private final GatewayPublication outboundPublication;
     private final GatewayPublication inboundLibraryPublication;
     private final SessionContexts sessionContexts;
-    private final AgentInvoker conductorAgentInvoker;
+    private final RecordingCoordinator recordingCoordinator;
 
     public FramerContext(
         final EngineConfiguration configuration,
@@ -64,9 +65,10 @@ public class FramerContext
         final Image replayImage,
         final Image slowReplayImage,
         final EngineTimers timers,
-        final AgentInvoker conductorAgentInvoker)
+        final AgentInvoker conductorAgentInvoker,
+        final RecordingCoordinator recordingCoordinator)
     {
-        this.conductorAgentInvoker = conductorAgentInvoker;
+        this.recordingCoordinator = recordingCoordinator;
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
         this.sessionContexts = new SessionContexts(configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
@@ -138,9 +140,9 @@ public class FramerContext
             configuration.agentNamePrefix(),
             engineContext.inboundCompletionPosition(),
             engineContext.outboundLibraryCompletionPosition(),
-            engineContext.outboundClusterCompletionPosition(),
             finalImagePositions,
-            conductorAgentInvoker);
+            conductorAgentInvoker,
+            recordingCoordinator);
     }
 
     public Agent framer()
