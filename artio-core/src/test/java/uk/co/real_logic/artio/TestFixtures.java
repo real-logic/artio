@@ -55,7 +55,8 @@ public final class TestFixtures
 
     public static ArchivingMediaDriver launchMediaDriver(final MediaDriver.Context context)
     {
-        final ArchivingMediaDriver mediaDriver = ArchivingMediaDriver.launch(context, new Archive.Context());
+        final Archive.Context archiveCtx = new Archive.Context().deleteArchiveOnStart(context.dirDeleteOnStart());
+        final ArchivingMediaDriver mediaDriver = ArchivingMediaDriver.launch(context, archiveCtx);
         final String aeronDirectoryName = context.aeronDirectoryName();
         CloseChecker.onOpen(aeronDirectoryName, mediaDriver);
 
