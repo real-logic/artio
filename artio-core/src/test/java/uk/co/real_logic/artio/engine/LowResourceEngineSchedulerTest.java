@@ -33,6 +33,7 @@ public class LowResourceEngineSchedulerTest
     private EngineConfiguration configuration = mock(EngineConfiguration.class);
     private Agent conductorAgent = mock(Agent.class);
     private ErrorHandler mockErrorHandler = mock(ErrorHandler.class);
+    private RecordingCoordinator recordingCoordinator = mock(RecordingCoordinator.class);
 
     @Test
     public void shouldPrintErrorIfRepeatedlyThrown() throws Exception
@@ -48,7 +49,8 @@ public class LowResourceEngineSchedulerTest
                 framer,
                 archivingAgent,
                 monitoringAgent,
-                conductorAgent);
+                conductorAgent,
+                recordingCoordinator);
 
             assertEventuallyTrue(
                 "Failed to invoke monitoring agent",

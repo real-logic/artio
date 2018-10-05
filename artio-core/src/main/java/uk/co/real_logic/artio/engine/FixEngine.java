@@ -54,8 +54,7 @@ public final class FixEngine extends GatewayProcess
 
     private final EngineTimers timers;
     private final EngineConfiguration configuration;
-    private final AeronArchive aeronArchive;
-    private final StartRecordingCoordinator startRecordingCoordinator;
+    private final RecordingCoordinator recordingCoordinator;
 
     private EngineScheduler scheduler;
     private FramerContext framerContext;
@@ -151,13 +150,14 @@ public final class FixEngine extends GatewayProcess
     {
         try
         {
+            this.configuration = configuration;
+
             timers = new EngineTimers(configuration.clock());
             scheduler = configuration.scheduler();
             scheduler.configure(configuration.aeronContext());
             init(configuration);
-            this.configuration = configuration;
-            aeronArchive = AeronArchive.connect();
-            startRecordingCoordinator = new StartRecordingCoordinator(
+            final AeronArchive aeronArchive = AeronArchive.connect(new AeronArchive.Context().aeron(aeron));
+            recordingCoordinator = new RecordingCoordinator(
                 aeronArchive, configuration.libraryAeronChannel());
 
             final ExclusivePublication replayPublication = replayPublication();
@@ -167,10 +167,10 @@ public final class FixEngine extends GatewayProcess
                 replayPublication,
                 fixCounters,
                 aeron,
-                startRecordingCoordinator);
+                recordingCoordinator);
             initFramer(configuration, fixCounters, replayPublication.sessionId());
             initMonitoringAgent(timers.all(), configuration);
-            startRecordingCoordinator.awaitReady();
+            recordingCoordinator.awaitReady();
         }
         catch (final Exception e)
         {
@@ -246,7 +246,8 @@ public final class FixEngine extends GatewayProcess
             framerContext.framer(),
             engineContext.archivingAgent(),
             monitoringAgent,
-            conductorAgent());
+            conductorAgent(),
+            recordingCoordinator);
 
         return this;
     }
@@ -261,7 +262,7 @@ public final class FixEngine extends GatewayProcess
     {
         synchronized (CLOSE_MUTEX)
         {
-            closeAll(scheduler, engineContext, configuration, aeronArchive, super::close);
+            closeAll(scheduler, engineContext, configuration, super::close);
         }
     }
 

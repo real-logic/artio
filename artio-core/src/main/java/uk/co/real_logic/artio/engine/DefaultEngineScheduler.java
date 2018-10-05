@@ -32,6 +32,7 @@ public class DefaultEngineScheduler implements EngineScheduler
     private AgentRunner framerRunner;
     private AgentRunner archivingRunner;
     private AgentRunner monitoringRunner;
+    private RecordingCoordinator recordingCoordinator;
 
     public void launch(
         final EngineConfiguration configuration,
@@ -39,8 +40,10 @@ public class DefaultEngineScheduler implements EngineScheduler
         final Agent framer,
         final Agent archivingAgent,
         final Agent monitoringAgent,
-        final Agent conductorAgent)
+        final Agent conductorAgent,
+        final RecordingCoordinator recordingCoordinator)
     {
+        this.recordingCoordinator = recordingCoordinator;
         if (framerRunner != null)
         {
             EngineScheduler.fail();
@@ -68,7 +71,7 @@ public class DefaultEngineScheduler implements EngineScheduler
         EngineScheduler.awaitRunnerStart(archivingRunner);
         EngineScheduler.awaitRunnerStart(monitoringRunner);
 
-        Exceptions.closeAll(framerRunner, archivingRunner, monitoringRunner);
+        Exceptions.closeAll(framerRunner, recordingCoordinator, archivingRunner, monitoringRunner);
     }
 
     public void configure(final Aeron.Context aeronContext)

@@ -29,14 +29,18 @@ import static io.aeron.archive.codecs.SourceLocation.REMOTE;
 import static uk.co.real_logic.artio.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 
-public class StartRecordingCoordinator
+public class RecordingCoordinator implements AutoCloseable
 {
     private final IntHashSet trackedSessionIds = new IntHashSet();
     private final AeronArchive archive;
+    private final String channel;
 
-    StartRecordingCoordinator(final AeronArchive archive, final String channel)
+    private boolean closed = false;
+
+    RecordingCoordinator(final AeronArchive archive, final String channel)
     {
         this.archive = archive;
+        this.channel = channel;
 
         // Inbound we're writing from the Framer thread, always local
         archive.startRecording(channel, INBOUND_LIBRARY_STREAM, LOCAL);
@@ -73,5 +77,17 @@ public class StartRecordingCoordinator
     private boolean hasRecordingStarted(final CountersReader counters, final int sessionId)
     {
         return RecordingPos.findCounterIdBySession(counters, sessionId) != CountersReader.NULL_COUNTER_ID;
+    }
+
+    @Override
+    public void close()
+    {
+        if (!closed)
+        {
+            archive.stopRecording(channel, INBOUND_LIBRARY_STREAM);
+            archive.stopRecording(channel, OUTBOUND_LIBRARY_STREAM);
+            archive.close();
+            closed = true;
+        }
     }
 }

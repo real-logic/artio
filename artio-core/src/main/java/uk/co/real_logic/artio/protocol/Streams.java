@@ -22,7 +22,7 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.StreamInformation;
-import uk.co.real_logic.artio.engine.StartRecordingCoordinator;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
 
 public final class Streams
 {
@@ -33,7 +33,7 @@ public final class Streams
     private final boolean printAeronStreamIdentifiers;
     private final AtomicCounter failedPublications;
     private final int maxClaimAttempts;
-    private final StartRecordingCoordinator startRecordingCoordinator;
+    private final RecordingCoordinator recordingCoordinator;
 
     public Streams(
         final Aeron aeron,
@@ -43,7 +43,7 @@ public final class Streams
         final int streamId,
         final Clock clock,
         final int maxClaimAttempts,
-        final StartRecordingCoordinator startRecordingCoordinator)
+        final RecordingCoordinator recordingCoordinator)
     {
         this.aeron = aeron;
         this.aeronChannel = aeronChannel;
@@ -52,7 +52,7 @@ public final class Streams
         this.streamId = streamId;
         this.clock = clock;
         this.maxClaimAttempts = maxClaimAttempts;
-        this.startRecordingCoordinator = startRecordingCoordinator;
+        this.recordingCoordinator = recordingCoordinator;
     }
 
     public GatewayPublication gatewayPublication(final IdleStrategy idleStrategy, final String name)
@@ -69,9 +69,9 @@ public final class Streams
     private ExclusivePublication dataPublication(final String name)
     {
         final ExclusivePublication publication = aeron.addExclusivePublication(aeronChannel, streamId);
-        if (startRecordingCoordinator != null)
+        if (recordingCoordinator != null)
         {
-            startRecordingCoordinator.track(publication);
+            recordingCoordinator.track(publication);
         }
         StreamInformation.print(name, publication, printAeronStreamIdentifiers);
         return publication;

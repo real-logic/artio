@@ -34,7 +34,7 @@ public interface EngineScheduler extends AutoCloseable
      * @param archivingAgent the archiver agent to schedule.
      * @param monitoringAgent the monitoring agent to schedule.
      * @param conductorAgent if aeron has useConductorInvoker enable it
-     *                       is the agent for the conductor, otherwise null.
+     * @param recordingCoordinator must be shut down after the Framer but before the conductorAgent.
      */
     void launch(
         EngineConfiguration configuration,
@@ -42,7 +42,8 @@ public interface EngineScheduler extends AutoCloseable
         Agent framer,
         Agent archivingAgent,
         Agent monitoringAgent,
-        Agent conductorAgent);
+        Agent conductorAgent,
+        RecordingCoordinator recordingCoordinator);
 
     /**
      * Invoked by the FIX Engine to stop the threads. Should only return once they are completed stopped.

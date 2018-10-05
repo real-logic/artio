@@ -23,6 +23,7 @@ import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.TestRequestEncoder;
+import uk.co.real_logic.artio.engine.DefaultEngineScheduler;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;

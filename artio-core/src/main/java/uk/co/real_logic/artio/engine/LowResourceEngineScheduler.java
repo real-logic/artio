@@ -40,6 +40,7 @@ public class LowResourceEngineScheduler implements EngineScheduler
     private final AgentInvoker driverAgentInvoker;
 
     private AgentRunner runner;
+    private RecordingCoordinator recordingCoordinator;
 
     public LowResourceEngineScheduler()
     {
@@ -57,15 +58,19 @@ public class LowResourceEngineScheduler implements EngineScheduler
         final Agent framer,
         final Agent archivingAgent,
         final Agent monitoringAgent,
-        final Agent conductorAgent)
+        final Agent conductorAgent,
+        final RecordingCoordinator recordingCoordinator)
     {
+        this.recordingCoordinator = recordingCoordinator;
+
         if (runner != null)
         {
             EngineScheduler.fail();
         }
 
         final List<Agent> agents = new ArrayList<>();
-        Collections.addAll(agents, monitoringAgent, framer, archivingAgent, conductorAgent);
+        Collections.addAll(agents,
+            monitoringAgent, framer, new RecordingCoordinatorAgent(), archivingAgent, conductorAgent);
         if (driverAgentInvoker != null)
         {
             agents.add(driverAgentInvoker.agent());
@@ -95,6 +100,31 @@ public class LowResourceEngineScheduler implements EngineScheduler
         if (driverAgentInvoker != null)
         {
             aeronContext.driverAgentInvoker(driverAgentInvoker);
+        }
+    }
+
+    /**
+     * Adapt a recording coordinator to the Agent interface to enable it to be shutdown in order.
+     */
+    private class RecordingCoordinatorAgent implements Agent
+    {
+        @Override
+        public int doWork()
+        {
+            // Deliberately empty
+            return 0;
+        }
+
+        @Override
+        public String roleName()
+        {
+            return "RecordingCoordinator";
+        }
+
+        @Override
+        public void onClose()
+        {
+            recordingCoordinator.close();
         }
     }
 }

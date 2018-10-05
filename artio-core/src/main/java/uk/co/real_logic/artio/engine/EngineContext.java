@@ -51,7 +51,7 @@ public class EngineContext implements AutoCloseable
     private final FixCounters fixCounters;
     private final Aeron aeron;
     private final SenderSequenceNumbers senderSequenceNumbers;
-    private final StartRecordingCoordinator startRecordingCoordinator;
+    private final RecordingCoordinator recordingCoordinator;
     private final ExclusivePublication replayPublication;
     private final StreamIdentifier inboundStreamId;
     private final SequenceNumberIndexWriter sentSequenceNumberIndex;
@@ -80,7 +80,7 @@ public class EngineContext implements AutoCloseable
         final ExclusivePublication replayPublication,
         final FixCounters fixCounters,
         final Aeron aeron,
-        final StartRecordingCoordinator startRecordingCoordinator)
+        final RecordingCoordinator recordingCoordinator)
     {
         this.configuration = configuration;
         this.errorHandler = errorHandler;
@@ -88,7 +88,7 @@ public class EngineContext implements AutoCloseable
         this.aeron = aeron;
         this.clock = configuration.clock();
         this.replayPublication = replayPublication;
-        this.startRecordingCoordinator = startRecordingCoordinator;
+        this.recordingCoordinator = recordingCoordinator;
 
         senderSequenceNumbers = new SenderSequenceNumbers(configuration.framerIdleStrategy());
 
@@ -136,7 +136,7 @@ public class EngineContext implements AutoCloseable
             INBOUND_LIBRARY_STREAM,
             clock,
             configuration.inboundMaxClaimAttempts(),
-            startRecordingCoordinator);
+            recordingCoordinator);
         outboundLibraryStreams = new Streams(
             aeron,
             libraryAeronChannel,
@@ -144,7 +144,7 @@ public class EngineContext implements AutoCloseable
             fixCounters.failedOutboundPublications(),
             OUTBOUND_LIBRARY_STREAM, clock,
             configuration.outboundMaxClaimAttempts(),
-            startRecordingCoordinator);
+            recordingCoordinator);
     }
 
     protected ReplayIndex newReplayIndex(

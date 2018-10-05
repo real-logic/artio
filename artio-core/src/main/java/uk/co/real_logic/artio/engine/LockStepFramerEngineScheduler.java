@@ -31,6 +31,7 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
     private AgentRunner archivingRunner;
     private AgentRunner monitoringRunner;
     private AgentInvoker framerInvoker;
+    private RecordingCoordinator recordingCoordinator;
 
     public void launch(
         final EngineConfiguration configuration,
@@ -38,8 +39,10 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
         final Agent framer,
         final Agent archivingAgent,
         final Agent monitoringAgent,
-        final Agent conductorAgent)
+        final Agent conductorAgent,
+        final RecordingCoordinator recordingCoordinator)
     {
+        this.recordingCoordinator = recordingCoordinator;
         framerInvoker = new AgentInvoker(errorHandler, null, framer);
         framerInvoker.start();
 
@@ -79,7 +82,7 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
         EngineScheduler.awaitRunnerStart(archivingRunner);
         EngineScheduler.awaitRunnerStart(monitoringRunner);
 
-        Exceptions.closeAll(framerInvoker, archivingRunner, monitoringRunner);
+        Exceptions.closeAll(framerInvoker, recordingCoordinator, archivingRunner, monitoringRunner);
     }
 
     public void configure(final Aeron.Context aeronContext)
