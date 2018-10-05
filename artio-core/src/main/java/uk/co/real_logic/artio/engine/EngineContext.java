@@ -19,6 +19,7 @@ import io.aeron.Aeron;
 import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
 import io.aeron.UnavailableImageHandler;
+import io.aeron.archive.client.AeronArchive;
 import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
@@ -51,6 +52,7 @@ public class EngineContext implements AutoCloseable
     private final FixCounters fixCounters;
     private final Aeron aeron;
     private final SenderSequenceNumbers senderSequenceNumbers;
+    private final AeronArchive aeronArchive;
     private final RecordingCoordinator recordingCoordinator;
     private final ExclusivePublication replayPublication;
     private final StreamIdentifier inboundStreamId;
@@ -80,6 +82,7 @@ public class EngineContext implements AutoCloseable
         final ExclusivePublication replayPublication,
         final FixCounters fixCounters,
         final Aeron aeron,
+        final AeronArchive aeronArchive,
         final RecordingCoordinator recordingCoordinator)
     {
         this.configuration = configuration;
@@ -88,6 +91,7 @@ public class EngineContext implements AutoCloseable
         this.aeron = aeron;
         this.clock = configuration.clock();
         this.replayPublication = replayPublication;
+        this.aeronArchive = aeronArchive;
         this.recordingCoordinator = recordingCoordinator;
 
         senderSequenceNumbers = new SenderSequenceNumbers(configuration.framerIdleStrategy());
@@ -177,7 +181,9 @@ public class EngineContext implements AutoCloseable
             LoggerUtil::mapExistingFile,
             archiveReader,
             streamId,
-            idleStrategy);
+            idleStrategy,
+            aeronArchive,
+            configuration.libraryAeronChannel());
     }
 
     protected ArchiveReader archiveReader(final StreamIdentifier streamId)

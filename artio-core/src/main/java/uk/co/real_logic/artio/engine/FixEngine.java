@@ -167,6 +167,7 @@ public final class FixEngine extends GatewayProcess
                 replayPublication,
                 fixCounters,
                 aeron,
+                aeronArchive,
                 recordingCoordinator);
             initFramer(configuration, fixCounters, replayPublication.sessionId());
             initMonitoringAgent(timers.all(), configuration);

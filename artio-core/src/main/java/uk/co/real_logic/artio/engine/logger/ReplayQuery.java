@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.Subscription;
+import io.aeron.archive.client.AeronArchive;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectCache;
@@ -28,6 +30,7 @@ import java.nio.MappedByteBuffer;
 import java.util.function.LongFunction;
 
 import static org.agrona.UnsafeAccess.UNSAFE;
+import static uk.co.real_logic.artio.GatewayProcess.ARCHIVE_REPLAY_STREAM;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
@@ -48,6 +51,8 @@ public class ReplayQuery implements AutoCloseable
     private final ArchiveReader archiveReader;
     private final int requiredStreamId;
     private final IdleStrategy idleStrategy;
+    private final AeronArchive aeronArchive;
+    private final String channel;
 
     public ReplayQuery(
         final String logFileDir,
@@ -56,13 +61,18 @@ public class ReplayQuery implements AutoCloseable
         final ExistingBufferFactory indexBufferFactory,
         final ArchiveReader archiveReader,
         final int requiredStreamId,
-        final IdleStrategy idleStrategy)
+        final IdleStrategy idleStrategy,
+        final AeronArchive aeronArchive,
+        final String channel)
     {
         this.logFileDir = logFileDir;
         this.indexBufferFactory = indexBufferFactory;
         this.archiveReader = archiveReader;
         this.requiredStreamId = requiredStreamId;
         this.idleStrategy = idleStrategy;
+        this.aeronArchive = aeronArchive;
+        this.channel = channel;
+
         fixSessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionQuery::close);
     }
 
@@ -122,7 +132,8 @@ public class ReplayQuery implements AutoCloseable
 
             int count = 0;
             int lastAeronSessionId = 0;
-            ArchiveReader.SessionReader sessionReader = null;
+            // TODO: ArchiveReader.SessionReader sessionReader = null;
+            Subscription subscription = null;
 
             // positions on a monotonically increasing scale
             long iteratorPosition = beginChangeVolatile(buffer);
@@ -152,6 +163,7 @@ public class ReplayQuery implements AutoCloseable
                 final int aeronSessionId = indexRecord.aeronSessionId();
                 final int sequenceIndex = indexRecord.sequenceIndex();
                 final int sequenceNumber = indexRecord.sequenceNumber();
+                final long recordingId = indexRecord.recordingId();
 
                 UNSAFE.loadFence(); // LoadLoad required so previous loads don't move past version check below.
 
@@ -165,27 +177,34 @@ public class ReplayQuery implements AutoCloseable
                         break;
                     }
 
-                    if (sessionReader == null || aeronSessionId != lastAeronSessionId)
+                    if (subscription == null || aeronSessionId != lastAeronSessionId)
                     {
                         lastAeronSessionId = aeronSessionId;
-                        sessionReader = archiveReader.session(aeronSessionId);
+                        // TODO: handle exception that this can throw, see previous sessionReader == null check.
+                        subscription = aeronArchive.replay(
+                            recordingId,
+                            position,
+                            Long.MAX_VALUE, // TODO: consider how to get the length
+                            channel,
+                            ARCHIVE_REPLAY_STREAM);
                     }
-
                     // You can't find the entry in the log file so treat the same as
                     // ArchiveReader.read() returning NO_MESSAGE.
-                    if (sessionReader == null)
+                    /*TODO: if (sessionReader == null)
                     {
                         break;
-                    }
-
+                    }*/
                     final boolean endOk = upToMostRecentMessage || sequenceIndex < endSequenceIndex ||
                         (sequenceIndex == endSequenceIndex && sequenceNumber <= endSequenceNumber);
                     final boolean startOk = sequenceIndex > beginSequenceIndex ||
                         (sequenceIndex == beginSequenceIndex && sequenceNumber >= beginSequenceNumber);
+                    // TODO: try to get rid of this requiredStreamId check thing
                     if (startOk && endOk && streamId == requiredStreamId)
                     {
-                        final long readTo = sessionReader.read(position, handler);
-                        if (readTo < 0 || readTo == position)
+                        final int read = subscription.controlledPoll(handler, Integer.MAX_VALUE);
+                        if (read == 0)
+                        // TODO: does this case even happen anymore?
+                        // if (readTo < 0 || readTo == position)
                         {
                             break;
                         }

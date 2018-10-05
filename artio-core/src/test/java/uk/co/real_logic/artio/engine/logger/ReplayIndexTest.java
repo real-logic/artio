@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.archive.client.AeronArchive;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
@@ -86,7 +87,9 @@ public class ReplayIndexTest extends AbstractLogTest
             existingBufferFactory,
             mockReader,
             OUTBOUND_LIBRARY_STREAM,
-            new NoOpIdleStrategy());
+            new NoOpIdleStrategy(),
+            mock(AeronArchive.class),
+            "channel");
 
         returnBuffer(indexBuffer, SESSION_ID);
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);

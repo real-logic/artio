@@ -44,7 +44,7 @@ public class RecordingCoordinator implements AutoCloseable
     private final String channel;
     private final CountersReader counters;
 
-    private Long2LongHashMap sessionIdToCompletionPosition;
+    private Long2LongHashMap aeronSessionIdToCompletionPosition;
     private boolean closed = false;
 
     RecordingCoordinator(final AeronArchive archive, final String channel)
@@ -87,9 +87,9 @@ public class RecordingCoordinator implements AutoCloseable
     }
 
     // Called only on Framer.quiesce(), uses shutdown order
-    public void completionPositions(final Long2LongHashMap sessionIdToCompletionPosition)
+    public void completionPositions(final Long2LongHashMap aeronSessionIdToCompletionPosition)
     {
-        this.sessionIdToCompletionPosition = sessionIdToCompletionPosition;
+        this.aeronSessionIdToCompletionPosition = aeronSessionIdToCompletionPosition;
     }
 
     // Must be called after the framer has shutdown, uses shutdown order
@@ -98,22 +98,22 @@ public class RecordingCoordinator implements AutoCloseable
     {
         if (!closed)
         {
-            quiesceArchivePositions();
+            awaitRecordingsCompletion();
             shutdownArchiver();
             closed = true;
         }
     }
 
-    private void quiesceArchivePositions()
+    private void awaitRecordingsCompletion()
     {
-        if (sessionIdToCompletionPosition == null)
+        if (aeronSessionIdToCompletionPosition == null)
         {
             throw new IllegalStateException(
                 "Unknown completionPositions when shutting down the RecordingCoordinator");
         }
 
         final List<CompletingRecording> completingRecordings = new ArrayList<>();
-        sessionIdToCompletionPosition.longForEach((sessionId, completionPosition) ->
+        aeronSessionIdToCompletionPosition.longForEach((sessionId, completionPosition) ->
             completingRecordings.add(new CompletingRecording((int)sessionId, completionPosition)));
 
         while (!completingRecordings.isEmpty())
