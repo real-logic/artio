@@ -78,6 +78,11 @@ subprojects {
         targetCompatibility = '1.8'
     }
 
+    compileTestJava {
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+    }
+    
     [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
     dependencies {
@@ -221,10 +226,13 @@ project(':artio-session-codecs') {
         generated.java.srcDir generatedDir
     }
 
-    // Code Generation Configuration
-    compileGeneratedJava.dependsOn 'generateCodecs'
-    compileGeneratedJava.classpath += sourceSets.main.runtimeClasspath
-
+    compileGeneratedJava {
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+        dependsOn 'generateCodecs'
+        classpath += sourceSets.main.runtimeClasspath
+    }
+    
     task generateCodecs(type: JavaExec) {
         main = 'uk.co.real_logic.artio.dictionary.CodecGenerationTool'
         classpath = sourceSets.main.runtimeClasspath
@@ -252,9 +260,12 @@ project(':artio-session-fixt-codecs') {
         generated.java.srcDir generatedDir
     }
 
-    // Code Generation Configuration
-    compileGeneratedJava.dependsOn 'generateCodecs'
-    compileGeneratedJava.classpath += sourceSets.main.runtimeClasspath
+    compileGeneratedJava {
+        sourceCompatibility = '1.8'
+        targetCompatibility = '1.8'
+        dependsOn 'generateCodecs'
+        classpath += sourceSets.main.runtimeClasspath
+    }
 
     task generateCodecs(type: JavaExec) {
         main = 'uk.co.real_logic.artio.dictionary.CodecGenerationTool'

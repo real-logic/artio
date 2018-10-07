@@ -192,9 +192,12 @@ public class DictionaryParserTest
     {
         final Field field = field("LinesOfText");
         assertThat(field.name(), is("NoLinesOfText"));
-        final Message newsMessage = dictionary.messages().stream()
-            .filter(m -> m.name().equals("News")).findFirst().orElseThrow(() -> new AssertionError(
-            "Did not find news message"));
+        final Message newsMessage = dictionary
+            .messages()
+            .stream()
+            .filter((m) -> m.name().equals("News"))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("Did not find news message"));
         final Entry linesOfText = newsMessage.entries().get(0);
         assertTrue(linesOfText.isGroup());
         assertThat(((Group)linesOfText.element()).numberField().name(), is("NoLinesOfTextGroupCounter"));
@@ -370,7 +373,7 @@ public class DictionaryParserTest
         }
     }
 
-    private interface ThrowingRunnable
+    interface ThrowingRunnable
     {
         void run() throws Exception;
     }
