@@ -30,6 +30,7 @@ apply plugin: 'com.github.johnrengelman.shadow'
 def aeronVersion = '1.11.2'
 def agronaVersion = '0.9.25'
 def sbeVersion = '1.8.9'
+def artioJavaVersion = '1.8'
 
 defaultTasks 'clean', 'build', 'install'
 
@@ -74,16 +75,18 @@ subprojects {
     group = fixGroup
 
     compileJava {
-        sourceCompatibility = '1.8'
-        targetCompatibility = '1.8'
+        sourceCompatibility = artioJavaVersion
+        targetCompatibility = artioJavaVersion
+        options.encoding = 'UTF-8'
+        options.deprecation = true
     }
 
     compileTestJava {
-        sourceCompatibility = '1.8'
-        targetCompatibility = '1.8'
+        sourceCompatibility = artioJavaVersion
+        targetCompatibility = artioJavaVersion
+        options.encoding = 'UTF-8'
+        options.deprecation = true
     }
-    
-    [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 
     dependencies {
         checkstyle 'com.puppycrawl.tools:checkstyle:8.13'
@@ -190,9 +193,14 @@ project(':artio-codecs') {
     }
 
     // Code Generation Configuration
-    compileGeneratedJava.dependsOn 'generateMessages'
-    compileGeneratedJava.classpath += sourceSets.main.runtimeClasspath
-
+    compileGeneratedJava {
+        dependsOn 'generateMessages'
+        sourceCompatibility = artioJavaVersion
+        targetCompatibility = artioJavaVersion
+        options.deprecation = true
+        classpath += sourceSets.main.runtimeClasspath
+    }
+    
     task generateMessages(type: JavaExec) {
         main = 'uk.co.real_logic.sbe.SbeTool'
         classpath = sourceSets.main.runtimeClasspath
@@ -227,12 +235,13 @@ project(':artio-session-codecs') {
     }
 
     compileGeneratedJava {
-        sourceCompatibility = '1.8'
-        targetCompatibility = '1.8'
         dependsOn 'generateCodecs'
+        sourceCompatibility = artioJavaVersion
+        targetCompatibility = artioJavaVersion
+        options.deprecation = true
         classpath += sourceSets.main.runtimeClasspath
     }
-    
+
     task generateCodecs(type: JavaExec) {
         main = 'uk.co.real_logic.artio.dictionary.CodecGenerationTool'
         classpath = sourceSets.main.runtimeClasspath
@@ -261,9 +270,10 @@ project(':artio-session-fixt-codecs') {
     }
 
     compileGeneratedJava {
-        sourceCompatibility = '1.8'
-        targetCompatibility = '1.8'
         dependsOn 'generateCodecs'
+        sourceCompatibility = artioJavaVersion
+        targetCompatibility = artioJavaVersion
+        options.deprecation = true
         classpath += sourceSets.main.runtimeClasspath
     }
 
