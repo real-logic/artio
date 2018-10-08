@@ -15,14 +15,17 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.archive.status.RecordingPos;
 import io.aeron.logbuffer.FrameDescriptor;
 import org.agrona.BitUtil;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
+import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.status.CountersReader;
 import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.FixMessageEncoder;
@@ -36,7 +39,9 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.function.LongFunction;
 
+import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static org.agrona.UnsafeAccess.UNSAFE;
+import static org.agrona.concurrent.status.CountersReader.NULL_COUNTER_ID;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
@@ -65,10 +70,12 @@ public class ReplayIndex implements Index
     private final IndexedPositionReader positionReader;
 
     private final Long2ObjectCache<SessionIndex> fixSessionIdToIndex;
+    private final Long2LongHashMap aeronSessionIdToRecordingId = new Long2LongHashMap(NULL_RECORDING_ID);
 
     private final String logFileDir;
     private final int requiredStreamId;
     private final int indexFileSize;
+    private final CountersReader counters;
     private final BufferFactory bufferFactory;
     private final AtomicBuffer positionBuffer;
 
@@ -80,19 +87,50 @@ public class ReplayIndex implements Index
         final int cacheSetSize,
         final BufferFactory bufferFactory,
         final AtomicBuffer positionBuffer,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final CountersReader counters)
     {
         this.logFileDir = logFileDir;
         this.requiredStreamId = requiredStreamId;
         this.indexFileSize = indexFileSize;
-        checkIndexFileSize(indexFileSize);
+        this.counters = counters;
         this.bufferFactory = bufferFactory;
         this.positionBuffer = positionBuffer;
+
+        checkIndexFileSize(indexFileSize);
         fixSessionIdToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
         final String replayPositionPath = replayPositionPath(logFileDir, requiredStreamId);
         positionWriter = new IndexedPositionWriter(
             positionBuffer, errorHandler, 0, replayPositionPath);
         positionReader = new IndexedPositionReader(positionBuffer);
+    }
+
+    private long getRecordingId(final int aeronSessionId)
+    {
+        long recordingId = aeronSessionIdToRecordingId.get(aeronSessionId);
+        if (recordingId == NULL_RECORDING_ID)
+        {
+            int counterId;
+            do
+            {
+                counterId = RecordingPos.findCounterIdBySession(counters, aeronSessionId);
+
+                Thread.yield(); // TODO: properly idle.
+            }
+            while (counterId == NULL_COUNTER_ID);
+
+            do
+            {
+                recordingId = RecordingPos.getRecordingId(counters, counterId);
+
+                Thread.yield(); // TODO: properly idle.
+            }
+            while (recordingId == NULL_RECORDING_ID);
+
+            aeronSessionIdToRecordingId.put(aeronSessionId, recordingId);
+        }
+
+        return recordingId;
     }
 
     public void indexRecord(
@@ -191,6 +229,8 @@ public class ReplayIndex implements Index
         {
             final long beginChangePosition = beginChange(buffer);
             final long changePosition = beginChangePosition + RECORD_LENGTH;
+            final long recordingId = getRecordingId(aeronSessionId);
+            final int length = (int)(endPosition - beginPosition);
 
             beginChangeOrdered(buffer, changePosition);
             UNSAFE.storeFence();
@@ -203,7 +243,9 @@ public class ReplayIndex implements Index
                 .aeronSessionId(aeronSessionId)
                 .position(beginPosition)
                 .sequenceNumber(sequenceNumber)
-                .sequenceIndex(sequenceIndex);
+                .sequenceIndex(sequenceIndex)
+                .recordingId(recordingId)
+                .length(length);
 
             positionWriter.indexedUpTo(aeronSessionId, endPosition);
             positionWriter.updateChecksums();

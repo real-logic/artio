@@ -165,7 +165,8 @@ public class EngineContext implements AutoCloseable
             cacheSetSize,
             LoggerUtil::map,
             ReplayIndexDescriptor.replayPositionBuffer(logFileDir, streamId),
-            errorHandler);
+            errorHandler,
+            aeron.countersReader());
     }
 
     protected ReplayQuery newReplayQuery(final ArchiveReader archiveReader, final IdleStrategy idleStrategy)
@@ -183,7 +184,8 @@ public class EngineContext implements AutoCloseable
             streamId,
             idleStrategy,
             aeronArchive,
-            configuration.libraryAeronChannel());
+            configuration.libraryAeronChannel(),
+            errorHandler);
     }
 
     protected ArchiveReader archiveReader(final StreamIdentifier streamId)

@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.engine.logger;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.IdleStrategy;
@@ -27,10 +28,13 @@ import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
 
 import java.nio.ByteBuffer;
 import java.nio.MappedByteBuffer;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.LongFunction;
 
 import static org.agrona.UnsafeAccess.UNSAFE;
 import static uk.co.real_logic.artio.GatewayProcess.ARCHIVE_REPLAY_STREAM;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
@@ -53,6 +57,7 @@ public class ReplayQuery implements AutoCloseable
     private final IdleStrategy idleStrategy;
     private final AeronArchive aeronArchive;
     private final String channel;
+    private final ErrorHandler errorHandler;
 
     public ReplayQuery(
         final String logFileDir,
@@ -63,7 +68,8 @@ public class ReplayQuery implements AutoCloseable
         final int requiredStreamId,
         final IdleStrategy idleStrategy,
         final AeronArchive aeronArchive,
-        final String channel)
+        final String channel,
+        final ErrorHandler errorHandler)
     {
         this.logFileDir = logFileDir;
         this.indexBufferFactory = indexBufferFactory;
@@ -72,6 +78,7 @@ public class ReplayQuery implements AutoCloseable
         this.idleStrategy = idleStrategy;
         this.aeronArchive = aeronArchive;
         this.channel = channel;
+        this.errorHandler = errorHandler;
 
         fixSessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionQuery::close);
     }
@@ -109,14 +116,14 @@ public class ReplayQuery implements AutoCloseable
         private final UnsafeBuffer buffer;
         private final int capacity;
 
-        private SessionQuery(final long sessionId)
+        SessionQuery(final long sessionId)
         {
             wrappedBuffer = indexBufferFactory.map(logFile(logFileDir, sessionId, requiredStreamId));
             buffer = new UnsafeBuffer(wrappedBuffer);
             capacity = recordCapacity(buffer.capacity());
         }
 
-        private int query(
+        int query(
             final ControlledFragmentHandler handler,
             final int beginSequenceNumber,
             final int beginSequenceIndex,
@@ -130,10 +137,10 @@ public class ReplayQuery implements AutoCloseable
             final int requiredStreamId = ReplayQuery.this.requiredStreamId;
             final boolean upToMostRecentMessage = endSequenceNumber == MOST_RECENT_MESSAGE;
 
-            int count = 0;
-            int lastAeronSessionId = 0;
-            // TODO: ArchiveReader.SessionReader sessionReader = null;
-            Subscription subscription = null;
+            // LOOKUP THE RANGE FROM THE INDEX
+            // NB: this is a List as we are looking up recordings in the correct order to replay them.
+            final List<RecordingRange> ranges = new ArrayList<>();
+            RecordingRange currentRange = null;
 
             // positions on a monotonically increasing scale
             long iteratorPosition = beginChangeVolatile(buffer);
@@ -159,11 +166,11 @@ public class ReplayQuery implements AutoCloseable
 
                 indexRecord.wrap(buffer, offset, actingBlockLength, actingVersion);
                 final int streamId = indexRecord.streamId();
-                final long position = indexRecord.position();
-                final int aeronSessionId = indexRecord.aeronSessionId();
+                final long readPosition = indexRecord.position();
                 final int sequenceIndex = indexRecord.sequenceIndex();
                 final int sequenceNumber = indexRecord.sequenceNumber();
                 final long recordingId = indexRecord.recordingId();
+                final int readLength = indexRecord.length();
 
                 UNSAFE.loadFence(); // LoadLoad required so previous loads don't move past version check below.
 
@@ -172,28 +179,11 @@ public class ReplayQuery implements AutoCloseable
                 {
                     idleStrategy.reset();
 
-                    if (position == 0)
+                    if (readPosition == 0)
                     {
                         break;
                     }
 
-                    if (subscription == null || aeronSessionId != lastAeronSessionId)
-                    {
-                        lastAeronSessionId = aeronSessionId;
-                        // TODO: handle exception that this can throw, see previous sessionReader == null check.
-                        subscription = aeronArchive.replay(
-                            recordingId,
-                            position,
-                            Long.MAX_VALUE, // TODO: consider how to get the length
-                            channel,
-                            ARCHIVE_REPLAY_STREAM);
-                    }
-                    // You can't find the entry in the log file so treat the same as
-                    // ArchiveReader.read() returning NO_MESSAGE.
-                    /*TODO: if (sessionReader == null)
-                    {
-                        break;
-                    }*/
                     final boolean endOk = upToMostRecentMessage || sequenceIndex < endSequenceIndex ||
                         (sequenceIndex == endSequenceIndex && sequenceNumber <= endSequenceNumber);
                     final boolean startOk = sequenceIndex > beginSequenceIndex ||
@@ -201,15 +191,17 @@ public class ReplayQuery implements AutoCloseable
                     // TODO: try to get rid of this requiredStreamId check thing
                     if (startOk && endOk && streamId == requiredStreamId)
                     {
-                        final int read = subscription.controlledPoll(handler, Integer.MAX_VALUE);
-                        if (read == 0)
-                        // TODO: does this case even happen anymore?
-                        // if (readTo < 0 || readTo == position)
+                        if (currentRange == null)
                         {
-                            break;
+                            currentRange = new RecordingRange(recordingId);
+                        }
+                        else if (currentRange.recordingId != recordingId)
+                        {
+                            ranges.add(currentRange);
+                            currentRange = new RecordingRange(recordingId);
                         }
 
-                        count++;
+                        currentRange.add(readPosition, readLength);
                     }
                     iteratorPosition += RECORD_LENGTH;
                 }
@@ -219,7 +211,39 @@ public class ReplayQuery implements AutoCloseable
                 }
             }
 
-            return count;
+            return replayTheRange(handler, ranges);
+        }
+
+        private int replayTheRange(final ControlledFragmentHandler handler, final List<RecordingRange> ranges)
+        {
+            int replayedMessages = 0;
+            // REPLAY THE RECORDINGS
+            for (int i = 0, size = ranges.size(); i < size; i++)
+            {
+                final RecordingRange recordingRange = ranges.get(i);
+                try (Subscription subscription = aeronArchive.replay(
+                    recordingRange.recordingId,
+                    recordingRange.position,
+                    recordingRange.length,
+                    channel,
+                    ARCHIVE_REPLAY_STREAM))
+                {
+                    final int messagesRead = subscription.controlledPoll(handler, recordingRange.count);
+                    replayedMessages += messagesRead;
+                    if (recordingRange.count != messagesRead)
+                    {
+                        return replayedMessages;
+                    }
+                }
+                catch (final Throwable exception)
+                {
+                    errorHandler.onError(exception);
+
+                    return replayedMessages;
+                }
+            }
+
+            return replayedMessages;
         }
 
         public void close()
@@ -228,6 +252,52 @@ public class ReplayQuery implements AutoCloseable
             {
                 IoUtil.unmap((MappedByteBuffer)wrappedBuffer);
             }
+        }
+    }
+
+    private static final class RecordingRange
+    {
+        final long recordingId;
+        long position = MISSING_LONG;
+        int length;
+        int count;
+
+        RecordingRange(final long recordingId)
+        {
+            this.recordingId = recordingId;
+        }
+
+        void add(final long addPosition, final int addLength)
+        {
+            final long currentPosition = this.position;
+
+            if (currentPosition == MISSING_LONG)
+            {
+                this.position = addPosition;
+                this.length = addLength;
+            }
+
+            final long currentEnd = currentPosition + this.length;
+            final long addEnd = addPosition + addLength;
+            final long newEnd = Math.max(currentEnd, addEnd);
+
+            if (currentPosition < addPosition)
+            {
+                // Add to the end
+                this.length = (int)(newEnd - currentPosition);
+            }
+            else if (addPosition < currentPosition)
+            {
+                // Add to the start
+                this.position = addPosition;
+                this.length = (int)(newEnd - addPosition);
+            }
+            else
+            {
+                // TODO: this should never happen, defensively log
+            }
+
+            count++;
         }
     }
 }

@@ -21,6 +21,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.NoOpIdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.status.CountersReader;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -68,7 +69,8 @@ public class ReplayIndexTest extends AbstractLogTest
             DEFAULT_LOGGER_CACHE_SET_SIZE,
             newBufferFactory,
             replayPositionBuffer,
-            errorHandler);
+            errorHandler,
+            mock(CountersReader.class));
     }
 
     private ReplayQuery query;
@@ -89,7 +91,8 @@ public class ReplayIndexTest extends AbstractLogTest
             OUTBOUND_LIBRARY_STREAM,
             new NoOpIdleStrategy(),
             mock(AeronArchive.class),
-            "channel");
+            "channel",
+            errorHandler);
 
         returnBuffer(indexBuffer, SESSION_ID);
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);
