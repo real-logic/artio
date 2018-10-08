@@ -29,6 +29,7 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -71,6 +72,7 @@ import static uk.co.real_logic.artio.engine.logger.ArchiveDescriptor.nextTerm;
 import static uk.co.real_logic.artio.engine.logger.ArchiveReader.*;
 import static uk.co.real_logic.artio.protocol.ReservedValue.NO_FILTER;
 
+@Ignore
 @RunWith(Parameterized.class)
 public class ArchiverTest
 {

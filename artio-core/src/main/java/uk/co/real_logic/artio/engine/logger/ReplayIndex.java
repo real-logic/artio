@@ -15,17 +15,14 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.archive.status.RecordingPos;
 import io.aeron.logbuffer.FrameDescriptor;
 import org.agrona.BitUtil;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
-import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
-import org.agrona.concurrent.status.CountersReader;
 import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.FixMessageEncoder;
@@ -39,9 +36,7 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.function.LongFunction;
 
-import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 import static org.agrona.UnsafeAccess.UNSAFE;
-import static org.agrona.concurrent.status.CountersReader.NULL_COUNTER_ID;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
@@ -70,14 +65,13 @@ public class ReplayIndex implements Index
     private final IndexedPositionReader positionReader;
 
     private final Long2ObjectCache<SessionIndex> fixSessionIdToIndex;
-    private final Long2LongHashMap aeronSessionIdToRecordingId = new Long2LongHashMap(NULL_RECORDING_ID);
 
     private final String logFileDir;
     private final int requiredStreamId;
     private final int indexFileSize;
-    private final CountersReader counters;
     private final BufferFactory bufferFactory;
     private final AtomicBuffer positionBuffer;
+    private final RecordingIdLookup recordingIdLookup;
 
     public ReplayIndex(
         final String logFileDir,
@@ -88,14 +82,14 @@ public class ReplayIndex implements Index
         final BufferFactory bufferFactory,
         final AtomicBuffer positionBuffer,
         final ErrorHandler errorHandler,
-        final CountersReader counters)
+        final RecordingIdLookup recordingIdLookup)
     {
         this.logFileDir = logFileDir;
         this.requiredStreamId = requiredStreamId;
         this.indexFileSize = indexFileSize;
-        this.counters = counters;
         this.bufferFactory = bufferFactory;
         this.positionBuffer = positionBuffer;
+        this.recordingIdLookup = recordingIdLookup;
 
         checkIndexFileSize(indexFileSize);
         fixSessionIdToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
@@ -103,34 +97,6 @@ public class ReplayIndex implements Index
         positionWriter = new IndexedPositionWriter(
             positionBuffer, errorHandler, 0, replayPositionPath);
         positionReader = new IndexedPositionReader(positionBuffer);
-    }
-
-    private long getRecordingId(final int aeronSessionId)
-    {
-        long recordingId = aeronSessionIdToRecordingId.get(aeronSessionId);
-        if (recordingId == NULL_RECORDING_ID)
-        {
-            int counterId;
-            do
-            {
-                counterId = RecordingPos.findCounterIdBySession(counters, aeronSessionId);
-
-                Thread.yield(); // TODO: properly idle.
-            }
-            while (counterId == NULL_COUNTER_ID);
-
-            do
-            {
-                recordingId = RecordingPos.getRecordingId(counters, counterId);
-
-                Thread.yield(); // TODO: properly idle.
-            }
-            while (recordingId == NULL_RECORDING_ID);
-
-            aeronSessionIdToRecordingId.put(aeronSessionId, recordingId);
-        }
-
-        return recordingId;
     }
 
     public void indexRecord(
@@ -193,7 +159,7 @@ public class ReplayIndex implements Index
         private final AtomicBuffer buffer;
         private final int capacity;
 
-        private SessionIndex(final long fixSessionId)
+        SessionIndex(final long fixSessionId)
         {
             final File logFile = logFile(logFileDir, fixSessionId, requiredStreamId);
             final boolean exists = logFile.exists();
@@ -219,7 +185,7 @@ public class ReplayIndex implements Index
             }
         }
 
-        private void onRecord(
+        void onRecord(
             final int streamId,
             final int aeronSessionId,
             final long beginPosition,
@@ -229,7 +195,7 @@ public class ReplayIndex implements Index
         {
             final long beginChangePosition = beginChange(buffer);
             final long changePosition = beginChangePosition + RECORD_LENGTH;
-            final long recordingId = getRecordingId(aeronSessionId);
+            final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
             final int length = (int)(endPosition - beginPosition);
 
             beginChangeOrdered(buffer, changePosition);
@@ -240,7 +206,6 @@ public class ReplayIndex implements Index
             replayIndexRecord
                 .wrap(buffer, offset)
                 .streamId(streamId)
-                .aeronSessionId(aeronSessionId)
                 .position(beginPosition)
                 .sequenceNumber(sequenceNumber)
                 .sequenceIndex(sequenceIndex)

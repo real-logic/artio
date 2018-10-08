@@ -166,7 +166,7 @@ public class EngineContext implements AutoCloseable
             LoggerUtil::map,
             ReplayIndexDescriptor.replayPositionBuffer(logFileDir, streamId),
             errorHandler,
-            aeron.countersReader());
+            new RecordingIdLookup(aeron.countersReader()));
     }
 
     protected ReplayQuery newReplayQuery(final ArchiveReader archiveReader, final IdleStrategy idleStrategy)
@@ -180,7 +180,6 @@ public class EngineContext implements AutoCloseable
             cacheNumSets,
             cacheSetSize,
             LoggerUtil::mapExistingFile,
-            archiveReader,
             streamId,
             idleStrategy,
             aeronArchive,

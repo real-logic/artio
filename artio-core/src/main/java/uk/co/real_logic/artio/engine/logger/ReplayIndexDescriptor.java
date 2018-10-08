@@ -19,10 +19,11 @@ import org.agrona.BitUtil;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
+import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
 
 import java.io.File;
 
-public class ReplayIndexDescriptor
+public final class ReplayIndexDescriptor
 {
     static final int REPLAY_POSITION_BUFFER_SIZE = 128 * 1024;
 
@@ -32,6 +33,14 @@ public class ReplayIndexDescriptor
     public static final int INITIAL_RECORD_OFFSET = END_CHANGE_OFFSET + BitUtil.SIZE_OF_LONG;
 
     static final int RECORD_LENGTH = 32;
+    static
+    {
+        // Safety check against making the ReplayIndexRecord big without modifying this
+        if (RECORD_LENGTH < ReplayIndexRecordDecoder.BLOCK_LENGTH)
+        {
+            throw new IllegalStateException("Invalid record length");
+        }
+    }
 
     static File logFile(final String logFileDir, final long fixSessionId, final int streamId)
     {

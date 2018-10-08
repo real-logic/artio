@@ -52,7 +52,6 @@ public class ReplayQuery implements AutoCloseable
     private final Long2ObjectCache<SessionQuery> fixSessionToIndex;
     private final String logFileDir;
     private final ExistingBufferFactory indexBufferFactory;
-    private final ArchiveReader archiveReader;
     private final int requiredStreamId;
     private final IdleStrategy idleStrategy;
     private final AeronArchive aeronArchive;
@@ -64,7 +63,6 @@ public class ReplayQuery implements AutoCloseable
         final int cacheNumSets,
         final int cacheSetSize,
         final ExistingBufferFactory indexBufferFactory,
-        final ArchiveReader archiveReader,
         final int requiredStreamId,
         final IdleStrategy idleStrategy,
         final AeronArchive aeronArchive,
@@ -73,7 +71,6 @@ public class ReplayQuery implements AutoCloseable
     {
         this.logFileDir = logFileDir;
         this.indexBufferFactory = indexBufferFactory;
-        this.archiveReader = archiveReader;
         this.requiredStreamId = requiredStreamId;
         this.idleStrategy = idleStrategy;
         this.aeronArchive = aeronArchive;
@@ -107,7 +104,6 @@ public class ReplayQuery implements AutoCloseable
     public void close()
     {
         fixSessionToIndex.clear();
-        archiveReader.close();
     }
 
     private final class SessionQuery implements AutoCloseable
@@ -211,6 +207,11 @@ public class ReplayQuery implements AutoCloseable
                 }
             }
 
+            if (currentRange != null)
+            {
+                ranges.add(currentRange);
+            }
+
             return replayTheRange(handler, ranges);
         }
 
@@ -275,6 +276,8 @@ public class ReplayQuery implements AutoCloseable
             {
                 this.position = addPosition;
                 this.length = addLength;
+                this.count = 1;
+                return;
             }
 
             final long currentEnd = currentPosition + this.length;
