@@ -93,10 +93,9 @@ public class Indexer implements Agent, ControlledFragmentHandler
             endPosition,
             streamId,
             aeronSessionId);
-        /*System.out.println(endPosition - header.frameLength());*/
         for (final Index index : indices)
         {
-            index.indexRecord(buffer, offset, length, streamId, aeronSessionId, endPosition);
+            index.onFragment(buffer, offset, length, header);
         }
 
         return CONTINUE;

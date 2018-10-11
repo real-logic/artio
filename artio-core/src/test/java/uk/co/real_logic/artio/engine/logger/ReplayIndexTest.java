@@ -15,20 +15,24 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.Aeron;
 import io.aeron.CommonContext;
+import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
+import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.archive.client.AeronArchive;
+import io.aeron.archive.codecs.SourceLocation;
 import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.logbuffer.Header;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.NoOpIdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
-import org.mockito.stubbing.OngoingStubbing;
+import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.artio.TestFixtures;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.messages.ManageSessionEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
@@ -39,34 +43,36 @@ import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.artio.GatewayProcess.ARCHIVE_REPLAY_STREAM;
 import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.*;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
 // TODO: test case where we return less messages than expected.
-@Ignore
 public class ReplayIndexTest extends AbstractLogTest
 {
     private static final String CHANNEL = CommonContext.IPC_CHANNEL;
-    private static final long RECORDING_ID = 1L;
 
     private ByteBuffer indexBuffer = ByteBuffer.allocate(16 * 1024 + INITIAL_RECORD_OFFSET);
     private ExistingBufferFactory existingBufferFactory = mock(ExistingBufferFactory.class);
     private BufferFactory newBufferFactory = mock(BufferFactory.class);
-    private ControlledFragmentHandler mockHandler = mock(ControlledFragmentHandler.class);
-    private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private ReplayIndex replayIndex;
-    private AeronArchive mockArchive = mock(AeronArchive.class);
-    private Subscription mockSubscription = mock(Subscription.class);
     private int totalMessages = (indexBuffer.capacity() - MessageHeaderEncoder.ENCODED_LENGTH) / RECORD_LENGTH;
 
     private UnsafeBuffer replayPositionBuffer = new UnsafeBuffer(new byte[REPLAY_POSITION_BUFFER_SIZE]);
     private IndexedPositionConsumer positionConsumer = mock(IndexedPositionConsumer.class);
     private IndexedPositionReader positionReader = new IndexedPositionReader(replayPositionBuffer);
     private ManageSessionEncoder logon = new ManageSessionEncoder();
-    private RecordingIdLookup recordingIdLookup = mock(RecordingIdLookup.class);
+
+    private ControlledFragmentHandler mockHandler = mock(ControlledFragmentHandler.class);
+    private ErrorHandler errorHandler = mock(ErrorHandler.class);
+
+    private ArchivingMediaDriver mediaDriver;
+    private AeronArchive aeronArchive;
+
+    private ExclusivePublication publication;
+    private Subscription subscription;
 
     private void newReplayIndex()
     {
@@ -79,7 +85,12 @@ public class ReplayIndexTest extends AbstractLogTest
             newBufferFactory,
             replayPositionBuffer,
             errorHandler,
-            recordingIdLookup);
+            new RecordingIdLookup(aeron().countersReader()));
+    }
+
+    private Aeron aeron()
+    {
+        return aeronArchive.context().aeron();
     }
 
     private ReplayQuery query;
@@ -87,6 +98,14 @@ public class ReplayIndexTest extends AbstractLogTest
     @Before
     public void setUp()
     {
+        mediaDriver = TestFixtures.launchMediaDriver();
+        aeronArchive = AeronArchive.connect();
+        aeronArchive.startRecording(CHANNEL, STREAM_ID, SourceLocation.LOCAL);
+
+        final Aeron aeron = aeron();
+        publication = aeron.addExclusivePublication(CHANNEL, STREAM_ID);
+        subscription = aeron.addSubscription(CHANNEL, STREAM_ID);
+
         final File logFile = logFile(SESSION_ID);
         IoUtil.deleteIfExists(logFile);
 
@@ -98,41 +117,22 @@ public class ReplayIndexTest extends AbstractLogTest
             existingBufferFactory,
             OUTBOUND_LIBRARY_STREAM,
             new NoOpIdleStrategy(),
-            mockArchive,
+            aeronArchive,
             CHANNEL,
             errorHandler,
-            mock(RecordingBarrier.class));
+            new RecordingBarrier(aeronArchive));
 
         returnBuffer(indexBuffer, SESSION_ID);
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);
         when(newBufferFactory.map(any(), anyInt())).thenReturn(indexBuffer);
-
-        when(recordingIdLookup.getRecordingId(anyInt())).thenReturn(RECORDING_ID);
-        when(mockArchive.replay(
-            eq(RECORDING_ID),
-            anyLong(),
-            anyLong(),
-            eq(CHANNEL),
-            eq(ARCHIVE_REPLAY_STREAM))).thenReturn(mockSubscription);
-        readsRequestedMessages();
-    }
-
-    private void readsRequestedMessages()
-    {
-        whenRead().then(inv ->
-        {
-            final ControlledFragmentHandler handler = inv.getArgument(0);
-
-            handler.onFragment(buffer, START, logEntryLength, mock(Header.class));
-
-            return 1;
-        });
     }
 
     @After
     public void teardown()
     {
-        replayIndex.close();
+        aeronArchive.stopRecording(CHANNEL, STREAM_ID);
+        Exceptions.closeAll(replayIndex, aeronArchive);
+        cleanupMediaDriver(mediaDriver);
     }
 
     @Test
@@ -153,7 +153,7 @@ public class ReplayIndexTest extends AbstractLogTest
         indexExampleMessage();
 
         final int endSequenceNumber = SEQUENCE_NUMBER + 1;
-        indexExampleMessage(endSequenceNumber);
+        indexExampleMessage(SESSION_ID, endSequenceNumber, SEQUENCE_INDEX);
 
         final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, endSequenceNumber, SEQUENCE_INDEX);
 
@@ -174,9 +174,6 @@ public class ReplayIndexTest extends AbstractLogTest
         {
             newReplayIndex();
 
-            bufferContainsExampleMessage(false, SESSION_ID, SEQUENCE_NUMBER + 1, SEQUENCE_INDEX);
-            indexRecord();
-
             final int msgCount = query();
 
             verifyMappedFile(SESSION_ID, 1);
@@ -189,21 +186,8 @@ public class ReplayIndexTest extends AbstractLogTest
         }
     }
 
-    @Ignore
     @Test
     public void shouldReturnAllLogEntriesWhenMostResentMessageRequested()
-    {
-        indexExampleMessage();
-
-        final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, MOST_RECENT_MESSAGE, SEQUENCE_INDEX);
-
-        verifyMappedFile(SESSION_ID, 1);
-        verifyMessagesRead(1);
-        assertEquals(1, msgCount);
-    }
-
-    @Test
-    public void shouldReturnLogEntriesWhenMostResentMessageRequested()
     {
         indexExampleMessage();
 
@@ -242,18 +226,15 @@ public class ReplayIndexTest extends AbstractLogTest
     {
         indexExampleMessage();
 
-        readPositions(100L, 100L);
-
         final int nextSequenceIndex = SEQUENCE_INDEX + 1;
         final int endSequenceNumber = 1;
 
-        bufferContainsExampleMessage(true, SESSION_ID, endSequenceNumber, nextSequenceIndex);
-        indexRecord();
+        indexExampleMessage(SESSION_ID, endSequenceNumber, nextSequenceIndex);
 
         final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, endSequenceNumber, nextSequenceIndex);
 
-        assertEquals(2, msgCount);
         verifyMessagesRead(2);
+        assertEquals(2, msgCount);
     }
 
     @Test
@@ -264,32 +245,13 @@ public class ReplayIndexTest extends AbstractLogTest
         final int beginSequenceNumber = 1;
         final int endSequenceNumber = 1_000;
 
-        IntStream.rangeClosed(beginSequenceNumber, endSequenceNumber).forEach(this::indexExampleMessage);
+        IntStream.rangeClosed(beginSequenceNumber, endSequenceNumber).forEach(seqNum ->
+            indexExampleMessage(SESSION_ID, seqNum, SEQUENCE_INDEX));
 
         final int msgCount = query(beginSequenceNumber, SEQUENCE_INDEX, endSequenceNumber, SEQUENCE_INDEX);
 
         assertEquals(totalMessages, msgCount);
         verifyMessagesRead(totalMessages);
-    }
-
-    @Ignore // TODO: figure out how to do this test
-    // another way now we read all the positions up front.
-    @Test
-    public void shouldCheckForWriterOverlap()
-    {
-        indexExampleMessage();
-
-        whenRead().then((inv) ->
-        {
-            IntStream.range(SEQUENCE_NUMBER + 1, totalMessages + 4).forEach(this::indexExampleMessage);
-
-            return 1;
-        }).thenReturn(1);
-
-        final int msgCount = query(SEQUENCE_NUMBER, SEQUENCE_INDEX, MOST_RECENT_MESSAGE, SEQUENCE_INDEX);
-
-        assertEquals(totalMessages + 1, msgCount);
-        verifyMessagesRead(totalMessages + 1);
     }
 
     @Test
@@ -299,7 +261,7 @@ public class ReplayIndexTest extends AbstractLogTest
 
         positionReader.readLastPosition(positionConsumer);
 
-        verify(positionConsumer, times(1)).accept(AERON_SESSION_ID, alignedEndPosition());
+        verify(positionConsumer, times(1)).accept(publication.sessionId(), alignedEndPosition());
     }
 
     @Test
@@ -307,7 +269,7 @@ public class ReplayIndexTest extends AbstractLogTest
     {
         indexExampleMessage();
 
-        indexRecord();
+        indexExampleMessage();
 
         verifyMappedFile(SESSION_ID);
     }
@@ -315,10 +277,9 @@ public class ReplayIndexTest extends AbstractLogTest
     @Test
     public void shouldRecordIndexesForMultipleSessions()
     {
-        indexExampleMessage(SEQUENCE_NUMBER);
+        indexExampleMessage();
 
-        bufferContainsExampleMessage(true, SESSION_ID_2, SEQUENCE_NUMBER, SEQUENCE_INDEX);
-        indexRecord();
+        indexExampleMessage(SESSION_ID_2, SEQUENCE_NUMBER, SEQUENCE_INDEX);
 
         verifyMappedFile(SESSION_ID);
         verifyMappedFile(SESSION_ID_2);
@@ -328,6 +289,8 @@ public class ReplayIndexTest extends AbstractLogTest
     public void shouldIgnoreOtherMessageTypes()
     {
         bufferContainsLogon();
+
+        publishBuffer();
 
         indexRecord();
 
@@ -350,28 +313,22 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private void indexExampleMessage()
     {
-        bufferContainsExampleMessage(true);
-        indexRecord();
-    }
-
-    private void readPositions(final Long firstPosition, final Long... remainingPositions)
-    {
-        // TODO: whenRead().thenReturn(firstPosition, remainingPositions);
-    }
-
-    private OngoingStubbing<Integer> whenRead()
-    {
-        return when(mockSubscription.controlledPoll(any(ControlledFragmentHandler.class), anyInt()));
+        indexExampleMessage(SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX);
     }
 
     private void verifyNoMessageRead()
     {
-        verifyNoMoreInteractions(mockSubscription);
+        verifyMessagesRead(never());
     }
 
     private void verifyMessagesRead(final int number)
     {
-        verify(mockHandler, times(number))
+        verifyMessagesRead(times(number));
+    }
+
+    private void verifyMessagesRead(final VerificationMode times)
+    {
+        verify(mockHandler, times)
             .onFragment(any(), anyInt(), anyInt(), any());
     }
 
@@ -398,13 +355,28 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private void indexRecord()
     {
-        replayIndex.indexRecord(buffer, START + 32, fragmentLength(), STREAM_ID, AERON_SESSION_ID, alignedEndPosition());
+        int read = 0;
+        while (read < 1)
+        {
+            read += subscription.controlledPoll(replayIndex, 1);
+        }
     }
 
-    private void indexExampleMessage(final int endSequenceNumber)
+    private void indexExampleMessage(final long sessionId, final int sequenceNumber, final int sequenceIndex)
     {
-        bufferContainsExampleMessage(true, SESSION_ID, endSequenceNumber, SEQUENCE_INDEX);
+        bufferContainsExampleMessage(true, sessionId, sequenceNumber, sequenceIndex);
+
+        publishBuffer();
+
         indexRecord();
+    }
+
+    private void publishBuffer()
+    {
+        while (publication.offer(buffer, START, logEntryLength + PREFIX_LENGTH) <= 0)
+        {
+            Thread.yield();
+        }
     }
 
     private int query()
