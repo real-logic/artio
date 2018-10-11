@@ -541,6 +541,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return logOutboundMessages;
     }
 
+    public boolean logAnyMessages()
+    {
+        return logInboundMessages || logOutboundMessages;
+    }
+
     public IdleStrategy framerIdleStrategy()
     {
         return framerIdleStrategy;

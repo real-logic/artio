@@ -1293,11 +1293,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void quiesce()
     {
-        final Long2LongHashMap completionPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
-
         final Long2LongHashMap inboundPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
         inboundPositions.put(inboundPublication.id(), inboundPublication.position());
-        completionPositions.put(inboundPublication.id(), inboundPublication.position());
         inboundCompletionPosition.complete(inboundPositions);
 
         final Long2LongHashMap outboundPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
@@ -1309,13 +1306,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             {
                 final long position = image.position();
                 outboundPositions.put(aeronSessionId, position);
-                //completionPositions.put(aeronSessionId, position);
             }
         });
 
         outboundLibraryCompletionPosition.complete(outboundPositions);
 
-        recordingCoordinator.completionPositions(completionPositions);
+        recordingCoordinator.completionPositions(inboundPositions);
     }
 
     public String roleName()

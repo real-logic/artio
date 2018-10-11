@@ -24,7 +24,6 @@ import uk.co.real_logic.artio.library.LibraryConfiguration;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
-@Ignore
 public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
     private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();

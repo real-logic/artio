@@ -43,28 +43,42 @@ public class RecordingCoordinator implements AutoCloseable
     private final AeronArchive archive;
     private final String channel;
     private final CountersReader counters;
+    private final EngineConfiguration configuration;
 
-    private Long2LongHashMap aeronSessionIdToCompletionPosition;
+    private Long2LongHashMap inboundAeronSessionIdToCompletionPosition;
+
     private boolean closed = false;
 
-    RecordingCoordinator(final AeronArchive archive, final String channel)
+    RecordingCoordinator(final AeronArchive archive, final EngineConfiguration configuration)
     {
         this.archive = archive;
-        this.channel = channel;
-        this.counters = archive.context().aeron().countersReader();
+        this.configuration = configuration;
+        this.channel = configuration.libraryAeronChannel();
+        this.counters = configuration.logAnyMessages() ? archive.context().aeron().countersReader() : null;
 
-        // Inbound we're writing from the Framer thread, always local
-        archive.startRecording(channel, INBOUND_LIBRARY_STREAM, LOCAL);
+        if (configuration.logInboundMessages())
+        {
+            // Inbound we're writing from the Framer thread, always local
+            archive.startRecording(channel, INBOUND_LIBRARY_STREAM, LOCAL);
+        }
 
-        // Outbound libraries might be on an IPC box.
-        final SourceLocation location = channel.equals(IPC_CHANNEL) ? LOCAL : REMOTE;
-        archive.startRecording(channel, OUTBOUND_LIBRARY_STREAM, location);
+        if (configuration.logOutboundMessages())
+        {
+            // Outbound libraries might be on an IPC box.
+            final SourceLocation location = channel.equals(IPC_CHANNEL) ? LOCAL : REMOTE;
+            archive.startRecording(channel, OUTBOUND_LIBRARY_STREAM, location);
+        }
     }
 
     // Only called on single threaded engine startup
     public void track(final Publication publication)
     {
-        trackedSessionIds.add(publication.sessionId());
+        final int streamId = publication.streamId();
+        if ((streamId == OUTBOUND_LIBRARY_STREAM && configuration.logOutboundMessages()) ||
+            (streamId == INBOUND_LIBRARY_STREAM && configuration.logInboundMessages()))
+        {
+            trackedSessionIds.add(publication.sessionId());
+        }
     }
 
     // Only called on single threaded engine startup
@@ -87,9 +101,9 @@ public class RecordingCoordinator implements AutoCloseable
     }
 
     // Called only on Framer.quiesce(), uses shutdown order
-    public void completionPositions(final Long2LongHashMap aeronSessionIdToCompletionPosition)
+    public void completionPositions(final Long2LongHashMap inboundAeronSessionIdToCompletionPosition)
     {
-        this.aeronSessionIdToCompletionPosition = aeronSessionIdToCompletionPosition;
+        this.inboundAeronSessionIdToCompletionPosition = inboundAeronSessionIdToCompletionPosition;
     }
 
     // Must be called after the framer has shutdown, uses shutdown order
@@ -105,6 +119,14 @@ public class RecordingCoordinator implements AutoCloseable
     }
 
     private void awaitRecordingsCompletion()
+    {
+        if (configuration.logInboundMessages())
+        {
+            awaitRecordingsCompletion(inboundAeronSessionIdToCompletionPosition);
+        }
+    }
+
+    private void awaitRecordingsCompletion(final Long2LongHashMap aeronSessionIdToCompletionPosition)
     {
         if (aeronSessionIdToCompletionPosition == null)
         {
@@ -126,9 +148,20 @@ public class RecordingCoordinator implements AutoCloseable
 
     private void shutdownArchiver()
     {
-        archive.stopRecording(channel, INBOUND_LIBRARY_STREAM);
-        archive.stopRecording(channel, OUTBOUND_LIBRARY_STREAM);
-        archive.close();
+        if (configuration.logInboundMessages())
+        {
+            archive.stopRecording(channel, INBOUND_LIBRARY_STREAM);
+        }
+
+        if (configuration.logOutboundMessages())
+        {
+            archive.stopRecording(channel, OUTBOUND_LIBRARY_STREAM);
+        }
+
+        if (configuration.logAnyMessages())
+        {
+            archive.close();
+        }
     }
 
     private boolean hasRecordingStarted(final int sessionId)
