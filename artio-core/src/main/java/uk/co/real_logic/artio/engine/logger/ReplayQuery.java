@@ -18,7 +18,6 @@ package uk.co.real_logic.artio.engine.logger;
 import io.aeron.ControlledFragmentAssembler;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
-import io.aeron.archive.status.RecordingPos;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
@@ -27,7 +26,6 @@ import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
-import org.agrona.concurrent.status.CountersReader;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
@@ -64,6 +62,7 @@ public class ReplayQuery implements AutoCloseable
     private final AeronArchive aeronArchive;
     private final String channel;
     private final ErrorHandler errorHandler;
+    private final RecordingBarrier recordingBarrier;
 
     private final MessageTracker messageTracker = new MessageTracker();
     private final ControlledFragmentAssembler assembler = new ControlledFragmentAssembler(messageTracker);
@@ -77,7 +76,8 @@ public class ReplayQuery implements AutoCloseable
         final IdleStrategy idleStrategy,
         final AeronArchive aeronArchive,
         final String channel,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final RecordingBarrier recordingBarrier)
     {
         this.logFileDir = logFileDir;
         this.indexBufferFactory = indexBufferFactory;
@@ -86,6 +86,7 @@ public class ReplayQuery implements AutoCloseable
         this.aeronArchive = aeronArchive;
         this.channel = channel;
         this.errorHandler = errorHandler;
+        this.recordingBarrier = recordingBarrier;
 
         fixSessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionQuery::close);
     }
@@ -235,7 +236,7 @@ public class ReplayQuery implements AutoCloseable
                 final long beginPosition = recordingRange.position - 32;
                 final long endPosition = beginPosition + recordingRange.length + 32;
 
-                awaitArchiverCatchup(recordingRange, endPosition);
+                recordingBarrier.await(recordingRange.recordingId, endPosition, idleStrategy);
 
                 try (Subscription subscription = aeronArchive.replay(
                     recordingRange.recordingId,
@@ -261,47 +262,11 @@ public class ReplayQuery implements AutoCloseable
                 {
                     errorHandler.onError(exception);
 
-                    System.err.println("requiredStreamId = " + requiredStreamId);
-                    System.err.println("Thread.currentThread().getName() = " + Thread.currentThread().getName());
-                    exception.printStackTrace();
-
-                    System.exit(-1);
-
                     return replayedMessages;
                 }
             }
 
             return replayedMessages;
-        }
-
-        private void awaitArchiverCatchup(final RecordingRange recordingRange, final long endPosition)
-        {
-            final CountersReader countersReader = aeronArchive.context().aeron().countersReader();
-            final int counterId = RecordingPos.findCounterIdByRecording(
-                countersReader,
-                recordingRange.recordingId);
-
-            if (counterId != CountersReader.NULL_COUNTER_ID)
-            {
-                long recordedPosition;
-                while ((recordedPosition = countersReader.getCounterValue(counterId)) < endPosition)
-                {
-                    idleStrategy.idle();
-                    //System.out.println(recordedPosition);
-
-                    if (!RecordingPos.isActive(countersReader, counterId, recordingRange.recordingId))
-                    {
-                        System.out.println(counterId + "IN ACTIVE!");
-                        System.exit(-1);
-                    }
-                }
-                idleStrategy.reset();
-            }
-            else
-            {
-                // TODO: find out how to get the completed position of the recording?
-                // Or maybe just handle the exception if it happens
-            }
         }
 
         public void close()

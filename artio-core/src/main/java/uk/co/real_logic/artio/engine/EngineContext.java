@@ -172,7 +172,8 @@ public class EngineContext implements AutoCloseable
             idleStrategy,
             aeronArchive,
             configuration.libraryAeronChannel(),
-            errorHandler);
+            errorHandler,
+            new RecordingBarrier(aeronArchive));
     }
 
     protected Replayer newReplayer(
