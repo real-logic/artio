@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.After;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.decoder.LogoutDecoder;
@@ -35,6 +36,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
 
+@Ignore
 public class MessageBasedAcceptorSystemTest
 {
     private int port = unusedPort();

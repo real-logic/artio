@@ -42,7 +42,6 @@ import static java.util.Arrays.asList;
 import static uk.co.real_logic.artio.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.suppressingClose;
-import static uk.co.real_logic.artio.protocol.ReservedValue.NO_FILTER;
 
 public class EngineContext implements AutoCloseable
 {
@@ -61,13 +60,7 @@ public class EngineContext implements AutoCloseable
     private final CompletionPosition inboundCompletionPosition = new CompletionPosition();
     private final CompletionPosition outboundLibraryCompletionPosition = new CompletionPosition();
     private final CompletionPosition outboundClusterCompletionPosition = new CompletionPosition();
-    private final List<Archiver> archivers = new ArrayList<>();
-    private final StreamIdentifier outboundStreamId;
 
-    private ArchiveReader outboundArchiveReader;
-    private ArchiveReader inboundArchiveReader;
-    private Archiver inboundArchiver;
-    private Archiver outboundArchiver;
     private Streams inboundLibraryStreams;
     private Streams outboundLibraryStreams;
 
@@ -111,10 +104,8 @@ public class EngineContext implements AutoCloseable
 
             final String channel = configuration.libraryAeronChannel();
             this.inboundStreamId = new StreamIdentifier(channel, INBOUND_LIBRARY_STREAM);
-            this.outboundStreamId = new StreamIdentifier(channel, OUTBOUND_LIBRARY_STREAM);
 
             newStreams();
-            newArchival();
             newArchivingAgent();
         }
         catch (final Exception e)
@@ -169,12 +160,11 @@ public class EngineContext implements AutoCloseable
             new RecordingIdLookup(aeron.countersReader()));
     }
 
-    protected ReplayQuery newReplayQuery(final ArchiveReader archiveReader, final IdleStrategy idleStrategy)
+    protected ReplayQuery newReplayQuery(final IdleStrategy idleStrategy, final int streamId)
     {
         final String logFileDir = configuration.logFileDir();
         final int cacheSetSize = configuration.loggerCacheSetSize();
         final int cacheNumSets = configuration.loggerCacheNumSets();
-        final int streamId = archiveReader.fullStreamId().streamId();
         return new ReplayQuery(
             logFileDir,
             cacheNumSets,
@@ -187,37 +177,11 @@ public class EngineContext implements AutoCloseable
             errorHandler);
     }
 
-    protected ArchiveReader archiveReader(final StreamIdentifier streamId)
-    {
-        return archiveReader(streamId, NO_FILTER);
-    }
-
-    protected ArchiveReader archiveReader(final StreamIdentifier streamId, final int reservedValueFilter)
-    {
-        return new ArchiveReader(
-            LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
-            configuration.loggerCacheNumSets(),
-            configuration.loggerCacheSetSize(),
-            streamId,
-            reservedValueFilter);
-    }
-
-    protected Archiver archiver(final StreamIdentifier streamId, final CompletionPosition completionPosition)
-    {
-        return new Archiver(
-            LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
-            configuration.loggerCacheNumSets(),
-            configuration.loggerCacheSetSize(),
-            streamId,
-            configuration.agentNamePrefix(),
-            completionPosition);
-    }
-
     protected Replayer newReplayer(
-        final ExclusivePublication replayPublication, final ArchiveReader outboundArchiveReader)
+        final ExclusivePublication replayPublication)
     {
         return new Replayer(
-            newReplayQuery(outboundArchiveReader, configuration.archiverIdleStrategy()),
+            newReplayQuery(configuration.archiverIdleStrategy(), OUTBOUND_LIBRARY_STREAM),
             replayPublication,
             new ExclusiveBufferClaim(),
             configuration.archiverIdleStrategy(),
@@ -232,8 +196,6 @@ public class EngineContext implements AutoCloseable
     }
 
     protected void newIndexers(
-        final ArchiveReader inboundArchiveReader,
-        final ArchiveReader outboundArchiveReader,
         final Index extraOutboundIndex)
     {
         final int cacheSetSize = configuration.loggerCacheSetSize();
@@ -244,7 +206,6 @@ public class EngineContext implements AutoCloseable
 
         inboundIndexer = new Indexer(
             asList(replayIndex, receivedSequenceNumberIndex),
-            inboundArchiveReader,
             inboundLibraryStreams.subscription("inboundIndexer"),
             configuration.agentNamePrefix(),
             inboundCompletionPosition);
@@ -259,7 +220,6 @@ public class EngineContext implements AutoCloseable
 
         outboundIndexer = new Indexer(
             outboundIndices,
-            outboundArchiveReader,
             outboundLibraryStreams.subscription("outboundIndexer"),
             configuration.agentNamePrefix(),
             outboundLibraryCompletionPosition);
@@ -270,24 +230,11 @@ public class EngineContext implements AutoCloseable
         if (configuration.logOutboundMessages())
         {
             newIndexers(
-                inboundArchiveReader,
-                outboundArchiveReader,
                 new PositionSender(inboundLibraryPublication()));
 
-            final Replayer replayer = newReplayer(replayPublication, outboundArchiveReader);
+            final Replayer replayer = newReplayer(replayPublication);
 
-            if (configuration.logInboundMessages())
-            {
-                archiverSubscription(inboundArchiver, inboundStreamId);
-            }
-
-
-            if (configuration.logOutboundMessages())
-            {
-                archiverSubscription(outboundArchiver, outboundStreamId);
-            }
-
-            final List<Agent> agents = new ArrayList<>(archivers);
+            final List<Agent> agents = new ArrayList<>();
             agents.add(inboundIndexer);
             agents.add(outboundIndexer);
             agents.add(replayer);
@@ -309,36 +256,6 @@ public class EngineContext implements AutoCloseable
                 configuration.agentNamePrefix(),
                 senderSequenceNumbers);
         }
-    }
-
-    private void archiverSubscription(final Archiver archiver, final StreamIdentifier streamId)
-    {
-
-        final Subscription subscription = aeron.addSubscription(streamId.channel(), streamId.streamId());
-        StreamInformation.print("Archiver", subscription, configuration);
-        archiver.subscription(subscription);
-    }
-
-    public void newArchival()
-    {
-        if (configuration.logInboundMessages())
-        {
-            inboundArchiver = addArchiver(inboundStreamId, inboundCompletionPosition());
-            inboundArchiveReader = archiveReader(inboundStreamId);
-        }
-
-        if (configuration.logOutboundMessages())
-        {
-            outboundArchiver = addArchiver(outboundStreamId, outboundLibraryCompletionPosition());
-            outboundArchiveReader = archiveReader(outboundStreamId);
-        }
-    }
-
-    private Archiver addArchiver(final StreamIdentifier streamId, final CompletionPosition completionPosition)
-    {
-        final Archiver archiver = archiver(streamId, completionPosition);
-        archivers.add(archiver);
-        return archiver;
     }
 
     public Streams outboundLibraryStreams()
@@ -368,8 +285,7 @@ public class EngineContext implements AutoCloseable
             return null;
         }
 
-        final ArchiveReader archiveReader = archiveReader(inboundStreamId);
-        return newReplayQuery(archiveReader, configuration.framerIdleStrategy());
+        return newReplayQuery(configuration.framerIdleStrategy(), INBOUND_LIBRARY_STREAM);
     }
 
     public GatewayPublication inboundLibraryPublication()
@@ -386,11 +302,6 @@ public class EngineContext implements AutoCloseable
     public CompletionPosition outboundLibraryCompletionPosition()
     {
         return outboundLibraryCompletionPosition;
-    }
-
-    public CompletionPosition outboundClusterCompletionPosition()
-    {
-        return outboundClusterCompletionPosition;
     }
 
     void completeDuringStartup()
@@ -413,6 +324,6 @@ public class EngineContext implements AutoCloseable
     public void close()
     {
         Exceptions.closeAll(
-            sentSequenceNumberIndex, receivedSequenceNumberIndex, inboundArchiveReader, outboundArchiveReader);
+            sentSequenceNumberIndex, receivedSequenceNumberIndex);
     }
 }

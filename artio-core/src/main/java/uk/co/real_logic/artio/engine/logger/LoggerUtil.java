@@ -52,12 +52,6 @@ public final class LoggerUtil
         return IoUtil.mapExistingFile(file, file.getName());
     }
 
-    public static ArchiveMetaData newArchiveMetaData(final String logFileDir)
-    {
-        final LogDirectoryDescriptor directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
-        return new ArchiveMetaData(directoryDescriptor, LoggerUtil::mapExistingFile, LoggerUtil::mapNewFile);
-    }
-
     /**
      * Returns true if the buffer has been initialised this time round, false if it was already initialised.
      */

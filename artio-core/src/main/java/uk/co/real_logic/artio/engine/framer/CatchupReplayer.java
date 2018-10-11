@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import io.aeron.ControlledFragmentAssembler;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ExclusiveBufferClaim;
 import io.aeron.logbuffer.Header;
@@ -72,7 +71,6 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final HeaderDecoder headerDecoder = new HeaderDecoder();
     private final ExclusiveBufferClaim bufferClaim = new ExclusiveBufferClaim();
-    private final ControlledFragmentAssembler assembler = new ControlledFragmentAssembler(this);
 
     private final PossDupEnabler possDupEnabler;
     private final ReplayQuery inboundMessages;
@@ -301,7 +299,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                         session.sessionId(), lastReceivedSeqNum, currentSequenceIndex);
 
                     inboundMessages.query(
-                        assembler,
+                        this,
                         session.sessionId(),
                         replayFromSequenceNumber,
                         replayFromSequenceIndex,

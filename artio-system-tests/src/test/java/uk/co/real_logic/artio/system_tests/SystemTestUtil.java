@@ -23,9 +23,9 @@ import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.TestRequestEncoder;
+import uk.co.real_logic.artio.engine.DefaultEngineScheduler;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -198,8 +198,8 @@ public final class SystemTestUtil
             .libraryAeronChannel("aeron:udp?endpoint=localhost:" + libraryAeronPort)
             .monitoringFile(optimalTmpDirName() + File.separator + "fix-client" + File.separator + "engineCounters")
             .logFileDir(CLIENT_LOGS)
-            //.scheduler(new DefaultEngineScheduler());
-            .scheduler(new LowResourceEngineScheduler());
+            .scheduler(new DefaultEngineScheduler());
+            //.scheduler(new LowResourceEngineScheduler());
         configuration.agentNamePrefix("init-");
 
         return configuration;
@@ -236,8 +236,8 @@ public final class SystemTestUtil
             .libraryAeronChannel(IPC_CHANNEL)
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(acceptorLogs)
-            //.scheduler(new DefaultEngineScheduler());
-            .scheduler(new LowResourceEngineScheduler());
+            .scheduler(new DefaultEngineScheduler());
+            //.scheduler(new LowResourceEngineScheduler());
     }
 
     static String acceptorMonitoringFile(final String countersSuffix)

@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.ControlledFragmentAssembler;
 import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
@@ -82,7 +81,6 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     private final ExclusiveBufferClaim bufferClaim;
     private final PossDupEnabler possDupEnabler;
     private final ProtocolSubscription protocolSubscription = ProtocolSubscription.of(this);
-    private final ControlledFragmentAssembler assembler = new ControlledFragmentAssembler(this);
 
     private final ReplayQuery replayQuery;
     private final ExclusivePublication publication;
@@ -212,7 +210,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
             backpressured = false;
             final int count = replayQuery.query(
-                assembler,
+                this,
                 sessionId,
                 beginSeqNo,
                 sequenceIndex,

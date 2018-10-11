@@ -27,6 +27,7 @@ import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.invocation.InvocationOnMock;
@@ -61,6 +62,7 @@ import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 import static uk.co.real_logic.artio.util.CustomMatchers.sequenceEqualsAscii;
 
+@Ignore
 public class ReplayerTest extends AbstractLogTest
 {
     private static final String DATE_TIME_STR = "19840521-15:00:00";

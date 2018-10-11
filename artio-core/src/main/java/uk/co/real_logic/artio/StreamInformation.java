@@ -54,10 +54,11 @@ public final class StreamInformation
         if (printAeronStreamIdentifiers)
         {
             System.out.printf(
-                "%-40s - registrationId=%d,streamId=%d%n",
+                "%-40s - registrationId=%d,streamId=%d,sessionId=%d%n",
                 name,
                 publication.registrationId(),
-                publication.streamId());
+                publication.streamId(),
+                publication.sessionId());
         }
     }
 }

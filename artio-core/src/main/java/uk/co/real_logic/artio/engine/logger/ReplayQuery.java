@@ -15,14 +15,20 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.ControlledFragmentAssembler;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
+import io.aeron.archive.status.RecordingPos;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.Header;
+import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.status.CountersReader;
+import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
 
@@ -32,6 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongFunction;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.agrona.UnsafeAccess.UNSAFE;
 import static uk.co.real_logic.artio.GatewayProcess.ARCHIVE_REPLAY_STREAM;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
@@ -57,6 +64,9 @@ public class ReplayQuery implements AutoCloseable
     private final AeronArchive aeronArchive;
     private final String channel;
     private final ErrorHandler errorHandler;
+
+    private final MessageTracker messageTracker = new MessageTracker();
+    private final ControlledFragmentAssembler assembler = new ControlledFragmentAssembler(messageTracker);
 
     public ReplayQuery(
         final String logFileDir,
@@ -218,33 +228,80 @@ public class ReplayQuery implements AutoCloseable
         private int replayTheRange(final ControlledFragmentHandler handler, final List<RecordingRange> ranges)
         {
             int replayedMessages = 0;
-            // REPLAY THE RECORDINGS
             for (int i = 0, size = ranges.size(); i < size; i++)
             {
                 final RecordingRange recordingRange = ranges.get(i);
+                // System.err.println(recordingRange);
+                final long beginPosition = recordingRange.position - 32;
+                final long endPosition = beginPosition + recordingRange.length + 32;
+
+                awaitArchiverCatchup(recordingRange, endPosition);
+
                 try (Subscription subscription = aeronArchive.replay(
                     recordingRange.recordingId,
-                    recordingRange.position,
-                    recordingRange.length,
+                    beginPosition,
+                    endPosition,
                     channel,
                     ARCHIVE_REPLAY_STREAM))
                 {
-                    final int messagesRead = subscription.controlledPoll(handler, recordingRange.count);
-                    replayedMessages += messagesRead;
-                    if (recordingRange.count != messagesRead)
+                    messageTracker.wrap(handler);
+
+                    // TODO: if we fail properly abort and don't retry.
+                    while (messageTracker.count < recordingRange.count)
                     {
-                        return replayedMessages;
+                        subscription.controlledPoll(assembler, Integer.MAX_VALUE);
+
+                        idleStrategy.idle();
                     }
+                    idleStrategy.reset();
+
+                    replayedMessages += recordingRange.count;
                 }
                 catch (final Throwable exception)
                 {
                     errorHandler.onError(exception);
+
+                    System.err.println("requiredStreamId = " + requiredStreamId);
+                    System.err.println("Thread.currentThread().getName() = " + Thread.currentThread().getName());
+                    exception.printStackTrace();
+
+                    System.exit(-1);
 
                     return replayedMessages;
                 }
             }
 
             return replayedMessages;
+        }
+
+        private void awaitArchiverCatchup(final RecordingRange recordingRange, final long endPosition)
+        {
+            final CountersReader countersReader = aeronArchive.context().aeron().countersReader();
+            final int counterId = RecordingPos.findCounterIdByRecording(
+                countersReader,
+                recordingRange.recordingId);
+
+            if (counterId != CountersReader.NULL_COUNTER_ID)
+            {
+                long recordedPosition;
+                while ((recordedPosition = countersReader.getCounterValue(counterId)) < endPosition)
+                {
+                    idleStrategy.idle();
+                    //System.out.println(recordedPosition);
+
+                    if (!RecordingPos.isActive(countersReader, counterId, recordingRange.recordingId))
+                    {
+                        System.out.println(counterId + "IN ACTIVE!");
+                        System.exit(-1);
+                    }
+                }
+                idleStrategy.reset();
+            }
+            else
+            {
+                // TODO: find out how to get the completed position of the recording?
+                // Or maybe just handle the exception if it happens
+            }
         }
 
         public void close()
@@ -301,6 +358,46 @@ public class ReplayQuery implements AutoCloseable
             }
 
             count++;
+        }
+
+        @Override
+        public String toString()
+        {
+            return "RecordingRange{" +
+                "recordingId=" + recordingId +
+                ", position=" + position +
+                ", length=" + length +
+                ", count=" + count +
+                '}';
+        }
+    }
+
+    private static class MessageTracker implements ControlledFragmentHandler
+    {
+        private final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
+
+        ControlledFragmentHandler messageHandler;
+        int count;
+
+        @Override
+        public Action onFragment(
+            final DirectBuffer buffer, final int offset, final int length, final Header header)
+        {
+            messageHeaderDecoder.wrap(buffer, offset);
+
+            if (messageHeaderDecoder.templateId() == FixMessageDecoder.TEMPLATE_ID)
+            {
+                count++;
+                return messageHandler.onFragment(buffer, offset, length, header);
+            }
+
+            return CONTINUE;
+        }
+
+        void wrap(final ControlledFragmentHandler handler)
+        {
+            this.messageHandler = handler;
+            this.count = 0;
         }
     }
 }

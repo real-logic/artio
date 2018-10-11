@@ -45,6 +45,7 @@ import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
 // TODO: test case where we return less messages than expected.
+@Ignore
 public class ReplayIndexTest extends AbstractLogTest
 {
     private static final String CHANNEL = CommonContext.IPC_CHANNEL;

@@ -29,8 +29,6 @@ import uk.co.real_logic.artio.engine.CompletionPosition;
 import java.util.List;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
-import static uk.co.real_logic.artio.engine.logger.ArchiveDescriptor.alignTerm;
 
 /**
  * Incrementally builds indexes by polling a subscription.
@@ -40,20 +38,17 @@ public class Indexer implements Agent, ControlledFragmentHandler
     private static final int LIMIT = 20;
 
     private final List<Index> indices;
-    private final ArchiveReader archiveReader;
     private final Subscription subscription;
     private final String agentNamePrefix;
     private final CompletionPosition completionPosition;
 
     public Indexer(
         final List<Index> indices,
-        final ArchiveReader archiveReader,
         final Subscription subscription,
         final String agentNamePrefix,
         final CompletionPosition completionPosition)
     {
         this.indices = indices;
-        this.archiveReader = archiveReader;
         this.subscription = subscription;
         this.agentNamePrefix = agentNamePrefix;
         this.completionPosition = completionPosition;
@@ -71,7 +66,8 @@ public class Indexer implements Agent, ControlledFragmentHandler
         {
             index.readLastPosition((aeronSessionId, endOfLastMessageposition) ->
             {
-                final ArchiveReader.SessionReader sessionReader = archiveReader.session(aeronSessionId);
+                // TODO: rewrite with aeron-archiver
+                /*final ArchiveReader.SessionReader sessionReader = archiveReader.session(aeronSessionId);
                 if (sessionReader != null)
                 {
                     do
@@ -81,7 +77,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
                         endOfLastMessageposition = sessionReader.read(nextMessagePosition, index);
                     }
                     while (endOfLastMessageposition > 0);
-                }
+                }*/
             });
         }
     }
@@ -90,16 +86,17 @@ public class Indexer implements Agent, ControlledFragmentHandler
     {
         final int streamId = header.streamId();
         final int aeronSessionId = header.sessionId();
-        final long position = header.position();
+        final long endPosition = header.position();
         DebugLogger.log(
             LogTag.INDEX,
             "Indexing @ %d from [%d, %d]%n",
-            position,
+            endPosition,
             streamId,
             aeronSessionId);
+        /*System.out.println(endPosition - header.frameLength());*/
         for (final Index index : indices)
         {
-            index.indexRecord(buffer, offset, length, streamId, aeronSessionId, position);
+            index.indexRecord(buffer, offset, length, streamId, aeronSessionId, endPosition);
         }
 
         return CONTINUE;
@@ -109,7 +106,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
     {
         quiesce();
 
-        Exceptions.closeAll(() -> Exceptions.closeAll(indices), archiveReader, subscription);
+        Exceptions.closeAll(() -> Exceptions.closeAll(indices), subscription);
     }
 
     private void quiesce()

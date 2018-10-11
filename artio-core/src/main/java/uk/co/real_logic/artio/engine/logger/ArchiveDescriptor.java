@@ -21,15 +21,6 @@ import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 
 public final class ArchiveDescriptor
 {
-    static int nextTerm(final int termOffset, final int frameLength)
-    {
-        return termOffset + alignTerm(frameLength);
-    }
-
-    static long nextTerm(final long position, final int frameLength)
-    {
-        return position + alignTerm(frameLength);
-    }
 
     public static int alignTerm(final int frameLength)
     {

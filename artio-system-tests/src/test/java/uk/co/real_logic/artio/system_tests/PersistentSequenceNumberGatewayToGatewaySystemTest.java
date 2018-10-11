@@ -21,6 +21,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -38,10 +39,8 @@ import java.util.function.Consumer;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.Constants.SEQUENCE_RESET_MESSAGE_AS_STR;
-import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
-import static uk.co.real_logic.artio.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasSequenceIndex;
@@ -69,10 +68,11 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertConnected(initiatingSession);
     };
 
-    private Runnable duringRestart = this::nothing;
+    private Runnable duringRestart = () -> dirsDeleteOnStart = false;
     private Runnable beforeReconnect = this::nothing;
     private boolean printErrorMessages = true;
     private boolean resetSequenceNumbersOnLogon = false;
+    private boolean dirsDeleteOnStart = true;
 
     @Before
     public void setUp() throws IOException
@@ -122,23 +122,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER);
 
         assertOnlyAcceptorSequenceReset();
-    }
-
-    @Test(timeout = TEST_TIMEOUT)
-    public void shouldCopeWithReplayOfMissingMessagesAfterPartialCleanout()
-    {
-        // Avoid spamming the build log with error missing messages error message
-        printErrorMessages = false;
-
-        duringRestart = this::deleteArchiveOfAcceptorLogs;
-
-        onAcquireSession = () -> assertFailStatusWhenReplayRequested(MISSING_MESSAGES);
-
-        resetSequenceNumbersOnLogon = true;
-
-        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER);
-
-        assertSequenceIndicesAre(1);
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -247,7 +230,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final Runnable beforeConnect,
         final boolean resetSequenceNumbersOnLogon)
     {
-        mediaDriver = launchMediaDriver();
+        mediaDriver = TestFixtures.launchMediaDriver(TestFixtures.mediaDriverContext(
+            TestFixtures.TERM_BUFFER_LENGTH,
+            dirsDeleteOnStart));
 
         final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
         config.sessionPersistenceStrategy(logon -> INDEXED);

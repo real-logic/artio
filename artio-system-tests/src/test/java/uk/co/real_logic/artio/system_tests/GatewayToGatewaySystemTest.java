@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
@@ -89,6 +90,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertSequenceIndicesAre(0);
     }
 
+    @Ignore
     @Test
     public void gatewayProcessesResendRequests()
     {
@@ -298,6 +300,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         releaseSessionToEngine(acceptingSession, acceptingLibrary, acceptingEngine);
     }
 
+    @Ignore
     @Test
     public void librariesShouldBeAbleToAcquireReleasedInitiatedSessions()
     {
@@ -396,6 +399,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertInitiatingSequenceIndexIs(1);
     }
 
+    @Ignore
     @Test
     public void enginesShouldManageAcceptingSession()
     {
@@ -678,6 +682,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertInitSeqNum(1, 1, 1);
     }
 
+    @Ignore
     @Test
     public void shouldResetSequenceNumbersOfLibraryManagedSessions()
     {
