@@ -54,7 +54,6 @@ public class EngineContext implements AutoCloseable
     private final AeronArchive aeronArchive;
     private final RecordingCoordinator recordingCoordinator;
     private final ExclusivePublication replayPublication;
-    private final StreamIdentifier inboundStreamId;
     private final SequenceNumberIndexWriter sentSequenceNumberIndex;
     private final SequenceNumberIndexWriter receivedSequenceNumberIndex;
     private final CompletionPosition inboundCompletionPosition = new CompletionPosition();
@@ -103,7 +102,6 @@ public class EngineContext implements AutoCloseable
                 INBOUND_LIBRARY_STREAM);
 
             final String channel = configuration.libraryAeronChannel();
-            this.inboundStreamId = new StreamIdentifier(channel, INBOUND_LIBRARY_STREAM);
 
             newStreams();
             newArchivingAgent();

@@ -1311,7 +1311,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         outboundLibraryCompletionPosition.complete(outboundPositions);
 
-        recordingCoordinator.completionPositions(inboundPositions);
+        recordingCoordinator.completionPositions(inboundPositions, outboundPositions);
     }
 
     public String roleName()

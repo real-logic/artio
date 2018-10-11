@@ -46,6 +46,7 @@ public class RecordingCoordinator implements AutoCloseable
     private final EngineConfiguration configuration;
 
     private Long2LongHashMap inboundAeronSessionIdToCompletionPosition;
+    private Long2LongHashMap outboundAeronSessionIdToCompletionPosition;
 
     private boolean closed = false;
 
@@ -101,9 +102,12 @@ public class RecordingCoordinator implements AutoCloseable
     }
 
     // Called only on Framer.quiesce(), uses shutdown order
-    public void completionPositions(final Long2LongHashMap inboundAeronSessionIdToCompletionPosition)
+    public void completionPositions(
+        final Long2LongHashMap inboundAeronSessionIdToCompletionPosition,
+        final Long2LongHashMap outboundAeronSessionIdToCompletionPosition)
     {
         this.inboundAeronSessionIdToCompletionPosition = inboundAeronSessionIdToCompletionPosition;
+        this.outboundAeronSessionIdToCompletionPosition = outboundAeronSessionIdToCompletionPosition;
     }
 
     // Must be called after the framer has shutdown, uses shutdown order
@@ -123,6 +127,11 @@ public class RecordingCoordinator implements AutoCloseable
         if (configuration.logInboundMessages())
         {
             awaitRecordingsCompletion(inboundAeronSessionIdToCompletionPosition);
+        }
+
+        if (configuration.logOutboundMessages())
+        {
+            awaitRecordingsCompletion(outboundAeronSessionIdToCompletionPosition);
         }
     }
 

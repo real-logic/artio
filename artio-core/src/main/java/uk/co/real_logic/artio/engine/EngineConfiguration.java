@@ -541,7 +541,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return logOutboundMessages;
     }
 
-    public boolean logAnyMessages()
+    boolean logAnyMessages()
     {
         return logInboundMessages || logOutboundMessages;
     }
