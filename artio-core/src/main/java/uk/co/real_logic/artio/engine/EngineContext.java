@@ -32,7 +32,6 @@ import uk.co.real_logic.artio.StreamInformation;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.logger.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
-import uk.co.real_logic.artio.protocol.StreamIdentifier;
 import uk.co.real_logic.artio.protocol.Streams;
 
 import java.util.ArrayList;
