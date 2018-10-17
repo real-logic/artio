@@ -110,6 +110,7 @@
             <value enum="15" description="REPEATING_GROUP_FIELDS_OUT_OF_ORDER"/>
             <value enum="16" description="INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP"/>
             <value enum="17" description="NON_DATA_VALUE_INCLUDES_FIELD_DELIMITER"/>
+            <value enum="18" description="INVALID/UNSUPPORTED_APPLICATION_VERSION"/>
             <value enum="99" description="OTHER"/>
         </field>
         <field number="58" name="Text" type="STRING"/>
