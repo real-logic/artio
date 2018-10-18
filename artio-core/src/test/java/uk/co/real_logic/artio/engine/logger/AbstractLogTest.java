@@ -58,7 +58,8 @@ public class AbstractLogTest
     public static final String BUFFER_TARGET = "target";
     public static final String RESEND_SENDER = "target";
     public static final String RESEND_TARGET = "sender";
-    public static final int PREFIX_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + SIZE_OF_LENGTH_FIELD;
+    public static final int PREFIX_LENGTH =
+        MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + SIZE_OF_LENGTH_FIELD;
 
     protected MessageHeaderEncoder header = new MessageHeaderEncoder();
     protected FixMessageEncoder messageFrame = new FixMessageEncoder();
