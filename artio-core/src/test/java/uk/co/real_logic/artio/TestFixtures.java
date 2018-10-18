@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio;
 
 import io.aeron.archive.Archive;
+import io.aeron.archive.ArchiveThreadingMode;
 import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.driver.MediaDriver;
 import org.agrona.IoUtil;
@@ -57,6 +58,7 @@ public final class TestFixtures
     {
         final Archive.Context archiveCtx = new Archive.Context().deleteArchiveOnStart(context.dirDeleteOnStart());
         final ArchivingMediaDriver mediaDriver = ArchivingMediaDriver.launch(context, archiveCtx);
+        archiveCtx.threadingMode(ArchiveThreadingMode.INVOKER);
         final String aeronDirectoryName = context.aeronDirectoryName();
         CloseChecker.onOpen(aeronDirectoryName, mediaDriver);
 

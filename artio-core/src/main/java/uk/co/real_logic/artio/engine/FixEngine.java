@@ -156,8 +156,9 @@ public final class FixEngine extends GatewayProcess
             scheduler = configuration.scheduler();
             scheduler.configure(configuration.aeronContext());
             init(configuration);
+            final AeronArchive.Context archiveContext = new AeronArchive.Context();
             final AeronArchive aeronArchive =
-                configuration.logAnyMessages() ? AeronArchive.connect(new AeronArchive.Context().aeron(aeron)) : null;
+                configuration.logAnyMessages() ? AeronArchive.connect(archiveContext.aeron(aeron)) : null;
             recordingCoordinator = new RecordingCoordinator(
                 aeronArchive,
                 configuration,
