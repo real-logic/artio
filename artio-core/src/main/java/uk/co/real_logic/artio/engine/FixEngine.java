@@ -160,7 +160,8 @@ public final class FixEngine extends GatewayProcess
                 configuration.logAnyMessages() ? AeronArchive.connect(new AeronArchive.Context().aeron(aeron)) : null;
             recordingCoordinator = new RecordingCoordinator(
                 aeronArchive,
-                configuration);
+                configuration,
+                aeron.conductorAgentInvoker());
 
             final ExclusivePublication replayPublication = replayPublication();
             engineContext = new EngineContext(

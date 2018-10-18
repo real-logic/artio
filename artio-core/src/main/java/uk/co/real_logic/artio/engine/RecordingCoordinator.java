@@ -24,6 +24,7 @@ import org.agrona.CloseHelper;
 import org.agrona.collections.IntHashSet;
 import org.agrona.collections.IntHashSet.IntIterator;
 import org.agrona.collections.Long2LongHashMap;
+import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.status.CountersReader;
 import uk.co.real_logic.artio.engine.logger.RecordingIdLookup;
 
@@ -58,7 +59,10 @@ public class RecordingCoordinator implements AutoCloseable
 
     private boolean closed = false;
 
-    RecordingCoordinator(final AeronArchive archive, final EngineConfiguration configuration)
+    RecordingCoordinator(
+        final AeronArchive archive,
+        final EngineConfiguration configuration,
+        final AgentInvoker conductorAgentInvoker)
     {
         this.archive = archive;
         this.configuration = configuration;
@@ -70,7 +74,8 @@ public class RecordingCoordinator implements AutoCloseable
 
             if (configuration.logInboundMessages())
             {
-                inboundRecordingIdLookup = new RecordingIdLookup(aeron, channel, INBOUND_LIBRARY_STREAM);
+                inboundRecordingIdLookup = new RecordingIdLookup(aeron, channel, INBOUND_LIBRARY_STREAM,
+                    conductorAgentInvoker);
 
                 // Inbound we're writing from the Framer thread, always local
                 archive.startRecording(channel, INBOUND_LIBRARY_STREAM, LOCAL);
@@ -82,7 +87,8 @@ public class RecordingCoordinator implements AutoCloseable
 
             if (configuration.logOutboundMessages())
             {
-                outboundRecordingIdLookup = new RecordingIdLookup(aeron, channel, OUTBOUND_LIBRARY_STREAM);
+                outboundRecordingIdLookup = new RecordingIdLookup(aeron, channel, OUTBOUND_LIBRARY_STREAM,
+                    conductorAgentInvoker);
 
                 // Outbound libraries might be on an IPC box.
                 final SourceLocation location = channel.equals(IPC_CHANNEL) ? LOCAL : REMOTE;
@@ -189,7 +195,6 @@ public class RecordingCoordinator implements AutoCloseable
     {
         if (configuration.logInboundMessages())
         {
-            System.out.println("stopping inbound");
             archive.stopRecording(channel, INBOUND_LIBRARY_STREAM);
 
             CloseHelper.close(inboundRecordingIdLookup);
@@ -197,7 +202,6 @@ public class RecordingCoordinator implements AutoCloseable
 
         if (configuration.logOutboundMessages())
         {
-            System.out.println("stopping outbound");
             archive.stopRecording(channel, OUTBOUND_LIBRARY_STREAM);
 
             CloseHelper.close(outboundRecordingIdLookup);

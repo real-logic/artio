@@ -101,7 +101,7 @@ public class ReplayIndexTest extends AbstractLogTest
     {
         mediaDriver = TestFixtures.launchMediaDriver();
         aeronArchive = AeronArchive.connect();
-        recordingIdLookup = new RecordingIdLookup(aeron(), CHANNEL, STREAM_ID);
+        recordingIdLookup = new RecordingIdLookup(aeron(), CHANNEL, STREAM_ID, null);
 
         aeronArchive.startRecording(CHANNEL, STREAM_ID, SourceLocation.LOCAL);
 

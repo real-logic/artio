@@ -21,6 +21,7 @@ import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.client.RecordingEventsAdapter;
 import io.aeron.archive.client.RecordingEventsListener;
 import org.agrona.collections.Long2LongHashMap;
+import org.agrona.concurrent.AgentInvoker;
 
 import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 
@@ -64,7 +65,11 @@ public class RecordingIdLookup implements AutoCloseable
         }
     };
 
-    public RecordingIdLookup(final Aeron aeron, final String requiredChannel, final int requiredStreamId)
+    public RecordingIdLookup(
+        final Aeron aeron,
+        final String requiredChannel,
+        final int requiredStreamId,
+        final AgentInvoker conductorAgentInvoker)
     {
         subscription = aeron.addSubscription(
             AeronArchive.Configuration.recordingEventsChannel(),
@@ -79,6 +84,11 @@ public class RecordingIdLookup implements AutoCloseable
         while (!subscription.isConnected())
         {
             poll();
+
+            if (conductorAgentInvoker != null)
+            {
+                conductorAgentInvoker.invoke();
+            }
 
             Thread.yield(); // TODO: properly idle.
         }
