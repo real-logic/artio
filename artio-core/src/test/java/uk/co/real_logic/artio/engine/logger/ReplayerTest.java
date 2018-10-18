@@ -62,7 +62,6 @@ import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 import static uk.co.real_logic.artio.util.CustomMatchers.sequenceEqualsAscii;
 
-@Ignore
 public class ReplayerTest extends AbstractLogTest
 {
     private static final String DATE_TIME_STR = "19840521-15:00:00";
