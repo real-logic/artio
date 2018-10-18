@@ -18,10 +18,16 @@ package uk.co.real_logic.artio.engine.logger;
 import io.aeron.Aeron;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
-import io.aeron.archive.client.RecordingEventsAdapter;
-import io.aeron.archive.client.RecordingEventsListener;
+import io.aeron.archive.codecs.MessageHeaderDecoder;
+import io.aeron.archive.codecs.RecordingStartedDecoder;
+import io.aeron.logbuffer.FragmentHandler;
+import io.aeron.logbuffer.Header;
+import org.agrona.DirectBuffer;
 import org.agrona.concurrent.AgentInvoker;
 
+import java.nio.charset.StandardCharsets;
+
+import static io.aeron.archive.codecs.RecordingStartedDecoder.channelHeaderLength;
 import static uk.co.real_logic.artio.GatewayProcess.INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 
@@ -32,38 +38,8 @@ public class RecordingIdStore implements AutoCloseable
     private final RecordingIdLookup inboundLookup;
     private final RecordingIdLookup outboundLookup;
     private final Subscription subscription;
-    private final String requiredChannel;
-    private final RecordingEventsAdapter recordingEventsAdapter;
-    // TODO: remove allocation of channel and sourceidentity strings
     // TODO: when does recording id change? Is it range limited.
-    private final RecordingEventsListener recordingEventsListener = new RecordingEventsListener()
-    {
-        @Override
-        public void onStart(
-            final long recordingId,
-            final long startPosition,
-            final int sessionId,
-            final int streamId,
-            final String channel,
-            final String sourceIdentity)
-        {
-            if (channel.equals(requiredChannel))
-            {
-                inboundLookup.onStart(recordingId, sessionId, streamId);
-                outboundLookup.onStart(recordingId, sessionId, streamId);
-            }
-        }
-
-        @Override
-        public void onProgress(final long recordingId, final long startPosition, final long position)
-        {
-        }
-
-        @Override
-        public void onStop(final long recordingId, final long startPosition, final long stopPosition)
-        {
-        }
-    };
+    private final RecordingEventHandler recordingEventHandler;
 
     public RecordingIdStore(
         final Aeron aeron,
@@ -73,13 +49,11 @@ public class RecordingIdStore implements AutoCloseable
         subscription = aeron.addSubscription(
             AeronArchive.Configuration.recordingEventsChannel(),
             AeronArchive.Configuration.recordingEventsStreamId());
-        this.requiredChannel = requiredChannel;
-
-        recordingEventsAdapter = new RecordingEventsAdapter(
-            recordingEventsListener, subscription, FRAGMENT_COUNT_LIMIT);
 
         inboundLookup = new RecordingIdLookup(INBOUND_LIBRARY_STREAM, this);
         outboundLookup = new RecordingIdLookup(OUTBOUND_LIBRARY_STREAM, this);
+
+        recordingEventHandler = new RecordingEventHandler(inboundLookup, outboundLookup, requiredChannel);
 
         // Wait for the subscription setup to ensure that we receive onStart events of all
         // recording started after this constructor.
@@ -108,12 +82,85 @@ public class RecordingIdStore implements AutoCloseable
 
     int poll()
     {
-        return recordingEventsAdapter.poll();
+        return subscription.poll(recordingEventHandler, FRAGMENT_COUNT_LIMIT);
     }
 
     @Override
     public void close()
     {
         subscription.close();
+    }
+
+    // RecordingEventsHandler that ships with Aeron Archive allocates objects for every onStart event.
+    static class RecordingEventHandler implements FragmentHandler
+    {
+        private final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
+        private final RecordingStartedDecoder recordingStartedDecoder = new RecordingStartedDecoder();
+
+        private final byte[] requiredChannel;
+        private final RecordingIdLookup inboundLookup;
+        private final RecordingIdLookup outboundLookup;
+
+        RecordingEventHandler(
+            final RecordingIdLookup inboundLookup,
+            final RecordingIdLookup outboundLookup,
+            final String requiredChannel)
+        {
+            this.inboundLookup = inboundLookup;
+            this.outboundLookup = outboundLookup;
+            this.requiredChannel = requiredChannel.getBytes(StandardCharsets.US_ASCII);
+        }
+
+        @Override
+        public void onFragment(
+            final DirectBuffer buffer, final int offset, final int length, final Header header)
+        {
+            messageHeaderDecoder.wrap(buffer, offset);
+
+            final int templateId = messageHeaderDecoder.templateId();
+            switch (templateId)
+            {
+                case RecordingStartedDecoder.TEMPLATE_ID:
+                    recordingStartedDecoder.wrap(
+                        buffer,
+                        offset + MessageHeaderDecoder.ENCODED_LENGTH,
+                        messageHeaderDecoder.blockLength(),
+                        messageHeaderDecoder.version());
+
+                    final long recordingId = recordingStartedDecoder.recordingId();
+                    final int sessionId = recordingStartedDecoder.sessionId();
+                    final int streamId = recordingStartedDecoder.streamId();
+
+                    if (hasRequiredChannel(buffer))
+                    {
+                        inboundLookup.onStart(recordingId, sessionId, streamId);
+                        outboundLookup.onStart(recordingId, sessionId, streamId);
+                    }
+
+                    break;
+            }
+        }
+
+        private boolean hasRequiredChannel(final DirectBuffer buffer)
+        {
+            final byte[] requiredChannel = this.requiredChannel;
+            final int channelLength = recordingStartedDecoder.channelLength();
+            if (channelLength != requiredChannel.length)
+            {
+                return false;
+            }
+
+            final int channelOffset = recordingStartedDecoder.limit() + channelHeaderLength();
+
+            for (int i = 0; i < channelLength; i++)
+            {
+                if (requiredChannel[i] != buffer.getByte(i + channelOffset))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
     }
 }

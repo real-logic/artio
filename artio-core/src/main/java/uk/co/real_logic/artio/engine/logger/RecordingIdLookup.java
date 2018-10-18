@@ -29,12 +29,11 @@ public class RecordingIdLookup
     {
         if (streamId == requiredStreamId)
         {
-            // System.out.printf("Mapping %d -> %d%n", sessionId, recordingId);
             aeronSessionIdToRecordingId.put(sessionId, recordingId);
         }
     }
 
-    public RecordingIdLookup(
+    RecordingIdLookup(
         final int requiredStreamId,
         final RecordingIdStore recordingIdStore)
     {
