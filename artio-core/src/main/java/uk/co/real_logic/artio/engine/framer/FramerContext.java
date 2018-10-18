@@ -55,7 +55,6 @@ public class FramerContext
     private final GatewayPublication outboundPublication;
     private final GatewayPublication inboundLibraryPublication;
     private final SessionContexts sessionContexts;
-    private final RecordingCoordinator recordingCoordinator;
 
     public FramerContext(
         final EngineConfiguration configuration,
@@ -68,7 +67,6 @@ public class FramerContext
         final AgentInvoker conductorAgentInvoker,
         final RecordingCoordinator recordingCoordinator)
     {
-        this.recordingCoordinator = recordingCoordinator;
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
         this.sessionContexts = new SessionContexts(configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();

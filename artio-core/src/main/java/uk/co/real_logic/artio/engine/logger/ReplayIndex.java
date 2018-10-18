@@ -99,6 +99,12 @@ public class ReplayIndex implements Index
         positionReader = new IndexedPositionReader(positionBuffer);
     }
 
+    @Override
+    public int doWork()
+    {
+        return recordingIdLookup.poll();
+    }
+
     public void indexRecord(
         final DirectBuffer srcBuffer,
         final int srcOffset,

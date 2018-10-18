@@ -70,7 +70,7 @@ public class LowResourceEngineScheduler implements EngineScheduler
 
         final List<Agent> agents = new ArrayList<>();
         Collections.addAll(agents,
-            monitoringAgent, framer, new RecordingCoordinatorAgent(), archivingAgent, conductorAgent);
+            monitoringAgent, framer, archivingAgent, new RecordingCoordinatorAgent(), conductorAgent);
         if (driverAgentInvoker != null)
         {
             agents.add(driverAgentInvoker.agent());

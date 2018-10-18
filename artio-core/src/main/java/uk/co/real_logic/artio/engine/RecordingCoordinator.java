@@ -15,14 +15,17 @@
  */
 package uk.co.real_logic.artio.engine;
 
+import io.aeron.Aeron;
 import io.aeron.Publication;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.codecs.SourceLocation;
 import io.aeron.archive.status.RecordingPos;
+import org.agrona.CloseHelper;
 import org.agrona.collections.IntHashSet;
 import org.agrona.collections.IntHashSet.IntIterator;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.status.CountersReader;
+import uk.co.real_logic.artio.engine.logger.RecordingIdLookup;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,6 +51,11 @@ public class RecordingCoordinator implements AutoCloseable
     private Long2LongHashMap inboundAeronSessionIdToCompletionPosition;
     private Long2LongHashMap outboundAeronSessionIdToCompletionPosition;
 
+    // TODO: these are always used on the same thread - can I combine them and reduce the
+    // number of subscriptions?
+    private final RecordingIdLookup inboundRecordingIdLookup;
+    private final RecordingIdLookup outboundRecordingIdLookup;
+
     private boolean closed = false;
 
     RecordingCoordinator(final AeronArchive archive, final EngineConfiguration configuration)
@@ -55,19 +63,41 @@ public class RecordingCoordinator implements AutoCloseable
         this.archive = archive;
         this.configuration = configuration;
         this.channel = configuration.libraryAeronChannel();
-        this.counters = configuration.logAnyMessages() ? archive.context().aeron().countersReader() : null;
-
-        if (configuration.logInboundMessages())
+        if (configuration.logAnyMessages())
         {
-            // Inbound we're writing from the Framer thread, always local
-            archive.startRecording(channel, INBOUND_LIBRARY_STREAM, LOCAL);
+            final Aeron aeron = archive.context().aeron();
+            counters = aeron.countersReader();
+
+            if (configuration.logInboundMessages())
+            {
+                inboundRecordingIdLookup = new RecordingIdLookup(aeron, channel, INBOUND_LIBRARY_STREAM);
+
+                // Inbound we're writing from the Framer thread, always local
+                archive.startRecording(channel, INBOUND_LIBRARY_STREAM, LOCAL);
+            }
+            else
+            {
+                inboundRecordingIdLookup = null;
+            }
+
+            if (configuration.logOutboundMessages())
+            {
+                outboundRecordingIdLookup = new RecordingIdLookup(aeron, channel, OUTBOUND_LIBRARY_STREAM);
+
+                // Outbound libraries might be on an IPC box.
+                final SourceLocation location = channel.equals(IPC_CHANNEL) ? LOCAL : REMOTE;
+                archive.startRecording(channel, OUTBOUND_LIBRARY_STREAM, location);
+            }
+            else
+            {
+                outboundRecordingIdLookup = null;
+            }
         }
-
-        if (configuration.logOutboundMessages())
+        else
         {
-            // Outbound libraries might be on an IPC box.
-            final SourceLocation location = channel.equals(IPC_CHANNEL) ? LOCAL : REMOTE;
-            archive.startRecording(channel, OUTBOUND_LIBRARY_STREAM, location);
+            counters = null;
+            inboundRecordingIdLookup = null;
+            outboundRecordingIdLookup = null;
         }
     }
 
@@ -116,7 +146,7 @@ public class RecordingCoordinator implements AutoCloseable
     {
         if (!closed)
         {
-            awaitRecordingsCompletion();
+            // awaitRecordingsCompletion();
             shutdownArchiver();
             closed = true;
         }
@@ -159,12 +189,18 @@ public class RecordingCoordinator implements AutoCloseable
     {
         if (configuration.logInboundMessages())
         {
+            System.out.println("stopping inbound");
             archive.stopRecording(channel, INBOUND_LIBRARY_STREAM);
+
+            CloseHelper.close(inboundRecordingIdLookup);
         }
 
         if (configuration.logOutboundMessages())
         {
+            System.out.println("stopping outbound");
             archive.stopRecording(channel, OUTBOUND_LIBRARY_STREAM);
+
+            CloseHelper.close(outboundRecordingIdLookup);
         }
 
         if (configuration.logAnyMessages())
@@ -207,5 +243,15 @@ public class RecordingCoordinator implements AutoCloseable
 
             return false;
         }
+    }
+
+    public RecordingIdLookup inboundRecordingIdLookup()
+    {
+        return inboundRecordingIdLookup;
+    }
+
+    public RecordingIdLookup outboundRecordingIdLookup()
+    {
+        return outboundRecordingIdLookup;
     }
 }

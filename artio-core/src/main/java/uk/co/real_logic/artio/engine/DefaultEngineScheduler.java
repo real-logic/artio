@@ -71,7 +71,7 @@ public class DefaultEngineScheduler implements EngineScheduler
         EngineScheduler.awaitRunnerStart(archivingRunner);
         EngineScheduler.awaitRunnerStart(monitoringRunner);
 
-        Exceptions.closeAll(framerRunner, recordingCoordinator, archivingRunner, monitoringRunner);
+        Exceptions.closeAll(framerRunner, archivingRunner, recordingCoordinator, monitoringRunner);
     }
 
     public void configure(final Aeron.Context aeronContext)

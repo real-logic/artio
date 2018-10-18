@@ -100,8 +100,6 @@ public class EngineContext implements AutoCloseable
                 errorHandler,
                 INBOUND_LIBRARY_STREAM);
 
-            final String channel = configuration.libraryAeronChannel();
-
             newStreams();
             newArchivingAgent();
         }
@@ -143,7 +141,8 @@ public class EngineContext implements AutoCloseable
         final int cacheSetSize,
         final int cacheNumSets,
         final String logFileDir,
-        final int streamId)
+        final int streamId,
+        final RecordingIdLookup recordingIdLookup)
     {
         return new ReplayIndex(
             logFileDir,
@@ -154,7 +153,7 @@ public class EngineContext implements AutoCloseable
             LoggerUtil::map,
             ReplayIndexDescriptor.replayPositionBuffer(logFileDir, streamId),
             errorHandler,
-            new RecordingIdLookup(aeron.countersReader()));
+            recordingIdLookup);
     }
 
     protected ReplayQuery newReplayQuery(final IdleStrategy idleStrategy, final int streamId)
@@ -200,7 +199,8 @@ public class EngineContext implements AutoCloseable
         final int cacheNumSets = configuration.loggerCacheNumSets();
         final String logFileDir = configuration.logFileDir();
 
-        final ReplayIndex replayIndex = newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, INBOUND_LIBRARY_STREAM);
+        final ReplayIndex replayIndex = newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, INBOUND_LIBRARY_STREAM,
+            recordingCoordinator.inboundRecordingIdLookup());
 
         inboundIndexer = new Indexer(
             asList(replayIndex, receivedSequenceNumberIndex),
@@ -209,7 +209,8 @@ public class EngineContext implements AutoCloseable
             inboundCompletionPosition);
 
         final List<Index> outboundIndices = new ArrayList<>();
-        outboundIndices.add(newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, OUTBOUND_LIBRARY_STREAM));
+        outboundIndices.add(newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, OUTBOUND_LIBRARY_STREAM,
+            recordingCoordinator.outboundRecordingIdLookup()));
         outboundIndices.add(sentSequenceNumberIndex);
         if (extraOutboundIndex != null)
         {
