@@ -300,7 +300,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         releaseSessionToEngine(acceptingSession, acceptingLibrary, acceptingEngine);
     }
 
-    @Ignore
     @Test
     public void librariesShouldBeAbleToAcquireReleasedInitiatedSessions()
     {
@@ -399,7 +398,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertInitiatingSequenceIndexIs(1);
     }
 
-    @Ignore
     @Test
     public void enginesShouldManageAcceptingSession()
     {
