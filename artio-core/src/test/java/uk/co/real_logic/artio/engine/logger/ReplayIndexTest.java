@@ -73,7 +73,7 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private ExclusivePublication publication;
     private Subscription subscription;
-    private RecordingIdLookup recordingIdLookup;
+    private RecordingIdStore recordingIdStore;
 
     private void newReplayIndex()
     {
@@ -86,7 +86,7 @@ public class ReplayIndexTest extends AbstractLogTest
             newBufferFactory,
             replayPositionBuffer,
             errorHandler,
-            recordingIdLookup);
+            recordingIdStore.outboundLookup());
     }
 
     private Aeron aeron()
@@ -101,7 +101,8 @@ public class ReplayIndexTest extends AbstractLogTest
     {
         mediaDriver = TestFixtures.launchMediaDriver();
         aeronArchive = AeronArchive.connect();
-        recordingIdLookup = new RecordingIdLookup(aeron(), CHANNEL, STREAM_ID, null);
+
+        recordingIdStore = new RecordingIdStore(aeron(), CHANNEL, null);
 
         aeronArchive.startRecording(CHANNEL, STREAM_ID, SourceLocation.LOCAL);
 

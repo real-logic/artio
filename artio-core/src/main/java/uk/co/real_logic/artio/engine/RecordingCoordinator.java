@@ -27,6 +27,7 @@ import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.status.CountersReader;
 import uk.co.real_logic.artio.engine.logger.RecordingIdLookup;
+import uk.co.real_logic.artio.engine.logger.RecordingIdStore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,10 +53,7 @@ public class RecordingCoordinator implements AutoCloseable
     private Long2LongHashMap inboundAeronSessionIdToCompletionPosition;
     private Long2LongHashMap outboundAeronSessionIdToCompletionPosition;
 
-    // TODO: these are always used on the same thread - can I combine them and reduce the
-    // number of subscriptions?
-    private final RecordingIdLookup inboundRecordingIdLookup;
-    private final RecordingIdLookup outboundRecordingIdLookup;
+    private final RecordingIdStore recordingIdStore;
 
     private boolean closed = false;
 
@@ -71,39 +69,25 @@ public class RecordingCoordinator implements AutoCloseable
         {
             final Aeron aeron = archive.context().aeron();
             counters = aeron.countersReader();
+            recordingIdStore = new RecordingIdStore(aeron, channel, conductorAgentInvoker);
 
             if (configuration.logInboundMessages())
             {
-                inboundRecordingIdLookup = new RecordingIdLookup(aeron, channel, INBOUND_LIBRARY_STREAM,
-                    conductorAgentInvoker);
-
                 // Inbound we're writing from the Framer thread, always local
                 archive.startRecording(channel, INBOUND_LIBRARY_STREAM, LOCAL);
-            }
-            else
-            {
-                inboundRecordingIdLookup = null;
             }
 
             if (configuration.logOutboundMessages())
             {
-                outboundRecordingIdLookup = new RecordingIdLookup(aeron, channel, OUTBOUND_LIBRARY_STREAM,
-                    conductorAgentInvoker);
-
                 // Outbound libraries might be on an IPC box.
                 final SourceLocation location = channel.equals(IPC_CHANNEL) ? LOCAL : REMOTE;
                 archive.startRecording(channel, OUTBOUND_LIBRARY_STREAM, location);
-            }
-            else
-            {
-                outboundRecordingIdLookup = null;
             }
         }
         else
         {
             counters = null;
-            inboundRecordingIdLookup = null;
-            outboundRecordingIdLookup = null;
+            recordingIdStore = null;
         }
     }
 
@@ -196,19 +180,16 @@ public class RecordingCoordinator implements AutoCloseable
         if (configuration.logInboundMessages())
         {
             archive.stopRecording(channel, INBOUND_LIBRARY_STREAM);
-
-            CloseHelper.close(inboundRecordingIdLookup);
         }
 
         if (configuration.logOutboundMessages())
         {
             archive.stopRecording(channel, OUTBOUND_LIBRARY_STREAM);
-
-            CloseHelper.close(outboundRecordingIdLookup);
         }
 
         if (configuration.logAnyMessages())
         {
+            CloseHelper.close(recordingIdStore);
             archive.close();
         }
     }
@@ -249,13 +230,13 @@ public class RecordingCoordinator implements AutoCloseable
         }
     }
 
-    public RecordingIdLookup inboundRecordingIdLookup()
+    RecordingIdLookup inboundRecordingIdLookup()
     {
-        return inboundRecordingIdLookup;
+        return recordingIdStore != null ? recordingIdStore.inboundLookup() : null;
     }
 
-    public RecordingIdLookup outboundRecordingIdLookup()
+    RecordingIdLookup outboundRecordingIdLookup()
     {
-        return outboundRecordingIdLookup;
+        return recordingIdStore != null ? recordingIdStore.outboundLookup() : null;
     }
 }

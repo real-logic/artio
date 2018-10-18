@@ -15,83 +15,31 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.Aeron;
-import io.aeron.Subscription;
-import io.aeron.archive.client.AeronArchive;
-import io.aeron.archive.client.RecordingEventsAdapter;
-import io.aeron.archive.client.RecordingEventsListener;
 import org.agrona.collections.Long2LongHashMap;
-import org.agrona.concurrent.AgentInvoker;
 
 import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 
-public class RecordingIdLookup implements AutoCloseable
+public class RecordingIdLookup
 {
-    private static final int FRAGMENT_COUNT_LIMIT = 10;
-
     private final Long2LongHashMap aeronSessionIdToRecordingId = new Long2LongHashMap(NULL_RECORDING_ID);
-    private final Subscription subscription;
     private final int requiredStreamId;
-    private final String requiredChannel;
-    private final RecordingEventsAdapter recordingEventsAdapter;
-    // TODO: remove allocation of channel and sourceidentity strings
-    // TODO: when does recording id change? Is it range limited.
-    private final RecordingEventsListener recordingEventsListener = new RecordingEventsListener()
+    private final RecordingIdStore recordingIdStore;
+
+    void onStart(final long recordingId, final int sessionId, final int streamId)
     {
-        @Override
-        public void onStart(
-            final long recordingId,
-            final long startPosition,
-            final int sessionId,
-            final int streamId,
-            final String channel,
-            final String sourceIdentity)
+        if (streamId == requiredStreamId)
         {
-            if (streamId == requiredStreamId && channel.equals(requiredChannel))
-            {
-                // System.out.printf("Mapping %d -> %d%n", sessionId, recordingId);
-                aeronSessionIdToRecordingId.put(sessionId, recordingId);
-            }
+            // System.out.printf("Mapping %d -> %d%n", sessionId, recordingId);
+            aeronSessionIdToRecordingId.put(sessionId, recordingId);
         }
-
-        @Override
-        public void onProgress(final long recordingId, final long startPosition, final long position)
-        {
-        }
-
-        @Override
-        public void onStop(final long recordingId, final long startPosition, final long stopPosition)
-        {
-        }
-    };
+    }
 
     public RecordingIdLookup(
-        final Aeron aeron,
-        final String requiredChannel,
         final int requiredStreamId,
-        final AgentInvoker conductorAgentInvoker)
+        final RecordingIdStore recordingIdStore)
     {
-        subscription = aeron.addSubscription(
-            AeronArchive.Configuration.recordingEventsChannel(),
-            AeronArchive.Configuration.recordingEventsStreamId());
         this.requiredStreamId = requiredStreamId;
-        this.requiredChannel = requiredChannel;
-        recordingEventsAdapter = new RecordingEventsAdapter(
-            recordingEventsListener, subscription, FRAGMENT_COUNT_LIMIT);
-
-        // Wait for the subscription setup to ensure that we receive onStart events of all
-        // recording started after this constructor.
-        while (!subscription.isConnected())
-        {
-            poll();
-
-            if (conductorAgentInvoker != null)
-            {
-                conductorAgentInvoker.invoke();
-            }
-
-            Thread.yield(); // TODO: properly idle.
-        }
+        this.recordingIdStore = recordingIdStore;
     }
 
     long getRecordingId(final int aeronSessionId)
@@ -114,12 +62,6 @@ public class RecordingIdLookup implements AutoCloseable
 
     int poll()
     {
-        return recordingEventsAdapter.poll();
-    }
-
-    @Override
-    public void close()
-    {
-        subscription.close();
+        return recordingIdStore.poll();
     }
 }
