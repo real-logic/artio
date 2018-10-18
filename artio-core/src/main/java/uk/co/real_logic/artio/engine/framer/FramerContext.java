@@ -18,7 +18,6 @@ package uk.co.real_logic.artio.engine.framer;
 import io.aeron.Image;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
-import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.*;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Reply;
@@ -53,7 +52,7 @@ public class FramerContext
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
     private final GatewayPublication outboundPublication;
-    private final GatewayPublication inboundLibraryPublication;
+    private final GatewayPublication inboundPublication;
     private final SessionContexts sessionContexts;
 
     public FramerContext(
@@ -71,13 +70,9 @@ public class FramerContext
         this.sessionContexts = new SessionContexts(configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
         final Streams outboundLibraryStreams = engineContext.outboundLibraryStreams();
-        final Streams inboundLibraryStreams = engineContext.inboundLibraryStreams();
 
         final SystemEpochClock clock = new SystemEpochClock();
-        final LongHashSet replicatedConnectionIds = new LongHashSet();
-        final GatewayPublication inboundClusterablePublication =
-            inboundLibraryStreams.gatewayPublication(idleStrategy, "inboundPublication");
-        this.inboundLibraryPublication = engineContext.inboundLibraryPublication();
+        this.inboundPublication = engineContext.inboundPublication();
         this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "outboundPublication");
 
         gatewaySessions = new GatewaySessions(
@@ -98,11 +93,9 @@ public class FramerContext
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,
             sessionContexts,
-            inboundLibraryPublication,
-            inboundClusterablePublication,
+            inboundPublication,
             fixCounters,
             errorHandler,
-            replicatedConnectionIds,
             gatewaySessions,
             engineContext.senderSequenceNumbers());
 
@@ -127,7 +120,7 @@ public class FramerContext
             slowReplayImage,
             engineContext.inboundReplayQuery(),
             outboundPublication,
-            inboundLibraryPublication,
+            inboundPublication,
             adminCommands,
             sessionIdStrategy,
             sessionContexts,
@@ -168,7 +161,7 @@ public class FramerContext
             sessionContexts,
             receivedSequenceNumberIndex,
             sentSequenceNumberIndex,
-            inboundLibraryPublication,
+            inboundPublication,
             outboundPublication);
 
         if (adminCommands.offer(reply))

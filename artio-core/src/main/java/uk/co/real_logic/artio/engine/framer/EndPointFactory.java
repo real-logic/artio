@@ -16,13 +16,10 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
-import org.agrona.collections.LongHashSet;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.artio.messages.ConnectionType;
-import uk.co.real_logic.artio.messages.SequenceNumberType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 class EndPointFactory
@@ -30,10 +27,8 @@ class EndPointFactory
     private final EngineConfiguration configuration;
     private final SessionContexts sessionContexts;
     private final GatewayPublication inboundLibraryPublication;
-    private final GatewayPublication inboundClusterablePublication;
     private final FixCounters fixCounters;
     private final ErrorHandler errorHandler;
-    private final LongHashSet replicatedConnectionIds;
     private final GatewaySessions gatewaySessions;
     private final SenderSequenceNumbers senderSequenceNumbers;
 
@@ -43,20 +38,16 @@ class EndPointFactory
         final EngineConfiguration configuration,
         final SessionContexts sessionContexts,
         final GatewayPublication inboundLibraryPublication,
-        final GatewayPublication inboundClusterablePublication,
         final FixCounters fixCounters,
         final ErrorHandler errorHandler,
-        final LongHashSet replicatedConnectionIds,
         final GatewaySessions gatewaySessions,
         final SenderSequenceNumbers senderSequenceNumbers)
     {
         this.configuration = configuration;
         this.sessionContexts = sessionContexts;
         this.inboundLibraryPublication = inboundLibraryPublication;
-        this.inboundClusterablePublication = inboundClusterablePublication;
         this.fixCounters = fixCounters;
         this.errorHandler = errorHandler;
-        this.replicatedConnectionIds = replicatedConnectionIds;
         this.gatewaySessions = gatewaySessions;
         this.senderSequenceNumbers = senderSequenceNumbers;
     }
@@ -69,15 +60,12 @@ class EndPointFactory
         final int libraryId,
         final Framer framer,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
-        final SequenceNumberIndexReader receivedSequenceNumberIndex,
-        final SequenceNumberType sequenceNumberType,
-        final ConnectionType connectionType)
+        final SequenceNumberIndexReader receivedSequenceNumberIndex)
     {
         return new ReceiverEndPoint(
             channel,
             configuration.receiverBufferSize(),
             inboundLibraryPublication,
-            inboundClusterablePublication,
             connectionId,
             sessionId,
             sequenceIndex,
@@ -88,9 +76,6 @@ class EndPointFactory
             framer,
             errorHandler,
             libraryId,
-            sequenceNumberType,
-            connectionType,
-            replicatedConnectionIds,
             gatewaySessions
         );
     }

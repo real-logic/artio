@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
-import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
@@ -25,12 +24,9 @@ import uk.co.real_logic.artio.dictionary.StandardFixConstants;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.DisconnectReason;
-import uk.co.real_logic.artio.messages.SequenceNumberType;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
-import uk.co.real_logic.artio.validation.PersistenceLevel;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -43,14 +39,10 @@ import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.dictionary.StandardFixConstants.MIN_MESSAGE_SIZE;
 import static uk.co.real_logic.artio.dictionary.StandardFixConstants.START_OF_HEADER;
-import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
-import static uk.co.real_logic.artio.messages.SequenceNumberType.TRANSIENT;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
 import static uk.co.real_logic.artio.util.AsciiBuffer.UNKNOWN_INDEX;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
 
 /**
  * Handles incoming data from sockets.
@@ -78,8 +70,7 @@ class ReceiverEndPoint
     private final LogonDecoder logon = new LogonDecoder();
 
     private final TcpChannel channel;
-    private final GatewayPublication libraryPublication;
-    private final GatewayPublication clusterablePublication;
+    private final GatewayPublication publication;
     private final long connectionId;
     private final SessionContexts sessionContexts;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
@@ -89,10 +80,8 @@ class ReceiverEndPoint
     private final ErrorHandler errorHandler;
     private final MutableAsciiBuffer buffer;
     private final ByteBuffer byteBuffer;
-    private final LongHashSet replicatedConnectionIds;
     private final GatewaySessions gatewaySessions;
 
-    private GatewayPublication publication;
     private int libraryId;
     private GatewaySession gatewaySession;
     private long sessionId;
@@ -105,8 +94,7 @@ class ReceiverEndPoint
     ReceiverEndPoint(
         final TcpChannel channel,
         final int bufferSize,
-        final GatewayPublication libraryPublication,
-        final GatewayPublication clusterablePublication,
+        final GatewayPublication publication,
         final long connectionId,
         final long sessionId,
         final int sequenceIndex,
@@ -117,19 +105,14 @@ class ReceiverEndPoint
         final Framer framer,
         final ErrorHandler errorHandler,
         final int libraryId,
-        final SequenceNumberType sequenceNumberType,
-        final ConnectionType connectionType,
-        final LongHashSet replicatedConnectionIds,
         final GatewaySessions gatewaySessions)
     {
-        Objects.requireNonNull(clusterablePublication, "clusterablePublication");
-        Objects.requireNonNull(libraryPublication, "libraryPublication");
+        Objects.requireNonNull(publication, "publication");
         Objects.requireNonNull(sessionContexts, "sessionContexts");
         Objects.requireNonNull(gatewaySessions, "gatewaySessions");
 
         this.channel = channel;
-        this.clusterablePublication = clusterablePublication;
-        this.libraryPublication = libraryPublication;
+        this.publication = publication;
         this.connectionId = connectionId;
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
@@ -140,16 +123,10 @@ class ReceiverEndPoint
         this.framer = framer;
         this.errorHandler = errorHandler;
         this.libraryId = libraryId;
-        this.replicatedConnectionIds = replicatedConnectionIds;
         this.gatewaySessions = gatewaySessions;
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
         buffer = new MutableAsciiBuffer(byteBuffer);
-        // Initiator sessions are persistent if the sequence numbers are expected to be persistent.
-        if (connectionType == INITIATOR)
-        {
-            choosePublication(sequenceNumberType == TRANSIENT ? UNINDEXED : INDEXED);
-        }
     }
 
     public long connectionId()
@@ -382,8 +359,6 @@ class ReceiverEndPoint
         sessionId = gatewaySession.sessionId();
         sequenceIndex = gatewaySession.sequenceIndex();
 
-        choosePublication(gatewaySession.persistenceLevel());
-
         return false;
     }
 
@@ -475,7 +450,7 @@ class ReceiverEndPoint
 
     private boolean saveInvalidMessage(final int offset, final int startOfChecksumTag)
     {
-        final long position = libraryPublication.saveMessage(
+        final long position = publication.saveMessage(
             buffer,
             offset,
             libraryId,
@@ -492,7 +467,7 @@ class ReceiverEndPoint
 
     private boolean saveInvalidMessage(final int offset)
     {
-        final long position = libraryPublication.saveMessage(buffer,
+        final long position = publication.saveMessage(buffer,
             offset,
             usedBufferData,
             libraryId,
@@ -520,7 +495,7 @@ class ReceiverEndPoint
 
     private boolean saveInvalidChecksumMessage(final int offset, final int messageType, final int length)
     {
-        final long position = libraryPublication.saveMessage(buffer,
+        final long position = publication.saveMessage(buffer,
             offset,
             length,
             libraryId,
@@ -582,7 +557,7 @@ class ReceiverEndPoint
 
     private void disconnectEndpoint(final DisconnectReason reason)
     {
-        framer.schedule(() -> libraryPublication.saveDisconnect(libraryId, connectionId, reason));
+        framer.schedule(() -> publication.saveDisconnect(libraryId, connectionId, reason));
 
         sessionContexts.onDisconnect(sessionId);
         if (selectionKey != null)
@@ -626,18 +601,5 @@ class ReceiverEndPoint
     void play()
     {
         isPaused = false;
-    }
-
-    private void choosePublication(final PersistenceLevel persistenceLevel)
-    {
-        if (persistenceLevel == INDEXED)
-        {
-            publication = clusterablePublication;
-            replicatedConnectionIds.add(connectionId);
-        }
-        else
-        {
-            publication = libraryPublication;
-        }
     }
 }

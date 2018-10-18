@@ -224,12 +224,12 @@ public class EngineContext implements AutoCloseable
             outboundLibraryCompletionPosition);
     }
 
-    protected void newArchivingAgent()
+    private void newArchivingAgent()
     {
         if (configuration.logOutboundMessages())
         {
             newIndexers(
-                new PositionSender(inboundLibraryPublication()));
+                new PositionSender(inboundPublication()));
 
             final Replayer replayer = newReplayer(replayPublication);
 
@@ -262,11 +262,6 @@ public class EngineContext implements AutoCloseable
         return outboundLibraryStreams;
     }
 
-    public Streams inboundLibraryStreams()
-    {
-        return inboundLibraryStreams;
-    }
-
     // Each invocation should return a new instance of the subscription
     public Subscription outboundLibrarySubscription(
         final String name, final UnavailableImageHandler unavailableImageHandler)
@@ -287,10 +282,10 @@ public class EngineContext implements AutoCloseable
         return newReplayQuery(configuration.framerIdleStrategy(), INBOUND_LIBRARY_STREAM);
     }
 
-    public GatewayPublication inboundLibraryPublication()
+    public GatewayPublication inboundPublication()
     {
         return inboundLibraryStreams.gatewayPublication(
-            configuration.framerIdleStrategy(), "inboundLibraryPublication");
+            configuration.framerIdleStrategy(), "inboundPublication");
     }
 
     public CompletionPosition inboundCompletionPosition()

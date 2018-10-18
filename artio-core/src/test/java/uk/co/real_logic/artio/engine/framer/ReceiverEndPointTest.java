@@ -17,10 +17,8 @@ package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
-import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
@@ -28,7 +26,6 @@ import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.messages.SessionState;
@@ -43,13 +40,12 @@ import java.nio.channels.ClosedChannelException;
 import java.util.function.ToIntFunction;
 
 import static io.aeron.Publication.BACK_PRESSURED;
-import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES;
 import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
-import static uk.co.real_logic.artio.messages.SequenceNumberType.DETERMINE_AT_LOGON;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
 import static uk.co.real_logic.artio.util.TestMessages.*;
 
@@ -64,8 +60,7 @@ public class ReceiverEndPointTest
     private static final int SEQUENCE_INDEX = 0;
 
     private TcpChannel mockChannel = mock(TcpChannel.class);
-    private GatewayPublication libraryPublication = mock(GatewayPublication.class);
-    private GatewayPublication clusterablePublication = mock(GatewayPublication.class);
+    private GatewayPublication publication = mock(GatewayPublication.class);
     private SessionContexts mockSessionContexts = mock(SessionContexts.class);
     private AtomicCounter messagesRead = mock(AtomicCounter.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
@@ -74,7 +69,6 @@ public class ReceiverEndPointTest
     private Framer framer = mock(Framer.class);
     private GatewaySession gatewaySession = mock(GatewaySession.class);
     private Session session = mock(Session.class);
-    private final LongHashSet replicatedConnectionIds = new LongHashSet();
     private final AuthenticationResult authenticationResult = AuthenticationResult.authenticatedSession(
         gatewaySession);
     private GatewaySessions mockGatewaySessions = mock(GatewaySessions.class);
@@ -83,10 +77,10 @@ public class ReceiverEndPointTest
         .onInitiateLogon("ACCEPTOR", "", "", "INIATOR", "", "");
 
     private ReceiverEndPoint endPoint = new ReceiverEndPoint(
-        mockChannel, BUFFER_SIZE, libraryPublication, clusterablePublication,
+        mockChannel, BUFFER_SIZE, publication,
         CONNECTION_ID, UNKNOWN, SEQUENCE_INDEX, mockSessionContexts,
         sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID,
-        DETERMINE_AT_LOGON, ConnectionType.ACCEPTOR, replicatedConnectionIds, mockGatewaySessions);
+        mockGatewaySessions);
 
     @Before
     public void setUp()
@@ -108,13 +102,6 @@ public class ReceiverEndPointTest
                 ((Continuation)inv.getArguments()[0]).attemptToAction();
                 return null;
             }).when(framer).schedule(any(Continuation.class));
-    }
-
-    @After
-    public void tearDown()
-    {
-        verifyNoMoreInteractions(clusterablePublication);
-        assertThat(replicatedConnectionIds, hasSize(0));
     }
 
     @Test
@@ -370,7 +357,7 @@ public class ReceiverEndPointTest
 
     private void firstSaveAttemptIsBackPressured()
     {
-        when(libraryPublication
+        when(publication
             .saveMessage(
                 anyBuffer(), anyInt(), anyInt(), anyInt(), anyInt(), anyLong(), anyInt(), anyLong(), any(), anyInt()))
             .thenReturn(BACK_PRESSURED, POSITION);
@@ -394,7 +381,7 @@ public class ReceiverEndPointTest
 
     private void savesInvalidMessage(final int length, final VerificationMode mode)
     {
-        verify(libraryPublication, mode).saveMessage(
+        verify(publication, mode).saveMessage(
             anyBuffer(), eq(0), eq(length), eq(LIBRARY_ID),
             anyInt(), anyLong(), anyInt(), eq(CONNECTION_ID),
             eq(INVALID), eq(0));
@@ -402,7 +389,7 @@ public class ReceiverEndPointTest
 
     private void assertSavesDisconnect()
     {
-        verify(libraryPublication).saveDisconnect(LIBRARY_ID, CONNECTION_ID, REMOTE_DISCONNECT);
+        verify(publication).saveDisconnect(LIBRARY_ID, CONNECTION_ID, REMOTE_DISCONNECT);
     }
 
     private void theChannelIsClosed() throws IOException
@@ -425,7 +412,7 @@ public class ReceiverEndPointTest
         final MessageStatus status,
         final int msgLen)
     {
-        verify(libraryPublication, times(numberOfMessages)).saveMessage(
+        verify(publication, times(numberOfMessages)).saveMessage(
             anyBuffer(), eq(0), eq(msgLen), eq(LIBRARY_ID),
             eq(MESSAGE_TYPE), eq(SESSION_ID), eq(SEQUENCE_INDEX), eq(CONNECTION_ID),
             eq(status), eq(0));
@@ -433,8 +420,8 @@ public class ReceiverEndPointTest
 
     private void savesTwoFramedMessages(final int firstMessageSaveAttempts)
     {
-        final InOrder inOrder = Mockito.inOrder(libraryPublication);
-        inOrder.verify(libraryPublication, times(firstMessageSaveAttempts)).saveMessage(
+        final InOrder inOrder = Mockito.inOrder(publication);
+        inOrder.verify(publication, times(firstMessageSaveAttempts)).saveMessage(
             anyBuffer(),
             eq(0),
             eq(MSG_LEN),
@@ -446,7 +433,7 @@ public class ReceiverEndPointTest
             eq(OK),
             eq(0));
 
-        inOrder.verify(libraryPublication, times(1)).saveMessage(
+        inOrder.verify(publication, times(1)).saveMessage(
             anyBuffer(),
             eq(MSG_LEN),
             eq(MSG_LEN),
@@ -463,7 +450,7 @@ public class ReceiverEndPointTest
 
     private void nothingMoreSaved()
     {
-        verifyNoMoreInteractions(libraryPublication);
+        verifyNoMoreInteractions(publication);
     }
 
     private void theEndpointReceivesACompleteMessage()
@@ -550,7 +537,7 @@ public class ReceiverEndPointTest
 
     private void savesInvalidChecksumMessage(final VerificationMode mode)
     {
-        verify(libraryPublication, mode).saveMessage(
+        verify(publication, mode).saveMessage(
             anyBuffer(),
             eq(0),
             eq(INVALID_CHECKSUM_LEN),
@@ -602,7 +589,7 @@ public class ReceiverEndPointTest
 
     private void verifyDuplicateSession(final VerificationMode times)
     {
-        verify(libraryPublication, times).saveDisconnect(anyInt(), anyLong(), eq(DisconnectReason.DUPLICATE_SESSION));
+        verify(publication, times).saveDisconnect(anyInt(), anyLong(), eq(DisconnectReason.DUPLICATE_SESSION));
     }
 
     private void givenADuplicateSession()

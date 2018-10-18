@@ -77,7 +77,6 @@ import static uk.co.real_logic.artio.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.GatewayError.*;
 import static uk.co.real_logic.artio.messages.LogonStatus.LIBRARY_NOTIFICATION;
-import static uk.co.real_logic.artio.messages.SequenceNumberType.DETERMINE_AT_LOGON;
 import static uk.co.real_logic.artio.messages.SequenceNumberType.TRANSIENT;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.*;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
@@ -490,7 +489,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         final long connectionId = this.nextConnectionId++;
         final GatewaySession session = setupConnection(
-            channel, connectionId, UNKNOWN_SESSION, null, ENGINE_LIBRARY_ID, ACCEPTOR, DETERMINE_AT_LOGON);
+            channel, connectionId, UNKNOWN_SESSION, null, ENGINE_LIBRARY_ID, ACCEPTOR);
 
         session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
 
@@ -654,8 +653,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 sessionContext,
                 sessionKey,
                 libraryId,
-                INITIATOR,
-                sequenceNumberType);
+                INITIATOR);
 
             library.addSession(session);
 
@@ -771,8 +769,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final SessionContext context,
         final CompositeKey sessionKey,
         final int libraryId,
-        final ConnectionType connectionType,
-        final SequenceNumberType sequenceNumberType)
+        final ConnectionType connectionType)
     {
         final ReceiverEndPoint receiverEndPoint = endPointFactory.receiverEndPoint(
             channel,
@@ -782,9 +779,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             libraryId,
             this,
             sentSequenceNumberIndex,
-            receivedSequenceNumberIndex,
-            sequenceNumberType,
-            connectionType);
+            receivedSequenceNumberIndex);
         receiverEndPoints.add(receiverEndPoint);
 
         final BlockablePosition libraryBlockablePosition = getLibraryBlockablePosition(libraryId);
