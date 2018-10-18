@@ -38,7 +38,6 @@ public class RecordingIdStore implements AutoCloseable
     private final RecordingIdLookup inboundLookup;
     private final RecordingIdLookup outboundLookup;
     private final Subscription subscription;
-    // TODO: when does recording id change? Is it range limited.
     private final RecordingEventHandler recordingEventHandler;
 
     public RecordingIdStore(

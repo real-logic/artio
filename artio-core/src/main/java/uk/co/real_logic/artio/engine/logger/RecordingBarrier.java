@@ -36,26 +36,20 @@ public class RecordingBarrier
             countersReader,
             recordingId);
 
+        // wait if the recording is active - otherwise assume that the recording has complete.
         if (counterId != CountersReader.NULL_COUNTER_ID)
         {
             long recordedPosition;
             while ((recordedPosition = countersReader.getCounterValue(counterId)) < reachedPosition)
             {
                 idleStrategy.idle();
-                //System.out.println(recordedPosition);
 
                 if (!RecordingPos.isActive(countersReader, counterId, recordingId))
                 {
-                    System.out.println(counterId + "IN ACTIVE!");
-                    System.exit(-1);
+                    return;
                 }
             }
             idleStrategy.reset();
-        }
-        else
-        {
-            // TODO: find out how to get the completed position of the recording?
-            // Or maybe just handle the exception if it happens
         }
     }
 }

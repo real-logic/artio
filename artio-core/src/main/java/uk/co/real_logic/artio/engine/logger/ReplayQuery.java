@@ -26,6 +26,8 @@ import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
@@ -195,7 +197,6 @@ public class ReplayQuery implements AutoCloseable
                         (sequenceIndex == endSequenceIndex && sequenceNumber <= endSequenceNumber);
                     final boolean startOk = sequenceIndex > beginSequenceIndex ||
                         (sequenceIndex == beginSequenceIndex && sequenceNumber >= beginSequenceNumber);
-                    // TODO: try to get rid of this requiredStreamId check thing
                     if (startOk && endOk && streamId == requiredStreamId)
                     {
                         if (currentRange == null)
@@ -319,7 +320,7 @@ public class ReplayQuery implements AutoCloseable
             }
             else
             {
-                // TODO: this should never happen, defensively log
+                DebugLogger.log(LogTag.INDEX, "currentPosition == addPosition, %d", currentPosition);
             }
 
             count++;

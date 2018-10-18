@@ -200,8 +200,6 @@ public class DecoderGeneratorTest
 
         decoder.reset();
         decode(RF_NO_FIELDS, decoder);
-        // TODO: we propose changing decimal sentinel to something like
-        // new DecimalFloat(Long.MAX_VALUE, Integer.MAX_VALUE) or new DecimalFloat(Long.MAX_VALUE, Integer.MIN_VALUE)
         assertEquals(DecimalFloat.MISSING_FLOAT, getMethod(decoder, DECIMAL_RF));
         assertEquals(DecimalFloat.ZERO, getMethod(decoder, DECIMAL_RF));
     }
