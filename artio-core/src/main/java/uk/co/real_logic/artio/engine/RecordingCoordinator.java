@@ -152,7 +152,7 @@ public class RecordingCoordinator implements AutoCloseable
     {
         if (!closed)
         {
-            // awaitRecordingsCompletion();
+            awaitRecordingsCompletion();
             shutdownArchiver();
             closed = true;
         }
