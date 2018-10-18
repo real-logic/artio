@@ -23,27 +23,12 @@ import java.util.List;
 
 public class LogDirectoryDescriptor
 {
-    private static final int EXTENSION_LENGTH = ".log".length();
 
     private final String logFileDir;
-    private final String logFileFormat;
-    private final String metaDataLogFileFormat;
 
     public LogDirectoryDescriptor(final String logFileDir)
     {
         this.logFileDir = logFileDir;
-        logFileFormat = logFileDir + File.separator + "archive_%s_%d_%d_%d.log";
-        metaDataLogFileFormat = logFileDir + File.separator + "meta-data_%s_%d_%d.log";
-    }
-
-    public File logFile(final StreamIdentifier stream, final int sessionId, final int termId)
-    {
-        return new File(String.format(logFileFormat, stream.canonicalForm(), stream.streamId(), sessionId, termId));
-    }
-
-    public File metaDataLogFile(final StreamIdentifier stream, final int sessionId)
-    {
-        return new File(String.format(metaDataLogFileFormat, stream.canonicalForm(), stream.streamId(), sessionId));
     }
 
     public List<File> listLogFiles(final StreamIdentifier stream)
@@ -53,12 +38,4 @@ public class LogDirectoryDescriptor
         return Arrays.asList(logFileDir.listFiles(file -> file.getName().startsWith(prefix)));
     }
 
-    public static int computeTermId(final File logFile)
-    {
-        final String logFileName = logFile.getName();
-        final int startOfTermId = logFileName.lastIndexOf('-');
-        final int endOfTermId = logFileName.length() - EXTENSION_LENGTH;
-
-        return Integer.parseInt(logFileName.substring(startOfTermId, endOfTermId));
-    }
 }
