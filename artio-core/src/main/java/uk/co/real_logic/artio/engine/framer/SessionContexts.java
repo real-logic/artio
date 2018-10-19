@@ -389,4 +389,9 @@ public class SessionContexts
     {
         return currentlyAuthenticatedSessionIds.contains(sessionId);
     }
+
+    boolean isKnownSessionId(final long sessionId)
+    {
+        return compositeToContext.values().stream().anyMatch(context -> context.sessionId() == sessionId);
+    }
 }

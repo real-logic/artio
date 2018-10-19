@@ -238,7 +238,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
 
     private boolean sessionIsUnknown()
     {
-        return sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId) == UNK_SESSION;
+        return !sessionContexts.isKnownSessionId(sessionId);
     }
 
     public String toString()

@@ -675,7 +675,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final long sessionId = lookupSessionId(ACCEPTOR_ID, INITIATOR_ID, acceptingEngine).resultIfPresent();
 
         final Reply<?> resetSequenceNumber = testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
-        assertTrue(resetSequenceNumber.hasCompleted());
+        assertTrue("Should be complete: " + resetSequenceNumber, resetSequenceNumber.hasCompleted());
 
         assertInitSeqNum(1, 1, 1);
     }
