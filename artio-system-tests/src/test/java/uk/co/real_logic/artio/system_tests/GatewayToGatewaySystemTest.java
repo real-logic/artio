@@ -674,10 +674,25 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final long sessionId = lookupSessionId(ACCEPTOR_ID, INITIATOR_ID, acceptingEngine).resultIfPresent();
 
-        final Reply<?> resetSequenceNumber = testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
-        assertTrue("Should be complete: " + resetSequenceNumber, resetSequenceNumber.hasCompleted());
+        final Reply<?> resetSequenceNumber = resetSequenceNumber(sessionId);
+        replyCompleted(resetSequenceNumber);
 
         assertInitSeqNum(1, 1, 1);
+    }
+
+    @Test
+    public void shouldNotResetSequenceNumbersOfMissingSession()
+    {
+        messagesCanBeExchanged();
+
+        assertInitSeqNum(2, 2, 0);
+
+        final Reply<?> resetSequenceNumber = resetSequenceNumber((long) 400);
+        assertTrue("Should have errored: " + resetSequenceNumber, resetSequenceNumber.hasErrored());
+        final String message = resetSequenceNumber.error().getMessage();
+        assertTrue(message, message.contains("Unknown sessionId: 400"));
+
+        assertInitSeqNum(2, 2, 0);
     }
 
     @Ignore
@@ -693,11 +708,21 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final long sessionId = lookupSessionId(ACCEPTOR_ID, INITIATOR_ID, acceptingEngine).resultIfPresent();
 
-        final Reply<?> resetSequenceNumber = testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
-        assertTrue(resetSequenceNumber.hasCompleted());
+        final Reply<?> resetSequenceNumber = resetSequenceNumber(sessionId);
+        replyCompleted(resetSequenceNumber);
 
         assertInitSeqNum(1, 1, 1);
         assertAccSeqNum(1, 1, 1);
+    }
+
+    private Reply<?> resetSequenceNumber(final long sessionId)
+    {
+        return testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
+    }
+
+    private void replyCompleted(final Reply<?> resetSequenceNumber)
+    {
+        assertTrue("Should be complete: " + resetSequenceNumber, resetSequenceNumber.hasCompleted());
     }
 
     @Test
