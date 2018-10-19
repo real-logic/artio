@@ -64,6 +64,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private Consumer<Reply<Session>> onInitiateReply = reply ->
     {
+        // System.out.println(reply);
         initiatingSession = reply.resultIfPresent();
         assertConnected(initiatingSession);
     };

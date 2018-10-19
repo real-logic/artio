@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.protocol.DataHeaderFlyweight;
+import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2LongHashMap;
@@ -66,6 +67,7 @@ public class SequenceNumberIndexWriter implements Index
     private final File writablePath;
     private final File passingPlacePath;
     private final int fileCapacity;
+    private final RecordingIdLookup recordingIdLookup;
     private final int streamId;
     private final int indexedPositionsOffset;
     private final IndexedPositionWriter positions;
@@ -78,13 +80,15 @@ public class SequenceNumberIndexWriter implements Index
         final AtomicBuffer inMemoryBuffer,
         final MappedFile indexFile,
         final ErrorHandler errorHandler,
-        final int streamId)
+        final int streamId,
+        final RecordingIdLookup recordingIdLookup)
     {
         this.inMemoryBuffer = inMemoryBuffer;
         this.indexFile = indexFile;
         this.errorHandler = errorHandler;
         this.streamId = streamId;
         this.fileCapacity = indexFile.buffer().capacity();
+        this.recordingIdLookup = recordingIdLookup;
 
         final String indexFilePath = indexFile.file().getAbsolutePath();
         indexPath = indexFile.file();
@@ -107,7 +111,7 @@ public class SequenceNumberIndexWriter implements Index
         }
         catch (final Exception e)
         {
-            writableFile.close();
+            CloseHelper.close(writableFile);
             indexFile.close();
             throw e;
         }
@@ -165,7 +169,9 @@ public class SequenceNumberIndexWriter implements Index
         }
 
         checkTermRoll(buffer, srcOffset, endPosition, length);
-        positions.indexedUpTo(aeronSessionId, endPosition);
+
+        final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
+        positions.indexedUpTo(aeronSessionId, recordingId, endPosition);
     }
 
     void resetSequenceNumbers()

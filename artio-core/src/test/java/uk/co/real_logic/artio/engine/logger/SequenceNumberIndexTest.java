@@ -51,6 +51,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private SequenceNumberIndexWriter writer;
     private SequenceNumberIndexReader reader;
+    private RecordingIdLookup recordingIdLookup = mock(RecordingIdLookup.class);
 
     @Before
     public void setUp()
@@ -263,7 +264,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private SequenceNumberIndexWriter newWriter(final AtomicBuffer inMemoryBuffer)
     {
         final MappedFile indexFile = newIndexFile();
-        return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler, STREAM_ID);
+        return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler, STREAM_ID, recordingIdLookup);
     }
 
     private MappedFile newIndexFile()

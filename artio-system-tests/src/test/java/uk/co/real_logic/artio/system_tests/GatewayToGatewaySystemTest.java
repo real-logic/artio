@@ -840,6 +840,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         // Callbacks for the missing messages whilst the gateway managed them
         final String expectedSeqNum = String.valueOf(lastReceivedMsgSeqNum + 1);
+        // System.out.println(expectedSeqNum);
         final long messageCount = messages
             .stream()
             .filter((m) -> m.getMsgType().equals(TEST_REQUEST_MESSAGE_AS_STR) &&

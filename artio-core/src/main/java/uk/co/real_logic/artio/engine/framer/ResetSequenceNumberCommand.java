@@ -25,7 +25,6 @@ import java.util.function.LongToIntFunction;
 
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.Reply.State.ERRORED;
-import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 
 class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
 {

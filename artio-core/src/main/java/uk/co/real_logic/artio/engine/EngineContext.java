@@ -93,12 +93,14 @@ public class EngineContext implements AutoCloseable
                 configuration.sentSequenceNumberBuffer(),
                 configuration.sentSequenceNumberIndex(),
                 errorHandler,
-                OUTBOUND_LIBRARY_STREAM);
+                OUTBOUND_LIBRARY_STREAM,
+                recordingCoordinator.outboundRecordingIdLookup());
             receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.receivedSequenceNumberBuffer(),
                 configuration.receivedSequenceNumberIndex(),
                 errorHandler,
-                INBOUND_LIBRARY_STREAM);
+                INBOUND_LIBRARY_STREAM,
+                recordingCoordinator.inboundRecordingIdLookup());
 
             newStreams();
             newArchivingAgent();
@@ -206,7 +208,8 @@ public class EngineContext implements AutoCloseable
             asList(replayIndex, receivedSequenceNumberIndex),
             inboundLibraryStreams.subscription("inboundIndexer"),
             configuration.agentNamePrefix(),
-            inboundCompletionPosition);
+            inboundCompletionPosition,
+            aeronArchive);
 
         final List<Index> outboundIndices = new ArrayList<>();
         outboundIndices.add(newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, OUTBOUND_LIBRARY_STREAM,
@@ -221,7 +224,7 @@ public class EngineContext implements AutoCloseable
             outboundIndices,
             outboundLibraryStreams.subscription("outboundIndexer"),
             configuration.agentNamePrefix(),
-            outboundLibraryCompletionPosition);
+            outboundLibraryCompletionPosition, aeronArchive);
     }
 
     private void newArchivingAgent()

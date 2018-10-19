@@ -102,9 +102,10 @@ class IndexedPositionReader
 
             decoder.wrap(buffer, offset, actingBlockLength, actingVersion);
             final int sessionId = decoder.sessionId();
+            final long recordingId = decoder.recordingId();
             if (sessionId != 0)
             {
-                consumer.accept(sessionId, decoder.position());
+                consumer.accept(sessionId, recordingId, decoder.position());
             }
 
             offset += RECORD_LENGTH;

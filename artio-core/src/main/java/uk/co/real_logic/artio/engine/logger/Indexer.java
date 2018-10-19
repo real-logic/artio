@@ -15,7 +15,9 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.Image;
 import io.aeron.Subscription;
+import io.aeron.archive.client.AeronArchive;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
@@ -28,7 +30,9 @@ import uk.co.real_logic.artio.engine.CompletionPosition;
 
 import java.util.List;
 
+import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.artio.GatewayProcess.ARCHIVE_REPLAY_STREAM;
 
 /**
  * Incrementally builds indexes by polling a subscription.
@@ -46,13 +50,14 @@ public class Indexer implements Agent, ControlledFragmentHandler
         final List<Index> indices,
         final Subscription subscription,
         final String agentNamePrefix,
-        final CompletionPosition completionPosition)
+        final CompletionPosition completionPosition,
+        final AeronArchive aeronArchive)
     {
         this.indices = indices;
         this.subscription = subscription;
         this.agentNamePrefix = agentNamePrefix;
         this.completionPosition = completionPosition;
-        catchIndexUp();
+        catchIndexUp(aeronArchive);
     }
 
     public int doWork()
@@ -60,24 +65,35 @@ public class Indexer implements Agent, ControlledFragmentHandler
         return subscription.controlledPoll(this, LIMIT) + CollectionUtil.sum(indices, Index::doWork);
     }
 
-    private void catchIndexUp()
+    private void catchIndexUp(final AeronArchive aeronArchive)
     {
         for (final Index index : indices)
         {
-            index.readLastPosition((aeronSessionId, endOfLastMessageposition) ->
+            index.readLastPosition((aeronSessionId, recordingId, endOfLastMessageposition) ->
             {
-                // TODO: rewrite with aeron-archiver
-                /*final ArchiveReader.SessionReader sessionReader = archiveReader.session(aeronSessionId);
-                if (sessionReader != null)
+                final long recordingPosition = aeronArchive.getRecordingPosition(recordingId);
+                if (recordingPosition > endOfLastMessageposition)
                 {
-                    do
+                    final long length = recordingPosition - endOfLastMessageposition;
+                    try (Subscription subscription = aeronArchive.replay(
+                        recordingId, endOfLastMessageposition, length, IPC_CHANNEL, ARCHIVE_REPLAY_STREAM))
                     {
+                        // Only do 1 replay at a time
+                        while (subscription.imageCount() != 1)
+                        {
+                            Thread.yield();
+                        }
 
-                        final long nextMessagePosition = alignTerm(endOfLastMessageposition) + HEADER_LENGTH;
-                        endOfLastMessageposition = sessionReader.read(nextMessagePosition, index);
+                        final Image replayImage = subscription.imageAtIndex(0);
+
+                        while (replayImage.position() < recordingPosition)
+                        {
+                            replayImage.controlledPoll(index, LIMIT);
+
+                            Thread.yield(); // TODO: proper backoff
+                        }
                     }
-                    while (endOfLastMessageposition > 0);
-                }*/
+                }
             });
         }
     }

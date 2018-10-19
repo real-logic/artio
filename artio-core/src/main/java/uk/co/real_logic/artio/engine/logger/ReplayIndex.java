@@ -218,7 +218,7 @@ public class ReplayIndex implements Index
                 .recordingId(recordingId)
                 .length(length);
 
-            positionWriter.indexedUpTo(aeronSessionId, endPosition);
+            positionWriter.indexedUpTo(aeronSessionId, recordingId, endPosition);
             positionWriter.updateChecksums();
 
             endChangeOrdered(buffer, changePosition);

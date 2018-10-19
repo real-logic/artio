@@ -21,5 +21,5 @@ package uk.co.real_logic.artio.engine.logger;
 @FunctionalInterface
 public interface IndexedPositionConsumer
 {
-    void accept(int aeronSessionId, long endPosition);
+    void accept(int aeronSessionId, long recordingId, long endPosition);
 }
