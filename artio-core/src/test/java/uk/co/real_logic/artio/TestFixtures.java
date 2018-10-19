@@ -23,6 +23,7 @@ import org.agrona.IoUtil;
 import org.agrona.concurrent.YieldingIdleStrategy;
 
 import java.io.File;
+import java.util.Arrays;
 
 import static io.aeron.driver.ThreadingMode.SHARED;
 
@@ -30,6 +31,8 @@ public final class TestFixtures
 {
     private static final int LOW_PORT = 9999;
     private static final int HIGH_PORT = 99999;
+
+    public static final int MESSAGE_BUFFER_SIZE_IN_BYTES = 15000;
     public static final int TERM_BUFFER_LENGTH = 4 * 1024 * 1024;
 
     private static int port = LOW_PORT;
@@ -98,6 +101,14 @@ public final class TestFixtures
         CloseChecker.onClose(aeronDirectoryName, archivingMediaDriver);
         archivingMediaDriver.close();
         return aeronDirectoryName;
+    }
+
+    public static String largeTestReqId()
+    {
+        final char[] testReqIDChars = new char[MESSAGE_BUFFER_SIZE_IN_BYTES - 100];
+        Arrays.fill(testReqIDChars, 'A');
+
+        return new String(testReqIDChars);
     }
 
 }

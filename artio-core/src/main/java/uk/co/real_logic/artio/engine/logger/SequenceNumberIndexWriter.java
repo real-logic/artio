@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.logbuffer.Header;
 import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
@@ -117,14 +118,16 @@ public class SequenceNumberIndexWriter implements Index
         }
     }
 
-    public void indexRecord(
+    public void onFragment(
         final DirectBuffer buffer,
         final int srcOffset,
         final int length,
-        final int streamId,
-        final int aeronSessionId,
-        final long endPosition)
+        final Header header)
     {
+        final int streamId = header.streamId();
+        final long endPosition = header.position();
+        final int aeronSessionId = header.sessionId();
+
         if (streamId != this.streamId)
         {
             return;

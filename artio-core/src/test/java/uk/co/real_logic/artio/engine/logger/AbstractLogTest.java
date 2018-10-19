@@ -34,6 +34,7 @@ import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.artio.TestFixtures.MESSAGE_BUFFER_SIZE_IN_BYTES;
 import static uk.co.real_logic.artio.engine.logger.Replayer.SIZE_OF_LENGTH_FIELD;
 
 public class AbstractLogTest
@@ -60,6 +61,7 @@ public class AbstractLogTest
     public static final String RESEND_TARGET = "sender";
     public static final int PREFIX_LENGTH =
         MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + SIZE_OF_LENGTH_FIELD;
+    public static final int BIG_BUFFER_LENGTH = MESSAGE_BUFFER_SIZE_IN_BYTES + 400;
 
     protected MessageHeaderEncoder header = new MessageHeaderEncoder();
     protected FixMessageEncoder messageFrame = new FixMessageEncoder();
@@ -69,7 +71,7 @@ public class AbstractLogTest
     protected UnsafeBuffer resultBuffer;
     protected MutableAsciiBuffer resultAsciiBuffer = new MutableAsciiBuffer();
 
-    protected UnsafeBuffer buffer = new UnsafeBuffer(new byte[512]);
+    protected UnsafeBuffer buffer = new UnsafeBuffer(new byte[BIG_BUFFER_LENGTH]);
 
     protected int logEntryLength;
     protected int offset;
@@ -82,9 +84,19 @@ public class AbstractLogTest
     protected void bufferContainsExampleMessage(
         final boolean hasPossDupFlag, final long sessionId, final int sequenceNumber, final int sequenceIndex)
     {
+        bufferContainsExampleMessage(hasPossDupFlag, sessionId, sequenceNumber, sequenceIndex, "abc");
+    }
+
+    protected void bufferContainsExampleMessage(
+        final boolean hasPossDupFlag,
+        final long sessionId,
+        final int sequenceNumber,
+        final int sequenceIndex,
+        final String testReqId)
+    {
         final ExampleMessageEncoder exampleMessage = new ExampleMessageEncoder();
         final HeaderEncoder header = exampleMessage.header();
-        exampleMessage.testReqID("abc");
+        exampleMessage.testReqID(testReqId);
 
         if (hasPossDupFlag)
         {
@@ -118,7 +130,7 @@ public class AbstractLogTest
     {
         final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
         final int timestampLength = timestampEncoder.encode(ORIGINAL_SENDING_EPOCH_MS);
-        MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[450]);
+        MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[BIG_BUFFER_LENGTH]);
 
         header
             .sendingTime(timestampEncoder.buffer(), timestampLength)

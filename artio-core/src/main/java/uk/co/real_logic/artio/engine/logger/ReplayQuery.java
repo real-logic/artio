@@ -38,7 +38,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongFunction;
 
+import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static org.agrona.UnsafeAccess.UNSAFE;
 import static uk.co.real_logic.artio.GatewayProcess.ARCHIVE_REPLAY_STREAM;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
@@ -160,6 +162,7 @@ public class ReplayQuery implements AutoCloseable
             }
             long stopIteratingPosition = iteratorPosition + capacity;
 
+            int lastSequenceNumber = -1;
             while (iteratorPosition != stopIteratingPosition)
             {
                 final long changePosition = endChangeVolatile(buffer);
@@ -175,11 +178,11 @@ public class ReplayQuery implements AutoCloseable
 
                 indexRecord.wrap(buffer, offset, actingBlockLength, actingVersion);
                 final int streamId = indexRecord.streamId();
-                final long readPosition = indexRecord.position();
+                long beginPosition = indexRecord.position();
                 final int sequenceIndex = indexRecord.sequenceIndex();
                 final int sequenceNumber = indexRecord.sequenceNumber();
                 final long recordingId = indexRecord.recordingId();
-                final int readLength = indexRecord.length();
+                int readLength = indexRecord.length();
 
                 UNSAFE.loadFence(); // LoadLoad required so previous loads don't move past version check below.
 
@@ -188,7 +191,7 @@ public class ReplayQuery implements AutoCloseable
                 {
                     idleStrategy.reset();
 
-                    if (readPosition == 0)
+                    if (beginPosition == 0)
                     {
                         break;
                     }
@@ -209,7 +212,16 @@ public class ReplayQuery implements AutoCloseable
                             currentRange = new RecordingRange(recordingId);
                         }
 
-                        currentRange.add(readPosition, readLength);
+                        beginPosition -= FRAME_ALIGNMENT;
+                        readLength += FRAME_ALIGNMENT;
+                        currentRange.add(beginPosition, readLength);
+
+                        // FIX messages can be fragmented, so number of range adds != count
+                        if (lastSequenceNumber != sequenceNumber)
+                        {
+                            currentRange.count++;
+                        }
+                        lastSequenceNumber = sequenceNumber;
                     }
                     iteratorPosition += RECORD_LENGTH;
                 }
@@ -234,16 +246,17 @@ public class ReplayQuery implements AutoCloseable
             {
                 final RecordingRange recordingRange = ranges.get(i);
                 // System.err.println(recordingRange);
-                final long beginPosition = recordingRange.position - 32;
-                final long endPosition = beginPosition + recordingRange.length + 32;
+                final long beginPosition = recordingRange.position;
+                final long length = recordingRange.length;
+                final long endPosition = beginPosition + length;
 
                 recordingBarrier.await(recordingRange.recordingId, endPosition, idleStrategy);
 
                 try (Subscription subscription = aeronArchive.replay(
                     recordingRange.recordingId,
                     beginPosition,
-                    endPosition,
-                    channel,
+                    length,
+                    IPC_CHANNEL,
                     ARCHIVE_REPLAY_STREAM))
                 {
                     messageTracker.wrap(handler);
@@ -279,7 +292,7 @@ public class ReplayQuery implements AutoCloseable
         }
     }
 
-    private static final class RecordingRange
+    static final class RecordingRange
     {
         final long recordingId;
         long position = MISSING_LONG;
@@ -289,6 +302,7 @@ public class ReplayQuery implements AutoCloseable
         RecordingRange(final long recordingId)
         {
             this.recordingId = recordingId;
+            this.count = 0;
         }
 
         void add(final long addPosition, final int addLength)
@@ -299,7 +313,6 @@ public class ReplayQuery implements AutoCloseable
             {
                 this.position = addPosition;
                 this.length = addLength;
-                this.count = 1;
                 return;
             }
 
@@ -322,8 +335,6 @@ public class ReplayQuery implements AutoCloseable
             {
                 DebugLogger.log(LogTag.INDEX, "currentPosition == addPosition, %d", currentPosition);
             }
-
-            count++;
         }
 
         @Override

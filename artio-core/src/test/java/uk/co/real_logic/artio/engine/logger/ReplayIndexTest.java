@@ -45,6 +45,7 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
+import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.*;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
@@ -140,9 +141,25 @@ public class ReplayIndexTest extends AbstractLogTest
     }
 
     @Test
-    public void shouldReturnLogEntriesMatchingQuery()
+    public void shouldReturnRecordsMatchingQuery()
     {
         indexExampleMessage();
+
+        final int msgCount = query();
+
+        verifyMappedFile(SESSION_ID, 1);
+        verifyMessagesRead(1);
+        assertEquals(1, msgCount);
+    }
+
+    @Test
+    public void shouldReturnLongRecordsMatchingQuery()
+    {
+        final String testReqId = largeTestReqId();
+
+        bufferContainsExampleMessage(true, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX, testReqId);
+        publishBuffer();
+        indexRecord(11);
 
         final int msgCount = query();
 
@@ -363,10 +380,15 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private void indexRecord()
     {
+        indexRecord(1);
+    }
+
+    private void indexRecord(final int fragmentsToRead)
+    {
         int read = 0;
-        while (read < 1)
+        while (read < fragmentsToRead)
         {
-            read += subscription.controlledPoll(replayIndex, 1);
+            read += subscription.poll(replayIndex, 1);
         }
     }
 

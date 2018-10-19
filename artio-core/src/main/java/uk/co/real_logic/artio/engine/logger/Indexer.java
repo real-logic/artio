@@ -88,7 +88,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
 
                         while (replayImage.position() < recordingPosition)
                         {
-                            replayImage.controlledPoll(index, LIMIT);
+                            replayImage.poll(index, LIMIT);
 
                             Thread.yield(); // TODO: proper backoff
                         }

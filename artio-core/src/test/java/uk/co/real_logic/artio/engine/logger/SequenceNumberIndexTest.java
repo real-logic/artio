@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.logbuffer.Header;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
@@ -56,6 +57,8 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Before
     public void setUp()
     {
+        buffer = new UnsafeBuffer(new byte[512]);
+
         deleteFiles();
 
         writer = newWriter(inMemoryBuffer);
@@ -290,7 +293,11 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
     private void indexRecord(final int position)
     {
-        writer.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_SESSION_ID, position);
+        final Header header = mock(Header.class);
+        when(header.streamId()).thenReturn(STREAM_ID);
+        when(header.sessionId()).thenReturn(AERON_SESSION_ID);
+        when(header.position()).thenReturn((long)position);
+        writer.onFragment(buffer, START, fragmentLength(), header);
     }
 
     private void assertLastKnownSequenceNumberIs(final long sessionId, final int expectedSequenceNumber)

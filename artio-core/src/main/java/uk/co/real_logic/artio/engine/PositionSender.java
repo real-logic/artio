@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine;
 
+import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.LongLongConsumer;
@@ -44,13 +45,11 @@ public class PositionSender implements Index
     }
 
     @SuppressWarnings("FinalParameters")
-    public void indexRecord(
+    public void onFragment(
         final DirectBuffer buffer,
         int offset,
         final int length,
-        final int streamId,
-        final int aeronSessionId,
-        final long endPosition)
+        final Header header)
     {
         messageHeader.wrap(buffer, offset);
 
@@ -60,7 +59,7 @@ public class PositionSender implements Index
 
             fixMessage.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
 
-            newPosition(fixMessage.libraryId(), endPosition);
+            newPosition(fixMessage.libraryId(), header.position());
         }
     }
 

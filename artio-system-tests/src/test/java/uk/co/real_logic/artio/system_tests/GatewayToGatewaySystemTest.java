@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
@@ -39,6 +38,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixMatchers.*;
+import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -90,13 +90,26 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertSequenceIndicesAre(0);
     }
 
-    @Ignore
     @Test
     public void gatewayProcessesResendRequests()
     {
+        final String testReqID = "AAA";
+
+        gatewayProcessesResendRequests(testReqID);
+    }
+
+    @Test
+    public void gatewayProcessesResendRequestsOfFragmentedMessages()
+    {
+        final String testReqID = largeTestReqId();
+
+        gatewayProcessesResendRequests(testReqID);
+    }
+
+    private void gatewayProcessesResendRequests(final String testReqID)
+    {
         acquireAcceptingSession();
 
-        final String testReqID = largeTestReqId();
         final FixMessage message = exchangeExampleMessageFromInitiatorToAcceptor(testReqID);
 
         final int sequenceNumber = acceptorSendsResendRequest(message.getMessageSequenceNumber());
@@ -687,7 +700,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertInitSeqNum(2, 2, 0);
 
-        final Reply<?> resetSequenceNumber = resetSequenceNumber((long) 400);
+        final Reply<?> resetSequenceNumber = resetSequenceNumber((long)400);
         assertTrue("Should have errored: " + resetSequenceNumber, resetSequenceNumber.hasErrored());
         final String message = resetSequenceNumber.error().getMessage();
         assertTrue(message, message.contains("Unknown sessionId: 400"));

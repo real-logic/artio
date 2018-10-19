@@ -71,7 +71,6 @@ public final class SystemTestUtil
     private static final String HI_ID = "hi";
     private static final String USERNAME = "bob";
     private static final String PASSWORD = "Uv1aegoh";
-    private static final int MESSAGE_BUFFER_SIZE_IN_BYTES = 15000;
 
     static
     {
@@ -449,13 +448,5 @@ public final class SystemTestUtil
                 final List<LibraryInfo> libraries = libraries(engine);
                 assertThat(libraries, containsInAnyOrder(libraryMatchers));
             });
-    }
-
-    static String largeTestReqId()
-    {
-        final char[] testReqIDChars = new char[MESSAGE_BUFFER_SIZE_IN_BYTES - 100];
-        Arrays.fill(testReqIDChars, 'A');
-
-        return new String(testReqIDChars);
     }
 }
