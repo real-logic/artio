@@ -165,7 +165,14 @@ public class RecordingCoordinator implements AutoCloseable
 
         final List<CompletingRecording> completingRecordings = new ArrayList<>();
         aeronSessionIdToCompletionPosition.longForEach((sessionId, completionPosition) ->
-            completingRecordings.add(new CompletingRecording((int)sessionId, completionPosition)));
+        {
+            final int counterId = RecordingPos.findCounterIdBySession(counters, (int) sessionId);
+            // Recording has completed
+            if (counterId != NULL_COUNTER_ID)
+            {
+                completingRecordings.add(new CompletingRecording(completionPosition, counterId));
+            }
+        });
 
         while (!completingRecordings.isEmpty())
         {
@@ -205,12 +212,12 @@ public class RecordingCoordinator implements AutoCloseable
         private final long recordingId;
         private final int counterId;
 
-        CompletingRecording(final int sessionId, final long completedPosition)
+        CompletingRecording(final long completedPosition, final int counterId)
         {
             this.completedPosition = completedPosition;
 
-            counterId = RecordingPos.findCounterIdBySession(counters, sessionId);
-            recordingId = RecordingPos.getRecordingId(counters, counterId);
+            this.counterId = counterId;
+            recordingId = RecordingPos.getRecordingId(counters, this.counterId);
         }
 
         boolean hasRecordingCompleted()
