@@ -695,7 +695,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertInitSeqNum(2, 2, 0);
     }
 
-    @Ignore
     @Test
     public void shouldResetSequenceNumbersOfLibraryManagedSessions()
     {
