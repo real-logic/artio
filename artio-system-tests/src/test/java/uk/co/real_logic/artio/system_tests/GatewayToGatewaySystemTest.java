@@ -857,7 +857,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final long sessionId = session.id();
         final int lastReceivedMsgSeqNum = session.lastReceivedMsgSeqNum();
         final int sequenceIndex = session.sequenceIndex();
-        final List<FixMessage> messages = otfAcceptor.messages();
 
         releaseToGateway(library, session, testSystem);
 
@@ -873,18 +872,21 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final Session newSession = sessions.get(0);
         assertNotSame(session, newSession);
 
-        messagesCanBeExchanged(otherSession, otherAcceptor);
-
         // Callbacks for the missing messages whilst the gateway managed them
+        final List<FixMessage> messages = otfAcceptor.messages();
         final String expectedSeqNum = String.valueOf(lastReceivedMsgSeqNum + 1);
         // System.out.println(expectedSeqNum);
         final long messageCount = messages
             .stream()
             .filter((m) -> m.getMsgType().equals(TEST_REQUEST_MESSAGE_AS_STR) &&
-            m.get(MSG_SEQ_NUM).equals(expectedSeqNum))
+                m.get(MSG_SEQ_NUM).equals(expectedSeqNum))
             .count();
 
-        assertEquals(messages.toString(), 1, messageCount);
+        System.out.println(messages);
+
+        assertEquals("Expected a single test request" + messages.toString(), 1, messageCount);
+
+        messagesCanBeExchanged(otherSession, otherAcceptor);
     }
 
     private void disconnectSessions()
