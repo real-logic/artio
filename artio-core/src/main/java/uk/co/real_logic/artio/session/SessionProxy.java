@@ -77,7 +77,7 @@ public class SessionProxy
     }
 
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
-    final LogonEncoder logon = new LogonEncoder();
+    private final LogonEncoder logon = new LogonEncoder();
     private final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
     private final LogoutEncoder logout = new LogoutEncoder();
     private final HeartbeatEncoder heartbeat = new HeartbeatEncoder();
