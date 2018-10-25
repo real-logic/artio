@@ -77,7 +77,7 @@ public class SessionProxy
     }
 
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
-    private final LogonEncoder logon = new LogonEncoder();
+    final LogonEncoder logon = new LogonEncoder();
     private final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
     private final LogoutEncoder logout = new LogoutEncoder();
     private final HeartbeatEncoder heartbeat = new HeartbeatEncoder();
@@ -98,6 +98,7 @@ public class SessionProxy
     private final int libraryId;
     private long sessionId;
     private boolean libraryConnected = true;
+    private boolean seqNumResetRequested = false;
 
     public SessionProxy(
         final MutableAsciiBuffer buffer,
@@ -172,6 +173,7 @@ public class SessionProxy
             logon.password(password);
         }
         customisationStrategy.configureLogon(logon, sessionId);
+        seqNumResetRequested = logon.resetSeqNumFlag(); // get customized or default
 
         final long result = logon.encode(buffer, 0);
         return send(result, LogonDecoder.MESSAGE_TYPE, sequenceIndex, logon, msgSeqNo);
@@ -397,5 +399,10 @@ public class SessionProxy
     void libraryConnected(final boolean libraryConnected)
     {
         this.libraryConnected = libraryConnected;
+    }
+
+    boolean isSeqNumResetRequested()
+    {
+        return seqNumResetRequested;
     }
 }
