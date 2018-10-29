@@ -53,6 +53,7 @@ public class DecoderGenerator extends Generator
 
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
     public static final String GROUP_FIELDS = "GROUP_FIELDS";
+    public static final String MESSAGE_FIELDS = "MESSAGE_FIELDS";
 
     public static final int INVALID_TAG_NUMBER =
         RejectReason.INVALID_TAG_NUMBER.representation();
@@ -141,6 +142,11 @@ public class DecoderGenerator extends Generator
             final Message message = (Message)aggregate;
             out.append(messageType(message.fullType(), message.packedType()));
             out.append(commonCompoundImports("Decoder", true));
+            final List<Field> allFieldsForMessage = message.entries()
+                .stream()
+                .flatMap(this::extractFields)
+                .collect(toList());
+            out.append(generateFieldDictionary(allFieldsForMessage, MESSAGE_FIELDS));
         }
         groupMethods(out, aggregate);
         headerMethods(out, aggregate, type);
@@ -443,15 +449,24 @@ public class DecoderGenerator extends Generator
         return entries
             .stream()
             .filter(Entry::required)
-            .flatMap(this::extractFields);
+            .flatMap(this::extractRequiredFields);
+    }
+
+    private Stream<Field> extractRequiredFields(final Entry entry)
+    {
+        return entry.match(
+            (e, field) -> Stream.of(field),
+            (e, group) -> Stream.of((Field)group.numberField().element()),
+            (e, component) -> requiredFields(component.entries()));
     }
 
     private Stream<Field> extractFields(final Entry entry)
     {
         return entry.match(
             (e, field) -> Stream.of(field),
-            (e, group) -> Stream.of((Field)group.numberField().element()),
-            (e, component) -> requiredFields(component.entries()));
+            (e, group) -> Stream.concat(Stream.of((Field)group.numberField().element()),
+                                group.entries().stream().flatMap(this::extractFields)),
+            (e, component) -> component.entries().stream().flatMap(this::extractFields));
     }
 
     private void componentInterface(final Component component)
