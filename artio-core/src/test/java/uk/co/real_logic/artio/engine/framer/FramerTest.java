@@ -465,8 +465,6 @@ public class FramerTest
         backPressureSaveSessionExists();
 
         final Action actual = onLibraryConnect();
-//        final MockingDetails mockingDetails = Mockito.mockingDetails(inboundPublication);
-//        System.out.println(mockingDetails.printInvocations());
 
         assertEquals(ABORT, actual);
 
