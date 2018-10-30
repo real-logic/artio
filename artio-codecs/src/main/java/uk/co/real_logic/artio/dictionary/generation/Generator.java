@@ -58,7 +58,7 @@ public abstract class Generator
     protected String commonCompoundImports(final String form, final boolean headerWrapsTrailer,
         final String messageFieldsSet)
     {
-        final String headerParameter = headerWrapsTrailer ? "trailer, " + MESSAGE_FIELDS : "";
+        final String headerParameter = headerWrapsTrailer ? "trailer" : "";
         return String.format(
             "    %3$s" +
             "    private Trailer%1$s trailer = new Trailer%1$s();\n\n" +

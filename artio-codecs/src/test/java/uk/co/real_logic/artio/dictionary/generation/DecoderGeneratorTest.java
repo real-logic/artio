@@ -46,11 +46,9 @@ import static uk.co.real_logic.artio.builder.Decoder.NO_ERROR;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.*;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.CODEC_LOGGING;
-import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.INVALID_TAG_NUMBER;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.REQUIRED_FIELDS;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.REQUIRED_TAG_MISSING;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_APPEARS_MORE_THAN_ONCE;
-import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.TAG_SPECIFIED_WITHOUT_A_VALUE;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.VALUE_IS_INCORRECT;
@@ -569,13 +567,35 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void shouldFailValidationForUnknownFieldInsideRepeatingGroup() throws Exception
+    public void shouldSkipUnknownFieldInRepeatingGroupAndPassValidation() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
 
-        assertFalse("Passed validation with missing fields", decoder.validate());
-        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
-        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
+        assertTrue("Failed validation with missing fields", decoder.validate());
+
+        Object group = get(decoder, "secondEgGroupGroup");
+        assertEquals("TOM", get(group, "secondGroupFieldAsString"));
+        assertEquals(180, get(group, "thirdGroupField"));
+
+        group = next(group);
+        assertEquals("Barbara", get(group, "secondGroupFieldAsString"));
+        assertEquals(123, get(group, "thirdGroupField"));
+    }
+
+    @Test
+    public void shouldSkipFieldUnknownToMessageButDefinedInFIXSpec() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_WITH_FIELD_UNKNOWN_TO_MESSAGE_BUT_IN_SPEC);
+
+        assertTrue("Failed validation with missing fields", decoder.validate());
+
+        Object group = get(decoder, "secondEgGroupGroup");
+        assertEquals("TOM", get(group, "secondGroupFieldAsString"));
+        assertEquals(180, get(group, "thirdGroupField"));
+
+        group = next(group);
+        assertEquals("Barbara", get(group, "secondGroupFieldAsString"));
+        assertEquals(123, get(group, "thirdGroupField"));
     }
 
     @Test
@@ -587,33 +607,13 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void shouldValidateTagNumbers() throws Exception
+    public void shouldSkipUnknownFieldForMessageAndPassValidation() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(INVALID_TAG_NUMBER_MESSAGE);
 
-        assertFalse("Passed validation with invalid tag number", decoder.validate());
-        assertEquals("Wrong tag id", 9999, decoder.invalidTagId());
-        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
-    }
+        assertTrue("Failed validation with invalid tag number", decoder.validate());
 
-    @Test
-    public void shouldFailValidationRegardingUnknownFieldRatherThanMissingRequiredField() throws Exception
-    {
-        final Decoder decoder = decodeHeartbeat(UNKNOWN_FIELD_MESSAGE);
-
-        assertFalse("Passed validation with invalid tag number ", decoder.validate());
-        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
-        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
-    }
-
-    @Test
-    public void shouldValidateTagNumbersDefinedForThisMessage() throws Exception
-    {
-        final Decoder decoder = decodeHeartbeat(TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE_MESSAGE);
-
-        assertFalse("Passed validation with invalid tag number", decoder.validate());
-        assertEquals("Wrong tag id", 99, decoder.invalidTagId());
-        assertEquals("Wrong reject reason", TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE, decoder.rejectReason());
+        assertEquals(2, getIntField(decoder));
     }
 
     @Test
@@ -717,7 +717,6 @@ public class DecoderGeneratorTest
         assertEquals(OTHER_MESSAGE_TYPE_PACKED, messageTypePacked);
         assertArrayEquals(OTHER_MESSAGE_TYPE_BYTES, messageTypeBytes);
     }
-
 
     @Test
     public void shouldResetAllRepeatingGroupEntries() throws Exception
