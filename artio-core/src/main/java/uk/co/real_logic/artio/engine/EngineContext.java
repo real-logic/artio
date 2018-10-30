@@ -171,7 +171,6 @@ public class EngineContext implements AutoCloseable
             streamId,
             idleStrategy,
             aeronArchive,
-            configuration.libraryAeronChannel(),
             errorHandler,
             new RecordingBarrier(aeronArchive));
     }

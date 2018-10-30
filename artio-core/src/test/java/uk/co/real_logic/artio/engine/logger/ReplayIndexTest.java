@@ -123,7 +123,6 @@ public class ReplayIndexTest extends AbstractLogTest
             OUTBOUND_LIBRARY_STREAM,
             new NoOpIdleStrategy(),
             aeronArchive,
-            CHANNEL,
             errorHandler,
             new RecordingBarrier(aeronArchive));
 

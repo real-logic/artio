@@ -64,7 +64,6 @@ public class ReplayQuery implements AutoCloseable
     private final int requiredStreamId;
     private final IdleStrategy idleStrategy;
     private final AeronArchive aeronArchive;
-    private final String channel;
     private final ErrorHandler errorHandler;
     private final RecordingBarrier recordingBarrier;
 
@@ -79,7 +78,6 @@ public class ReplayQuery implements AutoCloseable
         final int requiredStreamId,
         final IdleStrategy idleStrategy,
         final AeronArchive aeronArchive,
-        final String channel,
         final ErrorHandler errorHandler,
         final RecordingBarrier recordingBarrier)
     {
@@ -88,7 +86,6 @@ public class ReplayQuery implements AutoCloseable
         this.requiredStreamId = requiredStreamId;
         this.idleStrategy = idleStrategy;
         this.aeronArchive = aeronArchive;
-        this.channel = channel;
         this.errorHandler = errorHandler;
         this.recordingBarrier = recordingBarrier;
 
@@ -241,13 +238,10 @@ public class ReplayQuery implements AutoCloseable
 
         private int replayTheRange(final ControlledFragmentHandler handler, final List<RecordingRange> ranges)
         {
-            /*System.out.println("Replaying ranges: " + ranges);*/
-
             int replayedMessages = 0;
             for (int i = 0, size = ranges.size(); i < size; i++)
             {
                 final RecordingRange recordingRange = ranges.get(i);
-                // System.err.println(recordingRange);
                 final long beginPosition = recordingRange.position;
                 final long length = recordingRange.length;
                 final long endPosition = beginPosition + length;
