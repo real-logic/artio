@@ -53,8 +53,11 @@ public class PrinterGeneratorTest
         decoderGenerator.generate();
         printerGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
-        //System.out.println(sources);
         printer = compileInMemory(PRINTER, sources);
+        if (printer == null)
+        {
+            System.out.println(sources);
+        }
     }
 
     @Test

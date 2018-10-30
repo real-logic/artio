@@ -44,9 +44,15 @@ public class ConstantGeneratorTest
     {
         constantGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
-        //System.out.println(sources);
         final Class<?> constantsClass = compileInMemory(TEST_PACKAGE + "." + ConstantGenerator.CLASS_NAME, sources);
-        constants = constantsClass.getConstructor().newInstance();
+        if (constantsClass == null)
+        {
+            System.out.println(sources);
+        }
+        else
+        {
+            constants = constantsClass.getConstructor().newInstance();
+        }
     }
 
     @Test

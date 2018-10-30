@@ -875,14 +875,11 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         // Callbacks for the missing messages whilst the gateway managed them
         final List<FixMessage> messages = otfAcceptor.messages();
         final String expectedSeqNum = String.valueOf(lastReceivedMsgSeqNum + 1);
-        // System.out.println(expectedSeqNum);
         final long messageCount = messages
             .stream()
             .filter((m) -> m.getMsgType().equals(TEST_REQUEST_MESSAGE_AS_STR) &&
             m.get(MSG_SEQ_NUM).equals(expectedSeqNum))
             .count();
-
-        System.out.println(messages);
 
         assertEquals("Expected a single test request" + messages.toString(), 1, messageCount);
 
