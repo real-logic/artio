@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import java.util.Arrays;
+
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
 public final class CodecUtil
@@ -81,8 +83,26 @@ public final class CodecUtil
         return buffer;
     }
 
-    public static boolean equals(final char[] value, final char[] expected, final int offset,
-        final int expectedOffset, final int length)
+    public static byte[] subsequenceBytes(
+        final byte[] value, final byte[] oldBuffer, final int offset, final int length)
+    {
+        if (oldBuffer.length >= length)
+        {
+            System.arraycopy(value, offset, oldBuffer, 0, length);
+            return oldBuffer;
+        }
+        else
+        {
+            return Arrays.copyOfRange(value, offset, offset + length);
+        }
+    }
+
+    public static boolean equals(
+        final char[] value,
+        final char[] expected,
+        final int offset,
+        final int expectedOffset,
+        final int length)
     {
         if (value.length < length || expected.length < length)
         {

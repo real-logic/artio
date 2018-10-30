@@ -74,7 +74,7 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void generatesEncoderClass() throws Exception
+    public void generatesEncoderClass()
     {
         assertNotNull("Not generated anything", heartbeat);
         assertNotNull(heartbeat);
@@ -110,8 +110,56 @@ public class EncoderGeneratorTest
 
         setTestReqIdTo(encoder, "abcd");
 
-        assertArrayEquals(new byte[]{ 97, 98, 99, 100 }, (byte[])getField(encoder, TEST_REQ_ID));
-        assertEquals(4, getField(encoder, TEST_REQ_ID_LENGTH));
+        assertArrayEquals(LONG_VALUE_IN_BYTES, getTestReqIdBytes(encoder));
+        assertEquals(4, getTestReqIdLength(encoder));
+    }
+
+    private Object getTestReqIdLength(final Object encoder) throws Exception
+    {
+        return getField(encoder, TEST_REQ_ID_LENGTH);
+    }
+
+    @Test
+    public void byteArraySettersWriteToFields() throws Exception
+    {
+        final Object encoder = heartbeat.getConstructor().newInstance();
+
+        heartbeat
+            .getMethod(TEST_REQ_ID, byte[].class)
+            .invoke(encoder, VALUE_IN_BYTES);
+
+        assertTestReqIsValue(encoder);
+    }
+
+    @Test
+    public void offsetAndLengthbyteArraySettersWriteFields() throws Exception
+    {
+        final Object encoder = heartbeat.getConstructor().newInstance();
+
+        setTestReqIdBytes(encoder, 1, 3);
+
+        assertTestReqIsValue(encoder);
+    }
+
+    @Test
+    public void offsetAndLengthbyteArraySettersUpdateFields() throws Exception
+    {
+        final Object encoder = heartbeat.getConstructor().newInstance();
+
+        setTestReqIdBytes(encoder, 1, 4);
+
+        setTestReqIdBytes(encoder, 2, 3);
+
+        assertArrayEquals(new byte[]{ 98, 99, 100, 100 }, getTestReqIdBytes(encoder));
+        assertEquals(3, getTestReqIdLength(encoder));
+    }
+
+    private void setTestReqIdBytes(
+        final Object encoder, final int offset, final int length) throws Exception
+    {
+        heartbeat
+            .getMethod(TEST_REQ_ID, byte[].class, int.class, int.class)
+            .invoke(encoder, PREFIXED_VALUE_IN_BYTES, offset, length);
     }
 
     @Test
@@ -737,8 +785,13 @@ public class EncoderGeneratorTest
 
     private void assertTestReqIsValue(final Object encoder) throws Exception
     {
-        assertArrayEquals(VALUE_IN_BYTES, (byte[])getField(encoder, TEST_REQ_ID));
-        assertEquals(3, getField(encoder, TEST_REQ_ID_LENGTH));
+        assertArrayEquals(VALUE_IN_BYTES, getTestReqIdBytes(encoder));
+        assertEquals(3, getTestReqIdLength(encoder));
+    }
+
+    private byte[] getTestReqIdBytes(final Object encoder) throws Exception
+    {
+        return (byte[])getField(encoder, TEST_REQ_ID);
     }
 
     private void assertOnBehalfOfCompIDValue(final Object encoder, final String value) throws Exception

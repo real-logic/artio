@@ -79,6 +79,8 @@ public final class ExampleDictionary
 
     public static final String ABC = "abc";
     public static final byte[] VALUE_IN_BYTES = {97, 98, 99};
+    public static final byte[] LONG_VALUE_IN_BYTES = { 97, 98, 99, 100 };
+    public static final byte[] PREFIXED_VALUE_IN_BYTES = {0, 97, 98, 99, 100, 0};
     public static final String TEST_REQ_ID = "testReqID";
     public static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
     public static final String INT_FIELD = "intField";
