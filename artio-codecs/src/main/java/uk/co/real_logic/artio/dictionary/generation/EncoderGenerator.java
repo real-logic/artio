@@ -382,6 +382,12 @@ public class EncoderGenerator extends Generator
             "        %1$sLength = length;\n" +
             "        return this;\n" +
             "    }\n\n" +
+            "    public %2$s %1$s(final byte[] value, final int offset, final int length)\n" +
+            "    {\n" +
+            "        %1$s = subsequenceBytes(value, %1$s, offset, length);\n" +
+            "        %1$sLength = length;\n" +
+            "        return this;\n" +
+            "    }\n\n" +
             "    public %2$s %1$s(final byte[] value)\n" +
             "    {\n" +
             "        return %1$s(value, value.length);\n" +
