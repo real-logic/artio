@@ -241,6 +241,8 @@ public class ReplayQuery implements AutoCloseable
 
         private int replayTheRange(final ControlledFragmentHandler handler, final List<RecordingRange> ranges)
         {
+            /*System.out.println("Replaying ranges: " + ranges);*/
+
             int replayedMessages = 0;
             for (int i = 0, size = ranges.size(); i < size; i++)
             {

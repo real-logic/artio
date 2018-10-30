@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.engine.logger;
 import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
+import io.aeron.archive.client.ArchiveException;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
@@ -71,28 +72,39 @@ public class Indexer implements Agent, ControlledFragmentHandler
         {
             index.readLastPosition((aeronSessionId, recordingId, endOfLastMessageposition) ->
             {
-                final long recordingPosition = aeronArchive.getRecordingPosition(recordingId);
-                if (recordingPosition > endOfLastMessageposition)
+                // TODO: log System.out.println("endOfLastMessageposition = " + endOfLastMessageposition);
+                try
                 {
-                    final long length = recordingPosition - endOfLastMessageposition;
-                    try (Subscription subscription = aeronArchive.replay(
-                        recordingId, endOfLastMessageposition, length, IPC_CHANNEL, ARCHIVE_REPLAY_STREAM))
+                    final long recordingPosition = aeronArchive.getStopPosition(recordingId);
+                    /*System.out.println("Updating position to: recordingId = " + recordingId +
+                        "recordingPosition = " + recordingPosition);*/
+                    if (recordingPosition > endOfLastMessageposition)
                     {
-                        // Only do 1 replay at a time
-                        while (subscription.imageCount() != 1)
+                        final long length = recordingPosition - endOfLastMessageposition;
+                        try (Subscription subscription = aeronArchive.replay(
+                            recordingId, endOfLastMessageposition, length, IPC_CHANNEL, ARCHIVE_REPLAY_STREAM))
                         {
-                            Thread.yield();
-                        }
+                            // Only do 1 replay at a time
+                            while (subscription.imageCount() != 1)
+                            {
+                                Thread.yield();
+                            }
 
-                        final Image replayImage = subscription.imageAtIndex(0);
+                            final Image replayImage = subscription.imageAtIndex(0);
 
-                        while (replayImage.position() < recordingPosition)
-                        {
-                            replayImage.poll(index, LIMIT);
+                            while (replayImage.position() < recordingPosition)
+                            {
+                                replayImage.poll(index, LIMIT);
 
-                            Thread.yield(); // TODO: proper backoff
+                                Thread.yield(); // TODO: proper backoff
+                            }
                         }
                     }
+                }
+                catch (final ArchiveException e)
+                {
+                    // TODO: log this
+                    e.printStackTrace();
                 }
             });
         }

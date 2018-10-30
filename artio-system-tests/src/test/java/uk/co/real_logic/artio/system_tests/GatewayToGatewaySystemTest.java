@@ -879,7 +879,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final long messageCount = messages
             .stream()
             .filter((m) -> m.getMsgType().equals(TEST_REQUEST_MESSAGE_AS_STR) &&
-                m.get(MSG_SEQ_NUM).equals(expectedSeqNum))
+            m.get(MSG_SEQ_NUM).equals(expectedSeqNum))
             .count();
 
         System.out.println(messages);

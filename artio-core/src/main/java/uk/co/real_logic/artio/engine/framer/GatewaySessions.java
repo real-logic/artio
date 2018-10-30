@@ -273,7 +273,7 @@ class GatewaySessions
         catch (final Throwable throwable)
         {
             final String message = String.format(
-                "Exception thrown by persistence strategy for connectionId=%d, defaulted to LOCAL_ARCHIVE",
+                "Exception thrown by persistence strategy for connectionId=%d, defaulted to UNINDEXED",
                 connectionId);
             errorHandler.onError(new FixGatewayException(message, throwable));
             persistenceLevel = PersistenceLevel.UNINDEXED;
@@ -281,15 +281,28 @@ class GatewaySessions
 
         final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
         final boolean resetSeqNum = resetSequenceNumbersUponLogon(persistenceLevel) || resetSeqNumFlag;
-        final int sentSequenceNumber = sequenceNumber(sentSequenceNumberIndex, resetSeqNum, sessionId);
-        final int receivedSequenceNumber = sequenceNumber(receivedSequenceNumberIndex, resetSeqNum, sessionId);
+
+        final int aeronSessionId = outboundPublication.id();
+        final long requiredPosition = outboundPublication.position();
+        // At requiredPosition=0 there won't be anything indexed, so indexedPosition will be -1
+        if (requiredPosition > 0)
+        {
+            while (sentSequenceNumberIndex.indexedPosition(aeronSessionId) < requiredPosition)
+            {
+                Thread.yield(); // TODO: better idling
+            }
+        }
+
+        final int lastSentSequenceNumber = sequenceNumber(sentSequenceNumberIndex, resetSeqNum, sessionId);
+        final int lastReceivedSequenceNumber = sequenceNumber(receivedSequenceNumberIndex, resetSeqNum, sessionId);
+
         final String username = SessionParser.username(logon);
         final String password = SessionParser.password(logon);
 
         sessionContext.onLogon(resetSeqNum);
 
         gatewaySession.onLogon(sessionId, sessionContext, compositeKey, username, password, logon.heartBtInt());
-        gatewaySession.acceptorSequenceNumbers(sentSequenceNumber, receivedSequenceNumber);
+        gatewaySession.acceptorSequenceNumbers(lastSentSequenceNumber, lastReceivedSequenceNumber);
         gatewaySession.persistenceLevel(persistenceLevel);
 
         return AuthenticationResult.authenticatedSession(gatewaySession);

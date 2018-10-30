@@ -39,6 +39,8 @@ import java.util.function.Consumer;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.Constants.SEQUENCE_RESET_MESSAGE_AS_STR;
+import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.artio.TestFixtures.mediaDriverContext;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
@@ -64,7 +66,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private Consumer<Reply<Session>> onInitiateReply = reply ->
     {
-        // System.out.println(reply);
+        assertEquals("Repy failed: " + reply, Reply.State.COMPLETED, reply.state());
         initiatingSession = reply.resultIfPresent();
         assertConnected(initiatingSession);
     };
@@ -110,7 +112,6 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertSequenceIndicesAre(0);
     }
 
-    // Replicate a bug that Nick Reported
     @Test(timeout = TEST_TIMEOUT)
     public void shouldCopeWithReplayOfMissingMessages()
     {
@@ -231,7 +232,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final Runnable beforeConnect,
         final boolean resetSequenceNumbersOnLogon)
     {
-        mediaDriver = TestFixtures.launchMediaDriver(TestFixtures.mediaDriverContext(
+        mediaDriver = launchMediaDriver(mediaDriverContext(
             TestFixtures.TERM_BUFFER_LENGTH,
             dirsDeleteOnStart));
 

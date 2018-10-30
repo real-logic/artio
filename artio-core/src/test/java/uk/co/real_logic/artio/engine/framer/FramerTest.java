@@ -355,7 +355,7 @@ public class FramerTest
     @Test
     public void shouldAcquireAcceptedClientsWhenLibraryDisconnects() throws Exception
     {
-        libraryHasAcceptedClient();
+        libraryHasAcceptedClient(CONTINUE);
 
         timeoutLibrary();
 
@@ -370,7 +370,7 @@ public class FramerTest
     {
         sentIndexedToPosition(-100L);
 
-        libraryHasAcceptedClient();
+        libraryHasAcceptedClient(ABORT);
 
         timeoutLibrary();
 
@@ -914,11 +914,11 @@ public class FramerTest
         verify(inboundPublication).saveLibraryTimeout(LIBRARY_ID, 0);
     }
 
-    private void libraryHasAcceptedClient() throws IOException
+    private void libraryHasAcceptedClient(final Action action) throws IOException
     {
         aClientConnects();
         sessionIsActive();
-        assertEquals(CONTINUE, onRequestSession());
+        assertEquals(action, onRequestSession());
         when(receivedSequenceNumberIndex.lastKnownSequenceNumber(anyInt())).thenReturn(1);
     }
 

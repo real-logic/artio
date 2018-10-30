@@ -28,5 +28,5 @@ public enum LogTag
     POSITION,
     CATCHUP,
     INDEX,
-    CLUSTER_MANAGEMENT,
+    LIBRARY_MANAGEMENT,
 }
