@@ -53,7 +53,6 @@ public class DecoderGenerator extends Generator
 
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
     public static final String GROUP_FIELDS = "GROUP_FIELDS";
-    public static final String MESSAGE_FIELDS = "MESSAGE_FIELDS";
 
     public static final int INVALID_TAG_NUMBER =
         RejectReason.INVALID_TAG_NUMBER.representation();
@@ -141,12 +140,13 @@ public class DecoderGenerator extends Generator
         {
             final Message message = (Message)aggregate;
             out.append(messageType(message.fullType(), message.packedType()));
-            out.append(commonCompoundImports("Decoder", true));
             final List<Field> allFieldsForMessage = message.entries()
                 .stream()
                 .flatMap(this::extractFields)
                 .collect(toList());
-            out.append(generateFieldDictionary(allFieldsForMessage, MESSAGE_FIELDS));
+            final String messageFieldsSet = generateFieldDictionary(allFieldsForMessage, MESSAGE_FIELDS);
+            out.append(commonCompoundImports("Decoder", true, messageFieldsSet));
+
         }
         groupMethods(out, aggregate);
         headerMethods(out, aggregate, type);
@@ -166,7 +166,7 @@ public class DecoderGenerator extends Generator
             out.append(
                 "    public HeaderDecoder()\n" +
                 "    {\n" +
-                "        this(new TrailerDecoder());\n" +
+                "        this(new TrailerDecoder(), new IntHashSet());\n" +
                 "    }\n\n");
             wrapTrailerInConstructor(out, aggregate);
         }
@@ -578,10 +578,13 @@ public class DecoderGenerator extends Generator
     {
         out.append(String.format(
             "    private final TrailerDecoder trailer;\n" +
-            "    public %1$s(final TrailerDecoder trailer)\n" +
+            "    private final IntHashSet %1$s;\n" +
+            "    public %2$s(final TrailerDecoder trailer, final IntHashSet %1$s)\n" +
             "    {\n" +
             "        this.trailer = trailer;\n" +
+            "        this.%1$s = %1$s;\n" +
             "    }\n\n",
+            MESSAGE_FIELDS,
             decoderClassName(aggregate)));
     }
 
@@ -1011,11 +1014,12 @@ public class DecoderGenerator extends Generator
                 "            {\n" +
                 "                if (next == null)\n" +
                 "                {\n" +
-                "                    next = new %1$s(trailer);\n" +
+                "                    next = new %1$s(trailer, %2$s);\n" +
                 "                }\n" +
                 "                return position - offset;\n" +
                 "            }\n",
-                decoderClassName(aggregate));
+                decoderClassName(aggregate),
+                MESSAGE_FIELDS);
         }
         else
         {
@@ -1080,7 +1084,7 @@ public class DecoderGenerator extends Generator
         final String parseGroup = String.format(
             "                if (%1$s == null)\n" +
             "                {\n" +
-            "                    %1$s = new %2$s(trailer);\n" +
+            "                    %1$s = new %2$s(trailer, %4$s);\n" +
             "                }\n" +
             "                %2$s %1$sCurrent = %1$s;\n" +
             "                position = endOfField + 1;\n" +
@@ -1094,7 +1098,8 @@ public class DecoderGenerator extends Generator
             "                }\n",
             formatPropertyName(group.name()),
             decoderClassName(group),
-            formatPropertyName(group.numberField().name()));
+            formatPropertyName(group.numberField().name()),
+            MESSAGE_FIELDS);
 
         return decodeField(group.numberField(), parseGroup);
     }

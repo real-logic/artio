@@ -188,7 +188,7 @@ public class EncoderGenerator extends Generator
         out.append(constructor(aggregate, dictionary));
         if (isMessage)
         {
-            out.append(commonCompoundImports("Encoder", false));
+            out.append(commonCompoundImports("Encoder", false, ""));
         }
         else if (type == GROUP)
         {
