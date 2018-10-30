@@ -58,7 +58,7 @@ public class ErrorPrinter implements Agent
         lastSeenErrorTimeInMs = startTimeInMs;
     }
 
-    public int doWork() throws Exception
+    public int doWork()
     {
         final long timeInMs = System.currentTimeMillis();
         if (timeInMs > lastSeenErrorTimeInMs)

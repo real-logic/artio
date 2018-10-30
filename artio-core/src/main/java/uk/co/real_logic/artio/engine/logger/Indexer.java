@@ -22,8 +22,11 @@ import io.aeron.archive.client.ArchiveException;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
 import org.agrona.collections.CollectionUtil;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
@@ -52,13 +55,14 @@ public class Indexer implements Agent, ControlledFragmentHandler
         final Subscription subscription,
         final String agentNamePrefix,
         final CompletionPosition completionPosition,
-        final AeronArchive aeronArchive)
+        final AeronArchive aeronArchive,
+        final ErrorHandler errorHandler)
     {
         this.indices = indices;
         this.subscription = subscription;
         this.agentNamePrefix = agentNamePrefix;
         this.completionPosition = completionPosition;
-        catchIndexUp(aeronArchive);
+        catchIndexUp(aeronArchive, errorHandler);
     }
 
     public int doWork()
@@ -66,45 +70,53 @@ public class Indexer implements Agent, ControlledFragmentHandler
         return subscription.controlledPoll(this, LIMIT) + CollectionUtil.sum(indices, Index::doWork);
     }
 
-    private void catchIndexUp(final AeronArchive aeronArchive)
+    private void catchIndexUp(final AeronArchive aeronArchive, final ErrorHandler errorHandler)
     {
+        final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
+
         for (final Index index : indices)
         {
-            index.readLastPosition((aeronSessionId, recordingId, endOfLastMessageposition) ->
+            index.readLastPosition((aeronSessionId, recordingId, indexStoppedposition) ->
             {
-                // TODO: log System.out.println("endOfLastMessageposition = " + endOfLastMessageposition);
                 try
                 {
-                    final long recordingPosition = aeronArchive.getStopPosition(recordingId);
-                    /*System.out.println("Updating position to: recordingId = " + recordingId +
-                        "recordingPosition = " + recordingPosition);*/
-                    if (recordingPosition > endOfLastMessageposition)
+                    final long recordingStoppedPosition = aeronArchive.getStopPosition(recordingId);
+                    if (recordingStoppedPosition > indexStoppedposition)
                     {
-                        final long length = recordingPosition - endOfLastMessageposition;
+                        DebugLogger.log(
+                            LogTag.INDEX,
+                            "Catchup [%s]: recordingId = %d, recordingStopped @ %d, indexStopped @ %d",
+                            index.getName(),
+                            recordingId,
+                            recordingStoppedPosition,
+                            indexStoppedposition);
+
+                        final long length = recordingStoppedPosition - indexStoppedposition;
                         try (Subscription subscription = aeronArchive.replay(
-                            recordingId, endOfLastMessageposition, length, IPC_CHANNEL, ARCHIVE_REPLAY_STREAM))
+                            recordingId, indexStoppedposition, length, IPC_CHANNEL, ARCHIVE_REPLAY_STREAM))
                         {
                             // Only do 1 replay at a time
                             while (subscription.imageCount() != 1)
                             {
-                                Thread.yield();
+                                idleStrategy.idle();
                             }
+                            idleStrategy.reset();
 
                             final Image replayImage = subscription.imageAtIndex(0);
 
-                            while (replayImage.position() < recordingPosition)
+                            while (replayImage.position() < recordingStoppedPosition)
                             {
                                 replayImage.poll(index, LIMIT);
 
-                                Thread.yield(); // TODO: proper backoff
+                                idleStrategy.idle();
                             }
+                            idleStrategy.reset();
                         }
                     }
                 }
                 catch (final ArchiveException e)
                 {
-                    // TODO: log this
-                    e.printStackTrace();
+                    errorHandler.onError(e);
                 }
             });
         }

@@ -209,7 +209,8 @@ public class EngineContext implements AutoCloseable
             inboundLibraryStreams.subscription("inboundIndexer"),
             configuration.agentNamePrefix(),
             inboundCompletionPosition,
-            aeronArchive);
+            aeronArchive,
+            errorHandler);
 
         final List<Index> outboundIndices = new ArrayList<>();
         outboundIndices.add(newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, OUTBOUND_LIBRARY_STREAM,
@@ -224,7 +225,9 @@ public class EngineContext implements AutoCloseable
             outboundIndices,
             outboundLibraryStreams.subscription("outboundIndexer"),
             configuration.agentNamePrefix(),
-            outboundLibraryCompletionPosition, aeronArchive);
+            outboundLibraryCompletionPosition,
+            aeronArchive,
+            errorHandler);
     }
 
     private void newArchivingAgent()

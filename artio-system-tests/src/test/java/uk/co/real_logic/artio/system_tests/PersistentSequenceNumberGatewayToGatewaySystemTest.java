@@ -115,6 +115,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     @Test(timeout = TEST_TIMEOUT)
     public void shouldCopeWithReplayOfMissingMessages()
     {
+        printErrorMessages = false;
+
         duringRestart = this::deleteAcceptorLogs;
 
         onAcquireSession = () -> assertFailStatusWhenReplayRequested(SEQUENCE_NUMBER_TOO_HIGH);
@@ -240,7 +242,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         config.sessionPersistenceStrategy(logon -> INDEXED);
         config.printErrorMessages(printErrorMessages);
         acceptingEngine = FixEngine.launch(config);
-        initiatingEngine = launchInitiatingEngineWithSameLogs(libraryAeronPort);
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
+        initiatingConfig.printErrorMessages(printErrorMessages);
+        initiatingEngine = FixEngine.launch(initiatingConfig);
 
         // Use so that the SharedLibraryScheduler is integration tested
         final DynamicLibraryScheduler libraryScheduler = new DynamicLibraryScheduler();
