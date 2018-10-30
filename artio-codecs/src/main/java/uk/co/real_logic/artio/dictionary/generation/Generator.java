@@ -53,6 +53,7 @@ public abstract class Generator
 
     public static final String EXPAND_INDENT = ".toString().replace(\"\\n\", \"\\n  \")";
     public static final String CODEC_VALIDATION_ENABLED = "CODEC_VALIDATION_ENABLED";
+    public static final String CODEC_REJECT_UNKNOWN_FIELD_ENABLED = "CODEC_REJECT_UNKNOWN_FIELD_ENABLED";
     public static final String MESSAGE_FIELDS = "messageFields";
 
     protected String commonCompoundImports(final String form, final boolean headerWrapsTrailer,
@@ -86,19 +87,22 @@ public abstract class Generator
     private String builderCommonPackage;
     protected final OutputManager outputManager;
     protected final Class<?> validationClass;
+    protected final Class<?> rejectUnknownClass;
 
     protected Generator(
         final Dictionary dictionary,
         final String builderPackage,
         final String builderCommonPackage,
         final OutputManager outputManager,
-        final Class<?> validationClass)
+        final Class<?> validationClass,
+        final Class<?> rejectUnknownClass)
     {
         this.dictionary = dictionary;
         this.builderPackage = builderPackage;
         this.builderCommonPackage = builderCommonPackage;
         this.outputManager = outputManager;
         this.validationClass = validationClass;
+        this.rejectUnknownClass = rejectUnknownClass;
     }
 
     public void generate()
@@ -144,7 +148,8 @@ public abstract class Generator
             .append(importFor(IntHashSet.IntIterator.class))
             .append(importFor(EncodingException.class))
             .append(importStaticFor(StandardCharsets.class, "US_ASCII"))
-            .append(importStaticFor(validationClass, CODEC_VALIDATION_ENABLED));
+            .append(importStaticFor(validationClass, CODEC_VALIDATION_ENABLED))
+            .append(importStaticFor(rejectUnknownClass, CODEC_REJECT_UNKNOWN_FIELD_ENABLED));
         if (!builderPackage.equals(builderCommonPackage) && !builderCommonPackage.isEmpty())
         {
             out.append(importFor(builderCommonPackage + ".*"));

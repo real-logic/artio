@@ -58,6 +58,8 @@ public class DecoderGenerator extends Generator
         RejectReason.INVALID_TAG_NUMBER.representation();
     public static final int REQUIRED_TAG_MISSING =
         RejectReason.REQUIRED_TAG_MISSING.representation();
+    public static final int TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE =
+        RejectReason.TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE.representation();
     public static final int TAG_SPECIFIED_WITHOUT_A_VALUE =
         RejectReason.TAG_SPECIFIED_WITHOUT_A_VALUE.representation();
     public static final int VALUE_IS_INCORRECT =
@@ -87,9 +89,10 @@ public class DecoderGenerator extends Generator
         final String builderPackage,
         final String builderCommonPackage,
         final OutputManager outputManager,
-        final Class<?> validationClass)
+        final Class<?> validationClass,
+        final Class<?> rejectUnknownClass)
     {
-        super(dictionary, builderPackage, builderCommonPackage, outputManager, validationClass);
+        super(dictionary, builderPackage, builderCommonPackage, outputManager, validationClass, rejectUnknownClass);
         this.initialBufferSize = initialBufferSize;
     }
 
@@ -257,7 +260,8 @@ public class DecoderGenerator extends Generator
             "            rejectReason = NO_ERROR;\n" +
             "            missingRequiredFields.clear();\n" +
             (isGroup ? "" :
-            "            alreadyVisitedFields.clear();\n") +
+                    "            unknownFields.clear();\n" +
+                            "            alreadyVisitedFields.clear();\n") +
             "        }\n";
     }
 
@@ -292,6 +296,13 @@ public class DecoderGenerator extends Generator
         final boolean isMessage = type == MESSAGE;
         final boolean isGroup = type == GROUP;
         final String messageValidation = isMessage ?
+            "        if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + " && unknownFieldsIterator.hasNext())\n" +
+            "        {\n" +
+            "            invalidTagId = unknownFieldsIterator.nextValue();\n" +
+            "            rejectReason = Constants.ALL_FIELDS.contains(invalidTagId) ? " +
+            TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE + " : " + INVALID_TAG_NUMBER + ";\n" +
+            "            return false;\n" +
+            "        }\n" +
             "        if (!header.validate())\n" +
             "        {\n" +
             "            invalidTagId = header.invalidTagId();\n" +
@@ -308,7 +319,8 @@ public class DecoderGenerator extends Generator
 
         out.append(String.format(
             (isGroup ? "" :
-            "    private final IntHashSet alreadyVisitedFields = new IntHashSet(%5$d);\n\n") +
+            "    private final IntHashSet alreadyVisitedFields = new IntHashSet(%5$d);\n\n" +
+            "    private final IntHashSet unknownFields = new IntHashSet(10);\n\n") +
             "    private final IntHashSet missingRequiredFields = new IntHashSet(%1$d);\n\n" +
             "    private int invalidTagId = NO_ERROR;\n\n" +
             "    public int invalidTagId()\n" +
@@ -328,6 +340,7 @@ public class DecoderGenerator extends Generator
             "            return false;\n" +
             "        }\n" +
             "        final IntIterator missingFieldsIterator = missingRequiredFields.iterator();\n" +
+            (isMessage ? "        final IntIterator unknownFieldsIterator = unknownFields.iterator();\n" : "") +
             "%2$s" +
             "        if (missingFieldsIterator.hasNext())\n" +
             "        {\n" +
@@ -987,8 +1000,15 @@ public class DecoderGenerator extends Generator
 
         final String suffix =
             "            default:\n" +
+            (isGroup ? "" :
+            "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
+            " && !" + unknownFieldPredicate(type) + ")\n" +
+            "                {\n" +
+            "                    unknownFields.add(tag);\n" +
+            "                }\n") +
             // Skip the thing if it's a completely unknown field and you aren't validating messages
-            "                if (" + unknownFieldPredicate(type) + ")\n" +
+            "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
+            " || " + unknownFieldPredicate(type) + ")\n" +
             "                {\n" +
             decodeTrailerOrReturn(hasCommonCompounds, 5) +
             "                }\n" +
@@ -1026,7 +1046,7 @@ public class DecoderGenerator extends Generator
         }
         else
         {
-            return "trailer." + REQUIRED_FIELDS + ".contains(tag) || " + MESSAGE_FIELDS + ".contains(tag)";
+            return "(trailer." + REQUIRED_FIELDS + ".contains(tag) || " + MESSAGE_FIELDS + ".contains(tag))";
         }
     }
 
