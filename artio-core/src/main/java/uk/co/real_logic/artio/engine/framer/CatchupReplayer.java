@@ -30,6 +30,7 @@ import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.decoder.HeartbeatDecoder;
 import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
 import uk.co.real_logic.artio.engine.PossDupEnabler;
+import uk.co.real_logic.artio.engine.logger.ReplayOperation;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
@@ -298,13 +299,19 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                         "Querying for %d, currently at (%d, %d)%n",
                         session.sessionId(), lastReceivedSeqNum, currentSequenceIndex);
 
-                    inboundMessages.query(
+                    final ReplayOperation replayOperation = inboundMessages.query(
                         this,
                         session.sessionId(),
                         replayFromSequenceNumber,
                         replayFromSequenceIndex,
                         lastReceivedSeqNum,
                         currentSequenceIndex);
+
+                    while (!replayOperation.attemptReplay())
+                    {
+                        Thread.yield();
+                    }
+
                 }
                 catch (final IllegalStateException e)
                 {

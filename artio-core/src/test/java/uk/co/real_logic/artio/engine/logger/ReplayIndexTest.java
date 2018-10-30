@@ -428,7 +428,12 @@ public class ReplayIndexTest extends AbstractLogTest
         final int endSequenceNumber,
         final int endSequenceIndex)
     {
-        return query.query(
+        final ReplayOperation operation = query.query(
             mockHandler, sessionId, beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex);
+        while (!operation.attemptReplay())
+        {
+            Thread.yield();
+        }
+        return operation.replayedMessages();
     }
 }

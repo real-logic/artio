@@ -30,6 +30,7 @@ import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import java.util.List;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.GatewayProcess.ARCHIVE_REPLAY_STREAM;
 
@@ -65,7 +66,7 @@ public class ReplayOperation
     }
 
     // returns true when complete done.
-    boolean attemptReplay()
+    public boolean attemptReplay()
     {
         if (recordingRange == null)
         {
@@ -127,6 +128,11 @@ public class ReplayOperation
         }
     }
 
+    public int replayedMessages()
+    {
+        return replayedMessages;
+    }
+
     private boolean archivingNotComplete(final long endPosition, final long recordingId)
     {
         final int counterId = RecordingPos.findCounterIdByRecording(countersReader, recordingId);
@@ -138,11 +144,6 @@ public class ReplayOperation
         }
 
         return false;
-    }
-
-    int replayedMessages()
-    {
-        return replayedMessages;
     }
 
     private static class MessageTracker implements ControlledFragmentHandler
@@ -160,8 +161,12 @@ public class ReplayOperation
 
             if (messageHeaderDecoder.templateId() == FixMessageDecoder.TEMPLATE_ID)
             {
-                count++;
-                return messageHandler.onFragment(buffer, offset, length, header);
+                final Action action = messageHandler.onFragment(buffer, offset, length, header);
+                if (action != ABORT)
+                {
+                    count++;
+                }
+                return action;
             }
 
             return CONTINUE;

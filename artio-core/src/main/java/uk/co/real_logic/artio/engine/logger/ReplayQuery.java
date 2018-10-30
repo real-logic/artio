@@ -83,7 +83,7 @@ public class ReplayQuery implements AutoCloseable
      * @param endSequenceNumber sequence number to end replay at (inclusive).
      * @return number of messages replayed
      */
-    public int query(
+    public ReplayOperation query(
         final ControlledFragmentHandler handler,
         final long sessionId,
         final int beginSequenceNumber,
@@ -114,7 +114,7 @@ public class ReplayQuery implements AutoCloseable
             capacity = recordCapacity(buffer.capacity());
         }
 
-        int query(
+        ReplayOperation query(
             final ControlledFragmentHandler handler,
             final int beginSequenceNumber,
             final int beginSequenceIndex,
@@ -209,18 +209,7 @@ public class ReplayQuery implements AutoCloseable
                 ranges.add(currentRange);
             }
 
-            return doReplay(handler, ranges);
-        }
-
-        private int doReplay(final ControlledFragmentHandler handler, final List<RecordingRange> ranges)
-        {
-            final ReplayOperation operation = new ReplayOperation(
-                handler, ranges, aeronArchive, errorHandler);
-            while (!operation.attemptReplay())
-            {
-                Thread.yield();
-            }
-            return operation.replayedMessages();
+            return new ReplayOperation(handler, ranges, aeronArchive, errorHandler);
         }
 
         private long getIteratorPosition()
