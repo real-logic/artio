@@ -1037,8 +1037,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         // Ensure that we've indexed up to this point in time.
         // If we don't do this then the indexer thread could receive a message sent from the Framer after
         // the library has sent its first message and get the wrong sent sequence number.
-        continuations.add(() ->
-            sentIndexedPosition(aeronSessionId, requiredPosition) ? COMPLETE : BACK_PRESSURED);
+        if (requiredPosition > 0)
+        {
+            continuations.add(() ->
+                sentIndexedPosition(aeronSessionId, requiredPosition) ? COMPLETE : BACK_PRESSURED);
+        }
 
         continuations.add(() -> inboundPublication.saveManageSession(
             libraryId,
