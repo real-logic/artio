@@ -355,7 +355,7 @@ public class FramerTest
     @Test
     public void shouldAcquireAcceptedClientsWhenLibraryDisconnects() throws Exception
     {
-        libraryHasAcceptedClient(CONTINUE);
+        libraryHasAcceptedClient();
 
         timeoutLibrary();
 
@@ -370,7 +370,7 @@ public class FramerTest
     {
         sentIndexedToPosition(-100L);
 
-        libraryHasAcceptedClient(ABORT);
+        libraryHasAcceptedClient();
 
         timeoutLibrary();
 
@@ -787,7 +787,7 @@ public class FramerTest
     private void libraryConnects()
     {
         when(outboundLibrarySubscription.imageBySessionId(anyInt())).thenReturn(mock(Image.class));
-        assertEquals(Action.CONTINUE, onLibraryConnect());
+        assertEquals(CONTINUE, onLibraryConnect());
     }
 
     private void initiateConnection() throws Exception
@@ -914,11 +914,11 @@ public class FramerTest
         verify(inboundPublication).saveLibraryTimeout(LIBRARY_ID, 0);
     }
 
-    private void libraryHasAcceptedClient(final Action action) throws IOException
+    private void libraryHasAcceptedClient() throws IOException
     {
         aClientConnects();
         sessionIsActive();
-        assertEquals(action, onRequestSession());
+        assertEquals(CONTINUE, onRequestSession());
         when(receivedSequenceNumberIndex.lastKnownSequenceNumber(anyInt())).thenReturn(1);
     }
 
