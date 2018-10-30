@@ -196,9 +196,8 @@ public final class SystemTestUtil
         final EngineConfiguration configuration = new EngineConfiguration()
             .libraryAeronChannel("aeron:udp?endpoint=localhost:" + libraryAeronPort)
             .monitoringFile(optimalTmpDirName() + File.separator + "fix-client" + File.separator + "engineCounters")
-            .logFileDir(CLIENT_LOGS)
-            .scheduler(new DefaultEngineScheduler());
-            //.scheduler(new LowResourceEngineScheduler());
+            .logFileDir(CLIENT_LOGS)/*
+            .scheduler(new LowResourceEngineScheduler())*/;
         configuration.agentNamePrefix("init-");
 
         return configuration;

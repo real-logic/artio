@@ -15,20 +15,13 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.ControlledFragmentAssembler;
-import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.logbuffer.Header;
-import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.LogTag;
-import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
 
@@ -38,12 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongFunction;
 
-import static io.aeron.CommonContext.IPC_CHANNEL;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static org.agrona.UnsafeAccess.UNSAFE;
-import static uk.co.real_logic.artio.GatewayProcess.ARCHIVE_REPLAY_STREAM;
-import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
@@ -65,10 +54,6 @@ public class ReplayQuery implements AutoCloseable
     private final IdleStrategy idleStrategy;
     private final AeronArchive aeronArchive;
     private final ErrorHandler errorHandler;
-    private final RecordingBarrier recordingBarrier;
-
-    private final MessageTracker messageTracker = new MessageTracker();
-    private final ControlledFragmentAssembler assembler = new ControlledFragmentAssembler(messageTracker);
 
     public ReplayQuery(
         final String logFileDir,
@@ -78,8 +63,7 @@ public class ReplayQuery implements AutoCloseable
         final int requiredStreamId,
         final IdleStrategy idleStrategy,
         final AeronArchive aeronArchive,
-        final ErrorHandler errorHandler,
-        final RecordingBarrier recordingBarrier)
+        final ErrorHandler errorHandler)
     {
         this.logFileDir = logFileDir;
         this.indexBufferFactory = indexBufferFactory;
@@ -87,7 +71,6 @@ public class ReplayQuery implements AutoCloseable
         this.idleStrategy = idleStrategy;
         this.aeronArchive = aeronArchive;
         this.errorHandler = errorHandler;
-        this.recordingBarrier = recordingBarrier;
 
         fixSessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionQuery::close);
     }
@@ -150,13 +133,7 @@ public class ReplayQuery implements AutoCloseable
             final List<RecordingRange> ranges = new ArrayList<>();
             RecordingRange currentRange = null;
 
-            // positions on a monotonically increasing scale
-            long iteratorPosition = beginChangeVolatile(buffer);
-            // First iteration around you need to start at 0
-            if (iteratorPosition < capacity)
-            {
-                iteratorPosition = 0;
-            }
+            long iteratorPosition = getIteratorPosition();
             long stopIteratingPosition = iteratorPosition + capacity;
 
             int lastSequenceNumber = -1;
@@ -172,7 +149,6 @@ public class ReplayQuery implements AutoCloseable
                 }
 
                 final int offset = offset(iteratorPosition, capacity);
-
                 indexRecord.wrap(buffer, offset, actingBlockLength, actingVersion);
                 final int streamId = indexRecord.streamId();
                 long beginPosition = indexRecord.position();
@@ -233,50 +209,30 @@ public class ReplayQuery implements AutoCloseable
                 ranges.add(currentRange);
             }
 
-            return replayTheRange(handler, ranges);
+            return doReplay(handler, ranges);
         }
 
-        private int replayTheRange(final ControlledFragmentHandler handler, final List<RecordingRange> ranges)
+        private int doReplay(final ControlledFragmentHandler handler, final List<RecordingRange> ranges)
         {
-            int replayedMessages = 0;
-            for (int i = 0, size = ranges.size(); i < size; i++)
+            final ReplayOperation operation = new ReplayOperation(
+                handler, ranges, aeronArchive, errorHandler);
+            while (!operation.attemptReplay())
             {
-                final RecordingRange recordingRange = ranges.get(i);
-                final long beginPosition = recordingRange.position;
-                final long length = recordingRange.length;
-                final long endPosition = beginPosition + length;
-
-                recordingBarrier.await(recordingRange.recordingId, endPosition, idleStrategy);
-
-                try (Subscription subscription = aeronArchive.replay(
-                    recordingRange.recordingId,
-                    beginPosition,
-                    length,
-                    IPC_CHANNEL,
-                    ARCHIVE_REPLAY_STREAM))
-                {
-                    messageTracker.wrap(handler);
-
-                    // TODO: if we fail properly abort and don't retry.
-                    while (messageTracker.count < recordingRange.count)
-                    {
-                        subscription.controlledPoll(assembler, Integer.MAX_VALUE);
-
-                        idleStrategy.idle();
-                    }
-                    idleStrategy.reset();
-
-                    replayedMessages += recordingRange.count;
-                }
-                catch (final Throwable exception)
-                {
-                    errorHandler.onError(exception);
-
-                    return replayedMessages;
-                }
+                Thread.yield();
             }
+            return operation.replayedMessages();
+        }
 
-            return replayedMessages;
+        private long getIteratorPosition()
+        {
+            // positions on a monotonically increasing scale
+            long iteratorPosition = beginChangeVolatile(buffer);
+            // First iteration around you need to start at 0
+            if (iteratorPosition < capacity)
+            {
+                iteratorPosition = 0;
+            }
+            return iteratorPosition;
         }
 
         public void close()
@@ -288,89 +244,4 @@ public class ReplayQuery implements AutoCloseable
         }
     }
 
-    static final class RecordingRange
-    {
-        final long recordingId;
-        long position = MISSING_LONG;
-        int length;
-        int count;
-
-        RecordingRange(final long recordingId)
-        {
-            this.recordingId = recordingId;
-            this.count = 0;
-        }
-
-        void add(final long addPosition, final int addLength)
-        {
-            final long currentPosition = this.position;
-
-            if (currentPosition == MISSING_LONG)
-            {
-                this.position = addPosition;
-                this.length = addLength;
-                return;
-            }
-
-            final long currentEnd = currentPosition + this.length;
-            final long addEnd = addPosition + addLength;
-            final long newEnd = Math.max(currentEnd, addEnd);
-
-            if (currentPosition < addPosition)
-            {
-                // Add to the end
-                this.length = (int)(newEnd - currentPosition);
-            }
-            else if (addPosition < currentPosition)
-            {
-                // Add to the start
-                this.position = addPosition;
-                this.length = (int)(newEnd - addPosition);
-            }
-            else
-            {
-                DebugLogger.log(LogTag.INDEX, "currentPosition == addPosition, %d", currentPosition);
-            }
-        }
-
-        @Override
-        public String toString()
-        {
-            return "RecordingRange{" +
-                "recordingId=" + recordingId +
-                ", position=" + position +
-                ", length=" + length +
-                ", count=" + count +
-                '}';
-        }
-    }
-
-    private static class MessageTracker implements ControlledFragmentHandler
-    {
-        private final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
-
-        ControlledFragmentHandler messageHandler;
-        int count;
-
-        @Override
-        public Action onFragment(
-            final DirectBuffer buffer, final int offset, final int length, final Header header)
-        {
-            messageHeaderDecoder.wrap(buffer, offset);
-
-            if (messageHeaderDecoder.templateId() == FixMessageDecoder.TEMPLATE_ID)
-            {
-                count++;
-                return messageHandler.onFragment(buffer, offset, length, header);
-            }
-
-            return CONTINUE;
-        }
-
-        void wrap(final ControlledFragmentHandler handler)
-        {
-            this.messageHandler = handler;
-            this.count = 0;
-        }
-    }
 }

@@ -123,8 +123,7 @@ public class ReplayIndexTest extends AbstractLogTest
             OUTBOUND_LIBRARY_STREAM,
             new NoOpIdleStrategy(),
             aeronArchive,
-            errorHandler,
-            new RecordingBarrier(aeronArchive));
+            errorHandler);
 
         returnBuffer(indexBuffer, SESSION_ID);
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);
