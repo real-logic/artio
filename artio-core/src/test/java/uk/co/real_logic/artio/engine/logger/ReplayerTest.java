@@ -349,7 +349,6 @@ public class ReplayerTest extends AbstractLogTest
         reset(publication, claim, replayQuery, replayOperation);
     }
 
-    // TODO:
     @Test
     public void shouldResendAppThenAdminGapFillWhenBackPressured()
     {

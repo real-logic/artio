@@ -190,14 +190,13 @@ class GatewaySessions
         return -1;
     }
 
-    GatewaySession releaseByConnectionId(final long connectionId)
+    void releaseByConnectionId(final long connectionId)
     {
         final GatewaySession session = removeSessionByConnectionId(connectionId, sessions);
         if (session != null)
         {
             session.close();
         }
-        return session;
     }
 
     int pollSessions(final long time)
@@ -248,37 +247,13 @@ class GatewaySessions
             return AuthenticationResult.DUPLICATE_SESSION;
         }
 
-        boolean authenticated;
-        try
-        {
-            authenticated = authenticationStrategy.authenticate(logon);
-        }
-        catch (final Throwable throwable)
-        {
-            // TODO(Nick): Maybe this should go back to also logging the message that was being decoded.
-            onStrategyError("authentication", throwable, connectionId);
-            authenticated = false;
-        }
-
+        final boolean authenticated = authenticate(logon, connectionId);
         if (!authenticated)
         {
             return AuthenticationResult.FAILED_AUTHENTICATION;
         }
 
-        PersistenceLevel persistenceLevel;
-        try
-        {
-            persistenceLevel = sessionPersistenceStrategy.getPersistenceLevel(logon);
-        }
-        catch (final Throwable throwable)
-        {
-            final String message = String.format(
-                "Exception thrown by persistence strategy for connectionId=%d, defaulted to UNINDEXED",
-                connectionId);
-            errorHandler.onError(new FixGatewayException(message, throwable));
-            persistenceLevel = PersistenceLevel.UNINDEXED;
-        }
-
+        final PersistenceLevel persistenceLevel = getPersistenceLevel(logon, connectionId);
         final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
         final boolean resetSeqNum = resetSequenceNumbersUponLogon(persistenceLevel) || resetSeqNumFlag;
 
@@ -308,6 +283,32 @@ class GatewaySessions
         return AuthenticationResult.authenticatedSession(gatewaySession);
     }
 
+    private PersistenceLevel getPersistenceLevel(final LogonDecoder logon, final long connectionId)
+    {
+        try
+        {
+            return sessionPersistenceStrategy.getPersistenceLevel(logon);
+        }
+        catch (final Throwable throwable)
+        {
+            onStrategyError("persistence", throwable, connectionId, "UNINDEXED", logon);
+            return PersistenceLevel.UNINDEXED;
+        }
+    }
+
+    private boolean authenticate(final LogonDecoder logon, final long connectionId)
+    {
+        try
+        {
+            return authenticationStrategy.authenticate(logon);
+        }
+        catch (final Throwable throwable)
+        {
+            onStrategyError("authentication", throwable, connectionId, "false", logon);
+            return false;
+        }
+    }
+
     private int sequenceNumber(
         final SequenceNumberIndexReader sequenceNumberIndexReader,
         final boolean resetSeqNum,
@@ -321,12 +322,19 @@ class GatewaySessions
         return sequenceNumberIndexReader.lastKnownSequenceNumber(sessionId);
     }
 
-    private void onStrategyError(final String strategyName, final Throwable throwable, final long connectionId)
+    private void onStrategyError(
+        final String strategyName,
+        final Throwable throwable,
+        final long connectionId,
+        final String theDefault,
+        final LogonDecoder logon)
     {
         final String message = String.format(
-            "Exception thrown by %s strategy for connectionId=%d, [%s], defaulted to false",
+            "Exception thrown by %s strategy for connectionId=%d, processing [%s], defaulted to %s",
             strategyName,
-            connectionId);
+            connectionId,
+            logon.toString(),
+            theDefault);
         onError(new FixGatewayException(message, throwable));
     }
 
