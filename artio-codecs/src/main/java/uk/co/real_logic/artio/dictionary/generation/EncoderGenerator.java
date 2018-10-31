@@ -375,16 +375,19 @@ public class EncoderGenerator extends Generator
     {
         return String.format(
             "    private byte[] %1$s = new byte[%3$d];\n\n" +
+            "    private int %1$sOffset = 0;\n\n" +
             "    private int %1$sLength = 0;\n\n" +
             "    public %2$s %1$s(final byte[] value, final int length)\n" +
             "    {\n" +
             "        %1$s = value;\n" +
+            "        %1$sOffset = 0;\n" +
             "        %1$sLength = length;\n" +
             "        return this;\n" +
             "    }\n\n" +
             "    public %2$s %1$s(final byte[] value, final int offset, final int length)\n" +
             "    {\n" +
-            "        %1$s = subsequenceBytes(value, %1$s, offset, length);\n" +
+            "        %1$s = value;\n" +
+            "        %1$sOffset = offset;\n" +
             "        %1$sLength = length;\n" +
             "        return this;\n" +
             "    }\n\n" +
@@ -417,6 +420,7 @@ public class EncoderGenerator extends Generator
             "    public %3$s %1$s(final CharSequence value)\n" +
             "    {\n" +
             "        %1$s = toBytes(value, %1$s);\n" +
+            "        %1$sOffset = 0;\n" +
             "        %1$sLength = value.length();\n" +
             "        return this;\n" +
             "    }\n\n" +
@@ -427,12 +431,14 @@ public class EncoderGenerator extends Generator
             "    public %3$s %1$s(final char[] value, final int length)\n" +
             "    {\n" +
             "        %1$s = toBytes(value, %1$s, length);\n" +
+            "        %1$sOffset = 0;\n" +
             "        %1$sLength = length;\n" +
             "        return this;\n" +
             "    }\n\n" +
             "    public %3$s %1$s(final char[] value, final int offset, final int length)\n" +
             "    {\n" +
             "        %1$s = toBytes(value, %1$s, offset, length);\n" +
+            "        %1$sOffset = 0;\n" +
             "        %1$sLength = length;\n" +
             "        return this;\n" +
             "    }\n\n" +
@@ -677,7 +683,7 @@ public class EncoderGenerator extends Generator
     private String stringPut(final String fieldName, final String optionalSuffix, final String tag)
     {
         return formatEncoder(fieldName, optionalSuffix, tag,
-            "        buffer.putBytes(position, %s, 0, %2$sLength);\n" +
+        "        buffer.putBytes(position, %s, %2$sOffset, %2$sLength);\n" +
             "        position += %2$sLength;\n");
     }
 
@@ -775,7 +781,7 @@ public class EncoderGenerator extends Generator
 
     protected String stringToString(final String fieldName)
     {
-        return String.format("new String(%s, 0, %1$sLength, StandardCharsets.US_ASCII)", fieldName);
+        return String.format("new String(%s, %1$sOffset, %1$sLength, StandardCharsets.US_ASCII)", fieldName);
     }
 
     protected String componentToString(final Component component)
