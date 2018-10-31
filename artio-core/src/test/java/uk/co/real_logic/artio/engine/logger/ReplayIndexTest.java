@@ -27,6 +27,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.NoOpIdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.YieldingIdleStrategy;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -103,7 +104,7 @@ public class ReplayIndexTest extends AbstractLogTest
         mediaDriver = TestFixtures.launchMediaDriver();
         aeronArchive = AeronArchive.connect();
 
-        recordingIdStore = new RecordingIdStore(aeron(), CHANNEL, null);
+        recordingIdStore = new RecordingIdStore(aeron(), CHANNEL, null, new YieldingIdleStrategy());
 
         aeronArchive.startRecording(CHANNEL, STREAM_ID, SourceLocation.LOCAL);
 

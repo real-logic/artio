@@ -24,6 +24,7 @@ import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.AgentInvoker;
+import org.agrona.concurrent.IdleStrategy;
 
 import java.nio.charset.StandardCharsets;
 
@@ -43,7 +44,8 @@ public class RecordingIdStore implements AutoCloseable
     public RecordingIdStore(
         final Aeron aeron,
         final String requiredChannel,
-        final AgentInvoker conductorAgentInvoker)
+        final AgentInvoker conductorAgentInvoker,
+        final IdleStrategy idleStrategy)
     {
         subscription = aeron.addSubscription(
             AeronArchive.Configuration.recordingEventsChannel(),
@@ -65,8 +67,10 @@ public class RecordingIdStore implements AutoCloseable
                 conductorAgentInvoker.invoke();
             }
 
-            Thread.yield(); // TODO: properly idle.
+            idleStrategy.idle();
         }
+
+        idleStrategy.reset();
     }
 
     public RecordingIdLookup inboundLookup()
