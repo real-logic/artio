@@ -88,7 +88,8 @@ public class FramerContext
             configuration.reasonableTransmissionTimeInMs(),
             errorHandler,
             sessionContexts,
-            configuration.sessionPersistenceStrategy());
+            configuration.sessionPersistenceStrategy(),
+            idleStrategy);
 
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,

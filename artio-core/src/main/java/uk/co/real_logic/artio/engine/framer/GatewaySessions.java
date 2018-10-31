@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixCounters;
@@ -60,6 +61,7 @@ class GatewaySessions
     private final long reasonableTransmissionTimeInMs;
     private final SessionContexts sessionContexts;
     private final SessionPersistenceStrategy sessionPersistenceStrategy;
+    private final IdleStrategy framerIdleStrategy;
 
     private ErrorHandler errorHandler;
 
@@ -76,7 +78,8 @@ class GatewaySessions
         final long reasonableTransmissionTimeInMs,
         final ErrorHandler errorHandler,
         final SessionContexts sessionContexts,
-        final SessionPersistenceStrategy sessionPersistenceStrategy)
+        final SessionPersistenceStrategy sessionPersistenceStrategy,
+        final IdleStrategy framerIdleStrategy)
     {
         this.clock = clock;
         this.outboundPublication = outboundPublication;
@@ -91,6 +94,7 @@ class GatewaySessions
         this.errorHandler = errorHandler;
         this.sessionContexts = sessionContexts;
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
+        this.framerIdleStrategy = framerIdleStrategy;
     }
 
     void acquire(
@@ -264,8 +268,9 @@ class GatewaySessions
         {
             while (sentSequenceNumberIndex.indexedPosition(aeronSessionId) < requiredPosition)
             {
-                Thread.yield(); // TODO: better idling
+                framerIdleStrategy.idle();
             }
+            framerIdleStrategy.reset();
         }
 
         final int lastSentSequenceNumber = sequenceNumber(sentSequenceNumberIndex, resetSeqNum, sessionId);
