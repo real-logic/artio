@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.Aeron;
 import io.aeron.ControlledFragmentAssembler;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
@@ -46,10 +47,10 @@ public class ReplayOperation
     private final AeronArchive aeronArchive;
     private final ErrorHandler errorHandler;
     private final CountersReader countersReader;
+    private final Subscription subscription;
 
     private int replayedMessages = 0;
     private RecordingRange recordingRange;
-    private Subscription subscription;
 
     ReplayOperation(
         final ControlledFragmentHandler handler,
@@ -61,12 +62,23 @@ public class ReplayOperation
         this.aeronArchive = aeronArchive;
         this.errorHandler = errorHandler;
 
-        countersReader = aeronArchive.context().aeron().countersReader();
+        final Aeron aeron = aeronArchive.context().aeron();
+        countersReader = aeron.countersReader();
         messageTracker.wrap(handler);
+        subscription = aeron.addSubscription(IPC_CHANNEL, ARCHIVE_REPLAY_STREAM);
     }
 
-    // returns true when complete done.
     public boolean attemptReplay()
+    {
+        final boolean complete = attemptReplayStep();
+        if (complete)
+        {
+            subscription.close();
+        }
+        return complete;
+    }
+
+    private boolean attemptReplayStep()
     {
         if (recordingRange == null)
         {
@@ -76,10 +88,7 @@ public class ReplayOperation
             }
 
             recordingRange = ranges.remove(0);
-        }
 
-        if (subscription == null)
-        {
             final long beginPosition = recordingRange.position;
             final long length = recordingRange.length;
             final long endPosition = beginPosition + length;
@@ -92,12 +101,14 @@ public class ReplayOperation
 
             try
             {
-                subscription = aeronArchive.replay(
+                final int aeronSessionId = (int)aeronArchive.startReplay(
                     recordingId,
                     beginPosition,
                     length,
                     IPC_CHANNEL,
                     ARCHIVE_REPLAY_STREAM);
+
+                messageTracker.reset(aeronSessionId);
             }
             catch (final Throwable exception)
             {
@@ -106,8 +117,6 @@ public class ReplayOperation
                 return true;
             }
         }
-
-        messageTracker.count = 0;
 
         subscription.controlledPoll(assembler, Integer.MAX_VALUE);
 
@@ -120,9 +129,6 @@ public class ReplayOperation
         {
             replayedMessages += recordingRange.count;
             recordingRange = null;
-
-            subscription.close();
-            subscription = null;
 
             return ranges.isEmpty();
         }
@@ -152,21 +158,25 @@ public class ReplayOperation
 
         ControlledFragmentHandler messageHandler;
         int count;
+        private int aeronSessionId;
 
         @Override
         public Action onFragment(
             final DirectBuffer buffer, final int offset, final int length, final Header header)
         {
-            messageHeaderDecoder.wrap(buffer, offset);
-
-            if (messageHeaderDecoder.templateId() == FixMessageDecoder.TEMPLATE_ID)
+            if (header.sessionId() == aeronSessionId)
             {
-                final Action action = messageHandler.onFragment(buffer, offset, length, header);
-                if (action != ABORT)
+                messageHeaderDecoder.wrap(buffer, offset);
+
+                if (messageHeaderDecoder.templateId() == FixMessageDecoder.TEMPLATE_ID)
                 {
-                    count++;
+                    final Action action = messageHandler.onFragment(buffer, offset, length, header);
+                    if (action != ABORT)
+                    {
+                        count++;
+                    }
+                    return action;
                 }
-                return action;
             }
 
             return CONTINUE;
@@ -175,6 +185,12 @@ public class ReplayOperation
         void wrap(final ControlledFragmentHandler handler)
         {
             this.messageHandler = handler;
+        }
+
+        void reset(final int aeronSessionId)
+        {
+            count = 0;
+            this.aeronSessionId = aeronSessionId;
         }
     }
 }
