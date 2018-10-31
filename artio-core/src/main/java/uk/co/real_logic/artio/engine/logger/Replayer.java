@@ -429,26 +429,28 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
                 return; // Retry
             }
         }
-
-        // Validate that we've replayed the correct number of messages.
-        // If we have missing messages for some reason then just gap fill them.
-        if (!replayUpToMostRecent)
+        else
         {
-            final int expectedCount = endSeqNo - beginSeqNo + 1;
-            if (replayedMessages != expectedCount)
+            // Validate that we've replayed the correct number of messages.
+            // If we have missing messages for some reason then just gap fill them.
+            if (!replayUpToMostRecent)
             {
-                if (replayedMessages == 0)
+                final int expectedCount = endSeqNo - beginSeqNo + 1;
+                if (replayedMessages != expectedCount)
                 {
-                    final Action action = sendGapFill(beginSeqNo, endSeqNo + 1);
-                    if (action == ABORT)
+                    if (replayedMessages == 0)
                     {
-                        return; // Retry
+                        final Action action = sendGapFill(beginSeqNo, endSeqNo + 1);
+                        if (action == ABORT)
+                        {
+                            return; // Retry
+                        }
                     }
-                }
 
-                onIllegalState(
-                    "[%s] Error in resend request, count(%d) < expectedCount (%d)",
-                    message(), replayedMessages, expectedCount);
+                    onIllegalState(
+                        "[%s] Error in resend request, count(%d) < expectedCount (%d)",
+                        message(), replayedMessages, expectedCount);
+                }
             }
         }
 
