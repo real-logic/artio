@@ -51,7 +51,6 @@ import static uk.co.real_logic.artio.engine.EngineConfiguration.*;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
-// TODO: test case where we return less messages than expected.
 public class ReplayIndexTest extends AbstractLogTest
 {
     private static final String CHANNEL = CommonContext.IPC_CHANNEL;
@@ -104,7 +103,8 @@ public class ReplayIndexTest extends AbstractLogTest
         mediaDriver = TestFixtures.launchMediaDriver();
         aeronArchive = AeronArchive.connect();
 
-        recordingIdStore = new RecordingIdStore(aeron(), CHANNEL, null, new YieldingIdleStrategy(), archiverIdleStrategy);
+        recordingIdStore = new RecordingIdStore(
+            aeron(), CHANNEL, null, new YieldingIdleStrategy(), new YieldingIdleStrategy());
 
         aeronArchive.startRecording(CHANNEL, STREAM_ID, SourceLocation.LOCAL);
 
