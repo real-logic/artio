@@ -162,7 +162,8 @@ public final class FixEngine extends GatewayProcess
             recordingCoordinator = new RecordingCoordinator(
                 aeronArchive,
                 configuration,
-                aeron.conductorAgentInvoker());
+                aeron.conductorAgentInvoker(),
+                configuration.archiverIdleStrategy());
 
             final ExclusivePublication replayPublication = replayPublication();
             engineContext = new EngineContext(

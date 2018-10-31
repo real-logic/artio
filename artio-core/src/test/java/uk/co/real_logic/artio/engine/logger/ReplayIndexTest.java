@@ -104,7 +104,7 @@ public class ReplayIndexTest extends AbstractLogTest
         mediaDriver = TestFixtures.launchMediaDriver();
         aeronArchive = AeronArchive.connect();
 
-        recordingIdStore = new RecordingIdStore(aeron(), CHANNEL, null, new YieldingIdleStrategy());
+        recordingIdStore = new RecordingIdStore(aeron(), CHANNEL, null, new YieldingIdleStrategy(), archiverIdleStrategy);
 
         aeronArchive.startRecording(CHANNEL, STREAM_ID, SourceLocation.LOCAL);
 

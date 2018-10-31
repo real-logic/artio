@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import org.agrona.collections.Long2LongHashMap;
+import org.agrona.concurrent.IdleStrategy;
 
 import static io.aeron.archive.status.RecordingPos.NULL_RECORDING_ID;
 
@@ -24,6 +25,7 @@ public class RecordingIdLookup
     private final Long2LongHashMap aeronSessionIdToRecordingId = new Long2LongHashMap(NULL_RECORDING_ID);
     private final int requiredStreamId;
     private final RecordingIdStore recordingIdStore;
+    private final IdleStrategy archiverIdleStrategy;
 
     void onStart(final long recordingId, final int sessionId, final int streamId)
     {
@@ -35,10 +37,12 @@ public class RecordingIdLookup
 
     RecordingIdLookup(
         final int requiredStreamId,
-        final RecordingIdStore recordingIdStore)
+        final RecordingIdStore recordingIdStore,
+        final IdleStrategy archiverIdleStrategy)
     {
         this.requiredStreamId = requiredStreamId;
         this.recordingIdStore = recordingIdStore;
+        this.archiverIdleStrategy = archiverIdleStrategy;
     }
 
     long getRecordingId(final int aeronSessionId)
@@ -52,10 +56,11 @@ public class RecordingIdLookup
             }
             else
             {
+                archiverIdleStrategy.reset();
                 return recordingId;
             }
 
-            Thread.yield(); // TODO: properly idle.
+            archiverIdleStrategy.idle();
         }
     }
 

@@ -45,14 +45,15 @@ public class RecordingIdStore implements AutoCloseable
         final Aeron aeron,
         final String requiredChannel,
         final AgentInvoker conductorAgentInvoker,
-        final IdleStrategy idleStrategy)
+        final IdleStrategy startupIdleStrategy,
+        final IdleStrategy archiverIdleStrategy)
     {
         subscription = aeron.addSubscription(
             AeronArchive.Configuration.recordingEventsChannel(),
             AeronArchive.Configuration.recordingEventsStreamId());
 
-        inboundLookup = new RecordingIdLookup(INBOUND_LIBRARY_STREAM, this);
-        outboundLookup = new RecordingIdLookup(OUTBOUND_LIBRARY_STREAM, this);
+        inboundLookup = new RecordingIdLookup(INBOUND_LIBRARY_STREAM, this, archiverIdleStrategy);
+        outboundLookup = new RecordingIdLookup(OUTBOUND_LIBRARY_STREAM, this, archiverIdleStrategy);
 
         recordingEventHandler = new RecordingEventHandler(inboundLookup, outboundLookup, requiredChannel);
 
@@ -67,10 +68,10 @@ public class RecordingIdStore implements AutoCloseable
                 conductorAgentInvoker.invoke();
             }
 
-            idleStrategy.idle();
+            startupIdleStrategy.idle();
         }
 
-        idleStrategy.reset();
+        startupIdleStrategy.reset();
     }
 
     public RecordingIdLookup inboundLookup()

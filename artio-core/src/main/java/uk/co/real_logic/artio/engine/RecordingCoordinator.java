@@ -65,7 +65,8 @@ public class RecordingCoordinator implements AutoCloseable
     RecordingCoordinator(
         final AeronArchive archive,
         final EngineConfiguration configuration,
-        final AgentInvoker conductorAgentInvoker)
+        final AgentInvoker conductorAgentInvoker,
+        final IdleStrategy archiverIdleStrategy)
     {
         this.archive = archive;
         this.configuration = configuration;
@@ -74,7 +75,8 @@ public class RecordingCoordinator implements AutoCloseable
         {
             final Aeron aeron = archive.context().aeron();
             counters = aeron.countersReader();
-            recordingIdStore = new RecordingIdStore(aeron, channel, conductorAgentInvoker, idleStrategy);
+            recordingIdStore = new RecordingIdStore(
+                aeron, channel, conductorAgentInvoker, this.idleStrategy, archiverIdleStrategy);
 
             if (configuration.logInboundMessages())
             {
