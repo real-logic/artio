@@ -25,6 +25,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.CollectionUtil;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.DebugLogger;
@@ -73,6 +74,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
     private void catchIndexUp(final AeronArchive aeronArchive, final ErrorHandler errorHandler)
     {
         final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
+        final AgentInvoker aeronInvoker = aeronArchive.context().aeron().conductorAgentInvoker();
 
         for (final Index index : indices)
         {
@@ -98,7 +100,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
                             // Only do 1 replay at a time
                             while (subscription.imageCount() != 1)
                             {
-                                idleStrategy.idle();
+                                idle(idleStrategy, aeronInvoker);
                             }
                             idleStrategy.reset();
 
@@ -108,7 +110,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
                             {
                                 replayImage.poll(index, LIMIT);
 
-                                idleStrategy.idle();
+                                idle(idleStrategy, aeronInvoker);
                             }
                             idleStrategy.reset();
                         }
@@ -120,6 +122,16 @@ public class Indexer implements Agent, ControlledFragmentHandler
                 }
             });
         }
+    }
+
+    private void idle(final IdleStrategy idleStrategy, final AgentInvoker aeronInvoker)
+    {
+        if (aeronInvoker != null)
+        {
+            aeronInvoker.invoke();
+        }
+
+        idleStrategy.idle();
     }
 
     public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
