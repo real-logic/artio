@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.dictionary;
 
 import org.agrona.generation.PackageOutputManager;
+import uk.co.real_logic.artio.builder.RejectUnknownField;
 import uk.co.real_logic.artio.builder.Validation;
 import uk.co.real_logic.artio.dictionary.generation.*;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
@@ -60,10 +61,10 @@ public final class CodecGenerationTool
             1,
             ENCODER_PACKAGE,
             PARENT_PACKAGE,
-            new PackageOutputManager(outputPath, ENCODER_PACKAGE), Validation.class);
+            new PackageOutputManager(outputPath, ENCODER_PACKAGE), Validation.class, RejectUnknownField.class);
 
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
-            dictionary, 1, DECODER_PACKAGE, PARENT_PACKAGE, decoder, Validation.class);
+            dictionary, 1, DECODER_PACKAGE, PARENT_PACKAGE, decoder, Validation.class, RejectUnknownField.class);
         final PrinterGenerator printerGenerator = new PrinterGenerator(dictionary, DECODER_PACKAGE, decoder);
         final AcceptorGenerator acceptorGenerator = new AcceptorGenerator(dictionary, DECODER_PACKAGE, decoder);
 

@@ -110,9 +110,10 @@ public class EncoderGenerator extends Generator
         final String builderPackage,
         final String builderCommonPackage,
         final OutputManager outputManager,
-        final Class<?> validationClass)
+        final Class<?> validationClass,
+        final Class<?> rejectUnknownClass)
     {
-        super(dictionary, builderPackage, builderCommonPackage, outputManager, validationClass);
+        super(dictionary, builderPackage, builderCommonPackage, outputManager, validationClass, rejectUnknownClass);
 
         final Component header = dictionary.header();
         validateHasField(header, BEGIN_STRING);
@@ -188,7 +189,7 @@ public class EncoderGenerator extends Generator
         out.append(constructor(aggregate, dictionary));
         if (isMessage)
         {
-            out.append(commonCompoundImports("Encoder", false));
+            out.append(commonCompoundImports("Encoder", false, ""));
         }
         else if (type == GROUP)
         {
