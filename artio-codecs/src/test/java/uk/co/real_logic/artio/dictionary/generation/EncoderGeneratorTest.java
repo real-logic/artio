@@ -64,10 +64,12 @@ public class EncoderGeneratorTest
     private static Map<String, CharSequence> generateSources(final boolean validation)
     {
         final Class<?> validationClass = validation ? ValidationOn.class : ValidationOff.class;
+        final Class<?> rejectUnknownField = RejectUnknownFieldOff.class;
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final EncoderGenerator encoderGenerator =
-            new EncoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass);
+            new EncoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass,
+            rejectUnknownField);
         enumGenerator.generate();
         encoderGenerator.generate();
         return outputManager.getSources();
@@ -106,52 +108,41 @@ public class EncoderGeneratorTest
     @Test
     public void stringSettersResizeByteArray() throws Exception
     {
-        final Object encoder = heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setTestReqIdTo(encoder, "abcd");
 
         assertArrayEquals(LONG_VALUE_IN_BYTES, getTestReqIdBytes(encoder));
-        assertEquals(4, getTestReqIdLength(encoder));
-    }
-
-    private Object getTestReqIdLength(final Object encoder) throws Exception
-    {
-        return getField(encoder, TEST_REQ_ID_LENGTH);
+        assertTestReqIdLength(4, encoder);
+        assertTestReqIdOffset(0, encoder);
     }
 
     @Test
     public void byteArraySettersWriteToFields() throws Exception
     {
-        final Object encoder = heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         heartbeat
             .getMethod(TEST_REQ_ID, byte[].class)
             .invoke(encoder, VALUE_IN_BYTES);
 
         assertTestReqIsValue(encoder);
+
+        assertEncodesTestReqIdFully(encoder);
     }
 
     @Test
     public void offsetAndLengthbyteArraySettersWriteFields() throws Exception
     {
-        final Object encoder = heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setTestReqIdBytes(encoder, 1, 3);
 
-        assertTestReqIsValue(encoder);
-    }
+        assertArrayEquals(PREFIXED_VALUE_IN_BYTES, getTestReqIdBytes(encoder));
+        assertTestReqIdOffset(1, encoder);
+        assertTestReqIdLength(3, encoder);
 
-    @Test
-    public void offsetAndLengthbyteArraySettersUpdateFields() throws Exception
-    {
-        final Object encoder = heartbeat.getConstructor().newInstance();
-
-        setTestReqIdBytes(encoder, 1, 4);
-
-        setTestReqIdBytes(encoder, 2, 3);
-
-        assertArrayEquals(new byte[]{ 98, 99, 100, 100 }, getTestReqIdBytes(encoder));
-        assertEquals(3, getTestReqIdLength(encoder));
+        assertEncodesTestReqIdFully(encoder);
     }
 
     private void setTestReqIdBytes(
@@ -237,21 +228,20 @@ public class EncoderGeneratorTest
     @Test
     public void encodesValues() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setRequiredFields(encoder);
-
-        setOptionalFields(encoder);
         setupHeader(encoder);
         setupTrailer(encoder);
 
+        setOptionalFields(encoder);
         assertEncodesTo(encoder, ENCODED_MESSAGE);
     }
 
     @Test
     public void ignoresMissingOptionalValues() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setRequiredFields(encoder);
         setupHeader(encoder);
@@ -263,7 +253,7 @@ public class EncoderGeneratorTest
     @Test
     public void automaticallyComputesDerivedHeaderAndTrailerFields() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setRequiredFields(encoder);
 
@@ -273,7 +263,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldGenerateHumanReadableToString() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setRequiredFields(encoder);
 
@@ -283,7 +273,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldIncludeOptionalFieldsInToString() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setRequiredFields(encoder);
         setOptionalFields(encoder);
@@ -294,7 +284,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldEncodeShorterStringsAfterLongerStrings() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setRequiredFields(encoder);
 
@@ -308,7 +298,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldToStringShorterStringsAfterLongerStrings() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setRequiredFields(encoder);
 
@@ -321,7 +311,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldEncodeGroups() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
         setRequiredFields(encoder);
         setEgGroupToTwoElements(encoder);
 
@@ -331,7 +321,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldEncodeNestedGroups() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
         setRequiredFields(encoder);
 
         final Object group = getEgGroup(encoder, 1);
@@ -345,7 +335,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldResetOptionalFields() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
         setOptionalFields(encoder);
 
         reset(encoder);
@@ -358,7 +348,7 @@ public class EncoderGeneratorTest
     @Test(expected = EncodingException.class)
     public void shouldResetFlagForMissingRequiredIntFields() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setRequiredFields(encoder);
 
@@ -374,7 +364,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldResetRequiredFields() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
         setRequiredFields(encoder);
 
         reset(encoder);
@@ -385,7 +375,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldResetComponents() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
         setupComponent(encoder);
 
         reset(encoder);
@@ -397,7 +387,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldResetGroups() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         final Object group = getEgGroup(encoder, 1);
         setGroupField(group, 1);
@@ -412,7 +402,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldEncodeGroupsOfSizeZero() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setRequiredFields(encoder);
 
@@ -428,7 +418,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldEncodeGroupsAfterReset() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setRequiredFields(encoder);
         setEgGroupToTwoElements(encoder);
@@ -444,7 +434,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldEncodeShorterGroups() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setRequiredFields(encoder);
         setEgGroupToTwoElements(encoder);
@@ -458,7 +448,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldEncodeShorterGroupsAfterReset() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setRequiredFields(encoder);
         setEgGroupToTwoElements(encoder);
@@ -474,7 +464,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldGenerateToStringForShorterGroups() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
         setEgGroupToTwoElements(encoder);
 
         setRequiredFields(encoder);
@@ -486,7 +476,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldGenerateToStringForShorterGroupsAfterReset() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setRequiredFields(encoder);
         setEgGroupToTwoElements(encoder);
@@ -502,7 +492,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldIgnoreUnnecessaryGroupNextCalls() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setRequiredFields(encoder);
 
@@ -518,7 +508,7 @@ public class EncoderGeneratorTest
     @Test(expected = EncodingException.class)
     public void shouldValidateMissingRequiredStringFields() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setFloatField(encoder);
         setSomeTimeField(encoder, 0);
@@ -529,7 +519,7 @@ public class EncoderGeneratorTest
     @Test(expected = EncodingException.class)
     public void shouldValidateMissingRequiredFloatFields() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setOnBehalfOfCompID(encoder);
         setSomeTimeField(encoder, 0);
@@ -540,7 +530,7 @@ public class EncoderGeneratorTest
     @Test(expected = EncodingException.class)
     public void shouldValidateMissingRequiredIntFields() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setOnBehalfOfCompID(encoder);
         setFloatField(encoder);
@@ -552,7 +542,7 @@ public class EncoderGeneratorTest
     @Test(expected = EncodingException.class)
     public void shouldValidateMissingRequiredTemporalFields() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setOnBehalfOfCompID(encoder);
         setFloatField(encoder);
@@ -596,7 +586,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldEncodeShortTimestamp() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
 
         setRequiredFields(encoder, 0);
 
@@ -606,7 +596,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldGenerateToStringForGroups() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
         setRequiredFields(encoder);
         setEgGroupToTwoElements(encoder);
 
@@ -624,7 +614,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldEncodeComponents() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
         setRequiredFields(encoder);
 
         setupComponent(encoder);
@@ -635,7 +625,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldBeAbleToToStringComponentValues() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
         setRequiredFields(encoder);
 
         setupComponent(encoder);
@@ -646,7 +636,7 @@ public class EncoderGeneratorTest
     @Test
     public void shouldGenerateHasMethodsForFields() throws Exception
     {
-        final Encoder encoder = (Encoder)heartbeat.getConstructor().newInstance();
+        final Encoder encoder = newHeartbeat();
         setRequiredFields(encoder);
 
         assertTrue(hasOnBehalfOfCompID(encoder));
@@ -786,7 +776,8 @@ public class EncoderGeneratorTest
     private void assertTestReqIsValue(final Object encoder) throws Exception
     {
         assertArrayEquals(VALUE_IN_BYTES, getTestReqIdBytes(encoder));
-        assertEquals(3, getTestReqIdLength(encoder));
+        assertTestReqIdOffset(0, encoder);
+        assertTestReqIdLength(3, encoder);
     }
 
     private byte[] getTestReqIdBytes(final Object encoder) throws Exception
@@ -814,5 +805,27 @@ public class EncoderGeneratorTest
     private void setTestReqIdTo(final Object encoder, final String value) throws Exception
     {
         setCharSequence(encoder, TEST_REQ_ID, value);
+    }
+
+    private Encoder newHeartbeat() throws Exception
+    {
+        return (Encoder)heartbeat.getConstructor().newInstance();
+    }
+
+    private void assertTestReqIdLength(final int expectedLength, final Object encoder) throws Exception
+    {
+        assertEquals(expectedLength, getField(encoder, TEST_REQ_ID_LENGTH));
+    }
+
+    private void assertTestReqIdOffset(final int expectedoffset, final Object encoder) throws Exception
+    {
+        assertEquals(expectedoffset, getField(encoder, TEST_REQ_ID_OFFSET));
+    }
+
+    private void assertEncodesTestReqIdFully(final Encoder encoder) throws Exception
+    {
+        setRequiredFields(encoder);
+        assertThat(encoder.toString(), containsString(STRING_ONLY_TESTREQ_MESSAGE_SUFFIX));
+        assertEncodesTo(encoder, ONLY_TESTREQ_ENCODED_MESSAGE);
     }
 }

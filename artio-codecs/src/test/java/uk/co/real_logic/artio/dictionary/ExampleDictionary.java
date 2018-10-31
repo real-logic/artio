@@ -77,6 +77,7 @@ public final class ExampleDictionary
     public static final String BOOLEAN_FIELD = "booleanField";
     public static final String DATA_FIELD = "dataField";
     public static final String TEST_REQ_ID_LENGTH = "testReqIDLength";
+    public static final String TEST_REQ_ID_OFFSET = "testReqIDOffset";
     public static final String ON_BEHALF_OF_COMP_ID_LENGTH = "onBehalfOfCompIDLength";
     public static final String SOME_TIME_FIELD = "someTimeField";
     public static final String COMPONENT_FIELD = "componentField";
@@ -153,6 +154,13 @@ public final class ExampleDictionary
         "  \"FloatField\": \"1.1\",\n" +
         "  \"SomeTimeField\": \"19700101-00:00:00.001\"";
 
+    public static final String STRING_ONLY_TESTREQ_MESSAGE_SUFFIX =
+        "  \"OnBehalfOfCompID\": \"abc\",\n" +
+        "  \"TestReqID\": \"abc\",\n" +
+        "  \"IntField\": \"2\",\n" +
+        "  \"FloatField\": \"1.1\",\n" +
+        "  \"SomeTimeField\": \"19700101-00:00:00.001\"";
+
     public static final String STRING_NO_OPTIONAL_MESSAGE_EXAMPLE =
         "{\n" +
         "  \"MessageName\": \"Heartbeat\",\n" +
@@ -178,6 +186,10 @@ public final class ExampleDictionary
     public static final String ENCODED_MESSAGE =
         "8=FIX.4.4\0019=75\00135=0\001115=abc\001112=abc\001116=2\001117=1.1" +
         "\001118=Y\001119=123\001127=19700101-00:00:00.001\00110=199\001";
+
+    public static final String ONLY_TESTREQ_ENCODED_MESSAGE =
+        "8=FIX.4.4\0019=61\00135=0\001115=abc\001112=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\00110=034\001";
 
     public static final String NO_OPTIONAL_MESSAGE =
         "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
@@ -223,9 +235,14 @@ public final class ExampleDictionary
         "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
         "\001136=2\001138=180\0011000=UNKNOWN\001137=TOM\001138=123\001137=Barbara\00110=043\001";
 
+
+    public static final String REPEATING_GROUP_WITH_FIELD_UNKNOWN_TO_MESSAGE_BUT_IN_SPEC =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001136=2\001138=180\001501=UNKNOWN\001137=TOM\001138=123\001137=Barbara\00110=043\001";
+
     public static final String INVALID_TAG_NUMBER_MESSAGE =
-        "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-        "\0019999=9999\00110=161\001";
+        "8=FIX.4.4\0019=0027\00135=0\001115=abc\0019999=9999\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\00110=161\001";
 
     public static final String TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +

@@ -63,6 +63,7 @@ public class DecoderGeneratorTest
     private static final String STRING_ENUM_REQ = "stringEnumReq";
 
     private static Class<?> heartbeatWithoutValidation;
+    private static Class<?> heartbeatWithRejectingUnknownFields;
     private static Class<?> heartbeat;
     private static Class<?> component;
     private static Class<?> otherMessage;
@@ -75,8 +76,9 @@ public class DecoderGeneratorTest
     @BeforeClass
     public static void generate() throws Exception
     {
-        final Map<String, CharSequence> sourcesWithValidation = generateSources(true);
-        final Map<String, CharSequence> sourcesWithoutValidation = generateSources(false);
+        final Map<String, CharSequence> sourcesWithValidation = generateSources(true, false);
+        final Map<String, CharSequence> sourcesWithoutValidation = generateSources(false, false);
+        final Map<String, CharSequence> sourcesRejectingUnknownFields = generateSources(true, true);
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sourcesWithValidation);
         if (heartbeat == null || CODEC_LOGGING)
         {
@@ -89,6 +91,7 @@ public class DecoderGeneratorTest
         enumTestMessage = compileInMemory(ENUM_TEST_MESSAGE_DECODER, sourcesWithValidation);
 
         heartbeatWithoutValidation = compileInMemory(HEARTBEAT_DECODER, sourcesWithoutValidation);
+        heartbeatWithRejectingUnknownFields = compileInMemory(HEARTBEAT_DECODER, sourcesRejectingUnknownFields);
         allReqFieldTypesMessage = compileInMemory(ALL_REQ_FIELD_TYPES_MESSAGE_DECODER, sourcesWithoutValidation);
         if (heartbeatWithoutValidation == null || CODEC_LOGGING)
         {
@@ -96,15 +99,18 @@ public class DecoderGeneratorTest
         }
     }
 
-    private static Map<String, CharSequence> generateSources(final boolean validation)
+    private static Map<String, CharSequence> generateSources(final boolean validation,
+        final boolean rejectingUnknownFields)
     {
         final Class<?> validationClass = validation ? ValidationOn.class : ValidationOff.class;
+        final Class<?> rejectUnknownField = rejectingUnknownFields ?
+            RejectUnknownFieldOn.class : RejectUnknownFieldOff.class;
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
         final ConstantGenerator constantGenerator = new ConstantGenerator(
             MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
-            MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass);
+            MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass, rejectUnknownField);
 
         constantGenerator.generate();
         enumGenerator.generate();
@@ -556,13 +562,77 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void shouldFailValidationForUnknownFieldInsideRepeatingGroup() throws Exception
+    public void shouldSkipUnknownFieldInRepeatingGroupAndPassValidation() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
+
+        assertTrue("Failed validation with missing fields", decoder.validate());
+
+        Object group = get(decoder, "secondEgGroupGroup");
+        assertEquals("TOM", get(group, "secondGroupFieldAsString"));
+        assertEquals(180, get(group, "thirdGroupField"));
+
+        group = next(group);
+        assertEquals("Barbara", get(group, "secondGroupFieldAsString"));
+        assertEquals(123, get(group, "thirdGroupField"));
+    }
+
+    @Test
+    public void shouldFailValidationForUnknownFieldInsideRepeatingGroupWhenUnknownFieldPropIsSet() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
 
         assertFalse("Passed validation with missing fields", decoder.validate());
         assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
         assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateTagNumbersWhenUnknownFieldPropIsSet() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(INVALID_TAG_NUMBER_MESSAGE);
+
+        assertFalse("Passed validation with invalid tag number", decoder.validate());
+        assertEquals("Wrong tag id", 9999, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldFailValidationRegardingUnknownFieldRatherThanMissingRequiredFieldWhenUnknownFieldPropIsSet()
+        throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(UNKNOWN_FIELD_MESSAGE);
+
+        assertFalse("Passed validation with invalid tag number ", decoder.validate());
+        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateTagNumbersDefinedForThisMessageWhenUnknownFieldPropIsSet() throws Exception
+    {
+        final Decoder decoder =
+            decodeHeartbeatWithRejectingUnknownFields(TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE_MESSAGE);
+
+        assertFalse("Passed validation with invalid tag number", decoder.validate());
+        assertEquals("Wrong tag id", 99, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldSkipFieldUnknownToMessageButDefinedInFIXSpec() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_WITH_FIELD_UNKNOWN_TO_MESSAGE_BUT_IN_SPEC);
+
+        assertTrue("Failed validation with missing fields", decoder.validate());
+
+        Object group = get(decoder, "secondEgGroupGroup");
+        assertEquals("TOM", get(group, "secondGroupFieldAsString"));
+        assertEquals(180, get(group, "thirdGroupField"));
+
+        group = next(group);
+        assertEquals("Barbara", get(group, "secondGroupFieldAsString"));
+        assertEquals(123, get(group, "thirdGroupField"));
     }
 
     @Test
@@ -574,33 +644,13 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void shouldValidateTagNumbers() throws Exception
+    public void shouldSkipUnknownFieldForMessageAndPassValidation() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(INVALID_TAG_NUMBER_MESSAGE);
 
-        assertFalse("Passed validation with invalid tag number", decoder.validate());
-        assertEquals("Wrong tag id", 9999, decoder.invalidTagId());
-        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
-    }
+        assertTrue("Failed validation with invalid tag number", decoder.validate());
 
-    @Test
-    public void shouldFailValidationRegardingUnknownFieldRatherThanMissingRequiredField() throws Exception
-    {
-        final Decoder decoder = decodeHeartbeat(UNKNOWN_FIELD_MESSAGE);
-
-        assertFalse("Passed validation with invalid tag number ", decoder.validate());
-        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
-        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
-    }
-
-    @Test
-    public void shouldValidateTagNumbersDefinedForThisMessage() throws Exception
-    {
-        final Decoder decoder = decodeHeartbeat(TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE_MESSAGE);
-
-        assertFalse("Passed validation with invalid tag number", decoder.validate());
-        assertEquals("Wrong tag id", 99, decoder.invalidTagId());
-        assertEquals("Wrong reject reason", TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE, decoder.rejectReason());
+        assertEquals(2, getIntField(decoder));
     }
 
     @Test
@@ -704,7 +754,6 @@ public class DecoderGeneratorTest
         assertEquals(OTHER_MESSAGE_TYPE_PACKED, messageTypePacked);
         assertArrayEquals(OTHER_MESSAGE_TYPE_BYTES, messageTypeBytes);
     }
-
 
     @Test
     public void shouldResetAllRepeatingGroupEntries() throws Exception
@@ -1377,6 +1426,13 @@ public class DecoderGeneratorTest
     private Decoder decodeHeartbeatWithoutValidation(final String example) throws Exception
     {
         final Decoder decoder = (Decoder)heartbeatWithoutValidation.getConstructor().newInstance();
+        decode(example, decoder);
+        return decoder;
+    }
+
+    private Decoder decodeHeartbeatWithRejectingUnknownFields(final String example) throws Exception
+    {
+        final Decoder decoder = (Decoder)heartbeatWithRejectingUnknownFields.getConstructor().newInstance();
         decode(example, decoder);
         return decoder;
     }
