@@ -25,7 +25,9 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.collections.IntHashSet.IntIterator;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AgentInvoker;
+import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.CountersReader;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.engine.logger.RecordingIdLookup;
 import uk.co.real_logic.artio.engine.logger.RecordingIdStore;
 
@@ -44,6 +46,9 @@ import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
  */
 public class RecordingCoordinator implements AutoCloseable
 {
+    // Only used on startup and shutdown
+    private final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
+
     private final IntHashSet trackedSessionIds = new IntHashSet();
     private final AeronArchive archive;
     private final String channel;
@@ -117,8 +122,9 @@ public class RecordingCoordinator implements AutoCloseable
                 }
             }
 
-            Thread.yield();
+            idleStrategy.idle();
         }
+        idleStrategy.reset();
     }
 
     // Called only on Framer.quiesce(), uses shutdown order
@@ -178,8 +184,9 @@ public class RecordingCoordinator implements AutoCloseable
         {
             completingRecordings.removeIf(CompletingRecording::hasRecordingCompleted);
 
-            Thread.yield();
+            idleStrategy.idle();
         }
+        idleStrategy.reset();
     }
 
     private void shutdownArchiver()
