@@ -134,7 +134,7 @@ public class ReplayOperation
         }
     }
 
-    public int replayedMessages()
+    int replayedMessages()
     {
         return replayedMessages;
     }

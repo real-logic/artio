@@ -100,7 +100,6 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     private long connectionId;
     private long sessionId;
     private int sequenceIndex;
-    private boolean backpressured;
 
     private ReplayOperation currentReplayOperation;
     private boolean currentReplayUpToMostRecent;
@@ -179,22 +178,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
             resendRequest.reset();
             resendRequest.decode(asciiBuffer, srcOffset, limit);
 
-            final int beginSeqNo;
-            if (backpressured)
-            {
-                if (beginGapFillSeqNum != NONE)
-                {
-                    beginSeqNo = beginGapFillSeqNum;
-                }
-                else
-                {
-                    beginSeqNo = lastSeqNo + 1;
-                }
-            }
-            else
-            {
-                beginSeqNo = resendRequest.beginSeqNo();
-            }
+            final int beginSeqNo = resendRequest.beginSeqNo();
 
             final int endSeqNo = resendRequest.endSeqNo();
             final boolean replayUpToMostRecent = endSeqNo == MOST_RECENT_MESSAGE;
@@ -291,11 +275,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
             final Action action = possDupEnabler.enablePossDupFlag(
                 srcBuffer, messageOffset, messageLength, srcOffset, srcLength);
-            if (action == ABORT)
-            {
-                backpressured = true;
-            }
-            else
+            if (action != ABORT)
             {
                 lastSeqNo = msgSeqNum;
             }
@@ -414,8 +394,6 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
         final int beginSeqNo = this.currentReplayBeginSeqNo;
         final int endSeqNo = this.currentReplayEndSeqNo;
 
-        // TODO: what uses backpressured earlier.
-
         // If the last N messages were admin messages then we need to send a gapfill
         // after the replay query has run.
         if (beginGapFillSeqNum != NONE)
@@ -425,7 +403,6 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
             final Action action = sendGapFill(beginGapFillSeqNum, newSequenceNumber);
             if (action == ABORT)
             {
-                backpressured = true;
                 return; // Retry
             }
         }
