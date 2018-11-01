@@ -575,6 +575,39 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void shouldLeaveDecoderInUsableIfValidationFailsDuringRepeatingGroup() throws Exception
+    {
+        //Given
+        final Decoder decoder = decodeHeartbeat(FIELD_DEFINED_TWICE_IN_MESSAGE);
+
+        //When
+        assertFalse("Failed validation when it should have passed", decoder.validate());
+        assertEquals("Wrong reject reason", TAG_APPEARS_MORE_THAN_ONCE, decoder.rejectReason());
+
+        //Then
+        decoder.reset();
+        decode(NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE, decoder);
+        assertTrue("Failed validation when it should have passed", decoder.validate());
+    }
+
+    @Test
+    public void shouldLeaveDecoderInUsableIfUnknownFieldForRepeatingGroupReachedAndRejectingOn() throws Exception
+    {
+        //Given
+        final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
+
+        //When
+        assertFalse("Passed validation with missing fields", decoder.validate());
+        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
+
+        //Then
+        decoder.reset();
+        decode(NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE, decoder);
+        assertTrue("Failed validation when it should have passed", decoder.validate());
+    }
+
+    @Test
     public void shouldSkipUnknownFieldInRepeatingGroupAndPassValidation() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
