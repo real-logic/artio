@@ -3,53 +3,52 @@ package uk.co.real_logic.artio.util;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 
+/**
+ * View over a {@link DirectBuffer} which contains an ASCII string for a given range.
+ */
 public class AsciiSequenceView implements CharSequence
 {
     private DirectBuffer buffer;
-    private int valueOffset;
-    private int valueLength;
+    private int offset;
+    private int length;
 
-    @Override
     public int length()
     {
-        return valueLength;
+        return length;
     }
 
-    @Override
     public char charAt(final int index)
     {
-        return (char)buffer.getByte(valueOffset + index);
+        return (char)buffer.getByte(offset + index);
     }
 
-    @Override
     public CharSequence subSequence(final int start, final int end)
     {
-        throw new UnsupportedOperationException("Not supported");
+        throw new UnsupportedOperationException();
     }
 
-    public AsciiSequenceView wrap(final DirectBuffer buffer, final int valueOffset, final int valueLength)
+    public AsciiSequenceView wrap(final DirectBuffer buffer, final int offset, final int length)
     {
         this.buffer = buffer;
-        this.valueOffset = valueOffset;
-        this.valueLength = valueLength;
+        this.offset = offset;
+        this.length = length;
         return this;
     }
 
     public void reset()
     {
         this.buffer = null;
-        this.valueOffset = 0;
-        this.valueLength = 0;
+        this.offset = 0;
+        this.length = 0;
     }
 
     public void getBytes(final MutableDirectBuffer dstBuffer, final int dstOffset)
     {
-        dstBuffer.putBytes(dstOffset, this.buffer, valueOffset, valueLength);
+        dstBuffer.putBytes(dstOffset, this.buffer, offset, length);
     }
 
-    @Override
     public String toString()
     {
-        return buffer.getStringWithoutLengthAscii(valueOffset, valueLength);
+        return buffer.getStringWithoutLengthAscii(offset, length);
     }
 }
