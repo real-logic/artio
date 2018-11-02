@@ -66,7 +66,8 @@ public class DecoderGenerator extends Generator
         RejectReason.VALUE_IS_INCORRECT.representation();
 
     // TODO: ensure that these are only used in the case that we're dealing with FIX 4.4. or later
-    public static final int TAG_APPEARS_MORE_THAN_ONCE = 13;
+    public static final int TAG_APPEARS_MORE_THAN_ONCE =
+        RejectReason.TAG_APPEARS_MORE_THAN_ONCE.representation();
     public static final int TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER = 14;
 
     public static String decoderClassName(final Aggregate aggregate)
@@ -206,6 +207,11 @@ public class DecoderGenerator extends Generator
                 "        for (final %2$s iterator : %5$s.iterator())\n" +
                 "        {\n" +
                 "            iterator.reset();\n" +
+
+                "            if (iterator.next() == null)\n" +
+                "            {\n" +
+                "                break;\n" +
+                "            }\n" +
                 "        }\n" +
                 "        %3$s = 0;\n" +
                 "        has%4$s = false;\n" +
