@@ -266,8 +266,8 @@ public class DecoderGenerator extends Generator
             "            rejectReason = NO_ERROR;\n" +
             "            missingRequiredFields.clear();\n" +
             (isGroup ? "" :
-                    "            unknownFields.clear();\n" +
-                            "            alreadyVisitedFields.clear();\n") +
+                "            unknownFields.clear();\n" +
+                "            alreadyVisitedFields.clear();\n") +
             "        }\n";
     }
 
@@ -1007,10 +1007,16 @@ public class DecoderGenerator extends Generator
         final String suffix =
             "            default:\n" +
             (isGroup ? "" :
-            "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
-            " && !" + unknownFieldPredicate(type) + ")\n" +
+            "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + ")\n" +
             "                {\n" +
-            "                    unknownFields.add(tag);\n" +
+            "                    if (!" + unknownFieldPredicate(type) + ")\n" +
+            "                    {\n" +
+            "                        unknownFields.add(tag);\n" +
+            "                    }\n" +
+            "                }\n" +
+            "                else\n" +
+            "                {\n" +
+            "                    alreadyVisitedFields.remove(tag);\n" +
             "                }\n") +
             // Skip the thing if it's a completely unknown field and you aren't validating messages
             "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
