@@ -204,11 +204,11 @@ public class DecoderGenerator extends Generator
         return String.format(
                 "    public void %1$s()\n" +
                 "    {\n" +
-                "        for (final %2$s iterator : %5$s.iterator())\n" +
+                "        for (final %2$s %6$s : %5$s.iterator())\n" +
                 "        {\n" +
-                "            iterator.reset();\n" +
+                "            %6$s.reset();\n" +
 
-                "            if (iterator.next() == null)\n" +
+                "            if (%6$s.next() == null)\n" +
                 "            {\n" +
                 "                break;\n" +
                 "            }\n" +
@@ -220,7 +220,8 @@ public class DecoderGenerator extends Generator
                 decoderClassName(name),
                 formatPropertyName(numberField.name()),
                 numberField.name(),
-                iteratorFieldName(group));
+                iteratorFieldName(group),
+                formatPropertyName(decoderClassName(name)));
     }
 
     private static String iteratorClassName(final Group group)
