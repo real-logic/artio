@@ -39,7 +39,15 @@ class SlowPeeker extends BlockablePosition
         final long delta = resultingPosition - initialPosition;
         if (!peekImage.isClosed())
         {
-            peekImage.position(blockPosition != DID_NOT_BLOCK ? blockPosition : resultingPosition);
+            if (blockPosition != DID_NOT_BLOCK)
+            {
+                final long newLimitPosition = peekImage.position() + peekImage.termBufferLength();
+                peekImage.position(Math.min(newLimitPosition, blockPosition));
+            }
+            else
+            {
+                peekImage.position(resultingPosition);
+            }
 
             return (int)delta;
         }
