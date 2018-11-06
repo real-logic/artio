@@ -624,6 +624,19 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void shouldSkipUnknownRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = (Decoder)fieldsMessage.getConstructor().newInstance();
+        decode(CONTAINS_UNKNOWN_REPEATING_GROUP, decoder);
+
+        assertValid(decoder);
+
+        assertRequiredFieldsMessageFieldsDecoded(decoder, "USD", "N", "US");
+
+        assertOptionalDifferentFieldsNotDecoded(decoder);
+    }
+
+    @Test
     public void shouldFailValidationForUnknownFieldInsideRepeatingGroupWhenUnknownFieldPropIsSet() throws Exception
     {
         final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
