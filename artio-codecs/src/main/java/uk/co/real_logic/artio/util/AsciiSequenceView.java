@@ -12,33 +12,88 @@ public class AsciiSequenceView implements CharSequence
     private int offset;
     private int length;
 
+    public AsciiSequenceView()
+    {
+    }
+
+    /**
+     * Construct a view over a {@link DirectBuffer} from an offset for a given length..
+     *
+     * @param buffer containing the ASCII sequence.
+     * @param offset at which the ASCII sequence begins.
+     * @param length of the ASCII sequence in bytes.
+     */
+    public AsciiSequenceView(final DirectBuffer buffer, final int offset, final int length)
+    {
+        this.buffer = buffer;
+        this.offset = offset;
+        this.length = length;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
     public int length()
     {
         return length;
     }
 
+    /**
+     * {@inheritDoc}
+     */
     public char charAt(final int index)
     {
-        if (buffer == null || index < 0 || index >= length)
+        if (index < 0 || index >= length)
         {
-            throw new IndexOutOfBoundsException("AsciiSequenceView index out of range: " + index);
+            throw new StringIndexOutOfBoundsException("index=" + index + " length=" + length);
         }
+
         return (char)buffer.getByte(offset + index);
     }
 
-    public CharSequence subSequence(final int start, final int end)
+    /**
+     * {@inheritDoc}
+     */
+    public AsciiSequenceView subSequence(final int start, final int end)
     {
-        throw new UnsupportedOperationException();
+        if (start < 0)
+        {
+            throw new StringIndexOutOfBoundsException("start=" + start);
+        }
+
+        if (end > length)
+        {
+            throw new StringIndexOutOfBoundsException("end=" + end);
+        }
+
+        if (end - start < 0)
+        {
+            throw new StringIndexOutOfBoundsException("start=" + start + " end=" + end);
+        }
+
+        return new AsciiSequenceView(buffer, offset + start, end - start);
     }
 
+    /**
+     * Wrap a range of an existing buffer containing an ASCII sequence.
+     *
+     * @param buffer containing the ASCII sequence.
+     * @param offset at which the ASCII sequence begins.
+     * @param length of the ASCII sequence in bytes.
+     * @return this for a fluent API.
+     */
     public AsciiSequenceView wrap(final DirectBuffer buffer, final int offset, final int length)
     {
         this.buffer = buffer;
         this.offset = offset;
         this.length = length;
+
         return this;
     }
 
+    /**
+     * Reset the view to null.
+     */
     public void reset()
     {
         this.buffer = null;
@@ -53,10 +108,11 @@ public class AsciiSequenceView implements CharSequence
 
     public String toString()
     {
-        if (buffer == null)
+        if (null == buffer)
         {
             return "";
         }
+
         return buffer.getStringWithoutLengthAscii(offset, length);
     }
 }

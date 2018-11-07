@@ -17,14 +17,11 @@ public class AsciiSequenceViewTest
     @Test
     public void shouldBeAbleToGetChars()
     {
-        //Given
         final String data = "stringy";
         buffer.putStringWithoutLengthAscii(INDEX, data);
 
-        //When
         asciiSequenceView.wrap(buffer, INDEX, data.length());
 
-        //Then
         assertThat(asciiSequenceView.charAt(0), is('s'));
         assertThat(asciiSequenceView.charAt(1), is('t'));
         assertThat(asciiSequenceView.charAt(2), is('r'));
@@ -37,46 +34,49 @@ public class AsciiSequenceViewTest
     @Test
     public void shouldToString()
     {
-        //Given
         final String data = "a little bit of ascii";
         buffer.putStringWithoutLengthAscii(INDEX, data);
 
-        //When
         asciiSequenceView.wrap(buffer, INDEX, data.length());
 
-        //Then
         assertThat(asciiSequenceView.toString(), is(data));
     }
 
     @Test
     public void shouldReturnCorrectLength()
     {
-        //Given
         final String data = "a little bit of ascii";
         buffer.putStringWithoutLengthAscii(INDEX, data);
 
-        //When
         asciiSequenceView.wrap(buffer, INDEX, data.length());
 
-        //Then
         assertThat(asciiSequenceView.length(), is(data.length()));
     }
 
     @Test
     public void shouldCopyDataUnderTheView()
     {
-        //Given
         final String data = "a little bit of ascii";
         final int targetBufferOffset = 56;
         final MutableDirectBuffer targetBuffer = new UnsafeBuffer(new byte[128]);
         buffer.putStringWithoutLengthAscii(INDEX, data);
         asciiSequenceView.wrap(buffer, INDEX, data.length());
 
-        //When
         asciiSequenceView.getBytes(targetBuffer, targetBufferOffset);
 
-        //Then
         assertThat(targetBuffer.getStringWithoutLengthAscii(targetBufferOffset, data.length()), is(data));
+    }
+
+    @Test
+    public void shouldSubSequence()
+    {
+        final String data = "a little bit of ascii";
+        buffer.putStringWithoutLengthAscii(INDEX, data);
+
+        asciiSequenceView.wrap(buffer, INDEX, data.length());
+        final AsciiSequenceView subSequenceView = asciiSequenceView.subSequence(2, 8);
+
+        assertThat(subSequenceView.toString(), is("little"));
     }
 
     @Test
@@ -86,34 +86,29 @@ public class AsciiSequenceViewTest
         assertEquals("", asciiSequenceView.toString());
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
+    @Test(expected = StringIndexOutOfBoundsException.class)
     public void shouldThrowIndexOutOfBoundsExceptionWhenCharNotPresentAtGivenPosition()
     {
-        //Given
         final String data = "foo";
         buffer.putStringWithoutLengthAscii(INDEX, data);
         asciiSequenceView.wrap(buffer, INDEX, data.length());
 
-        //When
         asciiSequenceView.charAt(4);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
-    public void shouldThrowIndexOutOfBoundsExceptionWhenCharAtCalledWithNoBuffer()
+    @Test(expected = StringIndexOutOfBoundsException.class)
+    public void shouldThrowExceptionWhenCharAtCalledWithNoBuffer()
     {
-        //When
         asciiSequenceView.charAt(0);
     }
 
-    @Test(expected = IndexOutOfBoundsException.class)
-    public void shouldThrowIndexOutOfBoundsExceptionWhenCharAtCalledWithNegativeIndex()
+    @Test(expected = StringIndexOutOfBoundsException.class)
+    public void shouldThrowExceptionWhenCharAtCalledWithNegativeIndex()
     {
-        //Given
         final String data = "foo";
         buffer.putStringWithoutLengthAscii(INDEX, data);
         asciiSequenceView.wrap(buffer, INDEX, data.length());
 
-        //When
         asciiSequenceView.charAt(-1);
     }
 }
