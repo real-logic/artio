@@ -19,6 +19,10 @@ public class AsciiSequenceView implements CharSequence
 
     public char charAt(final int index)
     {
+        if (buffer == null || index < 0 || index >= length)
+        {
+            throw new IndexOutOfBoundsException("AsciiSequenceView index out of range: " + index);
+        }
         return (char)buffer.getByte(offset + index);
     }
 
@@ -49,6 +53,10 @@ public class AsciiSequenceView implements CharSequence
 
     public String toString()
     {
+        if (buffer == null)
+        {
+            return "";
+        }
         return buffer.getStringWithoutLengthAscii(offset, length);
     }
 }

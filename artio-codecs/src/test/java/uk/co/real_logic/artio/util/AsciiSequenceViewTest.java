@@ -5,6 +5,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
 
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 
 public class AsciiSequenceViewTest
@@ -76,5 +77,43 @@ public class AsciiSequenceViewTest
 
         //Then
         assertThat(targetBuffer.getStringWithoutLengthAscii(targetBufferOffset, data.length()), is(data));
+    }
+
+    @Test
+    public void shouldReturnEmptyStringWhenBufferIsNull()
+    {
+        assertEquals(0, asciiSequenceView.length());
+        assertEquals("", asciiSequenceView.toString());
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void shouldThrowIndexOutOfBoundsExceptionWhenCharNotPresentAtGivenPosition()
+    {
+        //Given
+        final String data = "foo";
+        buffer.putStringWithoutLengthAscii(INDEX, data);
+        asciiSequenceView.wrap(buffer, INDEX, data.length());
+
+        //When
+        asciiSequenceView.charAt(4);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void shouldThrowIndexOutOfBoundsExceptionWhenCharAtCalledWithNoBuffer()
+    {
+        //When
+        asciiSequenceView.charAt(0);
+    }
+
+    @Test(expected = IndexOutOfBoundsException.class)
+    public void shouldThrowIndexOutOfBoundsExceptionWhenCharAtCalledWithNegativeIndex()
+    {
+        //Given
+        final String data = "foo";
+        buffer.putStringWithoutLengthAscii(INDEX, data);
+        asciiSequenceView.wrap(buffer, INDEX, data.length());
+
+        //When
+        asciiSequenceView.charAt(-1);
     }
 }
