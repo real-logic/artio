@@ -204,11 +204,11 @@ public class DecoderGenerator extends Generator
         return String.format(
                 "    public void %1$s()\n" +
                 "    {\n" +
-                "        for (final %2$s iterator : %5$s.iterator())\n" +
+                "        for (final %2$s %6$s : %5$s.iterator())\n" +
                 "        {\n" +
-                "            iterator.reset();\n" +
+                "            %6$s.reset();\n" +
 
-                "            if (iterator.next() == null)\n" +
+                "            if (%6$s.next() == null)\n" +
                 "            {\n" +
                 "                break;\n" +
                 "            }\n" +
@@ -220,7 +220,8 @@ public class DecoderGenerator extends Generator
                 decoderClassName(name),
                 formatPropertyName(numberField.name()),
                 numberField.name(),
-                iteratorFieldName(group));
+                iteratorFieldName(group),
+                formatPropertyName(decoderClassName(name)));
     }
 
     private static String iteratorClassName(final Group group)
@@ -266,8 +267,8 @@ public class DecoderGenerator extends Generator
             "            rejectReason = NO_ERROR;\n" +
             "            missingRequiredFields.clear();\n" +
             (isGroup ? "" :
-                    "            unknownFields.clear();\n" +
-                            "            alreadyVisitedFields.clear();\n") +
+                "            unknownFields.clear();\n" +
+                "            alreadyVisitedFields.clear();\n") +
             "        }\n";
     }
 
@@ -1007,10 +1008,16 @@ public class DecoderGenerator extends Generator
         final String suffix =
             "            default:\n" +
             (isGroup ? "" :
-            "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
-            " && !" + unknownFieldPredicate(type) + ")\n" +
+            "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + ")\n" +
             "                {\n" +
-            "                    unknownFields.add(tag);\n" +
+            "                    if (!" + unknownFieldPredicate(type) + ")\n" +
+            "                    {\n" +
+            "                        unknownFields.add(tag);\n" +
+            "                    }\n" +
+            "                }\n" +
+            "                else\n" +
+            "                {\n" +
+            "                    alreadyVisitedFields.remove(tag);\n" +
             "                }\n") +
             // Skip the thing if it's a completely unknown field and you aren't validating messages
             "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
