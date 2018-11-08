@@ -30,6 +30,7 @@ import java.util.List;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItems;
+import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
@@ -59,22 +60,31 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
     @Test
     public void canScanArchiveWhilstGatewayRunning()
     {
-        messagesCanBeExchanged();
+        setupAndExchangeMessages();
+
+        assertArchiveContainsMessages("hi");
+    }
+
+    @Test
+    public void canScanArchiveForLargeMessages()
+    {
+        acquireAcceptingSession();
+
+        final String testReqID = largeTestReqId();
+
+        sendTestRequest(acceptingSession, testReqID);
+
+        assertReceivedSingleHeartbeat(testSystem, acceptingOtfAcceptor, testReqID);
 
         assertInitiatingSequenceIndexIs(0);
 
-        CloseHelper.close(initiatingLibrary);
-        CloseHelper.close(acceptingLibrary);
-
-        assertArchiveContainsMessages();
+        assertArchiveContainsMessages(largeTestReqId());
     }
 
     @Test
     public void canScanArchiveWhenGatewayStopped()
     {
-        messagesCanBeExchanged();
-
-        assertInitiatingSequenceIndexIs(0);
+        setupAndExchangeMessages();
 
         CloseHelper.close(initiatingLibrary);
         CloseHelper.close(acceptingLibrary);
@@ -82,10 +92,17 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
         CloseHelper.close(initiatingEngine);
         CloseHelper.close(acceptingEngine);
 
-        assertArchiveContainsMessages();
+        assertArchiveContainsMessages("hi");
     }
 
-    private void assertArchiveContainsMessages()
+    private void setupAndExchangeMessages()
+    {
+        messagesCanBeExchanged();
+
+        assertInitiatingSequenceIndexIs(0);
+    }
+
+    private void assertArchiveContainsMessages(final String testReqIdPrefix)
     {
         final List<String> messages = new ArrayList<>();
         final FixMessageConsumer fixMessageConsumer = (message, buffer, offset, length, header) ->
@@ -106,19 +123,9 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
                 fixMessageConsumer,
                 false);
 
-            assertThat(messages, hasItems(
+            assertThat(messages.toString(), messages, hasItems(
                 Matchers.containsString("35=A\00149=acceptor\00156=initiator\00134=1"),
-                Matchers.containsString("\001112=hi")));
+                Matchers.containsString("\001112=" + testReqIdPrefix)));
         }
     }
-
-    // TODO: large messages
-
-    /*
-    final String testReqID = largeTestReqId();
-
-        sendTestRequest(acceptingSession, testReqID);
-
-        assertReceivedSingleHeartbeat(testSystem, acceptingOtfAcceptor, testReqID);
-     */
 }

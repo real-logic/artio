@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.Aeron;
+import io.aeron.FragmentAssembler;
 import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
@@ -48,6 +49,7 @@ public class FixArchiveScanner implements AutoCloseable
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
     private final LogEntryHandler logEntryHandler = new LogEntryHandler();
+    private final FragmentAssembler fragmentAssembler = new FragmentAssembler(logEntryHandler);
 
     private final Aeron aeron;
     private final AeronArchive aeronArchive;
@@ -113,7 +115,70 @@ public class FixArchiveScanner implements AutoCloseable
     {
         this.handler = handler;
 
-        final List<ArchiveReplayInfo> replayInfos = new ArrayList<>();
+        final List<ArchiveLocation> archiveLocations = lookupArchiveLocations(aeronChannel, messageType);
+
+        try (Subscription replaySubscription = aeron.addSubscription(IPC_CHANNEL, ARCHIVE_SCANNER_STREAM))
+        {
+            archiveLocations.forEach(archiveLocation ->
+            {
+                final long recordingId = archiveLocation.recordingId;
+                final boolean stillArchiving = archiveLocation.stopPosition == NULL_POSITION;
+
+                final long stopPosition;
+                final long length;
+                if (stillArchiving)
+                {
+                    if (follow)
+                    {
+                        length = NULL_LENGTH;
+                        stopPosition = NULL_POSITION;
+                    }
+                    else
+                    {
+                        stopPosition = aeronArchive.getRecordingPosition(recordingId);
+                        length = stopPosition - archiveLocation.startPosition;
+                    }
+                }
+                else
+                {
+                    stopPosition = archiveLocation.stopPosition;
+                    length = stopPosition - archiveLocation.startPosition;
+                }
+
+                final int sessionId = (int)aeronArchive.startReplay(
+                    recordingId,
+                    archiveLocation.startPosition,
+                    length,
+                    IPC_CHANNEL,
+                    ARCHIVE_SCANNER_STREAM);
+
+                final Image image = lookupImage(replaySubscription, sessionId);
+
+                while (stopPosition == NULL_POSITION || image.position() < stopPosition)
+                {
+                    idleStrategy.idle(image.poll(fragmentAssembler, 10));
+                }
+            });
+        }
+    }
+
+    private Image lookupImage(final Subscription replaySubscription, final int sessionId)
+    {
+        Image image = null;
+
+        while (image == null)
+        {
+            idleStrategy.idle();
+            image = replaySubscription.imageBySessionId(sessionId);
+        }
+        idleStrategy.reset();
+
+        return image;
+    }
+
+    private List<ArchiveLocation> lookupArchiveLocations(final String aeronChannel, final MessageType messageType)
+    {
+        final List<ArchiveLocation> archiveLocations = new ArrayList<>();
         final int requestStreamId = messageType == SENT ? OUTBOUND_LIBRARY_STREAM : INBOUND_LIBRARY_STREAM;
         aeronArchive.listRecordingsForUri(
             0,
@@ -137,60 +202,12 @@ public class FixArchiveScanner implements AutoCloseable
             originalChannel,
             sourceIdentity) ->
             {
-                replayInfos.add(new ArchiveReplayInfo(recordingId, startPosition, stopPosition));
+                archiveLocations.add(new ArchiveLocation(recordingId, startPosition, stopPosition));
             });
 
-        final Subscription replaySubscription = aeron.addSubscription(IPC_CHANNEL, ARCHIVE_SCANNER_STREAM);
-
         // Any uncompleted recording is at the end
-        replayInfos.sort(comparingLong(ArchiveReplayInfo::stopPosition).reversed());
-
-        replayInfos.forEach(replayInfo ->
-        {
-            final long recordingId = replayInfo.recordingId;
-            final boolean stillArchiving = replayInfo.stopPosition == NULL_POSITION;
-
-            final long stopPosition;
-            final long length;
-            if (stillArchiving)
-            {
-                if (follow)
-                {
-                    length = NULL_LENGTH;
-                    stopPosition = NULL_POSITION;
-                }
-                else
-                {
-                    stopPosition = aeronArchive.getRecordingPosition(recordingId);
-                    length = stopPosition - replayInfo.startPosition;
-                }
-            }
-            else
-            {
-                stopPosition = replayInfo.stopPosition;
-                length = stopPosition - replayInfo.startPosition;
-            }
-
-            final int sessionId = (int)aeronArchive.startReplay(
-                recordingId,
-                replayInfo.startPosition,
-                length,
-                IPC_CHANNEL,
-                ARCHIVE_SCANNER_STREAM);
-
-            Image image = null;
-            while (image == null)
-            {
-                idleStrategy.idle();
-                image = replaySubscription.imageBySessionId(sessionId);
-            }
-            idleStrategy.reset();
-
-            while (stopPosition == NULL_POSITION || image.position() < stopPosition)
-            {
-                idleStrategy.idle(image.poll(logEntryHandler, 10));
-            }
-        });
+        archiveLocations.sort(comparingLong(ArchiveLocation::stopPosition).reversed());
+        return archiveLocations;
     }
 
     class LogEntryHandler implements FragmentHandler
@@ -211,13 +228,13 @@ public class FixArchiveScanner implements AutoCloseable
         }
     }
 
-    class ArchiveReplayInfo
+    class ArchiveLocation
     {
         final long recordingId;
         final long startPosition;
         final long stopPosition;
 
-        ArchiveReplayInfo(final long recordingId, final long startPosition, final long stopPosition)
+        ArchiveLocation(final long recordingId, final long startPosition, final long stopPosition)
         {
             this.recordingId = recordingId;
             this.startPosition = startPosition;
