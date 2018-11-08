@@ -91,8 +91,23 @@ public class AcceptorSessionTest extends AbstractSessionTest
         verifySessionSetup();
         verifyLogon();
         verify(mockProxy).resendRequest(2, 1, 0, SEQUENCE_INDEX);
+        verify(mockProxy).isSeqNumResetRequested();
         verifyNoFurtherMessages();
         assertState(AWAITING_RESEND);
+    }
+
+    @Test
+    public void shouldNotRequestResendIfHighSeqNoLogonAndResetRequested()
+    {
+        when(mockProxy.isSeqNumResetRequested()).thenReturn(true);
+
+        onLogon(3);
+
+        verifySessionSetup();
+        verifyLogon();
+        verify(mockProxy).isSeqNumResetRequested();
+        verifyNoFurtherMessages();
+        assertState(ACTIVE); // nothing to await as we requested seq no reset
     }
 
     @Test

@@ -708,52 +708,78 @@ public class Session implements AutoCloseable
 
             if (CODEC_VALIDATION_ENABLED)
             {
-                if (isPossDupOrResend)
+                final Action validationResult = validateCodec(time, msgSeqNo, msgType, msgTypeLength, sendingTime,
+                    origSendingTime, isPossDupOrResend);
+                if (validationResult != null)
                 {
-                    if (origSendingTime == UNKNOWN)
-                    {
-                        return checkPosition(proxy.reject(
-                            newSentSeqNum(),
-                            msgSeqNo,
-                            msgType,
-                            msgTypeLength,
-                            REQUIRED_TAG_MISSING, sequenceIndex()));
-                    }
-                    else if (origSendingTime > sendingTime)
-                    {
-                        return rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
-                    }
-                }
-
-                if ((sendingTime < time - sendingTimeWindowInMs) || (sendingTime > time + sendingTimeWindowInMs))
-                {
-                    final Action action = rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
-                    if (action != ABORT)
-                    {
-                        logoutRejectReason(RejectReason.SENDINGTIME_ACCURACY_PROBLEM.representation());
-                        logoutAndDisconnect(INVALID_SENDING_TIME);
-                    }
-
-                    return action;
+                    return validationResult;
                 }
             }
 
-            final int expectedSeqNo = expectedReceivedSeqNum();
-            if (expectedSeqNo == msgSeqNo)
+            return handleSeqNoChange(msgSeqNo, time, isPossDupOrResend);
+        }
+    }
+
+    /**
+     * @return final state of session after validation or null if further processing required
+     */
+    private Action validateCodec(
+        final long time,
+        final int msgSeqNo,
+        final byte[] msgType,
+        final int msgTypeLength,
+        final long sendingTime,
+        final long origSendingTime,
+        final boolean isPossDupOrResend)
+    {
+        if (isPossDupOrResend)
+        {
+            if (origSendingTime == UNKNOWN)
             {
-                incNextReceivedInboundMessageTime(time);
-                lastReceivedMsgSeqNum(msgSeqNo);
+                return checkPosition(proxy.reject(
+                    newSentSeqNum(),
+                    msgSeqNo,
+                    msgType,
+                    msgTypeLength,
+                    REQUIRED_TAG_MISSING, sequenceIndex()));
             }
-            else if (expectedSeqNo < msgSeqNo)
+            else if (origSendingTime > sendingTime)
             {
-                return requestResend(expectedSeqNo);
-            }
-            else if /* expectedSeqNo > msgSeqNo */ (!isPossDupOrResend)
-            {
-                return msgSeqNumTooLow(msgSeqNo, expectedSeqNo);
+                return rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
             }
         }
 
+        if ((sendingTime < time - sendingTimeWindowInMs) || (sendingTime > time + sendingTimeWindowInMs))
+        {
+            final Action action = rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
+            if (action != ABORT)
+            {
+                logoutRejectReason(RejectReason.SENDINGTIME_ACCURACY_PROBLEM.representation());
+                logoutAndDisconnect(INVALID_SENDING_TIME);
+            }
+
+            return action;
+        }
+
+        return null;
+    }
+
+    private Action handleSeqNoChange(final int msgSeqNo, final long time, final boolean isPossDupOrResend)
+    {
+        final int expectedSeqNo = expectedReceivedSeqNum();
+        if (expectedSeqNo == msgSeqNo)
+        {
+            incNextReceivedInboundMessageTime(time);
+            lastReceivedMsgSeqNum(msgSeqNo);
+        }
+        else if (expectedSeqNo < msgSeqNo)
+        {
+            return requestResend(expectedSeqNo);
+        }
+        else if /* expectedSeqNo > msgSeqNo */ (!isPossDupOrResend)
+        {
+            return msgSeqNumTooLow(msgSeqNo, expectedSeqNo);
+        }
         return CONTINUE;
     }
 
@@ -869,9 +895,26 @@ public class Session implements AutoCloseable
                     }
 
                     setLogonState(heartbeatInterval, username, password);
-                    // Above call sets state to ACTIVE, but we aren't really quite ACTIVE.
-                    // We need to request a replay here. This is done in the onMessage call below I believe.
-                    state(SessionState.AWAITING_RESEND);
+                    final boolean requestSeqNumReset = proxy.isSeqNumResetRequested();
+                    if (requestSeqNumReset) // if we requested sequence number reset then do not await for replay
+                    {
+                        lastReceivedMsgSeqNum = 0;
+                        logonTime(logonTime);
+                        // state is ACTIVE here
+                        final long time = time();
+
+                        notifyLogonListener();
+
+                        final Action validationResult = validateCodec(time, msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES,
+                            LogonDecoder.MESSAGE_TYPE_BYTES.length, sendingTime, origSendingTime, isPossDupOrResend);
+                        return validationResult != null ? validationResult : CONTINUE;
+                    }
+                    else
+                    {
+                        // Above call sets state to ACTIVE, but we aren't really quite ACTIVE.
+                        // We need to request a replay here. This is done in the onMessage call below I believe.
+                        state(SessionState.AWAITING_RESEND);
+                    }
                 }
                 else // (msgSeqNo < expectedMsgSeqNo)
                 {

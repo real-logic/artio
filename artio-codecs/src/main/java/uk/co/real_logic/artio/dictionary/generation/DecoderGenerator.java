@@ -66,7 +66,8 @@ public class DecoderGenerator extends Generator
         RejectReason.VALUE_IS_INCORRECT.representation();
 
     // TODO: ensure that these are only used in the case that we're dealing with FIX 4.4. or later
-    public static final int TAG_APPEARS_MORE_THAN_ONCE = 13;
+    public static final int TAG_APPEARS_MORE_THAN_ONCE =
+        RejectReason.TAG_APPEARS_MORE_THAN_ONCE.representation();
     public static final int TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER = 14;
 
     public static String decoderClassName(final Aggregate aggregate)
@@ -89,9 +90,10 @@ public class DecoderGenerator extends Generator
         final String builderPackage,
         final String builderCommonPackage,
         final OutputManager outputManager,
-        final Class<?> validationClass)
+        final Class<?> validationClass,
+        final Class<?> rejectUnknownClass)
     {
-        super(dictionary, builderPackage, builderCommonPackage, outputManager, validationClass);
+        super(dictionary, builderPackage, builderCommonPackage, outputManager, validationClass, rejectUnknownClass);
         this.initialBufferSize = initialBufferSize;
     }
 
@@ -140,7 +142,10 @@ public class DecoderGenerator extends Generator
         {
             final Message message = (Message)aggregate;
             out.append(messageType(message.fullType(), message.packedType()));
-            out.append(commonCompoundImports("Decoder", true));
+            final List<Field> fields = compileAllFieldsFor(message);
+            final String messageFieldsSet = generateFieldDictionary(fields, MESSAGE_FIELDS, false);
+            out.append(commonCompoundImports("Decoder", true, messageFieldsSet));
+
         }
         groupMethods(out, aggregate);
         headerMethods(out, aggregate, type);
@@ -150,6 +155,18 @@ public class DecoderGenerator extends Generator
         out.append(toString(aggregate, isMessage));
         out.append("}\n");
         currentAggregate = parentAggregate;
+    }
+
+    private List<Field> compileAllFieldsFor(final Message message)
+    {
+        final Stream<Field> messageBodyFields = extractFields(message.entries());
+        final Stream<Field> headerFields = extractFields(dictionary.header().entries());
+        final Stream<Field> trailerFields = extractFields(dictionary.trailer().entries());
+
+        return Stream.of(headerFields, messageBodyFields, trailerFields)
+            .reduce(Stream::concat)
+            .orElseGet(Stream::empty)
+            .collect(toList());
     }
 
     private void headerMethods(final Writer out, final Aggregate aggregate, final AggregateType type) throws IOException
@@ -190,6 +207,11 @@ public class DecoderGenerator extends Generator
                 "        for (final %2$s iterator : %5$s.iterator())\n" +
                 "        {\n" +
                 "            iterator.reset();\n" +
+
+                "            if (iterator.next() == null)\n" +
+                "            {\n" +
+                "                break;\n" +
+                "            }\n" +
                 "        }\n" +
                 "        %3$s = 0;\n" +
                 "        has%4$s = false;\n" +
@@ -244,8 +266,8 @@ public class DecoderGenerator extends Generator
             "            rejectReason = NO_ERROR;\n" +
             "            missingRequiredFields.clear();\n" +
             (isGroup ? "" :
-            "            unknownFields.clear();\n" +
-            "            alreadyVisitedFields.clear();\n") +
+                    "            unknownFields.clear();\n" +
+                            "            alreadyVisitedFields.clear();\n") +
             "        }\n";
     }
 
@@ -253,7 +275,7 @@ public class DecoderGenerator extends Generator
         throws IOException
     {
         final List<Field> requiredFields = requiredFields(aggregate.entries()).collect(toList());
-        out.append(generateFieldDictionary(requiredFields, REQUIRED_FIELDS));
+        out.append(generateFieldDictionary(requiredFields, REQUIRED_FIELDS, true));
 
         if (aggregate.containsGroup())
         {
@@ -262,7 +284,7 @@ public class DecoderGenerator extends Generator
                 .map(Entry::element)
                 .map(element -> (Field)element)
                 .collect(toList());
-            final String groupFieldString = generateFieldDictionary(groupFields, GROUP_FIELDS);
+            final String groupFieldString = generateFieldDictionary(groupFields, GROUP_FIELDS, true);
             out.append(groupFieldString);
         }
 
@@ -280,14 +302,14 @@ public class DecoderGenerator extends Generator
         final boolean isMessage = type == MESSAGE;
         final boolean isGroup = type == GROUP;
         final String messageValidation = isMessage ?
-            "        if (unknownFieldsIterator.hasNext())\n" +
+            "        if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + " && unknownFieldsIterator.hasNext())\n" +
             "        {\n" +
             "            invalidTagId = unknownFieldsIterator.nextValue();\n" +
             "            rejectReason = Constants.ALL_FIELDS.contains(invalidTagId) ? " +
             TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE + " : " + INVALID_TAG_NUMBER + ";\n" +
             "            return false;\n" +
             "        }\n" +
-            "        else if (!header.validate())\n" +
+            "        if (!header.validate())\n" +
             "        {\n" +
             "            invalidTagId = header.invalidTagId();\n" +
             "            rejectReason = header.rejectReason();\n" +
@@ -343,25 +365,37 @@ public class DecoderGenerator extends Generator
             2 * aggregate.allChildEntries().count()));
     }
 
-    private String generateFieldDictionary(final Collection<Field> fields, final String name)
+    private String generateFieldDictionary(final Collection<Field> fields, final String name,
+        final boolean shouldGenerateValidationGating)
     {
         final String addFields = fields
             .stream()
             .map((field) -> addField(field, name))
             .collect(joining());
+        final String generatedFieldEntryCode;
+
+        if (shouldGenerateValidationGating)
+        {
+            generatedFieldEntryCode =
+                "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
+                "        {\n" +
+                "          %s" +
+                "        }\n";
+        }
+        else
+        {
+            generatedFieldEntryCode = "%s";
+        }
 
         final int hashMapSize = sizeHashSet(fields);
         return String.format(
-            "    public final IntHashSet %3$s = new IntHashSet(%1$d);\n" +
+            "    public final IntHashSet %2$s = new IntHashSet(%1$d);\n" +
             "    {\n" +
-            "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
-            "        {\n" +
-            "%2$s" +
-            "        }\n" +
+            "%3$s" +
             "    }\n\n",
             hashMapSize,
-            addFields,
-            name);
+            name,
+            String.format(generatedFieldEntryCode, addFields));
     }
 
     public static String addField(final Field field, final String name)
@@ -443,15 +477,30 @@ public class DecoderGenerator extends Generator
         return entries
             .stream()
             .filter(Entry::required)
-            .flatMap(this::extractFields);
+            .flatMap(this::extractRequiredFields);
+    }
+
+    private Stream<Field> extractRequiredFields(final Entry entry)
+    {
+        return entry.match(
+            (e, field) -> Stream.of(field),
+            (e, group) -> Stream.of((Field)group.numberField().element()),
+            (e, component) -> requiredFields(component.entries()));
     }
 
     private Stream<Field> extractFields(final Entry entry)
     {
         return entry.match(
             (e, field) -> Stream.of(field),
-            (e, group) -> Stream.of((Field)group.numberField().element()),
-            (e, component) -> requiredFields(component.entries()));
+            (e, group) -> Stream.concat(Stream.of((Field)group.numberField().element()),
+                                group.entries().stream().flatMap(this::extractFields)),
+            (e, component) -> component.entries().stream().flatMap(this::extractFields));
+    }
+
+    private Stream<Field> extractFields(final List<Entry> entries)
+    {
+
+        return entries.stream().flatMap(this::extractFields);
     }
 
     private void componentInterface(final Component component)
@@ -545,7 +594,7 @@ public class DecoderGenerator extends Generator
     {
         if (aggregate instanceof Group)
         {
-            wrapTrailerInConstructor(out, aggregate);
+            wrapTrailerAndMessageFieldsInConstructor(out, aggregate);
 
             out.append(String.format(
                 "    private %1$s next = null;\n\n" +
@@ -557,6 +606,21 @@ public class DecoderGenerator extends Generator
                 decoderClassName(aggregate),
                 sizeHashSet(aggregate.entries())));
         }
+    }
+
+    private void wrapTrailerAndMessageFieldsInConstructor(final Writer out, final Aggregate aggregate)
+        throws IOException
+    {
+        out.append(String.format(
+            "    private final TrailerDecoder trailer;\n" +
+            "    private final IntHashSet %1$s;\n" +
+            "    public %2$s(final TrailerDecoder trailer, final IntHashSet %1$s)\n" +
+            "    {\n" +
+            "        this.trailer = trailer;\n" +
+            "        this.%1$s = %1$s;\n" +
+            "    }\n\n",
+            MESSAGE_FIELDS,
+            decoderClassName(aggregate)));
     }
 
     private void wrapTrailerInConstructor(final Writer out, final Aggregate aggregate) throws IOException
@@ -940,17 +1004,17 @@ public class DecoderGenerator extends Generator
             .map(this::decodeEntry)
             .collect(joining("\n", "", "\n"));
 
-        final String groupSuffix = aggregate.containsGroup() ? " && !" + GROUP_FIELDS + ".contains(tag)" : "";
-
         final String suffix =
             "            default:\n" +
             (isGroup ? "" :
-            "                if (" + CODEC_VALIDATION_ENABLED + isTrailerTag(type) + groupSuffix + ")\n" +
+            "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
+            " && !" + unknownFieldPredicate(type) + ")\n" +
             "                {\n" +
             "                    unknownFields.add(tag);\n" +
             "                }\n") +
             // Skip the thing if it's a completely unknown field and you aren't validating messages
-            "                if (" + CODEC_VALIDATION_ENABLED + " || Constants.ALL_FIELDS.contains(tag))\n" +
+            "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
+            " || " + unknownFieldPredicate(type) + ")\n" +
             "                {\n" +
             decodeTrailerOrReturn(hasCommonCompounds, 5) +
             "                }\n" +
@@ -974,15 +1038,21 @@ public class DecoderGenerator extends Generator
             indent(indent, "return position - offset;\n");
     }
 
-    private String isTrailerTag(final AggregateType type)
+    private String unknownFieldPredicate(final AggregateType type)
     {
         if (type == TRAILER)
         {
-            return " && !" + REQUIRED_FIELDS + ".contains(tag)";
+            return REQUIRED_FIELDS + ".contains(tag)";
+        }
+        //HeaderDecoder has the special requirement of being used independently so cannot use context of message to
+        //determine if field is unknown
+        else if (type == HEADER)
+        {
+            return "true";
         }
         else
         {
-            return " && !trailer." + REQUIRED_FIELDS + ".contains(tag)";
+            return "(trailer." + REQUIRED_FIELDS + ".contains(tag) || " + MESSAGE_FIELDS + ".contains(tag))";
         }
     }
 
@@ -996,11 +1066,12 @@ public class DecoderGenerator extends Generator
                 "            {\n" +
                 "                if (next == null)\n" +
                 "                {\n" +
-                "                    next = new %1$s(trailer);\n" +
+                "                    next = new %1$s(trailer, %2$s);\n" +
                 "                }\n" +
                 "                return position - offset;\n" +
                 "            }\n",
-                decoderClassName(aggregate));
+                decoderClassName(aggregate),
+                MESSAGE_FIELDS);
         }
         else
         {
@@ -1065,7 +1136,7 @@ public class DecoderGenerator extends Generator
         final String parseGroup = String.format(
             "                if (%1$s == null)\n" +
             "                {\n" +
-            "                    %1$s = new %2$s(trailer);\n" +
+            "                    %1$s = new %2$s(trailer, %4$s);\n" +
             "                }\n" +
             "                %2$s %1$sCurrent = %1$s;\n" +
             "                position = endOfField + 1;\n" +
@@ -1079,7 +1150,8 @@ public class DecoderGenerator extends Generator
             "                }\n",
             formatPropertyName(group.name()),
             decoderClassName(group),
-            formatPropertyName(group.numberField().name()));
+            formatPropertyName(group.numberField().name()),
+            MESSAGE_FIELDS);
 
         return decodeField(group.numberField(), parseGroup);
     }
