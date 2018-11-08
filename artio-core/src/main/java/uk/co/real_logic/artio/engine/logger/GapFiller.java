@@ -97,7 +97,8 @@ public class GapFiller implements ProtocolHandler, Agent
             // If the request was for an infinite replay then reply with the next expected sequence number
             final int newSeqNo = endSeqNo == 0 ? lastSentSeqNo : endSeqNo;
             final int gapFillMsgSeqNum = beginSeqNo;
-            final long result = encoder.encode(reqHeader, gapFillMsgSeqNum, newSeqNo);
+            encoder.setupMessage(reqHeader);
+            final long result = encoder.encode(gapFillMsgSeqNum, newSeqNo);
             final int encodedLength = Encoder.length(result);
             final int encodedOffset = Encoder.offset(result);
             final long sentPosition = publication.saveMessage(

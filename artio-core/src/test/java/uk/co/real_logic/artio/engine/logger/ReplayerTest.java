@@ -113,8 +113,6 @@ public class ReplayerTest extends AbstractLogTest
             EngineConfiguration.DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES,
             replayHandler,
             senderSequenceNumbers);
-
-        verify(publication).maxPayloadLength();
     }
 
     private void setReplayedMessages(final int replayedMessages)
@@ -134,7 +132,7 @@ public class ReplayerTest extends AbstractLogTest
         onRequestResendMessage(result);
 
         verifyQueriedService(END_SEQ_NO);
-        verifyNoMoreInteractions(publication);
+        verifyPublicationOnlyPayloadQueried();
     }
 
     @Test
@@ -144,6 +142,12 @@ public class ReplayerTest extends AbstractLogTest
         onRequestResendMessage(result);
 
         verifyQueriedService(MOST_RECENT_MESSAGE);
+        verifyPublicationOnlyPayloadQueried();
+    }
+
+    private void verifyPublicationOnlyPayloadQueried()
+    {
+        verify(publication).maxPayloadLength();
         verifyNoMoreInteractions(publication);
     }
 
@@ -481,7 +485,8 @@ public class ReplayerTest extends AbstractLogTest
         final long result = bufferHasResendRequest(END_SEQ_NO);
         onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, BREAK);
 
-        verifyNoMoreInteractions(publication, claim);
+        verifyPublicationOnlyPayloadQueried();
+        verifyNoMoreInteractions(claim);
         resetMocks();
 
         shouldReplayMessageWithExpandingBodyLength();
@@ -546,7 +551,8 @@ public class ReplayerTest extends AbstractLogTest
     private void claimedAndNothingMore()
     {
         verifyClaim();
-        verifyNoMoreInteractions(publication, claim);
+        verifyPublicationOnlyPayloadQueried();
+        verifyNoMoreInteractions(claim);
         reset(publication);
     }
 
