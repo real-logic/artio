@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -102,9 +102,10 @@ class IndexedPositionReader
 
             decoder.wrap(buffer, offset, actingBlockLength, actingVersion);
             final int sessionId = decoder.sessionId();
+            final long recordingId = decoder.recordingId();
             if (sessionId != 0)
             {
-                consumer.accept(sessionId, decoder.position());
+                consumer.accept(sessionId, recordingId, decoder.position());
             }
 
             offset += RECORD_LENGTH;

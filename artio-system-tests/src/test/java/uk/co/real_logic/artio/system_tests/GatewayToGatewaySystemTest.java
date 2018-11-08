@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
@@ -39,6 +38,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixMatchers.*;
+import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -90,13 +90,26 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertSequenceIndicesAre(0);
     }
 
-    @Ignore
     @Test
     public void gatewayProcessesResendRequests()
     {
+        final String testReqID = "AAA";
+
+        gatewayProcessesResendRequests(testReqID);
+    }
+
+    @Test
+    public void gatewayProcessesResendRequestsOfFragmentedMessages()
+    {
+        final String testReqID = largeTestReqId();
+
+        gatewayProcessesResendRequests(testReqID);
+    }
+
+    private void gatewayProcessesResendRequests(final String testReqID)
+    {
         acquireAcceptingSession();
 
-        final String testReqID = largeTestReqId();
         final FixMessage message = exchangeExampleMessageFromInitiatorToAcceptor(testReqID);
 
         final int sequenceNumber = acceptorSendsResendRequest(message.getMessageSequenceNumber());
@@ -674,13 +687,27 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final long sessionId = lookupSessionId(ACCEPTOR_ID, INITIATOR_ID, acceptingEngine).resultIfPresent();
 
-        final Reply<?> resetSequenceNumber = testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
-        assertTrue(resetSequenceNumber.hasCompleted());
+        final Reply<?> resetSequenceNumber = resetSequenceNumber(sessionId);
+        replyCompleted(resetSequenceNumber);
 
         assertInitSeqNum(1, 1, 1);
     }
 
-    @Ignore
+    @Test
+    public void shouldNotResetSequenceNumbersOfMissingSession()
+    {
+        messagesCanBeExchanged();
+
+        assertInitSeqNum(2, 2, 0);
+
+        final Reply<?> resetSequenceNumber = resetSequenceNumber((long)400);
+        assertTrue("Should have errored: " + resetSequenceNumber, resetSequenceNumber.hasErrored());
+        final String message = resetSequenceNumber.error().getMessage();
+        assertTrue(message, message.contains("Unknown sessionId: 400"));
+
+        assertInitSeqNum(2, 2, 0);
+    }
+
     @Test
     public void shouldResetSequenceNumbersOfLibraryManagedSessions()
     {
@@ -693,11 +720,21 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final long sessionId = lookupSessionId(ACCEPTOR_ID, INITIATOR_ID, acceptingEngine).resultIfPresent();
 
-        final Reply<?> resetSequenceNumber = testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
-        assertTrue(resetSequenceNumber.hasCompleted());
+        final Reply<?> resetSequenceNumber = resetSequenceNumber(sessionId);
+        replyCompleted(resetSequenceNumber);
 
         assertInitSeqNum(1, 1, 1);
         assertAccSeqNum(1, 1, 1);
+    }
+
+    private Reply<?> resetSequenceNumber(final long sessionId)
+    {
+        return testSystem.awaitReply(acceptingEngine.resetSequenceNumber(sessionId));
+    }
+
+    private void replyCompleted(final Reply<?> resetSequenceNumber)
+    {
+        assertTrue("Should be complete: " + resetSequenceNumber, resetSequenceNumber.hasCompleted());
     }
 
     @Test
@@ -820,7 +857,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final long sessionId = session.id();
         final int lastReceivedMsgSeqNum = session.lastReceivedMsgSeqNum();
         final int sequenceIndex = session.sequenceIndex();
-        final List<FixMessage> messages = otfAcceptor.messages();
 
         releaseToGateway(library, session, testSystem);
 
@@ -836,9 +872,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final Session newSession = sessions.get(0);
         assertNotSame(session, newSession);
 
-        messagesCanBeExchanged(otherSession, otherAcceptor);
-
         // Callbacks for the missing messages whilst the gateway managed them
+        final List<FixMessage> messages = otfAcceptor.messages();
         final String expectedSeqNum = String.valueOf(lastReceivedMsgSeqNum + 1);
         final long messageCount = messages
             .stream()
@@ -846,7 +881,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             m.get(MSG_SEQ_NUM).equals(expectedSeqNum))
             .count();
 
-        assertEquals(messages.toString(), 1, messageCount);
+        assertEquals("Expected a single test request" + messages.toString(), 1, messageCount);
+
+        messagesCanBeExchanged(otherSession, otherAcceptor);
     }
 
     private void disconnectSessions()

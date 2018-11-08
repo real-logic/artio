@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,9 +44,15 @@ public class ConstantGeneratorTest
     {
         constantGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
-        //System.out.println(sources);
         final Class<?> constantsClass = compileInMemory(TEST_PACKAGE + "." + ConstantGenerator.CLASS_NAME, sources);
-        constants = constantsClass.getConstructor().newInstance();
+        if (constantsClass == null)
+        {
+            System.out.println(sources);
+        }
+        else
+        {
+            constants = constantsClass.getConstructor().newInstance();
+        }
     }
 
     @Test

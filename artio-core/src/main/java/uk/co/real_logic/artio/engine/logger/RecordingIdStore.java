@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.AgentInvoker;
+import org.agrona.concurrent.IdleStrategy;
 
 import java.nio.charset.StandardCharsets;
 
@@ -43,14 +44,16 @@ public class RecordingIdStore implements AutoCloseable
     public RecordingIdStore(
         final Aeron aeron,
         final String requiredChannel,
-        final AgentInvoker conductorAgentInvoker)
+        final AgentInvoker conductorAgentInvoker,
+        final IdleStrategy startupIdleStrategy,
+        final IdleStrategy archiverIdleStrategy)
     {
         subscription = aeron.addSubscription(
             AeronArchive.Configuration.recordingEventsChannel(),
             AeronArchive.Configuration.recordingEventsStreamId());
 
-        inboundLookup = new RecordingIdLookup(INBOUND_LIBRARY_STREAM, this);
-        outboundLookup = new RecordingIdLookup(OUTBOUND_LIBRARY_STREAM, this);
+        inboundLookup = new RecordingIdLookup(INBOUND_LIBRARY_STREAM, this, archiverIdleStrategy);
+        outboundLookup = new RecordingIdLookup(OUTBOUND_LIBRARY_STREAM, this, archiverIdleStrategy);
 
         recordingEventHandler = new RecordingEventHandler(inboundLookup, outboundLookup, requiredChannel);
 
@@ -65,8 +68,10 @@ public class RecordingIdStore implements AutoCloseable
                 conductorAgentInvoker.invoke();
             }
 
-            Thread.yield(); // TODO: properly idle.
+            startupIdleStrategy.idle();
         }
+
+        startupIdleStrategy.reset();
     }
 
     public RecordingIdLookup inboundLookup()

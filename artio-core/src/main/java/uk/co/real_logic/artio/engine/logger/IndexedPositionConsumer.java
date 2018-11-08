@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,5 +21,5 @@ package uk.co.real_logic.artio.engine.logger;
 @FunctionalInterface
 public interface IndexedPositionConsumer
 {
-    void accept(int aeronSessionId, long endPosition);
+    void accept(int aeronSessionId, long recordingId, long endPosition);
 }

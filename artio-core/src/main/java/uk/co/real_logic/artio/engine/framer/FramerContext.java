@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -88,7 +88,8 @@ public class FramerContext
             configuration.reasonableTransmissionTimeInMs(),
             errorHandler,
             sessionContexts,
-            configuration.sessionPersistenceStrategy());
+            configuration.sessionPersistenceStrategy(),
+            idleStrategy);
 
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,8 @@ import java.util.function.Consumer;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.Constants.SEQUENCE_RESET_MESSAGE_AS_STR;
+import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.artio.TestFixtures.mediaDriverContext;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
@@ -64,6 +66,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private Consumer<Reply<Session>> onInitiateReply = reply ->
     {
+        assertEquals("Repy failed: " + reply, Reply.State.COMPLETED, reply.state());
         initiatingSession = reply.resultIfPresent();
         assertConnected(initiatingSession);
     };
@@ -109,10 +112,11 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertSequenceIndicesAre(0);
     }
 
-    // Replicate a bug that Nick Reported
     @Test(timeout = TEST_TIMEOUT)
     public void shouldCopeWithReplayOfMissingMessages()
     {
+        printErrorMessages = false;
+
         duringRestart = this::deleteAcceptorLogs;
 
         onAcquireSession = () -> assertFailStatusWhenReplayRequested(SEQUENCE_NUMBER_TOO_HIGH);
@@ -230,7 +234,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final Runnable beforeConnect,
         final boolean resetSequenceNumbersOnLogon)
     {
-        mediaDriver = TestFixtures.launchMediaDriver(TestFixtures.mediaDriverContext(
+        mediaDriver = launchMediaDriver(mediaDriverContext(
             TestFixtures.TERM_BUFFER_LENGTH,
             dirsDeleteOnStart));
 
@@ -238,7 +242,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         config.sessionPersistenceStrategy(logon -> INDEXED);
         config.printErrorMessages(printErrorMessages);
         acceptingEngine = FixEngine.launch(config);
-        initiatingEngine = launchInitiatingEngineWithSameLogs(libraryAeronPort);
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
+        initiatingConfig.printErrorMessages(printErrorMessages);
+        initiatingEngine = FixEngine.launch(initiatingConfig);
 
         // Use so that the SharedLibraryScheduler is integration tested
         final DynamicLibraryScheduler libraryScheduler = new DynamicLibraryScheduler();

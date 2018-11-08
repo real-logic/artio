@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -368,7 +368,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             total += library.poll(timeInMs);
             if (!library.isConnected())
             {
-                DebugLogger.log(CLUSTER_MANAGEMENT, "Timing out connection to library %s%n", library.libraryId());
+                DebugLogger.log(LIBRARY_MANAGEMENT, "Timing out connection to library %s%n", library.libraryId());
 
                 iterator.remove();
                 library.releaseSlowPeeker();
@@ -392,7 +392,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             libraryPosition = image.position();
         }
 
-        final boolean indexed = indexedPosition(librarySessionId, libraryPosition);
+        final boolean indexed = sentIndexedPosition(librarySessionId, libraryPosition);
         if (indexed)
         {
             acquireLibrarySessions(library);
@@ -406,7 +406,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private boolean retryAcquireLibrarySessions(final LiveLibraryInfo library)
     {
-        final boolean indexed = indexedPosition(library.aeronSessionId(), library.acquireAtPosition());
+        final boolean indexed = sentIndexedPosition(library.aeronSessionId(), library.acquireAtPosition());
         if (indexed)
         {
             acquireLibrarySessions(library);
@@ -415,7 +415,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return indexed;
     }
 
-    private boolean indexedPosition(final int aeronSessionId, final long position)
+    private boolean sentIndexedPosition(final int aeronSessionId, final long position)
     {
         return sentSequenceNumberIndex.indexedPosition(aeronSessionId) >= position;
     }
@@ -440,7 +440,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final SessionState state = hasLoggedIn ? ACTIVE : CONNECTED;
 
             DebugLogger.log(
-                CLUSTER_MANAGEMENT,
+                LIBRARY_MANAGEMENT,
                 "Acquiring session %s from library %s%n", session.sessionId(), library.libraryId());
 
             gatewaySessions.acquire(
@@ -701,7 +701,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
                 private long checkLoggerUpToDate()
                 {
-                    if (indexedPosition(header.sessionId(), header.position()))
+                    if (sentIndexedPosition(header.sessionId(), header.position()))
                     {
                         lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
                         lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
@@ -883,7 +883,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 libraryId, libraryName, livenessDetector, aeronSessionId, librarySlowPeeker);
             idToLibrary.put(libraryId, library);
 
-            DebugLogger.log(CLUSTER_MANAGEMENT, "Library %s - %s connected %n", libraryId, libraryName);
+            DebugLogger.log(LIBRARY_MANAGEMENT, "Library %s - %s connected %n", libraryId, libraryName);
 
             return COMPLETE;
         });
@@ -941,7 +941,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         DebugLogger.log(
-            CLUSTER_MANAGEMENT,
+            LIBRARY_MANAGEMENT,
             "Releasing session %s with connectionId %s from library %s%n",
             sessionId,
             connectionId,
@@ -996,6 +996,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return action;
         }
 
+        final int aeronSessionId = outboundPublication.id();
+        final long requiredPosition = outboundPublication.position();
+
         final LiveLibraryInfo libraryInfo = idToLibrary.get(libraryId);
         if (libraryInfo == null)
         {
@@ -1022,12 +1025,24 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int lastRecvSeqNum = session.lastReceivedMsgSeqNum();
         final SessionState sessionState = session.state();
         final long logonTime = session.logonTime();
+
         gatewaySession.handoverManagementTo(libraryId, libraryInfo.librarySlowPeeker());
         libraryInfo.addSession(gatewaySession);
 
-        DebugLogger.log(CLUSTER_MANAGEMENT, "Handing control for session %s to library %s%n", sessionId, libraryId);
+        DebugLogger.log(LIBRARY_MANAGEMENT, "Handing control for session %s to library %s%n", sessionId, libraryId);
+
 
         final List<Continuation> continuations = new ArrayList<>();
+
+        // Ensure that we've indexed up to this point in time.
+        // If we don't do this then the indexer thread could receive a message sent from the Framer after
+        // the library has sent its first message and get the wrong sent sequence number.
+        // Only applies if there's a position to wait for and if the indexer is actually running on those messages.
+        if (requiredPosition > 0 && configuration.logOutboundMessages())
+        {
+            continuations.add(() ->
+                sentIndexedPosition(aeronSessionId, requiredPosition) ? COMPLETE : BACK_PRESSURED);
+        }
 
         continuations.add(() -> inboundPublication.saveManageSession(
             libraryId,

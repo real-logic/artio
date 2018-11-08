@@ -27,6 +27,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.NoOpIdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.agrona.concurrent.YieldingIdleStrategy;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -45,11 +46,11 @@ import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
+import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.*;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
-// TODO: test case where we return less messages than expected.
 public class ReplayIndexTest extends AbstractLogTest
 {
     private static final String CHANNEL = CommonContext.IPC_CHANNEL;
@@ -102,7 +103,8 @@ public class ReplayIndexTest extends AbstractLogTest
         mediaDriver = TestFixtures.launchMediaDriver();
         aeronArchive = AeronArchive.connect();
 
-        recordingIdStore = new RecordingIdStore(aeron(), CHANNEL, null);
+        recordingIdStore = new RecordingIdStore(
+            aeron(), CHANNEL, null, new YieldingIdleStrategy(), new YieldingIdleStrategy());
 
         aeronArchive.startRecording(CHANNEL, STREAM_ID, SourceLocation.LOCAL);
 
@@ -122,9 +124,7 @@ public class ReplayIndexTest extends AbstractLogTest
             OUTBOUND_LIBRARY_STREAM,
             new NoOpIdleStrategy(),
             aeronArchive,
-            CHANNEL,
-            errorHandler,
-            new RecordingBarrier(aeronArchive));
+            errorHandler);
 
         returnBuffer(indexBuffer, SESSION_ID);
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);
@@ -140,9 +140,25 @@ public class ReplayIndexTest extends AbstractLogTest
     }
 
     @Test
-    public void shouldReturnLogEntriesMatchingQuery()
+    public void shouldReturnRecordsMatchingQuery()
     {
         indexExampleMessage();
+
+        final int msgCount = query();
+
+        verifyMappedFile(SESSION_ID, 1);
+        verifyMessagesRead(1);
+        assertEquals(1, msgCount);
+    }
+
+    @Test
+    public void shouldReturnLongRecordsMatchingQuery()
+    {
+        final String testReqId = largeTestReqId();
+
+        bufferContainsExampleMessage(true, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX, testReqId);
+        publishBuffer();
+        indexRecord(11);
 
         final int msgCount = query();
 
@@ -265,7 +281,11 @@ public class ReplayIndexTest extends AbstractLogTest
 
         positionReader.readLastPosition(positionConsumer);
 
-        verify(positionConsumer, times(1)).accept(publication.sessionId(), alignedEndPosition());
+        final int aeronSessionId = publication.sessionId();
+        final long recordingId = recordingIdStore.outboundLookup().getRecordingId(aeronSessionId);
+
+        verify(positionConsumer, times(1))
+            .accept(aeronSessionId, recordingId, alignedEndPosition());
     }
 
     @Test
@@ -359,10 +379,15 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private void indexRecord()
     {
+        indexRecord(1);
+    }
+
+    private void indexRecord(final int fragmentsToRead)
+    {
         int read = 0;
-        while (read < 1)
+        while (read < fragmentsToRead)
         {
-            read += subscription.controlledPoll(replayIndex, 1);
+            read += subscription.poll(replayIndex, 1);
         }
     }
 
@@ -404,7 +429,12 @@ public class ReplayIndexTest extends AbstractLogTest
         final int endSequenceNumber,
         final int endSequenceIndex)
     {
-        return query.query(
+        final ReplayOperation operation = query.query(
             mockHandler, sessionId, beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex);
+        while (!operation.attemptReplay())
+        {
+            Thread.yield();
+        }
+        return operation.replayedMessages();
     }
 }

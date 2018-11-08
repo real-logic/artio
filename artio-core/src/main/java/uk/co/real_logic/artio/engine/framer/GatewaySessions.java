@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixCounters;
@@ -60,6 +61,7 @@ class GatewaySessions
     private final long reasonableTransmissionTimeInMs;
     private final SessionContexts sessionContexts;
     private final SessionPersistenceStrategy sessionPersistenceStrategy;
+    private final IdleStrategy framerIdleStrategy;
 
     private ErrorHandler errorHandler;
 
@@ -76,7 +78,8 @@ class GatewaySessions
         final long reasonableTransmissionTimeInMs,
         final ErrorHandler errorHandler,
         final SessionContexts sessionContexts,
-        final SessionPersistenceStrategy sessionPersistenceStrategy)
+        final SessionPersistenceStrategy sessionPersistenceStrategy,
+        final IdleStrategy framerIdleStrategy)
     {
         this.clock = clock;
         this.outboundPublication = outboundPublication;
@@ -91,6 +94,7 @@ class GatewaySessions
         this.errorHandler = errorHandler;
         this.sessionContexts = sessionContexts;
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
+        this.framerIdleStrategy = framerIdleStrategy;
     }
 
     void acquire(
@@ -190,14 +194,13 @@ class GatewaySessions
         return -1;
     }
 
-    GatewaySession releaseByConnectionId(final long connectionId)
+    void releaseByConnectionId(final long connectionId)
     {
         final GatewaySession session = removeSessionByConnectionId(connectionId, sessions);
         if (session != null)
         {
             session.close();
         }
-        return session;
     }
 
     int pollSessions(final long time)
@@ -248,51 +251,67 @@ class GatewaySessions
             return AuthenticationResult.DUPLICATE_SESSION;
         }
 
-        boolean authenticated;
-        try
-        {
-            authenticated = authenticationStrategy.authenticate(logon);
-        }
-        catch (final Throwable throwable)
-        {
-            // TODO(Nick): Maybe this should go back to also logging the message that was being decoded.
-            onStrategyError("authentication", throwable, connectionId);
-            authenticated = false;
-        }
-
+        final boolean authenticated = authenticate(logon, connectionId);
         if (!authenticated)
         {
             return AuthenticationResult.FAILED_AUTHENTICATION;
         }
 
-        PersistenceLevel persistenceLevel;
-        try
-        {
-            persistenceLevel = sessionPersistenceStrategy.getPersistenceLevel(logon);
-        }
-        catch (final Throwable throwable)
-        {
-            final String message = String.format(
-                "Exception thrown by persistence strategy for connectionId=%d, defaulted to LOCAL_ARCHIVE",
-                connectionId);
-            errorHandler.onError(new FixGatewayException(message, throwable));
-            persistenceLevel = PersistenceLevel.UNINDEXED;
-        }
-
+        final PersistenceLevel persistenceLevel = getPersistenceLevel(logon, connectionId);
         final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
         final boolean resetSeqNum = resetSequenceNumbersUponLogon(persistenceLevel) || resetSeqNumFlag;
-        final int sentSequenceNumber = sequenceNumber(sentSequenceNumberIndex, resetSeqNum, sessionId);
-        final int receivedSequenceNumber = sequenceNumber(receivedSequenceNumberIndex, resetSeqNum, sessionId);
+
+        final int aeronSessionId = outboundPublication.id();
+        final long requiredPosition = outboundPublication.position();
+        // At requiredPosition=0 there won't be anything indexed, so indexedPosition will be -1
+        if (requiredPosition > 0)
+        {
+            while (sentSequenceNumberIndex.indexedPosition(aeronSessionId) < requiredPosition)
+            {
+                framerIdleStrategy.idle();
+            }
+            framerIdleStrategy.reset();
+        }
+
+        final int lastSentSequenceNumber = sequenceNumber(sentSequenceNumberIndex, resetSeqNum, sessionId);
+        final int lastReceivedSequenceNumber = sequenceNumber(receivedSequenceNumberIndex, resetSeqNum, sessionId);
+
         final String username = SessionParser.username(logon);
         final String password = SessionParser.password(logon);
 
         sessionContext.onLogon(resetSeqNum);
 
         gatewaySession.onLogon(sessionId, sessionContext, compositeKey, username, password, logon.heartBtInt());
-        gatewaySession.acceptorSequenceNumbers(sentSequenceNumber, receivedSequenceNumber);
+        gatewaySession.acceptorSequenceNumbers(lastSentSequenceNumber, lastReceivedSequenceNumber);
         gatewaySession.persistenceLevel(persistenceLevel);
 
         return AuthenticationResult.authenticatedSession(gatewaySession);
+    }
+
+    private PersistenceLevel getPersistenceLevel(final LogonDecoder logon, final long connectionId)
+    {
+        try
+        {
+            return sessionPersistenceStrategy.getPersistenceLevel(logon);
+        }
+        catch (final Throwable throwable)
+        {
+            onStrategyError("persistence", throwable, connectionId, "UNINDEXED", logon);
+            return PersistenceLevel.UNINDEXED;
+        }
+    }
+
+    private boolean authenticate(final LogonDecoder logon, final long connectionId)
+    {
+        try
+        {
+            return authenticationStrategy.authenticate(logon);
+        }
+        catch (final Throwable throwable)
+        {
+            onStrategyError("authentication", throwable, connectionId, "false", logon);
+            return false;
+        }
     }
 
     private int sequenceNumber(
@@ -308,12 +327,19 @@ class GatewaySessions
         return sequenceNumberIndexReader.lastKnownSequenceNumber(sessionId);
     }
 
-    private void onStrategyError(final String strategyName, final Throwable throwable, final long connectionId)
+    private void onStrategyError(
+        final String strategyName,
+        final Throwable throwable,
+        final long connectionId,
+        final String theDefault,
+        final LogonDecoder logon)
     {
         final String message = String.format(
-            "Exception thrown by %s strategy for connectionId=%d, [%s], defaulted to false",
+            "Exception thrown by %s strategy for connectionId=%d, processing [%s], defaulted to %s",
             strategyName,
-            connectionId);
+            connectionId,
+            logon.toString(),
+            theDefault);
         onError(new FixGatewayException(message, throwable));
     }
 

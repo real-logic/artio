@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,10 @@ import org.junit.Test;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
 
 import static org.junit.Assert.assertEquals;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static uk.co.real_logic.artio.engine.SectorFramer.SECTOR_SIZE;
 import static uk.co.real_logic.artio.engine.logger.ErrorHandlerVerifier.verify;
 import static uk.co.real_logic.artio.engine.logger.IndexedPositionReader.UNKNOWN_POSITION;
@@ -32,6 +35,9 @@ public class IndexedPositionTest
 {
     private static final int SESSION_ID = 1;
     private static final int OTHER_SESSION_ID = 2;
+
+    private static final int RECORDING_ID = 3;
+    private static final int OTHER_RECORDING_ID = 4;
 
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private AtomicBuffer buffer = new UnsafeBuffer(new byte[2 * SECTOR_SIZE]);
@@ -49,7 +55,7 @@ public class IndexedPositionTest
     {
         final int position = 10;
 
-        indexed(position, SESSION_ID);
+        indexed(position, SESSION_ID, RECORDING_ID);
 
         hasPosition(position, SESSION_ID);
     }
@@ -59,11 +65,11 @@ public class IndexedPositionTest
     {
         int position = 10;
 
-        indexed(position, SESSION_ID);
+        indexed(position, SESSION_ID, RECORDING_ID);
 
         position += 10;
 
-        indexed(position, SESSION_ID);
+        indexed(position, SESSION_ID, RECORDING_ID);
 
         hasPosition(position, SESSION_ID);
     }
@@ -74,20 +80,33 @@ public class IndexedPositionTest
         int position = 10;
         int otherPosition = 5;
 
-        indexed(position, SESSION_ID);
-        indexed(otherPosition, OTHER_SESSION_ID);
+        indexed(position, SESSION_ID, RECORDING_ID);
+        indexed(otherPosition, OTHER_SESSION_ID, OTHER_RECORDING_ID);
 
         hasPosition(position, SESSION_ID);
         hasPosition(otherPosition, OTHER_SESSION_ID);
+
+        queriesLastPosition(position, otherPosition);
 
         position += 20;
         otherPosition += 10;
 
-        indexed(position, SESSION_ID);
-        indexed(otherPosition, OTHER_SESSION_ID);
+        indexed(position, SESSION_ID, RECORDING_ID);
+        indexed(otherPosition, OTHER_SESSION_ID, OTHER_RECORDING_ID);
 
         hasPosition(position, SESSION_ID);
         hasPosition(otherPosition, OTHER_SESSION_ID);
+
+        queriesLastPosition(position, otherPosition);
+    }
+
+    private void queriesLastPosition(final int position, final int otherPosition)
+    {
+        final IndexedPositionConsumer consumer = mock(IndexedPositionConsumer.class);
+        reader.readLastPosition(consumer);
+        verify(consumer).accept(SESSION_ID, RECORDING_ID, position);
+        verify(consumer).accept(OTHER_SESSION_ID, OTHER_RECORDING_ID, otherPosition);
+        verifyNoMoreInteractions(consumer);
     }
 
     @Test
@@ -101,7 +120,7 @@ public class IndexedPositionTest
     {
         final int position = 10;
 
-        indexed(position, SESSION_ID);
+        indexed(position, SESSION_ID, RECORDING_ID);
 
         writer.updateChecksums();
 
@@ -114,7 +133,7 @@ public class IndexedPositionTest
     {
         final int position = 10;
 
-        indexed(position, SESSION_ID);
+        indexed(position, SESSION_ID, RECORDING_ID);
 
         writer.updateChecksums();
 
@@ -133,9 +152,9 @@ public class IndexedPositionTest
         noErrors();
     }
 
-    private void indexed(final int position, final int sessionId)
+    private void indexed(final int position, final int sessionId, final int recordingId)
     {
-        writer.indexedUpTo(sessionId, position);
+        writer.indexedUpTo(sessionId, recordingId, position);
     }
 
     private void hasPosition(final long position, final int sessionId)

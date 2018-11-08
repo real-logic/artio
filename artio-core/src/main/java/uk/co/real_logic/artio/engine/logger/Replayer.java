@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,8 +44,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.Set;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
@@ -101,7 +100,11 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
     private long connectionId;
     private long sessionId;
     private int sequenceIndex;
-    private boolean backpressured;
+
+    private ReplayOperation currentReplayOperation;
+    private boolean currentReplayUpToMostRecent;
+    private int currentReplayBeginSeqNo;
+    private int currentReplayEndSeqNo;
 
     public Replayer(
         final ReplayQuery replayQuery,
@@ -175,22 +178,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
             resendRequest.reset();
             resendRequest.decode(asciiBuffer, srcOffset, limit);
 
-            final int beginSeqNo;
-            if (backpressured)
-            {
-                if (beginGapFillSeqNum != NONE)
-                {
-                    beginSeqNo = beginGapFillSeqNum;
-                }
-                else
-                {
-                    beginSeqNo = lastSeqNo + 1;
-                }
-            }
-            else
-            {
-                beginSeqNo = resendRequest.beginSeqNo();
-            }
+            final int beginSeqNo = resendRequest.beginSeqNo();
 
             final int endSeqNo = resendRequest.endSeqNo();
             final boolean replayUpToMostRecent = endSeqNo == MOST_RECENT_MESSAGE;
@@ -208,8 +196,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
             this.sequenceIndex = sequenceIndex;
             this.lastSeqNo = beginSeqNo - 1;
 
-            backpressured = false;
-            final int count = replayQuery.query(
+            currentReplayOperation = replayQuery.query(
                 this,
                 sessionId,
                 beginSeqNo,
@@ -217,46 +204,13 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
                 endSeqNo,
                 sequenceIndex);
 
-            if (backpressured)
-            {
-                return ABORT;
-            }
+            // Save state to continue later
+            currentReplayUpToMostRecent = replayUpToMostRecent;
+            currentReplayBeginSeqNo = beginSeqNo;
+            currentReplayEndSeqNo = endSeqNo;
 
-            // If the last N messages were admin messages then we need to send a gapfill
-            // after the replay query has run.
-            if (beginGapFillSeqNum != NONE)
-            {
-                final int newSequenceNumber =
-                    replayUpToMostRecent ? newSeqNo(connectionId) : endSeqNo + 1;
-                final Action action = sendGapFill(beginGapFillSeqNum, newSequenceNumber);
-                if (action == ABORT)
-                {
-                    backpressured = true;
-                    return action;
-                }
-            }
-
-            // Validate that we've replayed the correct number of messages.
-            // If we have missing messages for some reason then just gap fill them.
-            if (!replayUpToMostRecent)
-            {
-                final int expectedCount = endSeqNo - beginSeqNo + 1;
-                if (count != expectedCount)
-                {
-                    if (count == 0)
-                    {
-                        final Action action = sendGapFill(beginSeqNo, endSeqNo + 1);
-                        if (action == ABORT)
-                        {
-                            return action;
-                        }
-                    }
-
-                    onIllegalState(
-                        "[%s] Error in resend request, count(%d) < expectedCount (%d)",
-                        message(), count, expectedCount);
-                }
-            }
+            // We break here to avoid another replay request happening at the same time.
+            return BREAK;
         }
 
         return CONTINUE;
@@ -321,11 +275,7 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
             final Action action = possDupEnabler.enablePossDupFlag(
                 srcBuffer, messageOffset, messageLength, srcOffset, srcLength);
-            if (action == ABORT)
-            {
-                backpressured = true;
-            }
-            else
+            if (action != ABORT)
             {
                 lastSeqNo = msgSeqNum;
             }
@@ -414,7 +364,75 @@ public class Replayer implements ProtocolHandler, ControlledFragmentHandler, Age
 
     public int doWork()
     {
-        return senderSequenceNumbers.poll() + subscription.controlledPoll(protocolSubscription, POLL_LIMIT);
+        final int work = senderSequenceNumbers.poll();
+
+        if (currentReplayOperation != null)
+        {
+            attempCurrentReplayOperation();
+
+            return work + 1;
+        }
+        else
+        {
+            return work + subscription.controlledPoll(protocolSubscription, POLL_LIMIT);
+        }
+    }
+
+    private void attempCurrentReplayOperation()
+    {
+        if (currentReplayOperation.attemptReplay())
+        {
+            completeReplay();
+        }
+    }
+
+    private void completeReplay()
+    {
+        // Load state needed to complete the replay
+        final int replayedMessages = currentReplayOperation.replayedMessages();
+        final boolean replayUpToMostRecent = this.currentReplayUpToMostRecent;
+        final int beginSeqNo = this.currentReplayBeginSeqNo;
+        final int endSeqNo = this.currentReplayEndSeqNo;
+
+        // If the last N messages were admin messages then we need to send a gapfill
+        // after the replay query has run.
+        if (beginGapFillSeqNum != NONE)
+        {
+            final int newSequenceNumber =
+                replayUpToMostRecent ? newSeqNo(connectionId) : endSeqNo + 1;
+            final Action action = sendGapFill(beginGapFillSeqNum, newSequenceNumber);
+            if (action == ABORT)
+            {
+                return; // Retry
+            }
+        }
+        else
+        {
+            // Validate that we've replayed the correct number of messages.
+            // If we have missing messages for some reason then just gap fill them.
+            if (!replayUpToMostRecent)
+            {
+                final int expectedCount = endSeqNo - beginSeqNo + 1;
+                if (replayedMessages != expectedCount)
+                {
+                    if (replayedMessages == 0)
+                    {
+                        final Action action = sendGapFill(beginSeqNo, endSeqNo + 1);
+                        if (action == ABORT)
+                        {
+                            return; // Retry
+                        }
+                    }
+
+                    onIllegalState(
+                        "[%s] Error in resend request, count(%d) < expectedCount (%d)",
+                        message(), replayedMessages, expectedCount);
+                }
+            }
+        }
+
+        // completed
+        currentReplayOperation = null;
     }
 
     public void onClose()

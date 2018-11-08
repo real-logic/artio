@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import java.util.function.LongToIntFunction;
 
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.Reply.State.ERRORED;
-import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 
 class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
 {
@@ -238,7 +237,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
 
     private boolean sessionIsUnknown()
     {
-        return sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId) == UNK_SESSION;
+        return !sessionContexts.isKnownSessionId(sessionId);
     }
 
     public String toString()

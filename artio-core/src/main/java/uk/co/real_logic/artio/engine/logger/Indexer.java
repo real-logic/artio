@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,19 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.Image;
 import io.aeron.Subscription;
+import io.aeron.archive.client.AeronArchive;
+import io.aeron.archive.client.ArchiveException;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
 import org.agrona.collections.CollectionUtil;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.AgentInvoker;
+import org.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
@@ -28,7 +35,9 @@ import uk.co.real_logic.artio.engine.CompletionPosition;
 
 import java.util.List;
 
+import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.artio.GatewayProcess.ARCHIVE_REPLAY_STREAM;
 
 /**
  * Incrementally builds indexes by polling a subscription.
@@ -46,13 +55,15 @@ public class Indexer implements Agent, ControlledFragmentHandler
         final List<Index> indices,
         final Subscription subscription,
         final String agentNamePrefix,
-        final CompletionPosition completionPosition)
+        final CompletionPosition completionPosition,
+        final AeronArchive aeronArchive,
+        final ErrorHandler errorHandler)
     {
         this.indices = indices;
         this.subscription = subscription;
         this.agentNamePrefix = agentNamePrefix;
         this.completionPosition = completionPosition;
-        catchIndexUp();
+        catchIndexUp(aeronArchive, errorHandler);
     }
 
     public int doWork()
@@ -60,26 +71,67 @@ public class Indexer implements Agent, ControlledFragmentHandler
         return subscription.controlledPoll(this, LIMIT) + CollectionUtil.sum(indices, Index::doWork);
     }
 
-    private void catchIndexUp()
+    private void catchIndexUp(final AeronArchive aeronArchive, final ErrorHandler errorHandler)
     {
+        final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
+        final AgentInvoker aeronInvoker = aeronArchive.context().aeron().conductorAgentInvoker();
+
         for (final Index index : indices)
         {
-            index.readLastPosition((aeronSessionId, endOfLastMessageposition) ->
+            index.readLastPosition((aeronSessionId, recordingId, indexStoppedposition) ->
             {
-                // TODO: rewrite with aeron-archiver
-                /*final ArchiveReader.SessionReader sessionReader = archiveReader.session(aeronSessionId);
-                if (sessionReader != null)
+                try
                 {
-                    do
+                    final long recordingStoppedPosition = aeronArchive.getStopPosition(recordingId);
+                    if (recordingStoppedPosition > indexStoppedposition)
                     {
+                        DebugLogger.log(
+                            LogTag.INDEX,
+                            "Catchup [%s]: recordingId = %d, recordingStopped @ %d, indexStopped @ %d",
+                            index.getName(),
+                            recordingId,
+                            recordingStoppedPosition,
+                            indexStoppedposition);
 
-                        final long nextMessagePosition = alignTerm(endOfLastMessageposition) + HEADER_LENGTH;
-                        endOfLastMessageposition = sessionReader.read(nextMessagePosition, index);
+                        final long length = recordingStoppedPosition - indexStoppedposition;
+                        try (Subscription subscription = aeronArchive.replay(
+                            recordingId, indexStoppedposition, length, IPC_CHANNEL, ARCHIVE_REPLAY_STREAM))
+                        {
+                            // Only do 1 replay at a time
+                            while (subscription.imageCount() != 1)
+                            {
+                                idle(idleStrategy, aeronInvoker);
+                            }
+                            idleStrategy.reset();
+
+                            final Image replayImage = subscription.imageAtIndex(0);
+
+                            while (replayImage.position() < recordingStoppedPosition)
+                            {
+                                replayImage.poll(index, LIMIT);
+
+                                idle(idleStrategy, aeronInvoker);
+                            }
+                            idleStrategy.reset();
+                        }
                     }
-                    while (endOfLastMessageposition > 0);
-                }*/
+                }
+                catch (final ArchiveException e)
+                {
+                    errorHandler.onError(e);
+                }
             });
         }
+    }
+
+    private void idle(final IdleStrategy idleStrategy, final AgentInvoker aeronInvoker)
+    {
+        if (aeronInvoker != null)
+        {
+            aeronInvoker.invoke();
+        }
+
+        idleStrategy.idle();
     }
 
     public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)

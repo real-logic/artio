@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,6 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.After;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.decoder.LogoutDecoder;
@@ -36,7 +35,6 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
 
-@Ignore
 public class MessageBasedAcceptorSystemTest
 {
     private int port = unusedPort();

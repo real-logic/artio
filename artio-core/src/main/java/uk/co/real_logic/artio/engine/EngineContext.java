@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -93,12 +93,14 @@ public class EngineContext implements AutoCloseable
                 configuration.sentSequenceNumberBuffer(),
                 configuration.sentSequenceNumberIndex(),
                 errorHandler,
-                OUTBOUND_LIBRARY_STREAM);
+                OUTBOUND_LIBRARY_STREAM,
+                recordingCoordinator.outboundRecordingIdLookup());
             receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.receivedSequenceNumberBuffer(),
                 configuration.receivedSequenceNumberIndex(),
                 errorHandler,
-                INBOUND_LIBRARY_STREAM);
+                INBOUND_LIBRARY_STREAM,
+                recordingCoordinator.inboundRecordingIdLookup());
 
             newStreams();
             newArchivingAgent();
@@ -169,9 +171,7 @@ public class EngineContext implements AutoCloseable
             streamId,
             idleStrategy,
             aeronArchive,
-            configuration.libraryAeronChannel(),
-            errorHandler,
-            new RecordingBarrier(aeronArchive));
+            errorHandler);
     }
 
     protected Replayer newReplayer(
@@ -206,7 +206,9 @@ public class EngineContext implements AutoCloseable
             asList(replayIndex, receivedSequenceNumberIndex),
             inboundLibraryStreams.subscription("inboundIndexer"),
             configuration.agentNamePrefix(),
-            inboundCompletionPosition);
+            inboundCompletionPosition,
+            aeronArchive,
+            errorHandler);
 
         final List<Index> outboundIndices = new ArrayList<>();
         outboundIndices.add(newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, OUTBOUND_LIBRARY_STREAM,
@@ -221,7 +223,9 @@ public class EngineContext implements AutoCloseable
             outboundIndices,
             outboundLibraryStreams.subscription("outboundIndexer"),
             configuration.agentNamePrefix(),
-            outboundLibraryCompletionPosition);
+            outboundLibraryCompletionPosition,
+            aeronArchive,
+            errorHandler);
     }
 
     private void newArchivingAgent()

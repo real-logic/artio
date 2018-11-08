@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.logbuffer.Header;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
@@ -51,10 +52,13 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private SequenceNumberIndexWriter writer;
     private SequenceNumberIndexReader reader;
+    private RecordingIdLookup recordingIdLookup = mock(RecordingIdLookup.class);
 
     @Before
     public void setUp()
     {
+        buffer = new UnsafeBuffer(new byte[512]);
+
         deleteFiles();
 
         writer = newWriter(inMemoryBuffer);
@@ -263,7 +267,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private SequenceNumberIndexWriter newWriter(final AtomicBuffer inMemoryBuffer)
     {
         final MappedFile indexFile = newIndexFile();
-        return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler, STREAM_ID);
+        return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler, STREAM_ID, recordingIdLookup);
     }
 
     private MappedFile newIndexFile()
@@ -289,7 +293,11 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
     private void indexRecord(final int position)
     {
-        writer.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_SESSION_ID, position);
+        final Header header = mock(Header.class);
+        when(header.streamId()).thenReturn(STREAM_ID);
+        when(header.sessionId()).thenReturn(AERON_SESSION_ID);
+        when(header.position()).thenReturn((long)position);
+        writer.onFragment(buffer, START, fragmentLength(), header);
     }
 
     private void assertLastKnownSequenceNumberIs(final long sessionId, final int expectedSequenceNumber)

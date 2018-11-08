@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -465,8 +465,6 @@ public class FramerTest
         backPressureSaveSessionExists();
 
         final Action actual = onLibraryConnect();
-//        final MockingDetails mockingDetails = Mockito.mockingDetails(inboundPublication);
-//        System.out.println(mockingDetails.printInvocations());
 
         assertEquals(ABORT, actual);
 
@@ -787,7 +785,7 @@ public class FramerTest
     private void libraryConnects()
     {
         when(outboundLibrarySubscription.imageBySessionId(anyInt())).thenReturn(mock(Image.class));
-        assertEquals(Action.CONTINUE, onLibraryConnect());
+        assertEquals(CONTINUE, onLibraryConnect());
     }
 
     private void initiateConnection() throws Exception

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,9 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.collections.IntHashSet.IntIterator;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AgentInvoker;
+import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.CountersReader;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.engine.logger.RecordingIdLookup;
 import uk.co.real_logic.artio.engine.logger.RecordingIdStore;
 
@@ -44,6 +46,9 @@ import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
  */
 public class RecordingCoordinator implements AutoCloseable
 {
+    // Only used on startup and shutdown
+    private final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
+
     private final IntHashSet trackedSessionIds = new IntHashSet();
     private final AeronArchive archive;
     private final String channel;
@@ -60,7 +65,8 @@ public class RecordingCoordinator implements AutoCloseable
     RecordingCoordinator(
         final AeronArchive archive,
         final EngineConfiguration configuration,
-        final AgentInvoker conductorAgentInvoker)
+        final AgentInvoker conductorAgentInvoker,
+        final IdleStrategy archiverIdleStrategy)
     {
         this.archive = archive;
         this.configuration = configuration;
@@ -69,7 +75,8 @@ public class RecordingCoordinator implements AutoCloseable
         {
             final Aeron aeron = archive.context().aeron();
             counters = aeron.countersReader();
-            recordingIdStore = new RecordingIdStore(aeron, channel, conductorAgentInvoker);
+            recordingIdStore = new RecordingIdStore(
+                aeron, channel, conductorAgentInvoker, this.idleStrategy, archiverIdleStrategy);
 
             if (configuration.logInboundMessages())
             {
@@ -117,8 +124,9 @@ public class RecordingCoordinator implements AutoCloseable
                 }
             }
 
-            Thread.yield();
+            idleStrategy.idle();
         }
+        idleStrategy.reset();
     }
 
     // Called only on Framer.quiesce(), uses shutdown order
@@ -165,14 +173,22 @@ public class RecordingCoordinator implements AutoCloseable
 
         final List<CompletingRecording> completingRecordings = new ArrayList<>();
         aeronSessionIdToCompletionPosition.longForEach((sessionId, completionPosition) ->
-            completingRecordings.add(new CompletingRecording((int)sessionId, completionPosition)));
+        {
+            final int counterId = RecordingPos.findCounterIdBySession(counters, (int)sessionId);
+            // Recording has completed
+            if (counterId != NULL_COUNTER_ID)
+            {
+                completingRecordings.add(new CompletingRecording(completionPosition, counterId));
+            }
+        });
 
         while (!completingRecordings.isEmpty())
         {
             completingRecordings.removeIf(CompletingRecording::hasRecordingCompleted);
 
-            Thread.yield();
+            idleStrategy.idle();
         }
+        idleStrategy.reset();
     }
 
     private void shutdownArchiver()
@@ -205,12 +221,12 @@ public class RecordingCoordinator implements AutoCloseable
         private final long recordingId;
         private final int counterId;
 
-        CompletingRecording(final int sessionId, final long completedPosition)
+        CompletingRecording(final long completedPosition, final int counterId)
         {
             this.completedPosition = completedPosition;
 
-            counterId = RecordingPos.findCounterIdBySession(counters, sessionId);
-            recordingId = RecordingPos.getRecordingId(counters, counterId);
+            this.counterId = counterId;
+            recordingId = RecordingPos.getRecordingId(counters, this.counterId);
         }
 
         boolean hasRecordingCompleted()

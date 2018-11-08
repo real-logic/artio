@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,9 +23,9 @@ import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.TestRequestEncoder;
-import uk.co.real_logic.artio.engine.DefaultEngineScheduler;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -71,7 +71,6 @@ public final class SystemTestUtil
     private static final String HI_ID = "hi";
     private static final String USERNAME = "bob";
     private static final String PASSWORD = "Uv1aegoh";
-    private static final int MESSAGE_BUFFER_SIZE_IN_BYTES = 15000;
 
     static
     {
@@ -198,8 +197,7 @@ public final class SystemTestUtil
             .libraryAeronChannel("aeron:udp?endpoint=localhost:" + libraryAeronPort)
             .monitoringFile(optimalTmpDirName() + File.separator + "fix-client" + File.separator + "engineCounters")
             .logFileDir(CLIENT_LOGS)
-            .scheduler(new DefaultEngineScheduler());
-            //.scheduler(new LowResourceEngineScheduler());
+            .scheduler(new LowResourceEngineScheduler());
         configuration.agentNamePrefix("init-");
 
         return configuration;
@@ -236,8 +234,7 @@ public final class SystemTestUtil
             .libraryAeronChannel(IPC_CHANNEL)
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(acceptorLogs)
-            .scheduler(new DefaultEngineScheduler());
-            //.scheduler(new LowResourceEngineScheduler());
+            .scheduler(new LowResourceEngineScheduler());
     }
 
     static String acceptorMonitoringFile(final String countersSuffix)
@@ -449,13 +446,5 @@ public final class SystemTestUtil
                 final List<LibraryInfo> libraries = libraries(engine);
                 assertThat(libraries, containsInAnyOrder(libraryMatchers));
             });
-    }
-
-    static String largeTestReqId()
-    {
-        final char[] testReqIDChars = new char[MESSAGE_BUFFER_SIZE_IN_BYTES - 100];
-        Arrays.fill(testReqIDChars, 'A');
-
-        return new String(testReqIDChars);
     }
 }
