@@ -102,14 +102,13 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
         assertInitiatingSequenceIndexIs(0);
     }
 
+    @SuppressWarnings("unchecked")
     private void assertArchiveContainsMessages(final String testReqIdPrefix)
     {
         final List<String> messages = new ArrayList<>();
-        final FixMessageConsumer fixMessageConsumer = (message, buffer, offset, length, header) ->
-        {
-            messages.add(message.body());
-        };
         final EngineConfiguration configuration = acceptingEngine.configuration();
+        final FixMessageConsumer fixMessageConsumer =
+            (message, buffer, offset, length, header) -> messages.add(message.body());
 
         final FixArchiveScanner.Context context = new FixArchiveScanner.Context()
             .aeronDirectoryName(configuration.aeronContext().aeronDirectoryName())
