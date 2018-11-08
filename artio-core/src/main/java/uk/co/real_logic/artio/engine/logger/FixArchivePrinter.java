@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.engine.logger.FixArchiveScanner.MessageType;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
@@ -37,10 +38,11 @@ public final class FixArchivePrinter
 {
     public static void main(final String[] args)
     {
-        String logFileDir = null;
+        String aeronDirectoryName = null;
         String aeronChannel = null;
         MessageType direction = SENT;
         FixMessagePredicate predicate = FixMessagePredicates.alwaysTrue();
+        boolean follow = false;
 
         Predicate<HeaderDecoder> headerPredicate = null;
 
@@ -55,14 +57,18 @@ public final class FixArchivePrinter
                 case "help":
                     printHelp();
                     return;
-            }
 
-            // Options with arguments
-            if (eqIndex == -1)
-            {
-                System.err.println("--help is the only option that doesn't take a value");
-                printHelp();
-                System.exit(-1);
+                case "follow":
+                    follow = true;
+                    break;
+
+                default:
+                    if (eqIndex == -1)
+                    {
+                        System.err.println("--help and --follow are the only options that don't take a value");
+                        printHelp();
+                        System.exit(-1);
+                    }
             }
 
             final String optionValue = arg.substring(eqIndex + 1);
@@ -110,8 +116,8 @@ public final class FixArchivePrinter
                     direction = MessageType.valueOf(optionValue.toUpperCase());
                     break;
 
-                case "log-file-dir":
-                    logFileDir = optionValue;
+                case "aeron-dir-name":
+                    aeronDirectoryName = optionValue;
                     break;
 
                 case "aeron-channel":
@@ -120,20 +126,36 @@ public final class FixArchivePrinter
             }
         }
 
-        requiredArgument(logFileDir, "log-file-dir");
+        requiredArgument(aeronDirectoryName, "aeron-dir-name");
         requiredArgument(aeronChannel, "aeron-channel");
 
+        scanArchive(aeronDirectoryName, aeronChannel, direction, predicate, follow, headerPredicate);
+    }
+
+    private static void scanArchive(
+        final String aeronDirectoryName,
+        final String aeronChannel,
+        final MessageType direction,
+        final FixMessagePredicate otherPredicate,
+        final boolean follow,
+        final Predicate<HeaderDecoder> headerPredicate)
+    {
+        FixMessagePredicate predicate = otherPredicate;
         if (headerPredicate != null)
         {
             predicate = whereHeader(headerPredicate).and(predicate);
         }
 
-        final FixArchiveScanner scanner = new FixArchiveScanner(logFileDir);
+        final FixArchiveScanner.Context context = new FixArchiveScanner.Context()
+            .aeronDirectoryName(aeronDirectoryName)
+            .idleStrategy(CommonConfiguration.backoffIdleStrategy());
+
+        final FixArchiveScanner scanner = new FixArchiveScanner(context);
         scanner.scan(
             aeronChannel,
             direction,
             filterBy(FixArchivePrinter::print, predicate),
-            Throwable::printStackTrace);
+            follow);
     }
 
     private static void requiredArgument(final String argument, final String description)
@@ -152,8 +174,9 @@ public final class FixArchivePrinter
         System.out.println("All options are specified in the form: --optionName=optionValue");
 
         printOption(
-            "log-file-dir",
-            "Specifies the directory to look in, should be the same as your configuration.logFileDir()",
+            "aeron-dir-name",
+            "Specifies the directory to use for archiving, should be the same as your " +
+            "aeronContext.aeronDirectoryName()",
             true);
         printOption(
             "aeron-channel",
@@ -200,6 +223,10 @@ public final class FixArchivePrinter
             "direction",
             "Only print messages where the direction matches this. Must be either 'sent' or 'received'." +
             "Defaults to sent.",
+            false);
+        printOption(
+            "follow",
+            "Continue to print out archive messages for a recording that is still in flight. defaults to off",
             false);
         printOption(
             "help",
