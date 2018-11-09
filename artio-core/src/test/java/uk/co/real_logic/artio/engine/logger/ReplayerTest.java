@@ -638,7 +638,7 @@ public class ReplayerTest extends AbstractLogTest
         whenReplayQueried().thenReturn(true);
 
         final long result = bufferHasResendRequest(endSeqNo, RESEND_TARGET_2);
-        onMessageWithSession(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT, SESSION_ID_2, CONNECTION_ID);
+        onMessageWithSession(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT, SESSION_ID_2, CONNECTION_ID_2);
     }
 
     private void onFragment(final int length, final Action expectedAction, final ControlledFragmentHandler handler)
