@@ -35,6 +35,8 @@ import uk.co.real_logic.artio.protocol.ProtocolSubscription;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
@@ -61,6 +63,7 @@ public class Replayer implements ProtocolHandler, Agent
 
     private final ExclusiveBufferClaim bufferClaim;
     private final ProtocolSubscription protocolSubscription = ProtocolSubscription.of(this);
+    private final List<ReplayerSession> replayerSessions = new ArrayList<>();
 
     private final ReplayQuery replayQuery;
     private final ExclusivePublication publication;
@@ -73,8 +76,6 @@ public class Replayer implements ProtocolHandler, Agent
     private final EpochClock clock;
     private final ReplayHandler replayHandler;
     private final SenderSequenceNumbers senderSequenceNumbers;
-
-    private ReplayerSession replayerSession;
 
     public Replayer(
         final ReplayQuery replayQuery,
@@ -146,7 +147,7 @@ public class Replayer implements ProtocolHandler, Agent
                 return CONTINUE;
             }
 
-            replayerSession = new ReplayerSession(
+            final ReplayerSession replayerSession = new ReplayerSession(
                 bufferClaim,
                 idleStrategy,
                 replayHandler,
@@ -168,8 +169,9 @@ public class Replayer implements ProtocolHandler, Agent
 
             replayerSession.query();
 
-            // We break here to avoid another replay request happening at the same time.
-            return BREAK;
+            replayerSessions.add(replayerSession);
+
+            return COMMIT;
         }
 
         return CONTINUE;
@@ -182,21 +184,12 @@ public class Replayer implements ProtocolHandler, Agent
 
     public int doWork()
     {
-        final int work = senderSequenceNumbers.poll();
+        int work = senderSequenceNumbers.poll();
 
-        if (replayerSession != null)
-        {
-            if (replayerSession.attempCurrentReplayOperation())
-            {
-                replayerSession = null;
-            }
+        work += replayerSessions.size();
+        replayerSessions.removeIf(ReplayerSession::attempCurrentReplayOperation);
 
-            return work + 1;
-        }
-        else
-        {
-            return work + subscription.controlledPoll(protocolSubscription, POLL_LIMIT);
-        }
+        return work + subscription.controlledPoll(protocolSubscription, POLL_LIMIT);
     }
 
     public void onClose()

@@ -45,7 +45,10 @@ public class AbstractLogTest
 
     protected static final long SESSION_ID = 1;
     protected static final long SESSION_ID_2 = 2;
+
     protected static final long CONNECTION_ID = 1;
+    protected static final long CONNECTION_ID_2 = 2;
+
     protected static final int STREAM_ID = OUTBOUND_LIBRARY_STREAM;
     protected static final int START = FRAME_ALIGNMENT;
     protected static final int SEQUENCE_NUMBER = 2;
@@ -54,11 +57,12 @@ public class AbstractLogTest
     protected static final int BEGIN_SEQ_NO = 2;
     protected static final int END_SEQ_NO = 2;
     protected static final int SEQUENCE_INDEX = 1;
-    protected static final int ENCODE_OFFSET = 1;
-    public static final String BUFFER_SENDER = "sender";
-    public static final String BUFFER_TARGET = "target";
-    public static final String RESEND_SENDER = "target";
-    public static final String RESEND_TARGET = "sender";
+    private static final int ENCODE_OFFSET = 1;
+    static final String BUFFER_SENDER = "sender";
+    static final String BUFFER_TARGET = "target";
+    private static final String RESEND_SENDER = "target";
+    private static final String RESEND_TARGET = "sender";
+    static final String RESEND_TARGET_2 = "sender2";
     public static final int PREFIX_LENGTH =
         MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + SIZE_OF_LENGTH_FIELD;
     public static final int BIG_BUFFER_LENGTH = MESSAGE_BUFFER_SIZE_IN_BYTES + 400;
@@ -183,6 +187,11 @@ public class AbstractLogTest
 
     protected long bufferHasResendRequest(final int endSeqNo)
     {
+        return bufferHasResendRequest(endSeqNo, RESEND_TARGET);
+    }
+
+    protected long bufferHasResendRequest(final int endSeqNo, final String targetCompId)
+    {
         final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
         timestampEncoder.encode(System.currentTimeMillis());
 
@@ -193,7 +202,7 @@ public class AbstractLogTest
             .sendingTime(timestampEncoder.buffer())
             .msgSeqNum(1)
             .senderCompID(RESEND_SENDER)
-            .targetCompID(RESEND_TARGET);
+            .targetCompID(targetCompId);
 
         return resendRequest
             .beginSeqNo(BEGIN_SEQ_NO)
