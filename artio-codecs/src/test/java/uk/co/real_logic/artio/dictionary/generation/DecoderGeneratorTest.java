@@ -624,6 +624,16 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void shouldSkipUnknownNestedRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(CONTAINS_UNKNOWN_NESTED_REPEATING_GROUP);
+
+        assertValid(decoder);
+
+        canIterateOverGroup(decoder);
+    }
+
+    @Test
     public void shouldFailValidationForUnknownFieldInsideRepeatingGroupWhenUnknownFieldPropIsSet() throws Exception
     {
         final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
