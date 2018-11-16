@@ -15,7 +15,9 @@
  */
 package uk.co.real_logic.artio.server;
 
-import io.aeron.driver.MediaDriver;
+import io.aeron.archive.Archive;
+import io.aeron.archive.ArchiveThreadingMode;
+import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.driver.MediaDriver.Context;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.SigInt;
@@ -64,7 +66,12 @@ public final class SampleServer
         final Context context = new Context()
             .threadingMode(SHARED)
             .dirDeleteOnStart(true);
-        try (MediaDriver driver = MediaDriver.launch(context);
+
+        final Archive.Context archiveContext = new Archive.Context()
+            .threadingMode(ArchiveThreadingMode.SHARED)
+            .deleteArchiveOnStart(true);
+
+        try (ArchivingMediaDriver driver = ArchivingMediaDriver.launch(context, archiveContext);
             FixEngine gateway = FixEngine.launch(configuration))
         {
             final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();

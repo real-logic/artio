@@ -38,7 +38,7 @@ public final class SampleClient
 {
     private static final TestReqIdFinder TEST_REQ_ID_FINDER = new TestReqIdFinder();
 
-    public static void main(final String[] args) throws Exception
+    public static void main(final String[] args)
     {
         // Static configuration lasts the duration of a FIX-Gateway instance
         final String aeronChannel = "aeron:udp?endpoint=localhost:10002";
