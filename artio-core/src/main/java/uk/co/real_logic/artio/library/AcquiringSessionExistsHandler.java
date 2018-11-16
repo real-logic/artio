@@ -40,7 +40,7 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
 
     public void onSessionExists(
         final FixLibrary library,
-        final long surrogateId,
+        final long surrogateSessionId,
         final String localCompId,
         final String localSubId,
         final String localLocationId,
@@ -49,12 +49,12 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
         final String remoteLocationId)
     {
         final Reply<SessionReplyStatus> reply = library.requestSession(
-            surrogateId,
+            surrogateSessionId,
             NO_MESSAGE_REPLAY,
             NO_MESSAGE_REPLAY,
             CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS);
         requests.add(new RequestInfo(
-            surrogateId, reply, localCompId, localSubId, localLocationId, remoteCompId));
+            surrogateSessionId, reply, localCompId, localSubId, localLocationId, remoteCompId));
     }
 
     public static final class RequestInfo
