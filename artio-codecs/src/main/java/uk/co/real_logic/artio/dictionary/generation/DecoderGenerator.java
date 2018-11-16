@@ -1007,18 +1007,22 @@ public class DecoderGenerator extends Generator
 
         final String suffix =
             "            default:\n" +
+            "                if (!" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + ")\n" +
+            "                {\n" +
+            (isGroup ?
+            "                    seenFields.remove(tag);\n" :
+            "                    alreadyVisitedFields.remove(tag);\n") +
+            "                }\n" +
             (isGroup ? "" :
-            "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + ")\n" +
+            "                else\n" +
             "                {\n" +
             "                    if (!" + unknownFieldPredicate(type) + ")\n" +
             "                    {\n" +
             "                        unknownFields.add(tag);\n" +
             "                    }\n" +
-            "                }\n" +
-            "                else\n" +
-            "                {\n" +
-            "                    alreadyVisitedFields.remove(tag);\n" +
             "                }\n") +
+
+
             // Skip the thing if it's a completely unknown field and you aren't validating messages
             "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
             " || " + unknownFieldPredicate(type) + ")\n" +

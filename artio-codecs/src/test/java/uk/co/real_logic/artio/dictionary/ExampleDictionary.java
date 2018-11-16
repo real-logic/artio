@@ -39,6 +39,7 @@ public final class ExampleDictionary
 
     public static final String NO_EG_GROUP = "NoEgGroup";
     public static final String NO_SECOND_EG_GROUP = "NoSecondEgGroup";
+    public static final String NO_ADMIN_EG_GROUP = "NoAdminEgGroup";
     public static final String NO_COMPONENT_GROUP = "NoComponentGroup";
     public static final String EG_COMPONENT = "EgComponent";
     public static final String FIELDS_MESSAGE = "FieldsMessage";
@@ -242,6 +243,10 @@ public final class ExampleDictionary
     public static final String CONTAINS_UNKNOWN_REPEATING_GROUP =
         "8=FIX.4.4\0019=0049\00135=Z\0011001=USD\0011002=N\0011003=US" +
         "\001136=2\001138=180\0011000=UNKNOWN\001137=TOM\001138=123\001137=Barbara\00110=043\001";
+
+    public static final String CONTAINS_UNKNOWN_NESTED_REPEATING_GROUP =
+        "8=FIX.4.4\0019=71\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001120=2\001121=1\001139=4\001140=Tom\001140=Judd\001140=Zam\001140=Stephen\001121=2\00110=053\001";
 
     public static final String REPEATING_GROUP_WITH_FIELD_UNKNOWN_TO_MESSAGE_BUT_IN_SPEC =
         "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
@@ -453,6 +458,9 @@ public final class ExampleDictionary
         egComponent.optionalEntry(registerField(messageEgFields, 124, "ComponentField", INT));
         egComponent.optionalEntry(componentGroup);
 
+        final Group groupForAdmin = Group.of(registerField(messageEgFields, 139, NO_ADMIN_EG_GROUP, INT));
+        groupForAdmin.optionalEntry(registerField(messageEgFields, 140, "AdminFirstGroupField", STRING));
+
         final Field dataFieldLength = registerField(messageEgFields, 200, "DataFieldLength", Type.LENGTH);
 
 
@@ -495,6 +503,7 @@ public final class ExampleDictionary
         fieldsMessage.optionalEntry(registerField(messageEgFields, 1005, "OptionalExchangeField", EXCHANGE));
         fieldsMessage.optionalEntry(registerField(messageEgFields, 1006, "OptionalCountryField", COUNTRY));
         fieldsMessage.optionalEntry(registerField(messageEgFields, 9001, "HighNumberField", INT));
+        fieldsMessage.optionalEntry(groupForAdmin);
 
         final Message enumTestMessage = new Message(ENUM_TEST_MESSAGE, ENUM_TEST_MESSAGE_TYPE, APP);
         enumTestMessage.optionalEntry(registerField(messageEgFields, 501, "CharEnumOpt", CHAR)
