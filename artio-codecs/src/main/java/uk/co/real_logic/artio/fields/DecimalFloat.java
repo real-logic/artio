@@ -43,8 +43,13 @@ import java.util.Arrays;
  */
 public final class DecimalFloat implements Comparable<DecimalFloat>
 {
-    public static final DecimalFloat MIN_VALUE = new DecimalFloat(Long.MIN_VALUE, 0);
-    public static final DecimalFloat MAX_VALUE = new DecimalFloat(Long.MAX_VALUE, 0);
+    private static final long VALUE_MAX_VAL = 999_999_999_999_999_999L;
+    private static final long VALUE_MIN_VAL = -VALUE_MAX_VAL;
+    private static final int SCALE_MAX_VAL = 127;
+    private static final int SCALE_MIN_VAL = 0;
+
+    public static final DecimalFloat MIN_VALUE = new DecimalFloat(VALUE_MIN_VAL, 0);
+    public static final DecimalFloat MAX_VALUE = new DecimalFloat(VALUE_MAX_VAL, 0);
     public static final DecimalFloat ZERO = new DecimalFloat();
     public static final DecimalFloat MISSING_FLOAT = ZERO;
 
@@ -58,14 +63,12 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
 
     public DecimalFloat(final long value, final int scale)
     {
-        this.value = value;
-        this.scale = scale;
+        setAndNormalise(value, scale);
     }
 
     public void reset()
     {
-        value(0);
-        scale(0);
+        setAndNormalise(0, 0);
     }
 
     public long value()
@@ -83,18 +86,27 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         return this.scale;
     }
 
+    public DecimalFloat set(final long value, final int scale)
+    {
+        setAndNormalise(value, scale);
+        return this;
+    }
+
+
+    /*
+     * Please use set(newValue, newScale) instead of value(newValue) and scale(newScale)
+     */
+    @Deprecated
     public DecimalFloat value(final long value)
     {
         this.value = value;
         return this;
     }
 
-    /**
-     * Set the number of digits to the right of the decimal point.
-     *
-     * @param scale the number of digits to the right of the decimal point.
-     * @return this
+    /*
+     * Please use set(newValue, newScale) instead of value(newValue) and scale(newScale)
      */
+    @Deprecated
     public DecimalFloat scale(final int scale)
     {
         this.scale = scale;
@@ -170,5 +182,48 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         return scaleComparison == 0 ?
             Long.compare(value, other.value) :
             !isPositive ? -1 * scaleComparison : scaleComparison;
+    }
+
+    private void setAndNormalise(final long value, final int scale)
+    {
+        this.value = value;
+        this.scale = scale;
+        normalise();
+    }
+
+    private void normalise()
+    {
+        final long valueCopy = value;
+        final int scaleCopy = scale;
+        if (value == 0)
+        {
+            scale = 0;
+        }
+        else if (0 < scale)
+        {
+            while (value % 10 == 0 && 0 < scale)
+            {
+                value /= 10;
+                --scale;
+            }
+        }
+        else if (scale < 0)
+        {
+            while (!isOutsideLimits(value, VALUE_MIN_VAL, VALUE_MAX_VAL) && scale < 0)
+            {
+                value *= 10;
+                ++scale;
+            }
+        }
+        if (isOutsideLimits(scale, SCALE_MIN_VAL, SCALE_MAX_VAL) ||
+            isOutsideLimits(value, VALUE_MIN_VAL, VALUE_MAX_VAL))
+        {
+            throw new ArithmeticException("Out of range: value: " + valueCopy + ", exponent: " + scaleCopy);
+        }
+    }
+
+    private static boolean isOutsideLimits(final long value, final long lowerBound, final long upperBound)
+    {
+        return value < lowerBound || upperBound < value;
     }
 }
