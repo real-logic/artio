@@ -101,7 +101,7 @@ public class Session implements AutoCloseable
 
     static final String TEST_REQ_ID = "TEST";
     private static final char[] TEST_REQ_ID_CHARS = TEST_REQ_ID.toCharArray();
-    public static final int NO_LOGOUT_REJECT_REASON = -1;
+    private static final int NO_LOGOUT_REJECT_REASON = -1;
 
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
 
@@ -119,8 +119,7 @@ public class Session implements AutoCloseable
     private final AtomicCounter sentMsgSeqNo;
     private final long reasonableTransmissionTimeInMs;
 
-    CompositeKey sessionKey;
-
+    private CompositeKey sessionKey;
     private SessionState state;
     private long id = UNKNOWN;
     private int lastReceivedMsgSeqNum = 0;

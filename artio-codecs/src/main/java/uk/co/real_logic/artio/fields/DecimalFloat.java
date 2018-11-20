@@ -85,6 +85,11 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         this(0, 0);
     }
 
+    public DecimalFloat(final long value)
+    {
+        this(value, 0);
+    }
+
     public DecimalFloat(final long value, final int scale)
     {
         setAndNormalise(value, scale);
@@ -114,6 +119,18 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
     {
         this.value = other.value;
         this.scale = other.scale;
+        return this;
+    }
+
+    /**
+     * Sets the value of the DecimalFloat to the same as a long value.
+     *
+     * @param value the value to set
+     * @return this
+     */
+    public DecimalFloat fromLong(final long value)
+    {
+        setAndNormalise(value, 0);
         return this;
     }
 

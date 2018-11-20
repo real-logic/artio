@@ -113,7 +113,7 @@ public class FakeHandler
 
     public void onSessionExists(
         final FixLibrary library,
-        final long surrogateId,
+        final long surrogateSessionId,
         final String localCompId,
         final String localSubId,
         final String localLocationId,
@@ -121,7 +121,7 @@ public class FakeHandler
         final String remoteSubId,
         final String remoteLocationId)
     {
-        completeSessionIds.add(new CompleteSessionId(localCompId, remoteCompId, surrogateId));
+        completeSessionIds.add(new CompleteSessionId(localCompId, remoteCompId, surrogateSessionId));
     }
 
     // ----------- END EVENTS -----------
