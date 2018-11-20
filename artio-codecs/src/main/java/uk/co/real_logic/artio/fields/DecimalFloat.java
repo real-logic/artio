@@ -43,9 +43,9 @@ import java.util.Arrays;
  */
 public final class DecimalFloat implements Comparable<DecimalFloat>
 {
-    private static final int SCALE_NULL_VALUE = -128;
-    private static final long VALUE_NULL_VALUE = Long.MIN_VALUE;
-    private static final double DOUBLE_NULL_VALUE = Double.NaN;
+    private static final int SCALE_NAN_VALUE = -128;
+    private static final long VALUE_NAN_VALUE = Long.MIN_VALUE;
+    private static final double DOUBLE_NAN_VALUE = Double.NaN;
 
     private static final long VALUE_MAX_VAL = 999_999_999_999_999_999L;
     private static final double VALUE_MAX_VAL_AS_DOUBLE = VALUE_MAX_VAL;
@@ -57,7 +57,7 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
     public static final DecimalFloat MIN_VALUE = new DecimalFloat(VALUE_MIN_VAL, 0);
     public static final DecimalFloat MAX_VALUE = new DecimalFloat(VALUE_MAX_VAL, 0);
     public static final DecimalFloat ZERO = new DecimalFloat();
-    public static final DecimalFloat NULL = getNull();
+    public static final DecimalFloat NAN = getNaN();
     public static final DecimalFloat MISSING_FLOAT = ZERO;
 
     private static final int HIGHEST_POWER_OF_TEN = 18;
@@ -233,9 +233,9 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
 
     public double toDouble()
     {
-        if (isNullValue())
+        if (isNaNValue())
         {
-            return DOUBLE_NULL_VALUE;
+            return DOUBLE_NAN_VALUE;
         }
         return toDouble(value, scale);
     }
@@ -244,8 +244,8 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
     {
         if (Double.isNaN(doubleValue))
         {
-            value = VALUE_NULL_VALUE;
-            scale = SCALE_NULL_VALUE;
+            value = VALUE_NAN_VALUE;
+            scale = SCALE_NAN_VALUE;
             return true;
         }
         if (!Double.isFinite(doubleValue) ||
@@ -294,17 +294,17 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         return true;
     }
 
-    public boolean isNullValue()
+    public boolean isNaNValue()
     {
-        return value == VALUE_NULL_VALUE && scale == SCALE_NULL_VALUE;
+        return value == VALUE_NAN_VALUE && scale == SCALE_NAN_VALUE;
     }
 
-    private static DecimalFloat getNull()
+    private static DecimalFloat getNaN()
     {
-        final DecimalFloat nullFloat = new DecimalFloat();
-        nullFloat.value = VALUE_NULL_VALUE;
-        nullFloat.scale = SCALE_NULL_VALUE;
-        return nullFloat;
+        final DecimalFloat nanFloat = new DecimalFloat();
+        nanFloat.value = VALUE_NAN_VALUE;
+        nanFloat.scale = SCALE_NAN_VALUE;
+        return nanFloat;
     }
 
     private void setAndNormalise(final long value, final int scale)

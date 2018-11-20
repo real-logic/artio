@@ -113,7 +113,7 @@ public class DecimalFloatToAndFromDoubleTest
         final DecimalFloat decimalFloat = new DecimalFloat();
         if (!decimalFloat.fromDouble(number))
         {
-            assertEquals(DecimalFloat.NULL, decimalFloat);
+            assertEquals(DecimalFloat.NAN, decimalFloat);
             fail("Invalid input: " + number);
         }
         builder.setLength(0);
