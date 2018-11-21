@@ -22,6 +22,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
 import static io.aeron.Publication.CLOSED;
+import static io.aeron.Publication.MAX_POSITION_EXCEEDED;
 
 /**
  * A publication designed for deterministic claiming.
@@ -79,7 +80,7 @@ class ClaimablePublication implements AutoCloseable
 
         idleStrategy.reset();
 
-        if (position == CLOSED)
+        if (position == CLOSED || position == MAX_POSITION_EXCEEDED)
         {
             throw new NotConnectedException(position);
         }
