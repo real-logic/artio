@@ -121,7 +121,7 @@ class GatewaySessions
             connectionId,
             FixEngine.ENGINE_LIBRARY_ID);
 
-        final Session session = new Session(
+        final InternalSession session = new InternalSession(
             heartbeatIntervalInS,
             connectionId,
             clock,

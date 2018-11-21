@@ -517,94 +517,6 @@ public class Session implements AutoCloseable
         return position;
     }
 
-    /**
-     * Runs a single iteration of the session's main logic loop. Users of the API don't need to call this method.
-     *
-     * @param time the current time in milliseconds
-     * @return the number of actions performed.
-     * @see uk.co.real_logic.artio.library.FixLibrary#poll(int)
-     */
-    public int poll(final long time)
-    {
-        final short state = state().value();
-
-        switch (state)
-        {
-            case DISCONNECTING_VALUE:
-            {
-                if (incorrectBeginString)
-                {
-                    final int sentMsgSeqNum = newSentSeqNum();
-                    final long position = proxy.incorrectBeginStringLogout(sentMsgSeqNum, sequenceIndex());
-                    if (position < 0)
-                    {
-                        return 1;
-                    }
-                    lastSentMsgSeqNum(sentMsgSeqNum);
-                    requestDisconnect(INCORRECT_BEGIN_STRING);
-                }
-                else
-                {
-                    requestDisconnect();
-                }
-
-                return 1;
-            }
-
-            case LOGGING_OUT_VALUE:
-            {
-                startLogout();
-
-                return 1;
-            }
-
-            case LOGGING_OUT_AND_DISCONNECTING_VALUE:
-            {
-                final long position = sendLogout();
-
-                state(position < 0 ? LOGGING_OUT_AND_DISCONNECTING : DISCONNECTING);
-
-                return 1;
-            }
-
-            default:
-            {
-                int actions = 0;
-                final boolean isActive = state == ACTIVE_VALUE || state == AWAITING_RESEND_VALUE;
-                if (isActive && time >= nextRequiredHeartbeatTimeInMs)
-                {
-                    // Drop when back pressured: retried on duty cycle
-                    final int sentSeqNum = newSentSeqNum();
-                    final long position = proxy.heartbeat(sentSeqNum, sequenceIndex());
-                    lastSentMsgSeqNum(sentSeqNum, position);
-                    actions++;
-                }
-
-                if (time >= nextRequiredInboundMessageTimeInMs)
-                {
-                    if (state == AWAITING_LOGOUT_VALUE || state == AWAITING_RESEND_VALUE)
-                    {
-                        // Drop when back pressured: retried on duty cycle
-                        requestDisconnect();
-                    }
-                    else if (isActive)
-                    {
-                        final int sentSeqNum = newSentSeqNum();
-                        if (proxy.testRequest(sentSeqNum, TEST_REQ_ID, sequenceIndex()) >= 0)
-                        {
-                            lastSentMsgSeqNum(sentSeqNum);
-                            state(AWAITING_RESEND);
-                            incNextReceivedInboundMessageTime(time);
-                        }
-                    }
-                    actions++;
-                }
-
-                return actions;
-            }
-        }
-    }
-
     public boolean isActive()
     {
         final SessionState state = this.state;
@@ -1305,32 +1217,6 @@ public class Session implements AutoCloseable
         receivedMsgSeqNo.increment();
     }
 
-    public Session address(final String connectedHost, final int connectedPort)
-    {
-        this.connectedHost = connectedHost;
-        this.connectedPort = connectedPort;
-
-        return this;
-    }
-
-    public Session username(final String username)
-    {
-        this.username = username;
-        return this;
-    }
-
-    public Session password(final String password)
-    {
-        this.password = password;
-        return this;
-    }
-
-    public Session logonTime(final long logonTime)
-    {
-        this.logonTime = logonTime;
-        return this;
-    }
-
     public long logonTime()
     {
         return this.logonTime;
@@ -1405,6 +1291,87 @@ public class Session implements AutoCloseable
         close();
     }
 
+    int poll(final long time)
+    {
+        final short state = state().value();
+
+        switch (state)
+        {
+            case DISCONNECTING_VALUE:
+            {
+                if (incorrectBeginString)
+                {
+                    final int sentMsgSeqNum = newSentSeqNum();
+                    final long position = proxy.incorrectBeginStringLogout(sentMsgSeqNum, sequenceIndex());
+                    if (position < 0)
+                    {
+                        return 1;
+                    }
+                    lastSentMsgSeqNum(sentMsgSeqNum);
+                    requestDisconnect(INCORRECT_BEGIN_STRING);
+                }
+                else
+                {
+                    requestDisconnect();
+                }
+
+                return 1;
+            }
+
+            case LOGGING_OUT_VALUE:
+            {
+                startLogout();
+
+                return 1;
+            }
+
+            case LOGGING_OUT_AND_DISCONNECTING_VALUE:
+            {
+                final long position = sendLogout();
+
+                state(position < 0 ? LOGGING_OUT_AND_DISCONNECTING : DISCONNECTING);
+
+                return 1;
+            }
+
+            default:
+            {
+                int actions = 0;
+                final boolean isActive = state == ACTIVE_VALUE || state == AWAITING_RESEND_VALUE;
+                if (isActive && time >= nextRequiredHeartbeatTimeInMs)
+                {
+                    // Drop when back pressured: retried on duty cycle
+                    final int sentSeqNum = newSentSeqNum();
+                    final long position = proxy.heartbeat(sentSeqNum, sequenceIndex());
+                    lastSentMsgSeqNum(sentSeqNum, position);
+                    actions++;
+                }
+
+                if (time >= nextRequiredInboundMessageTimeInMs)
+                {
+                    if (state == AWAITING_LOGOUT_VALUE || state == AWAITING_RESEND_VALUE)
+                    {
+                        // Drop when back pressured: retried on duty cycle
+                        requestDisconnect();
+                    }
+                    else if (isActive)
+                    {
+                        final int sentSeqNum = newSentSeqNum();
+                        if (proxy.testRequest(sentSeqNum, TEST_REQ_ID, sequenceIndex()) >= 0)
+                        {
+                            lastSentMsgSeqNum(sentSeqNum);
+                            state(AWAITING_RESEND);
+                            incNextReceivedInboundMessageTime(time);
+                        }
+                    }
+                    actions++;
+                }
+
+                return actions;
+            }
+        }
+    }
+
     void libraryConnected(final boolean libraryConnected)
     {
         proxy.libraryConnected(libraryConnected);
@@ -1420,13 +1387,34 @@ public class Session implements AutoCloseable
         return UNKNOWN == origSendingTime ? sendingTime : origSendingTime;
     }
 
-    public void logonListener(final SessionLogonListener logonListener)
+    void logonListener(final SessionLogonListener logonListener)
     {
         this.logonListener = logonListener;
     }
 
-    public void logoutRejectReason(final int logoutRejectReason)
+    void logoutRejectReason(final int logoutRejectReason)
     {
         this.logoutRejectReason = logoutRejectReason;
+    }
+
+    void address(final String connectedHost, final int connectedPort)
+    {
+        this.connectedHost = connectedHost;
+        this.connectedPort = connectedPort;
+    }
+
+    void username(final String username)
+    {
+        this.username = username;
+    }
+
+    void password(final String password)
+    {
+        this.password = password;
+    }
+
+    void logonTime(final long logonTime)
+    {
+        this.logonTime = logonTime;
     }
 }

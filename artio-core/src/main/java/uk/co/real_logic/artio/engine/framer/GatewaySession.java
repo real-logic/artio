@@ -19,10 +19,7 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.SlowStatus;
-import uk.co.real_logic.artio.session.CompositeKey;
-import uk.co.real_logic.artio.session.Session;
-import uk.co.real_logic.artio.session.SessionLogonListener;
-import uk.co.real_logic.artio.session.SessionParser;
+import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.PersistenceLevel;
 
@@ -46,7 +43,7 @@ class GatewaySession implements SessionInfo
 
     private long sessionId;
     private SessionParser sessionParser;
-    private Session session;
+    private InternalSession session;
     private CompositeKey sessionKey;
     private String username;
     private String password;
@@ -98,7 +95,10 @@ class GatewaySession implements SessionInfo
         return sessionKey;
     }
 
-    void manage(final SessionParser sessionParser, final Session session, final BlockablePosition blockablePosition)
+    void manage(
+        final SessionParser sessionParser,
+        final InternalSession session,
+        final BlockablePosition blockablePosition)
     {
         this.sessionParser = sessionParser;
         this.session = session;

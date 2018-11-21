@@ -19,10 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
-import uk.co.real_logic.artio.session.AcceptorSession;
-import uk.co.real_logic.artio.session.CompositeKey;
-import uk.co.real_logic.artio.session.Session;
-import uk.co.real_logic.artio.session.SessionParser;
+import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.timing.Timer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
@@ -31,7 +28,7 @@ import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_LOGON;
 class SessionSubscriber implements AutoCloseable
 {
     private final SessionParser parser;
-    private final Session session;
+    private final InternalSession session;
     private final Timer receiveTimer;
     private final Timer sessionTimer;
 
@@ -40,7 +37,7 @@ class SessionSubscriber implements AutoCloseable
 
     SessionSubscriber(
         final SessionParser parser,
-        final Session session,
+        final InternalSession session,
         final Timer receiveTimer,
         final Timer sessionTimer)
     {
@@ -180,7 +177,7 @@ class SessionSubscriber implements AutoCloseable
         session.requestDisconnect();
     }
 
-    Session session()
+    InternalSession session()
     {
         return session;
     }

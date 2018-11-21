@@ -81,8 +81,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private static final int CLOSED = 4;
 
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
-    private Session[] sessions = new Session[0];
-    private Session[] pendingInitiatorSessions = new Session[0];
+    private InternalSession[] sessions = new InternalSession[0];
+    private InternalSession[] pendingInitiatorSessions = new InternalSession[0];
 
     private final List<Session> unmodifiableSessions = new AbstractList<Session>()
     {
@@ -99,8 +99,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // Used when checking the consistency of the session ids
     private final LongHashSet sessionIds = new LongHashSet();
-
-    private final SessionAccessor accessor = new SessionAccessor(LibraryPoller.class);
 
     // Uniquely identifies library session
     private final int libraryId;
@@ -200,7 +198,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         requireNonNull(session, "session");
 
-        return new ReleaseToGatewayReply(this, timeInMs() + timeoutInMs, session);
+        return new ReleaseToGatewayReply(
+            this, timeInMs() + timeoutInMs, (InternalSession)session);
     }
 
     Reply<SessionReplyStatus> requestSession(
@@ -213,10 +212,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             this, timeInMs() + timeoutInMs, sessionId, lastReceivedSequenceNumber, sequenceIndex);
     }
 
-    void disableSession(final Session session)
+    void disableSession(final InternalSession session)
     {
         sessions = ArrayUtil.remove(sessions, session);
-        accessor.disable(session);
+        session.disable();
     }
 
     long saveReleaseSession(final Session session, final long correlationId)
@@ -494,11 +493,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private void setLibraryConnected(final boolean libraryConnected)
     {
-        final Session[] sessions = this.sessions;
+        final InternalSession[] sessions = this.sessions;
         for (int i = 0, size = sessions.length; i < size; i++)
         {
-            final Session session = sessions[i];
-            accessor.libraryConnected(session, libraryConnected);
+            final InternalSession session = sessions[i];
+            session.libraryConnected(libraryConnected);
         }
     }
 
@@ -513,12 +512,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private int pollSessions(final long timeInMs)
     {
-        final Session[] sessions = this.sessions;
+        final InternalSession[] sessions = this.sessions;
         int total = 0;
 
         for (int i = 0, size = sessions.length; i < size; i++)
         {
-            final Session session = sessions[i];
+            final InternalSession session = sessions[i];
             total += session.poll(timeInMs);
         }
 
@@ -527,12 +526,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private int pollPendingInitiatorSessions(final long timeInMs)
     {
-        Session[] pendingSessions = this.pendingInitiatorSessions;
+        InternalSession[] pendingSessions = this.pendingInitiatorSessions;
         int total = 0;
 
         for (int i = 0, size = pendingSessions.length; i < size;)
         {
-            final Session session = pendingSessions[i];
+            final InternalSession session = pendingSessions[i];
             total += session.poll(timeInMs);
             if (session.state() == ACTIVE)
             {
@@ -653,7 +652,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 else
                 {
                     DebugLogger.log(FIX_MESSAGE, "Acct Connect: %d, %d%n", connection, libraryId);
-                    final Session session = acceptSession(
+                    final InternalSession session = acceptSession(
                         connection, address, sessionState, heartbeatIntervalInS, sequenceIndex, logonTime);
                     newSession(connection, sessionId, session);
                     sessions = ArrayUtil.add(sessions, session);
@@ -761,7 +760,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 }
                 else
                 {
-                    final Session session = subscriber.session();
+                    final InternalSession session = subscriber.session();
                     session.close();
                     // session will be in either pendingInitiatorSessions or sessions
                     pendingInitiatorSessions = ArrayUtil.remove(pendingInitiatorSessions, session);
@@ -897,7 +896,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             // Why do we have it then? Is the caching saving
             // Is the caching saving enough considering that below we are creating loads of arrays (potentially)
             final LongHashSet sessionIds = this.sessionIds;
-            Session[] sessions = this.sessions;
+            InternalSession[] sessions = this.sessions;
 
             // copy session ids.
             sessionIds.clear();
@@ -909,7 +908,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
             for (int i = 0, size = sessions.length; i < size; i++)
             {
-                final Session session = sessions[i];
+                final InternalSession session = sessions[i];
                 final long sessionId = session.id();
                 if (!sessionIds.remove(sessionId))
                 {
@@ -983,7 +982,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     //                     END EVENT HANDLERS
     // -----------------------------------------------------------------------
 
-    private SessionSubscriber newSession(final long connectionId, final long sessionId, final Session session)
+    private SessionSubscriber newSession(final long connectionId, final long sessionId, final InternalSession session)
     {
         session.id(sessionId);
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
@@ -1043,9 +1042,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 sessionConfiguration.targetLocationId());
             sessionProxy.setupSession(-1, key);
 
-            session
-                .username(sessionConfiguration.username())
-                .password(sessionConfiguration.password());
+            session.username(sessionConfiguration.username());
+            session.password(sessionConfiguration.password());
         }
 
         return session;
@@ -1076,7 +1074,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return 1;
     }
 
-    private Session acceptSession(
+    private InternalSession acceptSession(
         final long connectionId,
         final String address,
         final SessionState state,
@@ -1094,8 +1092,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
         final int sessionBufferSize = configuration.sessionBufferSize();
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
-
-        return new AcceptorSession(heartbeatIntervalInS,
+        final InternalSession session = new AcceptorSession(
+            heartbeatIntervalInS,
             connectionId,
             clock,
             sessionProxy(connectionId, asciiBuffer),
@@ -1109,7 +1107,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             sequenceIndex,
             state,
             configuration.reasonableTransmissionTimeInMs(),
-            asciiBuffer).address(host, port).logonTime(logonTime);
+            asciiBuffer);
+
+        session.address(host, port);
+        session.logonTime(logonTime);
+
+        return session;
     }
 
     private SessionProxy sessionProxy(final long connectionId, final MutableAsciiBuffer asciiBuffer)
@@ -1149,7 +1152,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (state != CLOSED)
         {
-            connectionIdToSession.values().forEach(subscriber -> accessor.disable(subscriber.session()));
+            connectionIdToSession.values().forEach(subscriber -> subscriber.session().disable());
             state = CLOSED;
         }
     }

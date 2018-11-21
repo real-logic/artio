@@ -25,7 +25,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static uk.co.real_logic.artio.decoder.LogonDecoder.MESSAGE_TYPE_BYTES;
 
-public class InitiatorSession extends Session
+public class InitiatorSession extends InternalSession
 {
     private final boolean resetSeqNum;
 

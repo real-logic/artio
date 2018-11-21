@@ -17,18 +17,19 @@ package uk.co.real_logic.artio.library;
 
 import uk.co.real_logic.artio.messages.GatewayError;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
-import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.session.InternalSession;
 
 /**
  * .
  */
 class ReleaseToGatewayReply extends LibraryReply<SessionReplyStatus>
 {
-    private final Session session;
+    private final InternalSession session;
 
     private boolean requiresResend;
 
-    ReleaseToGatewayReply(final LibraryPoller libraryPoller, final long latestReplyArrivalTime, final Session session)
+    ReleaseToGatewayReply(
+        final LibraryPoller libraryPoller, final long latestReplyArrivalTime, final InternalSession session)
     {
         super(libraryPoller, latestReplyArrivalTime);
         this.session = session;

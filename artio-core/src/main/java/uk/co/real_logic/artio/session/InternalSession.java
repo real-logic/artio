@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,40 +21,83 @@ import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-public class AcceptorSession extends InternalSession
+/**
+ * Exposes Session methods to internal APIs that we don't want to expose to the outside world
+ */
+public class InternalSession extends Session
 {
-    public AcceptorSession(
-        final int defaultInterval,
+    public InternalSession(
+        final int heartbeatIntervalInS,
         final long connectionId,
         final EpochClock clock,
+        final SessionState state,
         final SessionProxy proxy,
         final GatewayPublication publication,
         final SessionIdStrategy sessionIdStrategy,
-        final long sendingTimeWindow,
+        final long sendingTimeWindowInMs,
         final AtomicCounter receivedMsgSeqNo,
         final AtomicCounter sentMsgSeqNo,
         final int libraryId,
-        final int initialSequenceNumber,
+        final int initialSentSequenceNumber,
         final int sequenceIndex,
-        final SessionState state,
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer)
     {
         super(
-            defaultInterval,
+            heartbeatIntervalInS,
             connectionId,
             clock,
             state,
             proxy,
             publication,
             sessionIdStrategy,
-            sendingTimeWindow,
+            sendingTimeWindowInMs,
             receivedMsgSeqNo,
             sentMsgSeqNo,
             libraryId,
-            initialSequenceNumber,
+            initialSentSequenceNumber,
             sequenceIndex,
             reasonableTransmissionTimeInMs,
             asciiBuffer);
+    }
+
+    public int poll(final long time)
+    {
+        return super.poll(time);
+    }
+
+    public void disable()
+    {
+        super.disable();
+    }
+
+    public void libraryConnected(final boolean libraryConnected)
+    {
+        super.libraryConnected(libraryConnected);
+    }
+
+    public void logonListener(final SessionLogonListener logonListener)
+    {
+        super.logonListener(logonListener);
+    }
+
+    public void address(final String connectedHost, final int connectedPort)
+    {
+        super.address(connectedHost, connectedPort);
+    }
+
+    public void username(final String username)
+    {
+        super.username(username);
+    }
+
+    public void password(final String password)
+    {
+        super.password(password);
+    }
+
+    public void logonTime(final long logonTime)
+    {
+        super.logonTime(logonTime);
     }
 }
