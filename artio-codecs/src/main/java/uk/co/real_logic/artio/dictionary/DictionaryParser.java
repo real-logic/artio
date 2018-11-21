@@ -423,7 +423,8 @@ public final class DictionaryParser
         for (final Message message : messages)
         {
             final Set<Integer> allFieldsForMessage = new HashSet<>();
-            identifyDuplicateFieldDefinitionsForMessage(message.name(), message, allFieldsForMessage, errorMessage);
+            identifyDuplicateFieldDefinitionsForMessage(
+                message.name(), message, allFieldsForMessage, new ArrayList<>(), errorMessage);
         }
 
         if (errorMessage.length() > 0)
@@ -436,6 +437,7 @@ public final class DictionaryParser
         final String messageName,
         final Aggregate aggregate,
         final Set<Integer> allFields,
+        final List<String> path,
         final StringBuilder errorCollector)
     {
         try
@@ -443,17 +445,27 @@ public final class DictionaryParser
             for (final Entry e : aggregate.entries())
             {
                 e.forEach(
-                    (field) -> addField(messageName, field, allFields, errorCollector),
-                    (group) -> identifyDuplicateFieldDefinitionsForMessage(
-                    messageName,
-                    group,
-                    allFields,
-                    errorCollector),
-                    (component) -> identifyDuplicateFieldDefinitionsForMessage(
-                    messageName,
-                    component,
-                    allFields,
-                    errorCollector)
+                    (field) -> addField(messageName, field, allFields, path, errorCollector),
+                    (group) ->
+                    {
+                        path.add(group.name());
+                        identifyDuplicateFieldDefinitionsForMessage(
+                            messageName,
+                            group,
+                            allFields,
+                            path,
+                            errorCollector);
+                    },
+                    (component) ->
+                    {
+                        path.add(component.name());
+                        identifyDuplicateFieldDefinitionsForMessage(
+                            messageName,
+                            component,
+                            allFields,
+                            path,
+                            errorCollector);
+                    }
                 );
             }
         }
@@ -467,7 +479,7 @@ public final class DictionaryParser
         final String messageName,
         final Field field,
         final Set<Integer> fieldsForMessage,
-        final StringBuilder errorCollector)
+        final List<String> path, final StringBuilder errorCollector)
     {
         if (!fieldsForMessage.add(field.number()))
         {
@@ -483,7 +495,14 @@ public final class DictionaryParser
                 .append(field.name())
                 .append(" (")
                 .append(field.number())
-                .append(")\n");
+                .append(")");
+
+            if (!path.isEmpty())
+            {
+                errorCollector.append(" Through Path: ").append(path.toString());
+            }
+
+            errorCollector.append('\n');
         }
     }
 
