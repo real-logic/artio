@@ -424,7 +424,7 @@ public final class DictionaryParser
         {
             final Set<Integer> allFieldsForMessage = new HashSet<>();
             identifyDuplicateFieldDefinitionsForMessage(
-                message.name(), message, allFieldsForMessage, new ArrayList<>(), errorMessage);
+                message.name(), message, allFieldsForMessage, new ArrayDeque<>(), errorMessage);
         }
 
         if (errorMessage.length() > 0)
@@ -437,7 +437,7 @@ public final class DictionaryParser
         final String messageName,
         final Aggregate aggregate,
         final Set<Integer> allFields,
-        final List<String> path,
+        final Deque<String> path,
         final StringBuilder errorCollector)
     {
         try
@@ -448,23 +448,25 @@ public final class DictionaryParser
                     (field) -> addField(messageName, field, allFields, path, errorCollector),
                     (group) ->
                     {
-                        path.add(group.name());
+                        path.push(group.name());
                         identifyDuplicateFieldDefinitionsForMessage(
                             messageName,
                             group,
                             allFields,
                             path,
                             errorCollector);
+                        path.pop();
                     },
                     (component) ->
                     {
-                        path.add(component.name());
+                        path.push(component.name());
                         identifyDuplicateFieldDefinitionsForMessage(
                             messageName,
                             component,
                             allFields,
                             path,
                             errorCollector);
+                        path.pop();
                     }
                 );
             }
@@ -479,7 +481,8 @@ public final class DictionaryParser
         final String messageName,
         final Field field,
         final Set<Integer> fieldsForMessage,
-        final List<String> path, final StringBuilder errorCollector)
+        final Deque<String> path,
+        final StringBuilder errorCollector)
     {
         if (!fieldsForMessage.add(field.number()))
         {
