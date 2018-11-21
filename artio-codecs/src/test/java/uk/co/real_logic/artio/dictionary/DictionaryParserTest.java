@@ -251,8 +251,8 @@ public class DictionaryParserTest
             IllegalStateException.class,
             "Cannot have the same field defined more than once on a message; this is against the FIX spec. " +
             "Details to follow:\n" +
-            "Message: PoorlyDefinedMessage Field : MemberSubID (104)\n" +
-            "Message: PoorlyDefinedMessage Field : MemberSubID (104)\n");
+            "Message: PoorlyDefinedMessage Field : MemberSubID (104) Through Path: [NextComponent, Members]\n" +
+            "Message: PoorlyDefinedMessage Field : MemberSubID (104) Through Path: [NextComponent]\n");
     }
 
     private Component component(final String name)
