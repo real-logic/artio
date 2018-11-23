@@ -68,6 +68,7 @@
             <field name="TransactTime" required="Y"/>
             <component name="OrderQtyData" required="Y"/>
             <field name="OrdType" required="Y"/>
+            <field name="Price" required="N"/>
         </message>
         <message name="ExecutionReport" msgtype="8" msgcat="app">
             <field name="OrderID" required="Y"/>
@@ -172,6 +173,7 @@
             <value enum="2" description="FILLED"/>
             <value enum="4" description="CANCELED"/>
         </field>
+        <field number="44" name="Price" type="PRICE"/>
         <field number="54" name="Side" type="CHAR">
             <value enum="1" description="BUY"/>
             <value enum="2" description="SELL"/>
