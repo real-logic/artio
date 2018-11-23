@@ -315,7 +315,7 @@ public class FixLibrary extends GatewayProcess
      *                                   to the latest message sequence number.
      *                                   If you don't care about message replay then
      *                                   use {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
-     * @param sequenceIndex the index of the sequence within which the lastReceivedSequenceNumber
+     * @param lastReceivedSequenceIndex the index of the sequence within which the lastReceivedSequenceNumber
      *                      refers. If you don't care about message replay then use
      *                      {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
      * @param timeoutInMs the timeout for this operation
@@ -324,11 +324,11 @@ public class FixLibrary extends GatewayProcess
     public Reply<SessionReplyStatus> requestSession(
         final long sessionId,
         final int lastReceivedSequenceNumber,
-        final int sequenceIndex,
+        final int lastReceivedSequenceIndex,
         final long timeoutInMs)
     {
         CommonConfiguration.validateTimeout(timeoutInMs);
-        return poller.requestSession(sessionId, lastReceivedSequenceNumber, sequenceIndex, timeoutInMs);
+        return poller.requestSession(sessionId, lastReceivedSequenceNumber, lastReceivedSequenceIndex, timeoutInMs);
     }
 
     public String currentAeronChannel()
