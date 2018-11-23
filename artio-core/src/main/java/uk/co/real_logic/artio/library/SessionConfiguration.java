@@ -332,11 +332,11 @@ public final class SessionConfiguration
          * Set this flag if you want sequence numbers to persistent when you reconnect
          * to the acceptor.
          *
+         * @see #initialReceivedSequenceNumber(int)
+         * @see #initialSentSequenceNumber(int)
+         *
          * @param sequenceNumbersPersistent true to make sequence numbers persistent
          * @return this builder
-         *
-         * @see this#initialReceivedSequenceNumber(int)
-         * @see this#initialSentSequenceNumber(int)
          */
         public Builder sequenceNumbersPersistent(final boolean sequenceNumbersPersistent)
         {
@@ -350,8 +350,8 @@ public final class SessionConfiguration
          * @param initialReceivedSequenceNumber the msg sequence number to expect from their logon message.
          * @return this builder
          *
-         * @see this#sequenceNumbersPersistent(boolean)
-         * @see this#initialSentSequenceNumber(int)
+         * @see #sequenceNumbersPersistent(boolean)
+         * @see #initialSentSequenceNumber(int)
          */
         public Builder initialReceivedSequenceNumber(final int initialReceivedSequenceNumber)
         {
@@ -365,8 +365,8 @@ public final class SessionConfiguration
          * @param initialSentSequenceNumber the msg sequence number to use when you send your logon message.
          * @return this builder
          *
-         * @see this#sequenceNumbersPersistent(boolean)
-         * @see this#initialReceivedSequenceNumber(int)
+         * @see #sequenceNumbersPersistent(boolean)
+         * @see #initialReceivedSequenceNumber(int)
          */
         public Builder initialSentSequenceNumber(final int initialSentSequenceNumber)
         {

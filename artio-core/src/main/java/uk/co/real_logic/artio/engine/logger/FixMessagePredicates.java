@@ -47,7 +47,8 @@ public final class FixMessagePredicates
      * @param predicate the predicate to filter messages.
      * @return a new composed consumer.
      */
-    public static FixMessageConsumer filterBy(final FixMessageConsumer consumer, final FixMessagePredicate predicate)
+    public static FixMessageConsumer filterBy(
+        final FixMessageConsumer consumer, final FixMessagePredicate predicate)
     {
         return (message, buffer, offset, length, header) ->
         {
@@ -68,6 +69,8 @@ public final class FixMessagePredicates
      *
      * Timestamps filtered in precision of CommonConfiguration.clock().
      *
+     * @param beginTimestampInclusive the message's timestamp must be &gt;= this value.
+     * @param endTimestampExclusive the message's timestamp must be &lt; this value.
      * @return the resulting predicate
      */
     public static FixMessagePredicate between(
@@ -80,6 +83,7 @@ public final class FixMessagePredicates
     /**
      * Filters a timestamp from a given begin time.
      *
+     * @param beginTimestampInclusive the message's timestamp must be &gt;= this value.
      * @return the resulting predicate
      */
     public static FixMessagePredicate from(final long beginTimestampInclusive)
@@ -92,6 +96,7 @@ public final class FixMessagePredicates
      *
      * Timestamps filtered in precision of CommonConfiguration.clock().
      *
+     * @param endTimestampExclusive the message's timestamp must be &lt; this value.
      * @return the resulting predicate
      */
     public static FixMessagePredicate to(final long endTimestampExclusive)

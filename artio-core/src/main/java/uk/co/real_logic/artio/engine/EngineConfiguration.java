@@ -285,7 +285,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * <p>
      * The logging and archival mechanism
      * has several caches of open memory mapped files which it stores streams of messages
-     * into. This and {@link this#loggerCacheNumSets} controls the size of those caches.
+     * into. This and {@link #loggerCacheNumSets} controls the size of those caches.
      * Should be increased if you see files being opened/closed in that area too frequently.
      * <p>
      * {@link org.agrona.collections.Int2ObjectCache} explains the difference between set size
@@ -303,9 +303,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * Sets the number of sets of in the logger's caches.
      *
+     * @see #loggerCacheSetSize(int)
+     *
      * @param loggerCacheNumSets the number of sets of in the logger's caches.
      * @return this
-     * @see this#loggerCacheSetSize(int)
      */
     public EngineConfiguration loggerCacheNumSets(final int loggerCacheNumSets)
     {

@@ -49,7 +49,7 @@ public final class LibraryUtil
      *         if you're unable to connect to the accepting gateway.
      *         This probably indicates a configuration problem related to the external gateway.
      * @throws TimeoutException the connection has timed out <code>attempts</code> number of times.
-     * @throws IllegalArgumentException if attempts is < 1
+     * @throws IllegalArgumentException if attempts is &lt; 1
      */
     public Session initiate(
         final FixLibrary library,

@@ -243,8 +243,9 @@ public class CommonConfiguration
     }
 
     /**
-     * The default interval for heartbeats if not exchanged upon logon. Specified in seconds.
+     * Set the default interval for heartbeats if not exchanged upon logon. Specified in seconds.
      *
+     * @param value the default interval for heartbeats if not exchanged upon logon. Specified in seconds.
      * @return this
      */
     public CommonConfiguration defaultHeartbeatIntervalInS(final int value)

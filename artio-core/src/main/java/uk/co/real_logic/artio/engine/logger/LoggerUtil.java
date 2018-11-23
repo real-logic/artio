@@ -52,9 +52,7 @@ public final class LoggerUtil
         return IoUtil.mapExistingFile(file, file.getName());
     }
 
-    /**
-     * Returns true if the buffer has been initialised this time round, false if it was already initialised.
-     */
+    // Returns true if the buffer has been initialised this time round, false if it was already initialised.
     public static boolean initialiseBuffer(
         final AtomicBuffer buffer,
         final MessageHeaderEncoder headerEncoder,
@@ -112,7 +110,7 @@ public final class LoggerUtil
     }
 
     // Returns false if not valid
-    public static boolean validateBuffer(
+    static boolean validateBuffer(
         final AtomicBuffer buffer,
         final MessageHeaderDecoder headerDecoder,
         final int sbeSchemaId,

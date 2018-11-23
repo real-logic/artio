@@ -36,6 +36,7 @@ public interface SessionCustomisationStrategy
      * Add additional fields or information to the logon message.
      *
      * @param logon the logon message about to be sent
+     * @param sessionId the surrogate id for the Session that is being customised
      */
     void configureLogon(LogonEncoder logon, long sessionId);
 
@@ -43,6 +44,7 @@ public interface SessionCustomisationStrategy
      * Add additional fields or information to the logout message.
      *
      * @param logout the logout message about to be sent
+     * @param sessionId the surrogate id for the Session that is being customised
      */
     void configureLogout(LogoutEncoder logout, long sessionId);
 }

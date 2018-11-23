@@ -31,25 +31,28 @@ public interface OtfMessageAcceptor
      * Called at the beginning of a repeating group.
      *
      * @param tag the tag number of the field representing the number of elements, eg NoAllocs
-     * @param numInGroup the number of group elements repeated
+     * @param numInGroup the total number of elements in the group
+     * @return whether to continue parsing or stop
      */
     MessageControl onGroupHeader(int tag, int numInGroup);
 
     /**
      * Called at the beginning of each group entry.
      *
-     * @param tag
-     * @param numInGroup
-     * @param index
+     * @param tag the tag number of the field representing the number of elements, eg NoAllocs
+     * @param numInGroup the total number of elements in the group
+     * @param index the index of the element within the group
+     * @return whether to continue parsing or stop
      */
     MessageControl onGroupBegin(int tag, int numInGroup, int index);
 
     /**
      * Called at the end of each group entry
      *
-     * @param tag
-     * @param numInGroup
-     * @param index
+     * @param tag the tag number of the field representing the number of elements, eg NoAllocs
+     * @param numInGroup the total number of elements in the group
+     * @param index the index of the element within the group
+     * @return whether to continue parsing or stop
      */
     MessageControl onGroupEnd(int tag, int numInGroup, int index);
 

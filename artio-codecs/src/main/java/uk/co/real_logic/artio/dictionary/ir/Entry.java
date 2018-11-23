@@ -93,6 +93,7 @@ public final class Entry
     }
 
     /**
+     * @param required whether this is a required or optional element
      * @param element nullable in the case of forward references
      */
     public Entry(final boolean required, final Element element)

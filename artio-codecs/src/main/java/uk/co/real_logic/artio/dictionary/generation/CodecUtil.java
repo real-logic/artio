@@ -39,9 +39,7 @@ public final class CodecUtil
     public static final int ENUM_UNKNOWN_INT = Integer.MAX_VALUE;
     public static final String ENUM_UNKNOWN_STRING = Character.toString(ENUM_UNKNOWN_CHAR);
 
-    /**
-     * NB: only valid for ASCII bytes.
-     */
+    // NB: only valid for ASCII bytes.
     public static byte[] toBytes(final CharSequence value, final byte[] oldBuffer)
     {
         final int length = value.length();
@@ -54,14 +52,13 @@ public final class CodecUtil
         return buffer;
     }
 
-    /**
-     * NB: only valid for ASCII bytes.
-     */
+    // NB: only valid for ASCII bytes.
     public static byte[] toBytes(final char[] value, final byte[] oldBuffer, final int length)
     {
         return toBytes(value, oldBuffer, 0, length);
     }
 
+    // NB: only valid for ASCII bytes.
     public static byte[] toBytes(final char[] value, final byte[] oldBuffer, final int offset, final int length)
     {
         final byte[] buffer = (oldBuffer.length < length) ? new byte[length] : oldBuffer;
@@ -72,6 +69,7 @@ public final class CodecUtil
         return buffer;
     }
 
+    // NB: only valid for ASCII bytes.
     public static byte[] toBytes(final char[] value, final int length)
     {
         final byte[] buffer = new byte[length];
@@ -83,6 +81,7 @@ public final class CodecUtil
         return buffer;
     }
 
+    // NB: only valid for ASCII bytes.
     public static byte[] subsequenceBytes(
         final byte[] value, final byte[] oldBuffer, final int offset, final int length)
     {

@@ -28,11 +28,10 @@ import static uk.co.real_logic.artio.fields.CalendricalUtil.isValidMonth;
  * Allocation free representation + codec for the FIX MonthYear data type.
  * <p>
  * A Month Year could be:
- * <p>
  * <ul>
- * <li>A pair of Year & Month</li>
- * <li>A pair of Year & Month with a day</li>
- * <li>A pair of Year & Month with a week</li>
+ * <li>A pair of Year &amp; Month</li>
+ * <li>A pair of Year &amp; Month with a day</li>
+ * <li>A pair of Year &amp; Month with a week</li>
  * </ul>
  * <p>
  * Since the month year field may represent calendrical values with differing

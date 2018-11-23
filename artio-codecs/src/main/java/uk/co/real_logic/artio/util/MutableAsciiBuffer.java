@@ -185,8 +185,8 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     /**
      * Not at all a performant conversion: don't use this on a critical application path.
      *
-     * @param offset
-     * @param length
+     * @param offset The offset within the buffer to start at.
+     * @param length the length in bytes to convert to a String
      * @return a String
      */
     public String getAscii(final int offset, final int length)

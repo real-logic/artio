@@ -94,6 +94,7 @@ public final class FixEngine extends GatewayProcess
      *
      * @param backupLocation the location to backup the current session ids file to.
      *                       Can be null to indicate that no backup is required.
+     * @param idleStrategy the idle strategy to use when polling this blocking operation.
      *
      * @return the reply object, or null if the request hasn't been successfully enqueued.
      */

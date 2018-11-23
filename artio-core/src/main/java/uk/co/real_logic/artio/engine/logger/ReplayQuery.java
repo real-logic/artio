@@ -80,7 +80,9 @@ public class ReplayQuery implements AutoCloseable
      * @param handler the handler to pass the messages to
      * @param sessionId the FIX session id of the stream to replay.
      * @param beginSequenceNumber sequence number to begin replay at (inclusive).
+     * @param beginSequenceIndex the sequence index to begin replay at (inclusive).
      * @param endSequenceNumber sequence number to end replay at (inclusive).
+     * @param endSequenceIndex the sequence index to end replay at (inclusive).
      * @return number of messages replayed
      */
     public ReplayOperation query(

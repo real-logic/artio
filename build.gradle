@@ -32,7 +32,7 @@ def agronaVersion = '0.9.26'
 def sbeVersion = '1.9.0'
 def artioJavaVersion = '1.8'
 
-defaultTasks 'clean', 'build', 'install'
+defaultTasks 'clean', 'build', 'javadoc', 'install'
 
 ext {
     group = fixGroup

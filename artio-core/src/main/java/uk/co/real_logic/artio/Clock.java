@@ -19,9 +19,9 @@ package uk.co.real_logic.artio;
  * The clock interface supports different sources of time to be plugged into Artio.
  *
  * This enables you to have different timestamp precisions, depending upon what your use
- * case is.
- *
- * {@see https://github.com/real-logic/artio/issues/181}
+ * case is. You can use nanosecond precision if you're most interested in timing performance
+ * of the messages going through the system. You could also choose to use milliseconds if
+ * You would prefer a stable measure time of time.
  */
 public interface Clock
 {

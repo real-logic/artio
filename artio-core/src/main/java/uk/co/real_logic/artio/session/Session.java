@@ -54,30 +54,30 @@ import static uk.co.real_logic.artio.messages.SessionState.*;
  * Stores information about the current state of a session - no matter whether outbound or inbound.
  * <p>
  * Should only be accessed on a single thread.
- * <p>
+ *
  * <h1>State Transitions</h1>
  * <p>
- * Successful Login: CONNECTED -> ACTIVE
- * Login with high sequence number: CONNECTED -> AWAITING_RESEND
- * Login with low sequence number: CONNECTED -> DISCONNECTED
- * Login with wrong credentials: CONNECTED -> DISCONNECTED or CONNECTED -> DISABLED
+ * Successful Login: CONNECTED -&gt; ACTIVE
+ * Login with high sequence number: CONNECTED -&gt; AWAITING_RESEND
+ * Login with low sequence number: CONNECTED -&gt; DISCONNECTED
+ * Login with wrong credentials: CONNECTED -&gt; DISCONNECTED or CONNECTED -&gt; DISABLED
  * depending on authentication plugin
  * <p>
- * Successful Hijack: * -> ACTIVE (same as regular login)
- * Hijack with high sequence number: * -> AWAITING_RESEND (same as regular login)
+ * Successful Hijack: * -&gt; ACTIVE (same as regular login)
+ * Hijack with high sequence number: * -&gt; AWAITING_RESEND (same as regular login)
  * Hijack with low sequence number: requestDisconnect the hijacker and leave main system ACTIVE
  * Hijack with wrong credentials: requestDisconnect the hijacker and leave main system ACTIVE
  * <p>
- * Successful resend: AWAITING_RESEND -> ACTIVE
+ * Successful resend: AWAITING_RESEND -&gt; ACTIVE
  * <p>
- * Send test request: ACTIVE -> ACTIVE - but alter the timeout for the next expected heartbeat.
- * Successful Heartbeat: ACTIVE -> ACTIVE - updates the timeout time.
- * Heartbeat Timeout: ACTIVE -> DISCONNECTED
+ * Send test request: ACTIVE -&gt; ACTIVE - but alter the timeout for the next expected heartbeat.
+ * Successful Heartbeat: ACTIVE -&gt; ACTIVE - updates the timeout time.
+ * Heartbeat Timeout: ACTIVE -&gt; DISCONNECTED
  * <p>
- * Logout request: ACTIVE -> AWAITING_LOGOUT
- * Logout acknowledgement: AWAITING_LOGOUT -> DISCONNECTED
+ * Logout request: ACTIVE -&gt; AWAITING_LOGOUT
+ * Logout acknowledgement: AWAITING_LOGOUT -&gt; DISCONNECTED
  * <p>
- * Manual disable: * -> DISABLED
+ * Manual disable: * -&gt; DISABLED
  */
 public class Session implements AutoCloseable
 {
@@ -334,6 +334,7 @@ public class Session implements AutoCloseable
      * Request the session be disconnected.
      *
      * @see Session#logoutAndDisconnect()
+     * @return the position within the Aeron stream where the disconnect is encoded.
      */
     public long requestDisconnect()
     {
@@ -358,6 +359,7 @@ public class Session implements AutoCloseable
      * This disconnects the session faster than <code>startLogout</code>.
      *
      * @see Session#startLogout()
+     * @return the position within the Aeron stream where the disconnect is encoded.
      */
     public long logoutAndDisconnect()
     {

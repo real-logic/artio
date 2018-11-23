@@ -163,7 +163,7 @@ public class FixLibrary extends GatewayProcess
      * and events that have received from or should be sent to the engine.
      *
      * @param fragmentLimit the maximum number of events to read from the engine.
-     * @return 0 if no work was performed, > 0 otherwise.
+     * @return 0 if no work was performed, &gt; 0 otherwise.
      */
     public int poll(final int fragmentLimit)
     {
@@ -277,7 +277,7 @@ public class FixLibrary extends GatewayProcess
      * Release this session object to the gateway to manage. If the release
      * operation has successfully completed then it will return {@link SessionReplyStatus#OK}.
      *
-     * Similar to {@link this#initiate(SessionConfiguration)} this is a non-blocking operation that
+     * Similar to {@link #initiate(SessionConfiguration)} this is a non-blocking operation that
      * returns a reply object that indicates what has happened to its result.
      *
      * @param session the session to release
@@ -305,7 +305,7 @@ public class FixLibrary extends GatewayProcess
      * {@link SessionReplyStatus#OTHER_SESSION_OWNER}. If the connection id refers
      * to an unknown session then the method returns {@link SessionReplyStatus#UNKNOWN_SESSION}.
      * If this library instance is unknown to the gateway, for example if its heartbeating
-     * mechanism has timed out due to {@link this#poll(int)} not being called often enough.
+     * mechanism has timed out due to {@link #poll(int)} not being called often enough.
      *
      * @param sessionId the id of the session to acquire.
      * @param lastReceivedSequenceNumber the last received message sequence number

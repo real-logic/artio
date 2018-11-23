@@ -18,6 +18,7 @@ public interface ReplayHandler
      * @param length the length of the message within the buffer.
      * @param libraryId the id of the library which has received this message.
      * @param sessionId the id of the session which has received this message.
+     * @param sequenceIndex the sequence index of the message being replayed.
      * @param messageType the FIX msgType field, encoded as an int.
      */
     void onReplayedMessage(
