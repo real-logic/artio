@@ -47,7 +47,7 @@ public class LowResourceEngineScheduler implements EngineScheduler
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
         final Agent framer,
-        final Agent archivingAgent,
+        final Agent indexingAgent,
         final Agent monitoringAgent,
         final Agent conductorAgent,
         final RecordingCoordinator recordingCoordinator)
@@ -61,7 +61,7 @@ public class LowResourceEngineScheduler implements EngineScheduler
 
         final List<Agent> agents = new ArrayList<>();
         Collections.addAll(agents,
-            monitoringAgent, framer, archivingAgent, new RecordingCoordinatorAgent(), conductorAgent);
+            monitoringAgent, framer, indexingAgent, new RecordingCoordinatorAgent(), conductorAgent);
 
         agents.removeIf(Objects::isNull);
 

@@ -37,7 +37,7 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
         final Agent framer,
-        final Agent archivingAgent,
+        final Agent indexingAgent,
         final Agent monitoringAgent,
         final Agent conductorAgent,
         final RecordingCoordinator recordingCoordinator)
@@ -52,7 +52,7 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
         }
 
         archivingRunner = new AgentRunner(
-            configuration.archiverIdleStrategy(), errorHandler, null, archivingAgent);
+            configuration.archiverIdleStrategy(), errorHandler, null, indexingAgent);
 
         startOnThread(archivingRunner);
 

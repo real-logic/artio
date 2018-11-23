@@ -31,7 +31,7 @@ public interface EngineScheduler extends AutoCloseable
      * @param configuration the engine's configuration object.
      * @param errorHandler the ErrorHandler used by the engine.
      * @param framer the framer agent to schedule.
-     * @param archivingAgent the archiver agent to schedule.
+     * @param indexingAgent the archiver agent to schedule.
      * @param monitoringAgent the monitoring agent to schedule.
      * @param conductorAgent if aeron has useConductorInvoker enable it
      * @param recordingCoordinator must be shut down after the Framer but before the conductorAgent.
@@ -40,7 +40,7 @@ public interface EngineScheduler extends AutoCloseable
         EngineConfiguration configuration,
         ErrorHandler errorHandler,
         Agent framer,
-        Agent archivingAgent,
+        Agent indexingAgent,
         Agent monitoringAgent,
         Agent conductorAgent,
         RecordingCoordinator recordingCoordinator);
