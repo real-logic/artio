@@ -341,7 +341,7 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         if (isOutsideLimits(scale, SCALE_MIN_VAL, SCALE_MAX_VAL) ||
             isOutsideLimits(value, VALUE_MIN_VAL, VALUE_MAX_VAL))
         {
-            throw new ArithmeticException("Out of range: value: " + value + ", exponent: " + scale);
+            throw new ArithmeticException("Out of range: value: " + this.value + ", scale: " + this.scale);
         }
         this.value = value;
         this.scale = scale;
