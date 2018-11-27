@@ -43,10 +43,39 @@ import java.util.Arrays;
  */
 public final class DecimalFloat implements Comparable<DecimalFloat>
 {
-    public static final DecimalFloat MIN_VALUE = new DecimalFloat(Long.MIN_VALUE, 0);
-    public static final DecimalFloat MAX_VALUE = new DecimalFloat(Long.MAX_VALUE, 0);
+    private static final int SCALE_NAN_VALUE = -128;
+    private static final long VALUE_NAN_VALUE = Long.MIN_VALUE;
+    private static final double DOUBLE_NAN_VALUE = Double.NaN;
+
+    private static final long VALUE_MAX_VAL = 999_999_999_999_999_999L;
+    private static final double VALUE_MAX_VAL_AS_DOUBLE = VALUE_MAX_VAL;
+    private static final long VALUE_MIN_VAL = -VALUE_MAX_VAL;
+    private static final double VALUE_MIN_VAL_AS_DOUBLE = VALUE_MIN_VAL;
+    private static final int SCALE_MAX_VAL = 127;
+    private static final int SCALE_MIN_VAL = 0;
+
+    public static final DecimalFloat MIN_VALUE = new DecimalFloat(VALUE_MIN_VAL, 0);
+    public static final DecimalFloat MAX_VALUE = new DecimalFloat(VALUE_MAX_VAL, 0);
     public static final DecimalFloat ZERO = new DecimalFloat();
+    public static final DecimalFloat NAN = getNaN();
     public static final DecimalFloat MISSING_FLOAT = ZERO;
+
+    private static final int HIGHEST_POWER_OF_TEN = 18;
+    private static final long[] POWERS_OF_TEN = new long[]
+        {1L, 10L, 100L, 1_000L, 10_000L, 100_000L, 1_000_000L, 10_000_000L,
+        100_000_000L, 1_000_000_000L, 10_000_000_000L, 100_000_000_000L,
+        1_000_000_000_000L, 10_000_000_000_000L, 100_000_000_000_000L,
+        1_000_000_000_000_000L, 10_000_000_000_000_000L, 100_000_000_000_000_000L,
+        1_000_000_000_000_000_000L, Long.MAX_VALUE};
+
+    // FRACTION_LOWER_THRESHOLD and FRACTION_UPPER_THRESHOLD are used when converting
+    // the fractional part of a double to ensure that discretisation errors are corrected.
+    // E.g. The actual number 0.123 might be held in binary as something like 0.1230000000000000001
+    //      and actual number 0.456 might be held in binary as 0.4559999999999999999999
+    // The while-loop and if-statement below using the *_THRESHOLD constants will ensure the
+    // correct number (0.123 and 0.456) is represented in the DecimalFloat.
+    private static final double FRACTION_LOWER_THRESHOLD = 1e-7;
+    private static final double FRACTION_UPPER_THRESHOLD = 1.0 - FRACTION_LOWER_THRESHOLD;
 
     private long value;
     private int scale;
@@ -63,14 +92,12 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
 
     public DecimalFloat(final long value, final int scale)
     {
-        this.value = value;
-        this.scale = scale;
+        setAndNormalise(value, scale);
     }
 
     public void reset()
     {
-        value(0);
-        scale(0);
+        setAndNormalise(0, 0);
     }
 
     public long value()
@@ -88,6 +115,13 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         return this.scale;
     }
 
+    public DecimalFloat set(final DecimalFloat other)
+    {
+        this.value = other.value;
+        this.scale = other.scale;
+        return this;
+    }
+
     /**
      * Sets the value of the DecimalFloat to the same as a long value.
      *
@@ -96,23 +130,30 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
      */
     public DecimalFloat fromLong(final long value)
     {
-        this.value = value;
-        this.scale = 0;
+        setAndNormalise(value, 0);
         return this;
     }
 
+    public DecimalFloat set(final long value, final int scale)
+    {
+        setAndNormalise(value, scale);
+        return this;
+    }
+
+    /*
+     * Please use set(newValue, newScale) instead of value(newValue) and scale(newScale)
+     */
+    @Deprecated
     public DecimalFloat value(final long value)
     {
         this.value = value;
         return this;
     }
 
-    /**
-     * Set the number of digits to the right of the decimal point.
-     *
-     * @param scale the number of digits to the right of the decimal point.
-     * @return this
+    /*
+     * Please use set(newValue, newScale) instead of value(newValue) and scale(newScale)
      */
+    @Deprecated
     public DecimalFloat scale(final int scale)
     {
         this.scale = scale;
@@ -188,5 +229,154 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         return scaleComparison == 0 ?
             Long.compare(value, other.value) :
             !isPositive ? -1 * scaleComparison : scaleComparison;
+    }
+
+    public double toDouble()
+    {
+        if (isNaNValue())
+        {
+            return DOUBLE_NAN_VALUE;
+        }
+        return toDouble(value, scale);
+    }
+
+    public boolean fromDouble(final double doubleValue)
+    {
+        if (Double.isNaN(doubleValue))
+        {
+            value = VALUE_NAN_VALUE;
+            scale = SCALE_NAN_VALUE;
+            return true;
+        }
+        if (!Double.isFinite(doubleValue) ||
+            isOutsideLimits(doubleValue, VALUE_MIN_VAL_AS_DOUBLE, VALUE_MAX_VAL_AS_DOUBLE))
+        {
+            return false;
+        }
+        if (doubleValue == 0.0)
+        {
+            value = 0L;
+            scale = 0;
+            return true;
+        }
+        final boolean isNegative = doubleValue < 0.0;
+        double remainingValue = Math.abs(doubleValue);
+        long newValue = (long)remainingValue;
+        // Have to repeat the limit verification, as the test above on the doubleValue is not exact.
+        // It cuts the worst offenders and allows us to cast to a long,
+        // but it lets through bad values within about 64 of the limits.
+        if (isOutsideLimits(newValue, VALUE_MIN_VAL, VALUE_MAX_VAL))
+        {
+            return false;
+        }
+        int newScale = 0;
+        remainingValue -= newValue;
+        if (remainingValue == 0.0)
+        {
+            setAndNormalise(signedValue(isNegative, newValue), newScale);
+            return true;
+        }
+        while (canValueAcceptMoreDigits(newValue, newScale) &&
+            (newValue == 0L ||
+            !isOutsideLimits(remainingValue, FRACTION_LOWER_THRESHOLD, FRACTION_UPPER_THRESHOLD)))
+        {
+            remainingValue *= 10.0;
+            final double digit = Math.floor(remainingValue);
+            remainingValue -= digit;
+            newValue = newValue * 10L + (long)digit;
+            ++newScale;
+        }
+        if (FRACTION_UPPER_THRESHOLD < remainingValue)
+        {
+            newValue++;
+        }
+        setAndNormalise(signedValue(isNegative, newValue), newScale);
+        return true;
+    }
+
+    public boolean isNaNValue()
+    {
+        return value == VALUE_NAN_VALUE && scale == SCALE_NAN_VALUE;
+    }
+
+    private static DecimalFloat getNaN()
+    {
+        final DecimalFloat nanFloat = new DecimalFloat();
+        nanFloat.value = VALUE_NAN_VALUE;
+        nanFloat.scale = SCALE_NAN_VALUE;
+        return nanFloat;
+    }
+
+    private void setAndNormalise(final long value, final int scale)
+    {
+        this.value = value;
+        this.scale = scale;
+        normalise();
+    }
+
+    private void normalise()
+    {
+        long value = this.value;
+        int scale = this.scale;
+        if (value == 0)
+        {
+            scale = 0;
+        }
+        else if (0 < scale)
+        {
+            while (value % 10 == 0 && 0 < scale)
+            {
+                value /= 10;
+                --scale;
+            }
+        }
+        else if (scale < 0)
+        {
+            while (!isOutsideLimits(value, VALUE_MIN_VAL, VALUE_MAX_VAL) && scale < 0)
+            {
+                value *= 10;
+                ++scale;
+            }
+        }
+        if (isOutsideLimits(scale, SCALE_MIN_VAL, SCALE_MAX_VAL) ||
+            isOutsideLimits(value, VALUE_MIN_VAL, VALUE_MAX_VAL))
+        {
+            throw new ArithmeticException("Out of range: value: " + this.value + ", scale: " + this.scale);
+        }
+        this.value = value;
+        this.scale = scale;
+    }
+
+    private static double toDouble(final long value, final int scale)
+    {
+        int remainingPowersOfTen = scale;
+        double divisor = 1.0;
+        while (remainingPowersOfTen >= HIGHEST_POWER_OF_TEN)
+        {
+            divisor *= POWERS_OF_TEN[HIGHEST_POWER_OF_TEN];
+            remainingPowersOfTen -= HIGHEST_POWER_OF_TEN;
+        }
+        divisor *= POWERS_OF_TEN[remainingPowersOfTen];
+        return value / divisor;
+    }
+
+    private static boolean canValueAcceptMoreDigits(final long value, final int scale)
+    {
+        return value <= POWERS_OF_TEN[HIGHEST_POWER_OF_TEN - 1] && scale < SCALE_MAX_VAL;
+    }
+
+    private static boolean isOutsideLimits(final long value, final long lowerBound, final long upperBound)
+    {
+        return value < lowerBound || upperBound < value;
+    }
+
+    private static boolean isOutsideLimits(final double value, final double lowerBound, final double upperBound)
+    {
+        return value < lowerBound || upperBound < value;
+    }
+
+    private static long signedValue(final boolean isNegative, final long value)
+    {
+        return isNegative ? -value : value;
     }
 }

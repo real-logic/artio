@@ -95,4 +95,15 @@ public class DecimalFloatTest
         assertThat(new DecimalFloat(45, 2), greaterThan(ZERO));
         assertThat(ZERO, lessThan(new DecimalFloat(45, 2)));
     }
+
+    @Test
+    public void normaliseValuesDuringConstruction()
+    {
+        assertThat(new DecimalFloat(0, 0), equalTo(new DecimalFloat(0, 0)));
+        assertThat(new DecimalFloat(0, 0), equalTo(new DecimalFloat(0, 25)));
+        assertThat(new DecimalFloat(0, 0), equalTo(new DecimalFloat(0, -25)));
+        assertThat(new DecimalFloat(5000, 0), equalTo(new DecimalFloat(500000, 2)));
+        assertThat(new DecimalFloat(5000, 0), equalTo(new DecimalFloat(50, -2)));
+        assertThat(new DecimalFloat(1234, 2), equalTo(new DecimalFloat(123400, 4)));
+    }
 }

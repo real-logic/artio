@@ -117,14 +117,14 @@ public final class MessageApiExamples
                 // need to update the fields in question and the other remain the side as your previous
                 // usage.
                 orderSingle
-                    .price(price.value(2010))
-                    .orderQty(quantity.value(20));
+                    .price(price.set(2010, 2))
+                    .orderQty(quantity.set(20, 0));
 
                 session.send(orderSingle);
 
                 orderSingle
-                    .price(price.value(2020))
-                    .orderQty(quantity.value(30));
+                    .price(price.set(2020, 2))
+                    .orderQty(quantity.set(30, 0));
 
                 session.send(orderSingle);
             }

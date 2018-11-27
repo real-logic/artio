@@ -276,8 +276,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
             }
         }
 
-        number.value(negative ? -1 * value : value);
-        number.scale(scale);
+        number.set(negative ? -1 * value : value, scale);
         return number;
     }
 
