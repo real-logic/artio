@@ -316,8 +316,8 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
 
     private void normalise()
     {
-        final long valueCopy = value;
-        final int scaleCopy = scale;
+        long value = this.value;
+        int scale = this.scale;
         if (value == 0)
         {
             scale = 0;
@@ -341,8 +341,10 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         if (isOutsideLimits(scale, SCALE_MIN_VAL, SCALE_MAX_VAL) ||
             isOutsideLimits(value, VALUE_MIN_VAL, VALUE_MAX_VAL))
         {
-            throw new ArithmeticException("Out of range: value: " + valueCopy + ", exponent: " + scaleCopy);
+            throw new ArithmeticException("Out of range: value: " + value + ", exponent: " + scale);
         }
+        this.value = value;
+        this.scale = scale;
     }
 
     private static double toDouble(final long value, final int scale)
