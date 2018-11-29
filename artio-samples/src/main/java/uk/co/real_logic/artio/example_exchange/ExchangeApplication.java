@@ -20,19 +20,14 @@ import io.aeron.archive.ArchiveThreadingMode;
 import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.driver.MediaDriver;
 import org.agrona.IoUtil;
-import org.agrona.concurrent.AgentRunner;
-import org.agrona.concurrent.SigInt;
-import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.SampleUtil;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.io.File;
 import java.util.Collections;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.driver.ThreadingMode.SHARED;
@@ -41,8 +36,6 @@ public class ExchangeApplication
 {
     public static final String ACCEPTOR_COMP_ID = "exexchange";
     public static final String INITIATOR_COMP_ID = "extrader";
-
-    private static Session session;
 
     public static void main(final String[] args) throws Exception
     {
@@ -70,27 +63,7 @@ public class ExchangeApplication
         try (ArchivingMediaDriver driver = ArchivingMediaDriver.launch(context, archiveContext);
             FixEngine gateway = FixEngine.launch(configuration))
         {
-            final ExchangeAgent exchangeAgent = new ExchangeAgent();
-            final AtomicCounter errorCounter =
-                driver.mediaDriver().context().countersManager().newCounter("exchange_agent_errors");
-            final AgentRunner runner = new AgentRunner(
-                CommonConfiguration.backoffIdleStrategy(),
-                Throwable::printStackTrace,
-                errorCounter,
-                exchangeAgent);
-
-            final Thread thread = AgentRunner.startOnThread(runner);
-
-            // TODO: wait for input:
-            final AtomicBoolean running = new AtomicBoolean(true);
-            SigInt.register(() -> running.set(false));
-
-            while (running.get())
-            {
-                Thread.sleep(100);
-            }
-
-            thread.join();
+            SampleUtil.runAgentUntilSignal(new ExchangeAgent(), driver.mediaDriver());
         }
 
         System.exit(0);

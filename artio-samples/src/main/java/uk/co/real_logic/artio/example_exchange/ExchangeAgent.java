@@ -20,12 +20,7 @@ public class ExchangeAgent implements Agent
 {
     private static final int FRAGMENT_LIMIT = 10;
 
-    private final LibraryConfiguration configuration = new LibraryConfiguration();
     private FixLibrary library;
-
-    public ExchangeAgent()
-    {
-    }
 
     @Override
     public void onStart()
@@ -35,6 +30,7 @@ public class ExchangeAgent implements Agent
 
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 
+        final LibraryConfiguration configuration = new LibraryConfiguration();
         configuration.authenticationStrategy(authenticationStrategy);
 
         // You register the new session handler - which is your application hook

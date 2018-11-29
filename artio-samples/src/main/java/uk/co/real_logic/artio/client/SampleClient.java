@@ -16,15 +16,11 @@
 package uk.co.real_logic.artio.client;
 
 import org.agrona.concurrent.SleepingIdleStrategy;
-import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.SampleUtil;
 import uk.co.real_logic.artio.builder.TestRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.library.FixLibrary;
-import uk.co.real_logic.artio.library.LibraryConfiguration;
-import uk.co.real_logic.artio.library.SessionConfiguration;
-import uk.co.real_logic.artio.library.SessionHandler;
+import uk.co.real_logic.artio.library.*;
 import uk.co.real_logic.artio.session.Session;
 
 import java.io.File;
@@ -60,27 +56,17 @@ public final class SampleClient
                 .senderCompId(INITIATOR_COMP_ID)
                 .build();
 
+            final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
+
             try (FixLibrary library = SampleUtil.blockingConnect(new LibraryConfiguration()
                 .sessionAcquireHandler(SampleClient::onConnect)
                 .libraryAeronChannels(singletonList(aeronChannel))))
             {
-                final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
-                final Reply<Session> reply = library.initiate(sessionConfig);
-
-                while (reply.isExecuting())
-                {
-                    idleStrategy.idle(library.poll(1));
-                }
-
-                if (!reply.hasCompleted())
-                {
-                    System.err.println(
-                        "Unable to initiate the session, " + reply.state() + " " + reply.error());
-                    System.exit(-1);
-                }
-
-                System.out.println("Replied with: " + reply.state());
-                final Session session = reply.resultIfPresent();
+                final Session session = LibraryUtil.initiate(
+                    library,
+                    sessionConfig,
+                    10_000,
+                    idleStrategy);
 
                 while (!session.canSendMessage())
                 {

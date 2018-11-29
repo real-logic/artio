@@ -51,7 +51,7 @@ public final class LibraryUtil
      * @throws TimeoutException the connection has timed out <code>attempts</code> number of times.
      * @throws IllegalArgumentException if attempts is &lt; 1
      */
-    public Session initiate(
+    public static Session initiate(
         final FixLibrary library,
         final SessionConfiguration configuration,
         final int attempts,
