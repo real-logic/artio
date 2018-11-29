@@ -86,6 +86,7 @@ public class FramerContext
             configuration.sessionBufferSize(),
             configuration.sendingTimeWindowInMs(),
             configuration.reasonableTransmissionTimeInMs(),
+            configuration.logAllMessages(),
             errorHandler,
             sessionContexts,
             configuration.sessionPersistenceStrategy(),

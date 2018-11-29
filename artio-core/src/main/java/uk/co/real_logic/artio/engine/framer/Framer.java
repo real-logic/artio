@@ -77,6 +77,7 @@ import static uk.co.real_logic.artio.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.GatewayError.*;
 import static uk.co.real_logic.artio.messages.LogonStatus.LIBRARY_NOTIFICATION;
+import static uk.co.real_logic.artio.messages.SequenceNumberType.PERSISTENT;
 import static uk.co.real_logic.artio.messages.SequenceNumberType.TRANSIENT;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.*;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
@@ -538,6 +539,21 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (library == null)
         {
             saveError(GatewayError.UNKNOWN_LIBRARY, libraryId, correlationId, "");
+
+            return CONTINUE;
+        }
+
+        final boolean logInboundMessages = configuration.logInboundMessages();
+        final boolean logOutboundMessages = configuration.logOutboundMessages();
+        if (sequenceNumberType == PERSISTENT && !configuration.logAllMessages())
+        {
+            final String msg =
+                "You need to enable the logging of inbound and outbound messages on your EngineConfiguration" +
+                "in order to initiate a connection with persistent sequence numbers. " +
+                "logInboundMessages = " + logInboundMessages +
+                "logOutboundMessages = " + logOutboundMessages;
+
+            saveError(INVALID_CONFIGURATION, libraryId, correlationId, msg);
 
             return CONTINUE;
         }

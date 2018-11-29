@@ -69,4 +69,10 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
 
         assertSequenceIndicesAre(0);
     }
+
+    @Test
+    public void sessionsCanReconnect()
+    {
+        super.sessionsCanReconnect();
+    }
 }

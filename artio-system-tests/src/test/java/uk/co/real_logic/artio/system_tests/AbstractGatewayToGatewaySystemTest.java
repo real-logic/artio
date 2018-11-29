@@ -262,4 +262,21 @@ public class AbstractGatewayToGatewaySystemTest
         acceptingOtfAcceptor.allMessagesHaveSequenceIndex(sequenceIndex);
         initiatingOtfAcceptor.allMessagesHaveSequenceIndex(sequenceIndex);
     }
+
+    void sessionsCanReconnect()
+    {
+        acquireAcceptingSession();
+
+        acceptingSession.startLogout();
+        assertSessionsDisconnected();
+
+        assertAllMessagesHaveSequenceIndex(0);
+        clearMessages();
+
+        wireSessions();
+
+        messagesCanBeExchanged();
+
+        assertSequenceIndicesAre(1);
+    }
 }

@@ -181,19 +181,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void sessionsCanReconnect()
     {
-        acquireAcceptingSession();
-
-        acceptingSession.startLogout();
-        assertSessionsDisconnected();
-
-        assertAllMessagesHaveSequenceIndex(0);
-        clearMessages();
-
-        wireSessions();
-
-        messagesCanBeExchanged();
-
-        assertSequenceIndicesAre(1);
+        super.sessionsCanReconnect();
     }
 
     @Test

@@ -36,7 +36,7 @@ import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
-import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysLocallyArchive;
+import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysUnindexed;
 
 /**
  * Configuration that exists for the entire duration of a fix gateway. Some options are configurable via
@@ -547,6 +547,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return logInboundMessages || logOutboundMessages;
     }
 
+    public boolean logAllMessages()
+    {
+        return logInboundMessages && logOutboundMessages;
+    }
+
     public IdleStrategy framerIdleStrategy()
     {
         return framerIdleStrategy;
@@ -713,7 +718,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
         if (sessionPersistenceStrategy() == null)
         {
-            sessionPersistenceStrategy(alwaysLocallyArchive());
+            sessionPersistenceStrategy(alwaysUnindexed());
         }
 
         return this;

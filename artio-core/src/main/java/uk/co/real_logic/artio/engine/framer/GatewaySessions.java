@@ -59,6 +59,7 @@ class GatewaySessions
     private final int sessionBufferSize;
     private final long sendingTimeWindowInMs;
     private final long reasonableTransmissionTimeInMs;
+    private final boolean logAllMessages;
     private final SessionContexts sessionContexts;
     private final SessionPersistenceStrategy sessionPersistenceStrategy;
     private final IdleStrategy framerIdleStrategy;
@@ -76,6 +77,7 @@ class GatewaySessions
         final int sessionBufferSize,
         final long sendingTimeWindowInMs,
         final long reasonableTransmissionTimeInMs,
+        final boolean logAllMessages,
         final ErrorHandler errorHandler,
         final SessionContexts sessionContexts,
         final SessionPersistenceStrategy sessionPersistenceStrategy,
@@ -91,6 +93,7 @@ class GatewaySessions
         this.sessionBufferSize = sessionBufferSize;
         this.sendingTimeWindowInMs = sendingTimeWindowInMs;
         this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
+        this.logAllMessages = logAllMessages;
         this.errorHandler = errorHandler;
         this.sessionContexts = sessionContexts;
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
@@ -261,20 +264,40 @@ class GatewaySessions
         final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
         final boolean resetSeqNum = resetSequenceNumbersUponLogon(persistenceLevel) || resetSeqNumFlag;
 
-        final int aeronSessionId = outboundPublication.id();
-        final long requiredPosition = outboundPublication.position();
-        // At requiredPosition=0 there won't be anything indexed, so indexedPosition will be -1
-        if (requiredPosition > 0)
+        if (persistenceLevel == PersistenceLevel.INDEXED && !logAllMessages)
         {
-            while (sentSequenceNumberIndex.indexedPosition(aeronSessionId) < requiredPosition)
-            {
-                framerIdleStrategy.idle();
-            }
-            framerIdleStrategy.reset();
+            onError(new IllegalStateException(
+                "Persistence Strategy specified INDEXED but " +
+                "EngineConfiguration has disabled required logging of messsages"));
+            return AuthenticationResult.INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES;
         }
 
-        final int lastSentSequenceNumber = sequenceNumber(sentSequenceNumberIndex, resetSeqNum, sessionId);
-        final int lastReceivedSequenceNumber = sequenceNumber(receivedSequenceNumberIndex, resetSeqNum, sessionId);
+        final int lastSentSequenceNumber;
+        final int lastReceivedSequenceNumber;
+
+        if (resetSeqNum)
+        {
+            lastSentSequenceNumber = SessionInfo.UNK_SESSION;
+            lastReceivedSequenceNumber = SessionInfo.UNK_SESSION;
+        }
+        else
+        {
+            final int aeronSessionId = outboundPublication.id();
+            final long requiredPosition = outboundPublication.position();
+            // TODO: don't block the Framer until the logger has caught up.
+            // At requiredPosition=0 there won't be anything indexed, so indexedPosition will be -1
+            if (requiredPosition > 0)
+            {
+                while (sentSequenceNumberIndex.indexedPosition(aeronSessionId) < requiredPosition)
+                {
+                    framerIdleStrategy.idle();
+                }
+                framerIdleStrategy.reset();
+            }
+
+            lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+            lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+        }
 
         final String username = SessionParser.username(logon);
         final String password = SessionParser.password(logon);
@@ -312,19 +335,6 @@ class GatewaySessions
             onStrategyError("authentication", throwable, connectionId, "false", logon);
             return false;
         }
-    }
-
-    private int sequenceNumber(
-        final SequenceNumberIndexReader sequenceNumberIndexReader,
-        final boolean resetSeqNum,
-        final long sessionId)
-    {
-        if (resetSeqNum)
-        {
-            return SessionInfo.UNK_SESSION;
-        }
-
-        return sequenceNumberIndexReader.lastKnownSequenceNumber(sessionId);
     }
 
     private void onStrategyError(

@@ -56,6 +56,7 @@
             <validValue name="DUPLICATE_ACCEPTOR">5</validValue>
             <validValue name="UNKNOWN_SESSION">6</validValue>
             <validValue name="UNABLE_TO_LOGON">7</validValue>
+            <validValue name="INVALID_CONFIGURATION">8</validValue>
         </enum>
         <enum name="MessageStatus" encodingType="uint8">
             <validValue name="OK">0</validValue>
@@ -101,6 +102,8 @@
                         description="We disconnected due to the authentication strategy returning false">16</validValue>
             <validValue name="INVALID_FIX_MESSAGE"
                         description="We disconnected due to codec validation failing">17</validValue>
+            <validValue name="INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES"
+                        description="Persistence Strategy specified INDEXED but EngineConfiguration has disabled required logging of messsages">18</validValue>
         </enum>
         <enum name="SessionState" encodingType="uint8">
             <validValue name="CONNECTING"

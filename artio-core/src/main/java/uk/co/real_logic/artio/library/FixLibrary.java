@@ -55,8 +55,6 @@ public class FixLibrary extends GatewayProcess
     private final LibraryPoller poller;
     private boolean isPolling = false;
 
-
-
     FixLibrary(final LibraryConfiguration configuration)
     {
         this.configuration = configuration;

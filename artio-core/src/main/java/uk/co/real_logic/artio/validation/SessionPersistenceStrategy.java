@@ -26,12 +26,12 @@ import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
 @FunctionalInterface
 public interface SessionPersistenceStrategy
 {
-    static SessionPersistenceStrategy alwaysReplicated()
+    static SessionPersistenceStrategy alwaysIndexed()
     {
         return (logon) -> INDEXED;
     }
 
-    static SessionPersistenceStrategy alwaysLocallyArchive()
+    static SessionPersistenceStrategy alwaysUnindexed()
     {
         return (logon) -> UNINDEXED;
     }

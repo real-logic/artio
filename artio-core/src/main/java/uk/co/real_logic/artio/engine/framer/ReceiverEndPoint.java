@@ -342,17 +342,9 @@ class ReceiverEndPoint
             receivedSequenceNumberIndex,
             gatewaySession);
 
-        if (authResult.isDuplicateSession())
-        {
-            close(DisconnectReason.DUPLICATE_SESSION);
-            removeEndpointFromFramer();
-
-            return true;
-        }
-
         if (!authResult.isValid())
         {
-            onInvalidLogon();
+            completeDisconnect(authResult.reason());
             return true;
         }
 
@@ -465,7 +457,7 @@ class ReceiverEndPoint
         return stashIfBackPressured(offset, position);
     }
 
-    private boolean saveInvalidMessage(final int offset)
+    private void saveInvalidMessage(final int offset)
     {
         final long position = publication.saveMessage(buffer,
             offset,
@@ -484,8 +476,6 @@ class ReceiverEndPoint
         {
             clearBuffer();
         }
-
-        return backPressured;
     }
 
     private void clearBuffer()
@@ -539,19 +529,17 @@ class ReceiverEndPoint
 
     private void onDisconnectDetected()
     {
-        disconnectEndpoint(REMOTE_DISCONNECT);
-        removeEndpointFromFramer();
+        completeDisconnect(REMOTE_DISCONNECT);
     }
 
     void onNoLogonDisconnect()
     {
-        disconnectEndpoint(NO_LOGON);
-        removeEndpointFromFramer();
+        completeDisconnect(NO_LOGON);
     }
 
-    private void onInvalidLogon()
+    private void completeDisconnect(final DisconnectReason reason)
     {
-        disconnectEndpoint(DisconnectReason.FAILED_AUTHENTICATION);
+        disconnectEndpoint(reason);
         removeEndpointFromFramer();
     }
 
