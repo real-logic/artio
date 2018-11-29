@@ -75,4 +75,21 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
     {
         super.sessionsCanReconnect();
     }
+
+    @Test
+    public void librariesShouldBeAbleToReleaseInitiatedSessionToEngine()
+    {
+        acquireAcceptingSession();
+
+        releaseSessionToEngine(initiatingSession, initiatingLibrary, initiatingEngine);
+    }
+
+    @Test
+    public void librariesShouldBeAbleToReleaseAcceptedSessionToEngine()
+    {
+        acquireAcceptingSession();
+
+        releaseSessionToEngine(acceptingSession, acceptingLibrary, acceptingEngine);
+    }
+
 }

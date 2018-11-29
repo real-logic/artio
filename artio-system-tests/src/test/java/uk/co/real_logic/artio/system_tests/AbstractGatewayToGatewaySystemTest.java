@@ -23,16 +23,22 @@ import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Reply.State;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
+import uk.co.real_logic.artio.messages.SessionReplyStatus;
+import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.session.Session;
+
+import java.util.List;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
-import static uk.co.real_logic.artio.FixMatchers.hasSequenceIndex;
+import static uk.co.real_logic.artio.FixMatchers.*;
 import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.unusedPort;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
@@ -278,5 +284,61 @@ public class AbstractGatewayToGatewaySystemTest
         messagesCanBeExchanged();
 
         assertSequenceIndicesAre(1);
+    }
+
+    void releaseSessionToEngine(final Session session, final FixLibrary library, final FixEngine engine)
+    {
+        final long connectionId = session.connectionId();
+        final long sessionId = session.id();
+
+        final SessionReplyStatus status = releaseToGateway(library, session, testSystem);
+
+        assertEquals(OK, status);
+        assertEquals(SessionState.DISABLED, session.state());
+        assertThat(library.sessions(), hasSize(0));
+
+        final List<SessionInfo> sessions = gatewayLibraryInfo(engine).sessions();
+        assertThat(sessions, contains(allOf(
+            hasConnectionId(connectionId),
+            hasSessionId(sessionId))));
+    }
+
+    void engineShouldManageSession(
+        final Session session,
+        final FixLibrary library,
+        final FakeOtfAcceptor otfAcceptor,
+        final Session otherSession,
+        final FakeOtfAcceptor otherAcceptor)
+    {
+        final long sessionId = session.id();
+        final int lastReceivedMsgSeqNum = session.lastReceivedMsgSeqNum();
+        final int sequenceIndex = session.sequenceIndex();
+
+        releaseToGateway(library, session, testSystem);
+
+        messagesCanBeExchanged(otherSession, otherAcceptor);
+
+        final SessionReplyStatus status = requestSession(
+            library, sessionId, lastReceivedMsgSeqNum, sequenceIndex, testSystem);
+        assertEquals(OK, status);
+
+        final List<Session> sessions = library.sessions();
+        assertThat(sessions, hasSize(1));
+
+        final Session newSession = sessions.get(0);
+        assertNotSame(session, newSession);
+
+        // Callbacks for the missing messages whilst the gateway managed them
+        final List<FixMessage> messages = otfAcceptor.messages();
+        final String expectedSeqNum = String.valueOf(lastReceivedMsgSeqNum + 1);
+        final long messageCount = messages
+            .stream()
+            .filter((m) -> m.getMsgType().equals(TEST_REQUEST_MESSAGE_AS_STR) &&
+            m.get(MSG_SEQ_NUM).equals(expectedSeqNum))
+            .count();
+
+        assertEquals("Expected a single test request" + messages.toString(), 1, messageCount);
+
+        messagesCanBeExchanged(otherSession, otherAcceptor);
     }
 }
