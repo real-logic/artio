@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio.engine;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import io.aeron.logbuffer.ExclusiveBufferClaim;
+import io.aeron.logbuffer.BufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.ExpandableArrayBuffer;
@@ -60,7 +60,7 @@ public class PossDupEnabler
     private final MutableAsciiBuffer mutableAsciiFlyweight = new MutableAsciiBuffer();
     private final UtcTimestampEncoder utcTimestampEncoder = new UtcTimestampEncoder();
 
-    private final ExclusiveBufferClaim bufferClaim;
+    private final BufferClaim bufferClaim;
     private final IntPredicate claimer;
     private final PreCommit onPreCommit;
     private final Consumer<String> onIllegalStateFunc;
@@ -71,7 +71,7 @@ public class PossDupEnabler
     private int fragmentedMessageLength;
 
     public PossDupEnabler(
-        final ExclusiveBufferClaim bufferClaim,
+        final BufferClaim bufferClaim,
         final IntPredicate claimer,
         final PreCommit onPreCommit,
         final Consumer<String> onIllegalStateFunc,

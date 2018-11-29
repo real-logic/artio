@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio.protocol;
 
 import io.aeron.ExclusivePublication;
-import io.aeron.logbuffer.ExclusiveBufferClaim;
+import io.aeron.logbuffer.BufferClaim;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
@@ -34,7 +34,7 @@ class ClaimablePublication implements AutoCloseable
     private final long maxClaimAttempts;
     private final AtomicCounter fails;
     protected final MessageHeaderEncoder header = new MessageHeaderEncoder();
-    protected final ExclusiveBufferClaim bufferClaim = new ExclusiveBufferClaim();
+    protected final BufferClaim bufferClaim = new BufferClaim();
     protected final ExclusivePublication dataPublication;
 
     protected final IdleStrategy idleStrategy;
@@ -56,7 +56,7 @@ class ClaimablePublication implements AutoCloseable
         return claim(framedLength, bufferClaim);
     }
 
-    public long claim(final int framedLength, final ExclusiveBufferClaim bufferClaim)
+    public long claim(final int framedLength, final BufferClaim bufferClaim)
     {
         long position;
         long i = 0;

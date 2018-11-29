@@ -20,7 +20,7 @@ import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
 import io.aeron.UnavailableImageHandler;
 import io.aeron.archive.client.AeronArchive;
-import io.aeron.logbuffer.ExclusiveBufferClaim;
+import io.aeron.logbuffer.BufferClaim;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.CompositeAgent;
@@ -180,7 +180,7 @@ public class EngineContext implements AutoCloseable
         return new Replayer(
             newReplayQuery(configuration.archiverIdleStrategy(), OUTBOUND_LIBRARY_STREAM),
             replayPublication,
-            new ExclusiveBufferClaim(),
+            new BufferClaim(),
             configuration.archiverIdleStrategy(),
             errorHandler,
             configuration.outboundMaxClaimAttempts(),

@@ -17,8 +17,8 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
+import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import io.aeron.logbuffer.ExclusiveBufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.IntHashSet;
@@ -29,7 +29,10 @@ import uk.co.real_logic.artio.decoder.ResendRequestDecoder;
 import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
-import uk.co.real_logic.artio.messages.*;
+import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.messages.FixMessageDecoder;
+import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
+import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.protocol.ProtocolHandler;
 import uk.co.real_logic.artio.protocol.ProtocolSubscription;
 import uk.co.real_logic.artio.util.AsciiBuffer;
@@ -39,7 +42,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.COMMIT;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
 /**
@@ -61,7 +65,7 @@ public class Replayer implements ProtocolHandler, Agent
 
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
-    private final ExclusiveBufferClaim bufferClaim;
+    private final BufferClaim bufferClaim;
     private final ProtocolSubscription protocolSubscription = ProtocolSubscription.of(this);
     private final List<ReplayerSession> replayerSessions = new ArrayList<>();
 
@@ -80,7 +84,7 @@ public class Replayer implements ProtocolHandler, Agent
     public Replayer(
         final ReplayQuery replayQuery,
         final ExclusivePublication publication,
-        final ExclusiveBufferClaim bufferClaim,
+        final BufferClaim bufferClaim,
         final IdleStrategy idleStrategy,
         final ErrorHandler errorHandler,
         final int maxClaimAttempts,

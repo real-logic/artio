@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio.protocol;
 
 import io.aeron.ExclusivePublication;
-import io.aeron.logbuffer.ExclusiveBufferClaim;
+import io.aeron.logbuffer.BufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
@@ -125,7 +125,7 @@ public class GatewayPublication extends ClaimablePublication
         final MessageStatus status,
         final int sequenceNumber)
     {
-        final ExclusiveBufferClaim bufferClaim = this.bufferClaim;
+        final BufferClaim bufferClaim = this.bufferClaim;
         final long timestamp = clock.time();
         final int framedLength = FRAMED_MESSAGE_SIZE + srcLength;
         final boolean fragmented = framedLength > maxPayloadLength;

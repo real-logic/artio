@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.ExclusivePublication;
 import io.aeron.Publication;
-import io.aeron.logbuffer.ExclusiveBufferClaim;
+import io.aeron.logbuffer.BufferClaim;
 import org.agrona.BitUtil;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.mockito.verification.VerificationMode;
@@ -71,7 +71,7 @@ public class AbstractLogTest
     protected FixMessageEncoder messageFrame = new FixMessageEncoder();
 
     protected ExclusivePublication publication = mock(ExclusivePublication.class);
-    protected ExclusiveBufferClaim claim = mock(ExclusiveBufferClaim.class);
+    protected BufferClaim claim = mock(BufferClaim.class);
     protected UnsafeBuffer resultBuffer;
     protected MutableAsciiBuffer resultAsciiBuffer = new MutableAsciiBuffer();
 

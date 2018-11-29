@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.logbuffer.ExclusiveBufferClaim;
+import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
@@ -53,7 +53,7 @@ class ReplayerSession implements ControlledFragmentHandler
     private final MessageHeaderEncoder messageHeaderEncoder = new MessageHeaderEncoder();
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
-    private final ExclusiveBufferClaim bufferClaim;
+    private final BufferClaim bufferClaim;
     private final PossDupEnabler possDupEnabler;
     private final String message;
     private final IdleStrategy idleStrategy;
@@ -78,7 +78,7 @@ class ReplayerSession implements ControlledFragmentHandler
     private ReplayOperation currentReplayOperation;
 
     ReplayerSession(
-        final ExclusiveBufferClaim bufferClaim,
+        final BufferClaim bufferClaim,
         final IdleStrategy idleStrategy,
         final ReplayHandler replayHandler,
         final int maxClaimAttempts,
