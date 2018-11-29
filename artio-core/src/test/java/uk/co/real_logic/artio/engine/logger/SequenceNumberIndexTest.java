@@ -15,7 +15,10 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.logbuffer.Header;
+import io.aeron.Aeron;
+import io.aeron.Publication;
+import io.aeron.Subscription;
+import io.aeron.driver.MediaDriver;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
@@ -33,10 +36,13 @@ import uk.co.real_logic.artio.engine.SessionInfo;
 
 import java.io.File;
 
+import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.agrona.IoUtil.deleteIfExists;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
+import static uk.co.real_logic.artio.TestFixtures.launchJustMediaDriver;
 import static uk.co.real_logic.artio.engine.SectorFramer.SECTOR_SIZE;
 import static uk.co.real_logic.artio.engine.logger.ErrorHandlerVerifier.verify;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
@@ -54,9 +60,18 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private SequenceNumberIndexReader reader;
     private RecordingIdLookup recordingIdLookup = mock(RecordingIdLookup.class);
 
+    private MediaDriver mediaDriver = launchJustMediaDriver();
+    private Aeron aeron;
+    private Publication publication;
+    private Subscription subscription;
+
     @Before
     public void setUp()
     {
+        aeron = Aeron.connect();
+        publication = aeron.addPublication(IPC_CHANNEL, STREAM_ID);
+        subscription = aeron.addSubscription(IPC_CHANNEL, STREAM_ID);
+
         buffer = new UnsafeBuffer(new byte[512]);
 
         deleteFiles();
@@ -87,6 +102,14 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     }
 
     @Test
+    public void shouldStashNewSequenceNumberForLargeMessage()
+    {
+        indexLargeFixMessage();
+
+        assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER);
+    }
+
+    @Test
     public void shouldStashSequenceNumbersAgainstASessionId()
     {
         indexFixMessage();
@@ -103,7 +126,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         bufferContainsExampleMessage(true, SESSION_ID, updatedSequenceNumber, SEQUENCE_INDEX);
 
-        indexRecord(alignedEndPosition() + fragmentLength());
+        indexRecord();
 
         assertLastKnownSequenceNumberIs(SESSION_ID, updatedSequenceNumber);
     }
@@ -126,7 +149,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         writer.close();
 
         final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
-        assertEquals(alignedEndPosition(), newReader.indexedPosition(AERON_SESSION_ID));
+        assertEquals(alignedEndPosition(), newReader.indexedPosition(publication.sessionId()));
     }
 
     @Test
@@ -203,11 +226,11 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Test
     public void shouldSaveIndexUponRotate()
     {
-        final int requiredMessagesToRoll = 2;
+        final int requiredMessagesToRoll = 18724;
         for (int i = 0; i <= requiredMessagesToRoll; i++)
         {
             bufferContainsExampleMessage(true, SESSION_ID, SEQUENCE_NUMBER + i, SEQUENCE_INDEX);
-            indexRecord(alignedEndPosition() + (i * fragmentLength()));
+            indexRecord();
         }
 
         try (MappedFile mappedFile = newIndexFile())
@@ -228,7 +251,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         for (int i = initialSequenceNumber; i <= recordsOverlappingABlock; i++)
         {
             bufferContainsExampleMessage(true, i, i + sequenceNumberDiff, SEQUENCE_INDEX);
-            indexRecord(alignedEndPosition() + (i * fragmentLength()));
+            indexRecord();
         }
 
         writer.close();
@@ -255,6 +278,9 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         writer.close();
         Mockito.verify(errorHandler, never()).onError(any());
+
+        CloseHelper.close(aeron);
+        CloseHelper.close(mediaDriver);
     }
 
     private SequenceNumberIndexReader newInstanceAfterRestart()
@@ -288,16 +314,37 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private void indexFixMessage()
     {
         bufferContainsExampleMessage(true);
-        indexRecord(alignedEndPosition());
+        indexRecord();
     }
 
-    private void indexRecord(final int position)
+    private void indexLargeFixMessage()
     {
-        final Header header = mock(Header.class);
-        when(header.streamId()).thenReturn(STREAM_ID);
-        when(header.sessionId()).thenReturn(AERON_SESSION_ID);
-        when(header.position()).thenReturn((long)position);
-        writer.onFragment(buffer, START, fragmentLength(), header);
+        buffer = new UnsafeBuffer(new byte[BIG_BUFFER_LENGTH]);
+
+        final String testReqId = largeTestReqId();
+        bufferContainsExampleMessage(true, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX, testReqId);
+
+        indexRecord();
+    }
+
+    private void indexRecord()
+    {
+        long position = 0;
+        while (position < 1)
+        {
+            position = publication.offer(buffer, START, fragmentLength());
+
+            Thread.yield();
+        }
+
+        /*System.out.println("position = " + position);
+        System.out.println("p = " + p);*/
+
+        int read = 0;
+        while (read < 1)
+        {
+            read += subscription.poll(writer, 1);
+        }
     }
 
     private void assertLastKnownSequenceNumberIs(final long sessionId, final int expectedSequenceNumber)

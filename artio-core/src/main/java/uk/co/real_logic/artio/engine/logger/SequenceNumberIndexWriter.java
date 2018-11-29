@@ -33,6 +33,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.File;
 
+import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
@@ -129,6 +130,11 @@ public class SequenceNumberIndexWriter implements Index
         final int aeronSessionId = header.sessionId();
 
         if (streamId != this.streamId)
+        {
+            return;
+        }
+
+        if ((header.flags() & BEGIN_FLAG) != BEGIN_FLAG)
         {
             return;
         }

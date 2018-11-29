@@ -52,7 +52,6 @@ public class AbstractLogTest
     protected static final int STREAM_ID = OUTBOUND_LIBRARY_STREAM;
     protected static final int START = FRAME_ALIGNMENT;
     protected static final int SEQUENCE_NUMBER = 2;
-    protected static final int AERON_SESSION_ID = -10;
     protected static final int LIBRARY_ID = 7;
     protected static final int BEGIN_SEQ_NO = 2;
     protected static final int END_SEQ_NO = 2;
@@ -65,7 +64,7 @@ public class AbstractLogTest
     static final String RESEND_TARGET_2 = "sender2";
     public static final int PREFIX_LENGTH =
         MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + SIZE_OF_LENGTH_FIELD;
-    public static final int BIG_BUFFER_LENGTH = MESSAGE_BUFFER_SIZE_IN_BYTES + 400;
+    public static final int BIG_BUFFER_LENGTH = MESSAGE_BUFFER_SIZE_IN_BYTES + 500;
 
     protected MessageHeaderEncoder header = new MessageHeaderEncoder();
     protected FixMessageEncoder messageFrame = new FixMessageEncoder();

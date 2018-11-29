@@ -52,6 +52,11 @@ public final class TestFixtures
         return launchMediaDriver(TERM_BUFFER_LENGTH);
     }
 
+    public static MediaDriver launchJustMediaDriver()
+    {
+        return MediaDriver.launch(mediaDriverContext(TERM_BUFFER_LENGTH, true));
+    }
+
     public static ArchivingMediaDriver launchMediaDriver(final int termBufferLength)
     {
         return launchMediaDriver(mediaDriverContext(termBufferLength, true));
