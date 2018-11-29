@@ -19,6 +19,8 @@ import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 
+import org.agrona.AsciiSequenceView;
+
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Iterator;
