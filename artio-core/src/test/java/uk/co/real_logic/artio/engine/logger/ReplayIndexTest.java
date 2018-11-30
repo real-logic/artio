@@ -25,6 +25,7 @@ import io.aeron.archive.codecs.SourceLocation;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
+import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.NoOpIdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.YieldingIdleStrategy;
@@ -32,6 +33,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.messages.ManageSessionEncoder;
@@ -436,11 +438,15 @@ public class ReplayIndexTest extends AbstractLogTest
     {
         final ReplayOperation operation = query.query(
             mockHandler, sessionId, beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex);
+
+        final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
         while (!operation.attemptReplay())
         {
-            Thread.yield();
+            idleStrategy.idle();
         }
+        idleStrategy.reset();
 
         return operation.replayedMessages();
     }
+
 }
