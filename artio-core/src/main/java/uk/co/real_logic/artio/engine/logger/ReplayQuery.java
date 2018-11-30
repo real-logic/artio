@@ -15,8 +15,10 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectCache;
@@ -31,8 +33,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongFunction;
 
+import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static org.agrona.UnsafeAccess.UNSAFE;
+import static uk.co.real_logic.artio.GatewayProcess.ARCHIVE_REPLAY_STREAM;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
@@ -54,6 +58,8 @@ public class ReplayQuery implements AutoCloseable
     private final IdleStrategy idleStrategy;
     private final AeronArchive aeronArchive;
     private final ErrorHandler errorHandler;
+
+    private Subscription replaySubscription;
 
     public ReplayQuery(
         final String logFileDir,
@@ -211,7 +217,14 @@ public class ReplayQuery implements AutoCloseable
                 ranges.add(currentRange);
             }
 
-            return new ReplayOperation(handler, ranges, aeronArchive, errorHandler);
+            if (replaySubscription == null)
+            {
+                replaySubscription = aeronArchive.context().aeron().addSubscription(
+                    IPC_CHANNEL, ARCHIVE_REPLAY_STREAM);
+            }
+
+            return new ReplayOperation(
+                handler, ranges, aeronArchive, errorHandler, replaySubscription);
         }
 
         private long getIteratorPosition()
@@ -232,6 +245,8 @@ public class ReplayQuery implements AutoCloseable
             {
                 IoUtil.unmap((MappedByteBuffer)wrappedBuffer);
             }
+
+            CloseHelper.close(replaySubscription);
         }
     }
 

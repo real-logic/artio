@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.Aeron;
 import io.aeron.ControlledFragmentAssembler;
+import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.status.RecordingPos;
@@ -36,7 +37,9 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.GatewayProcess.ARCHIVE_REPLAY_STREAM;
 
 /**
- * A continuable replay operation that can retried
+ * A continuable replay operation that can retried.
+ *
+ * Each object is single threaded, but different objects used on different threads.
  */
 public class ReplayOperation
 {
@@ -49,14 +52,18 @@ public class ReplayOperation
     private final CountersReader countersReader;
     private final Subscription subscription;
 
+    // fields reset for each recordingRange
     private int replayedMessages = 0;
     private RecordingRange recordingRange;
+    private int aeronSessionId;
+    private Image image;
 
     ReplayOperation(
         final ControlledFragmentHandler handler,
         final List<RecordingRange> ranges,
         final AeronArchive aeronArchive,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final Subscription subscription)
     {
         this.ranges = ranges;
         this.aeronArchive = aeronArchive;
@@ -65,17 +72,12 @@ public class ReplayOperation
         final Aeron aeron = aeronArchive.context().aeron();
         countersReader = aeron.countersReader();
         messageTracker.wrap(handler);
-        subscription = aeron.addSubscription(IPC_CHANNEL, ARCHIVE_REPLAY_STREAM);
+        this.subscription = subscription;
     }
 
     public boolean attemptReplay()
     {
-        final boolean complete = attemptReplayStep();
-        if (complete)
-        {
-            subscription.close();
-        }
-        return complete;
+        return attemptReplayStep();
     }
 
     private boolean attemptReplayStep()
@@ -107,14 +109,14 @@ public class ReplayOperation
 
             try
             {
-                final int aeronSessionId = (int)aeronArchive.startReplay(
+                aeronSessionId = (int)aeronArchive.startReplay(
                     recordingId,
                     beginPosition,
                     length,
                     IPC_CHANNEL,
                     ARCHIVE_REPLAY_STREAM);
 
-                messageTracker.reset(aeronSessionId);
+                messageTracker.reset();
             }
             catch (final Throwable exception)
             {
@@ -124,19 +126,28 @@ public class ReplayOperation
             }
         }
 
-        subscription.controlledPoll(assembler, Integer.MAX_VALUE);
-
-        // Have we finished this range?
-        if (messageTracker.count < recordingRange.count)
+        if (image == null)
         {
+            image = subscription.imageBySessionId(aeronSessionId);
+
             return false;
         }
         else
         {
-            replayedMessages += recordingRange.count;
-            recordingRange = null;
+            image.controlledPoll(assembler, Integer.MAX_VALUE);
 
-            return ranges.isEmpty();
+            // Have we finished this range?
+            if (messageTracker.count < recordingRange.count)
+            {
+                return false;
+            }
+            else
+            {
+                replayedMessages += recordingRange.count;
+                recordingRange = null;
+
+                return ranges.isEmpty();
+            }
         }
     }
 
@@ -164,25 +175,21 @@ public class ReplayOperation
 
         ControlledFragmentHandler messageHandler;
         int count;
-        private int aeronSessionId;
 
         @Override
         public Action onFragment(
             final DirectBuffer buffer, final int offset, final int length, final Header header)
         {
-            if (header.sessionId() == aeronSessionId)
-            {
-                messageHeaderDecoder.wrap(buffer, offset);
+            messageHeaderDecoder.wrap(buffer, offset);
 
-                if (messageHeaderDecoder.templateId() == FixMessageDecoder.TEMPLATE_ID)
+            if (messageHeaderDecoder.templateId() == FixMessageDecoder.TEMPLATE_ID)
+            {
+                final Action action = messageHandler.onFragment(buffer, offset, length, header);
+                if (action != ABORT)
                 {
-                    final Action action = messageHandler.onFragment(buffer, offset, length, header);
-                    if (action != ABORT)
-                    {
-                        count++;
-                    }
-                    return action;
+                    count++;
                 }
+                return action;
             }
 
             return CONTINUE;
@@ -193,10 +200,9 @@ public class ReplayOperation
             this.messageHandler = handler;
         }
 
-        void reset(final int aeronSessionId)
+        void reset()
         {
             count = 0;
-            this.aeronSessionId = aeronSessionId;
         }
     }
 }
