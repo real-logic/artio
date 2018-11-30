@@ -120,8 +120,6 @@ public class ReplayOperation
             {
                 errorHandler.onError(exception);
 
-                exception.printStackTrace();
-
                 return true;
             }
         }
