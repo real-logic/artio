@@ -73,7 +73,6 @@ public class ReplayOperation
         final boolean complete = attemptReplayStep();
         if (complete)
         {
-            System.out.println("closed");
             subscription.close();
         }
         return complete;
@@ -88,7 +87,7 @@ public class ReplayOperation
                 return true;
             }
 
-            recordingRange = ranges.remove(0);
+            recordingRange = ranges.get(0);
 
             final long beginPosition = recordingRange.position;
             final long length = recordingRange.length;
@@ -97,7 +96,13 @@ public class ReplayOperation
 
             if (archivingNotComplete(endPosition, recordingId))
             {
+                // Retry on the next iteration
+                recordingRange = null;
                 return false;
+            }
+            else
+            {
+                ranges.remove(0);
             }
 
             try
@@ -122,10 +127,6 @@ public class ReplayOperation
         }
 
         subscription.controlledPoll(assembler, Integer.MAX_VALUE);
-        if (subscription.isConnected())
-        {
-            System.out.println("connected");
-        }
 
         // Have we finished this range?
         if (messageTracker.count < recordingRange.count)
