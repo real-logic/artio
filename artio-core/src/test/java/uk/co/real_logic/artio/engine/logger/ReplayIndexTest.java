@@ -139,7 +139,7 @@ public class ReplayIndexTest extends AbstractLogTest
         cleanupMediaDriver(mediaDriver);
     }
 
-    @Test
+    @Test(timeout = 20_000L)
     public void shouldReturnRecordsMatchingQuery()
     {
         indexExampleMessage();
@@ -151,7 +151,7 @@ public class ReplayIndexTest extends AbstractLogTest
         assertEquals(1, msgCount);
     }
 
-    @Test
+    @Test(timeout = 20_000L)
     public void shouldReturnLongRecordsMatchingQuery()
     {
         final String testReqId = largeTestReqId();
@@ -167,7 +167,7 @@ public class ReplayIndexTest extends AbstractLogTest
         assertEquals(1, msgCount);
     }
 
-    @Test
+    @Test(timeout = 20_000L)
     public void shouldReadSecondRecord()
     {
         indexExampleMessage();
@@ -181,7 +181,7 @@ public class ReplayIndexTest extends AbstractLogTest
         assertEquals(2, msgCount);
     }
 
-    @Test
+    @Test(timeout = 20_000L)
     public void shouldReadRecordsFromBeforeARestart() throws IOException
     {
         indexExampleMessage();
@@ -206,7 +206,7 @@ public class ReplayIndexTest extends AbstractLogTest
         }
     }
 
-    @Test
+    @Test(timeout = 20_000L)
     public void shouldReturnAllLogEntriesWhenMostResentMessageRequested()
     {
         indexExampleMessage();
@@ -218,7 +218,7 @@ public class ReplayIndexTest extends AbstractLogTest
         assertEquals(1, msgCount);
     }
 
-    @Test
+    @Test(timeout = 20_000L)
     public void shouldNotReturnLogEntriesWithWrongSessionId()
     {
         indexExampleMessage();
@@ -230,7 +230,7 @@ public class ReplayIndexTest extends AbstractLogTest
         verifyNoMessageRead();
     }
 
-    @Test
+    @Test(timeout = 20_000L)
     public void shouldNotReturnLogEntriesWithOutOfRangeSequenceNumbers()
     {
         indexExampleMessage();
@@ -241,7 +241,7 @@ public class ReplayIndexTest extends AbstractLogTest
         verifyNoMessageRead();
     }
 
-    @Test
+    @Test(timeout = 20_000L)
     public void shouldQueryOverSequenceIndexBoundaries()
     {
         indexExampleMessage();
@@ -257,7 +257,7 @@ public class ReplayIndexTest extends AbstractLogTest
         assertEquals(2, msgCount);
     }
 
-    @Test
+    @Test(timeout = 20_000L)
     public void shouldNotStopIndexingWhenBufferFull()
     {
         indexExampleMessage();
@@ -265,8 +265,8 @@ public class ReplayIndexTest extends AbstractLogTest
         final int beginSequenceNumber = 1;
         final int endSequenceNumber = 1_000;
 
-        IntStream.rangeClosed(beginSequenceNumber, endSequenceNumber).forEach(seqNum ->
-            indexExampleMessage(SESSION_ID, seqNum, SEQUENCE_INDEX));
+        IntStream.rangeClosed(beginSequenceNumber, endSequenceNumber).forEach(
+            (seqNum) -> indexExampleMessage(SESSION_ID, seqNum, SEQUENCE_INDEX));
 
         final int msgCount = query(beginSequenceNumber, SEQUENCE_INDEX, endSequenceNumber, SEQUENCE_INDEX);
 
@@ -274,7 +274,7 @@ public class ReplayIndexTest extends AbstractLogTest
         verifyMessagesRead(totalMessages);
     }
 
-    @Test
+    @Test(timeout = 20_000L)
     public void shouldUpdatePositionForIndexedRecord()
     {
         indexExampleMessage();
@@ -288,7 +288,7 @@ public class ReplayIndexTest extends AbstractLogTest
             .accept(aeronSessionId, recordingId, alignedEndPosition());
     }
 
-    @Test
+    @Test(timeout = 20_000L)
     public void shouldOnlyMapSessionFileOnce()
     {
         indexExampleMessage();
@@ -298,7 +298,7 @@ public class ReplayIndexTest extends AbstractLogTest
         verifyMappedFile(SESSION_ID);
     }
 
-    @Test
+    @Test(timeout = 20_000L)
     public void shouldRecordIndexesForMultipleSessions()
     {
         indexExampleMessage();
@@ -309,7 +309,7 @@ public class ReplayIndexTest extends AbstractLogTest
         verifyMappedFile(SESSION_ID_2);
     }
 
-    @Test
+    @Test(timeout = 20_000L)
     public void shouldIgnoreOtherMessageTypes()
     {
         bufferContainsLogon();
@@ -387,7 +387,12 @@ public class ReplayIndexTest extends AbstractLogTest
         int read = 0;
         while (read < fragmentsToRead)
         {
-            read += subscription.poll(replayIndex, 1);
+            final int count = subscription.poll(replayIndex, 1);
+            if (0 == count)
+            {
+                Thread.yield();
+            }
+            read += count;
         }
     }
 
@@ -435,6 +440,7 @@ public class ReplayIndexTest extends AbstractLogTest
         {
             Thread.yield();
         }
+
         return operation.replayedMessages();
     }
 }
