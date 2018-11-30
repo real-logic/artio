@@ -200,13 +200,11 @@ public class FixArchiveScanner implements AutoCloseable
             streamId,
             strippedChannel,
             originalChannel,
-            sourceIdentity) ->
-            {
-                archiveLocations.add(new ArchiveLocation(recordingId, startPosition, stopPosition));
-            });
+            sourceIdentity) -> archiveLocations.add(new ArchiveLocation(recordingId, startPosition, stopPosition)));
 
         // Any uncompleted recording is at the end
         archiveLocations.sort(comparingLong(ArchiveLocation::stopPosition).reversed());
+
         return archiveLocations;
     }
 

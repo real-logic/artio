@@ -30,11 +30,11 @@ public class EngineRestartTest
         {
             mediaDriver = TestFixtures.launchMediaDriver();
             final int port = TestFixtures.unusedPort();
-            try (FixEngine engine = SystemTestUtil.launchInitiatingEngine(port))
+            try (FixEngine ignore = SystemTestUtil.launchInitiatingEngine(port))
             {
             }
 
-            try (FixEngine engine = SystemTestUtil.launchInitiatingEngineWithSameLogs(port))
+            try (FixEngine ignore = SystemTestUtil.launchInitiatingEngineWithSameLogs(port))
             {
             }
         }

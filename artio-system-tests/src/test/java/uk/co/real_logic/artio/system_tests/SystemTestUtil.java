@@ -123,8 +123,7 @@ public final class SystemTestUtil
                 testSystem.poll();
                 return acceptor
                     .hasReceivedMessage("1")
-                    .filter((msg) -> testReqId.equals(msg.getTestReqId()))
-                    .count() > 0;
+                    .anyMatch((msg) -> testReqId.equals(msg.getTestReqId()));
             });
     }
 
@@ -389,7 +388,6 @@ public final class SystemTestUtil
             .findFirst();
     }
 
-    @SuppressWarnings("ConstantConditions")
     static LibraryInfo engineLibrary(final List<LibraryInfo> libraries)
     {
         return libraryInfoById(libraries, ENGINE_LIBRARY_ID).get(); // Error if not present
@@ -419,8 +417,7 @@ public final class SystemTestUtil
 
                 return acceptor
                     .hasReceivedMessage("0")
-                    .filter((message) -> testReqId.equals(message.get(Constants.TEST_REQ_ID)))
-                    .count() > 0;
+                    .anyMatch((message) -> testReqId.equals(message.get(Constants.TEST_REQ_ID)));
             });
     }
 

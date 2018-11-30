@@ -21,7 +21,6 @@ import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 
 public final class ArchiveDescriptor
 {
-
     public static int alignTerm(final int frameLength)
     {
         return BitUtil.align(frameLength, FRAME_ALIGNMENT);
@@ -34,6 +33,6 @@ public final class ArchiveDescriptor
 
     private static long align(final long value, final long alignment)
     {
-        return (value + (alignment - 1)) & ~(alignment - 1);
+        return (value + (alignment - 1)) & -alignment;
     }
 }

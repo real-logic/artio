@@ -77,9 +77,9 @@ public final class Timing
                 runnable.run();
                 return;
             }
-            catch (final Throwable ignore)
+            catch (final Throwable ex)
             {
-                lastThrowable = ignore;
+                lastThrowable = ex;
             }
 
             Thread.yield();
