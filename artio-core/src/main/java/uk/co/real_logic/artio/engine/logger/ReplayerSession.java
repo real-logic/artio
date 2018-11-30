@@ -45,13 +45,15 @@ class ReplayerSession implements ControlledFragmentHandler
 {
     private static final int NONE = -1;
 
-    private final FixMessageEncoder fixMessageEncoder = new FixMessageEncoder();
-    private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
-    private final FixMessageDecoder fixMessage = new FixMessageDecoder();
-    private final HeaderDecoder fixHeader = new HeaderDecoder();
+    // Safe to share between multiple instances due to single threaded nature of the replayer
+    private static final FixMessageEncoder FIX_MESSAGE_ENCODER = new FixMessageEncoder();
+    private static final MessageHeaderDecoder MESSAGE_HEADER = new MessageHeaderDecoder();
+    private static final FixMessageDecoder FIX_MESSAGE = new FixMessageDecoder();
+    private static final HeaderDecoder FIX_HEADER = new HeaderDecoder();
+    private static final MessageHeaderEncoder MESSAGE_HEADER_ENCODER = new MessageHeaderEncoder();
+    private static final AsciiBuffer ASCII_BUFFER = new MutableAsciiBuffer();
+
     private final GapFillEncoder gapFillEncoder = new GapFillEncoder();
-    private final MessageHeaderEncoder messageHeaderEncoder = new MessageHeaderEncoder();
-    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
     private final BufferClaim bufferClaim;
     private final PossDupEnabler possDupEnabler;
@@ -129,7 +131,7 @@ class ReplayerSession implements ControlledFragmentHandler
     private void onPreCommit(final MutableDirectBuffer buffer, final int offset)
     {
         final int frameOffset = offset + MessageHeaderEncoder.ENCODED_LENGTH;
-        fixMessageEncoder
+        FIX_MESSAGE_ENCODER
             .wrap(buffer, frameOffset)
             .connection(connectionId);
     }
@@ -160,31 +162,32 @@ class ReplayerSession implements ControlledFragmentHandler
     public Action onFragment(
         final DirectBuffer srcBuffer, final int srcOffset, final int srcLength, final Header header)
     {
-        messageHeader.wrap(srcBuffer, srcOffset);
-        final int actingBlockLength = messageHeader.blockLength();
+        MESSAGE_HEADER.wrap(srcBuffer, srcOffset);
+        final int actingBlockLength = MESSAGE_HEADER.blockLength();
         final int offset = srcOffset + MessageHeaderDecoder.ENCODED_LENGTH;
 
-        fixMessage.wrap(
+        FIX_MESSAGE.wrap(
             srcBuffer,
             offset,
             actingBlockLength,
-            messageHeader.version());
+            MESSAGE_HEADER.version());
 
         final int messageOffset = srcOffset + MESSAGE_FRAME_BLOCK_LENGTH;
         final int messageLength = srcLength - MESSAGE_FRAME_BLOCK_LENGTH;
 
-        asciiBuffer.wrap(srcBuffer);
-        fixHeader.decode(asciiBuffer, messageOffset, messageLength);
-        final int msgSeqNum = fixHeader.msgSeqNum();
-        final int messageType = fixMessage.messageType();
+        ASCII_BUFFER.wrap(srcBuffer);
+        FIX_HEADER.reset();
+        FIX_HEADER.decode(ASCII_BUFFER, messageOffset, messageLength);
+        final int msgSeqNum = FIX_HEADER.msgSeqNum();
+        final int messageType = FIX_MESSAGE.messageType();
 
         replayHandler.onReplayedMessage(
-            asciiBuffer,
+            ASCII_BUFFER,
             messageOffset,
             messageLength,
-            fixMessage.libraryId(),
-            fixMessage.session(),
-            fixMessage.sequenceIndex(),
+            FIX_MESSAGE.libraryId(),
+            FIX_MESSAGE.session(),
+            FIX_MESSAGE.sequenceIndex(),
             messageType);
 
         if (gapFillMessageTypes.contains(messageType))
@@ -230,8 +233,8 @@ class ReplayerSession implements ControlledFragmentHandler
             final int destOffset = bufferClaim.offset();
             final MutableDirectBuffer destBuffer = bufferClaim.buffer();
 
-            fixMessageEncoder
-                .wrapAndApplyHeader(destBuffer, destOffset, messageHeaderEncoder)
+            FIX_MESSAGE_ENCODER
+                .wrapAndApplyHeader(destBuffer, destOffset, MESSAGE_HEADER_ENCODER)
                 .libraryId(ENGINE_LIBRARY_ID)
                 .messageType(SequenceResetDecoder.MESSAGE_TYPE)
                 .session(this.sessionId)

@@ -189,7 +189,12 @@ public class Replayer implements ProtocolHandler, Agent
     public int doWork()
     {
         int work = senderSequenceNumbers.poll();
+        work += pollReplayerSessions();
+        return work + subscription.controlledPoll(protocolSubscription, POLL_LIMIT);
+    }
 
+    private int pollReplayerSessions()
+    {
         final ArrayList<ReplayerSession> replayerSessions = this.replayerSessions;
         final int size = replayerSessions.size();
 
@@ -201,10 +206,7 @@ public class Replayer implements ProtocolHandler, Agent
                 fastUnorderedRemove(replayerSessions, i, lastIndex--);
             }
         }
-
-        work += size;
-
-        return work + subscription.controlledPoll(protocolSubscription, POLL_LIMIT);
+        return size;
     }
 
     public void onClose()
