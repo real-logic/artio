@@ -52,9 +52,6 @@ public class ReplayOperation
     private int replayedMessages = 0;
     private RecordingRange recordingRange;
 
-
-
-
     ReplayOperation(
         final ControlledFragmentHandler handler,
         final List<RecordingRange> ranges,
@@ -76,6 +73,7 @@ public class ReplayOperation
         final boolean complete = attemptReplayStep();
         if (complete)
         {
+            System.out.println("closed");
             subscription.close();
         }
         return complete;
@@ -117,11 +115,17 @@ public class ReplayOperation
             {
                 errorHandler.onError(exception);
 
+                exception.printStackTrace();
+
                 return true;
             }
         }
 
         subscription.controlledPoll(assembler, Integer.MAX_VALUE);
+        if (subscription.isConnected())
+        {
+            System.out.println("connected");
+        }
 
         // Have we finished this range?
         if (messageTracker.count < recordingRange.count)

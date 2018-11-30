@@ -39,11 +39,11 @@ import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.COMMIT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static org.agrona.collections.ArrayListUtil.fastUnorderedRemove;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
 /**
@@ -67,7 +67,7 @@ public class Replayer implements ProtocolHandler, Agent
 
     private final BufferClaim bufferClaim;
     private final ProtocolSubscription protocolSubscription = ProtocolSubscription.of(this);
-    private final List<ReplayerSession> replayerSessions = new ArrayList<>();
+    private final ArrayList<ReplayerSession> replayerSessions = new ArrayList<>();
 
     private final ReplayQuery replayQuery;
     private final ExclusivePublication publication;
@@ -190,8 +190,19 @@ public class Replayer implements ProtocolHandler, Agent
     {
         int work = senderSequenceNumbers.poll();
 
-        work += replayerSessions.size();
-        replayerSessions.removeIf(ReplayerSession::attempCurrentReplayOperation);
+        final ArrayList<ReplayerSession> replayerSessions = this.replayerSessions;
+        final int size = replayerSessions.size();
+
+        for (int lastIndex = size - 1, i = lastIndex; i >= 0; i--)
+        {
+            final ReplayerSession replayerSession = replayerSessions.get(i);
+            if (replayerSession.attempCurrentReplayOperation())
+            {
+                fastUnorderedRemove(replayerSessions, i, lastIndex--);
+            }
+        }
+
+        work += size;
 
         return work + subscription.controlledPoll(protocolSubscription, POLL_LIMIT);
     }
