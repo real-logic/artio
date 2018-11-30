@@ -1145,6 +1145,21 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         if (replayFromSequenceNumber != NO_MESSAGE_REPLAY)
         {
+            if (!configuration.logInboundMessages())
+            {
+                continuations.add(() ->
+                {
+                    final long position = inboundPublication.saveRequestSessionReply(
+                        libraryId, INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES, correlationId);
+                    if (position > 0)
+                    {
+                        session.play();
+                    }
+                    return position;
+                });
+                return;
+            }
+
             final int sequenceIndex = session.sequenceIndex();
             if (replayFromSequenceIndex > sequenceIndex ||
                 (replayFromSequenceIndex == sequenceIndex && replayFromSequenceNumber > lastReceivedSeqNum))

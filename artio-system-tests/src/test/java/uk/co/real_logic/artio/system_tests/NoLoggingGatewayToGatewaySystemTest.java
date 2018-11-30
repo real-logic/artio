@@ -18,9 +18,12 @@ package uk.co.real_logic.artio.system_tests;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.session.Session;
 
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.artio.messages.SessionReplyStatus.*;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
@@ -90,6 +93,38 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
         acquireAcceptingSession();
 
         releaseSessionToEngine(acceptingSession, acceptingLibrary, acceptingEngine);
+    }
+
+    @Test
+    public void enginesShouldManageAcceptingSession()
+    {
+        acquireAcceptingSession();
+
+        engineShouldManageSession(acceptingSession, acceptingLibrary, initiatingSession, initiatingOtfAcceptor);
+    }
+
+    @Test
+    public void enginesShouldManageInitiatingSession()
+    {
+        acquireAcceptingSession();
+
+        engineShouldManageSession(initiatingSession, initiatingLibrary, acceptingSession, acceptingOtfAcceptor);
+    }
+
+    private void engineShouldManageSession(
+        final Session session,
+        final FixLibrary library,
+        final Session otherSession,
+        final FakeOtfAcceptor otherAcceptor)
+    {
+        engineShouldManageSession(
+            session,
+            library,
+            otherSession,
+            otherAcceptor,
+            INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES);
+
+        messagesCanBeExchanged(otherSession, otherAcceptor);
     }
 
 }

@@ -297,7 +297,10 @@ public class FixLibrary extends GatewayProcess
      * {@link SessionReplyStatus#SEQUENCE_NUMBER_TOO_HIGH} if the sequence number you have passed in
      * is higher than the current sequence number known by the engine. This may happen to a sequence reset.
      * In this case you will still get the callback to the {@link SessionAcquireHandler} but won't get a
-     * replay on any messages.
+     * replay on any messages. You will also get a callback on the {@link SessionAcquireHandler} in the
+     * {@link SessionReplyStatus#MISSING_MESSAGES} and
+     * {@link SessionReplyStatus#INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES} case but you won't necessarily get the
+     * requested replay of messages.
      *
      * If another library has acquired the session then this method will return
      * {@link SessionReplyStatus#OTHER_SESSION_OWNER}. If the connection id refers

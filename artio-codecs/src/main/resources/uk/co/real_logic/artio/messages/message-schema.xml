@@ -161,6 +161,8 @@
                         description="Can't replay to that sequence number: haven't archived it yet">5</validValue>
             <validValue name="MISSING_MESSAGES"
                         description="We can't find the required number of messages in the log">6</validValue>
+            <validValue name="INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES"
+                        description="You've requested replay of messages, but EngineConfiguration has disabled required logging of messsages">7</validValue>
         </enum>
 
         <enum name="LogonStatus" encodingType="uint8">

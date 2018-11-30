@@ -310,23 +310,7 @@ public class AbstractGatewayToGatewaySystemTest
         final Session otherSession,
         final FakeOtfAcceptor otherAcceptor)
     {
-        final long sessionId = session.id();
-        final int lastReceivedMsgSeqNum = session.lastReceivedMsgSeqNum();
-        final int sequenceIndex = session.sequenceIndex();
-
-        releaseToGateway(library, session, testSystem);
-
-        messagesCanBeExchanged(otherSession, otherAcceptor);
-
-        final SessionReplyStatus status = requestSession(
-            library, sessionId, lastReceivedMsgSeqNum, sequenceIndex, testSystem);
-        assertEquals(OK, status);
-
-        final List<Session> sessions = library.sessions();
-        assertThat(sessions, hasSize(1));
-
-        final Session newSession = sessions.get(0);
-        assertNotSame(session, newSession);
+        final int lastReceivedMsgSeqNum = engineShouldManageSession(session, library, otherSession, otherAcceptor, OK);
 
         // Callbacks for the missing messages whilst the gateway managed them
         final List<FixMessage> messages = otfAcceptor.messages();
@@ -340,5 +324,32 @@ public class AbstractGatewayToGatewaySystemTest
         assertEquals("Expected a single test request" + messages.toString(), 1, messageCount);
 
         messagesCanBeExchanged(otherSession, otherAcceptor);
+    }
+
+    int engineShouldManageSession(
+        final Session session,
+        final FixLibrary library,
+        final Session otherSession,
+        final FakeOtfAcceptor otherAcceptor,
+        final SessionReplyStatus expectedStatus)
+    {
+        final long sessionId = session.id();
+        final int lastReceivedMsgSeqNum = session.lastReceivedMsgSeqNum();
+        final int sequenceIndex = session.sequenceIndex();
+
+        releaseToGateway(library, session, testSystem);
+
+        messagesCanBeExchanged(otherSession, otherAcceptor);
+
+        final SessionReplyStatus status = requestSession(
+            library, sessionId, lastReceivedMsgSeqNum, sequenceIndex, testSystem);
+        assertEquals(expectedStatus, status);
+
+        final List<Session> sessions = library.sessions();
+        assertThat(sessions, hasSize(1));
+
+        final Session newSession = sessions.get(0);
+        assertNotSame(session, newSession);
+        return lastReceivedMsgSeqNum;
     }
 }
