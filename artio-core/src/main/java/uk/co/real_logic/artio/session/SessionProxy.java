@@ -60,7 +60,7 @@ public class SessionProxy
             ).getBytes(US_ASCII);*/
 
             NOT_LOGGED_ON_SESSION_REJECT_REASONS[i] = String.format(
-                "Invalid Logon message: SendingTime accuracy problem, field=52",
+                "Invalid Logon message: SendingTime accuracy problem, field=52, reason=%s",
                 formattedReason
             ).getBytes(US_ASCII);
 

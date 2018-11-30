@@ -30,7 +30,7 @@ class SessionContext
 
     // onSequenceReset() will be called upon logon or not depending upon whether this is a persistent
     // session or not.
-    private int sequenceIndex = UNKNOWN_SEQUENCE_INDEX;
+    private int sequenceIndex;
 
     private long logonTime;
 

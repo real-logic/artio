@@ -32,38 +32,38 @@ public class DecimalFloatToAndFromDoubleTest
     {
         final StringBuilder builder = new StringBuilder();
         assertEquals(String.format("%.0f", 0.0),
-            buildDecimalFloatStringFromDouble(0.0, builder).toString());
+            buildDecimalFloatStringFromDouble(0.0, builder));
         assertEquals(String.format("%.0f", 1.0),
-            buildDecimalFloatStringFromDouble(1.0, builder).toString());
+            buildDecimalFloatStringFromDouble(1.0, builder));
         assertEquals(String.format("%.0f", -1.0),
-            buildDecimalFloatStringFromDouble(-1.0, builder).toString());
+            buildDecimalFloatStringFromDouble(-1.0, builder));
         assertEquals(String.format("%.0f", 87653.0),
-            buildDecimalFloatStringFromDouble(87653.0, builder).toString());
+            buildDecimalFloatStringFromDouble(87653.0, builder));
         assertEquals(String.format("%.0f", -237849.0),
-            buildDecimalFloatStringFromDouble(-237849.0, builder).toString());
+            buildDecimalFloatStringFromDouble(-237849.0, builder));
 
         assertEquals(String.format("%.2f", 0.01).replace("0.", "."),
-            buildDecimalFloatStringFromDouble(0.01, builder).toString());
+            buildDecimalFloatStringFromDouble(0.01, builder));
         assertEquals(String.format("%.1f", 0.1).replace("0.", "."),
-            buildDecimalFloatStringFromDouble(0.1, builder).toString());
+            buildDecimalFloatStringFromDouble(0.1, builder));
         assertEquals(String.format("%.1f", -0.1).replace("0.", "."),
-            buildDecimalFloatStringFromDouble(-0.1, builder).toString());
+            buildDecimalFloatStringFromDouble(-0.1, builder));
         assertEquals(String.format("%.5f", 0.98374).replace("0.", "."),
-            buildDecimalFloatStringFromDouble(0.98374, builder).toString());
+            buildDecimalFloatStringFromDouble(0.98374, builder));
         assertEquals(String.format("%.6f", 0.983745).replace("0.", "."),
-            buildDecimalFloatStringFromDouble(0.983745, builder).toString());
+            buildDecimalFloatStringFromDouble(0.983745, builder));
         assertEquals(String.format("%.6f", -7284.928374),
-            buildDecimalFloatStringFromDouble(-7284.928374, builder).toString());
+            buildDecimalFloatStringFromDouble(-7284.928374, builder));
         assertEquals(String.format("%.8f", 0.00007284).replace("0.", "."),
-            buildDecimalFloatStringFromDouble(0.00007284, builder).toString());
+            buildDecimalFloatStringFromDouble(0.00007284, builder));
         assertEquals(String.format("%.14f", -0.00000000000001).replace("0.", "."),
-            buildDecimalFloatStringFromDouble(-0.00000000000001, builder).toString());
+            buildDecimalFloatStringFromDouble(-0.00000000000001, builder));
         assertEquals(String.format("%.4f", 10001.0001),
-            buildDecimalFloatStringFromDouble(10001.0001, builder).toString());
+            buildDecimalFloatStringFromDouble(10001.0001, builder));
         assertEquals(String.format("%.53f", 1.0e-53).replace("0.", "."),
-            buildDecimalFloatStringFromDouble(1.0e-53, builder).toString());
+            buildDecimalFloatStringFromDouble(1.0e-53, builder));
         assertEquals(String.format("%.53f", -1.0e-53).replace("0.", "."),
-            buildDecimalFloatStringFromDouble(-1.0e-53, builder).toString());
+            buildDecimalFloatStringFromDouble(-1.0e-53, builder));
     }
 
     @Test
@@ -80,11 +80,11 @@ public class DecimalFloatToAndFromDoubleTest
     public void shouldConvertNearZeroDoublesToZero()
     {
         final StringBuilder builder = new StringBuilder();
-        assertEquals("0", buildDecimalFloatStringFromDouble(Double.MIN_VALUE, builder).toString());
-        assertEquals("0", buildDecimalFloatStringFromDouble(-Double.MIN_VALUE, builder).toString());
+        assertEquals("0", buildDecimalFloatStringFromDouble(Double.MIN_VALUE, builder));
+        assertEquals("0", buildDecimalFloatStringFromDouble(-Double.MIN_VALUE, builder));
 
-        assertEquals("0", buildDecimalFloatStringFromDouble(1.0e-153, builder).toString());
-        assertEquals("0", buildDecimalFloatStringFromDouble(-1.0e-153, builder).toString());
+        assertEquals("0", buildDecimalFloatStringFromDouble(1.0e-153, builder));
+        assertEquals("0", buildDecimalFloatStringFromDouble(-1.0e-153, builder));
     }
 
     @Test
@@ -99,6 +99,7 @@ public class DecimalFloatToAndFromDoubleTest
             1L, -2L, 3L, -17L, 53L, -101L, 234L, -9247L, 98237492L, -172839473229L, 329805234980580L,
             DECIMAL_MIN_VALUE, DECIMAL_MAX_VALUE
         };
+
         for (final long value : values)
         {
             for (int i = 0; i < 23; i++)
