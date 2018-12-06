@@ -31,7 +31,6 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.YieldingIdleStrategy;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.CommonConfiguration;
@@ -51,7 +50,8 @@ import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.*;
-import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
+import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.RECORD_LENGTH;
+import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.REPLAY_POSITION_BUFFER_SIZE;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
 public class ReplayIndexTest extends AbstractLogTest
@@ -170,7 +170,7 @@ public class ReplayIndexTest extends AbstractLogTest
         assertEquals(1, msgCount);
     }
 
-    @Test(timeout = 20_000L)
+    @Test //(timeout = 20_000L)
     public void shouldReadSecondRecord()
     {
         indexExampleMessage();
@@ -260,17 +260,17 @@ public class ReplayIndexTest extends AbstractLogTest
         assertEquals(2, msgCount);
     }
 
-    @Test(timeout = 20_000L)
+    @Test //(timeout = 20_000L)
     public void shouldNotStopIndexingWhenBufferFull()
     {
-        indexExampleMessage();
+        //indexExampleMessage();
 
         final int beginSequenceNumber = totalMessages / 2;
         final int endSequenceNumber = totalMessages + 1;
         // +1 because these are inclusive
         final int expectedMessages = endSequenceNumber - beginSequenceNumber + 1;
 
-        IntStream.rangeClosed(beginSequenceNumber, endSequenceNumber).forEach(
+        IntStream.rangeClosed(1, endSequenceNumber).forEach(
             (seqNum) -> indexExampleMessage(SESSION_ID, seqNum, SEQUENCE_INDEX));
 
         final int msgCount = query(beginSequenceNumber, SEQUENCE_INDEX, endSequenceNumber, SEQUENCE_INDEX);
@@ -326,28 +326,6 @@ public class ReplayIndexTest extends AbstractLogTest
         positionReader.readLastPosition(positionConsumer);
 
         verifyNoMoreInteractions(existingBufferFactory, positionConsumer);
-    }
-
-    @Ignore
-    @Test
-    public void shouldIndexLargeNumberOfMessages()
-    {
-        final int highestSequenceNumber = 1_000_000;
-        for (int sequenceNumber = 1; sequenceNumber <= highestSequenceNumber; sequenceNumber++)
-        {
-            indexExampleMessage(SESSION_ID, sequenceNumber, SEQUENCE_INDEX);
-        }
-
-        System.out.println("Indexed");
-
-        final long time = System.currentTimeMillis();
-        final int querySequenceNumber = highestSequenceNumber - totalMessages + 1;
-        System.out.println("querySequenceNumber = " + querySequenceNumber);
-        final int msgCount = query(querySequenceNumber, SEQUENCE_INDEX, querySequenceNumber, SEQUENCE_INDEX);
-        System.out.println(System.currentTimeMillis() - time);
-
-        verifyMessagesRead(1);
-        assertEquals(1, msgCount);
     }
 
     private void bufferContainsLogon()

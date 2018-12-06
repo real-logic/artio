@@ -133,7 +133,6 @@ public class ReplayQuery implements AutoCloseable
 
             final int actingBlockLength = messageFrameHeader.blockLength();
             final int actingVersion = messageFrameHeader.version();
-            final int requiredStreamId = ReplayQuery.this.requiredStreamId;
             final boolean upToMostRecentMessage = endSequenceNumber == MOST_RECENT_MESSAGE;
 
             // LOOKUP THE RANGE FROM THE INDEX
@@ -171,23 +170,16 @@ public class ReplayQuery implements AutoCloseable
                 {
                     idleStrategy.reset();
 
-                    if (beginPosition == 0)
+                    final boolean afterEnd = !upToMostRecentMessage && (sequenceIndex > endSequenceIndex ||
+                        (sequenceIndex == endSequenceIndex && sequenceNumber > endSequenceNumber));
+                    if (beginPosition == 0 || afterEnd)
                     {
                         break;
                     }
 
-                    final boolean beforeEnd = upToMostRecentMessage || sequenceIndex < endSequenceIndex ||
-                        (sequenceIndex == endSequenceIndex && sequenceNumber <= endSequenceNumber);
-
-                    // Don't scan to the end of the buffer, just exit immediately.
-                    if (!beforeEnd)
-                    {
-                        break;
-                    }
-
-                    final boolean afterStart = sequenceIndex > beginSequenceIndex ||
+                    final boolean withinQueryRange = sequenceIndex > beginSequenceIndex ||
                         (sequenceIndex == beginSequenceIndex && sequenceNumber >= beginSequenceNumber);
-                    if (afterStart)
+                    if (withinQueryRange)
                     {
                         currentRange = addRange(
                             ranges,
@@ -198,8 +190,12 @@ public class ReplayQuery implements AutoCloseable
                             recordingId,
                             readLength);
                         lastSequenceNumber = sequenceNumber;
+                        iteratorPosition += RECORD_LENGTH;
                     }
-                    iteratorPosition += RECORD_LENGTH;
+                    else // before start of query
+                    {
+                        iteratorPosition = skipToStart(beginSequenceNumber, iteratorPosition, sequenceNumber);
+                    }
                 }
                 else
                 {
@@ -213,6 +209,27 @@ public class ReplayQuery implements AutoCloseable
             }
 
             return newReplayOperation(handler, ranges);
+        }
+
+        private long skipToStart(final int beginSequenceNumber, final long iteratorPosition, final int sequenceNumber)
+        {
+            if (sequenceNumber < beginSequenceNumber)
+            {
+                // Pre: sequenceIndex <= beginSequenceIndex
+                return jumpPosition(beginSequenceNumber, sequenceNumber, iteratorPosition);
+            }
+            else
+            {
+                // Pre: sequenceIndex < beginSequenceIndex
+                // Don't have a good way to estimate the jump, so just scan forward.
+                return iteratorPosition + RECORD_LENGTH;
+            }
+        }
+
+        private long jumpPosition(final int beginSequenceNumber, final int sequenceNumber, final long iteratorPosition)
+        {
+            final int sequenceNumberJump = beginSequenceNumber - sequenceNumber;
+            return iteratorPosition + sequenceNumberJump * RECORD_LENGTH;
         }
 
         private ReplayOperation newReplayOperation(
