@@ -20,6 +20,7 @@ import io.aeron.archive.ArchiveThreadingMode;
 import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.driver.MediaDriver;
 import org.agrona.IoUtil;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.SampleUtil;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -31,6 +32,7 @@ import java.util.Collections;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.driver.ThreadingMode.SHARED;
+import static uk.co.real_logic.artio.CommonConfiguration.backoffIdleStrategy;
 
 public class ExchangeApplication
 {
@@ -54,10 +56,12 @@ public class ExchangeApplication
 
         final MediaDriver.Context context = new MediaDriver.Context()
             .threadingMode(SHARED)
+            .sharedIdleStrategy(backoffIdleStrategy())
             .dirDeleteOnStart(true);
 
         final Archive.Context archiveContext = new Archive.Context()
             .threadingMode(ArchiveThreadingMode.SHARED)
+            .idleStrategySupplier(CommonConfiguration::backoffIdleStrategy)
             .deleteArchiveOnStart(true);
 
         try (ArchivingMediaDriver driver = ArchivingMediaDriver.launch(context, archiveContext);

@@ -33,6 +33,18 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
 {
     private final List<RequestInfo> requests = new ArrayList<>();
 
+    private final boolean printRequests;
+
+    public AcquiringSessionExistsHandler()
+    {
+        this(false);
+    }
+
+    public AcquiringSessionExistsHandler(final boolean printRequests)
+    {
+        this.printRequests = printRequests;
+    }
+
     public List<RequestInfo> requests()
     {
         return requests;
@@ -53,8 +65,16 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
             NO_MESSAGE_REPLAY,
             NO_MESSAGE_REPLAY,
             CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS);
-        requests.add(new RequestInfo(
-            surrogateSessionId, reply, localCompId, localSubId, localLocationId, remoteCompId));
+
+        final RequestInfo requestInfo = new RequestInfo(
+            surrogateSessionId, reply, localCompId, localSubId, localLocationId, remoteCompId);
+
+        if (printRequests)
+        {
+            System.out.println(requestInfo);
+        }
+
+        requests.add(requestInfo);
     }
 
     public static final class RequestInfo
@@ -111,5 +131,20 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
         {
             return targetCompId;
         }
+
+        @Override
+        public String toString()
+        {
+            return "RequestInfo{" +
+                "connectionId=" + connectionId +
+                ", reply=" + reply +
+                ", senderCompId='" + senderCompId + '\'' +
+                ", senderSubId='" + senderSubId + '\'' +
+                ", senderLocationId='" + senderLocationId + '\'' +
+                ", targetCompId='" + targetCompId + '\'' +
+                '}';
+        }
     }
+
+
 }

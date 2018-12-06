@@ -43,14 +43,15 @@ public class RecordingIdStore implements AutoCloseable
 
     public RecordingIdStore(
         final Aeron aeron,
+        final AeronArchive.Context archiveContext,
         final String requiredChannel,
         final AgentInvoker conductorAgentInvoker,
         final IdleStrategy startupIdleStrategy,
         final IdleStrategy archiverIdleStrategy)
     {
         subscription = aeron.addSubscription(
-            AeronArchive.Configuration.recordingEventsChannel(),
-            AeronArchive.Configuration.recordingEventsStreamId());
+            archiveContext.recordingEventsChannel(),
+            archiveContext.recordingEventsStreamId());
 
         inboundLookup = new RecordingIdLookup(INBOUND_LIBRARY_STREAM, this, archiverIdleStrategy);
         outboundLookup = new RecordingIdLookup(OUTBOUND_LIBRARY_STREAM, this, archiverIdleStrategy);

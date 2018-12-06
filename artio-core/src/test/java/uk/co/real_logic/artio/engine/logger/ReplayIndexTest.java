@@ -107,7 +107,12 @@ public class ReplayIndexTest extends AbstractLogTest
         aeronArchive = AeronArchive.connect();
 
         recordingIdStore = new RecordingIdStore(
-            aeron(), CHANNEL, null, new YieldingIdleStrategy(), new YieldingIdleStrategy());
+            aeron(),
+            aeronArchive.context(),
+            CHANNEL,
+            null,
+            new YieldingIdleStrategy(),
+            new YieldingIdleStrategy());
 
         aeronArchive.startRecording(CHANNEL, STREAM_ID, SourceLocation.LOCAL);
 

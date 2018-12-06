@@ -67,7 +67,7 @@ public class Server implements Agent
             .agentNamePrefix("server-");
         fixLibrary = blockingConnect(libraryConfiguration
             .sessionAcquireHandler(StressSessionHandler::new)
-            .sessionExistsHandler(new AcquiringSessionExistsHandler())
+            .sessionExistsHandler(new AcquiringSessionExistsHandler(true))
             .libraryAeronChannels(singletonList(aeronChannel)));
     }
 

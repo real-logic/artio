@@ -10,6 +10,7 @@ import uk.co.real_logic.artio.library.LibraryConfiguration;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
 import static uk.co.real_logic.artio.example_buyer.BuyerApplication.AERON_DIRECTORY_NAME;
+import static uk.co.real_logic.artio.example_buyer.BuyerApplication.RECORDING_EVENTS_CHANNEL;
 import static uk.co.real_logic.artio.example_exchange.ExchangeApplication.cleanupOldLogFileDir;
 
 public class BuyerAgent implements Agent
@@ -24,7 +25,14 @@ public class BuyerAgent implements Agent
         final EngineConfiguration engineConfiguration = new EngineConfiguration()
             .libraryAeronChannel(IPC_CHANNEL);
 
-        engineConfiguration.aeronContext().aeronDirectoryName(AERON_DIRECTORY_NAME);
+        engineConfiguration
+            .aeronContext()
+            .aeronDirectoryName(AERON_DIRECTORY_NAME);
+
+        engineConfiguration
+            .aeronArchiveContext()
+            .recordingEventsChannel(RECORDING_EVENTS_CHANNEL)
+            .aeronDirectoryName(AERON_DIRECTORY_NAME);
 
         cleanupOldLogFileDir(engineConfiguration);
 
@@ -32,7 +40,12 @@ public class BuyerAgent implements Agent
 
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration()
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
-            .libraryConnectHandler(buyer);
+            .libraryConnectHandler(buyer)
+            .sessionAcquireHandler(buyer);
+
+        libraryConfiguration
+            .aeronContext()
+            .aeronDirectoryName(AERON_DIRECTORY_NAME);
 
         library = FixLibrary.connect(libraryConfiguration);
     }

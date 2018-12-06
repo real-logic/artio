@@ -73,10 +73,11 @@ public class RecordingCoordinator implements AutoCloseable
         this.channel = configuration.libraryAeronChannel();
         if (configuration.logAnyMessages())
         {
-            final Aeron aeron = archive.context().aeron();
+            final AeronArchive.Context archiveContext = archive.context();
+            final Aeron aeron = archiveContext.aeron();
             counters = aeron.countersReader();
             recordingIdStore = new RecordingIdStore(
-                aeron, channel, conductorAgentInvoker, this.idleStrategy, archiverIdleStrategy);
+                aeron, archiveContext, channel, conductorAgentInvoker, this.idleStrategy, archiverIdleStrategy);
 
             if (configuration.logInboundMessages())
             {

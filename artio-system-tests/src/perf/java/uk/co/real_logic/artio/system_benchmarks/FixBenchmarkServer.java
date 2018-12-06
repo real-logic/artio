@@ -102,7 +102,7 @@ public final class FixBenchmarkServer
         return configuration
             .libraryAeronChannels(singletonList(AERON_CHANNEL))
             .sessionAcquireHandler((session, isSlow) -> new BenchmarkSessionHandler())
-            .sessionExistsHandler(new AcquiringSessionExistsHandler());
+            .sessionExistsHandler(new AcquiringSessionExistsHandler(true));
     }
 
     private static void setupAuthentication(final CommonConfiguration configuration)

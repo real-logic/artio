@@ -37,8 +37,8 @@ public class FixLibraryCleanupTest
         final ArchivingMediaDriver mediaDriver = TestFixtures.launchMediaDriver();
         try
         {
-            final LibraryConfiguration configuration = new LibraryConfiguration()
-                .libraryAeronChannels(singletonList(IPC_CHANNEL));
+            final LibraryConfiguration configuration = newLibraryConfiguration();
+
             final FixLibrary library = FixLibrary.connect(configuration);
 
             final File monitoringFile = new File(configuration.monitoringFile());
@@ -62,11 +62,17 @@ public class FixLibraryCleanupTest
         }
     }
 
+    private LibraryConfiguration newLibraryConfiguration()
+    {
+        return new LibraryConfiguration()
+            .libraryAeronChannels(singletonList(IPC_CHANNEL))
+            .sessionAcquireHandler((session, isSlow) -> null);
+    }
+
     @Test
     public void shouldCleanupLibraryIfItCannotConnect()
     {
-        final LibraryConfiguration configuration = new LibraryConfiguration()
-            .libraryAeronChannels(singletonList(IPC_CHANNEL));
+        final LibraryConfiguration configuration = newLibraryConfiguration();
 
         shouldCleanupLibraryIfItCannotConnect(configuration);
     }
@@ -92,8 +98,7 @@ public class FixLibraryCleanupTest
     @Test
     public void shouldCleanupLibraryIfNoAeronCNCFile()
     {
-        final LibraryConfiguration configuration = new LibraryConfiguration()
-            .libraryAeronChannels(singletonList(IPC_CHANNEL));
+        final LibraryConfiguration configuration = newLibraryConfiguration();
 
         // Ensure that we test the CNC file not found path
         IoUtil.delete(new File(configuration.aeronContext().aeronDirectoryName()), true);

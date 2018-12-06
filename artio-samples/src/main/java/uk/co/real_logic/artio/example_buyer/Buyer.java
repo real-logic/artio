@@ -9,10 +9,7 @@ import uk.co.real_logic.artio.Side;
 import uk.co.real_logic.artio.builder.NewOrderSingleEncoder;
 import uk.co.real_logic.artio.decoder.ExecutionReportDecoder;
 import uk.co.real_logic.artio.fields.DecimalFloat;
-import uk.co.real_logic.artio.library.FixLibrary;
-import uk.co.real_logic.artio.library.LibraryConnectHandler;
-import uk.co.real_logic.artio.library.SessionConfiguration;
-import uk.co.real_logic.artio.library.SessionHandler;
+import uk.co.real_logic.artio.library.*;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -21,7 +18,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.server.SampleServer.ACCEPTOR_COMP_ID;
 import static uk.co.real_logic.artio.server.SampleServer.INITIATOR_COMP_ID;
 
-public class Buyer implements LibraryConnectHandler, SessionHandler
+public class Buyer implements LibraryConnectHandler, SessionHandler, SessionAcquireHandler
 {
     private enum State
     {
@@ -44,9 +41,9 @@ public class Buyer implements LibraryConnectHandler, SessionHandler
     private Reply<Session> initiateReply;
     private Session session;
 
-    @Override
     public void onConnect(final FixLibrary library)
     {
+        System.out.println("Library Connected");
         state = State.LIBRARY_CONNECTED;
         this.library = library;
     }
@@ -54,6 +51,7 @@ public class Buyer implements LibraryConnectHandler, SessionHandler
     @Override
     public void onDisconnect(final FixLibrary library)
     {
+        System.out.println("Library Disconnected");
         state = State.LIBRARY_DISCONNECTED;
         this.library = null;
     }
@@ -82,11 +80,20 @@ public class Buyer implements LibraryConnectHandler, SessionHandler
         {
             if (initiateReply.hasCompleted())
             {
+                System.out.println("Session Connected");
                 session = initiateReply.resultIfPresent();
                 state = State.SESSION_CONNECTED;
             }
-
-            // TODO: error cases
+            else
+            {
+                System.err.printf("Session connect failed %s%n", initiateReply.state());
+                final Exception error = initiateReply.error();
+                if (error != null)
+                {
+                    error.printStackTrace();
+                }
+                System.exit(-1);
+            }
 
             initiateReply = null;
         }
@@ -106,6 +113,8 @@ public class Buyer implements LibraryConnectHandler, SessionHandler
         initiateReply = library.initiate(sessionConfig);
 
         state = State.SESSION_CONNECTING;
+
+        System.out.println("Attempting to connect to exchange");
     }
 
     private void sendOrder()
@@ -127,7 +136,6 @@ public class Buyer implements LibraryConnectHandler, SessionHandler
         }
     }
 
-    @Override
     public Action onMessage(
         final DirectBuffer buffer,
         final int offset,
@@ -152,17 +160,14 @@ public class Buyer implements LibraryConnectHandler, SessionHandler
         return CONTINUE;
     }
 
-    @Override
     public void onTimeout(final int libraryId, final Session session)
     {
     }
 
-    @Override
     public void onSlowStatus(final int libraryId, final Session session, final boolean hasBecomeSlow)
     {
     }
 
-    @Override
     public Action onDisconnect(final int libraryId, final Session session, final DisconnectReason reason)
     {
         state = State.LIBRARY_CONNECTED;
@@ -170,9 +175,13 @@ public class Buyer implements LibraryConnectHandler, SessionHandler
         return CONTINUE;
     }
 
-    @Override
     public void onSessionStart(final Session session)
     {
+    }
+
+    public SessionHandler onSessionAcquired(final Session session, final boolean isSlow)
+    {
+        return this;
     }
 
 }
