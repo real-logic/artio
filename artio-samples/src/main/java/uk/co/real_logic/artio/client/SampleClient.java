@@ -30,6 +30,9 @@ import static uk.co.real_logic.artio.CommonConfiguration.optimalTmpDirName;
 import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.artio.server.SampleServer.*;
 
+// NB: You should start the {@link SampleServer} class first before starting this client as it
+// Starts up an Aeron ArchivingMediaDriver. If you want to use this sample as the basis for your
+// own code then start your own ArchivingMediaDriver.
 public final class SampleClient
 {
     private static final TestReqIdFinder TEST_REQ_ID_FINDER = new TestReqIdFinder();
