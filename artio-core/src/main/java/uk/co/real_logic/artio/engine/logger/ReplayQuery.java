@@ -117,7 +117,7 @@ public class ReplayQuery implements AutoCloseable
 
         SessionQuery(final long sessionId)
         {
-            wrappedBuffer = indexBufferFactory.map(logFile(logFileDir, sessionId, requiredStreamId));
+            wrappedBuffer = indexBufferFactory.map(replayIndexFile(logFileDir, sessionId, requiredStreamId));
             buffer = new UnsafeBuffer(wrappedBuffer);
             capacity = recordCapacity(buffer.capacity());
         }
@@ -158,12 +158,11 @@ public class ReplayQuery implements AutoCloseable
 
                 final int offset = offset(iteratorPosition, capacity);
                 indexRecord.wrap(buffer, offset, actingBlockLength, actingVersion);
-                final int streamId = indexRecord.streamId();
-                long beginPosition = indexRecord.position();
+                final long beginPosition = indexRecord.position();
                 final int sequenceIndex = indexRecord.sequenceIndex();
                 final int sequenceNumber = indexRecord.sequenceNumber();
                 final long recordingId = indexRecord.recordingId();
-                int readLength = indexRecord.length();
+                final int readLength = indexRecord.length();
 
                 UNSAFE.loadFence(); // LoadLoad required so previous loads don't move past version check below.
 
@@ -177,31 +176,27 @@ public class ReplayQuery implements AutoCloseable
                         break;
                     }
 
-                    final boolean endOk = upToMostRecentMessage || sequenceIndex < endSequenceIndex ||
+                    final boolean beforeEnd = upToMostRecentMessage || sequenceIndex < endSequenceIndex ||
                         (sequenceIndex == endSequenceIndex && sequenceNumber <= endSequenceNumber);
-                    final boolean startOk = sequenceIndex > beginSequenceIndex ||
-                        (sequenceIndex == beginSequenceIndex && sequenceNumber >= beginSequenceNumber);
-                    if (startOk && endOk && streamId == requiredStreamId)
+
+                    // Don't scan to the end of the buffer, just exit immediately.
+                    if (!beforeEnd)
                     {
-                        if (currentRange == null)
-                        {
-                            currentRange = new RecordingRange(recordingId);
-                        }
-                        else if (currentRange.recordingId != recordingId)
-                        {
-                            ranges.add(currentRange);
-                            currentRange = new RecordingRange(recordingId);
-                        }
+                        break;
+                    }
 
-                        beginPosition -= FRAME_ALIGNMENT;
-                        readLength += FRAME_ALIGNMENT;
-                        currentRange.add(beginPosition, readLength);
-
-                        // FIX messages can be fragmented, so number of range adds != count
-                        if (lastSequenceNumber != sequenceNumber)
-                        {
-                            currentRange.count++;
-                        }
+                    final boolean afterStart = sequenceIndex > beginSequenceIndex ||
+                        (sequenceIndex == beginSequenceIndex && sequenceNumber >= beginSequenceNumber);
+                    if (afterStart)
+                    {
+                        currentRange = addRange(
+                            ranges,
+                            currentRange,
+                            lastSequenceNumber,
+                            beginPosition,
+                            sequenceNumber,
+                            recordingId,
+                            readLength);
                         lastSequenceNumber = sequenceNumber;
                     }
                     iteratorPosition += RECORD_LENGTH;
@@ -217,6 +212,12 @@ public class ReplayQuery implements AutoCloseable
                 ranges.add(currentRange);
             }
 
+            return newReplayOperation(handler, ranges);
+        }
+
+        private ReplayOperation newReplayOperation(
+            final ControlledFragmentHandler handler, final List<RecordingRange> ranges)
+        {
             if (replaySubscription == null)
             {
                 replaySubscription = aeronArchive.context().aeron().addSubscription(
@@ -225,6 +226,38 @@ public class ReplayQuery implements AutoCloseable
 
             return new ReplayOperation(
                 handler, ranges, aeronArchive, errorHandler, replaySubscription);
+        }
+
+        private RecordingRange addRange(
+            final List<RecordingRange> ranges,
+            final RecordingRange currentRange,
+            final int lastSequenceNumber,
+            final long beginPosition,
+            final int sequenceNumber,
+            final long recordingId,
+            final int readLength)
+        {
+            RecordingRange range = currentRange;
+            if (range == null)
+            {
+                range = new RecordingRange(recordingId);
+            }
+            else if (range.recordingId != recordingId)
+            {
+                ranges.add(range);
+                range = new RecordingRange(recordingId);
+            }
+
+            range.add(
+                beginPosition - FRAME_ALIGNMENT,
+                readLength + FRAME_ALIGNMENT);
+
+            // FIX messages can be fragmented, so number of range adds != count
+            if (lastSequenceNumber != sequenceNumber)
+            {
+                range.count++;
+            }
+            return range;
         }
 
         private long getIteratorPosition()

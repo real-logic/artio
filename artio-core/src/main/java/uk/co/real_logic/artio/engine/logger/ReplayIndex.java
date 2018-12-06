@@ -106,9 +106,9 @@ public class ReplayIndex implements Index
         return recordingIdLookup.poll();
     }
 
-    long continuedFixSessionId;
-    int continuedSequenceNumber;
-    int continuedSequenceIndex;
+    private long continuedFixSessionId;
+    private int continuedSequenceNumber;
+    private int continuedSequenceIndex;
 
     public void onFragment(
         final DirectBuffer srcBuffer,
@@ -157,7 +157,7 @@ public class ReplayIndex implements Index
 
                     fixSessionIdToIndex
                         .computeIfAbsent(fixSessionId, newSessionIndex)
-                        .onRecord(streamId, endPosition, length, sequenceNumber, sequenceIndex, header);
+                        .onRecord(endPosition, length, sequenceNumber, sequenceIndex, header);
                 }
             }
         }
@@ -165,7 +165,7 @@ public class ReplayIndex implements Index
         {
             fixSessionIdToIndex
                 .computeIfAbsent(continuedFixSessionId, newSessionIndex)
-                .onRecord(streamId, endPosition, length, continuedSequenceNumber, continuedSequenceIndex, header);
+                .onRecord(endPosition, length, continuedSequenceNumber, continuedSequenceIndex, header);
         }
     }
 
@@ -189,7 +189,7 @@ public class ReplayIndex implements Index
 
         SessionIndex(final long fixSessionId)
         {
-            final File logFile = logFile(logFileDir, fixSessionId, requiredStreamId);
+            final File logFile = replayIndexFile(logFileDir, fixSessionId, requiredStreamId);
             final boolean exists = logFile.exists();
             this.wrappedBuffer = bufferFactory.map(logFile, indexFileSize);
             this.buffer = new UnsafeBuffer(wrappedBuffer);
@@ -214,7 +214,6 @@ public class ReplayIndex implements Index
         }
 
         void onRecord(
-            final int streamId,
             final long endPosition,
             final int length,
             final int sequenceNumber,
@@ -234,7 +233,6 @@ public class ReplayIndex implements Index
 
             replayIndexRecord
                 .wrap(buffer, offset)
-                .streamId(streamId)
                 .position(beginPosition)
                 .sequenceNumber(sequenceNumber)
                 .sequenceIndex(sequenceIndex)

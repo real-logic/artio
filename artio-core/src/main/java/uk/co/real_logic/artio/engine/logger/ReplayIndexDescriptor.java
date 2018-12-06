@@ -42,7 +42,7 @@ public final class ReplayIndexDescriptor
         }
     }
 
-    static File logFile(final String logFileDir, final long fixSessionId, final int streamId)
+    static File replayIndexFile(final String logFileDir, final long fixSessionId, final int streamId)
     {
         return new File(String.format(logFileDir + File.separator + "replay-index-%d-%d", fixSessionId, streamId));
     }

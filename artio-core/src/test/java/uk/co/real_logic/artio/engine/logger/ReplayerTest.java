@@ -29,7 +29,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.stubbing.OngoingStubbing;
 import org.mockito.verification.VerificationMode;
@@ -568,12 +567,6 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldHaveNoMoreErrors()
     {
         verifyNoMoreInteractions(errorHandler);
-    }
-
-    private void assertBeginSeqNo(final int endSeqNo, final InvocationOnMock inv)
-    {
-        final int beginSeqNo = (int)inv.getArguments()[2];
-        assertEquals(endSeqNo, beginSeqNo);
     }
 
     private void claimedAndNothingMore()
