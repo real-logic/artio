@@ -268,11 +268,14 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * Sets the size of index files.
+     * Sets the size of index files. This is the size in bytes for the replay index file that is used for each session.
+     * If you want to size in terms of the last N Fix message fragments that you have received then
+     * use the formula: INITIAL_RECORD_OFFSET + N * ReplayIndexRecordEncoder.BLOCK_LENGTH.
      *
      * @param indexFileSize the size of index files.
      * @return this
      * @see EngineConfiguration#REPLAY_INDEX_FILE_SIZE_PROP
+     * @see EngineConfiguration#DEFAULT_REPLAY_INDEX_FILE_SIZE
      */
     public EngineConfiguration replayIndexFileSize(final int indexFileSize)
     {
