@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.messages.DisconnectDecoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.messages.ReplicatedMessageDecoder;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
@@ -30,8 +29,6 @@ import static uk.co.real_logic.artio.protocol.GatewayPublication.FRAME_SIZE;
 
 public final class ProtocolSubscription implements ControlledFragmentHandler
 {
-    private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
-
     private static final Action UNKNOWN_TEMPLATE = null;
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
@@ -94,14 +91,6 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
             case DisconnectDecoder.TEMPLATE_ID:
             {
                 return onDisconnect(buffer, offset, blockLength, version);
-            }
-
-            case ReplicatedMessageDecoder.TEMPLATE_ID:
-            {
-                // Skip over replicated message header to its payload
-                offset += ReplicatedMessageDecoder.BLOCK_LENGTH;
-                length -= HEADER_LENGTH + ReplicatedMessageDecoder.BLOCK_LENGTH;
-                return onFragment(buffer, offset, length, position);
             }
         }
 

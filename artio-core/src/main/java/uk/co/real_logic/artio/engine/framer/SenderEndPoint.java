@@ -53,6 +53,7 @@ class SenderEndPoint
     private int libraryId;
     private long sessionId;
     private long sendingTimeoutTimeInMs;
+    private boolean replayPaused;
 
     SenderEndPoint(
         final long connectionId,
@@ -100,9 +101,15 @@ class SenderEndPoint
             return;
         }
 
+        if (replayPaused)
+        {
+            dropFurtherBehind(bodyLength);
+
+            return;
+        }
+
         attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, position, outboundTracker);
 
-        // TODO: think about how to deal with slow messages
         senderSequenceNumber.onNewMessage(sequenceNumber);
     }
 
@@ -113,6 +120,11 @@ class SenderEndPoint
         final long timeInMs,
         final long position)
     {
+        if (!isSlowConsumer())
+        {
+            replayPaused = true;
+        }
+
         attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, position, replayTracker);
 
         return CONTINUE;
@@ -125,6 +137,11 @@ class SenderEndPoint
         final long timeInMs,
         final long position)
     {
+        if (!outboundTracker.partiallySentMessage)
+        {
+            replayPaused = true;
+        }
+
         final int offsetAfterHeader = offset - FRAME_SIZE;
         final int length = bodyLength + FRAME_SIZE;
 
@@ -141,13 +158,7 @@ class SenderEndPoint
     {
         if (isSlowConsumer())
         {
-            final long bytesInBuffer = bytesInBufferWeak() + bodyLength;
-            if (bytesInBuffer > maxBytesInBuffer)
-            {
-                removeEndpoint(SLOW_CONSUMER);
-            }
-
-            this.bytesInBuffer.setOrdered(bytesInBuffer);
+            dropFurtherBehind(bodyLength);
 
             return;
         }
@@ -169,6 +180,17 @@ class SenderEndPoint
         {
             onError(ex);
         }
+    }
+
+    private void dropFurtherBehind(final int bodyLength)
+    {
+        final long bytesInBuffer = bytesInBufferWeak() + bodyLength;
+        if (bytesInBuffer > maxBytesInBuffer)
+        {
+            removeEndpoint(SLOW_CONSUMER);
+        }
+
+        this.bytesInBuffer.setOrdered(bytesInBuffer);
     }
 
     private int writeFramedMessage(
@@ -264,6 +286,11 @@ class SenderEndPoint
         {
             invalidLibraryAttempts.increment();
             return CONTINUE;
+        }
+
+        if (replayPaused)
+        {
+            return blockPosition(position, length, outboundTracker);
         }
 
         return attemptSlowMessage(
@@ -427,6 +454,16 @@ class SenderEndPoint
         return false;
     }
 
+    Action onReplayComplete()
+    {
+        if (!replayTracker.partiallySentMessage)
+        {
+            replayPaused = false;
+        }
+
+        return CONTINUE;
+    }
+
     // Struct for tracking the slow state of the replay and outbound streams
     static class StreamTracker
     {
@@ -444,5 +481,10 @@ class SenderEndPoint
         {
             sentPosition += delta;
         }
+    }
+
+    boolean replayPaused()
+    {
+        return replayPaused;
     }
 }

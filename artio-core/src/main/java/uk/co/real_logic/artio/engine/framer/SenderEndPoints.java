@@ -162,6 +162,16 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         return CONTINUE;
     }
 
+    Action onReplayComplete(final long connectionId)
+    {
+        final SenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
+        if (senderEndPoint != null)
+        {
+            return senderEndPoint.onReplayComplete();
+        }
+        return CONTINUE;
+    }
+
     public void close()
     {
         connectionIdToSenderEndpoint

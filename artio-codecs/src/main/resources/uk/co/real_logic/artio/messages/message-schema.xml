@@ -349,17 +349,22 @@
         <field name="session" id="2" type="FixSessionId"/>
     </sbe:message>
 
+    <sbe:message name="SlowStatusNotification" id="43"
+                 description="Notification of sessions become slow or not">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="connectionId" id="2" type="ConnectionId"/>
+        <field name="status" id="3" type="SlowStatus"/>
+    </sbe:message>
+
     <sbe:message name="ResetLibrarySequenceNumber" id="44"
                  description="Tells the library to reset the sequence number of a session that it owns">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="session" id="2" type="FixSessionId"/>
     </sbe:message>
 
-    <sbe:message name="SlowStatusNotification" id="43"
-                 description="Notification of sessions become slow or not">
-        <field name="libraryId" id="1" type="LibraryId"/>
-        <field name="connectionId" id="2" type="ConnectionId"/>
-        <field name="status" id="3" type="SlowStatus"/>
+    <sbe:message name="ReplayComplete" id="45"
+                 description="Replayer tells SenderEndPoint that the current replay is complete">
+        <field name="connection" id="1" type="ConnectionId"/>
     </sbe:message>
 
 </sbe:messageSchema>

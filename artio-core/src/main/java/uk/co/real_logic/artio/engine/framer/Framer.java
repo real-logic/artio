@@ -244,7 +244,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 // Should never be replayed.
                 return Action.CONTINUE;
             }
-        }),
+        },
+        new ReplayProtocolSubscription(senderEndPoints::onReplayComplete)),
         0,
         true);
 
@@ -272,7 +273,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 // Should never be replayed.
                 return Action.CONTINUE;
             }
-        }));
+        },
+        new ReplayProtocolSubscription(senderEndPoints::onReplayComplete)));
 
         channelSupplier = configuration.channelSupplier();
     }

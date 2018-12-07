@@ -45,6 +45,13 @@ class ReplayerSession implements ControlledFragmentHandler
 {
     private static final int NONE = -1;
 
+    private enum State
+    {
+        REPLAYING,
+        CHECK_REPLAY,
+        SEND_COMPLETE_MESSAGE
+    }
+
     // Safe to share between multiple instances due to single threaded nature of the replayer
     private static final FixMessageEncoder FIX_MESSAGE_ENCODER = new FixMessageEncoder();
     private static final MessageHeaderDecoder MESSAGE_HEADER = new MessageHeaderDecoder();
@@ -52,6 +59,7 @@ class ReplayerSession implements ControlledFragmentHandler
     private static final HeaderDecoder FIX_HEADER = new HeaderDecoder();
     private static final MessageHeaderEncoder MESSAGE_HEADER_ENCODER = new MessageHeaderEncoder();
     private static final AsciiBuffer ASCII_BUFFER = new MutableAsciiBuffer();
+    private static final ReplayCompleteEncoder REPLAY_COMPLETE_ENCODER = new ReplayCompleteEncoder();
 
     private final GapFillEncoder gapFillEncoder = new GapFillEncoder();
 
@@ -77,7 +85,9 @@ class ReplayerSession implements ControlledFragmentHandler
 
     private int beginGapFillSeqNum = NONE;
 
-    private ReplayOperation currentReplayOperation;
+    private ReplayOperation replayOperation;
+
+    private State state;
 
     ReplayerSession(
         final BufferClaim bufferClaim,
@@ -126,6 +136,8 @@ class ReplayerSession implements ControlledFragmentHandler
             this::onException,
             clock,
             publication.maxPayloadLength());
+
+        state = State.REPLAYING;
     }
 
     private void onPreCommit(final MutableDirectBuffer buffer, final int offset)
@@ -149,7 +161,7 @@ class ReplayerSession implements ControlledFragmentHandler
 
     void query()
     {
-        currentReplayOperation = replayQuery.query(
+        replayOperation = replayQuery.query(
             this,
             sessionId,
             beginSeqNo,
@@ -279,15 +291,37 @@ class ReplayerSession implements ControlledFragmentHandler
         return false;
     }
 
-    boolean attempCurrentReplayOperation()
+    boolean attempReplay()
     {
-        return currentReplayOperation.attemptReplay() && completeReplay();
+        switch (state)
+        {
+            case REPLAYING:
+                if (replayOperation.attemptReplay())
+                {
+                    state = State.CHECK_REPLAY;
+                    return attempReplay();
+                }
+                return false;
+
+            case CHECK_REPLAY:
+                if (completeReplay())
+                {
+                    state = State.SEND_COMPLETE_MESSAGE;
+                }
+                return false;
+
+            case SEND_COMPLETE_MESSAGE:
+                return sendCompleteMessage();
+
+            default:
+                return false;
+        }
     }
 
     private boolean completeReplay()
     {
         // Load state needed to complete the replay
-        final int replayedMessages = currentReplayOperation.replayedMessages();
+        final int replayedMessages = replayOperation.replayedMessages();
 
         // If the last N messages were admin messages then we need to send a gapfill
         // after the replay query has run.
@@ -324,6 +358,23 @@ class ReplayerSession implements ControlledFragmentHandler
         }
 
         return true;
+    }
+
+    private boolean sendCompleteMessage()
+    {
+        if (claimBuffer(MessageHeaderEncoder.ENCODED_LENGTH + ReplayCompleteEncoder.BLOCK_LENGTH))
+        {
+            REPLAY_COMPLETE_ENCODER.wrapAndApplyHeader(
+                bufferClaim.buffer(),
+                bufferClaim.offset(),
+                MESSAGE_HEADER_ENCODER)
+                .connection(connectionId);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
     }
 
     private int newSeqNo(final long connectionId)

@@ -31,7 +31,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
@@ -255,10 +255,16 @@ public class SenderEndPointTest
         onReplayMessage(0, position);
         byteBufferWritten();
 
+        onNormalStreamReplayComplete();
+        assertReplayPaused();
+
         channelWillWrite(BODY_LENGTH);
         onSlowReplayMessage(0, position);
         byteBufferWritten();
         verifyDoesNotBlockLibrary();
+
+        onSlowStreamReplayComplete();
+        assertNotReplayPaused();
 
         assertBytesInBuffer(0);
     }
@@ -294,11 +300,17 @@ public class SenderEndPointTest
         byteBufferWritten();
         verifyDoesNotBlockLibrary();
 
+        onNormalStreamReplayComplete();
+        assertReplayPaused();
+
         channelWillWrite(firstWrites);
         onSlowReplayMessage(0, position);
         byteBufferWritten();
         assertBytesInBuffer(remaining);
         verifyBlocksReplayAt(BEGIN_POSITION);
+
+        onSlowStreamReplayComplete();
+        assertReplayPaused();
 
         channelWillWrite(remaining);
         onSlowReplayMessage(0, position);
@@ -306,6 +318,9 @@ public class SenderEndPointTest
         assertBytesInBuffer(0);
         verifyNoMoreErrors();
         verifyDoesNotBlockLibrary();
+
+        onSlowStreamReplayComplete();
+        assertNotReplayPaused();
     }
 
     @Test
@@ -319,10 +334,16 @@ public class SenderEndPointTest
         onReplayMessage(0, position);
         byteBufferWritten();
 
+        onNormalStreamReplayComplete();
+        assertReplayPaused();
+
         channelWillWrite(firstWrites);
         onSlowReplayMessage(0, position);
         byteBufferWritten();
         assertBytesInBuffer(remaining);
+
+        onSlowStreamReplayComplete();
+        assertReplayPaused();
 
         onOutboundMessage(0, position);
         byteBufferNotWritten();
@@ -337,6 +358,9 @@ public class SenderEndPointTest
         onSlowReplayMessage(0, position);
         byteBufferWritten();
         assertBytesInBuffer(BODY_LENGTH);
+
+        onSlowStreamReplayComplete();
+        assertNotReplayPaused();
 
         channelWillWrite(BODY_LENGTH);
         onSlowOutboundMessage();
@@ -366,9 +390,15 @@ public class SenderEndPointTest
         byteBufferNotWritten();
         assertBytesInBuffer(remaining + BODY_LENGTH);
 
+        onNormalStreamReplayComplete();
+        assertNotReplayPaused();
+
         onSlowReplayMessage(0, position);
         byteBufferNotWritten();
         assertBytesInBuffer(remaining + BODY_LENGTH);
+
+        onSlowStreamReplayComplete();
+        assertNotReplayPaused();
 
         channelWillWrite(remaining);
         onSlowOutboundMessage();
@@ -379,6 +409,9 @@ public class SenderEndPointTest
         onSlowReplayMessage(0, BODY_LENGTH);
         byteBufferWritten();
         assertBytesInBuffer(0);
+
+        onSlowStreamReplayComplete();
+        assertNotReplayPaused();
 
         verifyNoMoreErrors();
     }
@@ -524,5 +557,25 @@ public class SenderEndPointTest
     {
         verify(blockablePosition).blockPosition(position);
         reset(blockablePosition);
+    }
+
+    private void assertNotReplayPaused()
+    {
+        assertFalse("should not be replay paused", endPoint.replayPaused());
+    }
+
+    private void assertReplayPaused()
+    {
+        assertTrue("should be replay paused", endPoint.replayPaused());
+    }
+
+    private void onSlowStreamReplayComplete()
+    {
+        endPoint.onReplayComplete();
+    }
+
+    private void onNormalStreamReplayComplete()
+    {
+        endPoint.onReplayComplete();
     }
 }

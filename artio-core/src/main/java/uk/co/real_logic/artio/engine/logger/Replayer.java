@@ -201,7 +201,7 @@ public class Replayer implements ProtocolHandler, Agent
         for (int lastIndex = size - 1, i = lastIndex; i >= 0; i--)
         {
             final ReplayerSession replayerSession = replayerSessions.get(i);
-            if (replayerSession.attempCurrentReplayOperation())
+            if (replayerSession.attempReplay())
             {
                 fastUnorderedRemove(replayerSessions, i, lastIndex--);
             }

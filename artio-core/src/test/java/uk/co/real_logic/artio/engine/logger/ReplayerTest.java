@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,8 @@ import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
+import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
+import uk.co.real_logic.artio.messages.ReplayCompleteDecoder;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -158,6 +160,11 @@ public class ReplayerTest extends AbstractLogTest
         onFragment(srcLength);
 
         assertHasResentWithPossDupFlag(srcLength, times(1));
+
+        replayer.doWork();
+        replayer.doWork();
+
+        verifyReplayCompleteMessageSent();
     }
 
     @Test
@@ -204,6 +211,10 @@ public class ReplayerTest extends AbstractLogTest
         replayer.doWork();
 
         assertSentGapFill(SEQUENCE_NUMBER, END_SEQ_NO + 1, offset, times(1));
+
+        replayer.doWork();
+
+        verifyReplayCompleteMessageSent();
     }
 
     @Test
@@ -225,6 +236,10 @@ public class ReplayerTest extends AbstractLogTest
         replayer.doWork();
 
         assertSentGapFill(SEQUENCE_NUMBER, endSeqNo + 1, offset, times(1));
+
+        replayer.doWork();
+
+        verifyReplayCompleteMessageSent();
     }
 
     @Test
@@ -256,6 +271,10 @@ public class ReplayerTest extends AbstractLogTest
         final int offset = setupCapturingClaim();
         replayer.doWork();
         assertSentGapFill(SEQUENCE_NUMBER, endSeqNo + 1, offset, times(1));
+
+        replayer.doWork();
+
+        verifyReplayCompleteMessageSent();
     }
 
     @Test
@@ -304,6 +323,10 @@ public class ReplayerTest extends AbstractLogTest
         replayer.doWork();
 
         assertReplayHandlerInvoked(endSeqNo);
+
+        replayer.doWork();
+
+        verifyReplayCompleteMessageSent();
     }
 
     private void assertReplayHandlerInvoked(final int endSeqNo)
@@ -408,6 +431,10 @@ public class ReplayerTest extends AbstractLogTest
         replayer.doWork();
 
         assertSentGapFill(endSeqNo, endSeqNo + 1, offset, times(1));
+
+        replayer.doWork();
+
+        verifyReplayCompleteMessageSent();
     }
 
     @Test
@@ -770,5 +797,19 @@ public class ReplayerTest extends AbstractLogTest
     {
         verify(publication).maxPayloadLength();
         verifyNoMoreInteractions(publication);
+    }
+
+    private void verifyReplayCompleteMessageSent()
+    {
+        final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
+        final ReplayCompleteDecoder replayComplete = new ReplayCompleteDecoder();
+
+        int offset = offset();
+        messageHeader.wrap(resultBuffer, offset);
+        offset += MessageHeaderDecoder.ENCODED_LENGTH;
+
+        assertEquals(ReplayCompleteDecoder.TEMPLATE_ID, messageHeader.templateId());
+        replayComplete.wrap(resultBuffer, offset, messageHeader.blockLength(), messageHeader.version());
+        assertEquals(CONNECTION_ID, replayComplete.connection());
     }
 }
