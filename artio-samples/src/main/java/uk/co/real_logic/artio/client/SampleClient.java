@@ -65,6 +65,9 @@ public final class SampleClient
                 .sessionAcquireHandler(SampleClient::onConnect)
                 .libraryAeronChannels(singletonList(aeronChannel))))
             {
+                // Whilst we only initiate a single Session for a given library here, it is
+                // perfectly possible to initiate multiple Sessions on a given library
+                // and manage them accordingly.
                 final Session session = LibraryUtil.initiate(
                     library,
                     sessionConfig,
