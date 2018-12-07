@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine;
 
+import io.aeron.archive.client.AeronArchive;
 import org.agrona.CloseHelper;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.IdleStrategy;
@@ -167,6 +168,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private MappedFile receivedSequenceNumberIndex;
     private MappedFile sessionIdBuffer;
     private Set<String> gapfillOnReplayMessageTypes = new HashSet<>(DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES);
+    private final AeronArchive.Context archiveContext = new AeronArchive.Context();
 
     private int outboundLibraryFragmentLimit =
         getInteger(OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP, DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT);
@@ -674,6 +676,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     {
         super.replyTimeoutInMs(replyTimeoutInMs);
         return this;
+    }
+
+    public AeronArchive.Context aeronArchiveContext()
+    {
+        return archiveContext;
     }
 
     public EngineConfiguration conclude()

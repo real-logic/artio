@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio;
 
 import io.aeron.Aeron;
-import io.aeron.archive.client.AeronArchive;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
@@ -207,7 +206,6 @@ public class CommonConfiguration
     private String monitoringFile = null;
     private long replyTimeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
     private final Aeron.Context aeronContext = new Aeron.Context();
-    private final AeronArchive.Context archiveContext = new AeronArchive.Context();
     private int sessionBufferSize = DEFAULT_SESSION_BUFFER_SIZE;
     private int inboundMaxClaimAttempts =
         getInteger(INBOUND_MAX_CLAIM_ATTEMPTS_PROPERTY, DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS);
@@ -481,11 +479,6 @@ public class CommonConfiguration
     public Aeron.Context aeronContext()
     {
         return aeronContext;
-    }
-
-    public AeronArchive.Context aeronArchiveContext()
-    {
-        return archiveContext;
     }
 
     public boolean printErrorMessages()
