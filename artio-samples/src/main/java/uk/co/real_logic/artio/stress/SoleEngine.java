@@ -18,13 +18,11 @@ package uk.co.real_logic.artio.stress;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 
-import java.io.IOException;
-
 public final class SoleEngine
 {
     static final String AERON_CHANNEL = "aeron:udp?endpoint=localhost:10000";
 
-    public static void main(final String[] args) throws IOException
+    public static void main(final String[] args)
     {
         final EngineConfiguration configuration = new EngineConfiguration()
             .bindTo("localhost", StressConfiguration.PORT)

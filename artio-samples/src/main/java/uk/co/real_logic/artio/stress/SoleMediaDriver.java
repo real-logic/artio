@@ -15,6 +15,9 @@
  */
 package uk.co.real_logic.artio.stress;
 
+import io.aeron.archive.Archive;
+import io.aeron.archive.ArchiveThreadingMode;
+import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.driver.MediaDriver;
 
 import static io.aeron.driver.ThreadingMode.SHARED;
@@ -27,7 +30,11 @@ public final class SoleMediaDriver
             .threadingMode(SHARED)
             .dirDeleteOnStart(true);
 
-        try (MediaDriver ignore = MediaDriver.launch(context))
+        final Archive.Context archiveContext = new Archive.Context()
+            .threadingMode(ArchiveThreadingMode.SHARED)
+            .deleteArchiveOnStart(true);
+
+        try (ArchivingMediaDriver ignore = ArchivingMediaDriver.launch(context, archiveContext))
         {
             StressUtil.awaitKeyPress();
         }
