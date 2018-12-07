@@ -23,14 +23,18 @@ public class ExchangeSessionHandler implements SessionHandler
     private static final char[] VALID_SYMBOL = "MSFT".toCharArray();
     private static final byte[] SYMBOL_BYTES = "MSFT".getBytes(US_ASCII);
 
+    private static final int SIZE_OF_ASCII_LONG = String.valueOf(Long.MAX_VALUE).length();
+
     // static fields below safe due to single threaded nature of the logic.
 
     // execIds unique to venue.
-    private static final byte[] EXEC_ID_BUFFER = new byte[4];
+    private static final byte[] EXEC_ID_BUFFER = new byte[SIZE_OF_ASCII_LONG];
+    private static int execIdEncodedLength;
     private static final UnsafeBuffer EXEC_ID_ENCODER = new UnsafeBuffer(EXEC_ID_BUFFER);
     private static long execId = 0;
 
-    private static final byte[] ORDER_ID_BUFFER = new byte[4];
+    private static final byte[] ORDER_ID_BUFFER = new byte[SIZE_OF_ASCII_LONG];
+    private static int orderIdEncodedLength;
     private static final UnsafeBuffer ORDER_ID_ENCODER = new UnsafeBuffer(ORDER_ID_BUFFER);
 
     // orderIds unique per session
@@ -80,14 +84,18 @@ public class ExchangeSessionHandler implements SessionHandler
     {
         final Side side = newOrderSingle.sideAsEnum();
 
-        executionReport.resetOrderID();
-        executionReport.resetExecID();
-        executionReport.instrument().resetSymbol();
+        newOrderId();
+
+        newExecId();
 
         executionReport
             .execType(ExecType.FILL)
             .ordStatus(OrdStatus.FILLED)
+            .orderID(ORDER_ID_BUFFER, orderIdEncodedLength)
+            .execID(EXEC_ID_BUFFER, execIdEncodedLength)
             .side(side);
+
+        executionReport.instrument().symbol(newOrderSingle.symbol(), newOrderSingle.symbolLength());
 
         return Pressure.apply(session.send(executionReport));
     }
@@ -113,16 +121,13 @@ public class ExchangeSessionHandler implements SessionHandler
     {
         final Side side = newOrderSingle.sideAsEnum();
 
-        // Generate ids GC free, underlying buffer is associated with the execution report in the constructor
-        orderId++;
-        ORDER_ID_ENCODER.putLong(0, orderId);
+        newOrderId();
 
-        execId++;
-        EXEC_ID_ENCODER.putLong(0, execId);
+        newExecId();
 
         executionReport
-            .orderID(ORDER_ID_BUFFER)
-            .execID(EXEC_ID_BUFFER)
+            .orderID(ORDER_ID_BUFFER, orderIdEncodedLength)
+            .execID(EXEC_ID_BUFFER, execIdEncodedLength)
             .execType(ExecType.FILL)
             .ordStatus(OrdStatus.FILLED)
             .side(side);
@@ -142,6 +147,19 @@ public class ExchangeSessionHandler implements SessionHandler
         {
             return CONTINUE;
         }
+    }
+
+    private void newExecId()
+    {
+        execId++;
+        execIdEncodedLength = EXEC_ID_ENCODER.putLongAscii(0, execId);
+    }
+
+    private void newOrderId()
+    {
+        // Generate ids GC free, underlying buffer is associated with the execution report in the constructor
+        orderId++;
+        orderIdEncodedLength = ORDER_ID_ENCODER.putLongAscii(0, orderId);
     }
 
     @Override

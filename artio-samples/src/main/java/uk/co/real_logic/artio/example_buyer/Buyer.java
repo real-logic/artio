@@ -9,14 +9,15 @@ import uk.co.real_logic.artio.Side;
 import uk.co.real_logic.artio.builder.NewOrderSingleEncoder;
 import uk.co.real_logic.artio.decoder.ExecutionReportDecoder;
 import uk.co.real_logic.artio.fields.DecimalFloat;
+import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.*;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.artio.server.SampleServer.ACCEPTOR_COMP_ID;
-import static uk.co.real_logic.artio.server.SampleServer.INITIATOR_COMP_ID;
+import static uk.co.real_logic.artio.example_exchange.ExchangeApplication.ACCEPTOR_COMP_ID;
+import static uk.co.real_logic.artio.example_exchange.ExchangeApplication.INITIATOR_COMP_ID;
 
 public class Buyer implements LibraryConnectHandler, SessionHandler, SessionAcquireHandler
 {
@@ -34,6 +35,7 @@ public class Buyer implements LibraryConnectHandler, SessionHandler, SessionAcqu
     private final ExecutionReportDecoder executionReport = new ExecutionReportDecoder();
     private final DecimalFloat price = new DecimalFloat(100);
     private final DecimalFloat orderQty = new DecimalFloat(2);
+    private final UtcTimestampEncoder transactTime = new UtcTimestampEncoder();
 
     private State state = State.LIBRARY_DISCONNECTED;
 
@@ -119,10 +121,12 @@ public class Buyer implements LibraryConnectHandler, SessionHandler, SessionAcqu
 
     private void sendOrder()
     {
+        final int transactTimeLength = transactTime.encode(System.currentTimeMillis());
+
         newOrderSingle
             .clOrdID("A")
             .side(Side.BUY)
-            .transactTime(null)
+            .transactTime(transactTime.buffer(), transactTimeLength)
             .ordType(OrdType.MARKET)
             .price(price);
 
@@ -150,9 +154,11 @@ public class Buyer implements LibraryConnectHandler, SessionHandler, SessionAcqu
         if (messageType == ExecutionReportDecoder.MESSAGE_TYPE)
         {
             asciiBuffer.wrap(buffer, offset, length);
+            System.out.println("Received report: " + asciiBuffer.getAscii(0, length));
+
             executionReport.decode(asciiBuffer, 0, length);
 
-            System.out.println("Received report: " + executionReport);
+            System.out.println("Parsed report: " + executionReport);
 
             state = State.SESSION_CONNECTED;
         }
