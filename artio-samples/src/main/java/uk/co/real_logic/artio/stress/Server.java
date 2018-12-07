@@ -15,7 +15,11 @@
  */
 package uk.co.real_logic.artio.stress;
 
+import io.aeron.archive.Archive;
+import io.aeron.archive.ArchiveThreadingMode;
+import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.driver.MediaDriver;
+import io.aeron.driver.ThreadingMode;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
@@ -27,13 +31,12 @@ import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 
-import static io.aeron.driver.ThreadingMode.SHARED;
 import static java.util.Collections.singletonList;
 import static uk.co.real_logic.artio.SampleUtil.blockingConnect;
 
 public class Server implements Agent
 {
-    private MediaDriver mediaDriver;
+    private ArchivingMediaDriver mediaDriver;
     private FixEngine fixEngine;
     private FixLibrary fixLibrary;
 
@@ -56,9 +59,14 @@ public class Server implements Agent
         StressUtil.cleanupOldLogFileDir(configuration);
 
         final MediaDriver.Context context = new MediaDriver.Context()
-            .threadingMode(SHARED)
+            .threadingMode(ThreadingMode.SHARED)
             .dirDeleteOnStart(true);
-        mediaDriver = MediaDriver.launch(context);
+
+        final Archive.Context archiveContext = new Archive.Context()
+            .threadingMode(ArchiveThreadingMode.SHARED)
+            .deleteArchiveOnStart(true);
+
+        mediaDriver = ArchivingMediaDriver.launch(context, archiveContext);
         fixEngine = FixEngine.launch(configuration);
 
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
