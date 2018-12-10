@@ -31,7 +31,7 @@ import uk.co.real_logic.artio.session.Session;
 public final class LibraryUtil
 {
 
-    private static final int FRAGMENT_LIMIT = 10;
+    private static final int DEFAULT_FRAGMENT_LIMIT = 10;
 
     /**
      * Initiate a FIX session with a FIX acceptor. This method returns a reply object
@@ -57,6 +57,35 @@ public final class LibraryUtil
         final int attempts,
         final IdleStrategy idleStrategy) throws IllegalStateException, FixGatewayException, TimeoutException
     {
+        return initiate(library, configuration, attempts, idleStrategy, DEFAULT_FRAGMENT_LIMIT);
+    }
+
+    /**
+     * Initiate a FIX session with a FIX acceptor. This method returns a reply object
+     * wrapping the Session itself.
+     *
+     * @param library the library to attempt to initiate from.
+     * @param configuration the configuration to use for the session.
+     * @param attempts the number of times to attempt to connect to a gateway.
+     * @param idleStrategy the {@link IdleStrategy} to use when polling.
+     * @param fragmentLimit the number of messages to poll on the library before idling.
+     * @return the session object for the session that you've initiated.
+     * @throws IllegalStateException if you're trying to initiate two sessions at the same time or if there's a timeout talking to
+     *         the {@link uk.co.real_logic.artio.engine.FixEngine}.
+     *         This probably indicates that there's a problem in your code or that your engine isn't running.
+     * @throws FixGatewayException
+     *         if you're unable to connect to the accepting gateway.
+     *         This probably indicates a configuration problem related to the external gateway.
+     * @throws TimeoutException the connection has timed out <code>attempts</code> number of times.
+     * @throws IllegalArgumentException if attempts is &lt; 1
+     */
+    private static Session initiate(
+        final FixLibrary library,
+        final SessionConfiguration configuration,
+        final int attempts,
+        final IdleStrategy idleStrategy,
+        final int fragmentLimit)
+    {
         if (attempts < 1)
         {
             throw new IllegalArgumentException("Attempts should be >= 1, but is " + attempts);
@@ -68,7 +97,7 @@ public final class LibraryUtil
             reply = library.initiate(configuration);
             while (reply.isExecuting())
             {
-                idleStrategy.idle(library.poll(FRAGMENT_LIMIT));
+                idleStrategy.idle(library.poll(fragmentLimit));
             }
 
             if (reply.hasCompleted())
