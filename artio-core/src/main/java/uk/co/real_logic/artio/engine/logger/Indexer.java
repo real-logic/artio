@@ -42,6 +42,7 @@ import static uk.co.real_logic.artio.GatewayProcess.ARCHIVE_REPLAY_STREAM;
 /**
  * Incrementally builds indexes by polling a subscription.
  */
+@SuppressWarnings("ForLoopReplaceableByForEach")
 public class Indexer implements Agent, ControlledFragmentHandler
 {
     private static final int LIMIT = 20;
@@ -76,14 +77,16 @@ public class Indexer implements Agent, ControlledFragmentHandler
         final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
         final AgentInvoker aeronInvoker = aeronArchive.context().aeron().conductorAgentInvoker();
 
-        for (final Index index : indices)
+        for (int i = 0, size = indices.size(); i < size; i++)
         {
-            index.readLastPosition((aeronSessionId, recordingId, indexStoppedposition) ->
+            final Index index = indices.get(i);
+
+            index.readLastPosition((aeronSessionId, recordingId, indexStoppedPosition) ->
             {
                 try
                 {
                     final long recordingStoppedPosition = aeronArchive.getStopPosition(recordingId);
-                    if (recordingStoppedPosition > indexStoppedposition)
+                    if (recordingStoppedPosition > indexStoppedPosition)
                     {
                         DebugLogger.log(
                             LogTag.INDEX,
@@ -91,11 +94,11 @@ public class Indexer implements Agent, ControlledFragmentHandler
                             index.getName(),
                             recordingId,
                             recordingStoppedPosition,
-                            indexStoppedposition);
+                            indexStoppedPosition);
 
-                        final long length = recordingStoppedPosition - indexStoppedposition;
+                        final long length = recordingStoppedPosition - indexStoppedPosition;
                         try (Subscription subscription = aeronArchive.replay(
-                            recordingId, indexStoppedposition, length, IPC_CHANNEL, ARCHIVE_REPLAY_STREAM))
+                            recordingId, indexStoppedPosition, length, IPC_CHANNEL, ARCHIVE_REPLAY_STREAM))
                         {
                             // Only do 1 replay at a time
                             while (subscription.imageCount() != 1)
@@ -116,9 +119,9 @@ public class Indexer implements Agent, ControlledFragmentHandler
                         }
                     }
                 }
-                catch (final ArchiveException e)
+                catch (final ArchiveException ex)
                 {
-                    errorHandler.onError(e);
+                    errorHandler.onError(ex);
                 }
             });
         }
@@ -145,7 +148,8 @@ public class Indexer implements Agent, ControlledFragmentHandler
             endPosition,
             streamId,
             aeronSessionId);
-        for (int i = 0; i < indices.size(); i++) 
+
+        for (int i = 0, size = indices.size(); i < size; i++)
         {
             indices.get(i).onFragment(buffer, offset, length, header);
         }
@@ -176,8 +180,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
         subscription.controlledPoll(this::quiesceFragment, Integer.MAX_VALUE);
     }
 
-    private Action quiesceFragment(
-        final DirectBuffer buffer, final int offset, final int length, final Header header)
+    private Action quiesceFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         if (completedPosition(header.sessionId()) <= header.position())
         {
