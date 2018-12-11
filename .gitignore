@@ -57,3 +57,4 @@ aeron-archive/
 buyer/
 
 *-example
+artio-samples/src/main/java/uk/co/real_logic/artio/reproduction/
