@@ -37,13 +37,15 @@ import static java.nio.channels.SelectionKey.OP_CONNECT;
 public class TcpChannelSupplier implements AutoCloseable
 {
     private final EngineConfiguration configuration;
+    private final boolean hasBindAddress;
 
+    private int opensInFlight = 0;
     private Selector selector;
     private ServerSocketChannel listeningChannel;
 
     public TcpChannelSupplier(final EngineConfiguration configuration)
     {
-        final boolean hasBindAddress = configuration.hasBindAddress();
+        hasBindAddress = configuration.hasBindAddress();
         this.configuration = configuration;
         try
         {
@@ -69,51 +71,58 @@ public class TcpChannelSupplier implements AutoCloseable
 
     public int pollSelector(final long timeInMs, final NewChannelHandler handler) throws IOException
     {
-        selector.selectNow();
-        final Set<SelectionKey> selectionKeys = selector.selectedKeys();
-        final int unprocessedConnections = selectionKeys.size();
-        if (unprocessedConnections > 0)
+        if (hasBindAddress || opensInFlight > 0)
         {
-            final Iterator<SelectionKey> it = selectionKeys.iterator();
-            while (it.hasNext())
+            selector.selectNow();
+            final Set<SelectionKey> selectionKeys = selector.selectedKeys();
+            final int unprocessedConnections = selectionKeys.size();
+            if (unprocessedConnections > 0)
             {
-                final SelectionKey selectionKey = it.next();
-
-                if (selectionKey.isAcceptable())
+                final Iterator<SelectionKey> it = selectionKeys.iterator();
+                while (it.hasNext())
                 {
-                    final SocketChannel channel = listeningChannel.accept();
-                    if (channel != null)
-                    {
-                        configure(channel);
-                        channel.configureBlocking(false);
+                    final SelectionKey selectionKey = it.next();
 
-                        handler.onNewChannel(timeInMs, newTcpChannel(channel));
-                    }
-
-                    it.remove();
-                }
-                else if (selectionKey.isConnectable())
-                {
-                    final InitiatedChannelHandler channelHandler = (InitiatedChannelHandler)selectionKey.attachment();
-                    final SocketChannel channel = (SocketChannel)selectionKey.channel();
-                    try
+                    if (selectionKey.isAcceptable())
                     {
-                        if (channel.finishConnect())
+                        final SocketChannel channel = listeningChannel.accept();
+                        if (channel != null)
                         {
-                            channelHandler.onInitiatedChannel(newTcpChannel(channel), null);
-                            it.remove();
+                            configure(channel);
+                            channel.configureBlocking(false);
+
+                            handler.onNewChannel(timeInMs, newTcpChannel(channel));
                         }
-                    }
-                    catch (final IOException e)
-                    {
-                        channelHandler.onInitiatedChannel(null, e);
+
                         it.remove();
+                    }
+                    else if (selectionKey.isConnectable())
+                    {
+                        final InitiatedChannelHandler channelHandler = (InitiatedChannelHandler)selectionKey.attachment();
+                        final SocketChannel channel = (SocketChannel)selectionKey.channel();
+                        try
+                        {
+                            if (channel.finishConnect())
+                            {
+                                channelHandler.onInitiatedChannel(newTcpChannel(channel), null);
+                                it.remove();
+                                opensInFlight--;
+                            }
+                        }
+                        catch (final IOException e)
+                        {
+                            channelHandler.onInitiatedChannel(null, e);
+                            it.remove();
+                            opensInFlight--;
+                        }
                     }
                 }
             }
+
+            return unprocessedConnections;
         }
 
-        return unprocessedConnections;
+        return 0;
     }
 
     private void configure(final SocketChannel channel) throws IOException
@@ -142,6 +151,7 @@ public class TcpChannelSupplier implements AutoCloseable
         channel.register(selector, OP_CONNECT, channelHandler);
         configure(channel);
         channel.connect(address);
+        opensInFlight++;
     }
 
     protected TcpChannel newTcpChannel(final SocketChannel channel) throws IOException
