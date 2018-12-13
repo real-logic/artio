@@ -66,8 +66,7 @@ public class ReceiverEndPointTest
     private Framer framer = mock(Framer.class);
     private GatewaySession gatewaySession = mock(GatewaySession.class);
     private Session session = mock(Session.class);
-    private final AuthenticationResult authenticationResult = AuthenticationResult.authenticatedSession(
-        gatewaySession);
+    private final AuthenticationResult authenticationResult = new AuthenticationResult(gatewaySession);
     private GatewaySessions mockGatewaySessions = mock(GatewaySessions.class);
     private CompositeKey sessionKey = SessionIdStrategy
         .senderAndTarget()

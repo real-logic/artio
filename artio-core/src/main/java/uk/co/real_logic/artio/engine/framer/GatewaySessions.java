@@ -284,35 +284,38 @@ class GatewaySessions
         gatewaySession.onLogon(sessionId, sessionContext, compositeKey, username, password, logon.heartBtInt());
         gatewaySession.persistenceLevel(persistenceLevel);
 
-        final int lastSentSequenceNumber;
-        final int lastReceivedSequenceNumber;
-
         if (resetSeqNum)
         {
-            lastSentSequenceNumber = SessionInfo.UNK_SESSION;
-            lastReceivedSequenceNumber = SessionInfo.UNK_SESSION;
+            gatewaySession.acceptorSequenceNumbers(SessionInfo.UNK_SESSION, SessionInfo.UNK_SESSION);
         }
         else
         {
-            final int aeronSessionId = outboundPublication.id();
             final long requiredPosition = outboundPublication.position();
-            // TODO: don't block the Framer until the logger has caught up.
-            // At requiredPosition=0 there won't be anything indexed, so indexedPosition will be -1
-            if (requiredPosition > 0)
-            {
-                while (sentSequenceNumberIndex.indexedPosition(aeronSessionId) < requiredPosition)
-                {
-                    framerIdleStrategy.idle();
-                }
-                framerIdleStrategy.reset();
-            }
 
-            lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-            lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+            if (!lookupSequenceNumbers(gatewaySession, requiredPosition))
+            {
+                return new AuthenticationResult(gatewaySession, requiredPosition);
+            }
         }
+
+        return new AuthenticationResult(gatewaySession);
+    }
+
+    public boolean lookupSequenceNumbers(final GatewaySession gatewaySession, final long requiredPosition)
+    {
+        final int aeronSessionId = outboundPublication.id();
+        // At requiredPosition=0 there won't be anything indexed, so indexedPosition will be -1
+        if (requiredPosition > 0 && sentSequenceNumberIndex.indexedPosition(aeronSessionId) < requiredPosition)
+        {
+            return false;
+        }
+
+        final long sessionId = gatewaySession.sessionId();
+        final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+        final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
         gatewaySession.acceptorSequenceNumbers(lastSentSequenceNumber, lastReceivedSequenceNumber);
 
-        return AuthenticationResult.authenticatedSession(gatewaySession);
+        return true;
     }
 
     private PersistenceLevel getPersistenceLevel(final LogonDecoder logon, final long connectionId)

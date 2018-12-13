@@ -88,6 +88,10 @@ class ReceiverEndPoint
     private SelectionKey selectionKey;
     private boolean isPaused = false;
 
+    private AuthenticationResult backpressuredAuthenticationResult;
+    private int backpressuredAuthenticationOffset;
+    private int backpressuredAuthenticationLength;
+
     ReceiverEndPoint(
         final TcpChannel channel,
         final int bufferSize,
@@ -134,6 +138,11 @@ class ReceiverEndPoint
             return 0;
         }
 
+        if (backpressuredAuthenticationResult != null)
+        {
+            return retryBackpressuredAuthenticationResult();
+        }
+
         try
         {
             return readData() + frameMessages();
@@ -152,6 +161,34 @@ class ReceiverEndPoint
             }
 
             onDisconnectDetected();
+            return 1;
+        }
+    }
+
+    private int retryBackpressuredAuthenticationResult()
+    {
+        if (gatewaySessions.lookupSequenceNumbers(
+            gatewaySession, backpressuredAuthenticationResult.requiredPosition()))
+        {
+            backpressuredAuthenticationResult = null;
+            messagesRead.incrementOrdered();
+
+            int offset = this.backpressuredAuthenticationOffset;
+            final int length = this.backpressuredAuthenticationLength;
+
+            if (!saveMessage(offset, LogonDecoder.MESSAGE_TYPE, length))
+            {
+                return offset;
+            }
+            else
+            {
+                offset += length;
+                moveRemainingDataToBufferStart(offset);
+                return offset;
+            }
+        }
+        else
+        {
             return 1;
         }
     }
@@ -238,13 +275,13 @@ class ReceiverEndPoint
                 }
                 else
                 {
-                    if (UNKNOWN == sessionId && !authenticate(offset, length))
+                    if (requiresAuthentication() && !authenticate(offset, length))
                     {
                         return offset;
                     }
 
                     messagesRead.incrementOrdered();
-                    if (saveMessage(offset, messageType, length))
+                    if (!saveMessage(offset, messageType, length))
                     {
                         return offset;
                     }
@@ -266,6 +303,11 @@ class ReceiverEndPoint
 
         moveRemainingDataToBufferStart(offset);
         return offset;
+    }
+
+    private boolean requiresAuthentication()
+    {
+        return UNKNOWN == sessionId;
     }
 
     private boolean validateChecksum(
@@ -326,19 +368,27 @@ class ReceiverEndPoint
 
         logon.decode(buffer, offset, length);
 
-        final AuthenticationResult authResult = gatewaySessions.authenticate(
+        final AuthenticationResult authenticationResult = gatewaySessions.authenticate(
             logon,
             connectionId(),
             gatewaySession);
 
-        if (!authResult.isValid())
+        if (!authenticationResult.isValid())
         {
-            completeDisconnect(authResult.reason());
+            completeDisconnect(authenticationResult.reason());
             return false;
         }
 
         sessionId = gatewaySession.sessionId();
         sequenceIndex = gatewaySession.sequenceIndex();
+
+        if (authenticationResult.isBackPressured())
+        {
+            backpressuredAuthenticationResult = authenticationResult;
+            backpressuredAuthenticationOffset = offset;
+            backpressuredAuthenticationLength = length;
+            return false;
+        }
 
         return true;
     }
@@ -370,12 +420,12 @@ class ReceiverEndPoint
         if (Pressure.isBackPressured(position))
         {
             moveRemainingDataToBufferStart(offset);
-            return true;
+            return false;
         }
         else
         {
             gatewaySession.onMessage(buffer, offset, length, messageType, sessionId);
-            return false;
+            return true;
         }
     }
 

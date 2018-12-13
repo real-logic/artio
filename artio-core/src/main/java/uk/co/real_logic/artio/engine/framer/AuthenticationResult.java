@@ -19,6 +19,8 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 
 final class AuthenticationResult
 {
+    private static final long NO_REQUIRED_POSITION = -1;
+
     static final AuthenticationResult DUPLICATE_SESSION =
         new AuthenticationResult(DisconnectReason.DUPLICATE_SESSION);
     static final AuthenticationResult FAILED_AUTHENTICATION =
@@ -28,29 +30,42 @@ final class AuthenticationResult
 
     private final GatewaySession session;
     private final DisconnectReason reason;
+    private final long requiredPosition;
 
     private AuthenticationResult(final DisconnectReason reason)
     {
         this.reason = reason;
         this.session = null;
+        this.requiredPosition = NO_REQUIRED_POSITION;
     }
 
-    private AuthenticationResult(
-        final GatewaySession session)
+    AuthenticationResult(final GatewaySession session)
     {
         this.session = session;
         this.reason = null;
+        this.requiredPosition = NO_REQUIRED_POSITION;
     }
 
-    static AuthenticationResult authenticatedSession(
-        final GatewaySession session)
+    AuthenticationResult(final GatewaySession session, final long requiredPosition)
     {
-        return new AuthenticationResult(session);
+        this.session = session;
+        this.reason = null;
+        this.requiredPosition = requiredPosition;
     }
 
     boolean isValid()
     {
         return session != null;
+    }
+
+    boolean isBackPressured()
+    {
+        return requiredPosition != NO_REQUIRED_POSITION;
+    }
+
+    public long requiredPosition()
+    {
+        return requiredPosition;
     }
 
     DisconnectReason reason()
