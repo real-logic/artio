@@ -26,6 +26,7 @@ import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
 
 import java.util.Random;
 import java.util.concurrent.CyclicBarrier;
@@ -35,6 +36,7 @@ import static org.agrona.SystemUtil.loadPropertiesFiles;
 import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.artio.stress.StressConfiguration.MESSAGES_EXCHANGED;
 import static uk.co.real_logic.artio.stress.StressConfiguration.NUM_SESSIONS;
+import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysIndexed;
 
 public final class ConcurrentConnections
 {
@@ -49,8 +51,7 @@ public final class ConcurrentConnections
         final String aeronChannel = "aeron:udp?endpoint=localhost:10002";
         final EngineConfiguration engineConfiguration = new EngineConfiguration()
             .libraryAeronChannel(aeronChannel)
-            .logFileDir("stress-client-logs")
-            .bindTo("localhost", 10001);
+            .logFileDir("stress-client-logs");
         engineConfiguration.authenticationStrategy((logon) -> true);
 
         System.out.println("Client Logs at " + engineConfiguration.logFileDir());
