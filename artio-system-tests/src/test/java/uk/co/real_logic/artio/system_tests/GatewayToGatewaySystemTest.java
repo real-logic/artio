@@ -739,10 +739,14 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         testSystem.send(initiatingSession, resendRequest);
 
-        final FixMessage message = testSystem.await(initiatingOtfAcceptor, Constants.SEQUENCE_RESET_MESSAGE_AS_STR);
+        final FixMessage message = testSystem.await(initiatingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
 
         // Logon + two heartbeats gets to 3, next is 4.
         assertEquals("4", message.get(Constants.NEW_SEQ_NO));
+
+        clearMessages();
+
+        messagesCanBeExchanged();
     }
 
     private void assertInitSeqNum(

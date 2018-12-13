@@ -369,6 +369,9 @@ class ReplayerSession implements ControlledFragmentHandler
                 bufferClaim.offset(),
                 MESSAGE_HEADER_ENCODER)
                 .connection(connectionId);
+
+            bufferClaim.commit();
+
             return true;
         }
         else
