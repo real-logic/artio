@@ -34,7 +34,6 @@ import java.util.List;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.artio.GatewayProcess.ARCHIVE_REPLAY_STREAM;
 
 /**
  * A continuable replay operation that can retried.
@@ -49,6 +48,7 @@ public class ReplayOperation
     private final List<RecordingRange> ranges;
     private final AeronArchive aeronArchive;
     private final ErrorHandler errorHandler;
+    private final int archiveReplayStream;
     private final CountersReader countersReader;
     private final Subscription subscription;
 
@@ -63,11 +63,13 @@ public class ReplayOperation
         final List<RecordingRange> ranges,
         final AeronArchive aeronArchive,
         final ErrorHandler errorHandler,
-        final Subscription subscription)
+        final Subscription subscription,
+        final int archiveReplayStream)
     {
         this.ranges = ranges;
         this.aeronArchive = aeronArchive;
         this.errorHandler = errorHandler;
+        this.archiveReplayStream = archiveReplayStream;
 
         final Aeron aeron = aeronArchive.context().aeron();
         countersReader = aeron.countersReader();
@@ -114,7 +116,7 @@ public class ReplayOperation
                     beginPosition,
                     length,
                     IPC_CHANNEL,
-                    ARCHIVE_REPLAY_STREAM);
+                    archiveReplayStream);
 
                 messageTracker.reset();
             }

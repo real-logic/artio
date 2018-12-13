@@ -33,7 +33,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.TestFixtures.MESSAGE_BUFFER_SIZE_IN_BYTES;
 import static uk.co.real_logic.artio.engine.logger.Replayer.SIZE_OF_LENGTH_FIELD;
 
@@ -49,7 +49,7 @@ public class AbstractLogTest
     protected static final long CONNECTION_ID = 1;
     protected static final long CONNECTION_ID_2 = 2;
 
-    protected static final int STREAM_ID = OUTBOUND_LIBRARY_STREAM;
+    protected static final int STREAM_ID = DEFAULT_OUTBOUND_LIBRARY_STREAM;
     protected static final int START = FRAME_ALIGNMENT;
     protected static final int SEQUENCE_NUMBER = 2;
     protected static final int LIBRARY_ID = 7;

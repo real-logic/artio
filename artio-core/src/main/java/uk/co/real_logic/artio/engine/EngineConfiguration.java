@@ -152,6 +152,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES = Collections.unmodifiableSet(defaultGapFillOnReplayMessageTypes);
     }
 
+    public static final int DEFAULT_OUTBOUND_REPLAY_STREAM = 3;
+    public static final int DEFAULT_ARCHIVE_REPLAY_STREAM = 4;
+    public static final int DEFAULT_ARCHIVE_SCANNER_STREAM = 5;
+
     private String host = null;
     private int port;
     private int replayIndexFileSize = getInteger(REPLAY_INDEX_FILE_SIZE_PROP, DEFAULT_REPLAY_INDEX_FILE_SIZE);
@@ -197,6 +201,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private long slowConsumerTimeoutInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
     private EngineScheduler scheduler = new DefaultEngineScheduler();
     private ReplayHandler replayHandler = DEFAULT_REPLAY_HANDLER;
+    private int outboundReplayStream = DEFAULT_OUTBOUND_REPLAY_STREAM;
+    private int archiveReplayStream = DEFAULT_ARCHIVE_REPLAY_STREAM;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -492,6 +498,18 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration outboundReplayStream(final int outboundReplayStream)
+    {
+        this.outboundReplayStream = outboundReplayStream;
+        return this;
+    }
+
+    public EngineConfiguration archiveReplayStream(final int archiveReplayStream)
+    {
+        this.archiveReplayStream = archiveReplayStream;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -681,6 +699,16 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public AeronArchive.Context aeronArchiveContext()
     {
         return archiveContext;
+    }
+
+    public int outboundReplayStream()
+    {
+        return outboundReplayStream;
+    }
+
+    public int archiveReplayStream()
+    {
+        return archiveReplayStream;
     }
 
     public EngineConfiguration conclude()

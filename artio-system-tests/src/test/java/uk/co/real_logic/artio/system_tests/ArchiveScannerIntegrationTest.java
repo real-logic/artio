@@ -32,6 +32,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItems;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ARCHIVE_SCANNER_STREAM;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySystemTest
@@ -118,9 +119,10 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
         {
             scanner.scan(
                 configuration.libraryAeronChannel(),
-                FixArchiveScanner.MessageType.SENT,
+                configuration.outboundLibraryStream(),
                 fixMessageConsumer,
-                false);
+                false,
+                DEFAULT_ARCHIVE_SCANNER_STREAM);
 
             assertThat(messages.toString(), messages, hasItems(
                 Matchers.containsString("35=A\00149=acceptor\00156=initiator\00134=1"),

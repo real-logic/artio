@@ -24,8 +24,6 @@ import uk.co.real_logic.artio.StreamInformation;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
 
-import static uk.co.real_logic.artio.GatewayProcess.INBOUND_LIBRARY_STREAM;
-import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.LogTag.LIBRARY_CONNECT;
 
 class LibraryTransport
@@ -58,7 +56,7 @@ class LibraryTransport
             aeronChannel,
             configuration.printAeronStreamIdentifiers(),
             fixCounters.failedOutboundPublications(),
-            OUTBOUND_LIBRARY_STREAM,
+            configuration.outboundLibraryStream(),
             clock,
             configuration.outboundMaxClaimAttempts(),
             null);
@@ -69,7 +67,7 @@ class LibraryTransport
             outboundPublication.close();
         }
 
-        inboundSubscription = aeron.addSubscription(aeronChannel, INBOUND_LIBRARY_STREAM);
+        inboundSubscription = aeron.addSubscription(aeronChannel, configuration.inboundLibraryStream());
         StreamInformation.print(
             "library " + configuration.libraryId() + " inboundSubscription", inboundSubscription, configuration);
         outboundPublication = outboundLibraryStreams.gatewayPublication(

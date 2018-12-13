@@ -38,8 +38,6 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.archive.codecs.SourceLocation.LOCAL;
 import static io.aeron.archive.codecs.SourceLocation.REMOTE;
 import static org.agrona.concurrent.status.CountersReader.NULL_COUNTER_ID;
-import static uk.co.real_logic.artio.GatewayProcess.INBOUND_LIBRARY_STREAM;
-import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 
 /**
  * Not thread safe.
@@ -77,19 +75,26 @@ public class RecordingCoordinator implements AutoCloseable
             final Aeron aeron = archiveContext.aeron();
             counters = aeron.countersReader();
             recordingIdStore = new RecordingIdStore(
-                aeron, archiveContext, channel, conductorAgentInvoker, this.idleStrategy, archiverIdleStrategy);
+                aeron,
+                archiveContext,
+                channel,
+                conductorAgentInvoker,
+                this.idleStrategy,
+                archiverIdleStrategy,
+                configuration.inboundLibraryStream(),
+                configuration.outboundLibraryStream());
 
             if (configuration.logInboundMessages())
             {
                 // Inbound we're writing from the Framer thread, always local
-                archive.startRecording(channel, INBOUND_LIBRARY_STREAM, LOCAL);
+                archive.startRecording(channel, configuration.inboundLibraryStream(), LOCAL);
             }
 
             if (configuration.logOutboundMessages())
             {
                 // Outbound libraries might be on an IPC box.
                 final SourceLocation location = channel.equals(IPC_CHANNEL) ? LOCAL : REMOTE;
-                archive.startRecording(channel, OUTBOUND_LIBRARY_STREAM, location);
+                archive.startRecording(channel, configuration.outboundLibraryStream(), location);
             }
         }
         else
@@ -103,8 +108,8 @@ public class RecordingCoordinator implements AutoCloseable
     public void track(final Publication publication)
     {
         final int streamId = publication.streamId();
-        if ((streamId == OUTBOUND_LIBRARY_STREAM && configuration.logOutboundMessages()) ||
-            (streamId == INBOUND_LIBRARY_STREAM && configuration.logInboundMessages()))
+        if ((streamId == configuration.outboundLibraryStream() && configuration.logOutboundMessages()) ||
+            (streamId == configuration.inboundLibraryStream() && configuration.logInboundMessages()))
         {
             trackedSessionIds.add(publication.sessionId());
         }
@@ -196,12 +201,12 @@ public class RecordingCoordinator implements AutoCloseable
     {
         if (configuration.logInboundMessages())
         {
-            archive.stopRecording(channel, INBOUND_LIBRARY_STREAM);
+            archive.stopRecording(channel, configuration.inboundLibraryStream());
         }
 
         if (configuration.logOutboundMessages())
         {
-            archive.stopRecording(channel, OUTBOUND_LIBRARY_STREAM);
+            archive.stopRecording(channel, configuration.outboundLibraryStream());
         }
 
         if (configuration.logAnyMessages())

@@ -46,7 +46,6 @@ import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.*;
@@ -112,7 +111,9 @@ public class ReplayIndexTest extends AbstractLogTest
             CHANNEL,
             null,
             new YieldingIdleStrategy(),
-            new YieldingIdleStrategy());
+            new YieldingIdleStrategy(),
+            DEFAULT_INBOUND_LIBRARY_STREAM,
+            DEFAULT_OUTBOUND_LIBRARY_STREAM);
 
         aeronArchive.startRecording(CHANNEL, STREAM_ID, SourceLocation.LOCAL);
 
@@ -129,10 +130,11 @@ public class ReplayIndexTest extends AbstractLogTest
             DEFAULT_LOGGER_CACHE_NUM_SETS,
             DEFAULT_LOGGER_CACHE_SET_SIZE,
             existingBufferFactory,
-            OUTBOUND_LIBRARY_STREAM,
+            DEFAULT_OUTBOUND_LIBRARY_STREAM,
             new NoOpIdleStrategy(),
             aeronArchive,
-            errorHandler);
+            errorHandler,
+            DEFAULT_ARCHIVE_REPLAY_STREAM);
 
         returnBuffer(indexBuffer, SESSION_ID);
         returnBuffer(ByteBuffer.allocate(16 * 1024), SESSION_ID_2);
