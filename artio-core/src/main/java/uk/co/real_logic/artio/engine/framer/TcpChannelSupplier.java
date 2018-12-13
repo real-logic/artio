@@ -98,7 +98,8 @@ public class TcpChannelSupplier implements AutoCloseable
                     }
                     else if (selectionKey.isConnectable())
                     {
-                        final InitiatedChannelHandler channelHandler = (InitiatedChannelHandler)selectionKey.attachment();
+                        final InitiatedChannelHandler channelHandler =
+                            (InitiatedChannelHandler)selectionKey.attachment();
                         final SocketChannel channel = (SocketChannel)selectionKey.channel();
                         try
                         {

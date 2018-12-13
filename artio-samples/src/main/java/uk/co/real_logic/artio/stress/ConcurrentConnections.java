@@ -26,7 +26,6 @@ import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.session.Session;
-import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
 
 import java.util.Random;
 import java.util.concurrent.CyclicBarrier;
@@ -36,7 +35,6 @@ import static org.agrona.SystemUtil.loadPropertiesFiles;
 import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.artio.stress.StressConfiguration.MESSAGES_EXCHANGED;
 import static uk.co.real_logic.artio.stress.StressConfiguration.NUM_SESSIONS;
-import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysIndexed;
 
 public final class ConcurrentConnections
 {
