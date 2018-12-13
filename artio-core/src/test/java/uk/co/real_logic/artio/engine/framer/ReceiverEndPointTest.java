@@ -147,7 +147,7 @@ public class ReceiverEndPointTest
         final int length = GARBLED_MESSAGE.length;
         theEndpointReceives(GARBLED_MESSAGE, 0, length);
 
-        endPoint.pollForData();
+        endPoint.poll();
 
         savesInvalidMessage(length, times(1));
         verifyNoError();
@@ -158,7 +158,7 @@ public class ReceiverEndPointTest
     {
         theEndpointReceivesAnIncompleteMessage();
 
-        endPoint.pollForData();
+        endPoint.poll();
 
         nothingMoreSaved();
     }
@@ -167,10 +167,10 @@ public class ReceiverEndPointTest
     public void shouldFrameSplitFixMessage()
     {
         theEndpointReceivesAnIncompleteMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         theEndpointReceivesTheRestOfTheMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         savesAFramedMessage();
 
@@ -182,7 +182,7 @@ public class ReceiverEndPointTest
     {
         theEndpointReceivesTwoCompleteMessages();
 
-        endPoint.pollForData();
+        endPoint.poll();
 
         savesTwoFramedMessages(1);
 
@@ -194,7 +194,7 @@ public class ReceiverEndPointTest
     {
         theEndpointReceivesACompleteAndAnIncompleteMessage();
 
-        endPoint.pollForData();
+        endPoint.poll();
 
         savesAFramedMessage();
 
@@ -205,10 +205,10 @@ public class ReceiverEndPointTest
     public void shouldFrameSecondSplitMessage()
     {
         theEndpointReceivesACompleteAndAnIncompleteMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         theEndpointReceivesTheRestOfTheMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         savesFramedMessages(2, OK, MSG_LEN);
 
@@ -220,7 +220,7 @@ public class ReceiverEndPointTest
     {
         theChannelIsClosedByException();
 
-        endPoint.pollForData();
+        endPoint.poll();
 
         verify(mockSessionContexts).onDisconnect(anyLong());
         assertSavesDisconnect();
@@ -231,7 +231,7 @@ public class ReceiverEndPointTest
     {
         theChannelIsClosed();
 
-        endPoint.pollForData();
+        endPoint.poll();
 
         assertSavesDisconnect();
     }
@@ -241,7 +241,7 @@ public class ReceiverEndPointTest
     {
         theEndpointReceivesAMessageWithInvalidChecksum();
 
-        endPoint.pollForData();
+        endPoint.poll();
 
         // Test for bug where invalid message re-saved.
         pollWithNoData();
@@ -257,9 +257,9 @@ public class ReceiverEndPointTest
 
         theEndpointReceivesAMessageWithInvalidChecksum();
 
-        endPoint.pollForData();
+        endPoint.poll();
 
-        endPoint.pollForData();
+        endPoint.poll();
 
         savesInvalidChecksumMessage(times(2));
     }
@@ -296,10 +296,10 @@ public class ReceiverEndPointTest
         firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesAnIncompleteMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         theEndpointReceivesTheRestOfTheMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         pollWithNoData();
 
@@ -314,7 +314,7 @@ public class ReceiverEndPointTest
         firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesTwoCompleteMessages();
-        endPoint.pollForData();
+        endPoint.poll();
 
         pollWithNoData();
 
@@ -329,7 +329,7 @@ public class ReceiverEndPointTest
         firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesACompleteAndAnIncompleteMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         pollWithNoData();
 
@@ -342,10 +342,10 @@ public class ReceiverEndPointTest
         firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesACompleteAndAnIncompleteMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         theEndpointReceivesTheRestOfTheMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         savesFramedMessages(2, OK, MSG_LEN);
 
@@ -367,7 +367,7 @@ public class ReceiverEndPointTest
 
     private void pollsData(final int bytesReadAndSaved)
     {
-        assertEquals(bytesReadAndSaved, endPoint.pollForData());
+        assertEquals(bytesReadAndSaved, endPoint.poll());
     }
 
     private void verifyNoError()
@@ -505,7 +505,7 @@ public class ReceiverEndPointTest
         final int length = TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES.length;
 
         theEndpointReceives(TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES, 0, length);
-        endPoint.pollForData();
+        endPoint.poll();
         return length;
     }
 
@@ -581,7 +581,7 @@ public class ReceiverEndPointTest
     private void pollWithNoData()
     {
         theEndpointReceivesNothing();
-        endPoint.pollForData();
+        endPoint.poll();
     }
 
     private void verifyDuplicateSession(final VerificationMode times)

@@ -247,7 +247,7 @@ public class FramerTest
             () ->
             {
                 doWork();
-                verify(mockReceiverEndPoint).pollForData();
+                verify(mockReceiverEndPoint).poll();
             });
     }
 

@@ -127,7 +127,7 @@ class ReceiverEndPoint
         return connectionId;
     }
 
-    int pollForData()
+    int poll()
     {
         if (isPaused || hasDisconnected())
         {
@@ -227,7 +227,6 @@ class ReceiverEndPoint
                     break;
                 }
 
-                // TODO(Nick): We already scan for the message type so we can check for logon messages here?
                 final int messageType = getMessageType(endOfBodyLength, endOfMessage);
                 final int length = (endOfMessage + 1) - offset;
                 if (validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
@@ -239,7 +238,7 @@ class ReceiverEndPoint
                 }
                 else
                 {
-                    if (UNKNOWN == sessionId && checkSessionId(offset, length))
+                    if (UNKNOWN == sessionId && !authenticate(offset, length))
                     {
                         return offset;
                     }
@@ -318,8 +317,7 @@ class ReceiverEndPoint
         return buffer.scan(startScan + 1, usedBufferData - 1, START_OF_HEADER);
     }
 
-
-    private boolean checkSessionId(final int offset, final int length)
+    private boolean authenticate(final int offset, final int length)
     {
         if (sessionId != UNKNOWN)
         {
@@ -336,13 +334,13 @@ class ReceiverEndPoint
         if (!authResult.isValid())
         {
             completeDisconnect(authResult.reason());
-            return true;
+            return false;
         }
 
         sessionId = gatewaySession.sessionId();
         sequenceIndex = gatewaySession.sequenceIndex();
 
-        return false;
+        return true;
     }
 
     private boolean stashIfBackPressured(final int offset, final long position)
