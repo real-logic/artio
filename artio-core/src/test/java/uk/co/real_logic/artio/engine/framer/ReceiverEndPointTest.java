@@ -24,6 +24,7 @@ import org.junit.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
@@ -57,6 +58,7 @@ public class ReceiverEndPointTest
     private static final long POSITION = 1024L;
     private static final int BUFFER_SIZE = 16 * 1024;
     private static final int SEQUENCE_INDEX = 0;
+    public static final int BACKPRESSURED_REQUIRED_POSITION = 1024;
 
     private TcpChannel mockChannel = mock(TcpChannel.class);
     private GatewayPublication publication = mock(GatewayPublication.class);
@@ -67,6 +69,8 @@ public class ReceiverEndPointTest
     private GatewaySession gatewaySession = mock(GatewaySession.class);
     private Session session = mock(Session.class);
     private final AuthenticationResult authenticationResult = new AuthenticationResult(gatewaySession);
+    private final AuthenticationResult backpressuredAuthenticationResult = new AuthenticationResult(
+        gatewaySession, BACKPRESSURED_REQUIRED_POSITION);
     private GatewaySessions mockGatewaySessions = mock(GatewaySessions.class);
     private CompositeKey sessionKey = SessionIdStrategy
         .senderAndTarget()
@@ -86,11 +90,7 @@ public class ReceiverEndPointTest
         when(gatewaySession.sessionKey()).thenReturn(sessionKey);
         when(gatewaySession.sessionId()).thenReturn(SESSION_ID);
         when(session.state()).thenReturn(SessionState.CONNECTED);
-        when(mockGatewaySessions.authenticate(
-            any(),
-            anyLong(),
-            eq(gatewaySession)))
-            .thenReturn(authenticationResult);
+        givenAuthenticationResult(authenticationResult);
 
         doAnswer(
             (inv) ->
@@ -100,6 +100,15 @@ public class ReceiverEndPointTest
             }).when(framer).schedule(any(Continuation.class));
     }
 
+    private void givenAuthenticationResult(final AuthenticationResult authenticationResult)
+    {
+        when(mockGatewaySessions.authenticate(
+            any(),
+            anyLong(),
+            eq(gatewaySession)))
+            .thenReturn(authenticationResult);
+    }
+
     @Test
     public void shouldNotifyDuplicateSession()
     {
@@ -107,7 +116,7 @@ public class ReceiverEndPointTest
 
         theEndpointReceivesACompleteMessage();
 
-        pollsData(MSG_LEN);
+        polls(MSG_LEN);
 
         verifyDuplicateSession(times(1));
     }
@@ -117,7 +126,7 @@ public class ReceiverEndPointTest
     {
         theEndpointReceivesACompleteMessage();
 
-        pollsData(2 * MSG_LEN);
+        polls(2 * MSG_LEN);
 
         savesAFramedMessage();
 
@@ -130,10 +139,10 @@ public class ReceiverEndPointTest
         firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesACompleteMessage();
-        pollsData(MSG_LEN);
+        polls(MSG_LEN);
 
         theEndpointReceivesNothing();
-        pollsData(MSG_LEN);
+        polls(MSG_LEN);
 
         savesFramedMessages(2, OK, MSG_LEN);
 
@@ -351,6 +360,27 @@ public class ReceiverEndPointTest
         sessionReceivesTwoMessages();
     }
 
+    @Test
+    public void shouldFrameLogonMessageWhenLoggerBehind()
+    {
+        givenAuthenticationResult(backpressuredAuthenticationResult);
+
+        theEndpointReceivesACompleteMessage();
+
+        // Backpressured attempt
+        polls(MSG_LEN);
+
+        nothingMoreSaved();
+
+        when(mockGatewaySessions.lookupSequenceNumbers(gatewaySession, BACKPRESSURED_REQUIRED_POSITION))
+            .thenReturn(true);
+
+        // Successful attempt
+        polls(MSG_LEN);
+
+        savesFramedMessages(1, OK, MSG_LEN, LogonDecoder.MESSAGE_TYPE);
+    }
+
     private void firstSaveAttemptIsBackPressured()
     {
         when(publication
@@ -364,7 +394,7 @@ public class ReceiverEndPointTest
         return any(AtomicBuffer.class);
     }
 
-    private void pollsData(final int bytesReadAndSaved)
+    private void polls(final int bytesReadAndSaved)
     {
         assertEquals(bytesReadAndSaved, endPoint.poll());
     }
@@ -408,9 +438,15 @@ public class ReceiverEndPointTest
         final MessageStatus status,
         final int msgLen)
     {
-        verify(publication, times(numberOfMessages)).saveMessage(
+        savesFramedMessages(numberOfMessages, status, msgLen, MESSAGE_TYPE);
+    }
+
+    private long savesFramedMessages(
+        final int numberOfMessages, final MessageStatus status, final int msgLen, final int messageType)
+    {
+        return verify(publication, times(numberOfMessages)).saveMessage(
             anyBuffer(), eq(0), eq(msgLen), eq(LIBRARY_ID),
-            eq(MESSAGE_TYPE), eq(SESSION_ID), eq(SEQUENCE_INDEX), eq(CONNECTION_ID),
+            eq(messageType), eq(SESSION_ID), eq(SEQUENCE_INDEX), eq(CONNECTION_ID),
             eq(status), eq(0));
     }
 
@@ -590,7 +626,6 @@ public class ReceiverEndPointTest
 
     private void givenADuplicateSession()
     {
-        when(mockGatewaySessions.authenticate(any(), anyLong(), any())).thenReturn(
-            AuthenticationResult.DUPLICATE_SESSION);
+        givenAuthenticationResult(AuthenticationResult.DUPLICATE_SESSION);
     }
 }
