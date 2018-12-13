@@ -63,6 +63,8 @@ class GatewaySessions
     private final SessionContexts sessionContexts;
     private final SessionPersistenceStrategy sessionPersistenceStrategy;
     private final IdleStrategy framerIdleStrategy;
+    private final SequenceNumberIndexReader sentSequenceNumberIndex;
+    private final SequenceNumberIndexReader receivedSequenceNumberIndex;
 
     private ErrorHandler errorHandler;
 
@@ -81,7 +83,9 @@ class GatewaySessions
         final ErrorHandler errorHandler,
         final SessionContexts sessionContexts,
         final SessionPersistenceStrategy sessionPersistenceStrategy,
-        final IdleStrategy framerIdleStrategy)
+        final IdleStrategy framerIdleStrategy,
+        final SequenceNumberIndexReader sentSequenceNumberIndex,
+        final SequenceNumberIndexReader receivedSequenceNumberIndex)
     {
         this.clock = clock;
         this.outboundPublication = outboundPublication;
@@ -98,6 +102,8 @@ class GatewaySessions
         this.sessionContexts = sessionContexts;
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
         this.framerIdleStrategy = framerIdleStrategy;
+        this.sentSequenceNumberIndex = sentSequenceNumberIndex;
+        this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
     }
 
     void acquire(
@@ -239,11 +245,9 @@ class GatewaySessions
         return null;
     }
 
-    AuthenticationResult authenticateAndInitiate(
+    AuthenticationResult authenticate(
         final LogonDecoder logon,
         final long connectionId,
-        final SequenceNumberIndexReader sentSequenceNumberIndex,
-        final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final GatewaySession gatewaySession)
     {
         final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(logon.header());
@@ -272,6 +276,14 @@ class GatewaySessions
             return AuthenticationResult.INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES;
         }
 
+        final String username = SessionParser.username(logon);
+        final String password = SessionParser.password(logon);
+
+        sessionContext.onLogon(resetSeqNum);
+
+        gatewaySession.onLogon(sessionId, sessionContext, compositeKey, username, password, logon.heartBtInt());
+        gatewaySession.persistenceLevel(persistenceLevel);
+
         final int lastSentSequenceNumber;
         final int lastReceivedSequenceNumber;
 
@@ -298,15 +310,7 @@ class GatewaySessions
             lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
         }
-
-        final String username = SessionParser.username(logon);
-        final String password = SessionParser.password(logon);
-
-        sessionContext.onLogon(resetSeqNum);
-
-        gatewaySession.onLogon(sessionId, sessionContext, compositeKey, username, password, logon.heartBtInt());
         gatewaySession.acceptorSequenceNumbers(lastSentSequenceNumber, lastReceivedSequenceNumber);
-        gatewaySession.persistenceLevel(persistenceLevel);
 
         return AuthenticationResult.authenticatedSession(gatewaySession);
     }

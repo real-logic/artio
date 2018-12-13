@@ -25,7 +25,6 @@ import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.messages.SessionState;
@@ -64,8 +63,6 @@ public class ReceiverEndPointTest
     private SessionContexts mockSessionContexts = mock(SessionContexts.class);
     private AtomicCounter messagesRead = mock(AtomicCounter.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private SequenceNumberIndexReader sentSequenceNumbers = mock(SequenceNumberIndexReader.class);
-    private SequenceNumberIndexReader receivedSequenceNumbers = mock(SequenceNumberIndexReader.class);
     private Framer framer = mock(Framer.class);
     private GatewaySession gatewaySession = mock(GatewaySession.class);
     private Session session = mock(Session.class);
@@ -79,7 +76,7 @@ public class ReceiverEndPointTest
     private ReceiverEndPoint endPoint = new ReceiverEndPoint(
         mockChannel, BUFFER_SIZE, publication,
         CONNECTION_ID, UNKNOWN, SEQUENCE_INDEX, mockSessionContexts,
-        sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID,
+        messagesRead, framer, errorHandler, LIBRARY_ID,
         mockGatewaySessions);
 
     @Before
@@ -90,11 +87,11 @@ public class ReceiverEndPointTest
         when(gatewaySession.sessionKey()).thenReturn(sessionKey);
         when(gatewaySession.sessionId()).thenReturn(SESSION_ID);
         when(session.state()).thenReturn(SessionState.CONNECTED);
-        when(mockGatewaySessions.authenticateAndInitiate(any(),
+        when(mockGatewaySessions.authenticate(
+            any(),
             anyLong(),
-            any(),
-            any(),
-            eq(gatewaySession))).thenReturn(authenticationResult);
+            eq(gatewaySession)))
+            .thenReturn(authenticationResult);
 
         doAnswer(
             (inv) ->
@@ -594,7 +591,7 @@ public class ReceiverEndPointTest
 
     private void givenADuplicateSession()
     {
-        when(mockGatewaySessions.authenticateAndInitiate(any(), anyLong(), any(), any(), any())).thenReturn(
+        when(mockGatewaySessions.authenticate(any(), anyLong(), any())).thenReturn(
             AuthenticationResult.DUPLICATE_SESSION);
     }
 }

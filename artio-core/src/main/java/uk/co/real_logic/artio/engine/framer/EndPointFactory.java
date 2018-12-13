@@ -19,7 +19,6 @@ import org.agrona.ErrorHandler;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
-import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 class EndPointFactory
@@ -58,9 +57,7 @@ class EndPointFactory
         final long sessionId,
         final int sequenceIndex,
         final int libraryId,
-        final Framer framer,
-        final SequenceNumberIndexReader sentSequenceNumberIndex,
-        final SequenceNumberIndexReader receivedSequenceNumberIndex)
+        final Framer framer)
     {
         return new ReceiverEndPoint(
             channel,
@@ -70,8 +67,6 @@ class EndPointFactory
             sessionId,
             sequenceIndex,
             sessionContexts,
-            sentSequenceNumberIndex,
-            receivedSequenceNumberIndex,
             fixCounters.messagesRead(connectionId, channel.remoteAddress()),
             framer,
             errorHandler,

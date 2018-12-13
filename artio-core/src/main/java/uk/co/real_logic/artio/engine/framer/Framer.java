@@ -795,9 +795,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             context.sessionId(),
             context.sequenceIndex(),
             libraryId,
-            this,
-            sentSequenceNumberIndex,
-            receivedSequenceNumberIndex);
+            this);
         receiverEndPoints.add(receiverEndPoint);
 
         final BlockablePosition libraryBlockablePosition = getLibraryBlockablePosition(libraryId);

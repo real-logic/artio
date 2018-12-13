@@ -75,6 +75,11 @@ public class FramerContext
         this.inboundPublication = engineContext.inboundPublication();
         this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "outboundPublication");
 
+        sentSequenceNumberIndex = new SequenceNumberIndexReader(
+            configuration.sentSequenceNumberBuffer(), errorHandler);
+        receivedSequenceNumberIndex = new SequenceNumberIndexReader(
+            configuration.receivedSequenceNumberBuffer(), errorHandler);
+
         gatewaySessions = new GatewaySessions(
             clock,
             outboundPublication,
@@ -90,7 +95,9 @@ public class FramerContext
             errorHandler,
             sessionContexts,
             configuration.sessionPersistenceStrategy(),
-            idleStrategy);
+            idleStrategy,
+            sentSequenceNumberIndex,
+            receivedSequenceNumberIndex);
 
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,
@@ -100,11 +107,6 @@ public class FramerContext
             errorHandler,
             gatewaySessions,
             engineContext.senderSequenceNumbers());
-
-        sentSequenceNumberIndex = new SequenceNumberIndexReader(
-            configuration.sentSequenceNumberBuffer(), errorHandler);
-        receivedSequenceNumberIndex = new SequenceNumberIndexReader(
-            configuration.receivedSequenceNumberBuffer(), errorHandler);
 
         final FinalImagePositions finalImagePositions = new FinalImagePositions();
 

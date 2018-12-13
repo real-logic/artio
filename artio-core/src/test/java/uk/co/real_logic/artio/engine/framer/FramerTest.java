@@ -145,8 +145,7 @@ public class FramerTest
         when(outboundLibrarySubscription.imageBySessionId(anyInt())).thenReturn(normalImage);
 
         when(mockEndPointFactory.receiverEndPoint(
-            any(), connectionId.capture(), anyLong(), anyInt(), anyInt(), any(),
-            eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex)))
+            any(), connectionId.capture(), anyLong(), anyInt(), anyInt(), any()))
             .thenReturn(mockReceiverEndPoint);
 
         when(mockEndPointFactory.senderEndPoint(any(), anyLong(), anyInt(), any(), any()))
@@ -897,11 +896,10 @@ public class FramerTest
         assertEquals("Has written bytes", clientBuffer.remaining(), client.write(clientBuffer));
     }
 
-    private void verifyEndpointsCreated() throws IOException
+    private void verifyEndpointsCreated()
     {
         verify(mockEndPointFactory).receiverEndPoint(
-            notNull(), anyLong(), anyLong(), anyInt(), eq(ENGINE_LIBRARY_ID), eq(framer),
-            eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex));
+            notNull(), anyLong(), anyLong(), anyInt(), eq(ENGINE_LIBRARY_ID), eq(framer));
 
         verify(mockEndPointFactory).senderEndPoint(
             notNull(), anyLong(), eq(ENGINE_LIBRARY_ID), any(LibrarySlowPeeker.class), eq(framer));

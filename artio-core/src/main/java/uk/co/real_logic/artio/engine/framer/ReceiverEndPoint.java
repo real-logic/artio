@@ -23,7 +23,6 @@ import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.dictionary.StandardFixConstants;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
-import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -73,8 +72,6 @@ class ReceiverEndPoint
     private final GatewayPublication publication;
     private final long connectionId;
     private final SessionContexts sessionContexts;
-    private final SequenceNumberIndexReader sentSequenceNumberIndex;
-    private final SequenceNumberIndexReader receivedSequenceNumberIndex;
     private final AtomicCounter messagesRead;
     private final Framer framer;
     private final ErrorHandler errorHandler;
@@ -99,8 +96,6 @@ class ReceiverEndPoint
         final long sessionId,
         final int sequenceIndex,
         final SessionContexts sessionContexts,
-        final SequenceNumberIndexReader sentSequenceNumberIndex,
-        final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final AtomicCounter messagesRead,
         final Framer framer,
         final ErrorHandler errorHandler,
@@ -117,8 +112,6 @@ class ReceiverEndPoint
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
         this.sessionContexts = sessionContexts;
-        this.sentSequenceNumberIndex = sentSequenceNumberIndex;
-        this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.messagesRead = messagesRead;
         this.framer = framer;
         this.errorHandler = errorHandler;
@@ -335,11 +328,9 @@ class ReceiverEndPoint
 
         logon.decode(buffer, offset, length);
 
-        final AuthenticationResult authResult = gatewaySessions.authenticateAndInitiate(
+        final AuthenticationResult authResult = gatewaySessions.authenticate(
             logon,
             connectionId(),
-            sentSequenceNumberIndex,
-            receivedSequenceNumberIndex,
             gatewaySession);
 
         if (!authResult.isValid())
