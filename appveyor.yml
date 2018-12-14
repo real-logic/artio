@@ -10,3 +10,16 @@ build: off
 test_script:
 - ./gradlew --init-script init.gradle
 
+on_finish:
+  - sh: |
+      find "$APPVEYOR_BUILD_FOLDER" -type f -name 'TEST*.xml' -print0 | xargs -0 -I '{}' curl -F 'file=@{}' "https://ci.appveyor.com/api/testresults/junit/$APPVEYOR_JOB_ID"
+  - ps: |
+      if ($isWindows) {
+        $wc = New-Object 'System.Net.WebClient'
+        $files = gci -Recurse *.*|Resolve-Path -Relative | Select-String -Pattern "TEST*" -CaseSensitive
+        foreach ($file in $files)
+        {
+          $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", ($file))
+        }
+      }
+
