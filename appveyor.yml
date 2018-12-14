@@ -6,5 +6,5 @@ stack: jdk 8
 build: off
 
 test_script:
-- ./gradlew
+- ./gradlew --init-script init.gradle
 
