@@ -32,4 +32,11 @@ on_finish:
           echo $_.Exception|format-list -force
         }
       }
+notifications:
+  - provider: Email
+    to:
+      - richard.warburton+appveyor@gmail.com
+    on_build_success: false
+    on_build_failure: true
+    on_build_status_changed: true
 
