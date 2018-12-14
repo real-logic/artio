@@ -1,4 +1,6 @@
-image: ubuntu
+image:
+- ubuntu
+- Visual Studio 2017
 
 stack: jdk 8
 
