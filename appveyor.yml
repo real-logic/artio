@@ -17,8 +17,10 @@ on_finish:
       if ($isWindows) {
         $wc = New-Object 'System.Net.WebClient'
         $files = gci . -Recurse -name -include "TEST-*.xml"
+        echo "$($env:APPVEYOR_JOB_ID)"
         foreach ($file in $files)
         {
+          echo "Uploading $file"
           $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", ($file))
         }
       }
