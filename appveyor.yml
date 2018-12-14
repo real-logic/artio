@@ -14,14 +14,22 @@ on_finish:
   - sh: |
       find "$APPVEYOR_BUILD_FOLDER" -type f -name 'TEST*.xml' -print0 | xargs -0 -I '{}' curl -F 'file=@{}' "https://ci.appveyor.com/api/testresults/junit/$APPVEYOR_JOB_ID"
   - ps: |
-      if ($isWindows) {
-        $wc = New-Object 'System.Net.WebClient'
-        $files = gci . -Recurse -name -include "TEST-*.xml"
-        echo "$($env:APPVEYOR_JOB_ID)"
-        foreach ($file in $files)
+      if ($isWindows)
+      {
+        try
         {
-          echo "Uploading $file"
-          $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", ($file))
+          $wc = New-Object 'System.Net.WebClient'
+          $files = gci . -Recurse -name -include "TEST-*.xml"
+          echo "$($env:APPVEYOR_JOB_ID)"
+          foreach ($file in $files)
+          {
+            echo "Uploading $file"
+            $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path "$file"))
+          }
+        }
+        catch [Exception]
+        {
+          echo $_.Exception|format-list -force
         }
       }
 
