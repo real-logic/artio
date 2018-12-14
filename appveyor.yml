@@ -1,0 +1,10 @@
+image: ubuntu
+
+stack: jdk 8
+
+# disable msbuild
+build: off
+
+test_script:
+- ./gradlew
+
