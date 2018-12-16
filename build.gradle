@@ -27,9 +27,9 @@ apply plugin: 'signing'
 apply plugin: 'net.researchgate.release'
 apply plugin: 'com.github.johnrengelman.shadow'
 
-def aeronVersion = '1.12.0'
-def agronaVersion = '0.9.27'
-def sbeVersion = '1.10.0'
+def aeronVersion = '1.13.0'
+def agronaVersion = '0.9.28'
+def sbeVersion = '1.10.1'
 def artioJavaVersion = '1.8'
 
 defaultTasks 'clean', 'build', 'javadoc', 'install'

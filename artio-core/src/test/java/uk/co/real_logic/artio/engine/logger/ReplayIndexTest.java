@@ -144,7 +144,6 @@ public class ReplayIndexTest extends AbstractLogTest
     @After
     public void teardown()
     {
-        aeronArchive.stopRecording(CHANNEL, STREAM_ID);
         Exceptions.closeAll(replayIndex, aeronArchive);
         cleanupMediaDriver(mediaDriver);
     }

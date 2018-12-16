@@ -115,5 +115,4 @@ public final class TestFixtures
 
         return new String(testReqIDChars);
     }
-
 }
