@@ -185,7 +185,7 @@ public class ReplayIndex implements Index
     {
         private final ByteBuffer wrappedBuffer;
         private final AtomicBuffer buffer;
-        private final int capacity;
+        private final int recordCapacity;
 
         SessionIndex(final long fixSessionId)
         {
@@ -194,7 +194,7 @@ public class ReplayIndex implements Index
             this.wrappedBuffer = bufferFactory.map(logFile, indexFileSize);
             this.buffer = new UnsafeBuffer(wrappedBuffer);
 
-            capacity = recordCapacity(buffer.capacity());
+            recordCapacity = recordCapacity(buffer.capacity());
             if (!exists)
             {
                 indexHeaderEncoder
@@ -207,7 +207,7 @@ public class ReplayIndex implements Index
             else
             {
                 // Reset the positions in order to avoid wraps at the start.
-                final int resetPosition = offset(beginChange(buffer), capacity);
+                final long resetPosition = beginChange(buffer) + RECORD_LENGTH;
                 beginChangeOrdered(buffer, resetPosition);
                 endChangeOrdered(buffer, resetPosition);
             }
@@ -229,7 +229,7 @@ public class ReplayIndex implements Index
             beginChangeOrdered(buffer, changePosition);
             UNSAFE.storeFence();
 
-            final int offset = offset(beginChangePosition, capacity);
+            final int offset = offset(beginChangePosition, recordCapacity);
 
             replayIndexRecord
                 .wrap(buffer, offset)
