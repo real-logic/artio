@@ -95,10 +95,18 @@ public final class ReplayIndexDescriptor
 
     static void checkIndexFileSize(final int indexFileSize)
     {
-        if (!BitUtil.isPowerOfTwo(recordCapacity(indexFileSize)))
+        final int recordCapacity = recordCapacity(indexFileSize);
+        if (!BitUtil.isPowerOfTwo(recordCapacity))
         {
             throw new IllegalStateException(
                 "IndexFileSize must be a positive power of 2 + INITIAL_RECORD_OFFSET: indexFileSize=" + indexFileSize);
+        }
+
+        if ((recordCapacity % RECORD_LENGTH) != 0)
+        {
+            throw new IllegalStateException(
+                "IndexFileSize must be a multiple of RECORD_LENGTH + INITIAL_RECORD_OFFSET: indexFileSize=" +
+                indexFileSize);
         }
     }
 }
