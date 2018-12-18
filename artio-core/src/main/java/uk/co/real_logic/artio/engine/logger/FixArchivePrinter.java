@@ -19,13 +19,12 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.decoder.HeaderDecoder;
-import uk.co.real_logic.artio.engine.logger.FixArchiveScanner.MessageType;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 
 import java.util.function.Predicate;
 
 import static java.lang.Long.parseLong;
-import static uk.co.real_logic.artio.engine.logger.FixArchiveScanner.MessageType.SENT;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ARCHIVE_SCANNER_STREAM;
 import static uk.co.real_logic.artio.engine.logger.FixMessagePredicates.*;
 
 /**
@@ -40,7 +39,8 @@ public final class FixArchivePrinter
     {
         String aeronDirectoryName = null;
         String aeronChannel = null;
-        MessageType direction = SENT;
+        int queryStreamId = 0;
+        int archiveScannerStreamId = DEFAULT_ARCHIVE_SCANNER_STREAM;
         FixMessagePredicate predicate = FixMessagePredicates.alwaysTrue();
         boolean follow = false;
 
@@ -63,12 +63,7 @@ public final class FixArchivePrinter
                     break;
 
                 default:
-                    if (eqIndex == -1)
-                    {
-                        System.err.println("--help and --follow are the only options that don't take a value");
-                        printHelp();
-                        System.exit(-1);
-                    }
+                    requiredArgument(eqIndex);
             }
 
             final String optionValue = arg.substring(eqIndex + 1);
@@ -112,8 +107,12 @@ public final class FixArchivePrinter
                     headerPredicate = safeAnd(headerPredicate, targetLocationIdOf(optionValue));
                     break;
 
-                case "direction":
-                    direction = MessageType.valueOf(optionValue.toUpperCase());
+                case "query-stream-id":
+                    queryStreamId = Integer.parseInt(optionValue);
+                    break;
+
+                case "archive-scanner-stream-id":
+                    archiveScannerStreamId = Integer.parseInt(optionValue);
                     break;
 
                 case "aeron-dir-name":
@@ -129,16 +128,28 @@ public final class FixArchivePrinter
         requiredArgument(aeronDirectoryName, "aeron-dir-name");
         requiredArgument(aeronChannel, "aeron-channel");
 
-        scanArchive(aeronDirectoryName, aeronChannel, direction, predicate, follow, headerPredicate);
+        scanArchive(aeronDirectoryName, aeronChannel, queryStreamId, predicate, follow, headerPredicate,
+            archiveScannerStreamId);
+    }
+
+    private static void requiredArgument(final int eqIndex)
+    {
+        if (eqIndex == -1)
+        {
+            System.err.println("--help and --follow are the only options that don't take a value");
+            printHelp();
+            System.exit(-1);
+        }
     }
 
     private static void scanArchive(
         final String aeronDirectoryName,
         final String aeronChannel,
-        final MessageType direction,
+        final int queryStreamId,
         final FixMessagePredicate otherPredicate,
         final boolean follow,
-        final Predicate<HeaderDecoder> headerPredicate)
+        final Predicate<HeaderDecoder> headerPredicate,
+        final int archiveScannerStreamId)
     {
         FixMessagePredicate predicate = otherPredicate;
         if (headerPredicate != null)
@@ -153,9 +164,10 @@ public final class FixArchivePrinter
         final FixArchiveScanner scanner = new FixArchiveScanner(context);
         scanner.scan(
             aeronChannel,
-            direction,
+            queryStreamId,
             filterBy(FixArchivePrinter::print, predicate),
-            follow);
+            follow,
+            archiveScannerStreamId);
     }
 
     private static void requiredArgument(final String argument, final String description)
@@ -220,8 +232,9 @@ public final class FixArchivePrinter
             "Only print messages where the header's sender comp id field matches this",
             false);
         printOption(
-            "direction",
-            "Only print messages where the direction matches this. Must be either 'sent' or 'received'." +
+            "stream-id",
+            "Only print messages where the stream-id matches this." +
+            " This should be your configuration.inboundLibraryStream() or configuration.outboundLibraryStream()" +
             "Defaults to sent.",
             false);
         printOption(

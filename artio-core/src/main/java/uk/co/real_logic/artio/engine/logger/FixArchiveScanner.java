@@ -34,8 +34,6 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.archive.client.AeronArchive.NULL_LENGTH;
 import static io.aeron.archive.client.AeronArchive.NULL_POSITION;
 import static java.util.Comparator.comparingLong;
-import static uk.co.real_logic.artio.GatewayProcess.*;
-import static uk.co.real_logic.artio.engine.logger.FixArchiveScanner.MessageType.SENT;
 
 /**
  * Scan the archive for fix messages. Can be combined with predicates to create rich queries.
@@ -56,15 +54,6 @@ public class FixArchiveScanner implements AutoCloseable
     private final IdleStrategy idleStrategy;
 
     private FixMessageConsumer handler;
-
-    public enum MessageType
-    {
-        /** Messages sent from the engine to another FIX system */
-        SENT,
-
-        /** Messages received by the engine from another FIX system */
-        RECEIVED
-    }
 
     public static class Context
     {
@@ -109,15 +98,16 @@ public class FixArchiveScanner implements AutoCloseable
 
     public void scan(
         final String aeronChannel,
-        final MessageType messageType,
+        final int queryStreamId,
         final FixMessageConsumer handler,
-        final boolean follow)
+        final boolean follow,
+        final int archiveScannerStreamId)
     {
         this.handler = handler;
 
-        final List<ArchiveLocation> archiveLocations = lookupArchiveLocations(aeronChannel, messageType);
+        final List<ArchiveLocation> archiveLocations = lookupArchiveLocations(aeronChannel, queryStreamId);
 
-        try (Subscription replaySubscription = aeron.addSubscription(IPC_CHANNEL, ARCHIVE_SCANNER_STREAM))
+        try (Subscription replaySubscription = aeron.addSubscription(IPC_CHANNEL, archiveScannerStreamId))
         {
             archiveLocations.forEach(archiveLocation ->
             {
@@ -150,7 +140,7 @@ public class FixArchiveScanner implements AutoCloseable
                     archiveLocation.startPosition,
                     length,
                     IPC_CHANNEL,
-                    ARCHIVE_SCANNER_STREAM);
+                    archiveScannerStreamId);
 
                 final Image image = lookupImage(replaySubscription, sessionId);
 
@@ -176,15 +166,14 @@ public class FixArchiveScanner implements AutoCloseable
         return image;
     }
 
-    private List<ArchiveLocation> lookupArchiveLocations(final String aeronChannel, final MessageType messageType)
+    private List<ArchiveLocation> lookupArchiveLocations(final String aeronChannel, final int queryStreamId)
     {
         final List<ArchiveLocation> archiveLocations = new ArrayList<>();
-        final int requestStreamId = messageType == SENT ? OUTBOUND_LIBRARY_STREAM : INBOUND_LIBRARY_STREAM;
         aeronArchive.listRecordingsForUri(
             0,
             Integer.MAX_VALUE,
             aeronChannel,
-            requestStreamId,
+            queryStreamId,
             (controlSessionId,
             correlationId,
             recordingId,

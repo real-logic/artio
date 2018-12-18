@@ -1,0 +1,42 @@
+image:
+- ubuntu
+- Visual Studio 2017
+
+stack: jdk 8
+
+# disable msbuild
+build: off
+
+test_script:
+- ./gradlew --init-script init.gradle
+
+on_finish:
+  - sh: |
+      find "$APPVEYOR_BUILD_FOLDER" -type f -name 'TEST*.xml' -print0 | xargs -0 -I '{}' curl -F 'file=@{}' "https://ci.appveyor.com/api/testresults/junit/$APPVEYOR_JOB_ID"
+  - ps: |
+      if ($isWindows)
+      {
+        try
+        {
+          $wc = New-Object 'System.Net.WebClient'
+          $files = gci . -Recurse -name -include "TEST-*.xml"
+          echo "$($env:APPVEYOR_JOB_ID)"
+          foreach ($file in $files)
+          {
+            echo "Uploading $file"
+            $wc.UploadFile("https://ci.appveyor.com/api/testresults/junit/$($env:APPVEYOR_JOB_ID)", (Resolve-Path "$file"))
+          }
+        }
+        catch [Exception]
+        {
+          echo $_.Exception|format-list -force
+        }
+      }
+notifications:
+  - provider: Email
+    to:
+      - richard.warburton+appveyor@gmail.com
+    on_build_success: false
+    on_build_failure: true
+    on_build_status_changed: true
+

@@ -36,7 +36,6 @@ import java.util.function.LongFunction;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static org.agrona.UnsafeAccess.UNSAFE;
-import static uk.co.real_logic.artio.GatewayProcess.ARCHIVE_REPLAY_STREAM;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
 
@@ -58,6 +57,7 @@ public class ReplayQuery implements AutoCloseable
     private final IdleStrategy idleStrategy;
     private final AeronArchive aeronArchive;
     private final ErrorHandler errorHandler;
+    private final int archiveReplayStream;
 
     private Subscription replaySubscription;
 
@@ -69,7 +69,8 @@ public class ReplayQuery implements AutoCloseable
         final int requiredStreamId,
         final IdleStrategy idleStrategy,
         final AeronArchive aeronArchive,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final int archiveReplayStream)
     {
         this.logFileDir = logFileDir;
         this.indexBufferFactory = indexBufferFactory;
@@ -77,6 +78,7 @@ public class ReplayQuery implements AutoCloseable
         this.idleStrategy = idleStrategy;
         this.aeronArchive = aeronArchive;
         this.errorHandler = errorHandler;
+        this.archiveReplayStream = archiveReplayStream;
 
         fixSessionToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionQuery::close);
     }
@@ -238,11 +240,16 @@ public class ReplayQuery implements AutoCloseable
             if (replaySubscription == null)
             {
                 replaySubscription = aeronArchive.context().aeron().addSubscription(
-                    IPC_CHANNEL, ARCHIVE_REPLAY_STREAM);
+                    IPC_CHANNEL, archiveReplayStream);
             }
 
             return new ReplayOperation(
-                handler, ranges, aeronArchive, errorHandler, replaySubscription);
+                handler,
+                ranges,
+                aeronArchive,
+                errorHandler,
+                replaySubscription,
+                archiveReplayStream);
         }
 
         private RecordingRange addRange(

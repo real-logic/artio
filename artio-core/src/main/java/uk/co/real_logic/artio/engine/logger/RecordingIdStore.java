@@ -29,8 +29,6 @@ import org.agrona.concurrent.IdleStrategy;
 import java.nio.charset.StandardCharsets;
 
 import static io.aeron.archive.codecs.RecordingStartedDecoder.channelHeaderLength;
-import static uk.co.real_logic.artio.GatewayProcess.INBOUND_LIBRARY_STREAM;
-import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 
 public class RecordingIdStore implements AutoCloseable
 {
@@ -47,14 +45,16 @@ public class RecordingIdStore implements AutoCloseable
         final String requiredChannel,
         final AgentInvoker conductorAgentInvoker,
         final IdleStrategy startupIdleStrategy,
-        final IdleStrategy archiverIdleStrategy)
+        final IdleStrategy archiverIdleStrategy,
+        final int inboundLibraryStream,
+        final int outboundLibraryStream)
     {
         subscription = aeron.addSubscription(
             archiveContext.recordingEventsChannel(),
             archiveContext.recordingEventsStreamId());
 
-        inboundLookup = new RecordingIdLookup(INBOUND_LIBRARY_STREAM, this, archiverIdleStrategy);
-        outboundLookup = new RecordingIdLookup(OUTBOUND_LIBRARY_STREAM, this, archiverIdleStrategy);
+        inboundLookup = new RecordingIdLookup(inboundLibraryStream, this, archiverIdleStrategy);
+        outboundLookup = new RecordingIdLookup(outboundLibraryStream, this, archiverIdleStrategy);
 
         recordingEventHandler = new RecordingEventHandler(inboundLookup, outboundLookup, requiredChannel);
 

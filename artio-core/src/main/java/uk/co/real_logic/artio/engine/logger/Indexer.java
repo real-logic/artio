@@ -37,7 +37,6 @@ import java.util.List;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.artio.GatewayProcess.ARCHIVE_REPLAY_STREAM;
 
 /**
  * Incrementally builds indexes by polling a subscription.
@@ -51,6 +50,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
     private final Subscription subscription;
     private final String agentNamePrefix;
     private final CompletionPosition completionPosition;
+    private final int archiveReplayStream;
 
     public Indexer(
         final List<Index> indices,
@@ -58,12 +58,14 @@ public class Indexer implements Agent, ControlledFragmentHandler
         final String agentNamePrefix,
         final CompletionPosition completionPosition,
         final AeronArchive aeronArchive,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final int archiveReplayStream)
     {
         this.indices = indices;
         this.subscription = subscription;
         this.agentNamePrefix = agentNamePrefix;
         this.completionPosition = completionPosition;
+        this.archiveReplayStream = archiveReplayStream;
         catchIndexUp(aeronArchive, errorHandler);
     }
 
@@ -98,7 +100,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
 
                         final long length = recordingStoppedPosition - indexStoppedPosition;
                         try (Subscription subscription = aeronArchive.replay(
-                            recordingId, indexStoppedPosition, length, IPC_CHANNEL, ARCHIVE_REPLAY_STREAM))
+                            recordingId, indexStoppedPosition, length, IPC_CHANNEL, archiveReplayStream))
                         {
                             // Only do 1 replay at a time
                             while (subscription.imageCount() != 1)

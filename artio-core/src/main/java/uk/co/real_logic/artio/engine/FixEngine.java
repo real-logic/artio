@@ -195,7 +195,7 @@ public final class FixEngine extends GatewayProcess
     private ExclusivePublication replayPublication()
     {
         final ExclusivePublication publication = aeron.addExclusivePublication(
-            IPC_CHANNEL, OUTBOUND_REPLAY_STREAM);
+            IPC_CHANNEL, configuration.outboundReplayStream());
         StreamInformation.print("replayPublication", publication, configuration);
         return publication;
     }
@@ -218,7 +218,7 @@ public final class FixEngine extends GatewayProcess
     private Image replayImage(final String name, final int replaySessionId)
     {
         final Subscription subscription = aeron.addSubscription(
-            IPC_CHANNEL, OUTBOUND_REPLAY_STREAM);
+            IPC_CHANNEL, configuration.outboundReplayStream());
         StreamInformation.print(name, subscription, configuration);
 
         // Await replay publication

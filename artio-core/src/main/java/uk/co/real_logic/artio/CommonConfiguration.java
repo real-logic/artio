@@ -101,21 +101,6 @@ public class CommonConfiguration
      */
     public static final String HISTOGRAM_LOGGING_FILE_PROPERTY = "fix.benchmark.histogram_file";
 
-    public static final int DEFAULT_MONITORING_BUFFER_LENGTH = 64 * 1024 * 1024;
-    public static final String DEFAULT_DIRECTORY = optimalTmpDirName() + File.separator + "fix-%s";
-    public static final String DEFAULT_MONITORING_FILE = DEFAULT_DIRECTORY + File.separator + "monitoring";
-
-    public static final String DEFAULT_HISTOGRAM_LOGGING_FILE = DEFAULT_DIRECTORY + File.separator + "histograms";
-    public static final String DEFAULT_NAME_PREFIX = "";
-    public static final int DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S = 3;
-    public static final long DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS =
-        SECONDS.toMillis(DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S);
-    public static final boolean DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS = false;
-
-    private long reasonableTransmissionTimeInMs = DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
-    private boolean printAeronStreamIdentifiers = DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS;
-    private Clock clock = Clock.systemNanoTime();
-
     public static void validateTimeout(final long timeoutInMs)
     {
         if (timeoutInMs <= 0)
@@ -184,6 +169,17 @@ public class CommonConfiguration
     //          Configuration Defaults
     // ------------------------------------------------
 
+    public static final int DEFAULT_MONITORING_BUFFER_LENGTH = 64 * 1024 * 1024;
+    public static final String DEFAULT_DIRECTORY = optimalTmpDirName() + File.separator + "fix-%s";
+    public static final String DEFAULT_MONITORING_FILE = DEFAULT_DIRECTORY + File.separator + "monitoring";
+
+    public static final String DEFAULT_HISTOGRAM_LOGGING_FILE = DEFAULT_DIRECTORY + File.separator + "histograms";
+    public static final String DEFAULT_NAME_PREFIX = "";
+    public static final int DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S = 3;
+    public static final long DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS =
+        SECONDS.toMillis(DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S);
+    public static final boolean DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS = false;
+
     public static final int DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS = BACKOFF_SPINS + BACKOFF_YIELDS + 1000;
     public static final int DEFAULT_OUTBOUND_MAX_CLAIM_ATTEMPTS = DEFAULT_INBOUND_MAX_CLAIM_ATTEMPTS;
 
@@ -194,6 +190,12 @@ public class CommonConfiguration
     public static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 3_000L;
     public static final long DEFAULT_HISTOGRAM_POLL_PERIOD_IN_MS = MINUTES.toMillis(1);
 
+    public static final int DEFAULT_INBOUND_LIBRARY_STREAM = 1;
+    public static final int DEFAULT_OUTBOUND_LIBRARY_STREAM = 2;
+
+    private long reasonableTransmissionTimeInMs = DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
+    private boolean printAeronStreamIdentifiers = DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS;
+    private Clock clock = Clock.systemNanoTime();
     private boolean printErrorMessages = true;
     private IdleStrategy monitoringThreadIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
     private long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
@@ -217,6 +219,8 @@ public class CommonConfiguration
     private String histogramLoggingFile = null;
     private HistogramHandler histogramHandler;
     private String agentNamePrefix = DEFAULT_NAME_PREFIX;
+    private int inboundLibraryStream = DEFAULT_INBOUND_LIBRARY_STREAM;
+    private int outboundLibraryStream = DEFAULT_OUTBOUND_LIBRARY_STREAM;
 
     private final AtomicBoolean isConcluded = new AtomicBoolean(false);
 
@@ -476,6 +480,18 @@ public class CommonConfiguration
         return this;
     }
 
+    public CommonConfiguration inboundLibraryStream(final int inboundLibraryStream)
+    {
+        this.inboundLibraryStream = inboundLibraryStream;
+        return this;
+    }
+
+    public CommonConfiguration outboundLibraryStream(final int outboundLibraryStream)
+    {
+        this.outboundLibraryStream = outboundLibraryStream;
+        return this;
+    }
+
     public Aeron.Context aeronContext()
     {
         return aeronContext;
@@ -625,4 +641,13 @@ public class CommonConfiguration
         return clock;
     }
 
+    public int inboundLibraryStream()
+    {
+        return inboundLibraryStream;
+    }
+
+    public int outboundLibraryStream()
+    {
+        return outboundLibraryStream;
+    }
 }
