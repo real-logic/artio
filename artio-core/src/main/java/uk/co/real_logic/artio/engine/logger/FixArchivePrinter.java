@@ -234,7 +234,7 @@ public final class FixArchivePrinter
             false);
         printOption(
             "query-stream-id",
-            "Only print messages where the stream-id matches this." +
+            "Only print messages where the query-stream-id matches this." +
             " This should be your configuration.inboundLibraryStream() or configuration.outboundLibraryStream()" +
             " Defaults to sent.",
             false);
