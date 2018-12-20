@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import java.util.function.Predicate;
 
 import static java.lang.Long.parseLong;
+import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ARCHIVE_SCANNER_STREAM;
 import static uk.co.real_logic.artio.engine.logger.FixMessagePredicates.*;
 
@@ -39,7 +40,7 @@ public final class FixArchivePrinter
     {
         String aeronDirectoryName = null;
         String aeronChannel = null;
-        int queryStreamId = 0;
+        int queryStreamId = DEFAULT_OUTBOUND_LIBRARY_STREAM;
         int archiveScannerStreamId = DEFAULT_ARCHIVE_SCANNER_STREAM;
         FixMessagePredicate predicate = FixMessagePredicates.alwaysTrue();
         boolean follow = false;
@@ -232,10 +233,10 @@ public final class FixArchivePrinter
             "Only print messages where the header's sender comp id field matches this",
             false);
         printOption(
-            "stream-id",
-            "Only print messages where the stream-id matches this." +
+            "query-stream-id",
+            "Only print messages where the query-stream-id matches this." +
             " This should be your configuration.inboundLibraryStream() or configuration.outboundLibraryStream()" +
-            "Defaults to sent.",
+            " Defaults to sent.",
             false);
         printOption(
             "follow",
