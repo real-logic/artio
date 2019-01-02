@@ -282,6 +282,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.slowStatus(),
             manageSession.connectionType(),
             manageSession.sessionState(),
+            manageSession.awaitingResend() == AwaitingResend.YES,
             manageSession.heartbeatIntervalInS(),
             manageSession.replyToId(),
             manageSession.sequenceIndex(),

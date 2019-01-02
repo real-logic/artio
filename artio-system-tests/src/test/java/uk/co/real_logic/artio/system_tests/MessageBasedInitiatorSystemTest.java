@@ -28,11 +28,11 @@ import uk.co.real_logic.artio.session.Session;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
-import static uk.co.real_logic.artio.messages.SessionState.AWAITING_RESEND;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 // For reproducing error scenarios when initiating a connection
@@ -75,7 +75,8 @@ public class MessageBasedInitiatorSystemTest
             assertEquals(COMPLETED, reply.state());
 
             final Session session = reply.resultIfPresent();
-            assertEquals(AWAITING_RESEND, session.state());
+            assertEquals(ACTIVE, session.state());
+            assertTrue(session.isAwaitingResend());
         }
     }
 

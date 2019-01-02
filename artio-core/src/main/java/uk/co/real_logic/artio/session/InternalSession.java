@@ -100,4 +100,9 @@ public class InternalSession extends Session
     {
         super.logonTime(logonTime);
     }
+
+    public void awaitingResend(final boolean awaitingResend)
+    {
+        super.awaitingResend(awaitingResend);
+    }
 }

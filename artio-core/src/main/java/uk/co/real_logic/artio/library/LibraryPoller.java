@@ -228,6 +228,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             session.id(),
             correlationId,
             session.state(),
+            session.isAwaitingResend(),
             session.heartbeatIntervalInMs(),
             session.lastSentMsgSeqNum(),
             session.lastReceivedMsgSeqNum(),
@@ -600,6 +601,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final SlowStatus slowStatus,
         final ConnectionType connectionType,
         final SessionState sessionState,
+        final boolean awaitingResend,
         final int heartbeatIntervalInS,
         final long correlationId,
         final int sequenceIndex,
@@ -646,7 +648,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                         sequenceIndex
                     );
 
-                    newSession(connection, sessionId, session).reply(reply);
+                    newSession(connection, sessionId, session, awaitingResend).reply(reply);
                     pendingInitiatorSessions = ArrayUtil.add(pendingInitiatorSessions, session);
                 }
                 else
@@ -654,7 +656,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     DebugLogger.log(FIX_MESSAGE, "Acct Connect: %d, %d%n", connection, libraryId);
                     final InternalSession session = acceptSession(
                         connection, address, sessionState, heartbeatIntervalInS, sequenceIndex, logonTime);
-                    newSession(connection, sessionId, session);
+                    newSession(connection, sessionId, session, awaitingResend);
                     sessions = ArrayUtil.add(sessions, session);
                 }
 
@@ -982,9 +984,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     //                     END EVENT HANDLERS
     // -----------------------------------------------------------------------
 
-    private SessionSubscriber newSession(final long connectionId, final long sessionId, final InternalSession session)
+    private SessionSubscriber newSession(
+        final long connectionId,
+        final long sessionId,
+        final InternalSession session,
+        final boolean awaitingResend)
     {
         session.id(sessionId);
+        session.awaitingResend(awaitingResend);
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
             session, sessionIdStrategy, validationStrategy, null);

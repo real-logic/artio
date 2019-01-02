@@ -50,6 +50,7 @@ public interface LibraryEndPointHandler
         SlowStatus slowStatus,
         ConnectionType connectionType,
         SessionState sessionState,
+        boolean awaitingResend,
         int heartBeatInt,
         long correlationId,
         int sequenceIndex,

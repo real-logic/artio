@@ -449,6 +449,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySessions.acquire(
                 session,
                 state,
+                false,
                 session.heartbeatIntervalInS(),
                 sentSequenceNumber,
                 receivedSequenceNumber,
@@ -499,6 +500,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         gatewaySessions.acquire(
             session,
             CONNECTED,
+            false,
             configuration.defaultHeartbeatIntervalInS(),
             UNK_SESSION,
             UNK_SESSION,
@@ -665,7 +667,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
             sessionContext.onLogon(resetSequenceNumber || sequenceNumberType == TRANSIENT);
             final long sessionId = sessionContext.sessionId();
-            final GatewaySession session = setupConnection(
+            final GatewaySession gatewaySession = setupConnection(
                 channel,
                 connectionId,
                 sessionContext,
@@ -673,7 +675,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 libraryId,
                 INITIATOR);
 
-            library.addSession(session);
+            library.addSession(gatewaySession);
 
             final class FinishInitiatingConnection extends UnitOfWork
             {
@@ -705,6 +707,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         SlowStatus.NOT_SLOW,
                         INITIATOR,
                         CONNECTED,
+                        false,
                         heartbeatIntervalInS,
                         correlationId,
                         sessionContext.sequenceIndex(),
@@ -723,7 +726,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     {
                         lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
                         lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-                        session.onLogon(
+                        gatewaySession.onLogon(
                             sessionId, sessionContext, sessionKey, username, password, heartbeatIntervalInS);
                         return 0;
                     }
@@ -942,6 +945,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long sessionId,
         final long correlationId,
         final SessionState state,
+        final boolean awaitingResend,
         final long heartbeatIntervalInMs,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
@@ -981,6 +985,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySessions.acquire(
                 session,
                 state,
+                awaitingResend,
                 (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs),
                 lastSentSequenceNumber,
                 lastReceivedSequenceNumber,
@@ -1071,6 +1076,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySession.slowStatus(),
             gatewaySession.connectionType(),
             sessionState,
+            session.isAwaitingResend(),
             gatewaySession.heartbeatIntervalInS(),
             correlationId,
             gatewaySession.sequenceIndex(),
@@ -1107,17 +1113,19 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             final long connectionId = gatewaySession.connectionId();
 
+            final Session session = gatewaySession.session();
             return inboundPublication.saveManageSession(
                 libraryId,
                 connectionId,
                 gatewaySession.sessionId(),
                 lastSentSeqNum,
                 lastReceivedSeqNum,
-                gatewaySession.session().logonTime(),
+                session.logonTime(),
                 logonstatus,
                 gatewaySession.slowStatus(),
                 gatewaySession.connectionType(),
-                gatewaySession.session().state(),
+                session.state(),
+                session.isAwaitingResend(),
                 gatewaySession.heartbeatIntervalInS(),
                 NO_CORRELATION_ID,
                 gatewaySession.sequenceIndex(),
@@ -1209,7 +1217,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         schedule(() ->
         {
-            if (null == gatewaySession.session())
+            final Session session = gatewaySession.session();
+            if (null == session)
             {
                 // Generally means that another library is now handling the session
                 // so we shouldn't publish availability.
@@ -1220,13 +1229,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return inboundPublication.saveManageSession(ENGINE_LIBRARY_ID,
                 gatewaySession.connectionId(),
                 gatewaySession.sessionId(),
-                gatewaySession.session().lastSentMsgSeqNum(),
-                gatewaySession.session().lastReceivedMsgSeqNum(),
-                gatewaySession.session().logonTime(),
+                session.lastSentMsgSeqNum(),
+                session.lastReceivedMsgSeqNum(),
+                session.logonTime(),
                 LogonStatus.NEW,
                 gatewaySession.slowStatus(),
                 gatewaySession.connectionType(),
-                gatewaySession.session().state(),
+                session.state(),
+                session.isAwaitingResend(),
                 gatewaySession.heartbeatIntervalInS(),
                 NO_CORRELATION_ID,
                 gatewaySession.sequenceIndex(),

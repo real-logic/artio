@@ -518,6 +518,7 @@ public class FramerTest
             any(),
             any(),
             any(),
+            anyBoolean(),
             anyInt(),
             anyLong(),
             anyInt(),
@@ -547,6 +548,7 @@ public class FramerTest
             any(),
             any(),
             any(),
+            anyBoolean(),
             anyInt(),
             anyLong(),
             anyInt(),
@@ -684,12 +686,12 @@ public class FramerTest
             SESSION_ID,
             CORR_ID,
             ACTIVE,
+            false,
             HEARTBEAT_INTERVAL_IN_MS,
             0,
             0,
             "",
-            "",
-            header));
+            "", header));
     }
 
     private Action onLibraryConnect()
@@ -716,6 +718,7 @@ public class FramerTest
             eq(SlowStatus.NOT_SLOW),
             eq(INITIATOR),
             any(),
+            anyBoolean(),
             anyInt(),
             anyLong(),
             anyInt(),
@@ -740,6 +743,7 @@ public class FramerTest
             any(),
             any(),
             any(),
+            anyBoolean(),
             anyInt(),
             anyLong(),
             anyInt(),
@@ -762,6 +766,7 @@ public class FramerTest
         verify(gatewaySessions, times).acquire(
             any(),
             eq(state),
+            eq(false),
             eq(HEARTBEAT_INTERVAL_IN_S),
             anyInt(),
             anyInt(),
@@ -854,6 +859,7 @@ public class FramerTest
             eq(SlowStatus.NOT_SLOW),
             eq(INITIATOR),
             any(),
+            anyBoolean(),
             anyInt(),
             anyLong(),
             anyInt(),
@@ -878,6 +884,7 @@ public class FramerTest
             any(), // todo(Nick): Should be NOT_SLOW? ,
             any(),
             any(),
+            anyBoolean(),
             anyInt(),
             anyLong(),
             anyInt(),

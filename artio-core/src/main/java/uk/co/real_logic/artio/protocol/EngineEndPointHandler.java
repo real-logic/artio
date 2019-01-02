@@ -59,6 +59,7 @@ public interface EngineEndPointHandler
         long sessionId,
         long correlationId,
         SessionState state,
+        boolean awaitingResend,
         long heartbeatIntervalInMs,
         int lastSentSequenceNumber,
         int lastReceivedSequenceNumber,

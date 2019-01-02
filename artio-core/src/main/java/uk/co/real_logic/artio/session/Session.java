@@ -88,7 +88,6 @@ public class Session implements AutoCloseable
     public static final int INITIAL_SEQUENCE_NUMBER = 1;
 
     static final short ACTIVE_VALUE = 3;
-    static final short AWAITING_RESEND_VALUE = 4;
     static final short LOGGING_OUT_VALUE = 5;
     static final short LOGGING_OUT_AND_DISCONNECTING_VALUE = 6;
     static final short AWAITING_LOGOUT_VALUE = 7;
@@ -121,6 +120,8 @@ public class Session implements AutoCloseable
 
     private CompositeKey sessionKey;
     private SessionState state;
+    // Used to trigger a disconnect if we don't receive a resend within expected timeout
+    private boolean awaitingResend;
     private long id = UNKNOWN;
     private int lastReceivedMsgSeqNum = 0;
     private int lastSentMsgSeqNum;
@@ -207,6 +208,16 @@ public class Session implements AutoCloseable
     public SessionState state()
     {
         return state;
+    }
+
+    /**
+     * Get whether the session is awaiting a resend / replay of messages.
+     *
+     * @return true iff the session is awaiting a resend / replay of messages.
+     */
+    public boolean isAwaitingResend()
+    {
+        return awaitingResend;
     }
 
     /**
@@ -521,10 +532,8 @@ public class Session implements AutoCloseable
 
     public boolean isActive()
     {
-        final SessionState state = this.state;
-        return state == ACTIVE || state == AWAITING_RESEND;
+        return state == ACTIVE;
     }
-
 
     public boolean isAcceptor()
     {
@@ -698,7 +707,7 @@ public class Session implements AutoCloseable
 
     Action requestResend(final int expectedSeqNo)
     {
-        state(AWAITING_RESEND);
+        awaitingResend = true;
         return checkPosition(
             proxy.resendRequest(newSentSeqNum(), expectedSeqNo, 0, sequenceIndex()));
     }
@@ -824,9 +833,9 @@ public class Session implements AutoCloseable
                     }
                     else
                     {
-                        // Above call sets state to ACTIVE, but we aren't really quite ACTIVE.
-                        // We need to request a replay here. This is done in the onMessage call below I believe.
-                        state(SessionState.AWAITING_RESEND);
+                        // Above call sets state to ACTIVE, we are active in the sense that we can send, but we want
+                        // to be able request a replay as well. This is done in the onMessage call below I believe.
+                        awaitingResend = true;
                     }
                 }
                 else // (msgSeqNo < expectedMsgSeqNo)
@@ -1079,9 +1088,9 @@ public class Session implements AutoCloseable
         {
             lastReceivedMsgSeqNum(newSeqNo - 1);
             // A Resend Request would have put it in the AWAITING_RESEND state, we're now active again.
-            if (state() == AWAITING_RESEND)
+            if (awaitingResend)
             {
-                state(ACTIVE);
+                awaitingResend = false;
             }
         }
 
@@ -1256,9 +1265,9 @@ public class Session implements AutoCloseable
         final long origSendingTime,
         final boolean isPossDupOrResend)
     {
-        if (state == AWAITING_RESEND && CodecUtil.equals(testReqID, TEST_REQ_ID_CHARS, testReqIDLength))
+        if (awaitingResend && CodecUtil.equals(testReqID, TEST_REQ_ID_CHARS, testReqIDLength))
         {
-            state(ACTIVE);
+            awaitingResend = false;
         }
 
         return onMessage(
@@ -1339,7 +1348,7 @@ public class Session implements AutoCloseable
             default:
             {
                 int actions = 0;
-                final boolean isActive = state == ACTIVE_VALUE || state == AWAITING_RESEND_VALUE;
+                final boolean isActive = state == ACTIVE_VALUE;
                 if (isActive && time >= nextRequiredHeartbeatTimeInMs)
                 {
                     // Drop when back pressured: retried on duty cycle
@@ -1351,7 +1360,7 @@ public class Session implements AutoCloseable
 
                 if (time >= nextRequiredInboundMessageTimeInMs)
                 {
-                    if (state == AWAITING_LOGOUT_VALUE || state == AWAITING_RESEND_VALUE)
+                    if (state == AWAITING_LOGOUT_VALUE || awaitingResend)
                     {
                         // Drop when back pressured: retried on duty cycle
                         requestDisconnect();
@@ -1362,7 +1371,7 @@ public class Session implements AutoCloseable
                         if (proxy.testRequest(sentSeqNum, TEST_REQ_ID, sequenceIndex()) >= 0)
                         {
                             lastSentMsgSeqNum(sentSeqNum);
-                            state(AWAITING_RESEND);
+                            awaitingResend = true;
                             incNextReceivedInboundMessageTime(time);
                         }
                     }
@@ -1418,5 +1427,10 @@ public class Session implements AutoCloseable
     void logonTime(final long logonTime)
     {
         this.logonTime = logonTime;
+    }
+
+    void awaitingResend(final boolean awaitingResend)
+    {
+        this.awaitingResend = awaitingResend;
     }
 }

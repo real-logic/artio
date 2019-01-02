@@ -59,7 +59,6 @@ public class AcceptorSessionTest extends AbstractSessionTest
     public void shouldHaveConstantsInSyncWithMessageSchema()
     {
         assertEquals(ACTIVE.value(), ACTIVE_VALUE);
-        assertEquals(AWAITING_RESEND.value(), AWAITING_RESEND_VALUE);
         assertEquals(LOGGING_OUT.value(), Session.LOGGING_OUT_VALUE);
         assertEquals(LOGGING_OUT_AND_DISCONNECTING.value(), Session.LOGGING_OUT_AND_DISCONNECTING_VALUE);
         assertEquals(AWAITING_LOGOUT.value(), Session.AWAITING_LOGOUT_VALUE);
@@ -93,7 +92,6 @@ public class AcceptorSessionTest extends AbstractSessionTest
         verify(mockProxy).resendRequest(2, 1, 0, SEQUENCE_INDEX);
         verify(mockProxy).isSeqNumResetRequested();
         verifyNoFurtherMessages();
-        assertState(AWAITING_RESEND);
     }
 
     @Test

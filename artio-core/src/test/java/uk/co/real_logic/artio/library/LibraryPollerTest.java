@@ -399,6 +399,7 @@ public class LibraryPollerTest
             SlowStatus.NOT_SLOW,
             ACCEPTOR,
             ACTIVE,
+            false,
             HEARTBEAT_INTERVAL_IN_S,
             REPLY_TO_ID,
             SEQUENCE_INDEX,
@@ -407,8 +408,7 @@ public class LibraryPollerTest
             "",
             "",
             "",
-            "",
-            address);
+            "", address);
     }
 
     private SessionsDecoder hasOtherSessionId()

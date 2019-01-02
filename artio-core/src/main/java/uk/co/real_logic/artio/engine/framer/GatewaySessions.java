@@ -109,6 +109,7 @@ class GatewaySessions
     void acquire(
         final GatewaySession gatewaySession,
         final SessionState state,
+        final boolean awaitingResend,
         final int heartbeatIntervalInS,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
@@ -147,6 +148,8 @@ class GatewaySessions
             0,
             reasonableTransmissionTimeInMs,
             asciiBuffer);
+
+        session.awaitingResend(awaitingResend);
 
         final SessionParser sessionParser = new SessionParser(
             session,

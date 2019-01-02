@@ -506,7 +506,8 @@ public abstract class AbstractSessionTest
         }
 
         verify(mockProxy, retry(backPressured)).testRequest(7, TEST_REQ_ID, SEQUENCE_INDEX);
-        assertEquals(AWAITING_RESEND, session().state());
+        assertState(ACTIVE);
+        assertAwaitingResend();
     }
 
     @Test
@@ -575,11 +576,13 @@ public abstract class AbstractSessionTest
 
         // then sends a resend request
         verify(mockProxy).resendRequest(1, 1, 0, SEQUENCE_INDEX);
-        assertState(AWAITING_RESEND);
+        assertState(ACTIVE);
+        assertAwaitingResend();
 
         // Receives gapfill
         session().onSequenceReset(1, 3, true, true);
         assertState(ACTIVE);
+        assertNotAwaitingResend();
     }
 
     @Test
@@ -892,5 +895,15 @@ public abstract class AbstractSessionTest
     private void assertSequenceIndexIs(final int sequenceIndex)
     {
         assertEquals(sequenceIndex, session().sequenceIndex());
+    }
+
+    private void assertAwaitingResend()
+    {
+        assertTrue("Session is not awaiting resend", session().isAwaitingResend());
+    }
+
+    private void assertNotAwaitingResend()
+    {
+        assertFalse("Session is awaiting resend", session().isAwaitingResend());
     }
 }

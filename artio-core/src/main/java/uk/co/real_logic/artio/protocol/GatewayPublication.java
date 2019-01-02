@@ -212,6 +212,7 @@ public class GatewayPublication extends ClaimablePublication
         final SlowStatus slowStatus,
         final ConnectionType connectionType,
         final SessionState sessionState,
+        final boolean awaitingResend,
         final int heartbeatIntervalInS,
         final long replyToId,
         final int sequenceIndex,
@@ -255,6 +256,7 @@ public class GatewayPublication extends ClaimablePublication
             .slowStatus(slowStatus)
             .connectionType(connectionType)
             .sessionState(sessionState)
+            .awaitingResend(encodeAwaitingResend(awaitingResend))
             .heartbeatIntervalInS(heartbeatIntervalInS)
             .replyToId(replyToId)
             .sequenceIndex(sequenceIndex)
@@ -552,6 +554,7 @@ public class GatewayPublication extends ClaimablePublication
         final long sessionId,
         final long correlationId,
         final SessionState state,
+        final boolean awaitingResend,
         final long heartbeatIntervalInMs,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
@@ -577,6 +580,7 @@ public class GatewayPublication extends ClaimablePublication
             .correlationId(correlationId)
             .heartbeatIntervalInMs(heartbeatIntervalInMs)
             .state(state)
+            .awaitingResend(encodeAwaitingResend(awaitingResend))
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
             .putUsername(usernameBytes, 0, usernameBytes.length)
@@ -587,6 +591,11 @@ public class GatewayPublication extends ClaimablePublication
         logSbeMessage(GATEWAY_MESSAGE, releaseSession);
 
         return position;
+    }
+
+    private AwaitingResend encodeAwaitingResend(final boolean awaitingResend)
+    {
+        return awaitingResend ? AwaitingResend.YES : AwaitingResend.NO;
     }
 
     public long saveReleaseSessionReply(final int libraryId, final SessionReplyStatus status, final long replyToId)

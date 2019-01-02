@@ -134,6 +134,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             releaseSession.sessionId(),
             releaseSession.correlationId(),
             releaseSession.state(),
+            releaseSession.awaitingResend() == AwaitingResend.YES,
             releaseSession.heartbeatIntervalInMs(),
             releaseSession.lastSentSequenceNumber(),
             releaseSession.lastReceivedSequenceNumber(),

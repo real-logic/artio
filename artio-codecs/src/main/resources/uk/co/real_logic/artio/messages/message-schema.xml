@@ -39,6 +39,10 @@
             <validValue name="ACCEPTOR">0</validValue>
             <validValue name="INITIATOR">1</validValue>
         </enum>
+        <enum name="AwaitingResend" encodingType="uint8">
+            <validValue name="NO">0</validValue>
+            <validValue name="YES">1</validValue>
+        </enum>
         <enum name="ResetSequenceNumber" encodingType="uint8">
             <validValue name="NO">0</validValue>
             <validValue name="YES">1</validValue>
@@ -114,8 +118,6 @@
                         description="Initiator only state - sent logon message but it hasn't received the reply yet.">2</validValue>
             <validValue name="ACTIVE"
                         description="Session is fully authenticated and ready to execute.">3</validValue>
-            <validValue name="AWAITING_RESEND"
-                        description="Login had too high a sequence number and a resend or gap fill is required.">4</validValue>
             <validValue name="LOGGING_OUT"
                         description="Session is trying to send logout, will retry sending until not backpressured">5</validValue>
             <validValue name="LOGGING_OUT_AND_DISCONNECTING"
@@ -216,6 +218,7 @@
         <field name="state" id="6" type="SessionState"/>
         <field name="lastSentSequenceNumber" id="7" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="8" type="int32"/>
+        <field name="awaitingResend" id="11" type="AwaitingResend" />
         <data name="username" id="9" type="Utf8String"/>
         <data name="password" id="10" type="Utf8String"/>
     </sbe:message>
@@ -258,6 +261,7 @@
         <field name="heartbeatIntervalInS" id="11" type="int32"/>
         <field name="replyToId" id="12" type="CorrelationId"/>
         <field name="sequenceIndex" id="13" type="SequenceIndex" />
+        <field name="awaitingResend" id="21" type="AwaitingResend" />
         <data name="localCompId" id="14" type="Utf8String"/>
         <data name="localSubId" id="15" type="Utf8String"/>
         <data name="localLocationId" id="16" type="Utf8String"/>
