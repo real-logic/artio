@@ -3,6 +3,8 @@
 [![Join the chat at https://gitter.im/real-logic/artio](https://badges.gitter.im/real-logic/artio.svg)](https://gitter.im/real-logic/artio?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 High-Performance FIX Gateway
 
+[![Build status](https://ci.appveyor.com/api/projects/status/js244x1yn26m1nhw/branch/master?svg=true)](https://ci.appveyor.com/project/RichardWarburton/artio/branch/master)
+
 ## How to build
 
 The first time that you build the project you need to configure the repository
