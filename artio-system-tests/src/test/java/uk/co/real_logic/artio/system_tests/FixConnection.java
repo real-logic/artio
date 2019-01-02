@@ -19,6 +19,7 @@ import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.builder.*;
+import uk.co.real_logic.artio.decoder.HeartbeatDecoder;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -42,9 +43,11 @@ final class FixConnection implements AutoCloseable
     private final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
     private final MutableAsciiBuffer writeAsciiBuffer = new MutableAsciiBuffer(writeBuffer);
 
-    private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
+    private final UtcTimestampEncoder sendingTimeEncoder = new UtcTimestampEncoder();
+    private final UtcTimestampEncoder origSendingTimeEncoder = new UtcTimestampEncoder();
     private final LogonEncoder logon = new LogonEncoder();
     private final LogoutEncoder logout = new LogoutEncoder();
+    private final TestRequestEncoder testRequestEncoder = new TestRequestEncoder();
 
     private final SocketChannel socket;
     private final String senderCompID;
@@ -93,8 +96,7 @@ final class FixConnection implements AutoCloseable
 
     void logon(final boolean resetSeqNumFlag)
     {
-        final long timestamp = System.currentTimeMillis();
-        setupHeader(logon.header(), timestamp);
+        setupHeader(logon.header(), msgSeqNum++, false);
 
         logon
             .resetSeqNumFlag(resetSeqNumFlag)
@@ -105,7 +107,7 @@ final class FixConnection implements AutoCloseable
         send(logon);
     }
 
-    public FixConnection msgSeqNum(final int msgSeqNum)
+    FixConnection msgSeqNum(final int msgSeqNum)
     {
         this.msgSeqNum = msgSeqNum;
         return this;
@@ -113,23 +115,33 @@ final class FixConnection implements AutoCloseable
 
     void logout()
     {
-        setupHeader(logout.header(), System.currentTimeMillis());
+        setupHeader(logout.header(), msgSeqNum++, false);
 
         send(logout);
     }
 
-    private void setupHeader(final HeaderEncoder header, final long timestamp)
+    void setupHeader(final HeaderEncoder header, final int msgSeqNum, final boolean possDupFlag)
     {
-        final int timestampLength = timestampEncoder.encode(timestamp);
+        final long timestamp = System.currentTimeMillis();
+        final int timestampLength = sendingTimeEncoder.encode(timestamp);
 
         header
             .senderCompID(senderCompID)
             .targetCompID(targetCompID)
-            .msgSeqNum(msgSeqNum++)
-            .sendingTime(timestampEncoder.buffer(), timestampLength);
+            .msgSeqNum(msgSeqNum)
+            .sendingTime(sendingTimeEncoder.buffer(), timestampLength);
+
+        if (possDupFlag)
+        {
+            final int origSendingTimeLength = origSendingTimeEncoder.encode(timestamp - 1000);
+
+            header
+                .possDupFlag(true)
+                .origSendingTime(origSendingTimeEncoder.buffer(), origSendingTimeLength);
+        }
     }
 
-    void readMessage(final Decoder decoder)
+    <T extends Decoder> T readMessage(final T decoder)
     {
         final ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(buffer);
@@ -139,14 +151,18 @@ final class FixConnection implements AutoCloseable
             final int read = socket.read(buffer);
             DebugLogger.log(FIX_TEST, "< [" + asciiBuffer.getAscii(OFFSET, read) + "]");
             decoder.decode(asciiBuffer, OFFSET, read);
+
+            assertTrue(decoder.validate());
         }
         catch (final IOException ex)
         {
             LangUtil.rethrowUnchecked(ex);
         }
+
+        return decoder;
     }
 
-    private void send(final Encoder encoder)
+    void send(final Encoder encoder)
     {
         try
         {
@@ -157,7 +173,7 @@ final class FixConnection implements AutoCloseable
             writeBuffer.position(offset).limit(offset + length);
             final int written = socket.write(writeBuffer);
             assertEquals(length, written);
-            DebugLogger.log(FIX_TEST, "> [" + writeAsciiBuffer.getAscii(OFFSET, length) + "]");
+            DebugLogger.log(FIX_TEST, "> [" + writeAsciiBuffer.getAscii(offset, length) + "]");
             writeBuffer.clear();
         }
         catch (final IOException ex)
@@ -166,18 +182,29 @@ final class FixConnection implements AutoCloseable
         }
     }
 
-    public LogonDecoder readLogonReply()
+    LogonDecoder readLogonReply()
     {
-        final LogonDecoder logon = new LogonDecoder();
-        readMessage(logon);
+        return readMessage(new LogonDecoder());
+    }
 
-        assertTrue(logon.validate());
+    void testRequest(final String testReqID)
+    {
+        setupHeader(testRequestEncoder.header(), msgSeqNum++, false);
+        testRequestEncoder.testReqID(testReqID);
+        send(testRequestEncoder);
+    }
 
-        return logon;
+    void readHeartbeat(final String testReqID)
+    {
+        final HeartbeatDecoder heartbeat = readMessage(new HeartbeatDecoder());
+        assertTrue(heartbeat.hasTestReqID());
+        assertEquals(testReqID, heartbeat.testReqIDAsString());
     }
 
     public void close()
     {
         CloseHelper.close(socket);
     }
+
+
 }

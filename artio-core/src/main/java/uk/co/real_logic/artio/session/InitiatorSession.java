@@ -135,7 +135,7 @@ public class InitiatorSession extends InternalSession
                 setLogonState(heartbeatInterval, username, password);
                 notifyLogonListener();
 
-                return requestResend(expectedSeqNo);
+                return requestResend(expectedSeqNo, msgSeqNo);
             }
             else /* expectedSeqNo > msgSeqNo */
             {

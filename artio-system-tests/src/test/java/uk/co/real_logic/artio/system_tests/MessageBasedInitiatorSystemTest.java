@@ -19,7 +19,10 @@ import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
+import uk.co.real_logic.artio.builder.HeaderEncoder;
+import uk.co.real_logic.artio.decoder.ResendRequestDecoder;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.FixLibrary;
@@ -96,6 +99,72 @@ public class MessageBasedInitiatorSystemTest
             assertEquals(ACTIVE, session.state());
             assertEquals(1, session.lastReceivedMsgSeqNum());
         }
+    }
+
+    @Test
+    public void shouldCatchupReplaySequences() throws IOException
+    {
+        final String testReqID = "thisIsATest";
+
+        try (FixConnection connection = acceptConnection())
+        {
+            sendLogonToAcceptor(connection);
+
+            connection.msgSeqNum(4).logon(false);
+
+            final Reply<Session> reply = testSystem.awaitReply(this.sessionReply);
+            assertEquals(COMPLETED, reply.state());
+
+            final Session session = reply.resultIfPresent();
+            assertEquals(ACTIVE, session.state());
+            assertTrue(session.isAwaitingResend());
+
+            // Receive resend request for missing messages.
+            final ResendRequestDecoder resendRequestDecoder = connection.readMessage(new ResendRequestDecoder());
+            assertEquals(1, resendRequestDecoder.beginSeqNo());
+            assertEquals(0, resendRequestDecoder.endSeqNo());
+
+            // Intermingle replay of
+            sendExecutionReport(connection, 1, true);
+            sendExecutionReport(connection, 2, true);
+            sendExecutionReport(connection, 3, true);
+
+            connection.msgSeqNum(5).testRequest(testReqID);
+
+            Timing.assertEventuallyTrue("Session has caught up", () ->
+            {
+                testSystem.poll();
+
+                return !session.isAwaitingResend();
+            });
+
+            testSystem.poll();
+
+            connection.readHeartbeat(testReqID);
+        }
+    }
+
+    // TODO: shouldNotSendRedundantResendRequestsByDefault
+
+    void sendExecutionReport(final FixConnection connection, final int msgSeqNum, final boolean possDupFlag)
+    {
+        final ExecutionReportEncoder executionReportEncoder = new ExecutionReportEncoder();
+        final HeaderEncoder header = executionReportEncoder.header();
+
+        connection.setupHeader(header, msgSeqNum, possDupFlag);
+
+        executionReportEncoder
+            .orderID("order")
+            .execID("exec")
+            .execType(ExecType.FILL)
+            .ordStatus(OrdStatus.FILLED)
+            .side(Side.BUY);
+
+        executionReportEncoder.instrument().symbol("IBM");
+
+        connection.send(executionReportEncoder);
+
+        testSystem.poll();
     }
 
     private void sendLogonToAcceptor(final FixConnection connection)

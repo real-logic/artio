@@ -140,14 +140,14 @@ public class TestSystem
         Timing.DEFAULT_TIMEOUT_IN_MS);
     }
 
-    public void send(final Session initiatingSession, final Encoder encoder)
+    public void send(final Session session, final Encoder encoder)
     {
         assertEventuallyTrue(
             "Unable to send " + encoder.getClass().getSimpleName(),
             () ->
             {
                 poll();
-                return initiatingSession.send(encoder) > 0;
+                return session.send(encoder) > 0;
             });
     }
 }
