@@ -103,7 +103,7 @@ public class ReplayIndex implements Index
     @Override
     public int doWork()
     {
-        return recordingIdLookup.poll();
+        return 0; //recordingIdLookup.poll();
     }
 
     private long continuedFixSessionId;

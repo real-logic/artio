@@ -20,7 +20,6 @@ import io.aeron.Publication;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.archive.codecs.SourceLocation;
 import io.aeron.archive.status.RecordingPos;
-import org.agrona.CloseHelper;
 import org.agrona.collections.IntHashSet;
 import org.agrona.collections.IntHashSet.IntIterator;
 import org.agrona.collections.Long2LongHashMap;
@@ -29,7 +28,6 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.CountersReader;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.engine.logger.RecordingIdLookup;
-import uk.co.real_logic.artio.engine.logger.RecordingIdStore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,11 +50,11 @@ public class RecordingCoordinator implements AutoCloseable
     private final String channel;
     private final CountersReader counters;
     private final EngineConfiguration configuration;
+    private final RecordingIdLookup inboundLookup;
+    private final RecordingIdLookup outboundLookup;
 
     private Long2LongHashMap inboundAeronSessionIdToCompletionPosition;
     private Long2LongHashMap outboundAeronSessionIdToCompletionPosition;
-
-    private final RecordingIdStore recordingIdStore;
 
     private boolean closed = false;
 
@@ -74,15 +72,8 @@ public class RecordingCoordinator implements AutoCloseable
             final AeronArchive.Context archiveContext = archive.context();
             final Aeron aeron = archiveContext.aeron();
             counters = aeron.countersReader();
-            recordingIdStore = new RecordingIdStore(
-                aeron,
-                archiveContext,
-                channel,
-                conductorAgentInvoker,
-                this.idleStrategy,
-                archiverIdleStrategy,
-                configuration.inboundLibraryStream(),
-                configuration.outboundLibraryStream());
+            inboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
+            outboundLookup = new RecordingIdLookup(archiverIdleStrategy, counters);
 
             if (configuration.logInboundMessages())
             {
@@ -100,7 +91,8 @@ public class RecordingCoordinator implements AutoCloseable
         else
         {
             counters = null;
-            recordingIdStore = null;
+            inboundLookup = null;
+            outboundLookup = null;
         }
     }
 
@@ -211,7 +203,6 @@ public class RecordingCoordinator implements AutoCloseable
 
         if (configuration.logAnyMessages())
         {
-            CloseHelper.close(recordingIdStore);
             archive.close();
         }
     }
@@ -254,11 +245,11 @@ public class RecordingCoordinator implements AutoCloseable
 
     RecordingIdLookup inboundRecordingIdLookup()
     {
-        return recordingIdStore != null ? recordingIdStore.inboundLookup() : null;
+        return inboundLookup;
     }
 
     RecordingIdLookup outboundRecordingIdLookup()
     {
-        return recordingIdStore != null ? recordingIdStore.outboundLookup() : null;
+        return outboundLookup;
     }
 }
