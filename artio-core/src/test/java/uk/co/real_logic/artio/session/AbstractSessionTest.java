@@ -586,6 +586,22 @@ public abstract class AbstractSessionTest
     }
 
     @Test
+    public void shouldSendWhenAwaitingResend()
+    {
+        givenActive();
+
+        // when high sequence number message
+        onMessage(3);
+
+        // then sends a resend request
+        verify(mockProxy).resendRequest(1, 1, 0, SEQUENCE_INDEX);
+        assertState(ACTIVE);
+        assertAwaitingResend();
+
+        sendTestRequest(100);
+    }
+
+    @Test
     public void shouldDisconnectIfBeginStringIsInvalidAtLogon()
     {
         onBeginString(true);
