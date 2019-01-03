@@ -36,7 +36,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.Function;
+import java.util.function.IntSupplier;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.joining;
@@ -127,7 +129,9 @@ public abstract class Generator
             .append(importFor(AsciiSequenceView.class))
             .append(importStaticFor(CodecUtil.class))
             .append(importStaticFor(StandardFixConstants.class))
-            .append(importFor(topType(MESSAGE)));
+            .append(importFor(topType(MESSAGE)))
+            .append(importFor(IntSupplier.class))
+            .append(importFor(Supplier.class));
 
         if (topType(GROUP) != topType(MESSAGE))
         {

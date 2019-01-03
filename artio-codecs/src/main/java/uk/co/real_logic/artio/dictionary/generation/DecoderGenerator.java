@@ -537,6 +537,10 @@ public class DecoderGenerator extends Generator
     private void groupInterfaceGetter(final Group group, final Writer out) throws IOException
     {
         groupClass(group, out);
+        generateGroupIterator(out, group);
+
+        final Entry numberField = group.numberField();
+        out.append(fieldInterfaceGetter(numberField, (Field)numberField.element()));
 
         out.append(String.format(
             "    public %1$s %2$s();\n",
@@ -667,6 +671,7 @@ public class DecoderGenerator extends Generator
         if (!(currentAggregate instanceof Component))
         {
             groupClass(group, out);
+            generateGroupIterator(out, group);
         }
 
         final Entry numberField = group.numberField();
@@ -679,41 +684,49 @@ public class DecoderGenerator extends Generator
             "    {\n" +
             "        return %2$s;\n" +
             "    }\n\n" +
-            "%3$s",
+            "%3$s\n" +
+            "    private %4$s %5$s = new %4$s(() -> %6$s, () -> %2$s);\n" +
+            "    public %4$s %5$s()\n" +
+            "    {\n" +
+            "        return %5$s.iterator();\n" +
+            "    }\n\n",
             decoderClassName(group),
             formatPropertyName(group.name()),
-            prefix));
-
-        generateGroupIterator(out, group);
+            prefix,
+            iteratorClassName(group),
+            iteratorFieldName(group),
+            formatPropertyName(group.numberField().name())));
     }
 
     private void generateGroupIterator(final Writer out, final Group group) throws IOException
     {
         out.append(String.format(
-            "    private %1$s %2$s = new %1$s();\n\n" +
-            "    public %1$s %2$s()\n" +
+            "    public class %1$s implements Iterable<%2$s>, java.util.Iterator<%2$s>\n" +
             "    {\n" +
-            "        return %2$s.iterator();\n" +
-            "    }\n\n" +
-            "    public class %1$s implements Iterable<%4$s>, java.util.Iterator<%4$s>\n" +
-            "    {\n" +
+            "        private final IntSupplier remainderReset;\n" +
+            "        private final Supplier<%2$s> currentReset;\n" +
             "        private int remainder;\n" +
-            "        private %4$s current;\n" +
+            "        private %2$s current;\n\n" +
+            "        public %1$s(final IntSupplier remainderReset, final Supplier<%2$s> currentReset)\n" +
+            "        {\n\n" +
+            "            this.remainderReset = remainderReset;\n" +
+            "            this.currentReset = currentReset;\n" +
+            "        }\n\n" +
             "        public boolean hasNext()\n" +
             "        {\n" +
             "            return remainder > 0;\n" +
             "        }\n" +
-            "        public %4$s next()\n" +
+            "        public %2$s next()\n" +
             "        {\n" +
             "            remainder--;\n" +
-            "            final %4$s value = current;\n" +
+            "            final %2$s value = current;\n" +
             "            current = current.next();\n" +
             "            return value;\n" +
             "        }\n" +
             "        public void reset()\n" +
             "        {\n" +
-            "            remainder = %3$s;\n" +
-            "            current = %5$s();\n" +
+            "            remainder = remainderReset.getAsInt();\n" +
+            "            current = currentReset.get();\n" +
             "        }\n" +
             "        public %1$s iterator()\n" +
             "        {\n" +
@@ -722,10 +735,7 @@ public class DecoderGenerator extends Generator
             "        }\n" +
             "    }\n\n",
             iteratorClassName(group),
-            iteratorFieldName(group),
-            formatPropertyName(group.numberField().name()),
-            decoderClassName(group),
-            formatPropertyName(group.name())));
+            decoderClassName(group)));
     }
 
     private String fieldGetter(final Entry entry, final Field field)
