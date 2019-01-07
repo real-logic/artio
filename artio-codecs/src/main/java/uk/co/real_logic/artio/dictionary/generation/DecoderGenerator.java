@@ -537,6 +537,8 @@ public class DecoderGenerator extends Generator
     private void groupInterfaceGetter(final Group group, final Writer out) throws IOException
     {
         groupClass(group, out);
+        final Entry numberField = group.numberField();
+        out.append(fieldInterfaceGetter(numberField, (Field)numberField.element()));
 
         out.append(String.format(
             "    public %1$s %2$s();\n",
@@ -570,17 +572,27 @@ public class DecoderGenerator extends Generator
         final String length = type.isStringBased() ?
             String.format("    public int %1$sLength();\n", fieldName) : "";
 
+        final String stringAsciiView = type.isStringBased() ?
+            String.format("    public void %1$s(AsciiSequenceView view);\n", fieldName) : "";
+
         final String optional = !entry.required() ?
             String.format("    public boolean has%1$s();\n", name) : "";
+
+        final String enumDecoder = EnumGenerator.hasEnumGenerated(field) && !field.type().isMultiValue() ?
+            String.format("    public %s %sAsEnum();\n", name, fieldName) : "";
 
         return String.format(
             "    public %1$s %2$s();\n" +
             "%3$s" +
-            "%4$s",
+            "%4$s" +
+            "%5$s" +
+            "%6$s",
             javaTypeOf(type),
             fieldName,
             optional,
-            length);
+            length,
+            enumDecoder,
+            stringAsciiView);
     }
 
     private void getter(final Entry entry, final Writer out) throws IOException
