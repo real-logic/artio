@@ -538,7 +538,6 @@ public class DecoderGenerator extends Generator
     {
         groupClass(group, out);
         final Entry numberField = group.numberField();
-        out.append(String.format("public %1$s %2$s();\n", iteratorClassName(group), iteratorFieldName(group)));
         out.append(fieldInterfaceGetter(numberField, (Field)numberField.element()));
 
         out.append(String.format(
