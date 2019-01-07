@@ -27,9 +27,9 @@ apply plugin: 'signing'
 apply plugin: 'net.researchgate.release'
 apply plugin: 'com.github.johnrengelman.shadow'
 
-def aeronVersion = '1.13.0'
-def agronaVersion = '0.9.28'
-def sbeVersion = '1.10.1'
+def aeronVersion = '1.14.0'
+def agronaVersion = '0.9.29'
+def sbeVersion = '1.10.2'
 def artioJavaVersion = '1.8'
 
 defaultTasks 'clean', 'build', 'javadoc', 'install'
@@ -89,7 +89,7 @@ subprojects {
     }
 
     dependencies {
-        checkstyle 'com.puppycrawl.tools:checkstyle:8.15'
+        checkstyle 'com.puppycrawl.tools:checkstyle:8.16'
 
         testCompile 'junit:junit:4.12'
         testCompile 'org.mockito:mockito-core:2.23.4'
@@ -97,7 +97,7 @@ subprojects {
     }
 
     checkstyle {
-        toolVersion = "8.15"
+        toolVersion = "8.16"
     }
 
     test {

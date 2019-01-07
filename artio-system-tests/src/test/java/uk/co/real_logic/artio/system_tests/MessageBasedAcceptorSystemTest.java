@@ -135,11 +135,9 @@ public class MessageBasedAcceptorSystemTest
 
     private void readLogoutReply(final FixConnection connection)
     {
-        final LogoutDecoder logon = new LogoutDecoder();
-        connection.readMessage(logon);
+        final LogoutDecoder logout = connection.readMessage(new LogoutDecoder());
 
-        assertFalse(logon.textAsString(), logon.hasText());
-        assertTrue(logon.validate());
+        assertFalse(logout.textAsString(), logout.hasText());
     }
 
     @After

@@ -122,6 +122,8 @@ public class Session implements AutoCloseable
     private SessionState state;
     // Used to trigger a disconnect if we don't receive a resend within expected timeout
     private boolean awaitingResend;
+    // Equivalent of receivedMsgSeqNo for resent messages
+    private int lastResentMsgSeqNo;
     private long id = UNKNOWN;
     private int lastReceivedMsgSeqNum = 0;
     private int lastSentMsgSeqNum;
@@ -686,30 +688,57 @@ public class Session implements AutoCloseable
         return null;
     }
 
-    private Action handleSeqNoChange(final int msgSeqNo, final long time, final boolean isPossDupOrResend)
+    private Action handleSeqNoChange(final int msgSeqNum, final long time, final boolean isPossDupOrResend)
     {
-        final int expectedSeqNo = expectedReceivedSeqNum();
-        if (expectedSeqNo == msgSeqNo)
+        if (isPossDupOrResend)
         {
-            incNextReceivedInboundMessageTime(time);
-            lastReceivedMsgSeqNum(msgSeqNo);
+            if (awaitingResend && endOfResendMsgSeqNum() == msgSeqNum)
+            {
+                awaitingResend = false;
+                lastResentMsgSeqNo = 0;
+            }
+            else
+            {
+                lastResentMsgSeqNo = msgSeqNum;
+            }
         }
-        else if (expectedSeqNo < msgSeqNo)
+        else
         {
-            return requestResend(expectedSeqNo);
+            final int expectedSeqNo = expectedReceivedSeqNum();
+            if (expectedSeqNo == msgSeqNum)
+            {
+                incNextReceivedInboundMessageTime(time);
+                lastReceivedMsgSeqNum(msgSeqNum);
+            }
+            else if (expectedSeqNo < msgSeqNum)
+            {
+                return requestResend(expectedSeqNo, msgSeqNum);
+            }
+            else /* expectedSeqNo > msgSeqNo */
+            {
+                return msgSeqNumTooLow(msgSeqNum, expectedSeqNo);
+            }
         }
-        else if /* expectedSeqNo > msgSeqNo */ (!isPossDupOrResend)
-        {
-            return msgSeqNumTooLow(msgSeqNo, expectedSeqNo);
-        }
+
         return CONTINUE;
     }
 
-    Action requestResend(final int expectedSeqNo)
+    private int endOfResendMsgSeqNum()
     {
-        awaitingResend = true;
-        return checkPosition(
-            proxy.resendRequest(newSentSeqNum(), expectedSeqNo, 0, sequenceIndex()));
+        return lastReceivedMsgSeqNum - 1;
+    }
+
+    Action requestResend(final int expectedSeqNo, final int msgSeqNo)
+    {
+        // TODO: why 0 and not msgSeqNo ?
+        final long position = proxy.resendRequest(newSentSeqNum(), expectedSeqNo, 0, sequenceIndex());
+        if (position >= 0)
+        {
+            awaitingResend = true;
+            lastResentMsgSeqNo = expectedSeqNo - 1;
+            lastReceivedMsgSeqNum = msgSeqNo;
+        }
+        return checkPosition(position);
     }
 
     Action msgSeqNumTooLow(final int msgSeqNo, final int expectedSeqNo)
@@ -1064,7 +1093,7 @@ public class Session implements AutoCloseable
 
     private Action onGapFill(final int receivedMsgSeqNo, final int newSeqNo, final boolean possDupFlag)
     {
-        final int expectedMsgSeqNo = expectedReceivedSeqNum();
+        final int expectedMsgSeqNo = awaitingResend ? lastResentMsgSeqNo + 1 : expectedReceivedSeqNum();
         // The gapfill has the wrong sequence number.
         if (receivedMsgSeqNo > expectedMsgSeqNo)
         {
@@ -1072,7 +1101,14 @@ public class Session implements AutoCloseable
                 proxy.resendRequest(newSentSeqNum(), expectedMsgSeqNo, 0, sequenceIndex()));
             if (action != ABORT)
             {
-                lastReceivedMsgSeqNum(newSeqNo - 1);
+                if (awaitingResend)
+                {
+                    lastResentMsgSeqNo = newSeqNo - 1;
+                }
+                else
+                {
+                    lastReceivedMsgSeqNum(newSeqNo - 1);
+                }
             }
             return action;
         }
@@ -1086,12 +1122,25 @@ public class Session implements AutoCloseable
         }
         else
         {
-            lastReceivedMsgSeqNum(newSeqNo - 1);
-            // A Resend Request would have put it in the AWAITING_RESEND state, we're now active again.
             if (awaitingResend)
             {
-                awaitingResend = false;
+                // A Resend Request would have put it in the AWAITING_RESEND state, we're now active again.
+                if (lastReceivedMsgSeqNum <= newSeqNo)
+                {
+                    awaitingResend = false;
+                    lastResentMsgSeqNo = 0;
+                    lastReceivedMsgSeqNum(newSeqNo - 1);
+                }
+                else
+                {
+                    lastResentMsgSeqNo = newSeqNo - 1;
+                }
             }
+            else
+            {
+                lastReceivedMsgSeqNum(newSeqNo - 1);
+            }
+
         }
 
         return CONTINUE;
@@ -1247,7 +1296,8 @@ public class Session implements AutoCloseable
             refTagId,
             refMsgType,
             refMsgTypeLength,
-            rejectReason, sequenceIndex()));
+            rejectReason,
+            sequenceIndex()));
 
         if (action != ABORT)
         {
