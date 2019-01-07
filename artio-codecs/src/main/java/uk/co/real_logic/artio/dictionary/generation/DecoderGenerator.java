@@ -685,7 +685,7 @@ public class DecoderGenerator extends Generator
             "        return %2$s;\n" +
             "    }\n\n" +
             "%3$s\n" +
-            "    private %4$s %5$s = new %4$s(this, () -> %2$s);\n" +
+            "    private %4$s %5$s = new %4$s(this);\n" +
             "    public %4$s %5$s()\n" +
             "    {\n" +
             "        return %5$s.iterator();\n" +
@@ -710,13 +710,11 @@ public class DecoderGenerator extends Generator
             "    public class %1$s implements Iterable<%2$s>, java.util.Iterator<%2$s>\n" +
             "    {\n" +
             "        private final %3$s parent;\n" +
-            "        private final Supplier<%2$s> currentReset;\n" +
             "        private int remainder;\n" +
             "        private %2$s current;\n\n" +
-            "        public %1$s(final %3$s parent, final Supplier<%2$s> currentReset)\n" +
+            "        public %1$s(final %3$s parent)\n" +
             "        {\n\n" +
             "            this.parent = parent;\n" +
-            "            this.currentReset = currentReset;\n" +
             "        }\n\n" +
             "        public boolean hasNext()\n" +
             "        {\n" +
@@ -732,7 +730,7 @@ public class DecoderGenerator extends Generator
             "        public void reset()\n" +
             "        {\n" +
             "            remainder = %4$s;\n" +
-            "            current = currentReset.get();\n" +
+            "            current = parent.%5$s();\n" +
             "        }\n" +
             "        public %1$s iterator()\n" +
             "        {\n" +
@@ -743,7 +741,8 @@ public class DecoderGenerator extends Generator
             iteratorClassName(group),
             decoderClassName(group),
             decoderClassName(parent),
-            numberFieldReset));
+            numberFieldReset,
+            formatPropertyName(group.name())));
     }
 
     private String fieldGetter(final Entry entry, final Field field)
