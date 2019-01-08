@@ -46,6 +46,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.LivenessDetector.SEND_INTERVAL_FRACTION;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.artio.library.SessionConfiguration.*;
 import static uk.co.real_logic.artio.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 
@@ -401,6 +402,9 @@ public class LibraryPollerTest
             ACTIVE,
             false,
             HEARTBEAT_INTERVAL_IN_S,
+            DEFAULT_CLOSED_RESEND_INTERVAL,
+            DEFAULT_RESEND_REQUEST_CHUNK_SIZE,
+            DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS,
             REPLY_TO_ID,
             SEQUENCE_INDEX,
             "",

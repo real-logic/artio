@@ -214,6 +214,9 @@ public class GatewayPublication extends ClaimablePublication
         final SessionState sessionState,
         final boolean awaitingResend,
         final int heartbeatIntervalInS,
+        final boolean closedResendInterval,
+        final int resendRequestChunkSize,
+        final boolean sendRedundantResendRequests,
         final long replyToId,
         final int sequenceIndex,
         final String localCompId,
@@ -258,6 +261,9 @@ public class GatewayPublication extends ClaimablePublication
             .sessionState(sessionState)
             .awaitingResend(encodeAwaitingResend(awaitingResend))
             .heartbeatIntervalInS(heartbeatIntervalInS)
+            .closedResendInterval(toBool(closedResendInterval))
+            .resendRequestChunkSize(resendRequestChunkSize)
+            .sendRedundantResendRequests(toBool(sendRedundantResendRequests))
             .replyToId(replyToId)
             .sequenceIndex(sequenceIndex)
             .putLocalCompId(localCompIdBytes, 0, localCompIdBytes.length)
@@ -422,6 +428,9 @@ public class GatewayPublication extends ClaimablePublication
         final boolean resetSequenceNumber,
         final int requestedInitialReceivedSequenceNumber,
         final int requestedInitialSentSequenceNumber,
+        final boolean closedResendInterval,
+        final int resendRequestChunkSize,
+        final boolean sendRedundantResendRequests,
         final String username,
         final String password,
         final int heartbeatIntervalInS,
@@ -459,6 +468,9 @@ public class GatewayPublication extends ClaimablePublication
             .heartbeatIntervalInS(heartbeatIntervalInS)
             .resetSequenceNumber(resetSequenceNumber ? ResetSequenceNumber.YES : ResetSequenceNumber.NO)
             .correlationId(correlationId)
+            .closedResendInterval(toBool(closedResendInterval))
+            .resendRequestChunkSize(resendRequestChunkSize)
+            .sendRedundantResendRequests(toBool(sendRedundantResendRequests))
             .putHost(hostBytes, 0, hostBytes.length)
             .putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length)
             .putSenderSubId(senderSubIdBytes, 0, senderSubIdBytes.length)
@@ -474,6 +486,11 @@ public class GatewayPublication extends ClaimablePublication
         logSbeMessage(GATEWAY_MESSAGE, initiateConnection);
 
         return position;
+    }
+
+    private Bool toBool(final boolean value)
+    {
+        return value ? Bool.TRUE : Bool.FALSE;
     }
 
     public long saveError(final GatewayError errorType, final int libraryId, final long replyToId, final String message)
@@ -558,6 +575,9 @@ public class GatewayPublication extends ClaimablePublication
         final long heartbeatIntervalInMs,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
+        final boolean closedResendInterval,
+        final int resendRequestChunkSize,
+        final boolean sendRedundantResendRequests,
         final String username,
         final String password)
     {
@@ -583,6 +603,9 @@ public class GatewayPublication extends ClaimablePublication
             .awaitingResend(encodeAwaitingResend(awaitingResend))
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
+            .closedResendInterval(toBool(closedResendInterval))
+            .resendRequestChunkSize(resendRequestChunkSize)
+            .sendRedundantResendRequests(toBool(sendRedundantResendRequests))
             .putUsername(usernameBytes, 0, usernameBytes.length)
             .putPassword(passwordBytes, 0, passwordBytes.length);
 

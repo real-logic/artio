@@ -232,6 +232,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             session.heartbeatIntervalInMs(),
             session.lastSentMsgSeqNum(),
             session.lastReceivedMsgSeqNum(),
+            session.closedResendInterval(),
+            session.resendRequestChunkSize(),
+            session.sendRedundantResendRequests(),
             session.username(),
             session.password());
     }
@@ -258,6 +261,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             configuration.resetSeqNum(),
             configuration.initialReceivedSequenceNumber(),
             configuration.initialSentSequenceNumber(),
+            configuration.closedResendInterval(),
+            configuration.resendRequestChunkSize(),
+            configuration.sendRedundantResendRequests(),
             configuration.username(),
             configuration.password(),
             this.configuration.defaultHeartbeatIntervalInS(),
@@ -603,6 +609,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final SessionState sessionState,
         final boolean awaitingResend,
         final int heartbeatIntervalInS,
+        final boolean closedResendInterval,
+        final int resendRequestChunkSize,
+        final boolean sendRedundantResendRequests,
         final long correlationId,
         final int sequenceIndex,
         final String localCompId,
@@ -655,7 +664,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 {
                     DebugLogger.log(FIX_MESSAGE, "Acct Connect: %d, %d%n", connection, libraryId);
                     final InternalSession session = acceptSession(
-                        connection, address, sessionState, heartbeatIntervalInS, sequenceIndex, logonTime);
+                        connection, address, sessionState, heartbeatIntervalInS, sequenceIndex);
+
+                    session.logonTime(logonTime);
+                    session.closedResendInterval(closedResendInterval);
+                    session.resendRequestChunkSize(resendRequestChunkSize);
+                    session.sendRedundantResendRequests(sendRedundantResendRequests);
+
                     newSession(connection, sessionId, session, awaitingResend);
                     sessions = ArrayUtil.add(sessions, session);
                 }
@@ -1036,6 +1051,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             sessionConfiguration != null && sessionConfiguration.resetSeqNum(),
             configuration.reasonableTransmissionTimeInMs(),
             asciiBuffer);
+
         session.lastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
 
         if (sessionConfiguration != null)
@@ -1051,6 +1067,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
             session.username(sessionConfiguration.username());
             session.password(sessionConfiguration.password());
+            session.closedResendInterval(sessionConfiguration.closedResendInterval());
+            session.resendRequestChunkSize(sessionConfiguration.resendRequestChunkSize());
+            session.sendRedundantResendRequests(sessionConfiguration.sendRedundantResendRequests());
         }
 
         return session;
@@ -1086,8 +1105,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final String address,
         final SessionState state,
         final int heartbeatIntervalInS,
-        final int sequenceIndex,
-        final long logonTime)
+        final int sequenceIndex)
     {
         final GatewayPublication publication = transport.outboundPublication();
         final int split = address.lastIndexOf(':');
@@ -1117,7 +1135,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             asciiBuffer);
 
         session.address(host, port);
-        session.logonTime(logonTime);
 
         return session;
     }

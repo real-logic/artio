@@ -18,7 +18,6 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochClock;
-import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixCounters;
@@ -62,7 +61,6 @@ class GatewaySessions
     private final boolean logAllMessages;
     private final SessionContexts sessionContexts;
     private final SessionPersistenceStrategy sessionPersistenceStrategy;
-    private final IdleStrategy framerIdleStrategy;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
 
@@ -83,7 +81,6 @@ class GatewaySessions
         final ErrorHandler errorHandler,
         final SessionContexts sessionContexts,
         final SessionPersistenceStrategy sessionPersistenceStrategy,
-        final IdleStrategy framerIdleStrategy,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final SequenceNumberIndexReader receivedSequenceNumberIndex)
     {
@@ -101,7 +98,6 @@ class GatewaySessions
         this.errorHandler = errorHandler;
         this.sessionContexts = sessionContexts;
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
-        this.framerIdleStrategy = framerIdleStrategy;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
     }
@@ -150,6 +146,9 @@ class GatewaySessions
             asciiBuffer);
 
         session.awaitingResend(awaitingResend);
+        session.closedResendInterval(gatewaySession.closedResendInterval());
+        session.resendRequestChunkSize(gatewaySession.resendRequestChunkSize());
+        session.sendRedundantResendRequests(gatewaySession.sendRedundantResendRequests());
 
         final SessionParser sessionParser = new SessionParser(
             session,
@@ -285,7 +284,6 @@ class GatewaySessions
         sessionContext.onLogon(resetSeqNum);
 
         gatewaySession.onLogon(sessionId, sessionContext, compositeKey, username, password, logon.heartBtInt());
-        gatewaySession.persistenceLevel(persistenceLevel);
 
         if (resetSeqNum)
         {

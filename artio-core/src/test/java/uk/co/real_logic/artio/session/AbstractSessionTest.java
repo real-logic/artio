@@ -586,6 +586,22 @@ public abstract class AbstractSessionTest
     }
 
     @Test
+    public void shouldRequestResendIfHighSeqNoClosedResendInterval()
+    {
+        session().closedResendInterval(true);
+
+        givenActive();
+
+        // when high sequence number message
+        onMessage(3);
+
+        // then sends a resend request
+        verify(mockProxy).resendRequest(1, 1, 3, SEQUENCE_INDEX);
+        assertState(ACTIVE);
+        assertAwaitingResend();
+    }
+
+    @Test
     public void shouldSendWhenAwaitingResend()
     {
         givenActive();

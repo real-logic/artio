@@ -139,6 +139,9 @@ public class Session implements AutoCloseable
     private String connectedHost;
     private int connectedPort;
     private long logonTime = NO_LOGON_TIME;
+    private boolean closedResendInterval;
+    private int resendRequestChunkSize;
+    private boolean sendRedundantResendRequests;
 
     private boolean incorrectBeginString = false;
 
@@ -220,6 +223,21 @@ public class Session implements AutoCloseable
     public boolean isAwaitingResend()
     {
         return awaitingResend;
+    }
+
+    public boolean closedResendInterval()
+    {
+        return closedResendInterval;
+    }
+
+    public int resendRequestChunkSize()
+    {
+        return resendRequestChunkSize;
+    }
+
+    public boolean sendRedundantResendRequests()
+    {
+        return sendRedundantResendRequests;
     }
 
     /**
@@ -728,17 +746,22 @@ public class Session implements AutoCloseable
         return lastReceivedMsgSeqNum - 1;
     }
 
-    Action requestResend(final int expectedSeqNo, final int msgSeqNo)
+    Action requestResend(final int expectedSeqNo, final int receivedMsgSeqNo)
     {
-        // TODO: why 0 and not msgSeqNo ?
-        final long position = proxy.resendRequest(newSentSeqNum(), expectedSeqNo, 0, sequenceIndex());
+        final long position = proxy.resendRequest(
+            newSentSeqNum(), expectedSeqNo, resendRequestEndSeqNo(receivedMsgSeqNo), sequenceIndex());
         if (position >= 0)
         {
             awaitingResend = true;
             lastResentMsgSeqNo = expectedSeqNo - 1;
-            lastReceivedMsgSeqNum = msgSeqNo;
+            lastReceivedMsgSeqNum = receivedMsgSeqNo;
         }
         return checkPosition(position);
+    }
+
+    private int resendRequestEndSeqNo(final int receivedMsgSeqNo)
+    {
+        return closedResendInterval ? receivedMsgSeqNo : 0;
     }
 
     Action msgSeqNumTooLow(final int msgSeqNo, final int expectedSeqNo)
@@ -1097,8 +1120,8 @@ public class Session implements AutoCloseable
         // The gapfill has the wrong sequence number.
         if (receivedMsgSeqNo > expectedMsgSeqNo)
         {
-            final Action action = checkPosition(
-                proxy.resendRequest(newSentSeqNum(), expectedMsgSeqNo, 0, sequenceIndex()));
+            final Action action = checkPosition(proxy.resendRequest(
+                newSentSeqNum(), expectedMsgSeqNo, resendRequestEndSeqNo(receivedMsgSeqNo), sequenceIndex()));
             if (action != ABORT)
             {
                 if (awaitingResend)
@@ -1482,5 +1505,20 @@ public class Session implements AutoCloseable
     void awaitingResend(final boolean awaitingResend)
     {
         this.awaitingResend = awaitingResend;
+    }
+
+    void resendRequestChunkSize(final int resendRequestChunkSize)
+    {
+        this.resendRequestChunkSize = resendRequestChunkSize;
+    }
+
+    void closedResendInterval(final boolean closedResendInterval)
+    {
+        this.closedResendInterval = closedResendInterval;
+    }
+
+    void sendRedundantResendRequests(final boolean sendRedundantResendRequests)
+    {
+        this.sendRedundantResendRequests = sendRedundantResendRequests;
     }
 }

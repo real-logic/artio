@@ -21,7 +21,6 @@ import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.SlowStatus;
 import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
-import uk.co.real_logic.artio.validation.PersistenceLevel;
 
 import java.util.function.Consumer;
 
@@ -37,6 +36,9 @@ class GatewaySession implements SessionInfo
     private SessionContext context;
     private final String address;
     private final ConnectionType connectionType;
+    private final boolean closedResendInterval;
+    private final int resendRequestChunkSize;
+    private final boolean sendRedundantResendRequests;
 
     private ReceiverEndPoint receiverEndPoint;
     private SenderEndPoint senderEndPoint;
@@ -50,7 +52,6 @@ class GatewaySession implements SessionInfo
     private int heartbeatIntervalInS;
     private long disconnectTimeout = NO_TIMEOUT;
 
-    private PersistenceLevel persistenceLevel;
     private Consumer<GatewaySession> onGatewaySessionLogon;
     private SessionLogonListener logonListener = this::onSessionLogon;
 
@@ -62,7 +63,10 @@ class GatewaySession implements SessionInfo
         final CompositeKey sessionKey,
         final ReceiverEndPoint receiverEndPoint,
         final SenderEndPoint senderEndPoint,
-        final Consumer<GatewaySession> onGatewaySessionLogon)
+        final Consumer<GatewaySession> onGatewaySessionLogon,
+        final boolean closedResendInterval,
+        final int resendRequestChunkSize,
+        final boolean sendRedundantResendRequests)
     {
         this.connectionId = connectionId;
         this.sessionId = context.sessionId();
@@ -73,6 +77,9 @@ class GatewaySession implements SessionInfo
         this.receiverEndPoint = receiverEndPoint;
         this.senderEndPoint = senderEndPoint;
         this.onGatewaySessionLogon = onGatewaySessionLogon;
+        this.closedResendInterval = closedResendInterval;
+        this.resendRequestChunkSize = resendRequestChunkSize;
+        this.sendRedundantResendRequests = sendRedundantResendRequests;
     }
 
     public long connectionId()
@@ -277,13 +284,18 @@ class GatewaySession implements SessionInfo
         return bytesInBuffer() > 0 ? SlowStatus.SLOW : SlowStatus.NOT_SLOW;
     }
 
-    void persistenceLevel(final PersistenceLevel persistenceLevel)
+    public boolean closedResendInterval()
     {
-        this.persistenceLevel = persistenceLevel;
+        return closedResendInterval;
     }
 
-    PersistenceLevel persistenceLevel()
+    public int resendRequestChunkSize()
     {
-        return this.persistenceLevel;
+        return resendRequestChunkSize;
+    }
+
+    public boolean sendRedundantResendRequests()
+    {
+        return sendRedundantResendRequests;
     }
 }

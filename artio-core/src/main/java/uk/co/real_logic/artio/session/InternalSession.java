@@ -105,4 +105,19 @@ public class InternalSession extends Session
     {
         super.awaitingResend(awaitingResend);
     }
+
+    public void closedResendInterval(final boolean closedResendInterval)
+    {
+        super.closedResendInterval(closedResendInterval);
+    }
+
+    public void resendRequestChunkSize(final int resendRequestChunkSize)
+    {
+        super.resendRequestChunkSize(resendRequestChunkSize);
+    }
+
+    public void sendRedundantResendRequests(final boolean sendRedundantResendRequests)
+    {
+        super.sendRedundantResendRequests(sendRedundantResendRequests);
+    }
 }

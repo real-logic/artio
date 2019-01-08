@@ -65,7 +65,7 @@ import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_NAME_PREFIX;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
-import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+import static uk.co.real_logic.artio.library.SessionConfiguration.*;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.DisconnectReason.APPLICATION_DISCONNECT;
 import static uk.co.real_logic.artio.messages.GatewayError.*;
@@ -520,6 +520,9 @@ public class FramerTest
             any(),
             anyBoolean(),
             anyInt(),
+            anyBoolean(),
+            anyInt(),
+            anyBoolean(),
             anyLong(),
             anyInt(),
             any(),
@@ -550,6 +553,9 @@ public class FramerTest
             any(),
             anyBoolean(),
             anyInt(),
+            anyBoolean(),
+            anyInt(),
+            anyBoolean(),
             anyLong(),
             anyInt(),
             any(),
@@ -690,6 +696,9 @@ public class FramerTest
             HEARTBEAT_INTERVAL_IN_MS,
             0,
             0,
+            DEFAULT_CLOSED_RESEND_INTERVAL,
+            DEFAULT_RESEND_REQUEST_CHUNK_SIZE,
+            DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS,
             "",
             "", header));
     }
@@ -720,6 +729,9 @@ public class FramerTest
             any(),
             anyBoolean(),
             anyInt(),
+            anyBoolean(),
+            anyInt(),
+            anyBoolean(),
             anyLong(),
             anyInt(),
             any(),
@@ -745,6 +757,9 @@ public class FramerTest
             any(),
             anyBoolean(),
             anyInt(),
+            anyBoolean(),
+            anyInt(),
+            anyBoolean(),
             anyLong(),
             anyInt(),
             any(),
@@ -823,6 +838,9 @@ public class FramerTest
             AUTOMATIC_INITIAL_SEQUENCE_NUMBER,
             AUTOMATIC_INITIAL_SEQUENCE_NUMBER,
             false,
+            DEFAULT_CLOSED_RESEND_INTERVAL,
+            DEFAULT_RESEND_REQUEST_CHUNK_SIZE,
+            DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS,
             "",
             "",
             HEARTBEAT_INTERVAL_IN_S,
@@ -861,6 +879,9 @@ public class FramerTest
             any(),
             anyBoolean(),
             anyInt(),
+            anyBoolean(),
+            anyInt(),
+            anyBoolean(),
             anyLong(),
             anyInt(),
             any(),
@@ -886,6 +907,9 @@ public class FramerTest
             any(),
             anyBoolean(),
             anyInt(),
+            anyBoolean(),
+            anyInt(),
+            anyBoolean(),
             anyLong(),
             anyInt(),
             any(),

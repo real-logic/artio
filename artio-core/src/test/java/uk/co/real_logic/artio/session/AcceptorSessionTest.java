@@ -140,21 +140,6 @@ public class AcceptorSessionTest extends AbstractSessionTest
         verifySendingTimeAccuracyProblem(2);
     }
 
-    private void verifySendingTimeAccuracyProblem(final int times)
-    {
-        verify(mockProxy, times(times)).rejectWhilstNotLoggedOn(1, SENDINGTIME_ACCURACY_PROBLEM, SEQUENCE_INDEX);
-    }
-
-    private void logonWithInvalidSendingTime(final Action expectedAction)
-    {
-        fakeClock.advanceMilliSeconds(2 * SENDING_TIME_WINDOW);
-
-        final Action action = session().onLogon(
-            HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, 1, UNKNOWN, null, null, false, false);
-
-        assertEquals(expectedAction, action);
-    }
-
     @Test
     public void shouldValidateSendingTimeNotTooLate()
     {
@@ -179,16 +164,37 @@ public class AcceptorSessionTest extends AbstractSessionTest
         verifyDisconnect(times(1));
     }
 
+    @Test
+    public void shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne()
+    {
+        shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne(SEQUENCE_INDEX);
+    }
+
+    @Test
+    public void should()
+    {
+
+    }
+
     private void verifySendingTimeAccuracyLogout()
     {
         verify(mockProxy, times(1)).logout(3, SEQUENCE_INDEX,
             SENDINGTIME_ACCURACY_PROBLEM.representation());
     }
 
-    @Test
-    public void shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne()
+    private void verifySendingTimeAccuracyProblem(final int times)
     {
-        shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne(SEQUENCE_INDEX);
+        verify(mockProxy, times(times)).rejectWhilstNotLoggedOn(1, SENDINGTIME_ACCURACY_PROBLEM, SEQUENCE_INDEX);
+    }
+
+    private void logonWithInvalidSendingTime(final Action expectedAction)
+    {
+        fakeClock.advanceMilliSeconds(2 * SENDING_TIME_WINDOW);
+
+        final Action action = session().onLogon(
+            HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, 1, UNKNOWN, null, null, false, false);
+
+        assertEquals(expectedAction, action);
     }
 
     protected void readyForLogon()

@@ -23,6 +23,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
+import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
 
 import java.io.File;
@@ -37,6 +38,7 @@ import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
+import static uk.co.real_logic.artio.library.SessionConfiguration.*;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysUnindexed;
 
 /**
@@ -203,6 +205,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private ReplayHandler replayHandler = DEFAULT_REPLAY_HANDLER;
     private int outboundReplayStream = DEFAULT_OUTBOUND_REPLAY_STREAM;
     private int archiveReplayStream = DEFAULT_ARCHIVE_REPLAY_STREAM;
+    private boolean acceptedSessionClosedResendInterval = DEFAULT_CLOSED_RESEND_INTERVAL;
+    private int acceptedSessionResendRequestChunkSize = DEFAULT_RESEND_REQUEST_CHUNK_SIZE;
+    private boolean acceptedSessionSendRedundantResendRequests = DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -510,6 +515,46 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Sets the {@link SessionConfiguration#closedResendInterval()} property for accepted Sessions.
+     *
+     * @param acceptedSessionClosedResendInterval the {@link SessionConfiguration#closedResendInterval()} property for
+     *                                           accepted Sessions.
+     * @return this
+     */
+    public EngineConfiguration acceptedSessionClosedResendInterval(final boolean acceptedSessionClosedResendInterval)
+    {
+        this.acceptedSessionClosedResendInterval = acceptedSessionClosedResendInterval;
+        return this;
+    }
+
+    /**
+     * Sets the {@link SessionConfiguration#resendRequestChunkSize()} property for accepted Sessions.
+     *
+     * @param acceptedSessionResendRequestChunkSize the {@link SessionConfiguration#resendRequestChunkSize()} property
+     *                                             for accepted Sessions.
+     * @return this
+     */
+    public EngineConfiguration acceptedSessionResendRequestChunkSize(final int acceptedSessionResendRequestChunkSize)
+    {
+        this.acceptedSessionResendRequestChunkSize = acceptedSessionResendRequestChunkSize;
+        return this;
+    }
+
+    /**
+     * Sets the {@link SessionConfiguration#sendRedundantResendRequests()} property for accepted Sessions.
+     *
+     * @param acceptedSessionSendRedundantResendRequests the {@link SessionConfiguration#sendRedundantResendRequests()}
+     *                                                   property for accepted Sessions.
+     * @return this
+     */
+    public EngineConfiguration acceptedSessionSendRedundantResendRequests(
+        final boolean acceptedSessionSendRedundantResendRequests)
+    {
+        this.acceptedSessionSendRedundantResendRequests = acceptedSessionSendRedundantResendRequests;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -709,6 +754,21 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public int archiveReplayStream()
     {
         return archiveReplayStream;
+    }
+
+    public boolean acceptedSessionClosedResendInterval()
+    {
+        return acceptedSessionClosedResendInterval;
+    }
+
+    public int acceptedSessionResendRequestChunkSize()
+    {
+        return acceptedSessionResendRequestChunkSize;
+    }
+
+    public boolean acceptedSessionSendRedundantResendRequests()
+    {
+        return acceptedSessionSendRedundantResendRequests;
     }
 
     public EngineConfiguration conclude()

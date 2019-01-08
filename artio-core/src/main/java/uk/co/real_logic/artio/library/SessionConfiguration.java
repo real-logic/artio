@@ -30,9 +30,12 @@ import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_I
  */
 public final class SessionConfiguration
 {
+    public static final boolean DEFAULT_SEQUENCE_NUMBERS_PERSISTENT = false;
     public static final int AUTOMATIC_INITIAL_SEQUENCE_NUMBER = -1;
     public static final boolean DEFAULT_RESET_SEQ_NUM = false;
-    public static final boolean DEFAULT_SEQUENCE_NUMBERS_PERSISTENT = false;
+    public static final boolean DEFAULT_CLOSED_RESEND_INTERVAL = false;
+    public static final int DEFAULT_RESEND_REQUEST_CHUNK_SIZE = 0;
+    public static final boolean DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS = false;
 
     private final List<String> hosts;
     private final IntArrayList ports;
@@ -49,6 +52,9 @@ public final class SessionConfiguration
     private final int initialSentSequenceNumber;
     private final long timeoutInMs;
     private final boolean resetSeqNum;
+    private final boolean closedResendInterval;
+    private final int resendRequestChunkSize;
+    private final boolean sendRedundantResendRequests;
 
     public static Builder builder()
     {
@@ -70,7 +76,10 @@ public final class SessionConfiguration
         final int initialReceivedSequenceNumber,
         final int initialSentSequenceNumber,
         final long timeoutInMs,
-        final boolean resetSeqNum)
+        final boolean resetSeqNum,
+        final boolean closedResendInterval,
+        final int resendRequestChunkSize,
+        final boolean sendRedundantResendRequests)
     {
         Objects.requireNonNull(hosts);
         Objects.requireNonNull(ports);
@@ -99,6 +108,9 @@ public final class SessionConfiguration
         this.initialReceivedSequenceNumber = initialReceivedSequenceNumber;
         this.initialSentSequenceNumber = initialSentSequenceNumber;
         this.resetSeqNum = resetSeqNum;
+        this.closedResendInterval = closedResendInterval;
+        this.resendRequestChunkSize = resendRequestChunkSize;
+        this.sendRedundantResendRequests = sendRedundantResendRequests;
     }
 
     private void requireNonEmpty(final List<?> values, final String name)
@@ -189,6 +201,21 @@ public final class SessionConfiguration
         return resetSeqNum;
     }
 
+    public boolean closedResendInterval()
+    {
+        return closedResendInterval;
+    }
+
+    public int resendRequestChunkSize()
+    {
+        return resendRequestChunkSize;
+    }
+
+    public boolean sendRedundantResendRequests()
+    {
+        return sendRedundantResendRequests;
+    }
+
     @Override
     public String toString()
     {
@@ -208,6 +235,8 @@ public final class SessionConfiguration
             ", initialSentSequenceNumber=" + initialSentSequenceNumber +
             ", timeoutInMs=" + timeoutInMs +
             ", resetSeqNum=" + resetSeqNum +
+            ", closedResendInterval=" + closedResendInterval +
+            ", resendRequestChunkSize=" + resendRequestChunkSize +
             '}';
     }
 
@@ -228,6 +257,9 @@ public final class SessionConfiguration
         private int initialSentSequenceNumber = AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
         private long timeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
         private boolean resetSeqNum = DEFAULT_RESET_SEQ_NUM;
+        private boolean closedResendInterval = DEFAULT_CLOSED_RESEND_INTERVAL;
+        private int resendRequestChunkSize = DEFAULT_RESEND_REQUEST_CHUNK_SIZE;
+        private boolean sendRedundantResendRequests = DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS;
 
         private Builder()
         {
@@ -401,6 +433,51 @@ public final class SessionConfiguration
             return this;
         }
 
+        /**
+         * Set to true to use the end of sequence gap for resend requests rather than requesting infinite replay.
+         *
+         * Not recommended by the FIX specification, but needed for some counterparties.
+         *
+         * @param closedResendInterval true to use the end of sequence gap for resend requests rather than requesting
+         *                             infinite replay.
+         * @return this builder
+         */
+        public Builder closedResendInterval(final boolean closedResendInterval)
+        {
+            this.closedResendInterval = closedResendInterval;
+            return this;
+        }
+
+        /**
+         * Set the limit for the size of a resend request in case of missing messages.
+         *
+         * This is useful when the remote FIX engine does not allow to ask for more than n message for a ResendRequest.
+         * E.g. if the ResendRequestChunkSize is set to 5 and a gap of 7 messages is detected, a first resend request
+         * will be sent for 5 messages. When this gap has been filled, another resend request for 2 messages will
+         * be sent. If the ResendRequestChunkSize is set to 0 (the default), only one ResendRequest for all the missing
+         * messages will be sent.
+         *
+         * @param resendRequestChunkSize the limit for the size of a resend request in case of missing messages.
+         * @return this builder
+         */
+        public Builder resendRequestChunkSize(final int resendRequestChunkSize)
+        {
+            this.resendRequestChunkSize = resendRequestChunkSize;
+            return this;
+        }
+
+        /**
+         * Set to true to allow sending of redundant resend requests, false otherwise.
+         *
+         * @param sendRedundantResendRequests true to allow sending of redundant resend requests, false otherwise
+         * @return this builder
+         */
+        public Builder sendRedundantResendRequests(final boolean sendRedundantResendRequests)
+        {
+            this.sendRedundantResendRequests = sendRedundantResendRequests;
+            return this;
+        }
+
         public SessionConfiguration build()
         {
             return new SessionConfiguration(
@@ -418,7 +495,10 @@ public final class SessionConfiguration
                 initialReceivedSequenceNumber,
                 initialSentSequenceNumber,
                 timeoutInMs,
-                resetSeqNum);
+                resetSeqNum,
+                closedResendInterval,
+                resendRequestChunkSize,
+                sendRedundantResendRequests);
         }
     }
 }

@@ -95,7 +95,6 @@ public class FramerContext
             errorHandler,
             sessionContexts,
             configuration.sessionPersistenceStrategy(),
-            idleStrategy,
             sentSequenceNumberIndex,
             receivedSequenceNumberIndex);
 
