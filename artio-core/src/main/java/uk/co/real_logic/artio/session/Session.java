@@ -690,9 +690,9 @@ public class Session implements AutoCloseable
 
     private Action handleSeqNoChange(final int msgSeqNum, final long time, final boolean isPossDupOrResend)
     {
-        if (isPossDupOrResend)
+        if (awaitingResend && isPossDupOrResend)
         {
-            if (awaitingResend && endOfResendMsgSeqNum() == msgSeqNum)
+            if (endOfResendMsgSeqNum() == msgSeqNum)
             {
                 awaitingResend = false;
                 lastResentMsgSeqNo = 0;
@@ -714,7 +714,7 @@ public class Session implements AutoCloseable
             {
                 return requestResend(expectedSeqNo, msgSeqNum);
             }
-            else /* expectedSeqNo > msgSeqNo */
+            else if (/* expectedSeqNo > msgSeqNo && */ !isPossDupOrResend)
             {
                 return msgSeqNumTooLow(msgSeqNum, expectedSeqNo);
             }
