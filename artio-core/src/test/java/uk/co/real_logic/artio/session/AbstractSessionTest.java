@@ -79,7 +79,6 @@ public abstract class AbstractSessionTest
     TestRequestEncoder testRequest = new TestRequestEncoder();
     SessionLogonListener mockLogonListener = mock(SessionLogonListener.class);
 
-
     AbstractSessionTest()
     {
         doAnswer(
@@ -101,6 +100,8 @@ public abstract class AbstractSessionTest
             anyLong(),
             any(),
             anyInt())).thenReturn(POSITION);
+
+        when(mockProxy.resendRequest(anyInt(), anyInt(), anyInt(), eq(SEQUENCE_INDEX))).thenReturn(POSITION);
     }
 
     @Test
@@ -402,7 +403,7 @@ public abstract class AbstractSessionTest
     {
         session().lastReceivedMsgSeqNum(2);
 
-        session().onSequenceReset(1, 4, true, false);
+        onGapFill(1, 4);
 
         verify(mockProxy).lowSequenceNumberLogout(anyInt(), eq(3), eq(1), eq(SEQUENCE_INDEX));
         verifyDisconnect(times(1));
@@ -413,7 +414,7 @@ public abstract class AbstractSessionTest
     {
         givenActive();
 
-        session().onSequenceReset(1, 4, true, false);
+        onGapFill(1, 4);
 
         assertEquals(4, session().expectedReceivedSeqNum());
         verifyNoFurtherMessages();
@@ -701,6 +702,61 @@ public abstract class AbstractSessionTest
         assertAwaitingResend();
 
         onPossDupMessage(3);
+        assertState(ACTIVE);
+        assertNotAwaitingResend();
+    }
+
+    @Test
+    public void shouldNotResendRequestLongerThanResendRequestChunkSizeWithGapfillReplies()
+    {
+        givenActive();
+        fakeClock.advanceMilliSeconds(10);
+        session().resendRequestChunkSize(2);
+
+        // when high sequence number message
+        onMessage(4);
+
+        // then sends a resend request
+        verify(mockProxy).resendRequest(1, 1, 2, SEQUENCE_INDEX);
+        assertState(ACTIVE);
+        assertAwaitingResend();
+        reset(mockProxy);
+
+        onGapFill(1, 2);
+
+        verify(mockProxy).resendRequest(2, 3, 0, SEQUENCE_INDEX);
+        assertState(ACTIVE);
+        assertAwaitingResend();
+
+        onGapFill(3, 4);
+        assertState(ACTIVE);
+        assertNotAwaitingResend();
+    }
+
+    @Test
+    public void shouldNotResendRequestLongerThanResendRequestChunkSizeWhenClosedResendIntervalWithGapfillReplies()
+    {
+        givenActive();
+        fakeClock.advanceMilliSeconds(10);
+        session().closedResendInterval(true);
+        session().resendRequestChunkSize(2);
+
+        // when high sequence number message
+        onMessage(4);
+
+        // then sends a resend request
+        verify(mockProxy).resendRequest(1, 1, 2, SEQUENCE_INDEX);
+        assertState(ACTIVE);
+        assertAwaitingResend();
+        reset(mockProxy);
+
+        onGapFill(1, 2);
+
+        verify(mockProxy).resendRequest(2, 3, 3, SEQUENCE_INDEX);
+        assertState(ACTIVE);
+        assertAwaitingResend();
+
+        onGapFill(3, 4);
         assertState(ACTIVE);
         assertNotAwaitingResend();
     }
@@ -1035,5 +1091,10 @@ public abstract class AbstractSessionTest
     private void assertNotAwaitingResend()
     {
         assertFalse("Session is awaiting resend", session().isAwaitingResend());
+    }
+
+    private void onGapFill(final int msgSeqNo, final int newSeqNo)
+    {
+        session().onSequenceReset(msgSeqNo, newSeqNo, true, false);
     }
 }

@@ -721,9 +721,15 @@ public class Session implements AutoCloseable
             }
             else if (msgSeqNum == lastResendChunkMsgSeqNum)
             {
-                sendResendRequest(
+                final Action action = checkPosition(sendResendRequest(
                     msgSeqNum + 1, // Effectively begin
-                    endOfResendMsgSeqNum()); // Effectively ideal end pre chunking
+                    endOfResendMsgSeqNum()));   // Effectively ideal end pre chunking
+                if (action == CONTINUE)
+                {
+                    lastResentMsgSeqNo = msgSeqNum;
+                }
+
+                return action;
             }
             else
             {
@@ -770,27 +776,32 @@ public class Session implements AutoCloseable
 
     private long sendResendRequest(final int expectedSeqNo, final int receivedMsgSeqNo)
     {
-        return proxy.resendRequest(
-            newSentSeqNum(),
-            expectedSeqNo,
-            resendRequestEndSeqNo(expectedSeqNo, receivedMsgSeqNo),
-            sequenceIndex());
-    }
-
-    private int resendRequestEndSeqNo(final int beginSeqNo, final int receivedMsgSeqNo)
-    {
         // Cap at a chunk size if specified, otherwise send 0 to indicate infinity or the receivedMsgSeqNo
         final boolean chunkedResend = resendRequestChunkSize != NO_RESEND_REQUEST_CHUNK_SIZE;
-        final int cappedEndSeqNo = chunkedResend ? beginSeqNo + resendRequestChunkSize - 1 : receivedMsgSeqNo;
+        final int cappedEndSeqNo = chunkedResend ? expectedSeqNo + resendRequestChunkSize - 1 : receivedMsgSeqNo;
+
+        final int endSeqNo;
         if (cappedEndSeqNo < receivedMsgSeqNo)
         {
-            // Pre: chunkedResend
-            lastResendChunkMsgSeqNum = cappedEndSeqNo;
-
-            return cappedEndSeqNo;
+            endSeqNo = cappedEndSeqNo;
+        }
+        else
+        {
+            endSeqNo = closedResendInterval ? receivedMsgSeqNo : 0;
         }
 
-        return closedResendInterval ? receivedMsgSeqNo : 0;
+        final long position = proxy.resendRequest(
+            newSentSeqNum(),
+            expectedSeqNo,
+            endSeqNo,
+            sequenceIndex());
+
+        if (position > 0 && chunkedResend)
+        {
+            lastResendChunkMsgSeqNum = cappedEndSeqNo;
+        }
+
+        return position;
     }
 
     Action msgSeqNumTooLow(final int msgSeqNo, final int expectedSeqNo)
@@ -1171,7 +1182,7 @@ public class Session implements AutoCloseable
                 return msgSeqNumTooLow(receivedMsgSeqNo, expectedMsgSeqNo);
             }
         }
-        else
+        else // receivedMsgSeqNo == expectedMsgSeqNo
         {
             if (awaitingResend)
             {
@@ -1185,6 +1196,19 @@ public class Session implements AutoCloseable
                 }
                 else
                 {
+                    if (newSeqNo == lastResendChunkMsgSeqNum)
+                    {
+                        final Action action = checkPosition(sendResendRequest(
+                            newSeqNo + 1,
+                            endOfResendMsgSeqNum()));
+                        if (action == CONTINUE)
+                        {
+                            lastResentMsgSeqNo = newSeqNo;
+                        }
+
+                        return action;
+                    }
+
                     lastResentMsgSeqNo = newSeqNo - 1;
                 }
             }
