@@ -721,7 +721,9 @@ public class Session implements AutoCloseable
             }
             else if (msgSeqNum == lastResendChunkMsgSeqNum)
             {
-                sendResendRequest(endOfResendMsgSeqNum(), msgSeqNum);
+                sendResendRequest(
+                    msgSeqNum + 1, // Effectively begin
+                    endOfResendMsgSeqNum()); // Effectively ideal end pre chunking
             }
             else
             {
@@ -756,7 +758,7 @@ public class Session implements AutoCloseable
 
     Action requestResend(final int expectedSeqNo, final int receivedMsgSeqNo)
     {
-        final long position = sendResendRequest(expectedSeqNo, receivedMsgSeqNo);
+        final long position = sendResendRequest(expectedSeqNo, receivedMsgSeqNo - 1);
         if (position >= 0)
         {
             awaitingResend = true;
@@ -771,7 +773,7 @@ public class Session implements AutoCloseable
         return proxy.resendRequest(
             newSentSeqNum(),
             expectedSeqNo,
-            resendRequestEndSeqNo(expectedSeqNo, receivedMsgSeqNo - 1),
+            resendRequestEndSeqNo(expectedSeqNo, receivedMsgSeqNo),
             sequenceIndex());
     }
 
@@ -1147,7 +1149,7 @@ public class Session implements AutoCloseable
         // The gapfill has the wrong sequence number.
         if (receivedMsgSeqNo > expectedMsgSeqNo)
         {
-            final Action action = checkPosition(sendResendRequest(expectedMsgSeqNo, receivedMsgSeqNo));
+            final Action action = checkPosition(sendResendRequest(expectedMsgSeqNo, receivedMsgSeqNo - 1));
             if (action != ABORT)
             {
                 if (awaitingResend)

@@ -676,7 +676,34 @@ public abstract class AbstractSessionTest
         assertNotAwaitingResend();
     }
 
-    // shouldNotResendRequestLongerThanResendRequestChunkSizeWhenClosedResendInterval
+    @Test
+    public void shouldNotResendRequestLongerThanResendRequestChunkSizeWhenClosedResendInterval()
+    {
+        givenActive();
+        fakeClock.advanceMilliSeconds(10);
+        session().closedResendInterval(true);
+        session().resendRequestChunkSize(2);
+
+        // when high sequence number message
+        onMessage(4);
+
+        // then sends a resend request
+        verify(mockProxy).resendRequest(1, 1, 2, SEQUENCE_INDEX);
+        assertState(ACTIVE);
+        assertAwaitingResend();
+        reset(mockProxy);
+
+        onPossDupMessage(1);
+        onPossDupMessage(2);
+
+        verify(mockProxy).resendRequest(2, 3, 3, SEQUENCE_INDEX);
+        assertState(ACTIVE);
+        assertAwaitingResend();
+
+        onPossDupMessage(3);
+        assertState(ACTIVE);
+        assertNotAwaitingResend();
+    }
 
     @Test
     public void shouldDisconnectIfBeginStringIsInvalidAtLogon()
