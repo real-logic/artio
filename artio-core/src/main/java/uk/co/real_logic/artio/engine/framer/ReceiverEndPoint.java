@@ -258,7 +258,7 @@ class ReceiverEndPoint
                 // TODO(Nick): We already scan for the message type so we can check for logon messages here?
                 final int messageType = getMessageType(endOfBodyLength, endOfMessage);
                 final int length = (endOfMessage + 1) - offset;
-                if (validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
+                if (!validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
                 {
                     if (saveInvalidChecksumMessage(offset, messageType, length))
                     {
@@ -305,7 +305,7 @@ class ReceiverEndPoint
     {
         final int expectedChecksum = buffer.getInt(startOfChecksumValue - 1, endOfMessage);
         final int computedChecksum = buffer.computeChecksum(offset, startOfChecksumTag + 1);
-        return expectedChecksum != computedChecksum;
+        return expectedChecksum == computedChecksum;
     }
 
     private int scanEndOfMessage(final int startOfChecksumValue)
