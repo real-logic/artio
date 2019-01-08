@@ -403,7 +403,7 @@ public class LibraryPollerTest
             false,
             HEARTBEAT_INTERVAL_IN_S,
             DEFAULT_CLOSED_RESEND_INTERVAL,
-            DEFAULT_RESEND_REQUEST_CHUNK_SIZE,
+            NO_RESEND_REQUEST_CHUNK_SIZE,
             DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS,
             REPLY_TO_ID,
             SEQUENCE_INDEX,

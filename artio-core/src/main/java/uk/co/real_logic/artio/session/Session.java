@@ -46,6 +46,7 @@ import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.fields.RejectReason.*;
+import static uk.co.real_logic.artio.library.SessionConfiguration.NO_RESEND_REQUEST_CHUNK_SIZE;
 import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionState.*;
@@ -124,6 +125,8 @@ public class Session implements AutoCloseable
     private boolean awaitingResend;
     // Equivalent of receivedMsgSeqNo for resent messages
     private int lastResentMsgSeqNo;
+    // The last msg seq no before you send the next chunk of the resend request
+    private int lastResendChunkMsgSeqNum;
     private long id = UNKNOWN;
     private int lastReceivedMsgSeqNum = 0;
     private int lastSentMsgSeqNum;
@@ -710,10 +713,15 @@ public class Session implements AutoCloseable
     {
         if (awaitingResend && isPossDupOrResend)
         {
-            if (endOfResendMsgSeqNum() == msgSeqNum)
+            if (msgSeqNum == endOfResendMsgSeqNum())
             {
                 awaitingResend = false;
+                lastResendChunkMsgSeqNum = 0;
                 lastResentMsgSeqNo = 0;
+            }
+            else if (msgSeqNum == lastResendChunkMsgSeqNum)
+            {
+                sendResendRequest(endOfResendMsgSeqNum(), msgSeqNum);
             }
             else
             {
@@ -748,8 +756,7 @@ public class Session implements AutoCloseable
 
     Action requestResend(final int expectedSeqNo, final int receivedMsgSeqNo)
     {
-        final long position = proxy.resendRequest(
-            newSentSeqNum(), expectedSeqNo, resendRequestEndSeqNo(receivedMsgSeqNo), sequenceIndex());
+        final long position = sendResendRequest(expectedSeqNo, receivedMsgSeqNo);
         if (position >= 0)
         {
             awaitingResend = true;
@@ -759,8 +766,28 @@ public class Session implements AutoCloseable
         return checkPosition(position);
     }
 
-    private int resendRequestEndSeqNo(final int receivedMsgSeqNo)
+    private long sendResendRequest(final int expectedSeqNo, final int receivedMsgSeqNo)
     {
+        return proxy.resendRequest(
+            newSentSeqNum(),
+            expectedSeqNo,
+            resendRequestEndSeqNo(expectedSeqNo, receivedMsgSeqNo - 1),
+            sequenceIndex());
+    }
+
+    private int resendRequestEndSeqNo(final int beginSeqNo, final int receivedMsgSeqNo)
+    {
+        // Cap at a chunk size if specified, otherwise send 0 to indicate infinity or the receivedMsgSeqNo
+        final boolean chunkedResend = resendRequestChunkSize != NO_RESEND_REQUEST_CHUNK_SIZE;
+        final int cappedEndSeqNo = chunkedResend ? beginSeqNo + resendRequestChunkSize - 1 : receivedMsgSeqNo;
+        if (cappedEndSeqNo < receivedMsgSeqNo)
+        {
+            // Pre: chunkedResend
+            lastResendChunkMsgSeqNum = cappedEndSeqNo;
+
+            return cappedEndSeqNo;
+        }
+
         return closedResendInterval ? receivedMsgSeqNo : 0;
     }
 
@@ -1120,8 +1147,7 @@ public class Session implements AutoCloseable
         // The gapfill has the wrong sequence number.
         if (receivedMsgSeqNo > expectedMsgSeqNo)
         {
-            final Action action = checkPosition(proxy.resendRequest(
-                newSentSeqNum(), expectedMsgSeqNo, resendRequestEndSeqNo(receivedMsgSeqNo), sequenceIndex()));
+            final Action action = checkPosition(sendResendRequest(expectedMsgSeqNo, receivedMsgSeqNo));
             if (action != ABORT)
             {
                 if (awaitingResend)
@@ -1152,6 +1178,7 @@ public class Session implements AutoCloseable
                 {
                     awaitingResend = false;
                     lastResentMsgSeqNo = 0;
+                    lastResendChunkMsgSeqNum = 0;
                     lastReceivedMsgSeqNum(newSeqNo - 1);
                 }
                 else

@@ -206,7 +206,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int outboundReplayStream = DEFAULT_OUTBOUND_REPLAY_STREAM;
     private int archiveReplayStream = DEFAULT_ARCHIVE_REPLAY_STREAM;
     private boolean acceptedSessionClosedResendInterval = DEFAULT_CLOSED_RESEND_INTERVAL;
-    private int acceptedSessionResendRequestChunkSize = DEFAULT_RESEND_REQUEST_CHUNK_SIZE;
+    private int acceptedSessionResendRequestChunkSize = NO_RESEND_REQUEST_CHUNK_SIZE;
     private boolean acceptedSessionSendRedundantResendRequests = DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS;
 
     /**

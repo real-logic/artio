@@ -697,7 +697,7 @@ public class FramerTest
             0,
             0,
             DEFAULT_CLOSED_RESEND_INTERVAL,
-            DEFAULT_RESEND_REQUEST_CHUNK_SIZE,
+            NO_RESEND_REQUEST_CHUNK_SIZE,
             DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS,
             "",
             "", header));
@@ -839,7 +839,7 @@ public class FramerTest
             AUTOMATIC_INITIAL_SEQUENCE_NUMBER,
             false,
             DEFAULT_CLOSED_RESEND_INTERVAL,
-            DEFAULT_RESEND_REQUEST_CHUNK_SIZE,
+            NO_RESEND_REQUEST_CHUNK_SIZE,
             DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS,
             "",
             "",

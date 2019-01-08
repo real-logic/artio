@@ -34,7 +34,7 @@ public final class SessionConfiguration
     public static final int AUTOMATIC_INITIAL_SEQUENCE_NUMBER = -1;
     public static final boolean DEFAULT_RESET_SEQ_NUM = false;
     public static final boolean DEFAULT_CLOSED_RESEND_INTERVAL = false;
-    public static final int DEFAULT_RESEND_REQUEST_CHUNK_SIZE = 0;
+    public static final int NO_RESEND_REQUEST_CHUNK_SIZE = 0;
     public static final boolean DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS = false;
 
     private final List<String> hosts;
@@ -258,7 +258,7 @@ public final class SessionConfiguration
         private long timeoutInMs = DEFAULT_REPLY_TIMEOUT_IN_MS;
         private boolean resetSeqNum = DEFAULT_RESET_SEQ_NUM;
         private boolean closedResendInterval = DEFAULT_CLOSED_RESEND_INTERVAL;
-        private int resendRequestChunkSize = DEFAULT_RESEND_REQUEST_CHUNK_SIZE;
+        private int resendRequestChunkSize = NO_RESEND_REQUEST_CHUNK_SIZE;
         private boolean sendRedundantResendRequests = DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS;
 
         private Builder()
