@@ -417,62 +417,67 @@ project(':artio-samples') {
     }
 }
 
-if (System.properties["uploadArchives"] != null) {
-    println "Enabling uploading of archives"
+subprojects {
+    uploadArchives {
+        repositories {
+            mavenDeployer {
+                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 
-    subprojects {
-        uploadArchives {
-            repositories {
-                mavenDeployer {
-                    beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                }
 
-                    repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                        authentication(userName: ossrhUsername, password: ossrhPassword)
+                snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                }
+
+                pom.project {
+                    name = 'artio'
+                    packaging = 'jar'
+                    description = 'High-Performance FIX Gateway'
+
+                    url = 'https://github.com/real-logic/artio'
+
+                    scm {
+                        connection = 'scm:git:https://github.com/real-logic/artio.git'
+                        developerConnection = 'scm:git:https://github.com/real-logic/artio.git'
+                        url = 'https://github.com/real-logic/artio.git'
                     }
 
-                    snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-                        authentication(userName: ossrhUsername, password: ossrhPassword)
+                    licenses {
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
                     }
 
-                    pom.project {
-                        name = 'artio'
-                        packaging = 'jar'
-                        description = 'High-Performance FIX Gateway'
-
-                        url = 'https://github.com/real-logic/artio'
-
-                        scm {
-                            connection = 'scm:git:https://github.com/real-logic/artio.git'
-                            developerConnection = 'scm:git:https://github.com/real-logic/artio.git'
-                            url = 'https://github.com/real-logic/artio.git'
+                    developers {
+                        developer {
+                            id = 'RichardWarburton'
+                            name = 'Richard Warburton'
+                            email = 'richard.warburton@gmail.com'
+                            url = 'https://github.com/RichardWarburton'
                         }
-
-                        licenses {
-                            license {
-                                name = 'The Apache License, Version 2.0'
-                                url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                            }
-                        }
-
-                        developers {
-                            developer {
-                                id = 'RichardWarburton'
-                                name = 'Richard Warburton'
-                                email = 'richard.warburton@gmail.com'
-                                url = 'https://github.com/RichardWarburton'
-                            }
-                            developer {
-                                id = 'mjpt777'
-                                name = 'Martin Thompson'
-                                email = 'mjpt777@gmail.com'
-                                url = 'https://github.com/mjpt777'
-                            }
+                        developer {
+                            id = 'mjpt777'
+                            name = 'Martin Thompson'
+                            email = 'mjpt777@gmail.com'
+                            url = 'https://github.com/mjpt777'
                         }
                     }
                 }
             }
         }
     }
+}
+
+task uploadToMavenCentral {
+    dependsOn 'artio-core:uploadArchives',
+        'artio-samples:uploadArchives',
+        'artio-system-tests:uploadArchives',
+        'artio-codecs:uploadArchives',
+        'artio-session-codecs:uploadArchives',
+        'artio-session-fixt-codecs:uploadArchives'
 }
 
 wrapper {
