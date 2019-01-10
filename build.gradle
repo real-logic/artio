@@ -315,9 +315,6 @@ project(':artio-session-fixt-codecs') {
 }
 
 project(':artio-core') {
-    apply plugin: 'application'
-
-    mainClassName = 'uk.co.real_logic.artio.FixEngine'
 
     dependencies {
         testCompile project(path: ':artio-codecs', configuration: 'tests')
@@ -328,14 +325,6 @@ project(':artio-core') {
         compile "io.aeron:aeron-archive:${aeronVersion}"
         compile "io.aeron:aeron-driver:${aeronVersion}"
         compile 'org.hdrhistogram:HdrHistogram:2.1.10'
-    }
-
-    run {
-        systemProperties(System.properties)
-    }
-
-    build.doLast {
-        distZip
     }
 
     test {
