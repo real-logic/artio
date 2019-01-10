@@ -192,7 +192,12 @@ public class AcceptorSessionTest extends AbstractSessionTest
         fakeClock.advanceMilliSeconds(2 * SENDING_TIME_WINDOW);
 
         final Action action = session().onLogon(
-            HEARTBEAT_INTERVAL, 1, SESSION_ID, SESSION_KEY, 1, UNKNOWN, null, null, false, false);
+            HEARTBEAT_INTERVAL,
+            1,
+            SESSION_ID,
+            SESSION_KEY,
+            1,
+            UNKNOWN, null, null, false, false, false);
 
         assertEquals(expectedAction, action);
     }

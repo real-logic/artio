@@ -76,7 +76,7 @@ public class InitiatorSession extends InternalSession
         final String username,
         final String password,
         final boolean isPossDupOrResend,
-        final boolean resetSeqNumFlag)
+        final boolean resetSeqNumFlag, final boolean possDup)
     {
         // We aren't checking CODEC_VALIDATION_ENABLED here because these are required values in order to
         // have a stable FIX connection.
@@ -119,7 +119,8 @@ public class InitiatorSession extends InternalSession
                 }
 
                 notifyLogonListener();
-                action = onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+                action = onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend,
+                    possDup);
 
                 if (action == ABORT)
                 {
@@ -148,7 +149,7 @@ public class InitiatorSession extends InternalSession
         {
             // TODO: This is an error case, what is the right behaviour?
             // You've received a logon and you weren't expecting one and it hasn't got the resetSeqNumFlag set
-            return onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+            return onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend, possDup);
         }
 
         return Action.CONTINUE;

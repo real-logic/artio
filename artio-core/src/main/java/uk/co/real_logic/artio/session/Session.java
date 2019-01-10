@@ -621,9 +621,10 @@ public class Session implements AutoCloseable
         final byte[] msgType,
         final long sendingTime,
         final long origSendingTime,
-        final boolean isPossDupOrResend)
+        final boolean isPossDupOrResend,
+        final boolean possDup)
     {
-        return onMessage(msgSeqNo, msgType, msgType.length, sendingTime, origSendingTime, isPossDupOrResend);
+        return onMessage(msgSeqNo, msgType, msgType.length, sendingTime, origSendingTime, isPossDupOrResend, possDup);
     }
 
     Action onMessage(
@@ -632,7 +633,8 @@ public class Session implements AutoCloseable
         final int msgTypeLength,
         final long sendingTime,
         final long origSendingTime,
-        final boolean isPossDupOrResend)
+        final boolean isPossDupOrResend,
+        final boolean possDup)
     {
         if (state() == SessionState.CONNECTED)
         {
@@ -654,7 +656,7 @@ public class Session implements AutoCloseable
             if (CODEC_VALIDATION_ENABLED)
             {
                 final Action validationResult = validateCodec(time, msgSeqNo, msgType, msgTypeLength, sendingTime,
-                    origSendingTime, isPossDupOrResend);
+                    origSendingTime, possDup);
                 if (validationResult != null)
                 {
                     return validationResult;
@@ -675,9 +677,9 @@ public class Session implements AutoCloseable
         final int msgTypeLength,
         final long sendingTime,
         final long origSendingTime,
-        final boolean isPossDupOrResend)
+        final boolean possDup)
     {
-        if (isPossDupOrResend)
+        if (possDup)
         {
             if (origSendingTime == UNKNOWN)
             {
@@ -851,7 +853,8 @@ public class Session implements AutoCloseable
         final String username,
         final String password,
         final boolean isPossDupOrResend,
-        final boolean resetSeqNumFlag)
+        final boolean resetSeqNumFlag,
+        final boolean possDup)
     {
         // TODO(Nick): Not sure why we do this when this is configured in GatewaySessions.authenticateAndInitiate...
         setupSession(sessionId, sessionKey);
@@ -920,7 +923,8 @@ public class Session implements AutoCloseable
                         notifyLogonListener();
 
                         final Action validationResult = validateCodec(time, msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES,
-                            LogonDecoder.MESSAGE_TYPE_BYTES.length, sendingTime, origSendingTime, isPossDupOrResend);
+                            LogonDecoder.MESSAGE_TYPE_BYTES.length, sendingTime, origSendingTime,
+                            possDup);
                         return validationResult != null ? validationResult : CONTINUE;
                     }
                     else
@@ -947,7 +951,8 @@ public class Session implements AutoCloseable
         notifyLogonListener();
 
         // Back pressure at this point won't re-run the above block if its completed because of the state change
-        return onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+        return onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend,
+            possDup);
     }
 
     // Always resets the sequence number to 1
@@ -1069,10 +1074,10 @@ public class Session implements AutoCloseable
         final int msgSeqNo,
         final long sendingTime,
         final long origSendingTime,
-        final boolean isPossDupOrResend)
+        final boolean isPossDupOrResend, final boolean possDup)
     {
         final Action action = onMessage(
-            msgSeqNo, LogoutDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+            msgSeqNo, LogoutDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend, possDup);
         if (action == ABORT)
         {
             return ABORT;
@@ -1096,7 +1101,7 @@ public class Session implements AutoCloseable
         final int testReqIdLength,
         final long sendingTime,
         final long origSendingTime,
-        final boolean isPossDupOrResend)
+        final boolean isPossDupOrResend, final boolean possDup)
     {
         if (msgSeqNo != MISSING_INT)
         {
@@ -1113,10 +1118,14 @@ public class Session implements AutoCloseable
         }
 
         return onMessage(
-            msgSeqNo, TestRequestDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+            msgSeqNo, TestRequestDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend, possDup);
     }
 
-    Action onSequenceReset(final int msgSeqNo, final int newSeqNo, final boolean gapFillFlag, final boolean possDupFlag)
+    Action onSequenceReset(
+        final int msgSeqNo,
+        final int newSeqNo,
+        final boolean gapFillFlag,
+        final boolean possDupFlag)
     {
         if (!gapFillFlag)
         {
@@ -1226,9 +1235,11 @@ public class Session implements AutoCloseable
         final int msgSeqNo,
         final long sendingTime,
         final long origSendingTime,
-        final boolean isPossDupOrResend)
+        final boolean isPossDupOrResend,
+        final boolean possDup)
     {
-        return onMessage(msgSeqNo, RejectDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+        return onMessage(msgSeqNo, RejectDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend,
+            possDup);
     }
 
     boolean onBeginString(final char[] value, final int length, final boolean isLogon)
@@ -1389,7 +1400,7 @@ public class Session implements AutoCloseable
         final int testReqIDLength,
         final long sendingTime,
         final long origSendingTime,
-        final boolean isPossDupOrResend)
+        final boolean isPossDupOrResend, final boolean possDup)
     {
         if (awaitingResend && CodecUtil.equals(testReqID, TEST_REQ_ID_CHARS, testReqIDLength))
         {
@@ -1397,7 +1408,7 @@ public class Session implements AutoCloseable
         }
 
         return onMessage(
-            msgSeqNum, HeartbeatDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
+            msgSeqNum, HeartbeatDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend, possDup);
     }
 
     Action onInvalidMessageType(final int msgSeqNum, final char[] msgType, final int msgTypeLength)

@@ -36,8 +36,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S;
@@ -178,7 +177,7 @@ public abstract class AbstractSessionTest
 
         onMessage(2);
 
-        session().onMessage(2, MSG_TYPE_BYTES, sendingTime, origSendingTime, true);
+        session().onMessage(2, MSG_TYPE_BYTES, sendingTime, origSendingTime, true, true);
 
         verifySendingTimeProblem();
         assertSequenceIndexIs(SEQUENCE_INDEX);
@@ -232,7 +231,7 @@ public abstract class AbstractSessionTest
             testReqId.length(),
             sendingTime(),
             MISSING_LONG,
-            false);
+            false, false);
 
         verifyConnected();
         assertState(ACTIVE);
@@ -345,7 +344,7 @@ public abstract class AbstractSessionTest
 
         session().id(SESSION_ID);
 
-        session().onTestRequest(1, testReqId, testReqIdLength, sendingTime(), UNKNOWN, false);
+        session().onTestRequest(1, testReqId, testReqIdLength, sendingTime(), UNKNOWN, false, false);
 
         verify(mockProxy).heartbeat(testReqId, testReqIdLength, 1, SEQUENCE_INDEX);
     }
@@ -998,7 +997,8 @@ public abstract class AbstractSessionTest
             username,
             password,
             false,
-            resetSeqNumFlag);
+            resetSeqNumFlag,
+            false);
     }
 
     protected Action onMessage(final int msgSeqNo)
@@ -1013,7 +1013,8 @@ public abstract class AbstractSessionTest
 
     private Action onMessage(final int msgSeqNo, final boolean isPossDupOrResend, final long origSendingTime)
     {
-        return session().onMessage(msgSeqNo, MSG_TYPE_BYTES, sendingTime(), origSendingTime, isPossDupOrResend);
+        return session().onMessage(
+            msgSeqNo, MSG_TYPE_BYTES, sendingTime(), origSendingTime, isPossDupOrResend, isPossDupOrResend);
     }
 
     protected long sendingTime()
@@ -1023,7 +1024,7 @@ public abstract class AbstractSessionTest
 
     protected void onLogout()
     {
-        assertEquals(CONTINUE, session().onLogout(1, sendingTime(), UNKNOWN, false));
+        assertEquals(CONTINUE, session().onLogout(1, sendingTime(), UNKNOWN, false, false));
     }
 
     protected void verifySendingTimeProblem()
@@ -1034,7 +1035,7 @@ public abstract class AbstractSessionTest
 
     protected void messageWithWeirdTime(final long sendingTime)
     {
-        session().onMessage(2, MSG_TYPE_BYTES, sendingTime, UNKNOWN, false);
+        session().onMessage(2, MSG_TYPE_BYTES, sendingTime, UNKNOWN, false, false);
     }
 
     protected void onBeginString(final boolean isLogon)
@@ -1059,7 +1060,7 @@ public abstract class AbstractSessionTest
         final char[] testReqId = "Hello".toCharArray();
         final int testReqIdLength = 5;
 
-        session().onTestRequest(4, testReqId, testReqIdLength, sendingTime(), UNKNOWN, false);
+        session().onTestRequest(4, testReqId, testReqIdLength, sendingTime(), UNKNOWN, false, false);
         verify(mockProxy).heartbeat(eq(testReqId), eq(testReqIdLength), anyInt(), eq(SEQUENCE_INDEX));
         verifyConnected();
     }
