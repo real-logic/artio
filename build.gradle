@@ -36,12 +36,12 @@ def aeronVersion = '1.14.0'
 def agronaVersion = '0.9.29'
 def sbeVersion = '1.10.2'
 def artioJavaVersion = '1.8'
-def fixGroup = 'uk.co.real-logic'
+def artioGroup = 'uk.co.real-logic'
 
 defaultTasks 'clean', 'build', 'javadoc', 'install'
 
 ext {
-    group = fixGroup
+    group = artioGroup
     isReleaseVersion = !version.endsWith("SNAPSHOT")
 
     if (!project.hasProperty('ossrhUsername')) {
@@ -84,7 +84,7 @@ subprojects {
         }
     }
 
-    group = fixGroup
+    group = artioGroup
     archivesBaseName = "artio"
     version
 
