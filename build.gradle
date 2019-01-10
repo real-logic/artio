@@ -18,6 +18,7 @@ import org.gradle.plugins.ide.eclipse.model.Classpath
 buildscript {
     repositories {
         mavenCentral()
+        mavenLocal()
         maven {
             url 'https://plugins.gradle.org/m2/'
         }
@@ -64,14 +65,10 @@ allprojects {
     }
 }
 
-// jar.enabled = false
-
 subprojects {
     apply plugin: 'java'
     apply plugin: 'checkstyle'
     apply plugin: 'idea'
-
-    // jar.enabled = true
 
     // Make sure that we use the correct JDK in Eclipse
     // There needs to be a JDK8 JVM installed in Eclipse before
@@ -85,8 +82,7 @@ subprojects {
     }
 
     group = artioGroup
-    archivesBaseName = "artio"
-    version
+    version = version
 
     compileJava {
         sourceCompatibility = artioJavaVersion
