@@ -16,14 +16,19 @@
 import org.gradle.plugins.ide.eclipse.model.Classpath
 
 buildscript {
+    repositories {
+        mavenCentral()
+        maven {
+            url 'https://plugins.gradle.org/m2/'
+        }
+    }
+
     dependencies {
         classpath "com.github.jengelman.gradle.plugins:shadow:4.0.3"
         classpath 'net.researchgate:gradle-release:2.7.0'
     }
 }
 
-apply plugin: 'maven'
-apply plugin: 'signing'
 apply plugin: 'net.researchgate.release'
 apply plugin: 'com.github.johnrengelman.shadow'
 
@@ -31,11 +36,13 @@ def aeronVersion = '1.14.0'
 def agronaVersion = '0.9.29'
 def sbeVersion = '1.10.2'
 def artioJavaVersion = '1.8'
+def fixGroup = 'uk.co.real-logic'
 
 defaultTasks 'clean', 'build', 'javadoc', 'install'
 
 ext {
     group = fixGroup
+    isReleaseVersion = !version.endsWith("SNAPSHOT")
 
     if (!project.hasProperty('ossrhUsername')) {
         ossrhUsername = ''
@@ -47,6 +54,8 @@ ext {
 }
 
 allprojects {
+    apply plugin: 'maven'
+    apply plugin: 'signing'
     apply plugin: 'eclipse'
 
     repositories {
@@ -55,11 +64,14 @@ allprojects {
     }
 }
 
+// jar.enabled = false
+
 subprojects {
     apply plugin: 'java'
-    apply plugin: 'maven'
     apply plugin: 'checkstyle'
     apply plugin: 'idea'
+
+    // jar.enabled = true
 
     // Make sure that we use the correct JDK in Eclipse
     // There needs to be a JDK8 JVM installed in Eclipse before
@@ -73,6 +85,8 @@ subprojects {
     }
 
     group = fixGroup
+    archivesBaseName = "artio"
+    version
 
     compileJava {
         sourceCompatibility = artioJavaVersion
@@ -133,10 +147,15 @@ subprojects {
 
     javadoc {
         title = '<h1>Artio</h1>'
-        options.bottom = '<i>Copyright &#169; 2015-2018 Real Logic Ltd. All Rights Reserved.</i>'
+        options.bottom = '<i>Copyright &#169; 2015-2019 Real Logic Ltd. All Rights Reserved.</i>'
         if (JavaVersion.current().ordinal() >= JavaVersion.VERSION_1_10.ordinal()) {
             options.addBooleanOption 'html5', true
         }
+    }
+
+    task javadocJar(type: Jar) {
+        classifier = 'javadoc'
+        from javadoc
     }
 
     task sourcesJar(type: Jar) {
@@ -144,15 +163,18 @@ subprojects {
         from sourceSets.main.allSource
     }
 
+    jar {
+        manifest.attributes(
+                'Implementation-Title': 'Artio',
+                'Implementation-Version': "${version}",
+                'Implementation-Vendor': 'Real Logic Limited'
+        )
+    }
+
     task testJar(type: Jar, dependsOn: testClasses) {
         classifier = 'tests'
         baseName = "test-${project.archivesBaseName}"
         from sourceSets.test.output
-    }
-
-    task javadocJar(type: Jar) {
-        classifier = 'javadoc'
-        from javadoc.destinationDir
     }
 
     task allDeps(type: DependencyReportTask) {}
@@ -162,10 +184,13 @@ subprojects {
     }
 
     artifacts {
-        archives sourcesJar
-        archives javadocJar
-        archives testJar
+        archives javadocJar, sourcesJar, testJar
         tests testJar
+    }
+
+    signing {
+        required { isReleaseVersion && gradle.taskGraph.hasTask("uploadArchives") }
+        sign configurations.archives
     }
 
     idea {
@@ -399,16 +424,19 @@ if (System.properties["uploadArchives"] != null) {
         uploadArchives {
             repositories {
                 mavenDeployer {
-                    snapshotRepository(url: project.ext.repoSnapshotUrl) {
+                    beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
+
+                    repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
                         authentication(userName: ossrhUsername, password: ossrhPassword)
                     }
-                    repository(url: project.ext.repoReleaseUrl) {
+
+                    snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
                         authentication(userName: ossrhUsername, password: ossrhPassword)
                     }
 
                     pom.project {
                         name = 'artio'
-                        packaging = 'pom'
+                        packaging = 'jar'
                         description = 'High-Performance FIX Gateway'
 
                         url = 'https://github.com/real-logic/artio'
