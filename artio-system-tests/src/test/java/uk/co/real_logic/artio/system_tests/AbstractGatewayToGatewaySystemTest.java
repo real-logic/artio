@@ -169,7 +169,7 @@ public class AbstractGatewayToGatewaySystemTest
                 testSystem.poll();
 
                 final FixMessage message = acceptingOtfAcceptor.lastReceivedMessage();
-                assertEquals(msgType, message.getMsgType());
+                assertEquals(msgType, message.msgType());
                 if (isGapFill)
                 {
                     assertEquals("Y", message.get(GAP_FILL_FLAG));
@@ -178,7 +178,7 @@ public class AbstractGatewayToGatewaySystemTest
                 {
                     assertNotNull(message.get(ORIG_SENDING_TIME));
                 }
-                assertEquals("Y", message.getPossDup());
+                assertEquals("Y", message.possDup());
                 assertEquals(String.valueOf(sequenceNumber), message.get(MSG_SEQ_NUM));
                 assertEquals(INITIATOR_ID, message.get(Constants.SENDER_COMP_ID));
                 assertNull("Detected Error", acceptingOtfAcceptor.lastError());
@@ -317,7 +317,7 @@ public class AbstractGatewayToGatewaySystemTest
         final String expectedSeqNum = String.valueOf(lastReceivedMsgSeqNum + 1);
         final long messageCount = messages
             .stream()
-            .filter((m) -> m.getMsgType().equals(TEST_REQUEST_MESSAGE_AS_STR) &&
+            .filter((m) -> m.msgType().equals(TEST_REQUEST_MESSAGE_AS_STR) &&
             m.get(MSG_SEQ_NUM).equals(expectedSeqNum))
             .count();
 

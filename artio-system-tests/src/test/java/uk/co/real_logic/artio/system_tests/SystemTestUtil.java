@@ -123,7 +123,7 @@ public final class SystemTestUtil
                 testSystem.poll();
                 return acceptor
                     .hasReceivedMessage("1")
-                    .anyMatch((msg) -> testReqId.equals(msg.getTestReqId()));
+                    .anyMatch((msg) -> testReqId.equals(msg.testReqId()));
             });
     }
 

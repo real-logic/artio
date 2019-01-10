@@ -210,8 +210,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         // In this case we just get immediately disconnected.
         final FixMessage lastMessage = testSystem.await(initiatingOtfAcceptor, LOGOUT_MESSAGE_AS_STR);
 
-        assertEquals(LOGOUT_MESSAGE_AS_STR, lastMessage.getMsgType());
-        assertEquals(1, lastMessage.getMessageSequenceNumber());
+        assertEquals(LOGOUT_MESSAGE_AS_STR, lastMessage.msgType());
+        assertEquals(1, lastMessage.messageSequenceNumber());
         assertEquals("MsgSeqNum too low, expecting 1 but received 0", lastMessage.get(Constants.TEXT));
     }
 

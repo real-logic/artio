@@ -112,10 +112,10 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final FixMessage message = exchangeExampleMessageFromInitiatorToAcceptor(testReqID);
 
-        final int sequenceNumber = acceptorSendsResendRequest(message.getMessageSequenceNumber());
+        final int sequenceNumber = acceptorSendsResendRequest(message.messageSequenceNumber());
 
         final FixMessage resentMessage = assertMessageResent(sequenceNumber, EXAMPLE_MESSAGE_MESSAGE_AS_STR, false);
-        assertEquals(testReqID, resentMessage.getTestReqId());
+        assertEquals(testReqID, resentMessage.testReqId());
 
         assertSequenceIndicesAre(0);
     }
@@ -381,11 +381,11 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         if (expectedStatus == OK)
         {
             final FixMessage replayedExampleMessage = acceptingOtfAcceptor.messages().get(1);
-            assertEquals(Constants.EXAMPLE_MESSAGE_MESSAGE_AS_STR, replayedExampleMessage.getMsgType());
+            assertEquals(Constants.EXAMPLE_MESSAGE_MESSAGE_AS_STR, replayedExampleMessage.msgType());
             assertThat(replayedExampleMessage, hasMessageSequenceNumber(2));
             assertEquals(0, replayedExampleMessage.sequenceIndex());
-            assertEquals("Y", replayedExampleMessage.getPossDup());
-            assertEquals(testReqID, replayedExampleMessage.getTestReqId());
+            assertEquals("Y", replayedExampleMessage.possDup());
+            assertEquals(testReqID, replayedExampleMessage.testReqId());
         }
 
         acceptingSession = acceptingHandler.lastSession();
