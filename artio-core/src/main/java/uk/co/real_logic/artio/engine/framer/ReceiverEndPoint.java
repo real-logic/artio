@@ -484,8 +484,8 @@ class ReceiverEndPoint
         final long position = publication.saveMessage(
             buffer,
             offset,
-            libraryId,
             startOfChecksumTag,
+            libraryId,
             UNKNOWN_MESSAGE_TYPE,
             sessionId,
             sequenceIndex,
