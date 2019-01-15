@@ -30,7 +30,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 public class DecimalFloatDecodingTest
 {
     @Parameters(name = "{index}: {0} => {1},{2}")
-    public static Iterable<Object[]> data1()
+    public static Iterable<Object[]> decimalFloatCodecData()
     {
         return Arrays.asList(new Object[][]
         {
@@ -53,6 +53,19 @@ public class DecimalFloatDecodingTest
             {"-.06", -6L, 2},
             {"10", 10L, 0},
             {"-10", -10L, 0},
+            {"10.", 10L, 0},
+            {"-10.", -10L, 0},
+
+            {"1.00000000", 1L, 0},
+            {"-1.00000000", -1L, 0},
+            {"0.92117125", 92117125L, 8},
+            {"-0.92117125", -92117125L, 8},
+            {"0.92125000", 92125L, 5},
+            {"-0.92125000", -92125L, 5},
+            {"0.00007875", 7875, 8},
+            {"-0.00007875", -7875, 8},
+            {"1.00109125", 100109125, 8},
+            {"-1.00109125", -100109125, 8},
         });
     }
 

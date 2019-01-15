@@ -31,7 +31,7 @@ import static uk.co.real_logic.artio.util.MutableAsciiBuffer.LONGEST_FLOAT_LENGT
 public class DecimalFloatEncodingTest
 {
     @Parameters(name = "{index}: {1},{2} => {0}")
-    public static Iterable<Object[]> data1()
+    public static Iterable<Object[]> decimalFloatCodecData()
     {
         return Arrays.asList(new Object[][]
         {
@@ -48,6 +48,15 @@ public class DecimalFloatEncodingTest
             {"-.06", -6L, 2},
             {"10", 10L, 0},
             {"-10", -10L, 0},
+
+            {".92117125", 92117125L, 8},
+            {"-.92117125", -92117125L, 8},
+            {".92125", 92125L, 5},
+            {"-.92125", -92125L, 5},
+            {".00007875", 7875, 8},
+            {"-.00007875", -7875, 8},
+            {"1.00109125", 100109125, 8},
+            {"-1.00109125", -100109125, 8},
         });
     }
 
