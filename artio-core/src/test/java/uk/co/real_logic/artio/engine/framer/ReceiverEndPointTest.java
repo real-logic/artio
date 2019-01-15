@@ -58,7 +58,7 @@ public class ReceiverEndPointTest
     private static final long POSITION = 1024L;
     private static final int BUFFER_SIZE = 16 * 1024;
     private static final int SEQUENCE_INDEX = 0;
-    public static final int BACKPRESSURED_REQUIRED_POSITION = 1024;
+    private static final int BACKPRESSURED_REQUIRED_POSITION = 1024;
 
     private TcpChannel mockChannel = mock(TcpChannel.class);
     private GatewayPublication publication = mock(GatewayPublication.class);
@@ -150,7 +150,7 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldIgnoreGarbledMessages() throws IOException
+    public void shouldIgnoreGarbledMessages()
     {
         final int length = GARBLED_MESSAGE.length;
         theEndpointReceives(GARBLED_MESSAGE, 0, length);
