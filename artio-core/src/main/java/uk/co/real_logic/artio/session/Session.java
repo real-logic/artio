@@ -1201,18 +1201,17 @@ public class Session implements AutoCloseable
                     awaitingResend = false;
                     lastResentMsgSeqNo = 0;
                     lastResendChunkMsgSeqNum = 0;
-                    lastReceivedMsgSeqNum(newSeqNo - 1);
                 }
                 else
                 {
                     if (newSeqNo == lastResendChunkMsgSeqNum)
                     {
                         final Action action = checkPosition(sendResendRequest(
-                            newSeqNo + 1,
+                            newSeqNo,
                             endOfResendMsgSeqNum()));
                         if (action == CONTINUE)
                         {
-                            lastResentMsgSeqNo = newSeqNo;
+                            lastResentMsgSeqNo = newSeqNo - 1;
                         }
 
                         return action;

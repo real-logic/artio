@@ -723,11 +723,11 @@ public abstract class AbstractSessionTest
 
         onGapFill(1, 2);
 
-        verify(mockProxy).resendRequest(2, 3, 0, SEQUENCE_INDEX);
+        verify(mockProxy).resendRequest(2, 2, 0, SEQUENCE_INDEX);
         assertState(ACTIVE);
         assertAwaitingResend();
 
-        onGapFill(3, 4);
+        onGapFill(2, 4);
         assertState(ACTIVE);
         assertNotAwaitingResend();
     }
@@ -751,11 +751,11 @@ public abstract class AbstractSessionTest
 
         onGapFill(1, 2);
 
-        verify(mockProxy).resendRequest(2, 3, 3, SEQUENCE_INDEX);
+        verify(mockProxy).resendRequest(2, 2, 3, SEQUENCE_INDEX);
         assertState(ACTIVE);
         assertAwaitingResend();
 
-        onGapFill(3, 4);
+        onGapFill(2, 4);
         assertState(ACTIVE);
         assertNotAwaitingResend();
     }
