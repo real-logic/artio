@@ -643,7 +643,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 // From manageConnection - ie set up the session in this library.
                 if (connectionType == INITIATOR)
                 {
-                    DebugLogger.log(FIX_MESSAGE, "Init Connect: %d, %d%n", connection, libraryId);
+                    DebugLogger.log(FIX_CONNECTION, "Init Connect: %d, %d%n", connection, libraryId);
                     // TODO: can this ever be false?
                     final boolean isInitiator = correlationIdToReply.get(correlationId) instanceof InitiateSessionReply;
                     final InitiateSessionReply reply = isInitiator ?
@@ -662,7 +662,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 }
                 else
                 {
-                    DebugLogger.log(FIX_MESSAGE, "Acct Connect: %d, %d%n", connection, libraryId);
+                    DebugLogger.log(FIX_CONNECTION, "Acct Connect: %d, %d%n", connection, libraryId);
                     final InternalSession session = acceptSession(
                         connection, address, sessionState, heartbeatIntervalInS, sequenceIndex);
 
@@ -738,7 +738,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
-            DebugLogger.log(FIX_MESSAGE, "(%d) Received %s %n", libraryId, buffer, offset, length);
+            DebugLogger.log(FIX_MESSAGE_FLOW, "(%d) Received %s %n", libraryId, buffer, offset, length);
             final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
             if (subscriber != null)
             {

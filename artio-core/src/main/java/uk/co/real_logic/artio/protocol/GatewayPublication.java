@@ -191,7 +191,7 @@ public class GatewayPublication extends ClaimablePublication
             }
         }
 
-        DebugLogger.log(FIX_MESSAGE, "Enqueued %s%n", srcBuffer, srcOffset, srcLength);
+        DebugLogger.log(FIX_MESSAGE_FLOW, "Enqueued %s%n", srcBuffer, srcOffset, srcLength);
 
         return position;
     }

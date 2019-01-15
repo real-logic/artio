@@ -24,7 +24,7 @@ import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
 import static uk.co.real_logic.artio.protocol.GatewayPublication.FRAME_SIZE;
 
 public final class ProtocolSubscription implements ControlledFragmentHandler
@@ -102,7 +102,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
     {
         disconnect.wrap(buffer, offset, blockLength, version);
         final long connectionId = disconnect.connection();
-        DebugLogger.log(FIX_MESSAGE, "FixSubscription Disconnect: %d%n", connectionId);
+        DebugLogger.log(FIX_CONNECTION, "FixSubscription Disconnect: %d%n", connectionId);
         return protocolHandler.onDisconnect(disconnect.libraryId(), connectionId, disconnect.reason());
     }
 

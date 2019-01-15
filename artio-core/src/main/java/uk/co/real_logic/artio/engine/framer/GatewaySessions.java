@@ -38,7 +38,7 @@ import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
 import java.util.ArrayList;
 import java.util.List;
 
-import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.DUPLICATE_SESSION;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.resetSequenceNumbersUponLogon;
 
@@ -159,7 +159,7 @@ class GatewaySessions
         gatewaySession.manage(sessionParser, session, engineBlockablePosition);
 
         final CompositeKey sessionKey = gatewaySession.sessionKey();
-        DebugLogger.log(FIX_MESSAGE, "Gateway Acquired Session %d%n", connectionId);
+        DebugLogger.log(FIX_CONNECTION, "Gateway Acquired Session %d%n", connectionId);
         if (sessionKey != null)
         {
             gatewaySession.onLogon(username, password, heartbeatIntervalInS);
