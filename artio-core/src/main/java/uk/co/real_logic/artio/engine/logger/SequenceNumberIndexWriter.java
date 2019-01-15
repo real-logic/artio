@@ -152,6 +152,11 @@ public class SequenceNumberIndexWriter implements Index
             {
                 messageFrame.wrap(buffer, offset, actingBlockLength, version);
 
+                if (messageFrame.status() != MessageStatus.OK)
+                {
+                    return;
+                }
+
                 offset += actingBlockLength + 2;
 
                 asciiBuffer.wrap(buffer);
