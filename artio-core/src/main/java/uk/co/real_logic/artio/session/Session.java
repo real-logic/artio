@@ -713,7 +713,7 @@ public class Session implements AutoCloseable
 
     private Action handleSeqNoChange(final int msgSeqNum, final long time, final boolean isPossDupOrResend)
     {
-        if (awaitingResend && isPossDupOrResend)
+        if (awaitingResend)
         {
             if (msgSeqNum == endOfResendMsgSeqNum())
             {
@@ -931,7 +931,6 @@ public class Session implements AutoCloseable
                     {
                         // Above call sets state to ACTIVE, we are active in the sense that we can send, but we want
                         // to be able request a replay as well. This is done in the onMessage call below I believe.
-                        awaitingResend = true;
                     }
                 }
                 else // (msgSeqNo < expectedMsgSeqNo)
