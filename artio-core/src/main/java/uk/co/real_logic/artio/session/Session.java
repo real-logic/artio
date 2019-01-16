@@ -643,28 +643,46 @@ public class Session implements AutoCloseable
         }
         else
         {
-            if (msgSeqNo == MISSING_INT)
-            {
-                final int sentSeqNum = newSentSeqNum();
-                return checkPositionAndDisconnect(
-                    proxy.receivedMessageWithoutSequenceNumber(sentSeqNum, sequenceIndex()),
-                    MSG_SEQ_NO_MISSING);
-            }
-
             final long time = time();
-
-            if (CODEC_VALIDATION_ENABLED)
+            final Action action = validateRequiredFieldsAndCodec(
+                msgSeqNo, time, msgType, msgTypeLength, sendingTime, origSendingTime, possDup);
+            if (action != null)
             {
-                final Action validationResult = validateCodec(time, msgSeqNo, msgType, msgTypeLength, sendingTime,
-                    origSendingTime, possDup);
-                if (validationResult != null)
-                {
-                    return validationResult;
-                }
+                return action;
             }
 
             return handleSeqNoChange(msgSeqNo, time, isPossDupOrResend);
         }
+    }
+
+    private Action validateRequiredFieldsAndCodec(
+        final int msgSeqNo,
+        final long time,
+        final byte[] msgType,
+        final int msgTypeLength,
+        final long sendingTime,
+        final long origSendingTime,
+        final boolean possDup)
+    {
+        if (msgSeqNo == MISSING_INT)
+        {
+            final int sentSeqNum = newSentSeqNum();
+            return checkPositionAndDisconnect(
+                proxy.receivedMessageWithoutSequenceNumber(sentSeqNum, sequenceIndex()),
+                MSG_SEQ_NO_MISSING);
+        }
+
+        if (CODEC_VALIDATION_ENABLED)
+        {
+            final Action validationResult = validateCodec(time, msgSeqNo, msgType, msgTypeLength, sendingTime,
+                origSendingTime, possDup);
+            if (validationResult != null)
+            {
+                return validationResult;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -1073,10 +1091,16 @@ public class Session implements AutoCloseable
         final int msgSeqNo,
         final long sendingTime,
         final long origSendingTime,
-        final boolean isPossDupOrResend, final boolean possDup)
+        final boolean isPossDupOrResend,
+        final boolean possDup)
     {
-        final Action action = onMessage(
-            msgSeqNo, LogoutDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend, possDup);
+        final long time = time();
+        final Action action = validateRequiredFieldsAndCodec(
+            msgSeqNo, time,
+            LogoutDecoder.MESSAGE_TYPE_BYTES, LogoutDecoder.MESSAGE_TYPE_BYTES.length,
+            sendingTime,
+            origSendingTime,
+            possDup);
         if (action == ABORT)
         {
             return ABORT;

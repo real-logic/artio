@@ -43,7 +43,7 @@ import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.mediaDriverContext;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
-import static uk.co.real_logic.artio.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
+import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasSequenceIndex;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -119,7 +119,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         duringRestart = this::deleteAcceptorLogs;
 
-        onAcquireSession = () -> assertFailStatusWhenReplayRequested(SEQUENCE_NUMBER_TOO_HIGH);
+        onAcquireSession = () -> assertFailStatusWhenReplayRequested(OK);
 
         resetSequenceNumbersOnLogon = true;
 
