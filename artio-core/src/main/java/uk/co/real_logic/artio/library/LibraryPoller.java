@@ -204,12 +204,16 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     Reply<SessionReplyStatus> requestSession(
         final long sessionId,
-        final int lastReceivedSequenceNumber,
-        final int sequenceIndex,
+        final int resendFromSequenceNumber,
+        final int resendFromSequenceIndex,
         final long timeoutInMs)
     {
         return new RequestSessionReply(
-            this, timeInMs() + timeoutInMs, sessionId, lastReceivedSequenceNumber, sequenceIndex);
+            this,
+            timeInMs() + timeoutInMs,
+            sessionId,
+            resendFromSequenceNumber,
+            resendFromSequenceIndex);
     }
 
     void disableSession(final InternalSession session)

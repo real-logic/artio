@@ -24,8 +24,8 @@ import uk.co.real_logic.artio.messages.SessionReplyStatus;
 class RequestSessionReply extends LibraryReply<SessionReplyStatus>
 {
     private final long sessionId;
-    private final int lastReceivedSequenceNumber;
-    private final int sequenceIndex;
+    private final int resendFromSequenceNumber;
+    private final int resendFromSequenceIndex;
 
     private boolean requiresResend;
 
@@ -33,13 +33,13 @@ class RequestSessionReply extends LibraryReply<SessionReplyStatus>
         final LibraryPoller libraryPoller,
         final long latestReplyArrivalTime,
         final long sessionId,
-        final int lastReceivedSequenceNumber,
-        final int sequenceIndex)
+        final int resendFromSequenceNumber,
+        final int resendFromSequenceIndex)
     {
         super(libraryPoller, latestReplyArrivalTime);
         this.sessionId = sessionId;
-        this.lastReceivedSequenceNumber = lastReceivedSequenceNumber;
-        this.sequenceIndex = sequenceIndex;
+        this.resendFromSequenceNumber = resendFromSequenceNumber;
+        this.resendFromSequenceIndex = resendFromSequenceIndex;
         if (libraryPoller.isConnected())
         {
             sendMessage();
@@ -49,7 +49,7 @@ class RequestSessionReply extends LibraryReply<SessionReplyStatus>
     private void sendMessage()
     {
         final long position = libraryPoller.saveRequestSession(
-            sessionId, correlationId, lastReceivedSequenceNumber, sequenceIndex);
+            sessionId, correlationId, resendFromSequenceNumber, resendFromSequenceIndex);
 
         requiresResend = position < 0;
     }

@@ -309,14 +309,14 @@ public class FixLibrary extends GatewayProcess
      * mechanism has timed out due to {@link #poll(int)} not being called often enough.
      *
      * @param sessionId the id of the session to acquire.
-     * @param lastReceivedSequenceNumber the last received message sequence number
+     * @param resendFromSequenceNumber the last received message sequence number
      *                                   that you know about. You will get a stream
      *                                   of messages replayed to you from
-     *                                   <code>lastReceivedMessageSequenceNumber + 1</code>
+     *                                   <code>resendFromSequenceNumber</code>
      *                                   to the latest message sequence number.
      *                                   If you don't care about message replay then
      *                                   use {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
-     * @param lastReceivedSequenceIndex the index of the sequence within which the lastReceivedSequenceNumber
+     * @param resendFromSequenceIndex the index of the sequence within which the resendFromSequenceNumber
      *                      refers. If you don't care about message replay then use
      *                      {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
      * @param timeoutInMs the timeout for this operation
@@ -324,12 +324,12 @@ public class FixLibrary extends GatewayProcess
      */
     public Reply<SessionReplyStatus> requestSession(
         final long sessionId,
-        final int lastReceivedSequenceNumber,
-        final int lastReceivedSequenceIndex,
+        final int resendFromSequenceNumber,
+        final int resendFromSequenceIndex,
         final long timeoutInMs)
     {
         CommonConfiguration.validateTimeout(timeoutInMs);
-        return poller.requestSession(sessionId, lastReceivedSequenceNumber, lastReceivedSequenceIndex, timeoutInMs);
+        return poller.requestSession(sessionId, resendFromSequenceNumber, resendFromSequenceIndex, timeoutInMs);
     }
 
     public String currentAeronChannel()
