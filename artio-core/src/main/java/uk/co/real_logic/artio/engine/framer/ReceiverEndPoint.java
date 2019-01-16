@@ -41,6 +41,7 @@ import static uk.co.real_logic.artio.dictionary.StandardFixConstants.START_OF_HE
 import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
+import static uk.co.real_logic.artio.util.AsciiBuffer.SEPARATOR;
 import static uk.co.real_logic.artio.util.AsciiBuffer.UNKNOWN_INDEX;
 
 /**
@@ -63,8 +64,10 @@ class ReceiverEndPoint
     private static final byte CHECKSUM3 = (byte)'=';
 
     private static final int MIN_CHECKSUM_SIZE = " 10=".length() + 1;
+    private static final int CHECKSUM_TAG_SIZE = "10=".length();
     private static final int SOCKET_DISCONNECTED = -1;
     private static final int UNKNOWN_MESSAGE_TYPE = -1;
+    private static final int BREAK = -1;
 
     private final LogonDecoder logon = new LogonDecoder();
 
@@ -239,7 +242,7 @@ class ReceiverEndPoint
 
                 final int startOfChecksumTag = endOfBodyLength + getBodyLength(startOfBodyLength, endOfBodyLength);
 
-                final int endOfChecksumTag = startOfChecksumTag + 3;
+                final int endOfChecksumTag = startOfChecksumTag + MIN_CHECKSUM_SIZE;
                 if (endOfChecksumTag >= usedBufferData)
                 {
                     break;
@@ -247,13 +250,12 @@ class ReceiverEndPoint
 
                 if (!validateBodyLength(startOfChecksumTag))
                 {
-                    if (saveInvalidMessage(offset, startOfChecksumTag))
+                    final int endOfMessage = onInvalidBodyLength(offset, startOfChecksumTag);
+                    if (endOfMessage == BREAK)
                     {
-                        return offset;
+                        break;
                     }
-                    close(INVALID_BODY_LENGTH);
-                    removeEndpointFromFramer();
-                    break;
+                    return endOfMessage;
                 }
 
                 final int startOfChecksumValue = startOfChecksumTag + MIN_CHECKSUM_SIZE;
@@ -302,6 +304,36 @@ class ReceiverEndPoint
         }
 
         moveRemainingDataToBufferStart(offset);
+        return offset;
+    }
+
+    private int onInvalidBodyLength(final int offset, final int startOfChecksumTag)
+    {
+        int checksumTagScanPoint = startOfChecksumTag + 1;
+        while (!isStartOfChecksum(checksumTagScanPoint))
+        {
+            final int endOfScanPoint = checksumTagScanPoint + CHECKSUM_TAG_SIZE;
+            if (endOfScanPoint >= usedBufferData)
+            {
+                return BREAK;
+            }
+
+            checksumTagScanPoint++;
+        }
+
+        final int endOfScanPoint = checksumTagScanPoint + CHECKSUM_TAG_SIZE;
+        final int endOfMessage = buffer.scan(endOfScanPoint, usedBufferData, SEPARATOR) + 1;
+        if (endOfMessage > usedBufferData)
+        {
+            return BREAK;
+        }
+
+        if (saveInvalidMessage(offset, endOfMessage))
+        {
+            return offset;
+        }
+
+        moveRemainingDataToBufferStart(endOfMessage);
         return offset;
     }
 
@@ -430,6 +462,11 @@ class ReceiverEndPoint
     }
 
     private boolean validateBodyLength(final int startOfChecksumTag)
+    {
+        return isStartOfChecksum(startOfChecksumTag);
+    }
+
+    private boolean isStartOfChecksum(final int startOfChecksumTag)
     {
         return buffer.getByte(startOfChecksumTag) == CHECKSUM0 &&
             buffer.getByte(startOfChecksumTag + 1) == CHECKSUM1 &&

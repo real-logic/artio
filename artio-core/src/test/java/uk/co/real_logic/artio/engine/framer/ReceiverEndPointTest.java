@@ -159,6 +159,24 @@ public class ReceiverEndPointTest
 
         savesInvalidMessage(length, times(1));
         verifyNoError();
+        verifyNotDisconnected();
+        sessionReceivesNoMessages();
+    }
+
+    @Test
+    public void shouldIgnoreMessageWithBodyLengthTooShort()
+    {
+        final int length = INVALID_LENGTH_MESSAGE.length;
+        theEndpointReceives(INVALID_LENGTH_MESSAGE, 0, length);
+
+        endPoint.poll();
+
+        savesInvalidMessage(length, times(1), INVALID_BODYLENGTH);
+        verifyNoError();
+        verifyNotDisconnected();
+        sessionReceivesNoMessages();
+
+        shouldFrameValidFixMessage();
     }
 
     @Test
@@ -231,7 +249,7 @@ public class ReceiverEndPointTest
         endPoint.poll();
 
         verify(mockSessionContexts).onDisconnect(anyLong());
-        assertSavesDisconnect();
+        verifyDisconnected();
     }
 
     @Test
@@ -241,7 +259,7 @@ public class ReceiverEndPointTest
 
         endPoint.poll();
 
-        assertSavesDisconnect();
+        verifyDisconnected();
     }
 
     @Test
@@ -407,15 +425,25 @@ public class ReceiverEndPointTest
 
     private void savesInvalidMessage(final int length, final VerificationMode mode)
     {
+        savesInvalidMessage(length, mode, INVALID);
+    }
+
+    private void savesInvalidMessage(final int length, final VerificationMode mode, final MessageStatus status)
+    {
         verify(publication, mode).saveMessage(
             anyBuffer(), eq(0), eq(length), eq(LIBRARY_ID),
             anyInt(), anyLong(), anyInt(), eq(CONNECTION_ID),
-            eq(INVALID), eq(0));
+            eq(status), eq(0));
     }
 
-    private void assertSavesDisconnect()
+    private void verifyDisconnected()
     {
         verify(publication).saveDisconnect(LIBRARY_ID, CONNECTION_ID, REMOTE_DISCONNECT);
+    }
+
+    private void verifyNotDisconnected()
+    {
+        verify(publication, never()).saveDisconnect(anyInt(), anyLong(), any());
     }
 
     private void theChannelIsClosed() throws IOException
@@ -611,6 +639,12 @@ public class ReceiverEndPointTest
     {
         verify(gatewaySession, mode)
             .onMessage(any(), eq(offset), eq(length), eq(MESSAGE_TYPE), eq(SESSION_ID));
+    }
+
+    private void sessionReceivesNoMessages()
+    {
+        verify(gatewaySession, never())
+            .onMessage(any(), anyInt(), anyInt(), anyInt(), anyLong());
     }
 
     private void pollWithNoData()

@@ -75,8 +75,8 @@ public final class TestMessages
                         "79=sally\001467=11\001366=5\001" +
                 "11=order-2\00167=2\00155=AOL\00154=2\00138=1000\00140=1\001");
 
-    public static final byte[] INVALID_LENGTH = toAscii(
-        "8=FIX.4.4\0019=40\00135=A\00134=1\00149=TW\00152=20150604-12:46:54\00156=ISLD\00198=0\001108=30\001");
+    public static final byte[] INVALID_LENGTH_MESSAGE = toAscii(
+        "8=FIX.4.4\0019=5\00135=A\00134=1\00149=TW\00152=20150604-12:46:54\00156=ISLD\00198=0\00110=000\001");
 
     public static final byte[] ZERO_CHECKSUM_MESSAGE = toAscii(
         "8=FIX.4.4\0019=0067\00135=0\00149=acceptor\00156=initiator\00134=2" +
