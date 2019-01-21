@@ -29,7 +29,7 @@ public interface AsciiBuffer extends DirectBuffer
     byte NEGATIVE = '-';
     int LONGEST_INT_LENGTH = String.valueOf(Integer.MIN_VALUE).length();
     int LONGEST_LONG_LENGTH = String.valueOf(Long.MIN_VALUE).length();
-    int LONGEST_FLOAT_LENGTH = LONGEST_LONG_LENGTH + 3;
+    int LONGEST_FLOAT_LENGTH = LONGEST_LONG_LENGTH + 3 + 1/*leading zero*/;
     int SEPARATOR_LENGTH = 1;
     int DOT_LENGTH = 1;
 

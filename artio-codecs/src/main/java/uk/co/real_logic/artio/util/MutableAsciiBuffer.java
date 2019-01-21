@@ -45,6 +45,30 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         999999999_999999999L, Long.MAX_VALUE
     };
 
+    private static final long[] MAX_VAL_AT_SCALE =
+    {
+        0L, // 0
+        10L,
+        100L,
+        1_000L,
+        10_000L,
+        100_000L, // 5
+        1_000_000L,
+        10_000_000L,
+        100_000_000L,
+        1_000_000_000L,
+        10_000_000_000L, //10
+        100_000_000_000L,
+        1_000_000_000_000L,
+        10_000_000_000_000L,
+        100_000_000_000_000L,
+        1_000_000_000_000_000L, // 15
+        10_000_000_000_000_000L,
+        100_000_000_000_000_000L,
+        1_000_000_000_000_000_000L, // 18
+        //10_000_000_000_000_000_000L,
+    };
+
     private static final byte[] MIN_INTEGER_VALUE = String.valueOf(Integer.MIN_VALUE).getBytes(US_ASCII);
     private static final byte[] MIN_LONG_VALUE = String.valueOf(Long.MIN_VALUE).getBytes(US_ASCII);
 
@@ -551,7 +575,8 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
         final long remainder = calculateRemainderAndPutMinus(offset, value);
         final int minusAdj = value < 0 ? 1 : 0;
-        final int start = offset + minusAdj;
+        final int leadingZeroAdj = checkForLeadingZeroAndPutIfNeeded(minusAdj == 0 ? offset : offset + 1, value, scale);
+        final int start = offset + minusAdj + leadingZeroAdj;
 
         // Encode the value into a tmp space, leaving the longest possible space required
         final int tmpEnd = start + LONGEST_LONG_LENGTH;
@@ -576,7 +601,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
                 }
                 putBytes(cursor, this, tmpStart, length);
 
-                return minusAdj + numberOfZeros + DOT_LENGTH + length;
+                return minusAdj + leadingZeroAdj + numberOfZeros + DOT_LENGTH + length;
             }
             else
             {
@@ -584,12 +609,12 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
                 putByte(split, DOT);
                 putBytes(split + 1, this, tmpStart + digitsBeforeDot, scale);
             }
-            return length + DOT_LENGTH + minusAdj;
+            return length + DOT_LENGTH + minusAdj + leadingZeroAdj;
         }
         else
         {
             putBytes(start, this, tmpStart, length);
-            return length + minusAdj;
+            return length + minusAdj + leadingZeroAdj;
         }
     }
 
@@ -615,6 +640,16 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
             // Deal with negatives to avoid overflow for Integer.MAX_VALUE
             return -1L * value;
         }
+    }
+
+    private int checkForLeadingZeroAndPutIfNeeded(final int offset, final long value, final int scale)
+    {
+        if ( MAX_VAL_AT_SCALE[scale] > Math.abs(value) )
+        {
+            putByte(offset, ZERO);
+            return 1;
+        }
+        return 0;
     }
 
     @SuppressWarnings("FinalParameters")
