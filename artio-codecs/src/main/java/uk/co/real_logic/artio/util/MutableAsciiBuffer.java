@@ -47,9 +47,9 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         999999999_999999999L, Long.MAX_VALUE
     };
 
-    private static final long[] MAX_VAL_AT_SCALE =
+    private static final long[] CEIL_VAL_AT_SCALE =
     {
-        0L, // 0 // irrelevant entry, just place holder for scale=0
+        0L, // scale=0 , irrelevant entry, just place holder
         10L,
         100L,
         1_000L, // scale=3
@@ -646,7 +646,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
     private int checkForLeadingZeroAndPutIfNeeded(final int offset, final long value, final int scale)
     {
-        if (scale >= MAX_DIGITS_OF_LONG || MAX_VAL_AT_SCALE[scale] > Math.abs(value))
+        if (scale >= MAX_DIGITS_OF_LONG || CEIL_VAL_AT_SCALE[scale] > Math.abs(value))
         {
             putByte(offset, ZERO);
             return 1;
