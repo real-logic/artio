@@ -498,6 +498,12 @@ public class EncoderGenerator extends Generator
             "%4$s" +
             "        return this;\n" +
             "    }\n\n" +
+            "    public %3$s %1$s(long value, int scale)\n" +
+            "    {\n" +
+            "        %1$s.set(value, scale);\n" +
+            "%4$s" +
+            "        return this;\n" +
+            "    }\n\n" +
             "    public DecimalFloat %1$s()\n" +
             "    {\n" +
             "        return %1$s;\n" +

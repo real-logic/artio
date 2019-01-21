@@ -62,6 +62,12 @@ public final class Reflection
         set(object, setter, DecimalFloat.class, value);
     }
 
+    public static void setFloat(final Object object, final String setter, final long value, final int scale)
+        throws Exception
+    {
+        set(object, setter, long.class, int.class, value, scale);
+    }
+
     public static void setCharSequence(final Object object, final String setter, final CharSequence value)
         throws Exception
     {
@@ -89,6 +95,19 @@ public final class Reflection
         object.getClass()
             .getMethod(setterName, type)
             .invoke(object, value);
+    }
+
+    private static void set(
+        final Object object,
+        final String setterName,
+        final Class<?> type1,
+        final Class<?> type2,
+        final Object value1,
+        final Object value2) throws Exception
+    {
+        object.getClass()
+            .getMethod(setterName, type1, type2)
+            .invoke(object, value1, value2);
     }
 
     public static void setField(

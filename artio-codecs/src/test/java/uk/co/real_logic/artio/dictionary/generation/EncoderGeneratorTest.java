@@ -753,7 +753,7 @@ public class EncoderGeneratorTest
 
     private void setFloatFieldRawValues(final Encoder encoder) throws Exception
     {
-        ((DecimalFloat)getField(encoder, FLOAT_FIELD)).set(11, 1);
+        setFloat(encoder, FLOAT_FIELD, 11, 1);
     }
 
     private void setIntField(final Encoder encoder) throws Exception
