@@ -577,7 +577,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
         final long remainder = calculateRemainderAndPutMinus(offset, value);
         final int minusAdj = value < 0 ? 1 : 0;
-        final int leadingZeroAdj = checkForLeadingZeroAndPutIfNeeded(minusAdj == 0 ? offset : offset + 1, value, scale);
+        final int leadingZeroAdj = checkForLeadingZeroAndPutIfNeeded(offset + minusAdj, value, scale);
         final int start = offset + minusAdj + leadingZeroAdj;
 
         // Encode the value into a tmp space, leaving the longest possible space required
