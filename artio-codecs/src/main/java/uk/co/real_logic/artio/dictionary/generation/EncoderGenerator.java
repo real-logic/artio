@@ -326,7 +326,7 @@ public class EncoderGenerator extends Generator
             case QTY:
             case PERCENTAGE:
             case AMT:
-                return generateSetter.apply("DecimalFloat");
+                return decimalFloatSetter(fieldName, hasField, className, hasAssign, enumSetter);
 
             case DATA:
             case XMLDATA:
@@ -475,6 +475,34 @@ public class EncoderGenerator extends Generator
             "%7$s",
             isBodyLength(name) ? "public" : "private",
             type,
+            fieldName,
+            optionalField,
+            className,
+            optionalAssign,
+            enumSetter);
+    }
+
+    private String decimalFloatSetter(
+        final String fieldName,
+        final String optionalField,
+        final String className,
+        final String optionalAssign,
+        final String enumSetter)
+    {
+        return String.format(
+            "    private DecimalFloat %1$s = new DecimalFloat();\n\n" +
+            "%2$s" +
+            "    public %3$s %1$s(DecimalFloat value)\n" +
+            "    {\n" +
+            "        %1$s = value;\n" +
+            "%4$s" +
+            "        return this;\n" +
+            "    }\n\n" +
+            "    public DecimalFloat %1$s()\n" +
+            "    {\n" +
+            "        return %1$s;\n" +
+            "    }\n\n" +
+            "%5$s",
             fieldName,
             optionalField,
             className,
