@@ -106,6 +106,7 @@ public class TcpChannelSupplier implements AutoCloseable
                             if (channel.finishConnect())
                             {
                                 channelHandler.onInitiatedChannel(newTcpChannel(channel), null);
+                                selectionKey.interestOps(selectionKey.interestOps() & (~OP_CONNECT));
                                 it.remove();
                                 opensInFlight--;
                             }
