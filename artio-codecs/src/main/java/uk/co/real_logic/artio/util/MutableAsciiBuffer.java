@@ -32,6 +32,8 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     private static final byte Y = (byte)'Y';
     private static final byte N = (byte)'N';
 
+    private static final int MAX_DIGITS_OF_LONG = 19;
+
     private static final int[] INT_ROUNDS =
     {
         9, 99, 999, 9999, 99999, 999999, 9999999, 99999999, 999999999, Integer.MAX_VALUE
@@ -47,26 +49,26 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
     private static final long[] MAX_VAL_AT_SCALE =
     {
-        0L, // 0
+        0L, // 0 // irrelevant entry, just place holder for scale=0
         10L,
         100L,
-        1_000L,
+        1_000L, // scale=3
         10_000L,
-        100_000L, // 5
-        1_000_000L,
+        100_000L,
+        1_000_000L,  // scale=6
         10_000_000L,
         100_000_000L,
-        1_000_000_000L,
-        10_000_000_000L, //10
+        1_000_000_000L,  // scale=9
+        10_000_000_000L,
         100_000_000_000L,
-        1_000_000_000_000L,
+        1_000_000_000_000L, // scale=12
         10_000_000_000_000L,
         100_000_000_000_000L,
-        1_000_000_000_000_000L, // 15
+        1_000_000_000_000_000L, // scale=15
         10_000_000_000_000_000L,
         100_000_000_000_000_000L,
-        1_000_000_000_000_000_000L, // 18
-        //10_000_000_000_000_000_000L,
+        1_000_000_000_000_000_000L, // scale=18
+        //10_000_000_000_000_000_000L, // scale=19
     };
 
     private static final byte[] MIN_INTEGER_VALUE = String.valueOf(Integer.MIN_VALUE).getBytes(US_ASCII);
@@ -644,7 +646,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
     private int checkForLeadingZeroAndPutIfNeeded(final int offset, final long value, final int scale)
     {
-        if ( MAX_VAL_AT_SCALE[scale] > Math.abs(value) )
+        if (scale >= MAX_DIGITS_OF_LONG || MAX_VAL_AT_SCALE[scale] > Math.abs(value))
         {
             putByte(offset, ZERO);
             return 1;
