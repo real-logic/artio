@@ -140,6 +140,16 @@ public class TestSystem
         Timing.DEFAULT_TIMEOUT_IN_MS);
     }
 
+    public void awaitReceivedSequenceNumber(final Session session, final int sequenceNumber)
+    {
+        Timing.assertEventuallyTrue(session + " Never get to " + sequenceNumber, () ->
+        {
+            poll();
+
+            return session.lastReceivedMsgSeqNum() >= sequenceNumber;
+        });
+    }
+
     public void send(final Session session, final Encoder encoder)
     {
         assertEventuallyTrue(

@@ -37,11 +37,12 @@ public class GatewayProcess implements AutoCloseable
 
     private static long startTimeInMs = System.currentTimeMillis();
 
+    private DistinctErrorLog distinctErrorLog;
+
     protected CommonConfiguration configuration;
     protected MonitoringFile monitoringFile;
     protected FixCounters fixCounters;
     protected ErrorHandler errorHandler;
-    protected DistinctErrorLog distinctErrorLog;
     protected Aeron aeron;
     protected Agent monitoringAgent;
 

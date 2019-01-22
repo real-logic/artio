@@ -702,6 +702,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         acquireAcceptingSession();
 
+        testSystem.awaitReceivedSequenceNumber(acceptingSession, 2);
+
         assertInitSeqNum(2, 2, 0);
         assertAccSeqNum(2, 2, 0);
 
