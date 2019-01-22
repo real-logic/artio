@@ -169,7 +169,7 @@ public class CommonConfiguration
     //          Configuration Defaults
     // ------------------------------------------------
 
-    public static final int DEFAULT_MONITORING_BUFFER_LENGTH = 64 * 1024 * 1024;
+    public static final int DEFAULT_MONITORING_BUFFER_LENGTH = 4 * 1024 * 1024;
     public static final String DEFAULT_DIRECTORY = optimalTmpDirName() + File.separator + "fix-%s";
     public static final String DEFAULT_MONITORING_FILE = DEFAULT_DIRECTORY + File.separator + "monitoring";
 

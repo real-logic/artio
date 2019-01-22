@@ -55,7 +55,6 @@ public class GatewayProcess implements AutoCloseable
     protected void initMonitoring(final CommonConfiguration configuration)
     {
         monitoringFile = new MonitoringFile(true, configuration);
-        fixCounters = new FixCounters(monitoringFile.createCountersManager());
         final EpochClock clock = new SystemEpochClock();
         distinctErrorLog = new DistinctErrorLog(monitoringFile.errorBuffer(), clock);
         errorHandler =
@@ -74,6 +73,7 @@ public class GatewayProcess implements AutoCloseable
         final Aeron.Context context = configureAeronContext(configuration);
         aeron = Aeron.connect(context);
         CloseChecker.onOpen(context.aeronDirectoryName(), aeron);
+        fixCounters = new FixCounters(aeron);
     }
 
     public Agent conductorAgent()
@@ -131,6 +131,7 @@ public class GatewayProcess implements AutoCloseable
     public void close()
     {
         closeAll(
+            fixCounters,
             () ->
             {
                 aeron.close();

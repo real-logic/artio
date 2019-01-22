@@ -15,25 +15,30 @@
  */
 package uk.co.real_logic.artio;
 
-import org.agrona.CloseHelper;
+import io.aeron.Aeron;
+import io.aeron.Counter;
 import org.agrona.concurrent.status.AtomicCounter;
-import org.agrona.concurrent.status.CountersManager;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.agrona.concurrent.status.CountersManager.DEFAULT_TYPE_ID;
 
 public class FixCounters implements AutoCloseable
 {
-    private final CountersManager countersManager;
+    private final List<Counter> counters = new ArrayList<>();
     private final AtomicCounter failedInboundPublications;
     private final AtomicCounter failedOutboundPublications;
     private final AtomicCounter failedReplayPublications;
+    private final Aeron aeron;
 
-    private AtomicCounter failedRaftPublications = null;
-
-    FixCounters(final CountersManager countersManager)
+    FixCounters(final Aeron aeron)
     {
-        this.countersManager = countersManager;
-        failedInboundPublications = countersManager.newCounter("Failed offer to inbound publication");
-        failedOutboundPublications = countersManager.newCounter("Failed offer to outbound publication");
-        failedReplayPublications = countersManager.newCounter("Failed offer to replay publication");
+        this.aeron = aeron;
+        failedInboundPublications = newCounter(DEFAULT_TYPE_ID, "Failed offer to inbound publication");
+        failedOutboundPublications = newCounter(DEFAULT_TYPE_ID, "Failed offer to outbound publication");
+        failedReplayPublications = newCounter(DEFAULT_TYPE_ID, "Failed offer to replay publication");
     }
 
     public AtomicCounter failedInboundPublications()
@@ -51,52 +56,41 @@ public class FixCounters implements AutoCloseable
         return failedReplayPublications;
     }
 
-    public AtomicCounter failedRaftPublications()
-    {
-        if (failedRaftPublications == null)
-        {
-            failedRaftPublications = countersManager.newCounter("Failed offer to raft publication");
-        }
-
-        return failedRaftPublications;
-    }
-
     public AtomicCounter messagesRead(final long connectionId, final String address)
     {
-        return newCounter("Messages Read from " + address + " id = " + connectionId);
+        return newCounter(DEFAULT_TYPE_ID, "Messages Read from " + address + " id = " + connectionId);
     }
 
     public AtomicCounter bytesInBuffer(final long connectionId, final String address)
     {
-        return newCounter("Quarantined bytes for " + address + " id = " + connectionId);
+        return newCounter(DEFAULT_TYPE_ID, "Quarantined bytes for " + address + " id = " + connectionId);
     }
 
     public AtomicCounter invalidLibraryAttempts(final long connectionId, final String address)
     {
-        return newCounter("Invalid Library Attempts for " + address + " id = " + connectionId);
+        return newCounter(DEFAULT_TYPE_ID, "Invalid Library Attempts for " + address + " id = " + connectionId);
     }
 
     public AtomicCounter sentMsgSeqNo(final long connectionId)
     {
-        return newCounter("Last Sent MsgSeqNo for " + connectionId);
+        return newCounter(DEFAULT_TYPE_ID, "Last Sent MsgSeqNo for " + connectionId);
     }
 
     public AtomicCounter receivedMsgSeqNo(final long connectionId)
     {
-        return newCounter("Last Received MsgSeqNo for " + connectionId);
+        return newCounter(DEFAULT_TYPE_ID, "Last Received MsgSeqNo for " + connectionId);
     }
 
-    private AtomicCounter newCounter(final String label)
+    private AtomicCounter newCounter(final int typeId, final String label)
     {
-        return countersManager.newCounter(label);
+        final Counter counter = aeron.addCounter(typeId, label);
+        counters.add(counter);
+        return counter;
     }
 
     public void close()
     {
-        failedInboundPublications.close();
-        failedOutboundPublications.close();
-        failedReplayPublications.close();
-        CloseHelper.close(failedRaftPublications);
+        Exceptions.closeAll(counters);
     }
 
 }
