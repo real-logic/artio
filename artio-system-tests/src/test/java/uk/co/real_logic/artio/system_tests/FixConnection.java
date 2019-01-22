@@ -18,9 +18,14 @@ package uk.co.real_logic.artio.system_tests;
 import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.ExecType;
+import uk.co.real_logic.artio.OrdStatus;
+import uk.co.real_logic.artio.Side;
 import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.HeartbeatDecoder;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.decoder.LogoutDecoder;
+import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -30,8 +35,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.LogTag.FIX_TEST;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
@@ -149,10 +153,14 @@ final class FixConnection implements AutoCloseable
         try
         {
             final int read = socket.read(buffer);
-            DebugLogger.log(FIX_TEST, "< [" + asciiBuffer.getAscii(OFFSET, read) + "]");
+            DebugLogger.log(FIX_TEST,
+                "< [" + asciiBuffer.getAscii(OFFSET, read) + "] for attempted: " + decoder.getClass());
             decoder.decode(asciiBuffer, OFFSET, read);
 
-            assertTrue(decoder.validate());
+            if (!decoder.validate())
+            {
+                fail("Failed: " + RejectReason.decode(decoder.rejectReason()) + " for " + decoder.invalidTagId());
+            }
         }
         catch (final IOException ex)
         {
@@ -160,6 +168,21 @@ final class FixConnection implements AutoCloseable
         }
 
         return decoder;
+    }
+
+    int pollData() throws IOException
+    {
+        final ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
+        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(buffer);
+
+        socket.configureBlocking(false);
+        final int read = socket.read(buffer);
+        socket.configureBlocking(true);
+        if (read > 0)
+        {
+            DebugLogger.log(FIX_TEST, "< [" + asciiBuffer.getAscii(OFFSET, read) + "] for poll");
+        }
+        return read;
     }
 
     void send(final Encoder encoder)
@@ -206,5 +229,31 @@ final class FixConnection implements AutoCloseable
         CloseHelper.close(socket);
     }
 
+    void logoutAndAwaitReply()
+    {
+        logout();
 
+        final LogoutDecoder logout = readMessage(new LogoutDecoder());
+
+        assertFalse(logout.textAsString(), logout.hasText());
+    }
+
+    public void sendExecutionReport(final int msgSeqNum, final boolean possDupFlag)
+    {
+        final ExecutionReportEncoder executionReportEncoder = new ExecutionReportEncoder();
+        final HeaderEncoder header = executionReportEncoder.header();
+
+        setupHeader(header, msgSeqNum, possDupFlag);
+
+        executionReportEncoder
+            .orderID("order")
+            .execID("exec")
+            .execType(ExecType.FILL)
+            .ordStatus(OrdStatus.FILLED)
+            .side(Side.BUY);
+
+        executionReportEncoder.instrument().symbol("IBM");
+
+        send(executionReportEncoder);
+    }
 }

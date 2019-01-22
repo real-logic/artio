@@ -521,7 +521,7 @@ public abstract class AbstractSessionTest
         verify(mockProxy, retry(backPressured))
             .testRequest(7, TEST_REQ_ID, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
         assertState(ACTIVE);
-        assertAwaitingResend();
+        assertAwaitingHeartbeat();
     }
 
     @Test
@@ -1111,12 +1111,17 @@ public abstract class AbstractSessionTest
 
     private void assertAwaitingResend()
     {
-        assertTrue("Session is not awaiting resend", session().isAwaitingResend());
+        assertTrue("Session is not awaiting resend", session().awaitingResend());
+    }
+
+    private void assertAwaitingHeartbeat()
+    {
+        assertTrue("Session is not awaiting heartbeat", session().awaitingHeartbeat());
     }
 
     private void assertNotAwaitingResend()
     {
-        assertFalse("Session is awaiting resend", session().isAwaitingResend());
+        assertFalse("Session is awaiting resend", session().awaitingResend());
     }
 
     private void onGapFill(final int msgSeqNo, final int newSeqNo)

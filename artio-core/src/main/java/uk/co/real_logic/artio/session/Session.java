@@ -129,6 +129,11 @@ public class Session implements AutoCloseable
     private int lastResentMsgSeqNo;
     // The last msg seq no before you send the next chunk of the resend request
     private int lastResendChunkMsgSeqNum;
+    // The last msg seq no before you hit the end of the resend request
+    private int endOfResendRequestRange;
+
+    private boolean awaitingHeartbeat;
+
     private long id = UNKNOWN;
     private int lastReceivedMsgSeqNum = 0;
     private int lastMsgSeqNumProcessed;
@@ -229,9 +234,14 @@ public class Session implements AutoCloseable
      *
      * @return true iff the session is awaiting a resend / replay of messages.
      */
-    public boolean isAwaitingResend()
+    public boolean awaitingResend()
     {
         return awaitingResend;
+    }
+
+    public boolean awaitingHeartbeat()
+    {
+        return awaitingHeartbeat;
     }
 
     public boolean closedResendInterval()
@@ -750,6 +760,7 @@ public class Session implements AutoCloseable
                 awaitingResend = false;
                 lastResendChunkMsgSeqNum = 0;
                 lastResentMsgSeqNo = 0;
+                endOfResendRequestRange = 0;
             }
             else if (msgSeqNum == lastResendChunkMsgSeqNum)
             {
@@ -763,6 +774,17 @@ public class Session implements AutoCloseable
 
                 return action;
             }
+            else if (msgSeqNum > endOfResendRequestRange)
+            {
+                if (sendRedundantResendRequests)
+                {
+                    return Pressure.apply(sendResendRequest(lastResendChunkMsgSeqNum, msgSeqNum));
+                }
+                else
+                {
+                    return handleNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend);
+                }
+            }
             else
             {
                 lastResentMsgSeqNo = msgSeqNum;
@@ -770,28 +792,34 @@ public class Session implements AutoCloseable
         }
         else
         {
-            final int expectedSeqNo = expectedReceivedSeqNum();
-            if (expectedSeqNo == msgSeqNum)
-            {
-                incNextReceivedInboundMessageTime(time);
-                lastReceivedMsgSeqNum(msgSeqNum);
-            }
-            else if (expectedSeqNo < msgSeqNum)
-            {
-                return requestResend(expectedSeqNo, msgSeqNum);
-            }
-            else if (/* expectedSeqNo > msgSeqNo && */ !isPossDupOrResend)
-            {
-                return msgSeqNumTooLow(msgSeqNum, expectedSeqNo);
-            }
+            return handleNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend);
         }
 
         return CONTINUE;
     }
 
+    private Action handleNormalSeqNoChange(final int msgSeqNum, final long time, final boolean isPossDupOrResend)
+    {
+        final int expectedSeqNo = expectedReceivedSeqNum();
+        if (expectedSeqNo == msgSeqNum)
+        {
+            incNextReceivedInboundMessageTime(time);
+            lastReceivedMsgSeqNum(msgSeqNum);
+        }
+        else if (expectedSeqNo < msgSeqNum)
+        {
+            return requestResend(expectedSeqNo, msgSeqNum);
+        }
+        else if (/* expectedSeqNo > msgSeqNo && */ !isPossDupOrResend)
+        {
+            return msgSeqNumTooLow(msgSeqNum, expectedSeqNo);
+        }
+        return CONTINUE;
+    }
+
     private int endOfResendMsgSeqNum()
     {
-        return lastReceivedMsgSeqNum - 1;
+        return endOfResendRequestRange;
     }
 
     Action requestResend(final int expectedSeqNo, final int receivedMsgSeqNo)
@@ -802,6 +830,7 @@ public class Session implements AutoCloseable
             awaitingResend = true;
             lastResentMsgSeqNo = expectedSeqNo - 1;
             lastReceivedMsgSeqNum = receivedMsgSeqNo;
+            endOfResendRequestRange = receivedMsgSeqNo - 1;
         }
         return checkPosition(position);
     }
@@ -1239,6 +1268,7 @@ public class Session implements AutoCloseable
                     awaitingResend = false;
                     lastResentMsgSeqNo = 0;
                     lastResendChunkMsgSeqNum = 0;
+                    endOfResendRequestRange = 0;
                 }
                 else
                 {
@@ -1440,9 +1470,9 @@ public class Session implements AutoCloseable
         final long origSendingTime,
         final boolean isPossDupOrResend, final boolean possDup)
     {
-        if (awaitingResend && CodecUtil.equals(testReqID, TEST_REQ_ID_CHARS, testReqIDLength))
+        if (awaitingHeartbeat && CodecUtil.equals(testReqID, TEST_REQ_ID_CHARS, testReqIDLength))
         {
-            awaitingResend = false;
+            awaitingHeartbeat = false;
         }
 
         return onMessage(
@@ -1536,7 +1566,7 @@ public class Session implements AutoCloseable
 
                 if (time >= nextRequiredInboundMessageTimeInMs)
                 {
-                    if (state == AWAITING_LOGOUT_VALUE || awaitingResend)
+                    if (state == AWAITING_LOGOUT_VALUE || awaitingHeartbeat)
                     {
                         // Drop when back pressured: retried on duty cycle
                         requestDisconnect();
@@ -1547,7 +1577,7 @@ public class Session implements AutoCloseable
                         if (proxy.testRequest(sentSeqNum, TEST_REQ_ID, sequenceIndex(), lastMsgSeqNumProcessed) >= 0)
                         {
                             lastSentMsgSeqNum(sentSeqNum);
-                            awaitingResend = true;
+                            awaitingHeartbeat = true;
                             incNextReceivedInboundMessageTime(time);
                         }
                     }

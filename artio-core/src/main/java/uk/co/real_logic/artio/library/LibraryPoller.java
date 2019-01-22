@@ -232,7 +232,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             session.id(),
             correlationId,
             session.state(),
-            session.isAwaitingResend(),
+            session.awaitingResend(),
             session.heartbeatIntervalInMs(),
             session.lastSentMsgSeqNum(),
             session.lastReceivedMsgSeqNum(),
