@@ -239,6 +239,20 @@ public class EncoderGeneratorTest
     }
 
     @Test
+    public void encodeDecimalFloatUsingRawValueAndScale() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+
+        setRequiredFields(encoder);
+        setFloatFieldRawValues(encoder);
+        setupHeader(encoder);
+        setupTrailer(encoder);
+
+        setOptionalFields(encoder);
+        assertEncodesTo(encoder, ENCODED_MESSAGE);
+    }
+
+    @Test
     public void ignoresMissingOptionalValues() throws Exception
     {
         final Encoder encoder = newHeartbeat();
@@ -735,6 +749,11 @@ public class EncoderGeneratorTest
     private void setFloatField(final Encoder encoder) throws Exception
     {
         setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
+    }
+
+    private void setFloatFieldRawValues(final Encoder encoder) throws Exception
+    {
+        setFloat(encoder, FLOAT_FIELD, 11, 1);
     }
 
     private void setIntField(final Encoder encoder) throws Exception
