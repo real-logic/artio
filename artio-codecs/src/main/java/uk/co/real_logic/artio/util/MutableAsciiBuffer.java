@@ -556,7 +556,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         // Encode the value into a tmp space, leaving the longest possible space required
         final int tmpEnd = start + LONGEST_LONG_LENGTH;
         final int tmpStart = putLong(remainder, tmpEnd) + 1;
-        final int length = tmpEnd - tmpStart + DOT_LENGTH;
+        final int length = tmpEnd - tmpStart + 1;
 
         // Move the value to the beginning once you've encoded it
         if (scale > 0)
@@ -564,9 +564,10 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
             final int end = start + length;
             final int split = end - scale;
             final int digitsBeforeDot = length - scale;
-            if (digitsBeforeDot < 0)
+            if (digitsBeforeDot <= 0)
             {
                 int cursor = start;
+                putByte(cursor++, ZERO);
                 putByte(cursor++, DOT);
                 final int numberOfZeros = -digitsBeforeDot;
                 final int endOfZeros = cursor + numberOfZeros;
@@ -576,15 +577,16 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
                 }
                 putBytes(cursor, this, tmpStart, length);
 
-                return minusAdj + numberOfZeros + DOT_LENGTH + length;
+                return minusAdj + ZERO_LENGTH + DOT_LENGTH + numberOfZeros + length;
             }
             else
             {
                 putBytes(start, this, tmpStart, digitsBeforeDot);
                 putByte(split, DOT);
                 putBytes(split + 1, this, tmpStart + digitsBeforeDot, scale);
+
+                return minusAdj + length + DOT_LENGTH;
             }
-            return length + DOT_LENGTH + minusAdj;
         }
         else
         {

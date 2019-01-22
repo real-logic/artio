@@ -48,6 +48,6 @@ public class DecimalFloatToStringTest
     {
         final DecimalFloat price = new DecimalFloat(value, scale);
 
-        assertEquals(input, price.toString());
+        assertEquals(Float.valueOf(input), Float.valueOf(price.toString()));
     }
 }
