@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.fields;
 
-import java.math.BigDecimal;
+import java.util.Arrays;
 
 /**
  * Fix float data type. Floats are used for a variety of things, including price.
@@ -182,9 +182,38 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         return 31 * result + scale;
     }
 
-    public String toString() {
-        BigDecimal bigDecimal = BigDecimal.valueOf(value, scale);
-        return bigDecimal.toPlainString();
+    public String toString()
+    {
+        String value = String.valueOf(this.value);
+        if (scale > 0)
+        {
+            final boolean isNegative = this.value < 0;
+            final int split = value.length() - scale;
+            final int splitWithNegative = split - (isNegative ? 1 : 0);
+            if (splitWithNegative < 0)
+            {
+                // We have to add extra zeros between the start or '-' and the First Digit.
+                final StringBuilder builder = new StringBuilder();
+
+                if (isNegative)
+                {
+                    value = String.valueOf(-this.value());
+                    builder.append('-');
+                }
+
+                final char[] zeros = new char[-splitWithNegative];
+                Arrays.fill(zeros, '0');
+                return builder
+                    .append('.')
+                    .append(zeros)
+                    .append(value).toString();
+            }
+            return value.substring(0, split) + "." + value.substring(split);
+        }
+        else
+        {
+            return value;
+        }
     }
 
     public int compareTo(final DecimalFloat other)
