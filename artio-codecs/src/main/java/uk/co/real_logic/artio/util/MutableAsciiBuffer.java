@@ -32,8 +32,6 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     private static final byte Y = (byte)'Y';
     private static final byte N = (byte)'N';
 
-    private static final int MAX_DIGITS_OF_LONG = 19;
-
     private static final int[] INT_ROUNDS =
     {
         9, 99, 999, 9999, 99999, 999999, 9999999, 99999999, 999999999, Integer.MAX_VALUE
@@ -45,30 +43,6 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         9_999999999L, 99_999999999L, 999_999999999L, 9999_999999999L,
         99999_999999999L, 999999_999999999L, 9999999_999999999L, 99999999_999999999L,
         999999999_999999999L, Long.MAX_VALUE
-    };
-
-    private static final long[] CEIL_VAL_AT_SCALE =
-    {
-        0L, // scale=0 , irrelevant entry, just place holder
-        10L,
-        100L,
-        1_000L, // scale=3
-        10_000L,
-        100_000L,
-        1_000_000L,  // scale=6
-        10_000_000L,
-        100_000_000L,
-        1_000_000_000L,  // scale=9
-        10_000_000_000L,
-        100_000_000_000L,
-        1_000_000_000_000L, // scale=12
-        10_000_000_000_000L,
-        100_000_000_000_000L,
-        1_000_000_000_000_000L, // scale=15
-        10_000_000_000_000_000L,
-        100_000_000_000_000_000L,
-        1_000_000_000_000_000_000L, // scale=18
-        //10_000_000_000_000_000_000L, // scale=19
     };
 
     private static final byte[] MIN_INTEGER_VALUE = String.valueOf(Integer.MIN_VALUE).getBytes(US_ASCII);
@@ -577,23 +551,23 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
         final long remainder = calculateRemainderAndPutMinus(offset, value);
         final int minusAdj = value < 0 ? 1 : 0;
-        final int leadingZeroAdj = checkForLeadingZeroAndPutIfNeeded(offset + minusAdj, value, scale);
-        final int start = offset + minusAdj + leadingZeroAdj;
+        final int start = offset + minusAdj;
 
         // Encode the value into a tmp space, leaving the longest possible space required
         final int tmpEnd = start + LONGEST_LONG_LENGTH;
         final int tmpStart = putLong(remainder, tmpEnd) + 1;
-        final int length = tmpEnd - tmpStart + DOT_LENGTH;
+        final int length = tmpEnd - tmpStart + 1;
 
         // Move the value to the beginning once you've encoded it
         if (scale > 0)
         {
+            final int digitsBeforeDot = length - scale;
             final int end = start + length;
             final int split = end - scale;
-            final int digitsBeforeDot = length - scale;
-            if (digitsBeforeDot < 0)
+            if (digitsBeforeDot <= 0)
             {
                 int cursor = start;
+                putByte(cursor++, ZERO);
                 putByte(cursor++, DOT);
                 final int numberOfZeros = -digitsBeforeDot;
                 final int endOfZeros = cursor + numberOfZeros;
@@ -603,20 +577,21 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
                 }
                 putBytes(cursor, this, tmpStart, length);
 
-                return minusAdj + leadingZeroAdj + numberOfZeros + DOT_LENGTH + length;
+                return minusAdj + ZERO_LENGTH + DOT_LENGTH + numberOfZeros + length;
             }
             else
             {
                 putBytes(start, this, tmpStart, digitsBeforeDot);
                 putByte(split, DOT);
                 putBytes(split + 1, this, tmpStart + digitsBeforeDot, scale);
+
+                return minusAdj + length + DOT_LENGTH;
             }
-            return length + DOT_LENGTH + minusAdj + leadingZeroAdj;
         }
         else
         {
             putBytes(start, this, tmpStart, length);
-            return length + minusAdj + leadingZeroAdj;
+            return length + minusAdj;
         }
     }
 
@@ -642,16 +617,6 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
             // Deal with negatives to avoid overflow for Integer.MAX_VALUE
             return -1L * value;
         }
-    }
-
-    private int checkForLeadingZeroAndPutIfNeeded(final int offset, final long value, final int scale)
-    {
-        if (scale >= MAX_DIGITS_OF_LONG || CEIL_VAL_AT_SCALE[scale] > Math.abs(value))
-        {
-            putByte(offset, ZERO);
-            return 1;
-        }
-        return 0;
     }
 
     @SuppressWarnings("FinalParameters")

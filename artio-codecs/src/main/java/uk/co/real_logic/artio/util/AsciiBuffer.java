@@ -32,6 +32,7 @@ public interface AsciiBuffer extends DirectBuffer
     int LONGEST_FLOAT_LENGTH = LONGEST_LONG_LENGTH + 3 + 1/*leading zero*/;
     int SEPARATOR_LENGTH = 1;
     int DOT_LENGTH = 1;
+    int ZERO_LENGTH = 1;
 
     byte SEPARATOR = (byte)'\001';
 
