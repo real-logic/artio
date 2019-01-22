@@ -561,9 +561,9 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         // Move the value to the beginning once you've encoded it
         if (scale > 0)
         {
-            final int digitsBeforeDot = length - scale;
             final int end = start + length;
             final int split = end - scale;
+            final int digitsBeforeDot = length - scale;
             if (digitsBeforeDot <= 0)
             {
                 int cursor = start;
