@@ -218,17 +218,33 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
 
     public int compareTo(final DecimalFloat other)
     {
+        final long value = this.value;
+        final long otherValue = other.value;
+
         final boolean isPositive = value >= 0;
-        final int negativeComparison = Boolean.compare(isPositive, other.value >= 0);
+        final int negativeComparison = Boolean.compare(isPositive, otherValue >= 0);
         if (negativeComparison != 0)
         {
             return negativeComparison;
         }
 
         final int scaleComparison = Integer.compare(scale, other.scale);
-        return scaleComparison == 0 ?
-            Long.compare(value, other.value) :
-            !isPositive ? -1 * scaleComparison : scaleComparison;
+        if (scaleComparison == 0)
+        {
+            return Long.compare(value, otherValue);
+        }
+        else if (value == 0)
+        {
+            return -1;
+        }
+        else if (otherValue == 0)
+        {
+            return 1;
+        }
+        else
+        {
+            return isPositive ? -1 * scaleComparison : scaleComparison;
+        }
     }
 
     public double toDouble()
