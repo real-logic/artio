@@ -182,8 +182,9 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         return 31 * result + scale;
     }
 
-    public String toString() {
-        BigDecimal bigDecimal = BigDecimal.valueOf(value, scale);
+    public String toString()
+    {
+        final BigDecimal bigDecimal = BigDecimal.valueOf(value, scale);
         return bigDecimal.toPlainString();
     }
 
