@@ -36,6 +36,9 @@ public class DecimalFloatTest
         assertThat(ZERO, comparesEqualTo(ZERO));
         assertThat(FIVE, comparesEqualTo(new DecimalFloat(5, 0)));
         assertThat(MINUS_FIVE, comparesEqualTo(new DecimalFloat(-5, 0)));
+
+        assertThat(new DecimalFloat(54321, 3), comparesEqualTo(new DecimalFloat(543210, 4)));
+        assertThat(new DecimalFloat(543210, 4), comparesEqualTo(new DecimalFloat(54321, 3)));
     }
 
     @Test
