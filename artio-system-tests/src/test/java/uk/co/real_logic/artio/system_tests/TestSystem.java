@@ -146,7 +146,7 @@ public class TestSystem
         {
             poll();
 
-            return session.lastReceivedMsgSeqNum() >= sequenceNumber;
+            return session.lastReceivedMsgSeqNum() == sequenceNumber;
         });
     }
 

@@ -712,6 +712,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final Reply<?> resetSequenceNumber = resetSequenceNumber(sessionId);
         replyCompleted(resetSequenceNumber);
 
+        testSystem.awaitReceivedSequenceNumber(acceptingSession, 1);
+
         assertInitSeqNum(1, 1, 1);
         assertAccSeqNum(1, 1, 1);
     }
