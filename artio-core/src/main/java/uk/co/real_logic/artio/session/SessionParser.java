@@ -101,29 +101,41 @@ public class SessionParser
     {
         asciiBuffer.wrap(buffer);
 
+        Action action = null;
+
         switch (messageType)
         {
             case LogonDecoder.MESSAGE_TYPE:
-                return onLogon(offset, length, sessionId);
+                action = onLogon(offset, length, sessionId);
+                break;
 
             case LogoutDecoder.MESSAGE_TYPE:
-                return onLogout(offset, length);
+                action = onLogout(offset, length);
+                break;
 
             case HeartbeatDecoder.MESSAGE_TYPE:
-                return onHeartbeat(offset, length);
+                action = onHeartbeat(offset, length);
+                break;
 
             case RejectDecoder.MESSAGE_TYPE:
-                return onReject(offset, length);
+                action = onReject(offset, length);
+                break;
 
             case TestRequestDecoder.MESSAGE_TYPE:
-                return onTestRequest(offset, length);
+                action = onTestRequest(offset, length);
+                break;
 
             case SequenceResetDecoder.MESSAGE_TYPE:
-                return onSequenceReset(offset, length);
+                action = onSequenceReset(offset, length);
+                break;
 
             default:
                 return onAnyOtherMessage(offset, length);
         }
+
+        // Consider admin messages processed when they've been received by the session logic
+        session.updateLastMessageProcessed();
+        return action;
     }
 
     private Action onHeartbeat(final int offset, final int length)

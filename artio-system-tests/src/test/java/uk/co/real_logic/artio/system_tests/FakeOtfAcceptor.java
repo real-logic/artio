@@ -138,6 +138,11 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         return receivedMessages.get(receivedMessages.size() - 1);
     }
 
+    public int lastReceivedMsgSeqNumProcessed()
+    {
+        return lastReceivedMessage().lastMsgSeqNumProcessed();
+    }
+
     public Stream<FixMessage> hasReceivedMessage(final String messageType)
     {
         return messages()

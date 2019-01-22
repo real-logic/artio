@@ -501,7 +501,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             ACCEPTOR,
             configuration.acceptedSessionClosedResendInterval(),
             configuration.acceptedSessionResendRequestChunkSize(),
-            configuration.acceptedSessionSendRedundantResendRequests());
+            configuration.acceptedSessionSendRedundantResendRequests(),
+            configuration.acceptedEnableLastMsgSeqNumProcessed());
 
         session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
 
@@ -544,6 +545,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final boolean closedResendInterval,
         final int resendRequestChunkSize,
         final boolean sendRedundantResendRequests,
+        final boolean enableLastMsgSeqNumProcessed,
         final String username,
         final String password,
         final int heartbeatIntervalInS,
@@ -562,15 +564,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final boolean logOutboundMessages = configuration.logOutboundMessages();
         if (sequenceNumberType == PERSISTENT && !configuration.logAllMessages())
         {
-            final String msg =
-                "You need to enable the logging of inbound and outbound messages on your EngineConfiguration" +
-                "in order to initiate a connection with persistent sequence numbers. " +
-                "logInboundMessages = " + logInboundMessages +
-                "logOutboundMessages = " + logOutboundMessages;
-
-            saveError(INVALID_CONFIGURATION, libraryId, correlationId, msg);
-
-            return CONTINUE;
+            return badSequenceNumberConfiguration(libraryId, correlationId, logInboundMessages, logOutboundMessages);
         }
 
         final CompositeKey sessionKey = sessionIdStrategy.onInitiateLogon(
@@ -627,6 +621,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         closedResendInterval,
                         resendRequestChunkSize,
                         sendRedundantResendRequests,
+                        enableLastMsgSeqNumProcessed,
                         username,
                         password,
                         heartbeatIntervalInS,
@@ -650,6 +645,23 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
+    private Action badSequenceNumberConfiguration(
+        final int libraryId,
+        final long correlationId,
+        final boolean logInboundMessages,
+        final boolean logOutboundMessages)
+    {
+        final String msg =
+            "You need to enable the logging of inbound and outbound messages on your EngineConfiguration" +
+            "in order to initiate a connection with persistent sequence numbers. " +
+            "logInboundMessages = " + logInboundMessages +
+            "logOutboundMessages = " + logOutboundMessages;
+
+        saveError(INVALID_CONFIGURATION, libraryId, correlationId, msg);
+
+        return CONTINUE;
+    }
+
     private void onConnectionOpen(
         final int libraryId,
         final String senderCompId,
@@ -663,6 +675,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final boolean closedResendInterval,
         final int resendRequestChunkSize,
         final boolean sendRedundantResendRequests,
+        final boolean enableLastMsgSeqNumProcessed,
         final String username,
         final String password,
         final int heartbeatIntervalInS,
@@ -693,7 +706,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 INITIATOR,
                 closedResendInterval,
                 resendRequestChunkSize,
-                sendRedundantResendRequests);
+                sendRedundantResendRequests,
+                enableLastMsgSeqNumProcessed);
 
             library.addSession(gatewaySession);
 
@@ -732,6 +746,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         closedResendInterval,
                         resendRequestChunkSize,
                         sendRedundantResendRequests,
+                        enableLastMsgSeqNumProcessed,
                         correlationId,
                         sessionContext.sequenceIndex(),
                         senderCompId,
@@ -816,7 +831,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final ConnectionType connectionType,
         final boolean closedResendInterval,
         final int resendRequestChunkSize,
-        final boolean sendRedundantResendRequests)
+        final boolean sendRedundantResendRequests,
+        final boolean enableLastMsgSeqNumProcessed)
     {
         final ReceiverEndPoint receiverEndPoint = endPointFactory.receiverEndPoint(
             channel,
@@ -843,7 +859,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             this.onSessionlogon,
             closedResendInterval,
             resendRequestChunkSize,
-            sendRedundantResendRequests);
+            sendRedundantResendRequests,
+            enableLastMsgSeqNumProcessed);
 
         receiverEndPoint.gatewaySession(gatewaySession);
 
@@ -978,9 +995,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long heartbeatIntervalInMs,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
-        final boolean closedResendInterval,
-        final int resendRequestChunkSize,
-        final boolean sendRedundantResendRequests,
         final String username,
         final String password,
         final Header header)
@@ -1113,6 +1127,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySession.closedResendInterval(),
             gatewaySession.resendRequestChunkSize(),
             gatewaySession.sendRedundantResendRequests(),
+            gatewaySession.enableLastMsgSeqNumProcessed(),
             correlationId,
             gatewaySession.sequenceIndex(),
             session.compositeKey().localCompId(),
@@ -1165,6 +1180,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 gatewaySession.closedResendInterval(),
                 gatewaySession.resendRequestChunkSize(),
                 gatewaySession.sendRedundantResendRequests(),
+                gatewaySession.enableLastMsgSeqNumProcessed(),
                 NO_CORRELATION_ID,
                 gatewaySession.sequenceIndex(),
                 compositeKey.localCompId(),
@@ -1279,6 +1295,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 gatewaySession.closedResendInterval(),
                 gatewaySession.resendRequestChunkSize(),
                 gatewaySession.sendRedundantResendRequests(),
+                gatewaySession.enableLastMsgSeqNumProcessed(),
                 NO_CORRELATION_ID,
                 gatewaySession.sequenceIndex(),
                 key.localCompId(),

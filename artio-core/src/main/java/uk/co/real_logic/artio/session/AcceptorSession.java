@@ -38,7 +38,8 @@ public class AcceptorSession extends InternalSession
         final int sequenceIndex,
         final SessionState state,
         final long reasonableTransmissionTimeInMs,
-        final MutableAsciiBuffer asciiBuffer)
+        final MutableAsciiBuffer asciiBuffer,
+        final boolean enableLastMsgSeqNumProcessed)
     {
         super(
             defaultInterval,
@@ -55,6 +56,7 @@ public class AcceptorSession extends InternalSession
             initialSequenceNumber,
             sequenceIndex,
             reasonableTransmissionTimeInMs,
-            asciiBuffer);
+            asciiBuffer,
+            enableLastMsgSeqNumProcessed);
     }
 }

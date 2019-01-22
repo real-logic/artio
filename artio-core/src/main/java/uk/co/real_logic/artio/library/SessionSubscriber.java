@@ -74,7 +74,7 @@ class SessionSubscriber implements AutoCloseable
                     }
 
                     // Can receive messages when no longer disconnected.
-                    return handler.onMessage(
+                    final Action handlerAction = handler.onMessage(
                         buffer,
                         offset,
                         length,
@@ -84,6 +84,13 @@ class SessionSubscriber implements AutoCloseable
                         messageType,
                         timestamp,
                         position);
+
+                    if (handlerAction == CONTINUE || handlerAction == COMMIT)
+                    {
+                        session.updateLastMessageProcessed();
+                    }
+
+                    return handlerAction;
 
                 case CATCHUP_REPLAY:
                     return handler.onMessage(

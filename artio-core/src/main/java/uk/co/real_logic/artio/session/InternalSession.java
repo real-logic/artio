@@ -41,7 +41,8 @@ public class InternalSession extends Session
         final int initialSentSequenceNumber,
         final int sequenceIndex,
         final long reasonableTransmissionTimeInMs,
-        final MutableAsciiBuffer asciiBuffer)
+        final MutableAsciiBuffer asciiBuffer,
+        final boolean enableLastMsgSeqNumProcessed)
     {
         super(
             heartbeatIntervalInS,
@@ -58,7 +59,8 @@ public class InternalSession extends Session
             initialSentSequenceNumber,
             sequenceIndex,
             reasonableTransmissionTimeInMs,
-            asciiBuffer);
+            asciiBuffer,
+            enableLastMsgSeqNumProcessed);
     }
 
     public int poll(final long time)
@@ -119,5 +121,10 @@ public class InternalSession extends Session
     public void sendRedundantResendRequests(final boolean sendRedundantResendRequests)
     {
         super.sendRedundantResendRequests(sendRedundantResendRequests);
+    }
+
+    public void updateLastMessageProcessed()
+    {
+        super.updateLastMessageProcessed();
     }
 }

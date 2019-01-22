@@ -405,6 +405,7 @@ public class LibraryPollerTest
             DEFAULT_CLOSED_RESEND_INTERVAL,
             NO_RESEND_REQUEST_CHUNK_SIZE,
             DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS,
+            DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED,
             REPLY_TO_ID,
             SEQUENCE_INDEX,
             "",

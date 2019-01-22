@@ -138,9 +138,6 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             releaseSession.heartbeatIntervalInMs(),
             releaseSession.lastSentSequenceNumber(),
             releaseSession.lastReceivedSequenceNumber(),
-            releaseSession.closedResendInterval() == Bool.TRUE,
-            releaseSession.resendRequestChunkSize(),
-            releaseSession.sendRedundantResendRequests() == Bool.TRUE,
             releaseSession.username(),
             releaseSession.password(),
             header);
@@ -200,6 +197,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             initiateConnection.closedResendInterval() == Bool.TRUE,
             initiateConnection.resendRequestChunkSize(),
             initiateConnection.sendRedundantResendRequests() == Bool.TRUE,
+            initiateConnection.enableLastMsgSeqNumProcessed() == Bool.TRUE,
             initiateConnection.username(),
             initiateConnection.password(),
             initiateConnection.heartbeatIntervalInS(),

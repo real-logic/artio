@@ -186,6 +186,7 @@
         <field name="closedResendInterval" id="18" type="Bool" />
         <field name="resendRequestChunkSize" id="19" type="int32" />
         <field name="sendRedundantResendRequests" id="20" type="Bool" />
+        <field name="enableLastMsgSeqNumProcessed" id="21" type="Bool" />
         <data name="host" id="8" type="Utf8String"/>
         <data name="senderCompId" id="9" type="Utf8String"/>
         <data name="senderSubId" id="10" type="Utf8String"/>
@@ -222,9 +223,6 @@
         <field name="lastSentSequenceNumber" id="7" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="8" type="int32"/>
         <field name="awaitingResend" id="11" type="AwaitingResend" />
-        <field name="closedResendInterval" id="12" type="Bool" />
-        <field name="resendRequestChunkSize" id="13" type="int32" />
-        <field name="sendRedundantResendRequests" id="14" type="Bool" />
         <data name="username" id="9" type="Utf8String"/>
         <data name="password" id="10" type="Utf8String"/>
     </sbe:message>
@@ -271,6 +269,7 @@
         <field name="closedResendInterval" id="22" type="Bool" />
         <field name="resendRequestChunkSize" id="23" type="int32" />
         <field name="sendRedundantResendRequests" id="24" type="Bool" />
+        <field name="enableLastMsgSeqNumProcessed" id="25" type="Bool" />
         <data name="localCompId" id="14" type="Utf8String"/>
         <data name="localSubId" id="15" type="Utf8String"/>
         <data name="localLocationId" id="16" type="Utf8String"/>

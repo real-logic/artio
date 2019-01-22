@@ -55,6 +55,7 @@ public interface LibraryEndPointHandler
         boolean closedResendInterval,
         int resendRequestChunkSize,
         boolean sendRedundantResendRequests,
+        boolean enableLastMsgSeqNumProcessed,
         long correlationId,
         int sequenceIndex,
         String localCompId,

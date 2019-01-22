@@ -27,8 +27,11 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
 import static uk.co.real_logic.artio.fields.RejectReason.SENDINGTIME_ACCURACY_PROBLEM;
+import static uk.co.real_logic.artio.library.SessionConfiguration.DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED;
 import static uk.co.real_logic.artio.messages.SessionState.*;
-import static uk.co.real_logic.artio.session.Session.*;
+import static uk.co.real_logic.artio.session.Session.ACTIVE_VALUE;
+import static uk.co.real_logic.artio.session.Session.UNKNOWN;
+import static uk.co.real_logic.artio.session.SessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
 
 public class AcceptorSessionTest extends AbstractSessionTest
 {
@@ -50,7 +53,8 @@ public class AcceptorSessionTest extends AbstractSessionTest
             SEQUENCE_INDEX,
             CONNECTED,
             DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
-            new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]));
+            new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]),
+            DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED);
         acceptorSession.logonListener(mockLogonListener);
         return acceptorSession;
     }
@@ -89,7 +93,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
         verifySessionSetup();
         verifyLogon();
-        verify(mockProxy).resendRequest(2, 1, 0, SEQUENCE_INDEX);
+        verify(mockProxy).resendRequest(2, 1, 0, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
         verify(mockProxy).isSeqNumResetRequested();
         verifyNoFurtherMessages();
     }
@@ -130,7 +134,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     @Test
     public void shouldDisconnectIfInvalidSendingTimeAtLogonWhenBackPressured()
     {
-        when(mockProxy.rejectWhilstNotLoggedOn(anyInt(), any(), eq(SEQUENCE_INDEX)))
+        when(mockProxy.rejectWhilstNotLoggedOn(anyInt(), any(), eq(SEQUENCE_INDEX), anyInt()))
             .thenReturn(BACK_PRESSURED, POSITION);
 
         logonWithInvalidSendingTime(ABORT);
@@ -179,12 +183,13 @@ public class AcceptorSessionTest extends AbstractSessionTest
     private void verifySendingTimeAccuracyLogout()
     {
         verify(mockProxy, times(1)).logout(3, SEQUENCE_INDEX,
-            SENDINGTIME_ACCURACY_PROBLEM.representation());
+            SENDINGTIME_ACCURACY_PROBLEM.representation(), NO_LAST_MSG_SEQ_NUM_PROCESSED);
     }
 
     private void verifySendingTimeAccuracyProblem(final int times)
     {
-        verify(mockProxy, times(times)).rejectWhilstNotLoggedOn(1, SENDINGTIME_ACCURACY_PROBLEM, SEQUENCE_INDEX);
+        verify(mockProxy, times(times)).rejectWhilstNotLoggedOn(
+            1, SENDINGTIME_ACCURACY_PROBLEM, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
     }
 
     private void logonWithInvalidSendingTime(final Action expectedAction)
@@ -214,7 +219,8 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
     private void verifyLogon()
     {
-        verify(mockProxy).logon(HEARTBEAT_INTERVAL, 1, null, null, false, SEQUENCE_INDEX);
+        verify(mockProxy).logon(
+            HEARTBEAT_INTERVAL, 1, null, null, false, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
     }
 
     private void verifySessionSetup()

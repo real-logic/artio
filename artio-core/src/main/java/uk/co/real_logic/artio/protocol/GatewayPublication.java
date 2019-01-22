@@ -217,6 +217,7 @@ public class GatewayPublication extends ClaimablePublication
         final boolean closedResendInterval,
         final int resendRequestChunkSize,
         final boolean sendRedundantResendRequests,
+        final boolean enableLastMsgSeqNumProcessed,
         final long replyToId,
         final int sequenceIndex,
         final String localCompId,
@@ -264,6 +265,7 @@ public class GatewayPublication extends ClaimablePublication
             .closedResendInterval(toBool(closedResendInterval))
             .resendRequestChunkSize(resendRequestChunkSize)
             .sendRedundantResendRequests(toBool(sendRedundantResendRequests))
+            .enableLastMsgSeqNumProcessed(toBool(enableLastMsgSeqNumProcessed))
             .replyToId(replyToId)
             .sequenceIndex(sequenceIndex)
             .putLocalCompId(localCompIdBytes, 0, localCompIdBytes.length)
@@ -431,6 +433,7 @@ public class GatewayPublication extends ClaimablePublication
         final boolean closedResendInterval,
         final int resendRequestChunkSize,
         final boolean sendRedundantResendRequests,
+        final boolean enableLastMsgSeqNumProcessed,
         final String username,
         final String password,
         final int heartbeatIntervalInS,
@@ -471,6 +474,7 @@ public class GatewayPublication extends ClaimablePublication
             .closedResendInterval(toBool(closedResendInterval))
             .resendRequestChunkSize(resendRequestChunkSize)
             .sendRedundantResendRequests(toBool(sendRedundantResendRequests))
+            .enableLastMsgSeqNumProcessed(toBool(enableLastMsgSeqNumProcessed))
             .putHost(hostBytes, 0, hostBytes.length)
             .putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length)
             .putSenderSubId(senderSubIdBytes, 0, senderSubIdBytes.length)
@@ -575,9 +579,6 @@ public class GatewayPublication extends ClaimablePublication
         final long heartbeatIntervalInMs,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
-        final boolean closedResendInterval,
-        final int resendRequestChunkSize,
-        final boolean sendRedundantResendRequests,
         final String username,
         final String password)
     {
@@ -603,9 +604,6 @@ public class GatewayPublication extends ClaimablePublication
             .awaitingResend(encodeAwaitingResend(awaitingResend))
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
-            .closedResendInterval(toBool(closedResendInterval))
-            .resendRequestChunkSize(resendRequestChunkSize)
-            .sendRedundantResendRequests(toBool(sendRedundantResendRequests))
             .putUsername(usernameBytes, 0, usernameBytes.length)
             .putPassword(passwordBytes, 0, passwordBytes.length);
 

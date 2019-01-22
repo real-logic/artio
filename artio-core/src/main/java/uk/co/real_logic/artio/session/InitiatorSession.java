@@ -45,7 +45,8 @@ public class InitiatorSession extends InternalSession
         final SessionState state,
         final boolean resetSeqNum,
         final long reasonableTransmissionTimeInMs,
-        final MutableAsciiBuffer asciiBuffer)
+        final MutableAsciiBuffer asciiBuffer,
+        final boolean enableLastMsgSeqNumProcessed)
     {
         super(
             heartbeatInterval,
@@ -62,7 +63,8 @@ public class InitiatorSession extends InternalSession
             initialSentSequenceNumber,
             sequenceIndex,
             reasonableTransmissionTimeInMs,
-            asciiBuffer);
+            asciiBuffer,
+            enableLastMsgSeqNumProcessed);
         this.resetSeqNum = resetSeqNum;
     }
 
@@ -168,7 +170,8 @@ public class InitiatorSession extends InternalSession
                 username(),
                 password(),
                 resetSeqNum,
-                sequenceIndex());
+                sequenceIndex(),
+                lastMsgSeqNumProcessed());
             if (position >= 0)
             {
                 lastSentMsgSeqNum(sentSeqNum);

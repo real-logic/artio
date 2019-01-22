@@ -69,8 +69,8 @@ public final class SystemTestUtil
     static final int LIBRARY_LIMIT = 2;
 
     private static final String HI_ID = "hi";
-    private static final String USERNAME = "bob";
-    private static final String PASSWORD = "Uv1aegoh";
+    static final String USERNAME = "bob";
+    static final String PASSWORD = "Uv1aegoh";
 
     static
     {

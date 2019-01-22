@@ -287,6 +287,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.closedResendInterval() == Bool.TRUE,
             manageSession.resendRequestChunkSize(),
             manageSession.sendRedundantResendRequests() == Bool.TRUE,
+            manageSession.enableLastMsgSeqNumProcessed() == Bool.TRUE,
             manageSession.replyToId(),
             manageSession.sequenceIndex(),
             manageSession.localCompId(),
