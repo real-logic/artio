@@ -23,10 +23,19 @@ import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.agrona.concurrent.status.CountersManager.DEFAULT_TYPE_ID;
-
 public class FixCounters implements AutoCloseable
 {
+
+    private static final int MINIMUM_ARTIO_TYPE_ID = 10_000;
+    private static final int FAILED_INBOUND_TYPE_ID = MINIMUM_ARTIO_TYPE_ID;
+    private static final int FAILED_OUTBOUND_TYPE_ID = 10_001;
+    private static final int FAILED_REPLAY_TYPE_ID = 10_002;
+    private static final int MESSAGES_READ_TYPE_ID = 10_003;
+    private static final int BYTES_IN_BUFFER_TYPE_ID = 10_004;
+    private static final int INVALID_LIBRARY_ATTEMPTS_TYPE_ID = 10_005;
+    private static final int SENT_MSG_SEQ_NO_TYPE_ID = 10_006;
+    private static final int RECV_MSG_SEQ_NO_TYPE_ID = 10_007;
+
     private final List<Counter> counters = new ArrayList<>();
     private final AtomicCounter failedInboundPublications;
     private final AtomicCounter failedOutboundPublications;
@@ -36,9 +45,9 @@ public class FixCounters implements AutoCloseable
     FixCounters(final Aeron aeron)
     {
         this.aeron = aeron;
-        failedInboundPublications = newCounter(DEFAULT_TYPE_ID, "Failed offer to inbound publication");
-        failedOutboundPublications = newCounter(DEFAULT_TYPE_ID, "Failed offer to outbound publication");
-        failedReplayPublications = newCounter(DEFAULT_TYPE_ID, "Failed offer to replay publication");
+        failedInboundPublications = newCounter(FAILED_INBOUND_TYPE_ID, "Failed offer to inbound publication");
+        failedOutboundPublications = newCounter(FAILED_OUTBOUND_TYPE_ID, "Failed offer to outbound publication");
+        failedReplayPublications = newCounter(FAILED_REPLAY_TYPE_ID, "Failed offer to replay publication");
     }
 
     public AtomicCounter failedInboundPublications()
@@ -58,27 +67,28 @@ public class FixCounters implements AutoCloseable
 
     public AtomicCounter messagesRead(final long connectionId, final String address)
     {
-        return newCounter(DEFAULT_TYPE_ID, "Messages Read from " + address + " id = " + connectionId);
+        return newCounter(MESSAGES_READ_TYPE_ID, "Messages Read from " + address + " id = " + connectionId);
     }
 
     public AtomicCounter bytesInBuffer(final long connectionId, final String address)
     {
-        return newCounter(DEFAULT_TYPE_ID, "Quarantined bytes for " + address + " id = " + connectionId);
+        return newCounter(BYTES_IN_BUFFER_TYPE_ID, "Quarantined bytes for " + address + " id = " + connectionId);
     }
 
     public AtomicCounter invalidLibraryAttempts(final long connectionId, final String address)
     {
-        return newCounter(DEFAULT_TYPE_ID, "Invalid Library Attempts for " + address + " id = " + connectionId);
+        return newCounter(INVALID_LIBRARY_ATTEMPTS_TYPE_ID,
+            "Invalid Library Attempts for " + address + " id = " + connectionId);
     }
 
     public AtomicCounter sentMsgSeqNo(final long connectionId)
     {
-        return newCounter(DEFAULT_TYPE_ID, "Last Sent MsgSeqNo for " + connectionId);
+        return newCounter(SENT_MSG_SEQ_NO_TYPE_ID, "Last Sent MsgSeqNo for " + connectionId);
     }
 
     public AtomicCounter receivedMsgSeqNo(final long connectionId)
     {
-        return newCounter(DEFAULT_TYPE_ID, "Last Received MsgSeqNo for " + connectionId);
+        return newCounter(RECV_MSG_SEQ_NO_TYPE_ID, "Last Received MsgSeqNo for " + connectionId);
     }
 
     private AtomicCounter newCounter(final int typeId, final String label)
