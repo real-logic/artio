@@ -48,8 +48,6 @@ public class DecimalFloatToStringTest
     {
         final DecimalFloat price = new DecimalFloat(value, scale);
 
-        // since toString of DecimalFloat does not return leading zeros, it fails
-        //assertEquals(input, price.toString());
         assertEquals(Float.valueOf(input), Float.valueOf(price.toString()));
     }
 }
