@@ -140,7 +140,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         testSystem.send(initiatingSession, resendRequest);
 
-        final FixMessage message = testSystem.await(initiatingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
+        final FixMessage message = testSystem.awaitMessageOf(initiatingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
 
         assertEquals(message.get(Constants.MSG_SEQ_NUM), "1");
         assertEquals(message.get(Constants.SENDER_COMP_ID), ACCEPTOR_ID);
@@ -208,7 +208,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertNull(initiatingSession);
 
         // In this case we just get immediately disconnected.
-        final FixMessage lastMessage = testSystem.await(initiatingOtfAcceptor, LOGOUT_MESSAGE_AS_STR);
+        final FixMessage lastMessage = testSystem.awaitMessageOf(initiatingOtfAcceptor, LOGOUT_MESSAGE_AS_STR);
 
         assertEquals(LOGOUT_MESSAGE_AS_STR, lastMessage.msgType());
         assertEquals(1, lastMessage.messageSequenceNumber());

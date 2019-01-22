@@ -129,7 +129,7 @@ public class TestSystem
         return reply;
     }
 
-    public FixMessage await(final FakeOtfAcceptor otfAcceptor, final String messageType)
+    public FixMessage awaitMessageOf(final FakeOtfAcceptor otfAcceptor, final String messageType)
     {
         return Timing.withTimeout("Never received " + messageType, () ->
         {

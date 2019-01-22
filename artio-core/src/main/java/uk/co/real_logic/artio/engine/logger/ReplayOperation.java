@@ -119,6 +119,12 @@ public class ReplayOperation
                     archiveReplayStream);
 
                 messageTracker.reset();
+
+                // reset the image if the new recordingRange requires it
+                if (image != null && aeronSessionId != image.sessionId())
+                {
+                    image = null;
+                }
             }
             catch (final Throwable exception)
             {

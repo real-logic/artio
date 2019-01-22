@@ -216,11 +216,11 @@ class ReplayerSession implements ControlledFragmentHandler
         {
             if (beginGapFillSeqNum != NONE)
             {
-                sendGapFill(beginGapFillSeqNum, msgSeqNum + 1);
+                sendGapFill(beginGapFillSeqNum, msgSeqNum);
             }
             else if (msgSeqNum > lastSeqNo + 1)
             {
-                sendGapFill(lastSeqNo, msgSeqNum + 1);
+                sendGapFill(lastSeqNo, msgSeqNum);
             }
 
             final Action action = possDupEnabler.enablePossDupFlag(
