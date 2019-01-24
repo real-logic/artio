@@ -540,7 +540,174 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         }
     }
 
-    public int putAsciiFloat(final int offset, final DecimalFloat price)
+    /**
+     *
+     * @see Integer#DigitTens
+     */
+    final static byte [] IntegerDigitTens = {
+            '0', '0', '0', '0', '0', '0', '0', '0', '0', '0',
+            '1', '1', '1', '1', '1', '1', '1', '1', '1', '1',
+            '2', '2', '2', '2', '2', '2', '2', '2', '2', '2',
+            '3', '3', '3', '3', '3', '3', '3', '3', '3', '3',
+            '4', '4', '4', '4', '4', '4', '4', '4', '4', '4',
+            '5', '5', '5', '5', '5', '5', '5', '5', '5', '5',
+            '6', '6', '6', '6', '6', '6', '6', '6', '6', '6',
+            '7', '7', '7', '7', '7', '7', '7', '7', '7', '7',
+            '8', '8', '8', '8', '8', '8', '8', '8', '8', '8',
+            '9', '9', '9', '9', '9', '9', '9', '9', '9', '9',
+    } ;
+
+    /**
+     *
+     * @see Integer#DigitOnes
+     */
+    final static byte [] IntegerDigitOnes = {
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+    } ;
+
+    /**
+     * All possible chars for representing a number as a String
+     *
+     * @see Integer#digits
+     */
+    final static byte[] IntegerDigits = {
+            '0' , '1' , '2' , '3' , '4' , '5' ,
+            '6' , '7' , '8' , '9' , 'a' , 'b' ,
+            'c' , 'd' , 'e' , 'f' , 'g' , 'h' ,
+            'i' , 'j' , 'k' , 'l' , 'm' , 'n' ,
+            'o' , 'p' , 'q' , 'r' , 's' , 't' ,
+            'u' , 'v' , 'w' , 'x' , 'y' , 'z'
+    };
+
+    /**
+     * @see Long#getChars(long, int, char[])
+     * @see java.math.BigDecimal#toPlainString
+     */
+    public int putAsciiFloat(final int offset, final long value, final int scale) {
+        long q;
+        int r;
+        int charPos = offset + LONGEST_FLOAT_LENGTH;
+        final int tmpEnd = charPos;
+        boolean negative = false;
+        long i = value;
+
+        if (i < 0)
+        {
+            negative = true;
+            i = -i;
+        }
+
+        // Get 2 digits/iteration using longs until quotient fits into an int
+        while (i > Integer.MAX_VALUE)
+        {
+            q = i / 100;
+            // really: r = i - (q * 100);
+            r = (int)(i - ((q << 6) + (q << 5) + (q << 2)));
+            i = q;
+            putByte(--charPos, IntegerDigitOnes[r]);
+            putByte(--charPos, IntegerDigitTens[r]);
+        }
+
+        // Get 2 digits/iteration using ints
+        int q2;
+        int i2 = (int)i;
+        while (i2 >= 65536)
+        {
+            q2 = i2 / 100;
+            // really: r = i2 - (q * 100);
+            r = i2 - ((q2 << 6) + (q2 << 5) + (q2 << 2));
+            i2 = q2;
+            putByte(--charPos, IntegerDigitOnes[r]);
+            putByte(--charPos, IntegerDigitTens[r]);
+        }
+
+        // Fall thru to fast mode for smaller numbers
+        // assert(i2 <= 65536, i2);
+        for (;;)
+        {
+            q2 = (i2 * 52429) >>> (16+3);
+            r = i2 - ((q2 << 3) + (q2 << 1));  // r = i2-(q2*10) ...
+            putByte(--charPos, IntegerDigits[r]);
+            i2 = q2;
+            if (i2 == 0) break;
+        }
+        int digitsPosAtEnd = charPos;
+        int numDigits = tmpEnd - digitsPosAtEnd;
+        charPos = offset;
+        int lengthDigitsIncludingMinus = numDigits;
+        if (negative)
+        {
+            lengthDigitsIncludingMinus++;
+            putByte(charPos++, NEGATIVE);
+        }
+        if ( scale <= 0 )
+        {
+            putBytes(charPos, this, digitsPosAtEnd, numDigits);
+            if (scale < 0)
+            {
+                charPos += numDigits;
+                int numberOfZeros = Math.abs(scale);
+                for (int ix = 1; ix <= numberOfZeros; ix++)
+                {
+                    putByte(charPos++, ZERO);
+                }
+                return lengthDigitsIncludingMinus + numberOfZeros;
+            }
+            return lengthDigitsIncludingMinus;
+        }
+        else
+        {
+            /**
+             * scale > 0
+             * @see java.math.BigDecimal#getValueString
+             */
+            int insertionPoint = numDigits - scale;
+            if (insertionPoint == 0)
+            {   /* Point goes right before digits */
+                putByte(charPos++, ZERO);
+                putByte(charPos++, DOT);
+                putBytes(charPos, this, digitsPosAtEnd, numDigits);
+                return 2 + lengthDigitsIncludingMinus;
+            }
+            else
+            {
+                if (insertionPoint > 0)
+                {   /* Point goes inside intVal */
+                    putBytes(charPos, this, digitsPosAtEnd, insertionPoint);
+                    putByte(charPos + insertionPoint, DOT);
+                    putBytes(charPos + insertionPoint + 1, this, digitsPosAtEnd + insertionPoint, numDigits - insertionPoint);
+                    return 1 + lengthDigitsIncludingMinus;
+                }
+                else
+                {   /* We must insert zeros between point and intVal */
+                    putByte(charPos++, ZERO);
+                    putByte(charPos++, DOT);
+                    int numberOfZeros = Math.abs(insertionPoint);
+                    for (int ix = 1; ix <= numberOfZeros; ix++)
+                    {
+                        putByte(charPos++, ZERO);
+                    }
+                    putBytes(charPos, this, digitsPosAtEnd, numDigits);
+                    return 2 + numberOfZeros + lengthDigitsIncludingMinus;
+                }
+            }
+        }
+    }
+
+    public int putAsciiFloat(final int offset, final DecimalFloat price) {
+        return putAsciiFloat(offset, price.value(), price.scale());
+    }
+
+    public int putAsciiFloat_old(final int offset, final DecimalFloat price)
     {
         final long value = price.value();
         final int scale = price.scale();
