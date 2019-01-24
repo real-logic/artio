@@ -188,6 +188,14 @@ public final class ExampleDictionary
         "8=FIX.4.4\0019=75\00135=0\001115=abc\001112=abc\001116=2\001117=1.1" +
         "\001118=Y\001119=123\001127=19700101-00:00:00.001\00110=199\001";
 
+    public static final String ENCODED_MESSAGE_FIXT11 =
+        "8=FIXT.1.1\0019=75\00135=0\001115=abc\001112=abc\001116=2\001117=1.1" +
+        "\001118=Y\001119=123\001127=19700101-00:00:00.001\00110=021\001";
+
+    public static final String ENCODED_MESSAGE_WITH_SIGNATURE =
+        "8=FIX.4.4\0019=96\00135=0\001115=abc\001112=abc\001116=2\001117=1.1" +
+        "\001118=Y\001119=123\001127=19700101-00:00:00.001\00193=11\00189=Good to go!\00110=040\001";
+
     public static final String ONLY_TESTREQ_ENCODED_MESSAGE =
         "8=FIX.4.4\0019=61\00135=0\001115=abc\001112=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
         "\00110=034\001";
@@ -403,6 +411,8 @@ public final class ExampleDictionary
         final Field bodyLength = registerField(messageEgFields, 9, "BodyLength", INT);
         final Field msgType = registerField(messageEgFields, 35, "MsgType", Type.STRING);
 
+        final Field signatureLength = registerField(messageEgFields, 93, "SignatureLength", Type.LENGTH);
+        final Field signature = registerField(messageEgFields, 89, "Signature", Type.DATA);
         final Field checkSum = registerField(messageEgFields, 10, "CheckSum", Type.STRING);
 
         final Field onBehalfOfCompID = registerField(messageEgFields, 115, "OnBehalfOfCompID", Type.STRING)
@@ -490,6 +500,8 @@ public final class ExampleDictionary
             .requiredEntry(msgType);
 
         final Component trailer = new Component("Trailer");
+        trailer.optionalEntry(signatureLength);
+        trailer.optionalEntry(signature);
         trailer.requiredEntry(checkSum);
 
         final Message otherMessage = new Message("OtherMessage", OTHER_MESSAGE_TYPE, ADMIN);
