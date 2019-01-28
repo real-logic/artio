@@ -588,9 +588,60 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         'u', 'v', 'w', 'x', 'y', 'z'
     };
 
-    private int toDigits(final int offset, final long value)
+    /**
+     *
+     * @param offset to 1 plus the right digit of given value
+     * @param value entire value, without decimal point
+     * @return offset to the left digit
+     *
+     * @see Long#getChars(long, int, char[])
+     */
+    private int handleDigits(final int offset, final long value)
     {
-        return 1;
+        long q;
+        int r;
+        int charPos = offset;
+        long i = value;
+        if (i < 0)
+        {
+            i = -i;
+        }
+        // Get 2 digits/iteration using longs until quotient fits into an int
+        while (i > Integer.MAX_VALUE)
+        {
+            q = i / 100;
+            // really: r = i - (q * 100);
+            r = (int)(i - ((q << 6) + (q << 5) + (q << 2)));
+            i = q;
+            putByte(charPos--, INTEGER_DIGIT_ONES[r]);
+            putByte(charPos--, INTEGER_DIGIT_TENS[r]);
+        }
+        // Get 2 digits/iteration using ints
+        int q2;
+        int i2 = (int)i;
+        while (i2 >= 65536)
+        {
+            q2 = i2 / 100;
+            // really: r = i2 - (q * 100);
+            r = i2 - ((q2 << 6) + (q2 << 5) + (q2 << 2));
+            i2 = q2;
+            putByte(charPos--, INTEGER_DIGIT_ONES[r]);
+            putByte(charPos--, INTEGER_DIGIT_TENS[r]);
+        }
+        // Fall thru to fast mode for smaller numbers
+        // assert(i2 <= 65536, i2);
+        for (;;)
+        {
+            q2 = (i2 * 52429) >>> (16 + 3);
+            r = i2 - ((q2 << 3) + (q2 << 1));  // r = i2-(q2*10) ...
+            putByte(charPos--, INTEGER_DIGITS[r]);
+            i2 = q2;
+            if (i2 == 0)
+            {
+                break;
+            }
+        }
+        return charPos + 1;
     }
 
     /**
@@ -605,67 +656,27 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
      *
      * @see Long#getChars(long, int, char[])
      * @see java.math.BigDecimal#toPlainString
+     *
+     * Note: unlike putAsciiFloat(offset, DecimalFloat), this method will respect the scale.
+     * so for input of 0, -2 value returned will be "0.00" and not only "0".
      */
     public int putAsciiFloat(final int offset, final long value, final int scale)
     {
-        long q;
-        int r;
-        int charPos = offset + LONGEST_FLOAT_LENGTH;
-        final int tmpEnd = charPos;
-        boolean negative = false;
-        long i = value;
-        if (i < 0)
-        {
-            negative = true;
-            i = -i;
-        }
-        // Get 2 digits/iteration using longs until quotient fits into an int
-        while (i > Integer.MAX_VALUE)
-        {
-            q = i / 100;
-            // really: r = i - (q * 100);
-            r = (int)(i - ((q << 6) + (q << 5) + (q << 2)));
-            i = q;
-            putByte(--charPos, INTEGER_DIGIT_ONES[r]);
-            putByte(--charPos, INTEGER_DIGIT_TENS[r]);
-        }
-        // Get 2 digits/iteration using ints
-        int q2;
-        int i2 = (int)i;
-        while (i2 >= 65536)
-        {
-            q2 = i2 / 100;
-            // really: r = i2 - (q * 100);
-            r = i2 - ((q2 << 6) + (q2 << 5) + (q2 << 2));
-            i2 = q2;
-            putByte(--charPos, INTEGER_DIGIT_ONES[r]);
-            putByte(--charPos, INTEGER_DIGIT_TENS[r]);
-        }
-        // Fall thru to fast mode for smaller numbers
-        // assert(i2 <= 65536, i2);
-        for (;;)
-        {
-            q2 = (i2 * 52429) >>> (16 + 3);
-            r = i2 - ((q2 << 3) + (q2 << 1));  // r = i2-(q2*10) ...
-            putByte(--charPos, INTEGER_DIGITS[r]);
-            i2 = q2;
-            if (i2 == 0)
-            {
-                break;
-            }
-        }
-        final int digitsPosAtEnd = charPos;
-        final int numDigits = tmpEnd - digitsPosAtEnd;
-        charPos = offset;
+//      final int rightDigitPosAtEnd = offset + Math.max(Math.abs(scale), LONGEST_LONG_LENGTH) + 1;
+        final int rightDigitPosAtEnd = offset + LONGEST_LONG_LENGTH + 1;
+        final int leftDigitPosAtEnd = handleDigits(rightDigitPosAtEnd, value);
+
+        final int numDigits = rightDigitPosAtEnd - leftDigitPosAtEnd + 1;
+        int charPos = offset;
         int lengthDigitsIncludingMinus = numDigits;
-        if (negative)
+        if (value < 0)
         {
             lengthDigitsIncludingMinus++;
             putByte(charPos++, NEGATIVE);
         }
         if (scale <= 0)
         {
-            putBytes(charPos, this, digitsPosAtEnd, numDigits);
+            putBytes(charPos, this, leftDigitPosAtEnd, numDigits);
             if (scale < 0)
             {
                 charPos += numDigits;
@@ -685,17 +696,17 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
             {   /* Point goes right before digits */
                 putByte(charPos++, ZERO);
                 putByte(charPos++, DOT);
-                putBytes(charPos, this, digitsPosAtEnd, numDigits);
+                putBytes(charPos, this, leftDigitPosAtEnd, numDigits);
                 return 2 + lengthDigitsIncludingMinus;
             }
             else
             {
                 if (insertionPoint > 0)
                 {   /* Point goes inside intVal */
-                    putBytes(charPos, this, digitsPosAtEnd, insertionPoint);
+                    putBytes(charPos, this, leftDigitPosAtEnd, insertionPoint);
                     putByte(charPos + insertionPoint, DOT);
                     putBytes(charPos + insertionPoint + 1, this,
-                            digitsPosAtEnd + insertionPoint, numDigits - insertionPoint);
+                        leftDigitPosAtEnd + insertionPoint, numDigits - insertionPoint);
                     return 1 + lengthDigitsIncludingMinus;
                 }
                 else
@@ -707,7 +718,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
                     {
                         putByte(charPos++, ZERO);
                     }
-                    putBytes(charPos, this, digitsPosAtEnd, numDigits);
+                    putBytes(charPos, this, leftDigitPosAtEnd, numDigits);
                     return 2 + numberOfZeros + lengthDigitsIncludingMinus;
                 }
             }
