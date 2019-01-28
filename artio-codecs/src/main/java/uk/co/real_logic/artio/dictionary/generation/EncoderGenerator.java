@@ -25,6 +25,7 @@ import org.agrona.generation.OutputManager;
 
 
 import uk.co.real_logic.artio.builder.Encoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.ir.Aggregate;
 import uk.co.real_logic.artio.dictionary.ir.Component;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
@@ -233,8 +234,21 @@ public class EncoderGenerator extends Generator
         final String className,
         final Writer out) throws IOException
     {
+        final boolean isHeader = type == AggregateType.HEADER;
         final boolean isMessage = type == AggregateType.MESSAGE;
-        final List<String> interfaces = isMessage ? singletonList(Encoder.class.getSimpleName()) : emptyList();
+        final List<String> interfaces;
+        if (isMessage)
+        {
+            interfaces = singletonList(Encoder.class.getSimpleName());
+        }
+        else if (isHeader)
+        {
+            interfaces = singletonList(SessionHeaderEncoder.class.getName());
+        }
+        else
+        {
+            interfaces = emptyList();
+        }
         out.append(classDeclaration(className, interfaces, type == GROUP));
         out.append(constructor(aggregate, type, dictionary));
         if (isMessage)
