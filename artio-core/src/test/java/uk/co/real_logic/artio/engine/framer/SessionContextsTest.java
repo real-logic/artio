@@ -241,6 +241,7 @@ public class SessionContextsTest
         final SessionContext cContext = sessionContexts.onLogon(cSession);
 
         assertNotEquals(DUPLICATE_SESSION, cContext);
+        assertEquals(3, cContext.sessionId());
     }
 
     private void verifyNoBackUp()
