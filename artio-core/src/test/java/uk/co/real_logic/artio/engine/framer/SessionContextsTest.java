@@ -21,11 +21,15 @@ import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
+import uk.co.real_logic.artio.builder.Encoder;
+import uk.co.real_logic.artio.builder.LogonEncoder;
 import uk.co.real_logic.artio.decoder.HeaderDecoder;
+import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,6 +41,7 @@ import static java.util.stream.Collectors.toList;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.artio.engine.framer.SessionContexts.DUPLICATE_SESSION;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.LOWEST_VALID_SESSION_ID;
 
 public class SessionContextsTest
@@ -50,6 +55,8 @@ public class SessionContextsTest
     private MappedFile mappedFile = mock(MappedFile.class);
     private SessionIdStrategy idStrategy = SessionIdStrategy.senderAndTarget();
     private SessionContexts sessionContexts = newSessionContexts(buffer);
+    private MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(ByteBuffer.allocate(BUFFER_SIZE));
+    private LogonEncoder logonEncoder = new LogonEncoder();
 
     private CompositeKey aSession = idStrategy.onInitiateLogon("a", null, null, "b", null, null);
     private CompositeKey bSession = idStrategy.onInitiateLogon("b", null, null, "a", null, null);
@@ -219,6 +226,23 @@ public class SessionContextsTest
             new SessionContext(sessionId, SEQUENCE_INDEX, Session.NO_LOGON_TIME, sessionContexts, FILE_POSITION));
     }
 
+    @Test
+    public void doesNotReuseExistingSessionIdsForDistinctCompositeKeys()
+    {
+        final SessionContext aContext = sessionContexts.onLogon(aSession);
+        final SessionContext bContext = sessionContexts.onLogon(bSession); // bump counter
+
+        final long result = logonWithSenderAndTarget(aSession.localCompId(), aSession.remoteCompId());
+
+        sessionContexts.onSentFollowerMessage(
+            aContext.sessionId(), aContext.sequenceIndex(), LogonDecoder.MESSAGE_TYPE, asciiBuffer,
+            Encoder.offset(result), Encoder.length(result));
+
+        final SessionContext cContext = sessionContexts.onLogon(cSession);
+
+        assertNotEquals(DUPLICATE_SESSION, cContext);
+    }
+
     private void verifyNoBackUp()
     {
         verify(mappedFile, never()).transferTo(any());
@@ -251,5 +275,14 @@ public class SessionContextsTest
     {
         assertEquals(sessionContext, secondSessionContext);
         assertEquals(sessionContext.sequenceIndex(), secondSessionContext.sequenceIndex());
+    }
+
+    private long logonWithSenderAndTarget(final String senderCompID, final String targetCompID)
+    {
+        logonEncoder.header()
+            .sendingTime(new byte[] {0})
+            .senderCompID(senderCompID)
+            .targetCompID(targetCompID);
+        return logonEncoder.encryptMethod(0).heartBtInt(0).encode(asciiBuffer, 0);
     }
 }
