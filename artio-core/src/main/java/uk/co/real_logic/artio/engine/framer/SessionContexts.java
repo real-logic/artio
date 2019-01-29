@@ -335,9 +335,6 @@ public class SessionContexts
     {
         if (messageType == LogonDecoder.MESSAGE_TYPE && recordedSessions.add(sessionId))
         {
-            // Ensure no future collision if you take over as leader of the cluster.
-            counter = sessionId + 1;
-
             asciiBuffer.wrap(buffer);
             logonDecoder.decode(asciiBuffer, offset, length);
 
