@@ -4,10 +4,6 @@ image:
 
 stack: jdk 8
 
-cache:
- - gradle
- - fix-integration/gradle
-
 # disable msbuild
 build: off
 
