@@ -451,7 +451,7 @@ public class FramerTest
 
         libraryConnects();
 
-        verifySessionExistsSaved(times(1), LogonStatus.LIBRARY_NOTIFICATION);
+        verifySessionExistsSaved(times(1), SessionStatus.LIBRARY_NOTIFICATION);
     }
 
     @Test
@@ -469,7 +469,7 @@ public class FramerTest
 
         libraryConnects();
 
-        verifySessionExistsSaved(times(2), LogonStatus.LIBRARY_NOTIFICATION);
+        verifySessionExistsSaved(times(2), SessionStatus.LIBRARY_NOTIFICATION);
     }
 
     @Test
@@ -875,7 +875,7 @@ public class FramerTest
             anyInt(),
             anyInt(),
             anyLong(),
-            eq(LogonStatus.NEW),
+            eq(SessionStatus.SESSION_HANDOVER),
             eq(SlowStatus.NOT_SLOW),
             eq(INITIATOR),
             any(),
@@ -896,7 +896,7 @@ public class FramerTest
             any());
     }
 
-    private void verifySessionExistsSaved(final VerificationMode times, final LogonStatus status)
+    private void verifySessionExistsSaved(final VerificationMode times, final SessionStatus status)
     {
         verify(inboundPublication, times).saveManageSession(eq(LIBRARY_ID),
             eq(connectionId.getValue()),

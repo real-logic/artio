@@ -208,7 +208,7 @@ public class GatewayPublication extends ClaimablePublication
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
         final long logonTime,
-        final LogonStatus logonStatus,
+        final SessionStatus sessionStatus,
         final SlowStatus slowStatus,
         final ConnectionType connectionType,
         final SessionState sessionState,
@@ -256,7 +256,7 @@ public class GatewayPublication extends ClaimablePublication
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
             .logonTime(logonTime)
-            .logonStatus(logonStatus)
+            .sessionStatus(sessionStatus)
             .slowStatus(slowStatus)
             .connectionType(connectionType)
             .sessionState(sessionState)

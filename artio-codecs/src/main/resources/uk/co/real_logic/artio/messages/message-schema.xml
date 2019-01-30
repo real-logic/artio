@@ -167,8 +167,8 @@
                         description="You've requested replay of messages, but EngineConfiguration has disabled required logging of messsages">7</validValue>
         </enum>
 
-        <enum name="LogonStatus" encodingType="uint8">
-            <validValue name="NEW">0</validValue>
+        <enum name="SessionStatus" encodingType="uint8">
+            <validValue name="SESSION_HANDOVER">0</validValue>
             <validValue name="LIBRARY_NOTIFICATION">1</validValue>
         </enum>
     </types>
@@ -258,7 +258,7 @@
         <field name="lastSentSequenceNumber" id="4" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
         <field name="logonTime" id="6" type="Timestamp" />
-        <field name="logonStatus" id="7" type="LogonStatus"/>
+        <field name="sessionStatus" id="7" type="SessionStatus"/>
         <field name="slowStatus" id="8" type="SlowStatus"/>
         <field name="connectionType" id="9" type="ConnectionType"/>
         <field name="sessionState" id="10" type="SessionState"/>

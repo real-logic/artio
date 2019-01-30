@@ -76,7 +76,7 @@ import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.GatewayError.*;
-import static uk.co.real_logic.artio.messages.LogonStatus.LIBRARY_NOTIFICATION;
+import static uk.co.real_logic.artio.messages.SessionStatus.LIBRARY_NOTIFICATION;
 import static uk.co.real_logic.artio.messages.SequenceNumberType.PERSISTENT;
 import static uk.co.real_logic.artio.messages.SequenceNumberType.TRANSIENT;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.*;
@@ -462,7 +462,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 session,
                 sentSequenceNumber,
                 receivedSequenceNumber,
-                LogonStatus.LIBRARY_NOTIFICATION));
+                SessionStatus.LIBRARY_NOTIFICATION));
         }
 
         finalImagePositions.removePosition(library.aeronSessionId());
@@ -737,7 +737,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         lastSentSequenceNumber,
                         lastReceivedSequenceNumber,
                         Session.NO_LOGON_TIME,
-                        LogonStatus.NEW,
+                        SessionStatus.SESSION_HANDOVER,
                         SlowStatus.NOT_SLOW,
                         INITIATOR,
                         CONNECTED,
@@ -1044,7 +1044,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 session,
                 lastSentSequenceNumber,
                 lastReceivedSequenceNumber,
-                LogonStatus.LIBRARY_NOTIFICATION));
+                SessionStatus.LIBRARY_NOTIFICATION));
         }
 
         return action;
@@ -1090,8 +1090,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long connectionId = gatewaySession.connectionId();
         final int lastSentSeqNum = session.lastSentMsgSeqNum();
         final int lastRecvSeqNum = session.lastReceivedMsgSeqNum();
-        final SessionState sessionState = session.state();
-        final long logonTime = session.logonTime();
 
         gatewaySession.handoverManagementTo(libraryId, libraryInfo.librarySlowPeeker());
         libraryInfo.addSession(gatewaySession);
@@ -1111,32 +1109,16 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 sentIndexedPosition(aeronSessionId, requiredPosition) ? COMPLETE : BACK_PRESSURED);
         }
 
-        continuations.add(() -> inboundPublication.saveManageSession(
+        continuations.add(() -> saveManageSession(
             libraryId,
-            connectionId,
-            sessionId,
+            gatewaySession,
             lastSentSeqNum,
             lastRecvSeqNum,
-            logonTime,
-            LogonStatus.NEW,
-            gatewaySession.slowStatus(),
-            gatewaySession.connectionType(),
-            sessionState,
-            session.awaitingResend(),
-            gatewaySession.heartbeatIntervalInS(),
-            gatewaySession.closedResendInterval(),
-            gatewaySession.resendRequestChunkSize(),
-            gatewaySession.sendRedundantResendRequests(),
-            gatewaySession.enableLastMsgSeqNumProcessed(),
-            correlationId,
-            gatewaySession.sequenceIndex(),
-            session.compositeKey().localCompId(),
-            session.compositeKey().localSubId(),
-            session.compositeKey().localLocationId(),
-            session.compositeKey().remoteCompId(),
-            session.compositeKey().remoteSubId(),
-            session.compositeKey().remoteLocationId(),
-            gatewaySession.address()));
+            SessionStatus.SESSION_HANDOVER,
+            session.compositeKey(),
+            connectionId,
+            session,
+            correlationId));
 
         catchupSession(
             continuations,
@@ -1156,7 +1138,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final GatewaySession gatewaySession,
         final int lastSentSeqNum,
         final int lastReceivedSeqNum,
-        final LogonStatus logonstatus)
+        final SessionStatus logonstatus)
     {
         final CompositeKey compositeKey = gatewaySession.sessionKey();
         if (compositeKey != null)
@@ -1164,35 +1146,58 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final long connectionId = gatewaySession.connectionId();
 
             final Session session = gatewaySession.session();
-            return inboundPublication.saveManageSession(
+            return saveManageSession(
                 libraryId,
-                connectionId,
-                gatewaySession.sessionId(),
+                gatewaySession,
                 lastSentSeqNum,
                 lastReceivedSeqNum,
-                session.logonTime(),
                 logonstatus,
-                gatewaySession.slowStatus(),
-                gatewaySession.connectionType(),
-                session.state(),
-                session.awaitingResend(),
-                gatewaySession.heartbeatIntervalInS(),
-                gatewaySession.closedResendInterval(),
-                gatewaySession.resendRequestChunkSize(),
-                gatewaySession.sendRedundantResendRequests(),
-                gatewaySession.enableLastMsgSeqNumProcessed(),
-                NO_CORRELATION_ID,
-                gatewaySession.sequenceIndex(),
-                compositeKey.localCompId(),
-                compositeKey.localSubId(),
-                compositeKey.localLocationId(),
-                compositeKey.remoteCompId(),
-                compositeKey.remoteSubId(),
-                compositeKey.remoteLocationId(),
-                gatewaySession.address());
+                compositeKey,
+                connectionId,
+                session,
+                NO_CORRELATION_ID);
         }
 
         return COMPLETE;
+    }
+
+    private long saveManageSession(
+        final int libraryId,
+        final GatewaySession gatewaySession,
+        final int lastSentSeqNum,
+        final int lastReceivedSeqNum,
+        final SessionStatus logonstatus,
+        final CompositeKey compositeKey,
+        final long connectionId,
+        final Session session,
+        final long correlationId)
+    {
+        return inboundPublication.saveManageSession(
+            libraryId,
+            connectionId,
+            gatewaySession.sessionId(),
+            lastSentSeqNum,
+            lastReceivedSeqNum,
+            session.logonTime(),
+            logonstatus,
+            gatewaySession.slowStatus(),
+            gatewaySession.connectionType(),
+            session.state(),
+            session.awaitingResend(),
+            gatewaySession.heartbeatIntervalInS(),
+            gatewaySession.closedResendInterval(),
+            gatewaySession.resendRequestChunkSize(),
+            gatewaySession.sendRedundantResendRequests(),
+            gatewaySession.enableLastMsgSeqNumProcessed(),
+            correlationId,
+            gatewaySession.sequenceIndex(),
+            compositeKey.localCompId(),
+            compositeKey.localSubId(),
+            compositeKey.localLocationId(),
+            compositeKey.remoteCompId(),
+            compositeKey.remoteSubId(),
+            compositeKey.remoteLocationId(),
+            gatewaySession.address());
     }
 
     private void catchupSession(
@@ -1280,31 +1285,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }
 
             final CompositeKey key = gatewaySession.sessionKey();
-            return inboundPublication.saveManageSession(ENGINE_LIBRARY_ID,
-                gatewaySession.connectionId(),
-                gatewaySession.sessionId(),
+            return saveManageSession(
+                ENGINE_LIBRARY_ID,
+                gatewaySession,
                 session.lastSentMsgSeqNum(),
                 session.lastReceivedMsgSeqNum(),
-                session.logonTime(),
-                LogonStatus.NEW,
-                gatewaySession.slowStatus(),
-                gatewaySession.connectionType(),
-                session.state(),
-                session.awaitingResend(),
-                gatewaySession.heartbeatIntervalInS(),
-                gatewaySession.closedResendInterval(),
-                gatewaySession.resendRequestChunkSize(),
-                gatewaySession.sendRedundantResendRequests(),
-                gatewaySession.enableLastMsgSeqNumProcessed(),
-                NO_CORRELATION_ID,
-                gatewaySession.sequenceIndex(),
-                key.localCompId(),
-                key.localSubId(),
-                key.localLocationId(),
-                key.remoteCompId(),
-                key.remoteSubId(),
-                key.remoteLocationId(),
-                gatewaySession.address());
+                SessionStatus.SESSION_HANDOVER,
+                key,
+                gatewaySession.connectionId(),
+                session, NO_CORRELATION_ID);
         });
     }
 

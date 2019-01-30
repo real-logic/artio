@@ -605,7 +605,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int lastSentSeqNum,
         final int lastRecvSeqNum,
         final long logonTime,
-        final LogonStatus logonStatus,
+        final SessionStatus sessionStatus,
         final SlowStatus slowStatus,
         final ConnectionType connectionType,
         final SessionState sessionState,
@@ -642,7 +642,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         {
             final InternalSession session;
             InitiateSessionReply reply = null;
-            if (LogonStatus.NEW == logonStatus) // TODO: LogonStatus is a badly named enum.
+            if (sessionStatus == SessionStatus.SESSION_HANDOVER)
             {
                 // From manageConnection - ie set up the session in this library.
                 if (connectionType == INITIATOR)
@@ -914,7 +914,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             // set as we remove all the ids to check for existence..
             // Weirdly looks like this.sessionIds is never used anywhere else?
             // Why do we have it then? Is the caching saving
-            // Why do we have it then? Is the caching saving
             // Is the caching saving enough considering that below we are creating loads of arrays (potentially)
             final LongHashSet sessionIds = this.sessionIds;
             InternalSession[] sessions = this.sessions;
@@ -1009,7 +1008,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final InitiateSessionReply reply,
         final SlowStatus slowStatus)
     {
-
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
             session, sessionIdStrategy, validationStrategy, null);

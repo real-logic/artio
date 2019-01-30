@@ -278,7 +278,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.lastSentSequenceNumber(),
             manageSession.lastReceivedSequenceNumber(),
             manageSession.logonTime(),
-            manageSession.logonStatus(),
+            manageSession.sessionStatus(),
             manageSession.slowStatus(),
             manageSession.connectionType(),
             manageSession.sessionState(),

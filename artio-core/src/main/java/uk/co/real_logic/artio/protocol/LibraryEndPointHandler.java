@@ -46,7 +46,7 @@ public interface LibraryEndPointHandler
         int lastSentSeqNum,
         int lastRecvSeqNum,
         long logonTime,
-        LogonStatus logonStatus,
+        SessionStatus sessionStatus,
         SlowStatus slowStatus,
         ConnectionType connectionType,
         SessionState sessionState,
