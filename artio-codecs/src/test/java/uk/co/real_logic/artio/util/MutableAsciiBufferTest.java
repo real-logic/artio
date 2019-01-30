@@ -20,8 +20,6 @@ import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
 import org.junit.runner.RunWith;
 
-import java.util.Arrays;
-
 import static org.junit.Assert.assertEquals;
 
 @RunWith(Theories.class)
@@ -55,21 +53,6 @@ public class MutableAsciiBufferTest
         final int value = valueAndLength[0];
         final int length = valueAndLength[1];
         assertEquals("Wrong length for " + value, length, MutableAsciiBuffer.lengthInAscii(value));
-    }
-
-    @Theory
-    public void shouldPutNaturalFromEnd(final int[] valueAndLength)
-    {
-        final int value = valueAndLength[0];
-        final int length = valueAndLength[1];
-
-        final int start = string.putNaturalFromEnd(value, length);
-        assertEquals("for " + Arrays.toString(valueAndLength), 0, start);
-
-        assertEquals(
-            "for " + Arrays.toString(valueAndLength),
-            String.valueOf(value),
-            string.getAscii(0, length));
     }
 
 }

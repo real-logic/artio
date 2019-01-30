@@ -338,45 +338,6 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         return 1;
     }
 
-    public void putNatural(final int offset, final int length, final int value)
-    {
-        final int end = offset + length;
-        int remainder = value;
-        for (int index = end - 1; index >= offset; index--)
-        {
-            final int digit = remainder % 10;
-            remainder = remainder / 10;
-            putByte(index, (byte)(ZERO + digit));
-        }
-
-        if (remainder != 0)
-        {
-            throw new NumberFormatException(String.format("Cannot write %d in %d bytes", value, length));
-        }
-    }
-
-    /**
-     * Encode a natural number starting at its end position.
-     *
-     * @param value        the natural number to encode
-     * @param endExclusive index after the last character encoded
-     * @return startInclusive index of first character encoded
-     */
-    public int putNaturalFromEnd(final int value, final int endExclusive)
-    {
-        int remainder = value;
-        int index = endExclusive;
-        while (remainder > 0)
-        {
-            index--;
-            final int digit = remainder % 10;
-            remainder = remainder / 10;
-            putByte(index, (byte)(ZERO + digit));
-        }
-
-        return index;
-    }
-
     public static int lengthInAscii(final int value)
     {
         int characterCount = 0;

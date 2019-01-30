@@ -139,9 +139,9 @@ final class CalendricalUtil
         final int day = marchDay0 - (marchMonth0 * 306 + 5) / 10 + 1;
         final int year = (int)(yearEstimate + marchMonth0 / 10);
 
-        string.putNatural(offset, 4, year);
-        string.putNatural(offset + 4, 2, month);
-        string.putNatural(offset + 6, 2, day);
+        string.putNaturalPaddedIntAscii(offset, 4, year);
+        string.putNaturalPaddedIntAscii(offset + 4, 2, month);
+        string.putNaturalPaddedIntAscii(offset + 6, 2, day);
     }
 
     private static long estimateDayOfYear(final long zeroDay, final long yearEst)

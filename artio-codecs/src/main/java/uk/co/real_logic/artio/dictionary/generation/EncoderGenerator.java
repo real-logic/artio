@@ -64,7 +64,7 @@ public class EncoderGenerator extends Generator
         "        final int checkSum = buffer.computeChecksum(messageStart, position);\n" +
         "        buffer.putBytes(position, checkSumHeader, 0, checkSumHeaderLength);\n" +
         "        position += checkSumHeaderLength;\n" +
-        "        buffer.putNatural(position, 3, checkSum);\n" +
+        "        buffer.putNaturalPaddedIntAscii(position, 3, checkSum);\n" +
         "        position += 3;\n" +
         "        buffer.putSeparator(position);\n" +
         "        position++;\n" +
@@ -87,7 +87,7 @@ public class EncoderGenerator extends Generator
         "        int position = bodyStart - 1;\n" +
         "\n" +
         "        buffer.putSeparator(position);\n" +
-        "        position = buffer.putNaturalFromEnd(bodyLength, position);\n" +
+        "        position = buffer.putNaturalIntAsciiFromEnd(bodyLength, position);\n" +
         "        position -= bodyLengthHeaderLength;\n" +
         "        buffer.putBytes(position, bodyLengthHeader, 0, bodyLengthHeaderLength);\n" +
         "\n" +

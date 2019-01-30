@@ -97,16 +97,16 @@ public final class UtcTimeOnlyEncoder
         final int minutes = secondOfDay / SECONDS_IN_MINUTE;
         secondOfDay -= minutes * SECONDS_IN_MINUTE;
 
-        string.putNatural(offset, 2, hours);
+        string.putNaturalPaddedIntAscii(offset, 2, hours);
         string.putChar(offset + 2, ':');
-        string.putNatural(offset + 3, 2, minutes);
+        string.putNaturalPaddedIntAscii(offset + 3, 2, minutes);
         string.putChar(offset + 5, ':');
-        string.putNatural(offset + 6, 2, secondOfDay);
+        string.putNaturalPaddedIntAscii(offset + 6, 2, secondOfDay);
 
         if (fractionOfSecond > 0)
         {
             string.putChar(offset + 8, '.');
-            string.putNatural(offset + 9, fractionFieldLength, fractionOfSecond);
+            string.putNaturalPaddedIntAscii(offset + 9, fractionFieldLength, fractionOfSecond);
         }
     }
 }
