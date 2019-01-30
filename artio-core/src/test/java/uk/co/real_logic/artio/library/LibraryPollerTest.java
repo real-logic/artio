@@ -408,10 +408,10 @@ public class LibraryPollerTest
             DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED,
             REPLY_TO_ID,
             SEQUENCE_INDEX,
+            "ABC",
             "",
             "",
-            "",
-            "",
+            "DEF",
             "",
             "", address);
     }
