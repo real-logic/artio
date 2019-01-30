@@ -721,7 +721,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * {@inheritDoc}
+     * Sets the aeron channel that libraries will use to communicate with this FixEngine instance.
+     *
+     * @param libraryAeronChannel the aeron channel that libraries will use to communicate with this FixEngine instance.
+     * @return this
      */
     public EngineConfiguration libraryAeronChannel(final String libraryAeronChannel)
     {

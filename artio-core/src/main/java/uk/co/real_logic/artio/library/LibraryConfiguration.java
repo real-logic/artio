@@ -204,7 +204,10 @@ public final class LibraryConfiguration extends CommonConfiguration
     }
 
     /**
-     * {@inheritDoc}
+     * Sets the list of aeron channels used to connect to the Engine
+     *
+     * @param libraryAeronChannels the list of aeron channels used to connect to the Engine
+     * @return this
      */
     public LibraryConfiguration libraryAeronChannels(final List<String> libraryAeronChannels)
     {
