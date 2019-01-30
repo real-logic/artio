@@ -92,14 +92,25 @@ public class DecimalFloatTest
         assertThat(new DecimalFloat(45, 2), greaterThan(new DecimalFloat(-45, 1)));
         assertThat(new DecimalFloat(-45, 1), lessThan(new DecimalFloat(45, 2)));
 
+        assertThat(new DecimalFloat(9, 2), lessThan(POINT_ONE));
+        assertThat(POINT_ONE, greaterThan(new DecimalFloat(9, 2)));
+    }
+
+    @Test
+    public void compareToOrdersFloatsOfDifferentScaleVsZero()
+    {
         assertThat(ZERO, greaterThan(new DecimalFloat(-45, 1)));
         assertThat(new DecimalFloat(-45, 1), lessThan(ZERO));
 
         assertThat(new DecimalFloat(45, 2), greaterThan(ZERO));
         assertThat(ZERO, lessThan(new DecimalFloat(45, 2)));
+    }
 
-        assertThat(new DecimalFloat(9, 2), lessThan(POINT_ONE));
-        assertThat(POINT_ONE, greaterThan(new DecimalFloat(9, 2)));
+    @Test
+    public void compareToOrderFloatsOfDifferentScaleWithMultiDigitValues()
+    {
+        assertThat(new DecimalFloat(54321, 2), lessThan(new DecimalFloat(543219, 3)));
+        assertThat(new DecimalFloat(543219, 3), greaterThan(new DecimalFloat(54321, 2)));
     }
 
     @Test

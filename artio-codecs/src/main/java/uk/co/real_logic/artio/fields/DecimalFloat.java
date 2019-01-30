@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd., Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -200,8 +200,11 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
             return negativeComparison;
         }
 
-        final int scaleComparison = Integer.compare(scale, other.scale);
-        if (scaleComparison == 0)
+        final int digitsBeforeDecimalPoint = digitsBeforeDecimalPoint(value);
+        final int otherDigitsBeforeDecimalPoint = other.digitsBeforeDecimalPoint(otherValue);
+
+        final int digitComparison = Integer.compare(digitsBeforeDecimalPoint, otherDigitsBeforeDecimalPoint);
+        if (digitComparison == 0)
         {
             return Long.compare(value, otherValue);
         }
@@ -215,8 +218,33 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         }
         else
         {
-            return isPositive ? -1 * scaleComparison : scaleComparison;
+            return isPositive ? digitComparison : -1 * digitComparison;
         }
+    }
+
+    private int digitsBeforeDecimalPoint(final long value)
+    {
+        final long absValue = Math.abs(value);
+        final int digitsInvalue = absValue < 10 ? 1 :
+            absValue < 100L ? 2 :
+            absValue < 1000L ? 3 :
+            absValue < 10000L ? 4 :
+            absValue < 100000L ? 5 :
+            absValue < 1000000L ? 6 :
+            absValue < 10000000L ? 7 :
+            absValue < 100000000L ? 8 :
+            absValue < 1000000000L ? 9 :
+            absValue < 10000000000L ? 10 :
+            absValue < 100000000000L ? 11 :
+            absValue < 1000000000000L ? 12 :
+            absValue < 10000000000000L ? 13 :
+            absValue < 100000000000000L ? 14 :
+            absValue < 1000000000000000L ? 15 :
+            absValue < 10000000000000000L ? 16 :
+            absValue < 100000000000000000L ? 17 :
+            absValue < 1000000000000000000L ? 18 :
+            19;
+        return digitsInvalue - scale;
     }
 
     public double toDouble()
