@@ -4,11 +4,21 @@ image:
 
 stack: jdk 8
 
+cache:
+ - gradle
+ - fix-integration/gradle
+
 # disable msbuild
 build: off
 
 test_script:
 - ./gradlew
+
+after_test:
+  - sh: |
+      git clone https://github.com/real-logic/fix-integration.git
+      cd fix-integration
+      ./gradlew
 
 on_finish:
   - sh: |
