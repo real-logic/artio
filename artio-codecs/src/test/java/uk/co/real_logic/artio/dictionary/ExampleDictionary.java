@@ -410,6 +410,18 @@ public final class ExampleDictionary
         final Field beginString = registerField(messageEgFields, 8, "BeginString", Type.STRING);
         final Field bodyLength = registerField(messageEgFields, 9, "BodyLength", INT);
         final Field msgType = registerField(messageEgFields, 35, "MsgType", Type.STRING);
+        final Field senderCompID = registerField(messageEgFields, 49, "SenderCompID", Type.STRING);
+        final Field targetCompID = registerField(messageEgFields, 56, "TargetCompID", Type.STRING);
+        final Field msgSeqNum = registerField(messageEgFields, 34, "MsgSeqNum", Type.SEQNUM);
+        final Field senderSubID = registerField(messageEgFields, 50, "SenderSubID", Type.STRING);
+        final Field senderLocationID = registerField(messageEgFields, 142, "SenderLocationID", Type.STRING);
+        final Field targetSubID = registerField(messageEgFields, 57, "TargetSubID", Type.STRING);
+        final Field targetLocationID = registerField(messageEgFields, 143, "TargetLocationID", Type.STRING);
+        final Field possDupFlag = registerField(messageEgFields, 43, "PossDupFlag", Type.BOOLEAN);
+        final Field possResend = registerField(messageEgFields, 97, "PossResend", Type.BOOLEAN);
+        final Field sendingTime = registerField(messageEgFields, 52, "SendingTime", Type.UTCTIMESTAMP);
+        final Field origSendingTime = registerField(messageEgFields, 122, "OrigSendingTime", Type.UTCTIMESTAMP);
+        final Field lastMsgSeqNumProcessed = registerField(messageEgFields, 369, "LastMsgSeqNumProcessed", Type.SEQNUM);
 
         final Field signatureLength = registerField(messageEgFields, 93, "SignatureLength", Type.LENGTH);
         final Field signature = registerField(messageEgFields, 89, "Signature", Type.DATA);
@@ -497,7 +509,20 @@ public final class ExampleDictionary
         header
             .requiredEntry(beginString)
             .requiredEntry(bodyLength)
-            .requiredEntry(msgType);
+            .requiredEntry(msgType)
+            .optionalEntry(senderCompID)
+            .optionalEntry(targetCompID)
+            .optionalEntry(msgSeqNum)
+            .optionalEntry(senderSubID)
+            .optionalEntry(senderLocationID)
+            .optionalEntry(targetSubID)
+            .optionalEntry(targetLocationID)
+            .optionalEntry(possDupFlag)
+            .optionalEntry(possResend)
+            .optionalEntry(sendingTime)
+            .optionalEntry(origSendingTime)
+            .optionalEntry(lastMsgSeqNumProcessed);
+
 
         final Component trailer = new Component("Trailer");
         trailer.optionalEntry(signatureLength);

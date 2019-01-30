@@ -114,7 +114,7 @@ public class OrderSingleEncoder implements Encoder
         return 0;
     }
 
-    public Object header()
+    public SessionHeaderEncoder header()
     {
         return null;
     }
