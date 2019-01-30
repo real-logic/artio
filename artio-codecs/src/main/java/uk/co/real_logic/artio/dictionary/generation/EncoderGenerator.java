@@ -857,7 +857,7 @@ public class EncoderGenerator extends Generator
     {
         return String.format(
             "%s" +
-            "        position += buffer.putAscii%s(position, %s);\n" +
+            "        position += buffer.put%sAscii(position, %s);\n" +
             SUFFIX,
             tag,
             type,
@@ -886,7 +886,7 @@ public class EncoderGenerator extends Generator
     {
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
-        final int length = string.putAsciiInt(0, field.number());
+        final int length = string.putIntAscii(0, field.number());
         final String bytes = IntStream
             .range(0, length)
             .mapToObj(i -> String.valueOf(buffer[i]))

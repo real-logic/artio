@@ -66,7 +66,7 @@ public class AsciiFormatter
 
     public AsciiFormatter with(final int number)
     {
-        final int length = numberFlyweight.putAsciiInt(0, number);
+        final int length = numberFlyweight.putIntAscii(0, number);
         return with(numberBuffer, length);
     }
 

@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.util;
 
-import org.junit.Test;
 import org.junit.experimental.theories.DataPoints;
 import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
@@ -24,100 +23,12 @@ import org.junit.runner.RunWith;
 import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static uk.co.real_logic.artio.util.CustomMatchers.sequenceEqualsAscii;
 
 @RunWith(Theories.class)
 public class MutableAsciiBufferTest
 {
 
     private MutableAsciiBuffer string = new MutableAsciiBuffer(new byte[8 * 1024]);
-
-    @Test
-    public void shouldWriteIntZero()
-    {
-        final int length = string.putAsciiInt(1, 0);
-
-        assertEquals(1, length);
-        assertThat(string, sequenceEqualsAscii("0", 1, 1));
-    }
-
-    @Test
-    public void shouldWritePositiveIntValues()
-    {
-        final int length = string.putAsciiInt(1, 123);
-
-        assertEquals(3, length);
-        assertThat(string, sequenceEqualsAscii("123", 1, 3));
-    }
-
-    @Test
-    public void shouldWriteNegativeIntValues()
-    {
-        final int length = string.putAsciiInt(1, -123);
-
-        assertEquals(4, length);
-        assertThat(string, sequenceEqualsAscii("-123", 1, 4));
-    }
-
-    @Test
-    public void shouldWriteMaxIntValue()
-    {
-        final int length = string.putAsciiInt(1, Integer.MAX_VALUE);
-
-        assertThat(string, sequenceEqualsAscii(String.valueOf(Integer.MAX_VALUE), 1, length));
-    }
-
-    @Test
-    public void shouldWriteMinIntValue()
-    {
-        final int length = string.putAsciiInt(1, Integer.MIN_VALUE);
-
-        assertThat(string, sequenceEqualsAscii(String.valueOf(Integer.MIN_VALUE), 1, length));
-    }
-
-    @Test
-    public void shouldWriteLongZero()
-    {
-        final int length = string.putAsciiLong(1, 0L);
-
-        assertEquals(1, length);
-        assertThat(string, sequenceEqualsAscii("0", 1, 1));
-    }
-
-    @Test
-    public void shouldWritePositiveLongValues()
-    {
-        final int length = string.putAsciiLong(1, 123L);
-
-        assertEquals(3, length);
-        assertThat(string, sequenceEqualsAscii("123", 1, 3));
-    }
-
-    @Test
-    public void shouldWriteNegativeLongValues()
-    {
-        final int length = string.putAsciiLong(1, -123L);
-
-        assertEquals(4, length);
-        assertThat(string, sequenceEqualsAscii("-123", 1, 4));
-    }
-
-    @Test
-    public void shouldWriteMaxLongValue()
-    {
-        final int length = string.putAsciiLong(1, Long.MAX_VALUE);
-
-        assertThat(string, sequenceEqualsAscii(String.valueOf(Long.MAX_VALUE), 1, length));
-    }
-
-    @Test
-    public void shouldWriteMinLongValue()
-    {
-        final int length = string.putAsciiLong(1, Long.MIN_VALUE);
-
-        assertThat(string, sequenceEqualsAscii(String.valueOf(Long.MIN_VALUE), 1, length));
-    }
 
     @DataPoints
     public static int[][] valuesAndLengths()
