@@ -720,33 +720,7 @@ public class FramerTest
 
     private void backPressureFirstSaveAttempts()
     {
-        when(inboundPublication.saveManageSession(eq(LIBRARY_ID),
-            anyLong(),
-            anyLong(),
-            anyInt(),
-            anyInt(),
-            anyLong(),
-            any(),
-            eq(SlowStatus.NOT_SLOW),
-            eq(INITIATOR),
-            any(),
-            anyBoolean(),
-            anyInt(),
-            anyBoolean(),
-            anyInt(),
-            anyBoolean(),
-            anyBoolean(),
-            anyLong(),
-            anyInt(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any())).thenReturn(BACK_PRESSURED, POSITION);
+        backPressureSaveSessionExists();
     }
 
     private void backPressureSaveSessionExists()
