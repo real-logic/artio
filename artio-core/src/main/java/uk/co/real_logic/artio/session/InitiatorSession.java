@@ -142,7 +142,6 @@ public class InitiatorSession extends InternalSession
         }
         else
         {
-            // TODO: This is an error case, what is the right behaviour?
             // You've received a logon and you weren't expecting one and it hasn't got the resetSeqNumFlag set
             return onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend, possDup);
         }
