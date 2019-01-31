@@ -96,7 +96,6 @@ public class InitiatorSession extends InternalSession
         }
 
         final long logonTime = sendingTime(sendingTime, origSendingTime);
-
         if (resetSeqNumFlag)
         {
             return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime, msgSeqNo);
@@ -107,8 +106,6 @@ public class InitiatorSession extends InternalSession
             final int expectedSeqNo = expectedReceivedSeqNum();
             if (msgSeqNo == expectedSeqNo)
             {
-                setLogonState(heartbeatInterval, username, password);
-
                 if (INITIAL_SEQUENCE_NUMBER == msgSeqNo)
                 {
                     // Outgoing connections could be exchanging logons because of a network disconnection
@@ -116,6 +113,7 @@ public class InitiatorSession extends InternalSession
                     logonTime(logonTime);
                 }
 
+                setLogonState(heartbeatInterval, username, password);
                 notifyLogonListener();
                 action = onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend,
                     possDup);
