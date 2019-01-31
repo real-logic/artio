@@ -36,7 +36,8 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S;
@@ -821,7 +822,6 @@ public abstract class AbstractSessionTest
     {
         onLogon(HEARTBEAT_INTERVAL, 1, true);
 
-        verifySetupSession();
         verifySetsSequenceNumbersToTwo(sequenceIndex);
     }
 
@@ -841,7 +841,6 @@ public abstract class AbstractSessionTest
             session().poll(100);
 
             sequenceIndex++;
-            verifySetupSession();
             verifySetsSequenceNumbersToTwo(sequenceIndex);
             assertSequenceIndexIs(sequenceIndex);
         }
@@ -854,7 +853,6 @@ public abstract class AbstractSessionTest
 
         onLogon(HEARTBEAT_INTERVAL, 1, true);
 
-        verifySetupSession();
         verifyNoFurtherMessages();
         assertSequenceIndexIs(SEQUENCE_INDEX + 1);
     }
@@ -897,11 +895,6 @@ public abstract class AbstractSessionTest
     {
         final MutableAsciiBuffer buffer = (MutableAsciiBuffer)this.bufferCaptor.getValue();
         return buffer.getAscii(offsetCaptor.getValue(), lengthCaptor.getValue());
-    }
-
-    private void verifySetupSession()
-    {
-        verify(mockProxy, atLeastOnce()).setupSession(anyLong(), any());
     }
 
     private void verifySetsSequenceNumbersToTwo(final int sequenceIndex)

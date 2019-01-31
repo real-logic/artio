@@ -84,10 +84,10 @@ import static uk.co.real_logic.artio.session.SessionProxy.NO_LAST_MSG_SEQ_NUM_PR
 public class Session implements AutoCloseable
 {
     public static final long UNKNOWN = -1;
-    public static final long NO_OPERATION = MIN_VALUE;
-    public static final long LIBRARY_DISCONNECTED = NO_OPERATION + 1;
+    private static final long NO_OPERATION = MIN_VALUE;
+    static final long LIBRARY_DISCONNECTED = NO_OPERATION + 1;
     public static final long NO_LOGON_TIME = -1;
-    public static final int INITIAL_SEQUENCE_NUMBER = 1;
+    static final int INITIAL_SEQUENCE_NUMBER = 1;
 
     static final short ACTIVE_VALUE = 3;
     static final short LOGGING_OUT_VALUE = 5;
@@ -98,7 +98,7 @@ public class Session implements AutoCloseable
     /**
      * The proportion of the maximum heartbeat interval before you send your heartbeat
      */
-    public static final double HEARTBEAT_PAUSE_FACTOR = 0.8;
+    private static final double HEARTBEAT_PAUSE_FACTOR = 0.8;
 
     static final String TEST_REQ_ID = "TEST";
     private static final char[] TEST_REQ_ID_CHARS = TEST_REQ_ID.toCharArray();
@@ -673,7 +673,7 @@ public class Session implements AutoCloseable
                 return action;
             }
 
-            return handleSeqNoChange(msgSeqNo, time, isPossDupOrResend);
+            return checkSeqNoChange(msgSeqNo, time, isPossDupOrResend);
         }
     }
 
@@ -751,7 +751,7 @@ public class Session implements AutoCloseable
         return null;
     }
 
-    private Action handleSeqNoChange(final int msgSeqNum, final long time, final boolean isPossDupOrResend)
+    private Action checkSeqNoChange(final int msgSeqNum, final long time, final boolean isPossDupOrResend)
     {
         if (awaitingResend)
         {
@@ -782,7 +782,7 @@ public class Session implements AutoCloseable
                 }
                 else
                 {
-                    return handleNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend);
+                    return checkNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend);
                 }
             }
             else
@@ -792,13 +792,13 @@ public class Session implements AutoCloseable
         }
         else
         {
-            return handleNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend);
+            return checkNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend);
         }
 
         return CONTINUE;
     }
 
-    private Action handleNormalSeqNoChange(final int msgSeqNum, final long time, final boolean isPossDupOrResend)
+    private Action checkNormalSeqNoChange(final int msgSeqNum, final long time, final boolean isPossDupOrResend)
     {
         final int expectedSeqNo = expectedReceivedSeqNum();
         if (expectedSeqNo == msgSeqNum)
@@ -916,9 +916,6 @@ public class Session implements AutoCloseable
         final boolean resetSeqNumFlag,
         final boolean possDup)
     {
-        // TODO(Nick): Not sure why we do this when this is configured in GatewaySessions.authenticateAndInitiate...
-        setupSession(sessionId, sessionKey);
-
         final long logonTime = sendingTime(sendingTime, origSendingTime);
 
         Action action = validateOrRejectSendingTime(sendingTime);

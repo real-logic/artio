@@ -80,7 +80,6 @@ public class AcceptorSessionTest extends AbstractSessionTest
     {
         onLogon(1);
 
-        verifySessionSetup();
         verifyLogon();
         verifyNoFurtherMessages();
         assertState(ACTIVE);
@@ -91,7 +90,6 @@ public class AcceptorSessionTest extends AbstractSessionTest
     {
         onLogon(3);
 
-        verifySessionSetup();
         verifyLogon();
         verify(mockProxy).resendRequest(2, 1, 0, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
         verify(mockProxy).isSeqNumResetRequested();
@@ -105,7 +103,6 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
         onLogon(3);
 
-        verifySessionSetup();
         verifyLogon();
         verify(mockProxy).isSeqNumResetRequested();
         verifyNoFurtherMessages();
@@ -174,12 +171,6 @@ public class AcceptorSessionTest extends AbstractSessionTest
         shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne(SEQUENCE_INDEX);
     }
 
-    @Test
-    public void should()
-    {
-
-    }
-
     private void verifySendingTimeAccuracyLogout()
     {
         verify(mockProxy, times(1)).logout(3, SEQUENCE_INDEX,
@@ -223,8 +214,4 @@ public class AcceptorSessionTest extends AbstractSessionTest
             HEARTBEAT_INTERVAL, 1, null, null, false, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
     }
 
-    private void verifySessionSetup()
-    {
-        verify(mockProxy).setupSession(SESSION_ID, SESSION_KEY);
-    }
 }

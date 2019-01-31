@@ -30,7 +30,6 @@ import static uk.co.real_logic.artio.session.SessionProxy.NO_LAST_MSG_SEQ_NUM_PR
 public class InitiatorSessionTest extends AbstractSessionTest
 {
     private InitiatorSession session;
-
     {
         session = new InitiatorSession(HEARTBEAT_INTERVAL,
             CONNECTION_ID,

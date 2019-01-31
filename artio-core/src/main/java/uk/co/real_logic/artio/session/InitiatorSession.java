@@ -98,10 +98,6 @@ public class InitiatorSession extends InternalSession
 
         if (resetSeqNumFlag)
         {
-            // Either we sent out a resetSeqNum flag when we connected or this session is already connected and they
-            // have sent one to us to run an end of day.
-            setupSession(sessionId, sessionKey);
-
             return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime);
         }
 
