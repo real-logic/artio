@@ -67,7 +67,7 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + SlowStatusNotificationEncoder.BLOCK_LENGTH;
     private static final byte MIDDLE_FLAG = 0;
     private static final int MANAGE_SESSION_BLOCK_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
-        ManageSessionEncoder.BLOCK_LENGTH + ManageSessionEncoder.localCompIdHeaderLength() * 7;
+        ManageSessionEncoder.BLOCK_LENGTH + ManageSessionEncoder.localCompIdHeaderLength() * 9;
     private static final int INITIATE_CONNECTION_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
         InitiateConnectionEncoder.BLOCK_LENGTH + InitiateConnectionDecoder.hostHeaderLength() * 9;
     private static final int CONTROL_NOTIFICATION_LENGTH = HEADER_LENGTH + ControlNotificationEncoder.BLOCK_LENGTH +
@@ -226,7 +226,9 @@ public class GatewayPublication extends ClaimablePublication
         final String remoteCompId,
         final String remoteSubId,
         final String remoteLocationId,
-        final String address)
+        final String address,
+        final String username,
+        final String password)
     {
         final byte[] localCompIdBytes = bytes(localCompId);
         final byte[] localSubIdBytes = bytes(localSubId);
@@ -235,11 +237,13 @@ public class GatewayPublication extends ClaimablePublication
         final byte[] remoteSubIdBytes = bytes(remoteSubId);
         final byte[] remoteLocationIdBytes = bytes(remoteLocationId);
         final byte[] addressBytes = bytes(address);
+        final byte[] usernameBytes = bytes(username);
+        final byte[] passwordBytes = bytes(password);
 
         final long position = claim(
             MANAGE_SESSION_BLOCK_LENGTH + localCompIdBytes.length + localSubIdBytes.length +
             localLocationIdBytes.length + remoteCompIdBytes.length + remoteSubIdBytes.length +
-            remoteLocationIdBytes.length + addressBytes.length);
+            remoteLocationIdBytes.length + addressBytes.length + usernameBytes.length + passwordBytes.length);
 
         if (position < 0)
         {
@@ -274,7 +278,9 @@ public class GatewayPublication extends ClaimablePublication
             .putRemoteCompId(remoteCompIdBytes, 0, remoteCompIdBytes.length)
             .putRemoteSubId(remoteSubIdBytes, 0, remoteSubIdBytes.length)
             .putRemoteLocationId(remoteLocationIdBytes, 0, remoteLocationIdBytes.length)
-            .putAddress(addressBytes, 0, addressBytes.length);
+            .putAddress(addressBytes, 0, addressBytes.length)
+            .putUsername(usernameBytes, 0, usernameBytes.length)
+            .putPassword(passwordBytes, 0, passwordBytes.length);
 
         bufferClaim.commit();
 

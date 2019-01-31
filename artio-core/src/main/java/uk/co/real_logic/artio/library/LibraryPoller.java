@@ -623,7 +623,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final String remoteCompId,
         final String remoteSubId,
         final String remoteLocationId,
-        final String address)
+        final String address,
+        final String username,
+        final String password)
     {
         if (libraryId == ENGINE_LIBRARY_ID)
         {
@@ -679,6 +681,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     remoteSubId,
                     remoteLocationId);
 
+                session.username(username);
+                session.password(password);
                 session.setupSession(sessionId, compositeKey);
                 session.logonTime(logonTime);
                 session.closedResendInterval(closedResendInterval);
@@ -1064,12 +1068,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             enableLastMsgSeqNumProcessed);
 
         session.lastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
-
-        if (sessionConfiguration != null)
-        {
-            session.username(sessionConfiguration.username());
-            session.password(sessionConfiguration.password());
-        }
 
         return session;
     }

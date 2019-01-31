@@ -277,6 +277,8 @@
         <data name="remoteSubId" id="18" type="Utf8String"/>
         <data name="remoteLocationId" id="19" type="Utf8String"/>
         <data name="address" id="20" type="Utf8String"/>
+        <data name="username" id="26" type="Utf8String"/>
+        <data name="password" id="27" type="Utf8String"/>
     </sbe:message>
 
     <sbe:message name="Error" id="13" description="An error has occurred">

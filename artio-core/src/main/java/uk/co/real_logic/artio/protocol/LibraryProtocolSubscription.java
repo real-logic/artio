@@ -296,6 +296,8 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.remoteCompId(),
             manageSession.remoteSubId(),
             manageSession.remoteLocationId(),
-            manageSession.address());
+            manageSession.address(),
+            manageSession.username(),
+            manageSession.password());
     }
 }

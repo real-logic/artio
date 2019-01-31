@@ -64,5 +64,7 @@ public interface LibraryEndPointHandler
         String remoteCompId,
         String remoteSubId,
         String remoteLocationId,
-        String address);
+        String address,
+        String username,
+        String password);
 }

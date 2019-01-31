@@ -532,6 +532,8 @@ public class FramerTest
             any(),
             any(),
             any(),
+            any(),
+            any(),
             any())).thenReturn(BACK_PRESSURED, POSITION);
 
         aClientConnects();
@@ -560,6 +562,8 @@ public class FramerTest
             anyBoolean(),
             anyLong(),
             anyInt(),
+            any(),
+            any(),
             any(),
             any(),
             any(),
@@ -663,9 +667,9 @@ public class FramerTest
         saveRequestSessionReply();
     }
 
-    private long saveRequestSessionReply()
+    private void saveRequestSessionReply()
     {
-        return verify(inboundPublication).saveRequestSessionReply(LIBRARY_ID, OK, CORR_ID);
+        verify(inboundPublication).saveRequestSessionReply(LIBRARY_ID, OK, CORR_ID);
     }
 
     private Action onRequestSession()
@@ -740,6 +744,8 @@ public class FramerTest
             any(),
             any(),
             any(),
+            any(),
+            any(),
             any())).thenReturn(BACK_PRESSURED, POSITION);
     }
 
@@ -763,6 +769,8 @@ public class FramerTest
             anyBoolean(),
             anyLong(),
             anyInt(),
+            any(),
+            any(),
             any(),
             any(),
             any(),
@@ -893,6 +901,8 @@ public class FramerTest
             any(),
             any(),
             any(),
+            any(),
+            any(),
             any());
     }
 
@@ -905,7 +915,7 @@ public class FramerTest
             anyInt(),
             anyLong(),
             eq(status),
-            any(), // todo(Nick): Should be NOT_SLOW? ,
+            any(),
             any(),
             any(),
             anyBoolean(),
@@ -916,6 +926,8 @@ public class FramerTest
             anyBoolean(),
             anyLong(),
             anyInt(),
+            any(),
+            any(),
             any(),
             any(),
             any(),

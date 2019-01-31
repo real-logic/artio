@@ -413,7 +413,9 @@ public class LibraryPollerTest
             "",
             "DEF",
             "",
-            "", address);
+            "", address,
+            "",
+            "");
     }
 
     private SessionsDecoder hasOtherSessionId()

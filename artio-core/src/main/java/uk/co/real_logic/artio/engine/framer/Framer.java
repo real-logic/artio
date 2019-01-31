@@ -755,7 +755,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         targetCompId,
                         targetSubId,
                         targetLocationId,
-                        address.toString());
+                        address.toString(),
+                        username,
+                        password);
                 }
 
                 private long checkLoggerUpToDate()
@@ -1197,7 +1199,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             compositeKey.remoteCompId(),
             compositeKey.remoteSubId(),
             compositeKey.remoteLocationId(),
-            gatewaySession.address());
+            gatewaySession.address(),
+            gatewaySession.username(),
+            gatewaySession.password());
     }
 
     private void catchupSession(
