@@ -661,7 +661,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                         lastRecvSeqNum,
                         sessionState,
                         isReply ? reply.configuration() : null,
-                        sequenceIndex);
+                        sequenceIndex,
+                        enableLastMsgSeqNumProcessed);
                 }
                 else
                 {
@@ -1033,7 +1034,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int lastReceivedSequenceNumber,
         final SessionState state,
         final SessionConfiguration sessionConfiguration,
-        final int sequenceIndex)
+        final int sequenceIndex,
+        final boolean enableLastMsgSeqNumProcessed)
     {
         final int defaultInterval = configuration.defaultHeartbeatIntervalInS();
         final GatewayPublication publication = transport.outboundPublication();
@@ -1045,8 +1047,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             sessionConfiguration, SessionConfiguration::initialReceivedSequenceNumber, lastReceivedSequenceNumber);
         final int initialSentSequenceNumber = initiatorNewSequenceNumber(
             sessionConfiguration, SessionConfiguration::initialSentSequenceNumber, lastSentSequenceNumber);
-        final boolean enableLastMsgSeqNumProcessed =
-            sessionConfiguration != null && sessionConfiguration.enableLastMsgSeqNumProcessed();
 
         final InitiatorSession session = new InitiatorSession(
             defaultInterval,
