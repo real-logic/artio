@@ -935,8 +935,7 @@ public class Session implements AutoCloseable
 
             if (resetSeqNumFlag)
             {
-                // TODO(Nick): Maybe we should validate their 34=1 on a reset.
-                return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime);
+                return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime, msgSeqNo);
             }
             else
             {
@@ -987,7 +986,7 @@ public class Session implements AutoCloseable
                     else
                     {
                         // Above call sets state to ACTIVE, we are active in the sense that we can send, but we want
-                        // to be able request a replay as well. This is done in the onMessage call below I believe.
+                        // to be able request a replay as well. This is done in the onMessage call below.
                     }
                 }
                 else // (msgSeqNo < expectedMsgSeqNo)
@@ -998,17 +997,23 @@ public class Session implements AutoCloseable
         }
         else if (resetSeqNumFlag)
         {
-            return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime);
+            return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime, msgSeqNo);
         }
 
-        // TODO(Nick): Not sure about this here.
-        // The onMessage call below is where we detect corrupt sequences
-        // so we could be notifying about a broken session here.
-        notifyLogonListener();
-
         // Back pressure at this point won't re-run the above block if its completed because of the state change
-        return onMessage(msgSeqNo, LogonDecoder.MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend,
+        action = onMessage(msgSeqNo,
+            LogonDecoder.MESSAGE_TYPE_BYTES,
+            sendingTime,
+            origSendingTime,
+            isPossDupOrResend,
             possDup);
+
+        if (isActive())
+        {
+            notifyLogonListener();
+        }
+
+        return action;
     }
 
     // Always resets the sequence number to 1
@@ -1016,12 +1021,13 @@ public class Session implements AutoCloseable
         final int heartbeatInterval,
         final String username,
         final String password,
-        final long sendingTime)
+        final long sendingTime,
+        final int msgSeqNo)
     {
+        // if we have just received a reset request and not a response to one we just sent.
         if (lastSentMsgSeqNum() != INITIAL_SEQUENCE_NUMBER)
         {
             final int logonSequenceIndex = isInitialRequest() ? sequenceIndex() : sequenceIndex() + 1;
-            // IE we have just received a reset request and not a response to one we just sent.
             final long position = proxy.logon(heartbeatInterval,
                 INITIAL_SEQUENCE_NUMBER,
                 null,
@@ -1034,11 +1040,11 @@ public class Session implements AutoCloseable
             }
 
             lastSentMsgSeqNum(INITIAL_SEQUENCE_NUMBER);
-            lastReceivedMsgSeqNum(INITIAL_SEQUENCE_NUMBER);
+            lastReceivedMsgSeqNum(msgSeqNo);
         }
         else
         {
-            lastReceivedMsgSeqNumOnly(INITIAL_SEQUENCE_NUMBER);
+            lastReceivedMsgSeqNumOnly(msgSeqNo);
         }
 
         setLogonState(heartbeatInterval, username, password);

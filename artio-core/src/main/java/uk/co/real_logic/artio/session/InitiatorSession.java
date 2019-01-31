@@ -78,7 +78,8 @@ public class InitiatorSession extends InternalSession
         final String username,
         final String password,
         final boolean isPossDupOrResend,
-        final boolean resetSeqNumFlag, final boolean possDup)
+        final boolean resetSeqNumFlag,
+        final boolean possDup)
     {
         // We aren't checking CODEC_VALIDATION_ENABLED here because these are required values in order to
         // have a stable FIX connection.
@@ -98,7 +99,7 @@ public class InitiatorSession extends InternalSession
 
         if (resetSeqNumFlag)
         {
-            return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime);
+            return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime, msgSeqNo);
         }
 
         if (state() == SessionState.SENT_LOGON)
@@ -106,7 +107,6 @@ public class InitiatorSession extends InternalSession
             final int expectedSeqNo = expectedReceivedSeqNum();
             if (msgSeqNo == expectedSeqNo)
             {
-                setupSession(sessionId, sessionKey);
                 setLogonState(heartbeatInterval, username, password);
 
                 if (INITIAL_SEQUENCE_NUMBER == msgSeqNo)
@@ -128,9 +128,6 @@ public class InitiatorSession extends InternalSession
             // Received the wrong sequence number from the acceptor
             else if (expectedSeqNo < msgSeqNo)
             {
-                // Setup the session and request a resend
-
-                setupSession(sessionId, sessionKey);
                 setLogonState(heartbeatInterval, username, password);
                 notifyLogonListener();
 

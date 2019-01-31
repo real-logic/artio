@@ -65,7 +65,6 @@ public class InitiatorSessionTest extends AbstractSessionTest
         assertEquals(CONTINUE, onLogon(1));
 
         assertState(ACTIVE);
-        verify(mockProxy).setupSession(SESSION_ID, SESSION_KEY);
         verifyNoFurtherMessages();
     }
 
