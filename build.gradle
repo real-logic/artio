@@ -33,9 +33,9 @@ buildscript {
 apply plugin: 'net.researchgate.release'
 apply plugin: 'com.github.johnrengelman.shadow'
 
-def aeronVersion = '1.15.1'
-def agronaVersion = '0.9.31'
-def sbeVersion = '1.12.0'
+def aeronVersion = '1.15.2'
+def agronaVersion = '0.9.32'
+def sbeVersion = '1.12.1'
 def artioJavaVersion = '1.8'
 def artioGroup = 'uk.co.real-logic'
 
