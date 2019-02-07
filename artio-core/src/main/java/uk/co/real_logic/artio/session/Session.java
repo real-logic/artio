@@ -677,7 +677,7 @@ public class Session implements AutoCloseable
         }
     }
 
-    private Action validateRequiredFieldsAndCodec(
+    Action validateRequiredFieldsAndCodec(
         final int msgSeqNo,
         final long time,
         final byte[] msgType,
@@ -712,7 +712,7 @@ public class Session implements AutoCloseable
      */
     private Action validateCodec(
         final long time,
-        final int msgSeqNo,
+        final int msgSeqNum,
         final byte[] msgType,
         final int msgTypeLength,
         final long sendingTime,
@@ -725,20 +725,22 @@ public class Session implements AutoCloseable
             {
                 return checkPosition(proxy.reject(
                     newSentSeqNum(),
-                    msgSeqNo,
+                    msgSeqNum,
                     msgType,
                     msgTypeLength,
-                    REQUIRED_TAG_MISSING, sequenceIndex(), lastMsgSeqNumProcessed));
+                    REQUIRED_TAG_MISSING,
+                    sequenceIndex(),
+                    lastMsgSeqNumProcessed));
             }
             else if (origSendingTime > sendingTime)
             {
-                return rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
+                return rejectDueToSendingTime(msgSeqNum, msgType, msgTypeLength);
             }
         }
 
         if ((sendingTime < time - sendingTimeWindowInMs) || (sendingTime > time + sendingTimeWindowInMs))
         {
-            final Action action = rejectDueToSendingTime(msgSeqNo, msgType, msgTypeLength);
+            final Action action = rejectDueToSendingTime(msgSeqNum, msgType, msgTypeLength);
             if (action != ABORT)
             {
                 logoutRejectReason(RejectReason.SENDINGTIME_ACCURACY_PROBLEM.representation());
@@ -898,7 +900,7 @@ public class Session implements AutoCloseable
             sequenceIndex(), lastMsgSeqNumProcessed));
     }
 
-    private void incNextReceivedInboundMessageTime(final long time)
+    void incNextReceivedInboundMessageTime(final long time)
     {
         this.nextRequiredInboundMessageTimeInMs = time + heartbeatIntervalInMs() + reasonableTransmissionTimeInMs;
     }
@@ -1455,7 +1457,8 @@ public class Session implements AutoCloseable
             refMsgType,
             refMsgTypeLength,
             rejectReason,
-            sequenceIndex(), lastMsgSeqNumProcessed));
+            sequenceIndex(),
+            lastMsgSeqNumProcessed));
 
         if (action != ABORT)
         {

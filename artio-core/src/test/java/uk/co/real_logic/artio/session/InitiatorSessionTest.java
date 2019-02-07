@@ -34,7 +34,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
         session = new InitiatorSession(HEARTBEAT_INTERVAL,
             CONNECTION_ID,
             fakeClock,
-            mockProxy,
+            sessionProxy,
             mockPublication,
             idStrategy,
             SENDING_TIME_WINDOW,
@@ -127,7 +127,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
     private void verifyLogon()
     {
-        verify(mockProxy, times(1)).logon(
+        verify(sessionProxy, times(1)).logon(
             HEARTBEAT_INTERVAL, 1, null, null, false, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
     }
 
@@ -140,4 +140,5 @@ public class InitiatorSessionTest extends AbstractSessionTest
     {
         return session;
     }
+
 }

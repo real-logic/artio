@@ -22,7 +22,6 @@ import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static uk.co.real_logic.artio.decoder.LogonDecoder.MESSAGE_TYPE_BYTES;
 
 public class InitiatorSession extends InternalSession
@@ -70,7 +69,7 @@ public class InitiatorSession extends InternalSession
 
     public Action onLogon(
         final int heartbeatInterval,
-        final int msgSeqNo,
+        final int msgSeqNum,
         final long sessionId,
         final CompositeKey sessionKey,
         final long sendingTime,
@@ -98,50 +97,59 @@ public class InitiatorSession extends InternalSession
         final long logonTime = sendingTime(sendingTime, origSendingTime);
         if (resetSeqNumFlag)
         {
-            return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime, msgSeqNo);
+            return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime, msgSeqNum);
         }
 
+        final byte[] msgType = MESSAGE_TYPE_BYTES;
         if (state() == SessionState.SENT_LOGON)
         {
             final int expectedSeqNo = expectedReceivedSeqNum();
-            if (msgSeqNo == expectedSeqNo)
+            if (msgSeqNum == expectedSeqNo)
             {
-                if (INITIAL_SEQUENCE_NUMBER == msgSeqNo)
+                if (INITIAL_SEQUENCE_NUMBER == msgSeqNum)
                 {
                     // Outgoing connections could be exchanging logons because of a network disconnection
                     // So we still only want this to occur on the initial logon.
                     logonTime(logonTime);
                 }
 
+                final long time = time();
+                action = validateRequiredFieldsAndCodec(
+                    msgSeqNum, time, msgType, msgType.length, sendingTime, origSendingTime, possDup);
+
+                if (action != null)
+                {
+                    return action;
+                }
+
+                incNextReceivedInboundMessageTime(time);
+                lastReceivedMsgSeqNum(msgSeqNum);
                 setLogonState(heartbeatInterval, username, password);
                 notifyLogonListener();
-                action = onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend,
-                    possDup);
-
-                if (action == ABORT)
-                {
-                    return ABORT;
-                }
             }
             // Received the wrong sequence number from the acceptor
-            else if (expectedSeqNo < msgSeqNo)
+            else if (expectedSeqNo < msgSeqNum)
             {
+                // NB: become active before the resend request because a user may want to send
+                // Orders at this point.
                 setLogonState(heartbeatInterval, username, password);
                 notifyLogonListener();
 
-                return requestResend(expectedSeqNo, msgSeqNo);
+                action = requestResend(expectedSeqNo, msgSeqNum);
+
+                return action;
             }
             else /* expectedSeqNo > msgSeqNo */
             {
                 // Disconnect with an error.
 
-                return msgSeqNumTooLow(msgSeqNo, expectedSeqNo);
+                return msgSeqNumTooLow(msgSeqNum, expectedSeqNo);
             }
         }
         else
         {
             // You've received a logon and you weren't expecting one and it hasn't got the resetSeqNumFlag set
-            return onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend, possDup);
+            return onMessage(msgSeqNum, msgType, sendingTime, origSendingTime, isPossDupOrResend, possDup);
         }
 
         return Action.CONTINUE;
