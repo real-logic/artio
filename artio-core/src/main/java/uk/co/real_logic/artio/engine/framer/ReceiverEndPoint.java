@@ -174,7 +174,6 @@ class ReceiverEndPoint
             gatewaySession, backpressuredAuthenticationResult.requiredPosition()))
         {
             backpressuredAuthenticationResult = null;
-            messagesRead.incrementOrdered();
 
             int offset = this.backpressuredAuthenticationOffset;
             final int length = this.backpressuredAuthenticationLength;
