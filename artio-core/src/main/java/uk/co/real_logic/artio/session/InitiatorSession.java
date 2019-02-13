@@ -22,8 +22,6 @@ import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import static uk.co.real_logic.artio.decoder.LogonDecoder.MESSAGE_TYPE_CHARS;
-
 public class InitiatorSession extends InternalSession
 {
     private final boolean resetSeqNum;
@@ -67,84 +65,15 @@ public class InitiatorSession extends InternalSession
         this.resetSeqNum = resetSeqNum;
     }
 
-    public Action onLogon(
-        final int heartbeatInterval,
-        final int msgSeqNum,
-        final long sessionId,
-        final CompositeKey sessionKey,
-        final long sendingTime,
-        final long origSendingTime,
-        final String username,
-        final String password,
-        final boolean isPossDupOrResend,
-        final boolean resetSeqNumFlag,
-        final boolean possDup)
+    protected SessionState initialState()
     {
-        // We aren't checking CODEC_VALIDATION_ENABLED here because these are required values in order to
-        // have a stable FIX connection.
-        Action action = validateOrRejectHeartbeat(heartbeatInterval);
-        if (action != null)
-        {
-            return action;
-        }
+        return SessionState.SENT_LOGON;
+    }
 
-        action = validateOrRejectSendingTime(sendingTime);
-        if (action != null)
-        {
-            return action;
-        }
-
-        final long logonTime = sendingTime(sendingTime, origSendingTime);
-
-        if (resetSeqNumFlag)
-        {
-            return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime, msgSeqNum);
-        }
-
-        final char[] msgType = MESSAGE_TYPE_CHARS;
-        if (state() == SessionState.SENT_LOGON)
-        {
-            // initial logon
-            final int expectedSeqNo = expectedReceivedSeqNum();
-            if (msgSeqNum == expectedSeqNo)
-            {
-                final long time = time();
-                action = validateRequiredFieldsAndCodec(
-                    msgSeqNum, time, msgType, msgType.length, logonTime, origSendingTime, possDup);
-
-                if (action != null)
-                {
-                    return action;
-                }
-
-                setupCompleteLogonState(heartbeatInterval, msgSeqNum, username, password, logonTime, time);
-                lastReceivedMsgSeqNum(msgSeqNum);
-
-                return Action.CONTINUE;
-            }
-            // Received the wrong sequence number from the acceptor
-            else if (expectedSeqNo < msgSeqNum)
-            {
-                // NB: become active before the resend request because a user may want to send
-                // Orders at this point.
-                setupCompleteLogonState(heartbeatInterval, msgSeqNum, username, password, logonTime, time());
-
-                action = requestResend(expectedSeqNo, msgSeqNum);
-
-                return action;
-            }
-            else /* expectedSeqNo > msgSeqNo */
-            {
-                // Disconnect with an error.
-
-                return msgSeqNumTooLow(msgSeqNum, expectedSeqNo);
-            }
-        }
-        else
-        {
-            // You've received a logon and you weren't expecting one and it hasn't got the resetSeqNumFlag set
-            return onMessage(msgSeqNum, msgType, logonTime, origSendingTime, isPossDupOrResend, possDup);
-        }
+    protected Action respondToLogon(final int heartbeatInterval)
+    {
+        // Initiator sends its logon first, so has no need to reply
+        return null;
     }
 
     public int poll(final long time)

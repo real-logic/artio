@@ -180,18 +180,9 @@ public abstract class AbstractSessionTest
 
         onLogon(1);
 
-        System.out.println("session().lastReceivedMsgSeqNum() = " + session().lastReceivedMsgSeqNum());
-        System.out.println("session().lastSentMsgSeqNum() = " + session().lastSentMsgSeqNum());
-
         onMessage(2);
 
-        System.out.println("session().lastReceivedMsgSeqNum() = " + session().lastReceivedMsgSeqNum());
-        System.out.println("session().lastSentMsgSeqNum() = " + session().lastSentMsgSeqNum());
-
         session().onMessage(2, MSG_TYPE_CHARS, sendingTime, origSendingTime, true, true);
-
-        System.out.println("session().lastReceivedMsgSeqNum() = " + session().lastReceivedMsgSeqNum());
-        System.out.println("session().lastSentMsgSeqNum() = " + session().lastSentMsgSeqNum());
 
         verifySendingTimeProblem();
         assertSequenceIndexIs(SEQUENCE_INDEX);
@@ -966,8 +957,6 @@ public abstract class AbstractSessionTest
         final Action action = session().onLogon(
             HEARTBEAT_INTERVAL,
             1,
-            SESSION_ID,
-            SESSION_KEY,
             1,
             UNKNOWN, null, null, false, false, false);
 
@@ -1094,8 +1083,6 @@ public abstract class AbstractSessionTest
         return session().onLogon(
             heartbeatInterval,
             msgSeqNo,
-            SESSION_ID,
-            SESSION_KEY,
             fakeClock.time(),
             UNKNOWN,
             username,
@@ -1128,7 +1115,7 @@ public abstract class AbstractSessionTest
 
     protected void onLogout()
     {
-        assertEquals(CONTINUE, session().onLogout(1, sendingTime(), UNKNOWN, false, false));
+        assertEquals(CONTINUE, session().onLogout(1, sendingTime(), UNKNOWN, false));
     }
 
     protected void verifySendingTimeProblem()

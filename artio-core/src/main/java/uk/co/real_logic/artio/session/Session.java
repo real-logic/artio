@@ -43,6 +43,7 @@ import static uk.co.real_logic.artio.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.artio.Constants.VERSION_CHARS;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
+import static uk.co.real_logic.artio.decoder.LogonDecoder.MESSAGE_TYPE_CHARS;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.fields.RejectReason.*;
@@ -87,7 +88,7 @@ public class Session implements AutoCloseable
     private static final long NO_OPERATION = MIN_VALUE;
     static final long LIBRARY_DISCONNECTED = NO_OPERATION + 1;
     public static final long NO_LOGON_TIME = -1;
-    static final int INITIAL_SEQUENCE_NUMBER = 1;
+    private static final int INITIAL_SEQUENCE_NUMBER = 1;
 
     static final short ACTIVE_VALUE = 3;
     static final short LOGGING_OUT_VALUE = 5;
@@ -550,7 +551,7 @@ public class Session implements AutoCloseable
         return position;
     }
 
-    protected void nextSequenceIndex()
+    private void nextSequenceIndex()
     {
         sequenceIndex++;
     }
@@ -902,17 +903,14 @@ public class Session implements AutoCloseable
             lastMsgSeqNumProcessed));
     }
 
-    void incNextReceivedInboundMessageTime(final long time)
+    private void incNextReceivedInboundMessageTime(final long time)
     {
         this.nextRequiredInboundMessageTimeInMs = time + heartbeatIntervalInMs() + reasonableTransmissionTimeInMs;
     }
 
-    // Only run by AcceptorSession
     public Action onLogon(
         final int heartbeatInterval,
         final int msgSeqNum,
-        final long sessionId,
-        final CompositeKey sessionKey,
         final long sendingTime,
         final long origSendingTime,
         final String username,
@@ -921,6 +919,8 @@ public class Session implements AutoCloseable
         final boolean resetSeqNumFlag,
         final boolean possDup)
     {
+        // We aren't checking CODEC_VALIDATION_ENABLED here because these are required values in order to
+        // have a stable FIX connection.
         Action action = validateOrRejectHeartbeat(heartbeatInterval);
         if (action != null)
         {
@@ -940,21 +940,21 @@ public class Session implements AutoCloseable
             return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime, msgSeqNum);
         }
 
-        if (state() == SessionState.CONNECTED)
+        if (state() == initialState())
         {
             // Initial income connection logic
             final int expectedMsgSeqNo = expectedReceivedSeqNum();
             if (expectedMsgSeqNo == msgSeqNum)
             {
                 // Send outbound logon message and check if backpressured on the outward client side.
-                action = replyToLogon(heartbeatInterval);
+                action = respondToLogon(heartbeatInterval);
                 if (action == ABORT)
                 {
                     return ABORT;
                 }
 
                 // Don't configure this session as active until successful outbound publication
-                setupCompleteLogonState(heartbeatInterval, msgSeqNum, username, password, logonTime, time());
+                setupCompleteLogonState(logonTime, heartbeatInterval, msgSeqNum, username, password, time());
                 lastReceivedMsgSeqNum(msgSeqNum);
 
                 return CONTINUE;
@@ -962,7 +962,7 @@ public class Session implements AutoCloseable
             else if (expectedMsgSeqNo < msgSeqNum)
             {
                 // If their sequence number is higher than expected, we still accept the logon.
-                action = replyToLogon(heartbeatInterval);
+                action = respondToLogon(heartbeatInterval);
                 if (action == ABORT)
                 {
                     return ABORT;
@@ -972,17 +972,16 @@ public class Session implements AutoCloseable
                 if (requestSeqNumReset) // if we requested sequence number reset then do not await for replay
                 {
                     lastReceivedMsgSeqNum = 0; // TODO: should this not be msgSeqNum?
-                    setupCompleteLogonStateReset(heartbeatInterval, username, password, logonTime, time());
+                    setupCompleteLogonStateReset(logonTime, heartbeatInterval, username, password, time());
 
                     return CONTINUE;
                 }
                 else
                 {
-                    setupLogonState(heartbeatInterval, username, password);
-                    notifyLogonListener();
-                    // Above call sets state to ACTIVE, we are active in the sense that we can send, but we want
-                    // to be able request a replay as well. This is done in the onMessage call below.
-                    // FIXME: FALLTHROUGH
+                    setupCompleteLogonState(logonTime, heartbeatInterval, msgSeqNum, username, password, time());
+                    action = requestResend(expectedMsgSeqNo, msgSeqNum);
+
+                    return action;
                 }
             }
             else // (msgSeqNo < expectedMsgSeqNo)
@@ -990,22 +989,25 @@ public class Session implements AutoCloseable
                 return msgSeqNumTooLow(msgSeqNum, expectedMsgSeqNo);
             }
         }
+        else
+        {
+            // You've received a logon and you weren't expecting one and it hasn't got the resetSeqNumFlag set
+            return onMessage(msgSeqNum, MESSAGE_TYPE_CHARS, sendingTime, origSendingTime, isPossDupOrResend, possDup);
+        }
+    }
 
-        // IF an ACTIVE session receives a non reset Logon
-        // OR low sequence number and didn't request a sequence number reset
-        // Back pressure at this point won't re-run the above block if its completed because of the state change
-        action = onMessage(msgSeqNum,
-            LogonDecoder.MESSAGE_TYPE_CHARS,
-            sendingTime,
-            origSendingTime,
-            isPossDupOrResend,
-            possDup);
+    protected Action respondToLogon(final int heartbeatInterval)
+    {
+        return replyToLogon(heartbeatInterval);
+    }
 
-        return action;
+    protected SessionState initialState()
+    {
+        return SessionState.CONNECTED;
     }
 
     // Always resets the sequence number to 1
-    Action onResetSeqNumLogon(
+    private Action onResetSeqNumLogon(
         final int heartbeatInterval,
         final String username,
         final String password,
@@ -1036,48 +1038,47 @@ public class Session implements AutoCloseable
         }
 
         // logon time becomes time of the confirmation message.
-        logonTime(logonTime);
-
-        incNextReceivedInboundMessageTime(time());
-        setupLogonState(heartbeatInterval, username, password);
-        notifyLogonListener();
+        setupCompleteLogonStateReset(logonTime, heartbeatInterval, username, password, time());
 
         return CONTINUE;
     }
 
-    void setupCompleteLogonState(
+    private void setupCompleteLogonState(
+        final long logonTime,
         final int heartbeatInterval,
         final int msgSeqNum,
         final String username,
         final String password,
-        final long logonTime,
         final long currentTime)
     {
         setFirstLogonTime(logonTime, msgSeqNum);
-        incNextReceivedInboundMessageTime(currentTime);
-        setupLogonState(heartbeatInterval, username, password);
-        notifyLogonListener();
+        setupLogonState(heartbeatInterval, username, password, currentTime);
     }
 
-    void setupCompleteLogonStateReset(
+    private void setupCompleteLogonStateReset(
+        final long logonTime,
         final int heartbeatInterval,
         final String username,
         final String password,
-        final long logonTime,
         final long currentTime)
     {
         logonTime(logonTime);
-        incNextReceivedInboundMessageTime(currentTime);
-        setupLogonState(heartbeatInterval, username, password);
-        notifyLogonListener();
+        setupLogonState(heartbeatInterval, username, password, currentTime);
     }
 
-    void setupLogonState(final int heartbeatInterval, final String username, final String password)
+    private void setupLogonState(
+        final int heartbeatInterval, final String username, final String password, final long currentTime)
     {
+        incNextReceivedInboundMessageTime(currentTime);
         heartbeatIntervalInS(heartbeatInterval);
         state(ACTIVE);
         username(username);
         password(password);
+
+        if (logonListener != null)
+        {
+            logonListener.onLogon(this);
+        }
     }
 
     public void setupSession(final long sessionId, final CompositeKey sessionKey)
@@ -1093,15 +1094,7 @@ public class Session implements AutoCloseable
             heartbeatInterval, newSentSeqNum(), null, null, false, sequenceIndex(), lastMsgSeqNumProcessed));
     }
 
-    void notifyLogonListener()
-    {
-        if (logonListener != null)
-        {
-            logonListener.onLogon(this);
-        }
-    }
-
-    Action validateOrRejectSendingTime(final long sendingTime)
+    private Action validateOrRejectSendingTime(final long sendingTime)
     {
         if (CODEC_VALIDATION_DISABLED && sendingTime == MISSING_LONG)
         {
@@ -1120,7 +1113,7 @@ public class Session implements AutoCloseable
             INVALID_SENDING_TIME);
     }
 
-    Action validateOrRejectHeartbeat(final int heartbeatInterval)
+    private Action validateOrRejectHeartbeat(final int heartbeatInterval)
     {
         if (heartbeatInterval < 0)
         {
@@ -1154,7 +1147,6 @@ public class Session implements AutoCloseable
         final int msgSeqNo,
         final long sendingTime,
         final long origSendingTime,
-        final boolean isPossDupOrResend,
         final boolean possDup)
     {
         final long time = time();
@@ -1669,7 +1661,7 @@ public class Session implements AutoCloseable
     // So we still only want this to occur on the initial logon.
     // Incoming initiators are allowed to start a session from 1
     // Without also sending 141=Y if the session was previously logged out cleanly.
-    void setFirstLogonTime(final long logonTime, final int msgSeqNum)
+    private void setFirstLogonTime(final long logonTime, final int msgSeqNum)
     {
         if (msgSeqNum == INITIAL_SEQUENCE_NUMBER)
         {

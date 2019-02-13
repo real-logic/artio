@@ -26,6 +26,7 @@ public class SessionSchedulerTest
     private SessionConfiguration sessionConfiguration = mock(SessionConfiguration.class);
     private ScheduledExecutorService timeEventPool = mock(ScheduledExecutorService.class);
     private Session session = mock(Session.class);
+    @SuppressWarnings("unchecked")
     private Reply<Session> reply = mock(Reply.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
 

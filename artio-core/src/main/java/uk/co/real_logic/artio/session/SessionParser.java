@@ -104,7 +104,7 @@ public class SessionParser
         switch (messageType)
         {
             case LogonDecoder.MESSAGE_TYPE:
-                action = onLogon(offset, length, sessionId);
+                action = onLogon(offset, length);
                 break;
 
             case LogoutDecoder.MESSAGE_TYPE:
@@ -325,12 +325,11 @@ public class SessionParser
                 header.msgSeqNum(),
                 sendingTime,
                 origSendingTime,
-                isPossDupOrResend(possDup, header),
                 possDup);
         }
     }
 
-    private Action onLogon(final int offset, final int length, final long sessionId)
+    private Action onLogon(final int offset, final int length)
     {
         final LogonDecoder logon = this.logon;
         final Session session = this.session;
@@ -347,7 +346,6 @@ public class SessionParser
         }
         else
         {
-            final CompositeKey sessionKey = sessionIdStrategy.onAcceptLogon(header);
             final long origSendingTime = origSendingTime(header);
             final String username = username(logon);
             final String password = password(logon);
@@ -356,8 +354,6 @@ public class SessionParser
             return session.onLogon(
                 logon.heartBtInt(),
                 header.msgSeqNum(),
-                sessionId,
-                sessionKey,
                 sendingTime(header),
                 origSendingTime,
                 username,
