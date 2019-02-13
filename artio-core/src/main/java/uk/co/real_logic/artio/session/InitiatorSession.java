@@ -132,6 +132,7 @@ public class InitiatorSession extends InternalSession
             {
                 // NB: become active before the resend request because a user may want to send
                 // Orders at this point.
+                incNextReceivedInboundMessageTime(time());
                 setLogonState(heartbeatInterval, username, password);
                 notifyLogonListener();
 

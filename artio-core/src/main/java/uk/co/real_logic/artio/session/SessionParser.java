@@ -35,7 +35,6 @@ import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED
 import static uk.co.real_logic.artio.builder.Validation.isValidMsgType;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
-import static uk.co.real_logic.artio.messages.DisconnectReason.INVALID_FIX_MESSAGE;
 import static uk.co.real_logic.artio.messages.SessionState.AWAITING_LOGOUT;
 import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
@@ -460,7 +459,7 @@ public class SessionParser
 
             if (action == CONTINUE && requestDisconnect)
             {
-                return session.onRequestDisconnect(INVALID_FIX_MESSAGE);
+                return session.onInvalidFixDisconnect();
             }
 
             return action;
@@ -468,7 +467,7 @@ public class SessionParser
 
         if (requestDisconnect)
         {
-            return session.onRequestDisconnect(INVALID_FIX_MESSAGE);
+            return session.onInvalidFixDisconnect();
         }
 
         return CONTINUE;

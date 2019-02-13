@@ -610,9 +610,9 @@ public class Session implements AutoCloseable
 
     // ---------- Event Handlers & Logic ----------
 
-    Action onRequestDisconnect(final DisconnectReason reason)
+    Action onInvalidFixDisconnect()
     {
-        return Pressure.apply(requestDisconnect(reason));
+        return Pressure.apply(requestDisconnect(DisconnectReason.INVALID_FIX_MESSAGE));
     }
 
     public void onDisconnect()
@@ -1054,8 +1054,8 @@ public class Session implements AutoCloseable
         setLogonState(heartbeatInterval, username, password);
         // logon time becomes time of the confirmation message.
         logonTime(sendingTime);
-
         notifyLogonListener();
+
         return CONTINUE;
     }
 
@@ -1368,7 +1368,7 @@ public class Session implements AutoCloseable
 
     // ---------- Setters ----------
 
-    Session heartbeatIntervalInS(final int heartbeatIntervalInS)
+    private void heartbeatIntervalInS(final int heartbeatIntervalInS)
     {
         this.heartbeatIntervalInMs = SECONDS.toMillis((long)heartbeatIntervalInS);
 
@@ -1376,8 +1376,6 @@ public class Session implements AutoCloseable
         incNextReceivedInboundMessageTime(time);
         sendingHeartbeatIntervalInMs = (long)(heartbeatIntervalInMs * HEARTBEAT_PAUSE_FACTOR);
         nextRequiredHeartbeatTimeInMs = time + sendingHeartbeatIntervalInMs;
-
-        return this;
     }
 
     protected Session state(final SessionState state)
