@@ -30,6 +30,7 @@ import java.util.List;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.fields.RejectReason.VALUE_IS_INCORRECT;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 import static uk.co.real_logic.artio.session.Session.LIBRARY_DISCONNECTED;
@@ -39,7 +40,7 @@ import static uk.co.real_logic.artio.session.Session.LIBRARY_DISCONNECTED;
  */
 public class SessionProxy
 {
-    public static final int NO_LAST_MSG_SEQ_NUM_PROCESSED = -1;
+    static final int NO_LAST_MSG_SEQ_NUM_PROCESSED = -1;
 
     private static final byte[] INCORRECT_BEGIN_STRING = "Incorrect BeginString".getBytes(US_ASCII);
     private static final byte[] NEGATIVE_HEARTBEAT = "HeartBtInt must not be negative".getBytes(US_ASCII);
@@ -117,7 +118,7 @@ public class SessionProxy
         timestampEncoder.initialise(clock.time());
     }
 
-    public SessionProxy setupSession(final long sessionId, final CompositeKey sessionKey)
+    void setupSession(final long sessionId, final CompositeKey sessionKey)
     {
         requireNonNull(sessionKey, "sessionKey");
 
@@ -126,8 +127,6 @@ public class SessionProxy
         {
             sessionIdStrategy.setupSession(sessionKey, header);
         }
-
-        return this;
     }
 
     long resendRequest(
@@ -150,7 +149,7 @@ public class SessionProxy
         return gatewayPublication.saveRequestDisconnect(libraryId, connectionId, reason);
     }
 
-    public long logon(
+    long logon(
         final int heartbeatIntervalInS,
         final int msgSeqNo,
         final String username,
@@ -167,11 +166,11 @@ public class SessionProxy
             .resetSeqNumFlag(resetSeqNumFlag)
             .encryptMethod(0); // may have been previously reset
 
-        if (!nullOrEmpty(username))
+        if (notNullOrEmpty(username))
         {
             logon.username(username);
         }
-        if (!nullOrEmpty(password))
+        if (notNullOrEmpty(password))
         {
             logon.password(password);
         }
@@ -182,17 +181,17 @@ public class SessionProxy
         return send(result, LogonDecoder.MESSAGE_TYPE, sequenceIndex, logon, msgSeqNo);
     }
 
-    private boolean nullOrEmpty(final String string)
+    private boolean notNullOrEmpty(final String string)
     {
-        return string == null || string.length() == 0;
+        return string != null && string.length() > 0;
     }
 
-    public long logout(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
+    long logout(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
         return logout(msgSeqNo, null, 0, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    public long logout(
+    long logout(
         final int msgSeqNo, final int sequenceIndex, final int rejectReason, final int lastMsgSeqNumProcessed)
     {
         final byte[] reasonText = LOGGED_ON_SESSION_REJECT_REASONS[rejectReason];
@@ -225,7 +224,7 @@ public class SessionProxy
         return send(result, LogoutDecoder.MESSAGE_TYPE, sequenceIndex, logout, msgSeqNo);
     }
 
-    public long lowSequenceNumberLogout(
+    long lowSequenceNumberLogout(
         final int msgSeqNo,
         final int expectedSeqNo,
         final int receivedSeqNo,
@@ -243,25 +242,25 @@ public class SessionProxy
         return position;
     }
 
-    public long incorrectBeginStringLogout(
+    long incorrectBeginStringLogout(
         final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
         return logout(msgSeqNo, INCORRECT_BEGIN_STRING, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    public long negativeHeartbeatLogout(
+    long negativeHeartbeatLogout(
         final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
         return logout(msgSeqNo, NEGATIVE_HEARTBEAT, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    public long receivedMessageWithoutSequenceNumber(
+    long receivedMessageWithoutSequenceNumber(
         final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
         return logout(msgSeqNo, NO_MSG_SEQ_NO, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    public long rejectWhilstNotLoggedOn(
+    long rejectWhilstNotLoggedOn(
         final int msgSeqNo, final RejectReason reason, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
         return logout(
@@ -297,38 +296,7 @@ public class SessionProxy
         return send(result, HeartbeatDecoder.MESSAGE_TYPE, sequenceIndex, heartbeat, msgSeqNo);
     }
 
-    public long reject(
-        final int msgSeqNo,
-        final int refSeqNum,
-        final int refTagId,
-        final byte[] refMsgType,
-        final int refMsgTypeLength,
-        final RejectReason reason,
-        final int sequenceIndex,
-        final int lastMsgSeqNumProcessed)
-    {
-        reject.refTagID(refTagId);
-        return reject(msgSeqNo, refSeqNum, refMsgType, refMsgTypeLength, reason, sequenceIndex, lastMsgSeqNumProcessed);
-    }
-
-    public long reject(
-        final int msgSeqNo,
-        final int refSeqNum,
-        final byte[] refMsgType,
-        final int refMsgTypeLength,
-        final RejectReason reason,
-        final int sequenceIndex,
-        final int lastMsgSeqNumProcessed)
-    {
-        final int rejectReason = reason.representation();
-
-        reject.refMsgType(refMsgType, refMsgTypeLength);
-        reject.text(LOGGED_ON_SESSION_REJECT_REASONS[rejectReason]);
-
-        return sendReject(msgSeqNo, refSeqNum, rejectReason, sequenceIndex, lastMsgSeqNumProcessed);
-    }
-
-    public long reject(
+    long reject(
         final int msgSeqNo,
         final int refSeqNum,
         final int refTagId,
@@ -338,33 +306,18 @@ public class SessionProxy
         final int sequenceIndex,
         final int lastMsgSeqNumProcessed)
     {
-        reject.refTagID(refTagId);
-        return reject(
-            msgSeqNo, refSeqNum, refMsgType, refMsgTypeLength, rejectReason, sequenceIndex, lastMsgSeqNumProcessed);
-    }
+        if (refTagId != MISSING_INT)
+        {
+            reject.refTagID(refTagId);
+        }
+        else
+        {
+            reject.resetRefTagID();
+        }
 
-    public long reject(
-        final int msgSeqNo,
-        final int refSeqNum,
-        final char[] refMsgType,
-        final int refMsgTypeLength,
-        final int rejectReason,
-        final int sequenceIndex,
-        final int lastMsgSeqNumProcessed)
-    {
         reject.refMsgType(refMsgType, refMsgTypeLength);
         reject.text(LOGGED_ON_SESSION_REJECT_REASONS[rejectReason]);
 
-        return sendReject(msgSeqNo, refSeqNum, rejectReason, sequenceIndex, lastMsgSeqNumProcessed);
-    }
-
-    private long sendReject(
-        final int msgSeqNo,
-        final int refSeqNum,
-        final int rejectReason,
-        final int sequenceIndex,
-        final int lastMsgSeqNumProcessed)
-    {
         final HeaderEncoder header = reject.header();
         setupHeader(header, msgSeqNo, lastMsgSeqNumProcessed);
 

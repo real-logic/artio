@@ -33,7 +33,6 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.containsString;
@@ -64,7 +63,7 @@ public abstract class AbstractSessionTest
     static final int LIBRARY_ID = 4;
     static final int SEQUENCE_INDEX = 0;
 
-    private static final byte[] MSG_TYPE_BYTES = "D".getBytes(US_ASCII);
+    private static final char[] MSG_TYPE_CHARS = "D".toCharArray();
 
     static final long POSITION = 1024;
 
@@ -183,7 +182,7 @@ public abstract class AbstractSessionTest
 
         onMessage(2);
 
-        session().onMessage(2, MSG_TYPE_BYTES, sendingTime, origSendingTime, true, true);
+        session().onMessage(2, MSG_TYPE_CHARS, sendingTime, origSendingTime, true, true);
 
         verifySendingTimeProblem();
         assertSequenceIndexIs(SEQUENCE_INDEX);
@@ -201,9 +200,10 @@ public abstract class AbstractSessionTest
         verify(sessionProxy).reject(
             2,
             2,
-            MSG_TYPE_BYTES,
-            MSG_TYPE_BYTES.length,
-            REQUIRED_TAG_MISSING,
+            MISSING_INT,
+            MSG_TYPE_CHARS,
+            MSG_TYPE_CHARS.length,
+            REQUIRED_TAG_MISSING.representation(),
             SEQUENCE_INDEX,
             NO_LAST_MSG_SEQ_NUM_PROCESSED);
     }
@@ -485,9 +485,11 @@ public abstract class AbstractSessionTest
             1,
             2,
             NEW_SEQ_NO,
-            SequenceResetDecoder.MESSAGE_TYPE_BYTES,
-            SequenceResetDecoder.MESSAGE_TYPE_BYTES.length,
-            VALUE_IS_INCORRECT, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+            SequenceResetDecoder.MESSAGE_TYPE_CHARS,
+            SequenceResetDecoder.MESSAGE_TYPE_CHARS.length,
+            VALUE_IS_INCORRECT.representation(),
+            SEQUENCE_INDEX,
+            NO_LAST_MSG_SEQ_NUM_PROCESSED);
         assertSequenceIndexIs(SEQUENCE_INDEX);
     }
 
@@ -1103,7 +1105,7 @@ public abstract class AbstractSessionTest
     private Action onMessage(final int msgSeqNo, final boolean isPossDupOrResend, final long origSendingTime)
     {
         return session().onMessage(
-            msgSeqNo, MSG_TYPE_BYTES, sendingTime(), origSendingTime, isPossDupOrResend, isPossDupOrResend);
+            msgSeqNo, MSG_TYPE_CHARS, sendingTime(), origSendingTime, isPossDupOrResend, isPossDupOrResend);
     }
 
     protected long sendingTime()
@@ -1122,16 +1124,16 @@ public abstract class AbstractSessionTest
             2,
             2,
             52,
-            MSG_TYPE_BYTES,
-            MSG_TYPE_BYTES.length,
-            SENDINGTIME_ACCURACY_PROBLEM,
+            MSG_TYPE_CHARS,
+            MSG_TYPE_CHARS.length,
+            SENDINGTIME_ACCURACY_PROBLEM.representation(),
             SEQUENCE_INDEX,
             NO_LAST_MSG_SEQ_NUM_PROCESSED);
     }
 
     protected void messageWithWeirdTime(final long sendingTime)
     {
-        session().onMessage(2, MSG_TYPE_BYTES, sendingTime, UNKNOWN, false, false);
+        session().onMessage(2, MSG_TYPE_CHARS, sendingTime, UNKNOWN, false, false);
     }
 
     protected void onBeginString(final boolean isLogon)

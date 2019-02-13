@@ -22,7 +22,6 @@ import org.agrona.LangUtil;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.decoder.*;
-import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.util.AsciiBuffer;
@@ -214,23 +213,15 @@ public class SessionParser
     {
         final long origSendingTime = origSendingTime(header);
         final long sendingTime = sendingTime(header);
-        final int msgTypeLength = header.msgTypeLength();
-        final byte[] msgType = extractMsgType(header, msgTypeLength);
         final boolean possDup = isPossDup(header);
         return session.onMessage(
             header.msgSeqNum(),
-            msgType,
-            msgTypeLength,
+            header.msgType(),
+            header.msgTypeLength(),
             sendingTime,
             origSendingTime,
             isPossDupOrResend(possDup, header),
             possDup);
-    }
-
-    private byte[] extractMsgType(final HeaderDecoder header, final int length)
-    {
-        msgTypeBuffer = CodecUtil.toBytes(header.msgType(), msgTypeBuffer, length);
-        return msgTypeBuffer;
     }
 
     private long origSendingTime(final HeaderDecoder header)
@@ -455,7 +446,7 @@ public class SessionParser
             {
                 final long origSendingTime = origSendingTime(header);
                 final long sendingTime = sendingTime(header);
-                final byte[] msgType = extractMsgType(header, msgTypeLength);
+                final char[] msgType = header.msgType();
                 return session.onMessage(MISSING_INT, msgType, msgTypeLength, sendingTime, origSendingTime, false,
                     false);
             }

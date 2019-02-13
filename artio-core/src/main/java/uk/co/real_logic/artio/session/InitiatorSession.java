@@ -22,7 +22,7 @@ import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import static uk.co.real_logic.artio.decoder.LogonDecoder.MESSAGE_TYPE_BYTES;
+import static uk.co.real_logic.artio.decoder.LogonDecoder.MESSAGE_TYPE_CHARS;
 
 public class InitiatorSession extends InternalSession
 {
@@ -100,7 +100,7 @@ public class InitiatorSession extends InternalSession
             return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime, msgSeqNum);
         }
 
-        final byte[] msgType = MESSAGE_TYPE_BYTES;
+        final char[] msgType = MESSAGE_TYPE_CHARS;
         if (state() == SessionState.SENT_LOGON)
         {
             final int expectedSeqNo = expectedReceivedSeqNum();
