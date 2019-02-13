@@ -1448,7 +1448,7 @@ public class Session implements AutoCloseable
     }
 
     // Visible for testing
-    Action onInvalidMessage(
+    public Action onInvalidMessage(
         final int refSeqNum,
         final int refTagId,
         final char[] refMsgType,
