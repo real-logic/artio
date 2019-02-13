@@ -16,11 +16,11 @@
 package uk.co.real_logic.artio.session;
 
 import org.junit.Test;
-import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
@@ -66,6 +66,8 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
         assertState(ACTIVE);
         verifyNoFurtherMessages();
+        verifyNotifiesLoginListener();
+        assertHasLogonTime();
     }
 
     @Test
@@ -99,7 +101,8 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
         assertEquals(CONTINUE, onLogon(1));
 
-        verifySavesLogonMessage(times(1));
+        verifyNotifiesLoginListener();
+        assertHasLogonTime();
     }
 
     @Test
@@ -111,18 +114,14 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
         assertEquals(CONTINUE, onLogon(2));
 
-        verifySavesLogonMessage(times(1));
+        verifyNotifiesLoginListener();
+        assertHasLogonTime();
     }
 
     @Test
     public void shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne()
     {
         shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne(SEQUENCE_INDEX);
-    }
-
-    private void verifySavesLogonMessage(final VerificationMode verificationMode)
-    {
-        verify(mockLogonListener, verificationMode).onLogon(any());
     }
 
     private void verifyLogon()
@@ -139,6 +138,11 @@ public class InitiatorSessionTest extends AbstractSessionTest
     protected Session session()
     {
         return session;
+    }
+
+    private void assertHasLogonTime()
+    {
+        assertTrue(session().hasLogonTime());
     }
 
 }

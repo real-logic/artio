@@ -180,9 +180,18 @@ public abstract class AbstractSessionTest
 
         onLogon(1);
 
+        System.out.println("session().lastReceivedMsgSeqNum() = " + session().lastReceivedMsgSeqNum());
+        System.out.println("session().lastSentMsgSeqNum() = " + session().lastSentMsgSeqNum());
+
         onMessage(2);
 
+        System.out.println("session().lastReceivedMsgSeqNum() = " + session().lastReceivedMsgSeqNum());
+        System.out.println("session().lastSentMsgSeqNum() = " + session().lastSentMsgSeqNum());
+
         session().onMessage(2, MSG_TYPE_CHARS, sendingTime, origSendingTime, true, true);
+
+        System.out.println("session().lastReceivedMsgSeqNum() = " + session().lastReceivedMsgSeqNum());
+        System.out.println("session().lastSentMsgSeqNum() = " + session().lastSentMsgSeqNum());
 
         verifySendingTimeProblem();
         assertSequenceIndexIs(SEQUENCE_INDEX);
@@ -893,6 +902,8 @@ public abstract class AbstractSessionTest
         logonWithInvalidSendingTime(CONTINUE);
 
         verifySendingTimeAccuracyProblem(1);
+
+        verifyDoesNotNotifyLoginListener();
     }
 
     @Test
@@ -906,6 +917,8 @@ public abstract class AbstractSessionTest
         logonWithInvalidSendingTime(CONTINUE);
 
         verifySendingTimeAccuracyProblem(2);
+
+        verifyDoesNotNotifyLoginListener();
     }
 
     @Test
@@ -1170,6 +1183,16 @@ public abstract class AbstractSessionTest
 
     protected abstract Session session();
 
+    protected void verifyNotifiesLoginListener()
+    {
+        verifyNotifiesLoginListener(times(1));
+    }
+
+    protected void verifyDoesNotNotifyLoginListener()
+    {
+        verifyNotifiesLoginListener(never());
+    }
+
     protected abstract void readyForLogon();
 
     void verifyNoFurtherMessages()
@@ -1200,5 +1223,10 @@ public abstract class AbstractSessionTest
     private void onGapFill(final int msgSeqNo, final int newSeqNo)
     {
         session().onSequenceReset(msgSeqNo, newSeqNo, true, false);
+    }
+
+    private void verifyNotifiesLoginListener(final VerificationMode verificationMode)
+    {
+        verify(mockLogonListener, verificationMode).onLogon(any());
     }
 }

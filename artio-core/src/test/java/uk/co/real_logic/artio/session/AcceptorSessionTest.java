@@ -86,19 +86,19 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
         verifyLogon();
         verify(sessionProxy).resendRequest(2, 1, 0, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
-        verify(sessionProxy).isSeqNumResetRequested();
+        verify(sessionProxy).seqNumResetRequested();
         verifyNoFurtherMessages();
     }
 
     @Test
     public void shouldNotRequestResendIfHighSeqNoLogonAndResetRequested()
     {
-        when(sessionProxy.isSeqNumResetRequested()).thenReturn(true);
+        when(sessionProxy.seqNumResetRequested()).thenReturn(true);
 
         onLogon(3);
 
         verifyLogon();
-        verify(sessionProxy).isSeqNumResetRequested();
+        verify(sessionProxy).seqNumResetRequested();
         verifyNoFurtherMessages();
         assertState(ACTIVE); // nothing to await as we requested seq no reset
     }

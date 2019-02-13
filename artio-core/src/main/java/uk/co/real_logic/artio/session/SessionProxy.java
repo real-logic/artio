@@ -390,7 +390,7 @@ public class SessionProxy
         this.libraryConnected = libraryConnected;
     }
 
-    boolean isSeqNumResetRequested()
+    boolean seqNumResetRequested()
     {
         return seqNumResetRequested;
     }

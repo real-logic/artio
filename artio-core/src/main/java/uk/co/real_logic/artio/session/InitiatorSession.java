@@ -95,6 +95,7 @@ public class InitiatorSession extends InternalSession
         }
 
         final long logonTime = sendingTime(sendingTime, origSendingTime);
+
         if (resetSeqNumFlag)
         {
             return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime, msgSeqNum);
@@ -103,38 +104,30 @@ public class InitiatorSession extends InternalSession
         final char[] msgType = MESSAGE_TYPE_CHARS;
         if (state() == SessionState.SENT_LOGON)
         {
+            // initial logon
             final int expectedSeqNo = expectedReceivedSeqNum();
             if (msgSeqNum == expectedSeqNo)
             {
-                if (INITIAL_SEQUENCE_NUMBER == msgSeqNum)
-                {
-                    // Outgoing connections could be exchanging logons because of a network disconnection
-                    // So we still only want this to occur on the initial logon.
-                    logonTime(logonTime);
-                }
-
                 final long time = time();
                 action = validateRequiredFieldsAndCodec(
-                    msgSeqNum, time, msgType, msgType.length, sendingTime, origSendingTime, possDup);
+                    msgSeqNum, time, msgType, msgType.length, logonTime, origSendingTime, possDup);
 
                 if (action != null)
                 {
                     return action;
                 }
 
-                incNextReceivedInboundMessageTime(time);
+                setupCompleteLogonState(heartbeatInterval, msgSeqNum, username, password, logonTime, time);
                 lastReceivedMsgSeqNum(msgSeqNum);
-                setLogonState(heartbeatInterval, username, password);
-                notifyLogonListener();
+
+                return Action.CONTINUE;
             }
             // Received the wrong sequence number from the acceptor
             else if (expectedSeqNo < msgSeqNum)
             {
                 // NB: become active before the resend request because a user may want to send
                 // Orders at this point.
-                incNextReceivedInboundMessageTime(time());
-                setLogonState(heartbeatInterval, username, password);
-                notifyLogonListener();
+                setupCompleteLogonState(heartbeatInterval, msgSeqNum, username, password, logonTime, time());
 
                 action = requestResend(expectedSeqNo, msgSeqNum);
 
@@ -150,10 +143,8 @@ public class InitiatorSession extends InternalSession
         else
         {
             // You've received a logon and you weren't expecting one and it hasn't got the resetSeqNumFlag set
-            return onMessage(msgSeqNum, msgType, sendingTime, origSendingTime, isPossDupOrResend, possDup);
+            return onMessage(msgSeqNum, msgType, logonTime, origSendingTime, isPossDupOrResend, possDup);
         }
-
-        return Action.CONTINUE;
     }
 
     public int poll(final long time)
