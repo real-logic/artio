@@ -678,7 +678,7 @@ public class Session implements AutoCloseable
         }
     }
 
-    Action validateRequiredFieldsAndCodec(
+    private Action validateRequiredFieldsAndCodec(
         final int msgSeqNo,
         final long time,
         final char[] msgType,
@@ -826,7 +826,7 @@ public class Session implements AutoCloseable
         return endOfResendRequestRange;
     }
 
-    Action requestResend(final int expectedSeqNo, final int receivedMsgSeqNo)
+    private Action requestResend(final int expectedSeqNo, final int receivedMsgSeqNo)
     {
         final long position = sendResendRequest(expectedSeqNo, receivedMsgSeqNo - 1);
         if (position >= 0)
@@ -869,7 +869,7 @@ public class Session implements AutoCloseable
         return position;
     }
 
-    Action msgSeqNumTooLow(final int msgSeqNo, final int expectedSeqNo)
+    private Action msgSeqNumTooLow(final int msgSeqNo, final int expectedSeqNo)
     {
         return checkPositionAndDisconnect(
             proxy.lowSequenceNumberLogout(
@@ -1051,7 +1051,10 @@ public class Session implements AutoCloseable
         final String password,
         final long currentTime)
     {
-        setFirstLogonTime(logonTime, msgSeqNum);
+        if (msgSeqNum == INITIAL_SEQUENCE_NUMBER)
+        {
+            logonTime(logonTime);
+        }
         setupLogonState(heartbeatInterval, username, password, currentTime);
     }
 
@@ -1655,18 +1658,6 @@ public class Session implements AutoCloseable
     void logonTime(final long logonTime)
     {
         this.logonTime = logonTime;
-    }
-
-    // Outgoing connections could be exchanging logons because of a network disconnection
-    // So we still only want this to occur on the initial logon.
-    // Incoming initiators are allowed to start a session from 1
-    // Without also sending 141=Y if the session was previously logged out cleanly.
-    private void setFirstLogonTime(final long logonTime, final int msgSeqNum)
-    {
-        if (msgSeqNum == INITIAL_SEQUENCE_NUMBER)
-        {
-            logonTime(logonTime);
-        }
     }
 
     void awaitingResend(final boolean awaitingResend)
