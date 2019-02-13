@@ -106,6 +106,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
                             while (subscription.imageCount() != 1)
                             {
                                 idle(idleStrategy, aeronInvoker);
+                                aeronArchive.checkForErrorResponse();
                             }
                             idleStrategy.reset();
 
