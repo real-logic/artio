@@ -232,6 +232,20 @@ public class ReplayIndexTest extends AbstractLogTest
     }
 
     @Test(timeout = 20_000L)
+    public void shouldNotReturnLogEntriesWithOtherSessionId()
+    {
+        indexExampleMessage(SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX);
+        indexExampleMessage(SESSION_ID_2, SEQUENCE_NUMBER, SEQUENCE_INDEX);
+        indexExampleMessage(SESSION_ID, SEQUENCE_NUMBER + 1, SEQUENCE_INDEX);
+
+        final int msgCount = query(SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX, SEQUENCE_NUMBER + 1, SEQUENCE_INDEX);
+
+        assertEquals(2, msgCount);
+        verifyMappedFile(SESSION_ID, 1);
+        verifyMessagesRead(2);
+    }
+
+    @Test(timeout = 20_000L)
     public void shouldNotReturnLogEntriesWithOutOfRangeSequenceNumbers()
     {
         indexExampleMessage();
