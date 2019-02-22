@@ -59,6 +59,10 @@ final class FixConnection implements AutoCloseable
 
     private int msgSeqNum = 1;
 
+    private final ByteBuffer readBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
+    private final MutableAsciiBuffer asciiReadBuffer = new MutableAsciiBuffer(readBuffer);
+    private int bytesRemaining = 0;
+
     static FixConnection initiate(final int port) throws IOException
     {
         return new FixConnection(
@@ -147,19 +151,36 @@ final class FixConnection implements AutoCloseable
 
     <T extends Decoder> T readMessage(final T decoder)
     {
-        final ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
-        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(buffer);
-
         try
         {
-            final int read = socket.read(buffer);
+            final int bytesToParse = bytesRemaining == 0 ? socket.read(readBuffer) : bytesRemaining;
+            final String ascii = asciiReadBuffer.getAscii(OFFSET, bytesToParse);
+
             DebugLogger.log(FIX_TEST,
-                "< [" + asciiBuffer.getAscii(OFFSET, read) + "] for attempted: " + decoder.getClass());
-            decoder.decode(asciiBuffer, OFFSET, read);
+                "< [" + ascii + "] for attempted: " + decoder.getClass());
+
+            int endOfMessage = ascii.indexOf("8=FIX.4.4", 9);
+            if (endOfMessage == -1)
+            {
+                endOfMessage = bytesToParse;
+            }
+
+            decoder.decode(asciiReadBuffer, OFFSET, endOfMessage);
 
             if (!decoder.validate())
             {
                 fail("Failed: " + RejectReason.decode(decoder.rejectReason()) + " for " + decoder.invalidTagId());
+            }
+
+            readBuffer.clear();
+            if (endOfMessage != -1)
+            {
+                bytesRemaining = bytesToParse - endOfMessage;
+                asciiReadBuffer.putBytes(0, asciiReadBuffer, endOfMessage, bytesRemaining);
+            }
+            else
+            {
+                bytesRemaining = 0;
             }
         }
         catch (final IOException ex)
