@@ -25,7 +25,7 @@ buildscript {
     }
 
     dependencies {
-        classpath "com.github.jengelman.gradle.plugins:shadow:4.0.4"
+        classpath "com.github.jengelman.gradle.plugins:shadow:5.0.0"
         classpath 'net.researchgate:gradle-release:2.7.0'
     }
 }
@@ -466,6 +466,6 @@ task uploadToMavenCentral {
 }
 
 wrapper {
-    gradleVersion = '4.10.3'
+    gradleVersion = '5.2.1'
     distributionType = 'ALL'
 }
