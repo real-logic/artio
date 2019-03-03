@@ -471,10 +471,10 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
      * @see Long#getChars(long, int, char[])
      * @see java.math.BigDecimal#toPlainString
      *
-     * Note: unlike putAsciiFloat(offset, DecimalFloat), this method will respect the scale.
+     * Note: unlike putFloatAscii(offset, DecimalFloat), this method will respect the scale.
      * so for input of 0, -2 value returned will be "0.00" and not only "0".
      */
-    public int putAsciiFloat(final int offset, final long value, final int scale)
+    public int putFloatAscii(final int offset, final long value, final int scale)
     {
 //      final int rightDigitPosAtEnd = offset + Math.max(Math.abs(scale), LONGEST_LONG_LENGTH) + 1;
         final int rightDigitPosAtEnd = offset + LONGEST_LONG_LENGTH + 1;
@@ -539,64 +539,9 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         }
     }
 
-    public int putAsciiFloat(final int offset, final DecimalFloat price)
+    public int putFloatAscii(final int offset, final DecimalFloat price)
     {
-        return putAsciiFloat(offset, price.value(), price.scale());
-    }
-
-    public int putFloatAsciiOld(final int offset, final DecimalFloat price)
-    {
-        final long value = price.value();
-        final int scale = price.scale();
-        if (zero(offset, value))
-        {
-            return 1;
-        }
-
-        final long remainder = calculateRemainderAndPutMinus(offset, value);
-        final int minusAdj = value < 0 ? 1 : 0;
-        final int start = offset + minusAdj;
-
-        // Encode the value into a tmp space, leaving the longest possible space required
-        final int tmpEnd = start + LONGEST_LONG_LENGTH;
-        final int tmpStart = putLong(remainder, tmpEnd) + 1;
-        final int length = tmpEnd - tmpStart + 1;
-
-        // Move the value to the beginning once you've encoded it
-        if (scale > 0)
-        {
-            final int end = start + length;
-            final int split = end - scale;
-            final int digitsBeforeDot = length - scale;
-            if (digitsBeforeDot <= 0)
-            {
-                int cursor = start;
-                putByte(cursor++, ZERO);
-                putByte(cursor++, DOT);
-                final int numberOfZeros = -digitsBeforeDot;
-                final int endOfZeros = cursor + numberOfZeros;
-                for (; cursor < endOfZeros; cursor++)
-                {
-                    putByte(cursor, ZERO);
-                }
-                putBytes(cursor, this, tmpStart, length);
-
-                return minusAdj + ZERO_LENGTH + DOT_LENGTH + numberOfZeros + length;
-            }
-            else
-            {
-                putBytes(start, this, tmpStart, digitsBeforeDot);
-                putByte(split, DOT);
-                putBytes(split + 1, this, tmpStart + digitsBeforeDot, scale);
-
-                return minusAdj + length + DOT_LENGTH;
-            }
-        }
-        else
-        {
-            putBytes(start, this, tmpStart, length);
-            return length + minusAdj;
-        }
+        return putFloatAscii(offset, price.value(), price.scale());
     }
 
     private boolean zero(final int offset, final long value)
