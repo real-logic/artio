@@ -354,17 +354,6 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         return 1;
     }
 
-    private static int endOffset(final long value)
-    {
-        for (int i = 0; true; i++)
-        {
-            if (value <= LONG_ROUNDS[i])
-            {
-                return i;
-            }
-        }
-    }
-
     /**
      *
      * @see Integer#DigitTens
