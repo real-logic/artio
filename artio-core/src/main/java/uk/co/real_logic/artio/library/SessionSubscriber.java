@@ -74,7 +74,7 @@ class SessionSubscriber implements AutoCloseable
                     }
 
                     // Can receive messages when no longer disconnected.
-                    return handler.onMessage(
+                    final Action handlerAction = handler.onMessage(
                         buffer,
                         offset,
                         length,
@@ -84,6 +84,13 @@ class SessionSubscriber implements AutoCloseable
                         messageType,
                         timestamp,
                         position);
+
+                    if (handlerAction == CONTINUE || handlerAction == COMMIT)
+                    {
+                        session.updateLastMessageProcessed();
+                    }
+
+                    return handlerAction;
 
                 case CATCHUP_REPLAY:
                     return handler.onMessage(
@@ -123,36 +130,14 @@ class SessionSubscriber implements AutoCloseable
         return action;
     }
 
-    void onLogon(
-        final long sessionId,
-        final int lastSentSequenceNumber,
-        final int lastReceivedSequenceNumber,
-        final CompositeKey compositeKey)
-    {
-        if (compositeKey != null)
-        {
-            session.setupSession(sessionId, compositeKey);
-        }
-        else
-        {
-            session.id(sessionId);
-        }
-
-        // Acceptors need to wait for Logon message to identify
-        if (session instanceof AcceptorSession)
-        {
-            session.lastSentMsgSeqNum(lastSentSequenceNumber);
-            session.lastReceivedMsgSeqNum(lastReceivedSequenceNumber);
-        }
-    }
-
     private void onSessionLogon(final Session session)
     {
         // Should only be fired if we already own the session and the client sends another logon to run and end of day.
-        if (session.logonTime() != Session.NO_LOGON_TIME)
+        if (session.hasLogonTime())
         {
             handler.onSessionStart(session);
         }
+
         if (initiateSessionReply != null)
         {
             initiateSessionReply.onComplete(session);

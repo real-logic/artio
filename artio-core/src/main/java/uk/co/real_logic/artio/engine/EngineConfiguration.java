@@ -208,6 +208,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private boolean acceptedSessionClosedResendInterval = DEFAULT_CLOSED_RESEND_INTERVAL;
     private int acceptedSessionResendRequestChunkSize = NO_RESEND_REQUEST_CHUNK_SIZE;
     private boolean acceptedSessionSendRedundantResendRequests = DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS;
+    private boolean acceptedEnableLastMsgSeqNumProcessed = DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -555,6 +556,20 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Sets the {@link SessionConfiguration#enableLastMsgSeqNumProcessed()} property for accepted Sessions.
+     *
+     * @param acceptedEnableLastMsgSeqNumProcessed the {@link SessionConfiguration#enableLastMsgSeqNumProcessed()}
+     *                                             property for accepted Sessions.
+     * @return this
+     */
+    public EngineConfiguration acceptedEnableLastMsgSeqNumProcessed(
+        final boolean acceptedEnableLastMsgSeqNumProcessed)
+    {
+        this.acceptedEnableLastMsgSeqNumProcessed = acceptedEnableLastMsgSeqNumProcessed;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -706,7 +721,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * {@inheritDoc}
+     * Sets the aeron channel that libraries will use to communicate with this FixEngine instance.
+     *
+     * @param libraryAeronChannel the aeron channel that libraries will use to communicate with this FixEngine instance.
+     * @return this
      */
     public EngineConfiguration libraryAeronChannel(final String libraryAeronChannel)
     {
@@ -769,6 +787,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public boolean acceptedSessionSendRedundantResendRequests()
     {
         return acceptedSessionSendRedundantResendRequests;
+    }
+
+    public boolean acceptedEnableLastMsgSeqNumProcessed()
+    {
+        return acceptedEnableLastMsgSeqNumProcessed;
     }
 
     public EngineConfiguration conclude()

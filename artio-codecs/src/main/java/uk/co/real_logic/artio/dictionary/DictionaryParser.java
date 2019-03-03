@@ -85,7 +85,7 @@ public final class DictionaryParser
         final List<Message> messages = parseMessages(document, fields, components, forwardReferences);
 
         reconnectForwardReferences(forwardReferences, components);
-        sanitizeDictionary(fields, components, messages);
+        sanitizeDictionary(fields, messages);
 
         if (fixtDictionary != null)
         {
@@ -129,47 +129,6 @@ public final class DictionaryParser
     private boolean hasMultipleCharacters(final Field field)
     {
         return field.values().stream().anyMatch(value -> value.representation().length() > 1);
-    }
-
-    private void simplifyComponentsThatAreJustGroups(final Map<String, Component> components,
-        final List<Message> messages)
-    {
-        final List<String> toRemove = new ArrayList<>();
-        components.forEach((name, component) ->
-        {
-            if (isJustGroup(component))
-            {
-                toRemove.add(name);
-                final Entry.Element group = extractFirst(component);
-                messages.forEach(aggregate -> replaceComponent(aggregate, component, group));
-                components.values().forEach(aggregate -> replaceComponent(aggregate, component, group));
-            }
-        });
-
-        toRemove.forEach(components::remove);
-    }
-
-    private void replaceComponent(
-        final Aggregate aggregate,
-        final Component component,
-        final Entry.Element group)
-    {
-        aggregate.entriesWith(element -> element == component)
-            .forEach((entry) -> entry.element(group));
-
-        aggregate.entriesWith(element -> element instanceof Aggregate)
-            .forEach((entry) -> replaceComponent((Aggregate)entry.element(), component, group));
-    }
-
-    private Entry.Element extractFirst(final Component component)
-    {
-        return component.entries().get(0).element();
-    }
-
-    private boolean isJustGroup(final Component component)
-    {
-        final List<Entry> entries = component.entries();
-        return entries.size() == 1 && entries.get(0).element() instanceof Group;
     }
 
     private void reconnectForwardReferences(final Map<Entry, String> forwardReferences,
@@ -407,10 +366,8 @@ public final class DictionaryParser
     }
 
     private void sanitizeDictionary(final Map<String, Field> fields,
-        final Map<String, Component> components,
         final List<Message> messages)
     {
-        simplifyComponentsThatAreJustGroups(components, messages);
         correctMultiCharacterCharEnums(fields);
         identifyDuplicateFieldDefinitionsForMessages(messages);
     }

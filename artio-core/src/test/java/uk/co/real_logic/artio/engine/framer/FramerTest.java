@@ -451,7 +451,7 @@ public class FramerTest
 
         libraryConnects();
 
-        verifySessionExistsSaved(times(1), LogonStatus.LIBRARY_NOTIFICATION);
+        verifySessionExistsSaved(times(1), SessionStatus.LIBRARY_NOTIFICATION);
     }
 
     @Test
@@ -469,7 +469,7 @@ public class FramerTest
 
         libraryConnects();
 
-        verifySessionExistsSaved(times(2), LogonStatus.LIBRARY_NOTIFICATION);
+        verifySessionExistsSaved(times(2), SessionStatus.LIBRARY_NOTIFICATION);
     }
 
     @Test
@@ -523,8 +523,11 @@ public class FramerTest
             anyBoolean(),
             anyInt(),
             anyBoolean(),
+            anyBoolean(),
             anyLong(),
             anyInt(),
+            any(),
+            any(),
             any(),
             any(),
             any(),
@@ -556,8 +559,11 @@ public class FramerTest
             anyBoolean(),
             anyInt(),
             anyBoolean(),
+            anyBoolean(),
             anyLong(),
             anyInt(),
+            any(),
+            any(),
             any(),
             any(),
             any(),
@@ -661,9 +667,9 @@ public class FramerTest
         saveRequestSessionReply();
     }
 
-    private long saveRequestSessionReply()
+    private void saveRequestSessionReply()
     {
-        return verify(inboundPublication).saveRequestSessionReply(LIBRARY_ID, OK, CORR_ID);
+        verify(inboundPublication).saveRequestSessionReply(LIBRARY_ID, OK, CORR_ID);
     }
 
     private Action onRequestSession()
@@ -696,9 +702,6 @@ public class FramerTest
             HEARTBEAT_INTERVAL_IN_MS,
             0,
             0,
-            DEFAULT_CLOSED_RESEND_INTERVAL,
-            NO_RESEND_REQUEST_CHUNK_SIZE,
-            DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS,
             "",
             "", header));
     }
@@ -717,30 +720,7 @@ public class FramerTest
 
     private void backPressureFirstSaveAttempts()
     {
-        when(inboundPublication.saveManageSession(eq(LIBRARY_ID),
-            anyLong(),
-            anyLong(),
-            anyInt(),
-            anyInt(),
-            anyLong(),
-            any(),
-            eq(SlowStatus.NOT_SLOW),
-            eq(INITIATOR),
-            any(),
-            anyBoolean(),
-            anyInt(),
-            anyBoolean(),
-            anyInt(),
-            anyBoolean(),
-            anyLong(),
-            anyInt(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any())).thenReturn(BACK_PRESSURED, POSITION);
+        backPressureSaveSessionExists();
     }
 
     private void backPressureSaveSessionExists()
@@ -760,8 +740,11 @@ public class FramerTest
             anyBoolean(),
             anyInt(),
             anyBoolean(),
+            anyBoolean(),
             anyLong(),
             anyInt(),
+            any(),
+            any(),
             any(),
             any(),
             any(),
@@ -841,6 +824,7 @@ public class FramerTest
             DEFAULT_CLOSED_RESEND_INTERVAL,
             NO_RESEND_REQUEST_CHUNK_SIZE,
             DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS,
+            false,
             "",
             "",
             HEARTBEAT_INTERVAL_IN_S,
@@ -873,7 +857,7 @@ public class FramerTest
             anyInt(),
             anyInt(),
             anyLong(),
-            eq(LogonStatus.NEW),
+            eq(SessionStatus.SESSION_HANDOVER),
             eq(SlowStatus.NOT_SLOW),
             eq(INITIATOR),
             any(),
@@ -882,8 +866,11 @@ public class FramerTest
             anyBoolean(),
             anyInt(),
             anyBoolean(),
+            anyBoolean(),
             anyLong(),
             anyInt(),
+            any(),
+            any(),
             any(),
             any(),
             any(),
@@ -893,7 +880,7 @@ public class FramerTest
             any());
     }
 
-    private void verifySessionExistsSaved(final VerificationMode times, final LogonStatus status)
+    private void verifySessionExistsSaved(final VerificationMode times, final SessionStatus status)
     {
         verify(inboundPublication, times).saveManageSession(eq(LIBRARY_ID),
             eq(connectionId.getValue()),
@@ -902,16 +889,19 @@ public class FramerTest
             anyInt(),
             anyLong(),
             eq(status),
-            any(), // todo(Nick): Should be NOT_SLOW? ,
+            any(),
             any(),
             any(),
             anyBoolean(),
             anyInt(),
             anyBoolean(),
             anyInt(),
+            anyBoolean(),
             anyBoolean(),
             anyLong(),
             anyInt(),
+            any(),
+            any(),
             any(),
             any(),
             any(),

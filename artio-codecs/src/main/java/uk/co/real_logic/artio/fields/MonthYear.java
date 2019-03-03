@@ -195,13 +195,13 @@ public final class MonthYear
         final int endYear = offset + SIZE_OF_YEAR;
         final int endMonth = endYear + SIZE_OF_MONTH;
 
-        buffer.putNatural(offset, SIZE_OF_YEAR, year());
-        buffer.putNatural(endYear, SIZE_OF_MONTH, month().getValue());
+        buffer.putNaturalPaddedIntAscii(offset, SIZE_OF_YEAR, year());
+        buffer.putNaturalPaddedIntAscii(endYear, SIZE_OF_MONTH, month().getValue());
 
         final int dayOfMonth = dayOfMonth();
         if (dayOfMonth != NONE)
         {
-            buffer.putNatural(endMonth, SIZE_OF_DAY_OF_MONTH, dayOfMonth);
+            buffer.putNaturalPaddedIntAscii(endMonth, SIZE_OF_DAY_OF_MONTH, dayOfMonth);
             return LONG_LENGTH;
         }
         else
@@ -210,7 +210,7 @@ public final class MonthYear
             if (weekOfMonth != NONE)
             {
                 buffer.putChar(endMonth, 'w');
-                buffer.putNatural(endMonth + 1, SIZE_OF_WEEK_OF_MONTH, weekOfMonth);
+                buffer.putNaturalPaddedIntAscii(endMonth + 1, SIZE_OF_WEEK_OF_MONTH, weekOfMonth);
                 return LONG_LENGTH;
             }
         }

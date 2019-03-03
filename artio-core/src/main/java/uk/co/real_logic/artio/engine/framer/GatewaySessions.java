@@ -143,7 +143,8 @@ class GatewaySessions
             // This gets set by the receiver end point once the logon message has been received.
             0,
             reasonableTransmissionTimeInMs,
-            asciiBuffer);
+            asciiBuffer,
+            gatewaySession.enableLastMsgSeqNumProcessed());
 
         session.awaitingResend(awaitingResend);
         session.closedResendInterval(gatewaySession.closedResendInterval());

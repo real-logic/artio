@@ -18,35 +18,21 @@ package uk.co.real_logic.artio;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
-import org.agrona.concurrent.status.CountersManager;
 import uk.co.real_logic.artio.engine.logger.LoggerUtil;
 
 import java.io.File;
 import java.nio.MappedByteBuffer;
 
 /**
- * A memory mapped file that stores monitoring data which can be accessed by a monitoring
- * daemon/process.
- *
- * This contains buffers in order for:
- *
- * <ol>
- *     <li>The Labels Buffer</li>
- *     <li>The Counters Buffer</li>
- *     <li>The Error Buffer</li>
- * </ol>
+ * A memory mapped file that stores the error buffer.
  */
 public final class MonitoringFile implements AutoCloseable
 {
-    private static final int SEGMENT_SIZE_FACTOR = 4;
-
     private final MappedByteBuffer mappedByteBuffer;
-    private final AtomicBuffer counterMetaDataBuffer;
-    private final AtomicBuffer counterValuesBuffer;
     private final AtomicBuffer errorBuffer;
     private final String absolutePath;
 
-    public MonitoringFile(final boolean newFile, final CommonConfiguration configuration)
+    MonitoringFile(final boolean newFile, final CommonConfiguration configuration)
     {
         final File file = new File(configuration.monitoringFile()).getAbsoluteFile();
         absolutePath = file.getAbsolutePath();
@@ -71,23 +57,8 @@ public final class MonitoringFile implements AutoCloseable
             length = mappedByteBuffer.capacity();
         }
 
-        final int segmentLength = length / SEGMENT_SIZE_FACTOR;
-
         final AtomicBuffer mappedFile = new UnsafeBuffer(mappedByteBuffer);
-        final int counterMetaDataBufferLength = segmentLength * 2;
-        counterMetaDataBuffer = new UnsafeBuffer(mappedFile, 0, counterMetaDataBufferLength);
-        counterValuesBuffer = new UnsafeBuffer(mappedFile, counterMetaDataBufferLength, segmentLength);
-        errorBuffer = new UnsafeBuffer(mappedFile, counterMetaDataBufferLength + segmentLength, segmentLength);
-    }
-
-    public CountersManager createCountersManager()
-    {
-        return new CountersManager(counterMetaDataBuffer, counterValuesBuffer);
-    }
-
-    public AtomicBuffer countersBuffer()
-    {
-        return counterValuesBuffer;
+        errorBuffer = new UnsafeBuffer(mappedFile, 0, length);
     }
 
     public AtomicBuffer errorBuffer()

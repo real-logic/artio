@@ -36,6 +36,7 @@ public final class SessionConfiguration
     public static final boolean DEFAULT_CLOSED_RESEND_INTERVAL = false;
     public static final int NO_RESEND_REQUEST_CHUNK_SIZE = 0;
     public static final boolean DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS = false;
+    public static final boolean DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED = false;
 
     private final List<String> hosts;
     private final IntArrayList ports;
@@ -55,6 +56,7 @@ public final class SessionConfiguration
     private final boolean closedResendInterval;
     private final int resendRequestChunkSize;
     private final boolean sendRedundantResendRequests;
+    private final boolean enableLastMsgSeqNumProcessed;
 
     public static Builder builder()
     {
@@ -79,7 +81,8 @@ public final class SessionConfiguration
         final boolean resetSeqNum,
         final boolean closedResendInterval,
         final int resendRequestChunkSize,
-        final boolean sendRedundantResendRequests)
+        final boolean sendRedundantResendRequests,
+        final boolean enableLastMsgSeqNumProcessed)
     {
         Objects.requireNonNull(hosts);
         Objects.requireNonNull(ports);
@@ -111,6 +114,7 @@ public final class SessionConfiguration
         this.closedResendInterval = closedResendInterval;
         this.resendRequestChunkSize = resendRequestChunkSize;
         this.sendRedundantResendRequests = sendRedundantResendRequests;
+        this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
     }
 
     private void requireNonEmpty(final List<?> values, final String name)
@@ -216,6 +220,11 @@ public final class SessionConfiguration
         return sendRedundantResendRequests;
     }
 
+    public boolean enableLastMsgSeqNumProcessed()
+    {
+        return enableLastMsgSeqNumProcessed;
+    }
+
     @Override
     public String toString()
     {
@@ -237,6 +246,7 @@ public final class SessionConfiguration
             ", resetSeqNum=" + resetSeqNum +
             ", closedResendInterval=" + closedResendInterval +
             ", resendRequestChunkSize=" + resendRequestChunkSize +
+            ", enableLastMsgSeqNumProcessed=" + enableLastMsgSeqNumProcessed +
             '}';
     }
 
@@ -260,6 +270,7 @@ public final class SessionConfiguration
         private boolean closedResendInterval = DEFAULT_CLOSED_RESEND_INTERVAL;
         private int resendRequestChunkSize = NO_RESEND_REQUEST_CHUNK_SIZE;
         private boolean sendRedundantResendRequests = DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS;
+        private boolean enableLastMsgSeqNumProcessed;
 
         private Builder()
         {
@@ -478,6 +489,18 @@ public final class SessionConfiguration
             return this;
         }
 
+        /**
+         * Set to true to enable the LastMsgSeqNumProcessed (369) flag.
+         *
+         * @param enableLastMsgSeqNumProcessed enable the LastMsgSeqNumProcessed (369) flag.
+         * @return this builder
+         */
+        public Builder enableLastMsgSeqNumProcessed(final boolean enableLastMsgSeqNumProcessed)
+        {
+            this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
+            return this;
+        }
+
         public SessionConfiguration build()
         {
             return new SessionConfiguration(
@@ -498,7 +521,8 @@ public final class SessionConfiguration
                 resetSeqNum,
                 closedResendInterval,
                 resendRequestChunkSize,
-                sendRedundantResendRequests);
+                sendRedundantResendRequests,
+                enableLastMsgSeqNumProcessed);
         }
     }
 }

@@ -380,7 +380,7 @@ public class PossDupEnabler
         }
         // Max to avoid special casing the prefixing of the field with zeros
         final int lengthOfUpdatedBodyLengthField = Math.max(lengthOfOldBodyLength, lengthOfNewBodyLength);
-        mutableAsciiFlyweight.putNatural(
+        mutableAsciiFlyweight.putNaturalPaddedIntAscii(
             bodyLengthClaimOffset, lengthOfUpdatedBodyLengthField, newBodyLength);
         // END Update body length
 
@@ -394,7 +394,7 @@ public class PossDupEnabler
         final int checksumEnd = beforeChecksum + lengthOfSeparator;
         final int checksum = mutableAsciiFlyweight.computeChecksum(messageClaimOffset, checksumEnd);
         final int checksumValueOffset = messageEndOffset - (CHECKSUM_VALUE_LENGTH + SEPARATOR_LENGTH);
-        mutableAsciiFlyweight.putNatural(checksumValueOffset, CHECKSUM_VALUE_LENGTH, checksum);
+        mutableAsciiFlyweight.putNaturalPaddedIntAscii(checksumValueOffset, CHECKSUM_VALUE_LENGTH, checksum);
         mutableAsciiFlyweight.putSeparator(checksumValueOffset + CHECKSUM_VALUE_LENGTH);
     }
 

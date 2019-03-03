@@ -30,6 +30,7 @@ import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 import java.util.List;
+import java.util.function.Predicate;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -57,6 +58,7 @@ public class ReplayOperation
     private RecordingRange recordingRange;
     private int aeronSessionId;
     private Image image;
+    private int fragmentsToPoll = Integer.MAX_VALUE;
 
     ReplayOperation(
         final ControlledFragmentHandler handler,
@@ -92,6 +94,7 @@ public class ReplayOperation
             }
 
             recordingRange = ranges.get(0);
+            messageTracker.msgPredicate = recordingRange.msgPredicate;
 
             final long beginPosition = recordingRange.position;
             final long length = recordingRange.length;
@@ -119,6 +122,12 @@ public class ReplayOperation
                     archiveReplayStream);
 
                 messageTracker.reset();
+
+                // reset the image if the new recordingRange requires it
+                if (image != null && aeronSessionId != image.sessionId())
+                {
+                    image = null;
+                }
             }
             catch (final Throwable exception)
             {
@@ -136,7 +145,7 @@ public class ReplayOperation
         }
         else
         {
-            image.controlledPoll(assembler, Integer.MAX_VALUE);
+            image.controlledPoll(assembler, fragmentsToPoll);
 
             // Have we finished this range?
             if (messageTracker.count < recordingRange.count)
@@ -171,12 +180,19 @@ public class ReplayOperation
         return false;
     }
 
+    public void setFragmentsToPoll(final int fragmentsToPoll)
+    {
+        this.fragmentsToPoll = fragmentsToPoll;
+    }
+
     private static class MessageTracker implements ControlledFragmentHandler
     {
         private final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
+        private final FixMessageDecoder messageDecoder = new FixMessageDecoder();
 
         ControlledFragmentHandler messageHandler;
         int count;
+        Predicate<FixMessageDecoder> msgPredicate;
 
         @Override
         public Action onFragment(
@@ -186,6 +202,20 @@ public class ReplayOperation
 
             if (messageHeaderDecoder.templateId() == FixMessageDecoder.TEMPLATE_ID)
             {
+                if (msgPredicate != null)
+                {
+                    messageDecoder.wrap(
+                        buffer,
+                        offset + MessageHeaderDecoder.ENCODED_LENGTH,
+                        messageHeaderDecoder.blockLength(),
+                        messageHeaderDecoder.version()
+                    );
+                    if (!msgPredicate.test(messageDecoder))
+                    {
+                        return CONTINUE;
+                    }
+                }
+
                 final Action action = messageHandler.onFragment(buffer, offset, length, header);
                 if (action != ABORT)
                 {

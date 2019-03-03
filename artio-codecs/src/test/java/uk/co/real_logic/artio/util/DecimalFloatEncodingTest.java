@@ -141,7 +141,7 @@ public class DecimalFloatEncodingTest
         final MutableAsciiBuffer string = new MutableAsciiBuffer(buffer);
         final DecimalFloat price = new DecimalFloat(value, scale);
 
-        final int encodedLength = string.putAsciiFloat(1, price);
+        final int encodedLength = string.putFloatAscii(1, price);
 
         assertEquals(input, string.getAscii(1, length));
         assertEquals(length, encodedLength);

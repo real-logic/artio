@@ -26,6 +26,8 @@ import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.util.Reflection;
 
+
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import static java.lang.reflect.Modifier.isAbstract;
@@ -55,6 +57,7 @@ public class EncoderGeneratorTest
         {
             System.out.println(sources);
         }
+
         otherMessage = compileInMemory(OTHER_MESSAGE_ENCODER, sources);
 
         final Map<String, CharSequence> sourcesWithoutValidation = generateSources(false);
@@ -231,6 +234,46 @@ public class EncoderGeneratorTest
         final Encoder encoder = newHeartbeat();
 
         setRequiredFields(encoder);
+        setupHeader(encoder);
+        setupTrailer(encoder);
+
+        setOptionalFields(encoder);
+        assertEncodesTo(encoder, ENCODED_MESSAGE);
+    }
+
+    @Test
+    public void encodesValuesWithOptionalTrailerFields() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+
+        setRequiredFields(encoder);
+        setupHeader(encoder);
+        setupTrailer(encoder, "Good to go!");
+
+        setOptionalFields(encoder);
+        assertEncodesTo(encoder, ENCODED_MESSAGE_WITH_SIGNATURE);
+    }
+
+    @Test
+    public void encodesValuesWithBeginString() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+
+        setRequiredFields(encoder);
+        setupHeader(encoder, "FIXT.1.1");
+        setupTrailer(encoder);
+
+        setOptionalFields(encoder);
+        assertEncodesTo(encoder, ENCODED_MESSAGE_FIXT11);
+    }
+
+    @Test
+    public void encodeDecimalFloatUsingRawValueAndScale() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+
+        setRequiredFields(encoder);
+        setFloatFieldRawValues(encoder);
         setupHeader(encoder);
         setupTrailer(encoder);
 
@@ -450,6 +493,23 @@ public class EncoderGeneratorTest
     {
         final Encoder encoder = newHeartbeat();
 
+        setRequiredFields(encoder);
+        setEgGroupToTwoElements(encoder);
+
+        reset(encoder);
+
+        setRequiredFields(encoder);
+        setEgGroupToOneElement(encoder);
+
+        assertEncodesTo(encoder, SINGLE_REPEATING_GROUP_MESSAGE);
+    }
+
+    @Test
+    public void shouldEncodeDefaultBeginStringAfterReset() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+
+        setupHeader(encoder, "FIXT.1.1");
         setRequiredFields(encoder);
         setEgGroupToTwoElements(encoder);
 
@@ -709,8 +769,13 @@ public class EncoderGeneratorTest
 
     private void setupHeader(final Encoder encoder) throws Exception
     {
+        setupHeader(encoder, "FIX.4.4");
+    }
+
+    private void setupHeader(final Encoder encoder, final String beginString) throws Exception
+    {
         final Object header = Reflection.get(encoder, "header");
-        setCharSequence(header, "beginString", "FIX.4.4");
+        setCharSequence(header, "beginString", beginString);
         setCharSequence(header, MSG_TYPE, "0");
     }
 
@@ -737,6 +802,11 @@ public class EncoderGeneratorTest
         setFloat(encoder, FLOAT_FIELD, new DecimalFloat(11, 1));
     }
 
+    private void setFloatFieldRawValues(final Encoder encoder) throws Exception
+    {
+        setFloat(encoder, FLOAT_FIELD, 11, 1);
+    }
+
     private void setIntField(final Encoder encoder) throws Exception
     {
         setInt(encoder, INT_FIELD, 2);
@@ -760,7 +830,19 @@ public class EncoderGeneratorTest
 
     private void setupTrailer(final Encoder encoder) throws Exception
     {
+        setupTrailer(encoder, "");
+    }
+
+    private void setupTrailer(final Encoder encoder, final String signature) throws Exception
+    {
         final Object trailer = Reflection.get(encoder, "trailer");
+
+        if (signature.length() > 0)
+        {
+            setByteArray(trailer, "signature", signature.getBytes(StandardCharsets.US_ASCII));
+            setInt(trailer, "signatureLength", signature.length());
+        }
+
         setCharSequence(trailer, "checkSum", "12");
     }
 

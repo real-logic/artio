@@ -87,6 +87,11 @@ public class FixMessage extends Int2ObjectHashMap<String>
         return sequenceIndex;
     }
 
+    public int lastMsgSeqNumProcessed()
+    {
+        return Integer.parseInt(get(Constants.LAST_MSG_SEQ_NUM_PROCESSED));
+    }
+
     public FixMessage clone()
     {
         final FixMessage theClone = new FixMessage();

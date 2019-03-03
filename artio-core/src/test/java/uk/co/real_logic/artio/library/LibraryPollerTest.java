@@ -27,7 +27,7 @@ import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
-import uk.co.real_logic.artio.messages.LogonStatus;
+import uk.co.real_logic.artio.messages.SessionStatus;
 import uk.co.real_logic.artio.messages.SlowStatus;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.Session;
@@ -396,7 +396,7 @@ public class LibraryPollerTest
             LAST_SENT_SEQUENCE_NUMBER,
             LAST_RECEIVED_SEQUENCE_NUMBER,
             -1,
-            LogonStatus.NEW,
+            SessionStatus.SESSION_HANDOVER,
             SlowStatus.NOT_SLOW,
             ACCEPTOR,
             ACTIVE,
@@ -405,14 +405,17 @@ public class LibraryPollerTest
             DEFAULT_CLOSED_RESEND_INTERVAL,
             NO_RESEND_REQUEST_CHUNK_SIZE,
             DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS,
+            DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED,
             REPLY_TO_ID,
             SEQUENCE_INDEX,
+            "ABC",
             "",
             "",
+            "DEF",
             "",
+            "", address,
             "",
-            "",
-            "", address);
+            "");
     }
 
     private SessionsDecoder hasOtherSessionId()

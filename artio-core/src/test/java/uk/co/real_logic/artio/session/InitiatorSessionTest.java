@@ -16,25 +16,25 @@
 package uk.co.real_logic.artio.session;
 
 import org.junit.Test;
-import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
 import static uk.co.real_logic.artio.messages.SessionState.*;
+import static uk.co.real_logic.artio.session.SessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
 
 public class InitiatorSessionTest extends AbstractSessionTest
 {
     private InitiatorSession session;
-
     {
         session = new InitiatorSession(HEARTBEAT_INTERVAL,
             CONNECTION_ID,
             fakeClock,
-            mockProxy,
+            sessionProxy,
             mockPublication,
             idStrategy,
             SENDING_TIME_WINDOW,
@@ -46,7 +46,8 @@ public class InitiatorSessionTest extends AbstractSessionTest
             CONNECTED,
             false,
             DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
-            new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]));
+            new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]),
+            false);
         session.logonListener(mockLogonListener);
     }
 
@@ -64,8 +65,9 @@ public class InitiatorSessionTest extends AbstractSessionTest
         assertEquals(CONTINUE, onLogon(1));
 
         assertState(ACTIVE);
-        verify(mockProxy).setupSession(SESSION_ID, SESSION_KEY);
         verifyNoFurtherMessages();
+        verifyNotifiesLoginListener();
+        assertHasLogonTime();
     }
 
     @Test
@@ -99,7 +101,8 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
         assertEquals(CONTINUE, onLogon(1));
 
-        verifySavesLogonMessage(times(1));
+        verifyNotifiesLoginListener();
+        assertHasLogonTime();
     }
 
     @Test
@@ -111,7 +114,8 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
         assertEquals(CONTINUE, onLogon(2));
 
-        verifySavesLogonMessage(times(1));
+        verifyNotifiesLoginListener();
+        assertHasLogonTime();
     }
 
     @Test
@@ -120,14 +124,10 @@ public class InitiatorSessionTest extends AbstractSessionTest
         shouldStartAcceptLogonBasedSequenceNumberResetWhenSequenceNumberIsOne(SEQUENCE_INDEX);
     }
 
-    private void verifySavesLogonMessage(final VerificationMode verificationMode)
-    {
-        verify(mockLogonListener, verificationMode).onLogon(any());
-    }
-
     private void verifyLogon()
     {
-        verify(mockProxy, times(1)).logon(HEARTBEAT_INTERVAL, 1, null, null, false, SEQUENCE_INDEX);
+        verify(sessionProxy, times(1)).logon(
+            HEARTBEAT_INTERVAL, 1, null, null, false, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
     }
 
     protected void readyForLogon()
@@ -139,4 +139,10 @@ public class InitiatorSessionTest extends AbstractSessionTest
     {
         return session;
     }
+
+    private void assertHasLogonTime()
+    {
+        assertTrue(session().hasLogonTime());
+    }
+
 }

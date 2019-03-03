@@ -18,9 +18,14 @@ package uk.co.real_logic.artio.system_tests;
 import org.agrona.CloseHelper;
 import org.agrona.LangUtil;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.ExecType;
+import uk.co.real_logic.artio.OrdStatus;
+import uk.co.real_logic.artio.Side;
 import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.HeartbeatDecoder;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.decoder.LogoutDecoder;
+import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -30,8 +35,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.LogTag.FIX_TEST;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
@@ -54,6 +58,10 @@ final class FixConnection implements AutoCloseable
     private final String targetCompID;
 
     private int msgSeqNum = 1;
+
+    private final ByteBuffer readBuffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
+    private final MutableAsciiBuffer asciiReadBuffer = new MutableAsciiBuffer(readBuffer);
+    private int bytesRemaining = 0;
 
     static FixConnection initiate(final int port) throws IOException
     {
@@ -143,16 +151,37 @@ final class FixConnection implements AutoCloseable
 
     <T extends Decoder> T readMessage(final T decoder)
     {
-        final ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
-        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(buffer);
-
         try
         {
-            final int read = socket.read(buffer);
-            DebugLogger.log(FIX_TEST, "< [" + asciiBuffer.getAscii(OFFSET, read) + "]");
-            decoder.decode(asciiBuffer, OFFSET, read);
+            final int bytesToParse = bytesRemaining == 0 ? socket.read(readBuffer) : bytesRemaining;
+            final String ascii = asciiReadBuffer.getAscii(OFFSET, bytesToParse);
 
-            assertTrue(decoder.validate());
+            DebugLogger.log(FIX_TEST,
+                "< [" + ascii + "] for attempted: " + decoder.getClass());
+
+            int endOfMessage = ascii.indexOf("8=FIX.4.4", 9);
+            if (endOfMessage == -1)
+            {
+                endOfMessage = bytesToParse;
+            }
+
+            decoder.decode(asciiReadBuffer, OFFSET, endOfMessage);
+
+            if (!decoder.validate())
+            {
+                fail("Failed: " + RejectReason.decode(decoder.rejectReason()) + " for " + decoder.invalidTagId());
+            }
+
+            readBuffer.clear();
+            if (endOfMessage != -1)
+            {
+                bytesRemaining = bytesToParse - endOfMessage;
+                asciiReadBuffer.putBytes(0, asciiReadBuffer, endOfMessage, bytesRemaining);
+            }
+            else
+            {
+                bytesRemaining = 0;
+            }
         }
         catch (final IOException ex)
         {
@@ -160,6 +189,21 @@ final class FixConnection implements AutoCloseable
         }
 
         return decoder;
+    }
+
+    int pollData() throws IOException
+    {
+        final ByteBuffer buffer = ByteBuffer.allocateDirect(BUFFER_SIZE);
+        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(buffer);
+
+        socket.configureBlocking(false);
+        final int read = socket.read(buffer);
+        socket.configureBlocking(true);
+        if (read > 0)
+        {
+            DebugLogger.log(FIX_TEST, "< [" + asciiBuffer.getAscii(OFFSET, read) + "] for poll");
+        }
+        return read;
     }
 
     void send(final Encoder encoder)
@@ -206,5 +250,31 @@ final class FixConnection implements AutoCloseable
         CloseHelper.close(socket);
     }
 
+    void logoutAndAwaitReply()
+    {
+        logout();
 
+        final LogoutDecoder logout = readMessage(new LogoutDecoder());
+
+        assertFalse(logout.textAsString(), logout.hasText());
+    }
+
+    public void sendExecutionReport(final int msgSeqNum, final boolean possDupFlag)
+    {
+        final ExecutionReportEncoder executionReportEncoder = new ExecutionReportEncoder();
+        final HeaderEncoder header = executionReportEncoder.header();
+
+        setupHeader(header, msgSeqNum, possDupFlag);
+
+        executionReportEncoder
+            .orderID("order")
+            .execID("exec")
+            .execType(ExecType.FILL)
+            .ordStatus(OrdStatus.FILLED)
+            .side(Side.BUY);
+
+        executionReportEncoder.instrument().symbol("IBM");
+
+        send(executionReportEncoder);
+    }
 }

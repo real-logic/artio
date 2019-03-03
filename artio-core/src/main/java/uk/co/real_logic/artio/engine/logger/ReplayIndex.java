@@ -100,12 +100,6 @@ public class ReplayIndex implements Index
         positionReader = new IndexedPositionReader(positionBuffer);
     }
 
-    @Override
-    public int doWork()
-    {
-        return 0; //recordingIdLookup.poll();
-    }
-
     private long continuedFixSessionId;
     private int continuedSequenceNumber;
     private int continuedSequenceIndex;

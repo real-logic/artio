@@ -17,9 +17,9 @@ package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.artio.Constants;
-import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
+import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
@@ -35,8 +35,7 @@ import java.util.function.IntSupplier;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
-import static uk.co.real_logic.artio.Constants.EXAMPLE_MESSAGE_MESSAGE_AS_STR;
-import static uk.co.real_logic.artio.Constants.SEQUENCE_RESET_MESSAGE_AS_STR;
+import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixMatchers.*;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
@@ -127,7 +126,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final long position = initiatingSession.send(exampleMessage);
         assertThat(position, greaterThan(0L));
 
-        return testSystem.await(acceptingOtfAcceptor, EXAMPLE_MESSAGE_MESSAGE_AS_STR);
+        return testSystem.awaitMessageOf(acceptingOtfAcceptor, EXAMPLE_MESSAGE_MESSAGE_AS_STR);
     }
 
     @Test
@@ -703,6 +702,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         acquireAcceptingSession();
 
+        testSystem.awaitReceivedSequenceNumber(acceptingSession, 2);
+
         assertInitSeqNum(2, 2, 0);
         assertAccSeqNum(2, 2, 0);
 
@@ -710,6 +711,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final Reply<?> resetSequenceNumber = resetSequenceNumber(sessionId);
         replyCompleted(resetSequenceNumber);
+
+        testSystem.awaitReceivedSequenceNumber(acceptingSession, 1);
 
         assertInitSeqNum(1, 1, 1);
         assertAccSeqNum(1, 1, 1);
@@ -739,7 +742,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         testSystem.send(initiatingSession, resendRequest);
 
-        final FixMessage message = testSystem.await(initiatingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
+        final FixMessage message = testSystem.awaitMessageOf(initiatingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
 
         // Logon + two heartbeats gets to 3, next is 4.
         assertEquals("4", message.get(Constants.NEW_SEQ_NO));
@@ -747,6 +750,51 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         clearMessages();
 
         messagesCanBeExchanged();
+    }
+
+    @Test
+    public void shouldReplayAMixOfEngineAndLibraryMessages()
+    {
+        // Engine messages
+        messagesCanBeExchanged();
+        messagesCanBeExchanged();
+
+        // Library messages
+        acquireAcceptingSession();
+        exchangeExecutionReport();
+
+        final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
+        resendRequest.beginSeqNo(1).endSeqNo(0);
+
+        initiatingOtfAcceptor.messages().clear();
+
+        testSystem.send(initiatingSession, resendRequest);
+
+        final FixMessage gapFill = testSystem.awaitMessageOf(initiatingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
+        assertEquals(1, gapFill.messageSequenceNumber());
+        assertEquals(4, Integer.parseInt(gapFill.get(NEW_SEQ_NO)));
+
+        final FixMessage execReport = testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
+        assertEquals(4, execReport.messageSequenceNumber());
+
+        clearMessages();
+
+        messagesCanBeExchanged();
+    }
+
+    private void exchangeExecutionReport()
+    {
+        final ExecutionReportEncoder executionReport = new ExecutionReportEncoder();
+        executionReport
+            .orderID("order")
+            .execID("exec")
+            .execType(ExecType.FILL)
+            .ordStatus(OrdStatus.FILLED)
+            .side(Side.BUY);
+        executionReport.instrument().symbol("IBM");
+        assertThat(acceptingSession.send(executionReport), greaterThan(0L));
+
+        testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
     }
 
     private void assertInitSeqNum(

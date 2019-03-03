@@ -19,7 +19,6 @@ import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
-import uk.co.real_logic.artio.decoder.LogoutDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.FixLibrary;
@@ -113,16 +112,9 @@ public class MessageBasedAcceptorSystemTest
 
         logon(connection);
 
-        logout(connection);
+        connection.logoutAndAwaitReply();
 
         connection.close();
-    }
-
-    private void logout(final FixConnection connection)
-    {
-        connection.logout();
-
-        readLogoutReply(connection);
     }
 
     private void logon(final FixConnection connection)
@@ -131,13 +123,6 @@ public class MessageBasedAcceptorSystemTest
 
         final LogonDecoder logon = connection.readLogonReply();
         assertTrue(logon.resetSeqNumFlag());
-    }
-
-    private void readLogoutReply(final FixConnection connection)
-    {
-        final LogoutDecoder logout = connection.readMessage(new LogoutDecoder());
-
-        assertFalse(logout.textAsString(), logout.hasText());
     }
 
     @After

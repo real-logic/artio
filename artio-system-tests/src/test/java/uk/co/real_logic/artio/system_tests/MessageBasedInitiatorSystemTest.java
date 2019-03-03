@@ -20,8 +20,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
-import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
-import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.decoder.ResendRequestDecoder;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -79,7 +77,7 @@ public class MessageBasedInitiatorSystemTest
 
             final Session session = reply.resultIfPresent();
             assertEquals(ACTIVE, session.state());
-            assertTrue(session.isAwaitingResend());
+            assertTrue(session.awaitingResend());
         }
     }
 
@@ -117,7 +115,7 @@ public class MessageBasedInitiatorSystemTest
 
             final Session session = reply.resultIfPresent();
             assertEquals(ACTIVE, session.state());
-            assertTrue(session.isAwaitingResend());
+            assertTrue(session.awaitingResend());
 
             // Receive resend request for missing messages.
             final ResendRequestDecoder resendRequestDecoder = connection.readMessage(new ResendRequestDecoder());
@@ -135,7 +133,7 @@ public class MessageBasedInitiatorSystemTest
             {
                 testSystem.poll();
 
-                return !session.isAwaitingResend();
+                return !session.awaitingResend();
             });
 
             testSystem.poll();
@@ -144,25 +142,9 @@ public class MessageBasedInitiatorSystemTest
         }
     }
 
-    // TODO: shouldNotSendRedundantResendRequestsByDefault
-
     void sendExecutionReport(final FixConnection connection, final int msgSeqNum, final boolean possDupFlag)
     {
-        final ExecutionReportEncoder executionReportEncoder = new ExecutionReportEncoder();
-        final HeaderEncoder header = executionReportEncoder.header();
-
-        connection.setupHeader(header, msgSeqNum, possDupFlag);
-
-        executionReportEncoder
-            .orderID("order")
-            .execID("exec")
-            .execType(ExecType.FILL)
-            .ordStatus(OrdStatus.FILLED)
-            .side(Side.BUY);
-
-        executionReportEncoder.instrument().symbol("IBM");
-
-        connection.send(executionReportEncoder);
+        connection.sendExecutionReport(msgSeqNum, possDupFlag);
 
         testSystem.poll();
     }

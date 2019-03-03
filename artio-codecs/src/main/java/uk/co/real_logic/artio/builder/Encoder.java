@@ -55,7 +55,7 @@ public interface Encoder
 
     int messageType();
 
-    Object header();
+    SessionHeaderEncoder header();
 
     void resetMessage();
 }

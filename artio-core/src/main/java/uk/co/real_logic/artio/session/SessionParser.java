@@ -22,7 +22,6 @@ import org.agrona.LangUtil;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.decoder.*;
-import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.util.AsciiBuffer;
@@ -36,7 +35,6 @@ import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED
 import static uk.co.real_logic.artio.builder.Validation.isValidMsgType;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
-import static uk.co.real_logic.artio.messages.DisconnectReason.INVALID_FIX_MESSAGE;
 import static uk.co.real_logic.artio.messages.SessionState.AWAITING_LOGOUT;
 import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
@@ -101,29 +99,41 @@ public class SessionParser
     {
         asciiBuffer.wrap(buffer);
 
+        Action action = null;
+
         switch (messageType)
         {
             case LogonDecoder.MESSAGE_TYPE:
-                return onLogon(offset, length, sessionId);
+                action = onLogon(offset, length);
+                break;
 
             case LogoutDecoder.MESSAGE_TYPE:
-                return onLogout(offset, length);
+                action = onLogout(offset, length);
+                break;
 
             case HeartbeatDecoder.MESSAGE_TYPE:
-                return onHeartbeat(offset, length);
+                action = onHeartbeat(offset, length);
+                break;
 
             case RejectDecoder.MESSAGE_TYPE:
-                return onReject(offset, length);
+                action = onReject(offset, length);
+                break;
 
             case TestRequestDecoder.MESSAGE_TYPE:
-                return onTestRequest(offset, length);
+                action = onTestRequest(offset, length);
+                break;
 
             case SequenceResetDecoder.MESSAGE_TYPE:
-                return onSequenceReset(offset, length);
+                action = onSequenceReset(offset, length);
+                break;
 
             default:
                 return onAnyOtherMessage(offset, length);
         }
+
+        // Consider admin messages processed when they've been received by the session logic
+        session.updateLastMessageProcessed();
+        return action;
     }
 
     private Action onHeartbeat(final int offset, final int length)
@@ -202,23 +212,15 @@ public class SessionParser
     {
         final long origSendingTime = origSendingTime(header);
         final long sendingTime = sendingTime(header);
-        final int msgTypeLength = header.msgTypeLength();
-        final byte[] msgType = extractMsgType(header, msgTypeLength);
         final boolean possDup = isPossDup(header);
         return session.onMessage(
             header.msgSeqNum(),
-            msgType,
-            msgTypeLength,
+            header.msgType(),
+            header.msgTypeLength(),
             sendingTime,
             origSendingTime,
             isPossDupOrResend(possDup, header),
             possDup);
-    }
-
-    private byte[] extractMsgType(final HeaderDecoder header, final int length)
-    {
-        msgTypeBuffer = CodecUtil.toBytes(header.msgType(), msgTypeBuffer, length);
-        return msgTypeBuffer;
     }
 
     private long origSendingTime(final HeaderDecoder header)
@@ -323,12 +325,11 @@ public class SessionParser
                 header.msgSeqNum(),
                 sendingTime,
                 origSendingTime,
-                isPossDupOrResend(possDup, header),
                 possDup);
         }
     }
 
-    private Action onLogon(final int offset, final int length, final long sessionId)
+    private Action onLogon(final int offset, final int length)
     {
         final LogonDecoder logon = this.logon;
         final Session session = this.session;
@@ -345,7 +346,6 @@ public class SessionParser
         }
         else
         {
-            final CompositeKey sessionKey = sessionIdStrategy.onAcceptLogon(header);
             final long origSendingTime = origSendingTime(header);
             final String username = username(logon);
             final String password = password(logon);
@@ -354,8 +354,6 @@ public class SessionParser
             return session.onLogon(
                 logon.heartBtInt(),
                 header.msgSeqNum(),
-                sessionId,
-                sessionKey,
                 sendingTime(header),
                 origSendingTime,
                 username,
@@ -443,7 +441,7 @@ public class SessionParser
             {
                 final long origSendingTime = origSendingTime(header);
                 final long sendingTime = sendingTime(header);
-                final byte[] msgType = extractMsgType(header, msgTypeLength);
+                final char[] msgType = header.msgType();
                 return session.onMessage(MISSING_INT, msgType, msgTypeLength, sendingTime, origSendingTime, false,
                     false);
             }
@@ -457,7 +455,7 @@ public class SessionParser
 
             if (action == CONTINUE && requestDisconnect)
             {
-                return session.onRequestDisconnect(INVALID_FIX_MESSAGE);
+                return session.onInvalidFixDisconnect();
             }
 
             return action;
@@ -465,7 +463,7 @@ public class SessionParser
 
         if (requestDisconnect)
         {
-            return session.onRequestDisconnect(INVALID_FIX_MESSAGE);
+            return session.onInvalidFixDisconnect();
         }
 
         return CONTINUE;

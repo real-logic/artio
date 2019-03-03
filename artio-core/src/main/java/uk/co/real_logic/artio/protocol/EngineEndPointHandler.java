@@ -46,6 +46,7 @@ public interface EngineEndPointHandler
         boolean closedResendInterval,
         int resendRequestChunkSize,
         boolean sendRedundantResendRequests,
+        boolean enableLastMsgSeqNumProcessed,
         String username,
         String password,
         int heartbeatIntervalInS,
@@ -66,9 +67,6 @@ public interface EngineEndPointHandler
         long heartbeatIntervalInMs,
         int lastSentSequenceNumber,
         int lastReceivedSequenceNumber,
-        boolean closedResendInterval,
-        int resendRequestChunkSize,
-        boolean sendRedundantResendRequests,
         String username,
         String password,
         Header header);

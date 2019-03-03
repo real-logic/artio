@@ -67,7 +67,7 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + SlowStatusNotificationEncoder.BLOCK_LENGTH;
     private static final byte MIDDLE_FLAG = 0;
     private static final int MANAGE_SESSION_BLOCK_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
-        ManageSessionEncoder.BLOCK_LENGTH + ManageSessionEncoder.localCompIdHeaderLength() * 7;
+        ManageSessionEncoder.BLOCK_LENGTH + ManageSessionEncoder.localCompIdHeaderLength() * 9;
     private static final int INITIATE_CONNECTION_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
         InitiateConnectionEncoder.BLOCK_LENGTH + InitiateConnectionDecoder.hostHeaderLength() * 9;
     private static final int CONTROL_NOTIFICATION_LENGTH = HEADER_LENGTH + ControlNotificationEncoder.BLOCK_LENGTH +
@@ -208,7 +208,7 @@ public class GatewayPublication extends ClaimablePublication
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
         final long logonTime,
-        final LogonStatus logonStatus,
+        final SessionStatus sessionStatus,
         final SlowStatus slowStatus,
         final ConnectionType connectionType,
         final SessionState sessionState,
@@ -217,6 +217,7 @@ public class GatewayPublication extends ClaimablePublication
         final boolean closedResendInterval,
         final int resendRequestChunkSize,
         final boolean sendRedundantResendRequests,
+        final boolean enableLastMsgSeqNumProcessed,
         final long replyToId,
         final int sequenceIndex,
         final String localCompId,
@@ -225,7 +226,9 @@ public class GatewayPublication extends ClaimablePublication
         final String remoteCompId,
         final String remoteSubId,
         final String remoteLocationId,
-        final String address)
+        final String address,
+        final String username,
+        final String password)
     {
         final byte[] localCompIdBytes = bytes(localCompId);
         final byte[] localSubIdBytes = bytes(localSubId);
@@ -234,11 +237,13 @@ public class GatewayPublication extends ClaimablePublication
         final byte[] remoteSubIdBytes = bytes(remoteSubId);
         final byte[] remoteLocationIdBytes = bytes(remoteLocationId);
         final byte[] addressBytes = bytes(address);
+        final byte[] usernameBytes = bytes(username);
+        final byte[] passwordBytes = bytes(password);
 
         final long position = claim(
             MANAGE_SESSION_BLOCK_LENGTH + localCompIdBytes.length + localSubIdBytes.length +
             localLocationIdBytes.length + remoteCompIdBytes.length + remoteSubIdBytes.length +
-            remoteLocationIdBytes.length + addressBytes.length);
+            remoteLocationIdBytes.length + addressBytes.length + usernameBytes.length + passwordBytes.length);
 
         if (position < 0)
         {
@@ -255,7 +260,7 @@ public class GatewayPublication extends ClaimablePublication
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
             .logonTime(logonTime)
-            .logonStatus(logonStatus)
+            .sessionStatus(sessionStatus)
             .slowStatus(slowStatus)
             .connectionType(connectionType)
             .sessionState(sessionState)
@@ -264,6 +269,7 @@ public class GatewayPublication extends ClaimablePublication
             .closedResendInterval(toBool(closedResendInterval))
             .resendRequestChunkSize(resendRequestChunkSize)
             .sendRedundantResendRequests(toBool(sendRedundantResendRequests))
+            .enableLastMsgSeqNumProcessed(toBool(enableLastMsgSeqNumProcessed))
             .replyToId(replyToId)
             .sequenceIndex(sequenceIndex)
             .putLocalCompId(localCompIdBytes, 0, localCompIdBytes.length)
@@ -272,7 +278,9 @@ public class GatewayPublication extends ClaimablePublication
             .putRemoteCompId(remoteCompIdBytes, 0, remoteCompIdBytes.length)
             .putRemoteSubId(remoteSubIdBytes, 0, remoteSubIdBytes.length)
             .putRemoteLocationId(remoteLocationIdBytes, 0, remoteLocationIdBytes.length)
-            .putAddress(addressBytes, 0, addressBytes.length);
+            .putAddress(addressBytes, 0, addressBytes.length)
+            .putUsername(usernameBytes, 0, usernameBytes.length)
+            .putPassword(passwordBytes, 0, passwordBytes.length);
 
         bufferClaim.commit();
 
@@ -431,6 +439,7 @@ public class GatewayPublication extends ClaimablePublication
         final boolean closedResendInterval,
         final int resendRequestChunkSize,
         final boolean sendRedundantResendRequests,
+        final boolean enableLastMsgSeqNumProcessed,
         final String username,
         final String password,
         final int heartbeatIntervalInS,
@@ -471,6 +480,7 @@ public class GatewayPublication extends ClaimablePublication
             .closedResendInterval(toBool(closedResendInterval))
             .resendRequestChunkSize(resendRequestChunkSize)
             .sendRedundantResendRequests(toBool(sendRedundantResendRequests))
+            .enableLastMsgSeqNumProcessed(toBool(enableLastMsgSeqNumProcessed))
             .putHost(hostBytes, 0, hostBytes.length)
             .putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length)
             .putSenderSubId(senderSubIdBytes, 0, senderSubIdBytes.length)
@@ -575,9 +585,6 @@ public class GatewayPublication extends ClaimablePublication
         final long heartbeatIntervalInMs,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
-        final boolean closedResendInterval,
-        final int resendRequestChunkSize,
-        final boolean sendRedundantResendRequests,
         final String username,
         final String password)
     {
@@ -603,9 +610,6 @@ public class GatewayPublication extends ClaimablePublication
             .awaitingResend(encodeAwaitingResend(awaitingResend))
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
-            .closedResendInterval(toBool(closedResendInterval))
-            .resendRequestChunkSize(resendRequestChunkSize)
-            .sendRedundantResendRequests(toBool(sendRedundantResendRequests))
             .putUsername(usernameBytes, 0, usernameBytes.length)
             .putPassword(passwordBytes, 0, passwordBytes.length);
 

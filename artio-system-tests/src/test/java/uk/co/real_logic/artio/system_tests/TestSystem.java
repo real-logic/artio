@@ -129,7 +129,7 @@ public class TestSystem
         return reply;
     }
 
-    public FixMessage await(final FakeOtfAcceptor otfAcceptor, final String messageType)
+    public FixMessage awaitMessageOf(final FakeOtfAcceptor otfAcceptor, final String messageType)
     {
         return Timing.withTimeout("Never received " + messageType, () ->
         {
@@ -138,6 +138,16 @@ public class TestSystem
             return otfAcceptor.hasReceivedMessage(messageType).findFirst();
         },
         Timing.DEFAULT_TIMEOUT_IN_MS);
+    }
+
+    public void awaitReceivedSequenceNumber(final Session session, final int sequenceNumber)
+    {
+        Timing.assertEventuallyTrue(session + " Never get to " + sequenceNumber, () ->
+        {
+            poll();
+
+            return session.lastReceivedMsgSeqNum() == sequenceNumber;
+        });
     }
 
     public void send(final Session session, final Encoder encoder)

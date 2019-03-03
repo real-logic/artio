@@ -20,7 +20,6 @@ import org.agrona.collections.IntHashSet;
 import uk.co.real_logic.artio.dictionary.IntDictionary;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.util.AsciiBuffer;
-import uk.co.real_logic.artio.util.AsciiEncodingException;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.artio.ValidationError.INVALID_CHECKSUM;
@@ -89,7 +88,7 @@ public final class OtfParser
                 invalidChecksum(this.messageType);
             }
         }
-        catch (final AsciiEncodingException ex)
+        catch (final NumberFormatException ex)
         {
             parseError(this.messageType, tag);
         }

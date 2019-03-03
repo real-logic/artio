@@ -10,9 +10,16 @@ build: off
 test_script:
 - ./gradlew
 
+after_test:
+  - sh: |
+      git clone https://github.com/quickfix-j/quickfixj.git
+      git clone https://github.com/real-logic/fix-integration.git
+      cd fix-integration
+      ./gradlew
+
 on_finish:
   - sh: |
-      find "$APPVEYOR_BUILD_FOLDER" -type f -name 'TEST*.xml' -print0 | xargs -0 -I '{}' curl -F 'file=@{}' "https://ci.appveyor.com/api/testresults/junit/$APPVEYOR_JOB_ID"
+      find "$APPVEYOR_BUILD_FOLDER" -type f -name 'TEST*.xml' -print0 | xargs -0 -I '{}' curl -k -F 'file=@{}' "https://ci.appveyor.com/api/testresults/junit/$APPVEYOR_JOB_ID"
   - ps: |
       if ($isWindows)
       {

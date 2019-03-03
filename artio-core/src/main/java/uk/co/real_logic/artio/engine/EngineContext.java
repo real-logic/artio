@@ -65,7 +65,7 @@ public class EngineContext implements AutoCloseable
     private Indexer outboundIndexer;
     private Agent archivingAgent;
 
-    public EngineContext(
+    EngineContext(
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
         final ExclusivePublication replayPublication,
@@ -113,7 +113,7 @@ public class EngineContext implements AutoCloseable
         }
     }
 
-    protected void newStreams()
+    private void newStreams()
     {
         final String libraryAeronChannel = configuration.libraryAeronChannel();
         final boolean printAeronStreamIdentifiers = configuration.printAeronStreamIdentifiers();
@@ -138,7 +138,7 @@ public class EngineContext implements AutoCloseable
             recordingCoordinator);
     }
 
-    protected ReplayIndex newReplayIndex(
+    private ReplayIndex newReplayIndex(
         final int cacheSetSize,
         final int cacheNumSets,
         final String logFileDir,
@@ -157,7 +157,7 @@ public class EngineContext implements AutoCloseable
             recordingIdLookup);
     }
 
-    protected ReplayQuery newReplayQuery(final IdleStrategy idleStrategy, final int streamId)
+    private ReplayQuery newReplayQuery(final IdleStrategy idleStrategy, final int streamId)
     {
         final String logFileDir = configuration.logFileDir();
         final int cacheSetSize = configuration.loggerCacheSetSize();
@@ -176,7 +176,7 @@ public class EngineContext implements AutoCloseable
             archiveReplayStream);
     }
 
-    protected Replayer newReplayer(
+    private Replayer newReplayer(
         final ExclusivePublication replayPublication)
     {
         return new Replayer(
@@ -194,8 +194,7 @@ public class EngineContext implements AutoCloseable
             senderSequenceNumbers);
     }
 
-    protected void newIndexers(
-        final Index extraOutboundIndex)
+    private void newIndexers()
     {
         final int cacheSetSize = configuration.loggerCacheSetSize();
         final int cacheNumSets = configuration.loggerCacheNumSets();
@@ -225,10 +224,7 @@ public class EngineContext implements AutoCloseable
             configuration.outboundLibraryStream(),
             recordingCoordinator.outboundRecordingIdLookup()));
         outboundIndices.add(sentSequenceNumberIndex);
-        if (extraOutboundIndex != null)
-        {
-            outboundIndices.add(extraOutboundIndex);
-        }
+        outboundIndices.add(new PositionSender(inboundPublication()));
 
         outboundIndexer = new Indexer(
             outboundIndices,
@@ -244,8 +240,7 @@ public class EngineContext implements AutoCloseable
     {
         if (configuration.logOutboundMessages())
         {
-            newIndexers(
-                new PositionSender(inboundPublication()));
+            newIndexers();
 
             final Replayer replayer = newReplayer(replayPublication);
 

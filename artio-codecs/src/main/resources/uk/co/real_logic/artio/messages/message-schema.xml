@@ -167,8 +167,8 @@
                         description="You've requested replay of messages, but EngineConfiguration has disabled required logging of messsages">7</validValue>
         </enum>
 
-        <enum name="LogonStatus" encodingType="uint8">
-            <validValue name="NEW">0</validValue>
+        <enum name="SessionStatus" encodingType="uint8">
+            <validValue name="SESSION_HANDOVER">0</validValue>
             <validValue name="LIBRARY_NOTIFICATION">1</validValue>
         </enum>
     </types>
@@ -186,6 +186,7 @@
         <field name="closedResendInterval" id="18" type="Bool" />
         <field name="resendRequestChunkSize" id="19" type="int32" />
         <field name="sendRedundantResendRequests" id="20" type="Bool" />
+        <field name="enableLastMsgSeqNumProcessed" id="21" type="Bool" />
         <data name="host" id="8" type="Utf8String"/>
         <data name="senderCompId" id="9" type="Utf8String"/>
         <data name="senderSubId" id="10" type="Utf8String"/>
@@ -222,9 +223,6 @@
         <field name="lastSentSequenceNumber" id="7" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="8" type="int32"/>
         <field name="awaitingResend" id="11" type="AwaitingResend" />
-        <field name="closedResendInterval" id="12" type="Bool" />
-        <field name="resendRequestChunkSize" id="13" type="int32" />
-        <field name="sendRedundantResendRequests" id="14" type="Bool" />
         <data name="username" id="9" type="Utf8String"/>
         <data name="password" id="10" type="Utf8String"/>
     </sbe:message>
@@ -260,7 +258,7 @@
         <field name="lastSentSequenceNumber" id="4" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
         <field name="logonTime" id="6" type="Timestamp" />
-        <field name="logonStatus" id="7" type="LogonStatus"/>
+        <field name="sessionStatus" id="7" type="SessionStatus"/>
         <field name="slowStatus" id="8" type="SlowStatus"/>
         <field name="connectionType" id="9" type="ConnectionType"/>
         <field name="sessionState" id="10" type="SessionState"/>
@@ -271,6 +269,7 @@
         <field name="closedResendInterval" id="22" type="Bool" />
         <field name="resendRequestChunkSize" id="23" type="int32" />
         <field name="sendRedundantResendRequests" id="24" type="Bool" />
+        <field name="enableLastMsgSeqNumProcessed" id="25" type="Bool" />
         <data name="localCompId" id="14" type="Utf8String"/>
         <data name="localSubId" id="15" type="Utf8String"/>
         <data name="localLocationId" id="16" type="Utf8String"/>
@@ -278,6 +277,8 @@
         <data name="remoteSubId" id="18" type="Utf8String"/>
         <data name="remoteLocationId" id="19" type="Utf8String"/>
         <data name="address" id="20" type="Utf8String"/>
+        <data name="username" id="26" type="Utf8String"/>
+        <data name="password" id="27" type="Utf8String"/>
     </sbe:message>
 
     <sbe:message name="Error" id="13" description="An error has occurred">

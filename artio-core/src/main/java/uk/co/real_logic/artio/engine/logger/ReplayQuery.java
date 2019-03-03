@@ -24,6 +24,7 @@ import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
 
@@ -32,6 +33,7 @@ import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongFunction;
+import java.util.function.Predicate;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
@@ -116,12 +118,14 @@ public class ReplayQuery implements AutoCloseable
         private final ByteBuffer wrappedBuffer;
         private final UnsafeBuffer buffer;
         private final int capacity;
+        private final Predicate<FixMessageDecoder> msgPredicate;
 
         SessionQuery(final long sessionId)
         {
             wrappedBuffer = indexBufferFactory.map(replayIndexFile(logFileDir, sessionId, requiredStreamId));
             buffer = new UnsafeBuffer(wrappedBuffer);
             capacity = recordCapacity(buffer.capacity());
+            msgPredicate = decoder -> decoder.session() == sessionId;
         }
 
         ReplayOperation query(
@@ -264,12 +268,12 @@ public class ReplayQuery implements AutoCloseable
             RecordingRange range = currentRange;
             if (range == null)
             {
-                range = new RecordingRange(recordingId);
+                range = new RecordingRange(recordingId, msgPredicate);
             }
             else if (range.recordingId != recordingId)
             {
                 ranges.add(range);
-                range = new RecordingRange(recordingId);
+                range = new RecordingRange(recordingId, msgPredicate);
             }
 
             range.add(
