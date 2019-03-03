@@ -150,26 +150,26 @@ subprojects {
     }
 
     task javadocJar(type: Jar) {
-        classifier = 'javadoc'
+        archiveClassifier = 'javadoc'
         from javadoc
     }
 
     task sourcesJar(type: Jar) {
-        classifier = 'sources'
+        archiveClassifier = 'sources'
         from sourceSets.main.allSource
     }
 
     jar {
         manifest.attributes(
-                'Implementation-Title': 'Artio',
-                'Implementation-Version': "${version}",
-                'Implementation-Vendor': 'Real Logic Limited'
+            'Implementation-Title': 'Artio',
+            'Implementation-Version': "${version}",
+            'Implementation-Vendor': 'Real Logic Limited'
         )
     }
 
     task testJar(type: Jar, dependsOn: testClasses) {
-        classifier = 'tests'
-        baseName = "test-${project.archivesBaseName}"
+        archiveClassifier = 'tests'
+        archiveBaseName = "test-${project.archivesBaseName}"
         from sourceSets.test.output
     }
 
@@ -245,7 +245,6 @@ project(':artio-codecs') {
 }
 
 project(':artio-session-codecs') {
-
     dependencies {
         compile project(path: ':artio-codecs')
     }
@@ -371,7 +370,7 @@ project(':artio-system-tests') {
 
     task benchmarks(dependsOn: perfClasses) {
         shadowJar {
-            classifier = "benchmarks"
+            archiveClassifier = "benchmarks"
 
             from sourceSets.main.output
             from sourceSets.perf.output
@@ -394,7 +393,7 @@ project(':artio-samples') {
     }
 
     shadowJar {
-        baseName = 'samples.jar'
+        archiveFileName = 'samples.jar'
     }
 
     build.doLast {
