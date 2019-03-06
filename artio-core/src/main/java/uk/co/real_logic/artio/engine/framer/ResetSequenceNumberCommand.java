@@ -69,7 +69,6 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
         // await reset of sent seq num - jumped to from RESET_ENGINE_SESSION and RESET_LIBRARY_SESSION
         // since this will be updated when the other end of the session acknowledges the sequence reset.
         AWAIT_RECV,
-        AWAIT_RECV0,
 
         // await reset of recv seq num
         AWAIT_SENT,
