@@ -226,7 +226,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
 
     private boolean await(final SequenceNumberIndexReader sequenceNumberIndex)
     {
-        final boolean done = sequenceNumberIndex.lastKnownSequenceNumber(sessionId) == 1;
+        final boolean done = sequenceNumberIndex.lastKnownSequenceNumber(sessionId) == 0;
         if (done)
         {
             step = Step.DONE;
