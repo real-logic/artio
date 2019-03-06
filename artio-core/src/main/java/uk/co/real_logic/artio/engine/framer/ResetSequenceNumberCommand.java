@@ -43,6 +43,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
     private final GatewayPublication outboundPublication;
     private Session session;
     private LongToIntFunction libraryLookup;
+    private long waitSequence = 1;
 
     void libraryLookup(final LongToIntFunction libraryLookup)
     {
@@ -68,6 +69,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
         // await reset of sent seq num - jumped to from RESET_ENGINE_SESSION and RESET_LIBRARY_SESSION
         // since this will be updated when the other end of the session acknowledges the sequence reset.
         AWAIT_RECV,
+        AWAIT_RECV0,
 
         // await reset of recv seq num
         AWAIT_SENT,
@@ -165,6 +167,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
                 final long position = session.resetSequenceNumbers();
                 if (!Pressure.isBackPressured(position))
                 {
+                    waitSequence = 1;
                     step = Step.AWAIT_RECV;
                 }
                 return false;
@@ -178,6 +181,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
                     if (!Pressure.isBackPressured(
                         inboundPublication.saveResetLibrarySequenceNumber(libraryId, sessionId)))
                     {
+                        waitSequence = 1;
                         step = Step.AWAIT_RECV;
                     }
                 }
@@ -191,9 +195,11 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
             }
 
             case RESET_RECV:
+                waitSequence = 0;
                 return reset(inboundPublication, Step.RESET_SENT);
 
             case RESET_SENT:
+                waitSequence = 0;
                 return reset(outboundPublication, Step.AWAIT_RECV);
 
             case AWAIT_RECV:
@@ -226,7 +232,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
 
     private boolean await(final SequenceNumberIndexReader sequenceNumberIndex)
     {
-        final boolean done = sequenceNumberIndex.lastKnownSequenceNumber(sessionId) == 0;
+        final boolean done = sequenceNumberIndex.lastKnownSequenceNumber(sessionId) <= waitSequence;
         if (done)
         {
             step = Step.DONE;

@@ -173,7 +173,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         beforeReconnect = this::resetSequenceNumbers;
 
-        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 2);
+        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1);
 
         assertSequenceIndicesAre(1);
     }
