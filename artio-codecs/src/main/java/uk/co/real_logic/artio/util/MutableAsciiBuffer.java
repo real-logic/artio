@@ -411,7 +411,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         {
             putBytes(start, this, tmpStart, length);
             final int trailingZeros = -scale;
-            if ( trailingZeros > 0 )
+            if (trailingZeros > 0)
             {
                 putTrailingZero(start + length, trailingZeros);
             }
