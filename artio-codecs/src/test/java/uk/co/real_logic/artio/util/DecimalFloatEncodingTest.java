@@ -157,7 +157,7 @@ public class DecimalFloatEncodingTest
         if (isExpectedOutputContainDecimalPoint())
         {
             final String trimmed = expectedOutput.trim();
-            return (trimmed.charAt(trimmed.length()-1) == '0');
+            return (trimmed.charAt(trimmed.length() - 1) == '0');
         }
         return false;
     }
@@ -166,7 +166,7 @@ public class DecimalFloatEncodingTest
     public void canEncodeDecimalFloat()
     {
         Assume.assumeTrue("ignoring test since expected output has Trailing Zeros",
-                !isExpectedOutputContainTrailingZeros());
+            !isExpectedOutputContainTrailingZeros());
 
         final int length = input.length();
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[LONGEST_FLOAT_LENGTH]);
@@ -184,8 +184,9 @@ public class DecimalFloatEncodingTest
     {
         if (value == 0 && scale > 0)
         {
-            Assume.assumeTrue("ignoring test since expected output has no Trailing Zeros for input value 0 (with positive scale)",
-                    isExpectedOutputContainTrailingZeros());
+            Assume.assumeTrue(
+                "ignoring test since expected output has no Trailing Zeros for input value 0 (with positive scale)",
+                isExpectedOutputContainTrailingZeros());
         }
         final int length = input.length();
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[LONGEST_FLOAT_LENGTH]);
