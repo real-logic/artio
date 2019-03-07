@@ -440,16 +440,6 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         return 2 + scale;
     }
 
-    private boolean zero(final int offset, final long value)
-    {
-        if (value == 0)
-        {
-            putByte(offset, ZERO);
-            return true;
-        }
-        return false;
-    }
-
     private long calculateRemainderAndPutMinus(final int offset, final long value)
     {
         if (value < 0)
