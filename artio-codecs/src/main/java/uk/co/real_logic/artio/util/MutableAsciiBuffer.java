@@ -356,13 +356,18 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
     public int putFloatAscii(final int offset, final DecimalFloat price)
     {
-        final long value = price.value();
-        final int scale = price.scale();
-        if (zero(offset, value))
-        {
-            return 1;
-        }
+        return putFloatAscii(offset, price.value(), price.scale());
+    }
 
+    /**
+     * keeping given scale. will not trim needed trailing zeros
+     */
+    public int putFloatAscii(final int offset, final long value, final int scale)
+    {
+        if (value == 0)
+        {
+            return handleZero(offset, scale);
+        }
         final long remainder = calculateRemainderAndPutMinus(offset, value);
         final int minusAdj = value < 0 ? 1 : 0;
         final int start = offset + minusAdj;
@@ -405,18 +410,34 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         else
         {
             putBytes(start, this, tmpStart, length);
-            return length + minusAdj;
+            final int trailingZeros = -scale;
+            if (trailingZeros > 0)
+            {
+                putTrailingZero(start + length, trailingZeros);
+            }
+            return length + minusAdj + trailingZeros;
         }
     }
 
-    private boolean zero(final int offset, final long value)
+    private void putTrailingZero(final int offset, final int zerosCount)
     {
-        if (value == 0)
+        for (int ix = 0; ix < zerosCount; ix++)
         {
-            putByte(offset, ZERO);
-            return true;
+            putByte(offset + ix, ZERO);
         }
-        return false;
+    }
+
+    private int handleZero(final int offset, final int scale)
+    {
+        putByte(offset, ZERO);
+        if (scale <= 0)
+        {
+            return 1;
+        }
+        putByte(offset + 1, DOT);
+        putTrailingZero(offset + 2, scale);
+
+        return 2 + scale;
     }
 
     private long calculateRemainderAndPutMinus(final int offset, final long value)
