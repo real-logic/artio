@@ -166,6 +166,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int loggerCacheSetSize = DEFAULT_LOGGER_CACHE_SET_SIZE;
     private boolean logInboundMessages = true;
     private boolean logOutboundMessages = true;
+    private boolean printStartupWarnings = true;
     private IdleStrategy framerIdleStrategy = backoffIdleStrategy();
     private IdleStrategy archiverIdleStrategy = backoffIdleStrategy();
     private AtomicBuffer sentSequenceNumberBuffer;
@@ -363,6 +364,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration logOutboundMessages(final boolean logOutboundMessages)
     {
         this.logOutboundMessages = logOutboundMessages;
+        return this;
+    }
+
+    public EngineConfiguration printStartupWarnings(final boolean printStartupWarnings)
+    {
+        this.printStartupWarnings = printStartupWarnings;
         return this;
     }
 
@@ -623,6 +630,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public boolean logOutboundMessages()
     {
         return logOutboundMessages;
+    }
+
+    public boolean printStartupWarnings()
+    {
+        return printStartupWarnings;
     }
 
     boolean logAnyMessages()

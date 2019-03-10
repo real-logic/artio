@@ -18,12 +18,12 @@ package uk.co.real_logic.artio.engine;
 import io.aeron.Aeron;
 import io.aeron.Publication;
 import io.aeron.archive.client.AeronArchive;
+import io.aeron.archive.client.ArchiveException;
 import io.aeron.archive.codecs.SourceLocation;
 import io.aeron.archive.status.RecordingPos;
 import org.agrona.collections.IntHashSet;
 import org.agrona.collections.IntHashSet.IntIterator;
 import org.agrona.collections.Long2LongHashMap;
-import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.CountersReader;
 import uk.co.real_logic.artio.CommonConfiguration;
@@ -61,7 +61,6 @@ public class RecordingCoordinator implements AutoCloseable
     RecordingCoordinator(
         final AeronArchive archive,
         final EngineConfiguration configuration,
-        final AgentInvoker conductorAgentInvoker,
         final IdleStrategy archiverIdleStrategy)
     {
         this.archive = archive;
@@ -78,14 +77,14 @@ public class RecordingCoordinator implements AutoCloseable
             if (configuration.logInboundMessages())
             {
                 // Inbound we're writing from the Framer thread, always local
-                archive.startRecording(channel, configuration.inboundLibraryStream(), LOCAL);
+                startRecording(archive, configuration.inboundLibraryStream(), LOCAL);
             }
 
             if (configuration.logOutboundMessages())
             {
                 // Outbound libraries might be on an IPC box.
                 final SourceLocation location = channel.equals(IPC_CHANNEL) ? LOCAL : REMOTE;
-                archive.startRecording(channel, configuration.outboundLibraryStream(), location);
+                startRecording(archive, configuration.outboundLibraryStream(), location);
             }
         }
         else
@@ -94,6 +93,28 @@ public class RecordingCoordinator implements AutoCloseable
             inboundLookup = null;
             outboundLookup = null;
         }
+    }
+
+    private void startRecording(final AeronArchive archive, final int streamId, final SourceLocation location)
+    {
+        // If the Engine has been killed and thus not signalled to the archiver that its recording has been
+        // Stopped we forcibly stop it here.
+        try
+        {
+            archive.stopRecording(channel, streamId);
+
+            if (configuration.printStartupWarnings())
+            {
+                System.err.printf(
+                    "Warning: stopped currently running recording for streamId=%d channel=%s%n", streamId, channel);
+            }
+        }
+        catch (final ArchiveException e)
+        {
+            // Deliberately blank - this is the normal case
+        }
+
+        archive.startRecording(channel, streamId, location);
     }
 
     // Only called on single threaded engine startup

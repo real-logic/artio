@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,10 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.Test;
 import uk.co.real_logic.artio.TestFixtures;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
+
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class EngineRestartTest
 {
@@ -34,7 +37,36 @@ public class EngineRestartTest
             {
             }
 
-            try (FixEngine ignore = SystemTestUtil.launchInitiatingEngineWithSameLogs(port))
+            try (FixEngine ignore = launchInitiatingEngineWithSameLogs(port))
+            {
+            }
+        }
+        finally
+        {
+            TestFixtures.cleanupMediaDriver(mediaDriver);
+        }
+    }
+
+    // This is a way to test the scenario that the engine has been shutdown improperly without notifying the AMD.
+    @Test
+    public void shouldRestartWhenStopRecordingFails()
+    {
+        ArchivingMediaDriver mediaDriver = null;
+        try
+        {
+            mediaDriver = TestFixtures.launchMediaDriver();
+            final int port = TestFixtures.unusedPort();
+            delete(SystemTestUtil.CLIENT_LOGS);
+
+            final EngineConfiguration firstInitiatingConfig = initiatingConfig(port);
+            try (FixEngine ignore = FixEngine.launch(firstInitiatingConfig))
+            {
+                firstInitiatingConfig.logInboundMessages(false).logOutboundMessages(false);
+            }
+
+            final EngineConfiguration secondInitiatingConfig = initiatingConfig(port)
+                .printStartupWarnings(false);
+            try (FixEngine ignore = FixEngine.launch(secondInitiatingConfig))
             {
             }
         }
