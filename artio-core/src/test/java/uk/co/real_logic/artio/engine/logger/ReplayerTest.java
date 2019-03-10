@@ -94,7 +94,7 @@ public class ReplayerTest extends AbstractLogTest
         when(fragmentHeader.flags()).thenReturn((byte)DataHeaderFlyweight.BEGIN_AND_END_FLAGS);
         when(clock.time()).thenReturn(DATE_TIME_EPOCH_MS);
         when(publication.tryClaim(anyInt(), any())).thenReturn(1L);
-        when(publication.maxPayloadLength()).thenReturn(Configuration.MTU_LENGTH);
+        when(publication.maxPayloadLength()).thenReturn(Configuration.mtuLength() - DataHeaderFlyweight.HEADER_LENGTH);
 
         when(replayQuery.query(handler.capture(), anyLong(), anyInt(), anyInt(), anyInt(), anyInt()))
             .thenReturn(replayOperation);
