@@ -35,7 +35,7 @@ public final class UtcTimestampEncoder
     private static final int LENGTH_OF_DATE = 8;
     private static final int LENGTH_OF_DATE_AND_DASH = LENGTH_OF_DATE + 1;
 
-    private final boolean usesMilliseconds;
+    private final boolean usesMillisecondsAsEpochFraction;
     private final byte[] bytes = new byte[LENGTH_WITH_MICROSECONDS];
     private final MutableAsciiBuffer flyweight = new MutableAsciiBuffer(bytes);
 
@@ -47,21 +47,29 @@ public final class UtcTimestampEncoder
         this(true);
     }
 
-    public UtcTimestampEncoder(final boolean usesMilliseconds)
+    /**
+     * Create the encoder.
+     *
+     * @param usesMillisecondsAsEpochFraction true if you want to use milliseconds as the precision of the
+     *                                        timeunit for the <code>epochFraction</code> passed to encode().
+     *                                        False if you wish to use microseconds.
+     */
+    public UtcTimestampEncoder(final boolean usesMillisecondsAsEpochFraction)
     {
-        this.usesMilliseconds = usesMilliseconds;
+        this.usesMillisecondsAsEpochFraction = usesMillisecondsAsEpochFraction;
         flyweight.wrap(bytes);
     }
 
     /**
      * Encode the current time into the buffer as an ascii UTC String
      *
-     * @param epochFraction the current time as the number of milliseconds since the start of the UNIX Epoch.
+     * @param epochFraction the current time as the number of milliseconds or microseconds since the start of the
+     *                      UNIX Epoch.
      * @return the length of the encoded data in the flyweight.
      */
     public int encode(final long epochFraction)
     {
-        if (usesMilliseconds)
+        if (usesMillisecondsAsEpochFraction)
         {
             return encode(epochFraction, flyweight, 0);
         }
@@ -80,7 +88,7 @@ public final class UtcTimestampEncoder
         final int fractionFieldLength;
         final int lengthWithFraction;
 
-        if (usesMilliseconds)
+        if (usesMillisecondsAsEpochFraction)
         {
             minEpochFraction = MIN_EPOCH_MILLIS;
             maxEpochFraction = MAX_EPOCH_MILLIS;
@@ -127,7 +135,7 @@ public final class UtcTimestampEncoder
         final int fractionFieldLength;
         final int lengthWithFraction;
 
-        if (usesMilliseconds)
+        if (usesMillisecondsAsEpochFraction)
         {
             fractionInSecond = MILLIS_IN_SECOND;
             fractionFieldLength = MILLIS_FIELD_LENGTH;
