@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.util;
 
 import org.agrona.concurrent.UnsafeBuffer;
-import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -164,8 +163,11 @@ public class DecimalFloatEncodingTest
     @Test
     public void canEncodeDecimalFloat()
     {
-        Assume.assumeTrue("ignoring test since expected output has Trailing Zeros",
-            !isExpectedOutputContainTrailingZeros());
+        // ignoring test since expected output has Trailing Zeros
+        if (isExpectedOutputContainTrailingZeros())
+        {
+            return;
+        }
 
         final int length = input.length();
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[LONGEST_FLOAT_LENGTH]);
@@ -181,12 +183,12 @@ public class DecimalFloatEncodingTest
     @Test
     public void canEncodeValueAndScale()
     {
-        if (value == 0 && scale > 0)
+        // ignoring test since expected output has no Trailing Zeros for input value 0 (with positive scale)
+        if (value == 0 && scale > 0 && !isExpectedOutputContainTrailingZeros())
         {
-            Assume.assumeTrue(
-                "ignoring test since expected output has no Trailing Zeros for input value 0 (with positive scale)",
-                isExpectedOutputContainTrailingZeros());
+            return;
         }
+
         final int length = input.length();
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[LONGEST_FLOAT_LENGTH]);
         final MutableAsciiBuffer string = new MutableAsciiBuffer(buffer);
