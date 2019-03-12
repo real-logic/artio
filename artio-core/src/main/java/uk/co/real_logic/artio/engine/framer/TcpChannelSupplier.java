@@ -25,6 +25,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -38,8 +39,8 @@ public class TcpChannelSupplier implements AutoCloseable
 {
     private final EngineConfiguration configuration;
     private final boolean hasBindAddress;
+    private final Set<SocketChannel> openingSocketChannels = new HashSet<>();
 
-    private int opensInFlight = 0;
     private Selector selector;
     private ServerSocketChannel listeningChannel;
 
@@ -71,7 +72,7 @@ public class TcpChannelSupplier implements AutoCloseable
 
     public int pollSelector(final long timeInMs, final NewChannelHandler handler) throws IOException
     {
-        if (hasBindAddress || opensInFlight > 0)
+        if (hasBindAddress || openingSocketChannels.size() > 0)
         {
             selector.selectNow();
             final Set<SelectionKey> selectionKeys = selector.selectedKeys();
@@ -108,14 +109,14 @@ public class TcpChannelSupplier implements AutoCloseable
                                 channelHandler.onInitiatedChannel(newTcpChannel(channel), null);
                                 selectionKey.interestOps(selectionKey.interestOps() & (~OP_CONNECT));
                                 it.remove();
-                                opensInFlight--;
+                                openingSocketChannels.remove(channel);
                             }
                         }
                         catch (final IOException e)
                         {
                             channelHandler.onInitiatedChannel(null, e);
                             it.remove();
-                            opensInFlight--;
+                            openingSocketChannels.remove(channel);
                         }
                     }
                 }
@@ -153,12 +154,26 @@ public class TcpChannelSupplier implements AutoCloseable
         channel.register(selector, OP_CONNECT, channelHandler);
         configure(channel);
         channel.connect(address);
-        opensInFlight++;
+        openingSocketChannels.add(channel);
     }
 
     protected TcpChannel newTcpChannel(final SocketChannel channel) throws IOException
     {
         return new TcpChannel(channel);
+    }
+
+    protected void stopConnecting(final InetSocketAddress address) throws IOException
+    {
+        final Iterator<SocketChannel> iterator = openingSocketChannels.iterator();
+        while (iterator.hasNext())
+        {
+            final SocketChannel channel = iterator.next();
+            if (channel.getRemoteAddress().equals(address))
+            {
+                iterator.remove();
+                break;
+            }
+        }
     }
 
     @FunctionalInterface

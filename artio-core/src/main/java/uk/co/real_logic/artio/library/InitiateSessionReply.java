@@ -99,6 +99,16 @@ class InitiateSessionReply extends LibraryReply<Session>
         return super.poll(timeInMs);
     }
 
+    protected boolean onTimeout()
+    {
+        if (libraryPoller.saveMidConnectionDisconnect(correlationId) > 0)
+        {
+            super.onTimeout();
+        }
+
+        return false;
+    }
+
     SessionConfiguration configuration()
     {
         return configuration;

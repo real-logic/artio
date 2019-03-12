@@ -26,9 +26,6 @@ import java.util.ArrayList;
 
 /**
  * Hook for testing interaction with different networking conditions.
- *
- * NB: this class is not thread-safe and take care to ensure that your tests don't use it
- * concurrently with new connections being established.
  */
 public class DebugTcpChannelSupplier extends TcpChannelSupplier
 {
@@ -40,21 +37,21 @@ public class DebugTcpChannelSupplier extends TcpChannelSupplier
         super(configuration);
     }
 
-    protected TcpChannel newTcpChannel(final SocketChannel channel) throws IOException
+    protected synchronized TcpChannel newTcpChannel(final SocketChannel channel) throws IOException
     {
         final TcpChannel tcpChannel = new TcpChannel(channel);
         channels.add(tcpChannel);
         return tcpChannel;
     }
 
-    public void disable()
+    public synchronized void disable()
     {
         isEnabled = false;
         channels.forEach(TcpChannel::close);
         channels.clear();
     }
 
-    public void enable()
+    public synchronized void enable()
     {
         isEnabled = true;
 
@@ -65,7 +62,7 @@ public class DebugTcpChannelSupplier extends TcpChannelSupplier
         }
     }
 
-    public int pollSelector(final long timeInMs, final NewChannelHandler handler) throws IOException
+    public synchronized int pollSelector(final long timeInMs, final NewChannelHandler handler) throws IOException
     {
         if (isEnabled)
         {
@@ -77,7 +74,10 @@ public class DebugTcpChannelSupplier extends TcpChannelSupplier
         }
     }
 
-    public void open(final InetSocketAddress address, final InitiatedChannelHandler handler) throws IOException
+    public synchronized void open(
+        final InetSocketAddress address,
+        final InitiatedChannelHandler handler)
+        throws IOException
     {
         if (isEnabled)
         {
@@ -85,7 +85,7 @@ public class DebugTcpChannelSupplier extends TcpChannelSupplier
         }
         else
         {
-            handler.onInitiatedChannel(null, new IOException("Unable to connect"));
+            // Deliberately blank - black hole the connection
         }
     }
 }

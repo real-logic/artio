@@ -27,6 +27,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final InitiateConnectionDecoder initiateConnection = new InitiateConnectionDecoder();
     private final RequestDisconnectDecoder requestDisconnect = new RequestDisconnectDecoder();
+    private final MidConnectionDisconnectDecoder midConnectionDisconnect = new MidConnectionDisconnectDecoder();
     private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
     private final LibraryConnectDecoder libraryConnect = new LibraryConnectDecoder();
     private final ReleaseSessionDecoder releaseSession = new ReleaseSessionDecoder();
@@ -78,6 +79,11 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             case RequestSessionDecoder.TEMPLATE_ID:
             {
                 return onRequestSession(buffer, offset, blockLength, version, header);
+            }
+
+            case MidConnectionDisconnectDecoder.TEMPLATE_ID:
+            {
+                return onMidConnectionDisconnect(buffer, offset, blockLength, version, header);
             }
         }
 
@@ -224,5 +230,24 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             libraryId,
             requestDisconnect.connection(),
             requestDisconnect.reason());
+    }
+
+    private Action onMidConnectionDisconnect(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final Header header)
+    {
+        midConnectionDisconnect.wrap(buffer, offset, blockLength, version);
+        final int libraryId = midConnectionDisconnect.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        if (action != null)
+        {
+            return action; // Continue processing messages, but not this message.
+        }
+        return handler.onMidConnectionDisconnect(
+            libraryId,
+            midConnectionDisconnect.correlationId());
     }
 }
