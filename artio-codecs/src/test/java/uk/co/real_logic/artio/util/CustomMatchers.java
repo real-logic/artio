@@ -36,9 +36,6 @@ public final class CustomMatchers
     {
     }
 
-    /**
-     * Assert that a range of an ascii flyweight equals a String.
-     */
     public static Matcher<AsciiBuffer> sequenceEqualsAscii(final String expectedValue, final int offset)
     {
         return sequenceEqualsAscii(expectedValue, offset, expectedValue.length());
@@ -70,9 +67,6 @@ public final class CustomMatchers
         };
     }
 
-    /**
-     * Doesn't use getters for properties, like hamcrest.
-     */
     public static <T> Matcher<T> hasFluentProperty(final String name, final Matcher<?> valueMatcher)
     {
         return new TypeSafeMatcher<T>()

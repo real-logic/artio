@@ -80,10 +80,10 @@ final class CalendricalUtil
     /**
      * Converts a year/month/day representation of a UTC date to the number of days since the epoch.
      *
-     * @param year
-     * @param month
-     * @param day
-     * @return
+     * @param year the year component of the date value to convert
+     * @param month the month component of the date value to convert
+     * @param day the day component of the date value to convert
+     * @return number of days since the epoch
      */
     static int toEpochDay(final int year, final int month, final int day)
     {
