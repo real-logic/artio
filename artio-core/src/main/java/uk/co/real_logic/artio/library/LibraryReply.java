@@ -86,6 +86,13 @@ abstract class LibraryReply<T> implements Reply<T>
 
     abstract void onError(GatewayError errorType, String errorMessage);
 
+    protected boolean onTimeout()
+    {
+        state = State.TIMED_OUT;
+
+        return true;
+    }
+
     /**
      * Poll the reply's duty cycle.
      *
@@ -97,8 +104,7 @@ abstract class LibraryReply<T> implements Reply<T>
     {
         if (timeInMs >= latestReplyArrivalTimeInMs)
         {
-            state = State.TIMED_OUT;
-            return true;
+            return onTimeout();
         }
 
         if (!isExecuting())

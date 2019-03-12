@@ -72,10 +72,13 @@ public class GatewayPublication extends ClaimablePublication
         InitiateConnectionEncoder.BLOCK_LENGTH + InitiateConnectionDecoder.hostHeaderLength() * 9;
     private static final int CONTROL_NOTIFICATION_LENGTH = HEADER_LENGTH + ControlNotificationEncoder.BLOCK_LENGTH +
         GroupSizeEncodingEncoder.ENCODED_LENGTH;
+    private static final int MID_CONNECTION_DISCONNECT_LENGTH =
+        HEADER_LENGTH + MidConnectionDisconnectEncoder.BLOCK_LENGTH;
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
     private final RequestDisconnectEncoder requestDisconnect = new RequestDisconnectEncoder();
+    private final MidConnectionDisconnectEncoder midConnectionDisconnect = new MidConnectionDisconnectEncoder();
     private final DisconnectEncoder disconnect = new DisconnectEncoder();
     private final FixMessageEncoder fixMessage = new FixMessageEncoder();
     private final ErrorEncoder error = new ErrorEncoder();
@@ -418,6 +421,29 @@ public class GatewayPublication extends ClaimablePublication
         bufferClaim.commit();
 
         logSbeMessage(GATEWAY_MESSAGE, requestDisconnect);
+
+        return position;
+    }
+
+    public long saveMidConnectionDisconnect(final int libraryId, final long correlationId)
+    {
+        final long position = claim(MID_CONNECTION_DISCONNECT_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        midConnectionDisconnect
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .correlationId(correlationId);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, midConnectionDisconnect);
 
         return position;
     }
@@ -841,4 +867,5 @@ public class GatewayPublication extends ClaimablePublication
     {
         return maxPayloadLength;
     }
+
 }

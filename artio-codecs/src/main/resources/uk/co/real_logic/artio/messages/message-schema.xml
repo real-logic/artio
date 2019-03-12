@@ -236,6 +236,12 @@
         <field name="sequenceIndex" id="5" type="SequenceIndex" />
     </sbe:message>
 
+    <sbe:message name="MidConnectionDisconnect" id="46"
+                 description="disconnect, even though you haven't finished connecting">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="correlationId" id="2" type="CorrelationId"/>
+    </sbe:message>
+
     <!-- Messages From Engine To Library -->
     <sbe:message name="Disconnect" id="7" description="A connection has disconnected">
         <field name="libraryId" id="1" type="LibraryId"/>

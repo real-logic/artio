@@ -122,9 +122,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
      */
     private long currentCorrelationId = ThreadLocalRandom.current().nextLong(1, Long.MAX_VALUE);
 
-    private String errorMessage;
-
     private int state = CONNECTING;
+
+    private String errorMessage;
 
     // State changed upon connect/reconnect
     private LivenessDetector livenessDetector;
@@ -270,6 +270,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             configuration.password(),
             this.configuration.defaultHeartbeatIntervalInS(),
             correlationId);
+    }
+
+    long saveMidConnectionDisconnect(final long correlationId)
+    {
+        checkState();
+
+        return outboundPublication.saveMidConnectionDisconnect(libraryId, correlationId);
     }
 
     long saveRequestSession(
@@ -811,7 +818,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             final LibraryReply<?> reply = correlationIdToReply.remove(replyToId);
             if (reply != null)
             {
-                reply.onError(errorType, errorMessage);
+                reply.onError(errorType, message);
             }
             else
             {

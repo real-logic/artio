@@ -26,16 +26,16 @@ buildscript {
 
     dependencies {
         classpath "com.github.jengelman.gradle.plugins:shadow:5.0.0"
-        classpath 'net.researchgate:gradle-release:2.7.0'
+        classpath 'net.researchgate:gradle-release:2.8.0'
     }
 }
 
 apply plugin: 'net.researchgate.release'
 apply plugin: 'com.github.johnrengelman.shadow'
 
-def aeronVersion = '1.15.3'
-def agronaVersion = '0.9.33'
-def sbeVersion = '1.12.2'
+def aeronVersion = '1.16.0'
+def agronaVersion = '0.9.34'
+def sbeVersion = '1.12.3'
 def artioJavaVersion = '1.8'
 def artioGroup = 'uk.co.real-logic'
 
@@ -102,7 +102,7 @@ subprojects {
         checkstyle 'com.puppycrawl.tools:checkstyle:8.18'
 
         testCompile 'junit:junit:4.12'
-        testCompile 'org.mockito:mockito-core:2.24.5'
+        testCompile 'org.mockito:mockito-core:2.25.0'
         testCompile 'org.hamcrest:hamcrest-library:1.3'
     }
 

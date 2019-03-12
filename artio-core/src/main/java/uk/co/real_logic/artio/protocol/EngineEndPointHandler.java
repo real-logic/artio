@@ -77,4 +77,6 @@ public interface EngineEndPointHandler
         long correlationId,
         int lastReceivedSequenceNumber,
         int sequenceIndex);
+
+    Action onMidConnectionDisconnect(int libraryId, long correlationId);
 }

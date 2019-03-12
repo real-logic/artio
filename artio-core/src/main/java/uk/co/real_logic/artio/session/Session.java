@@ -708,9 +708,7 @@ public class Session implements AutoCloseable
         return null;
     }
 
-    /**
-     * @return final state of session after validation or null if further processing required
-     */
+    // returns final state of session after validation or null if further processing required
     private Action validateCodec(
         final long time,
         final int msgSeqNum,

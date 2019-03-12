@@ -41,11 +41,8 @@ public class DecimalFloatEncodingTest
             {"-55.36", -5536L, 2},
             {"-0.995", -995L, 3},
             {"-25", -25L, 0},
-            {"1.1", 11L, 1},
             {"0.6", 6L, 1},
-            {"0.06", 6L, 2},
             {"-0.6", -6L, 1},
-            {"-0.06", -6L, 2},
             {"10", 10L, 0},
             {"-10", -10L, 0},
 
@@ -59,11 +56,10 @@ public class DecimalFloatEncodingTest
             {"-1.00109125", -100109125, 8},
 
             // negative scale
-            {"2000", 2L, -3},
-            {"-2000", -2L, -3},
+            {"26000", 26L, -3},
+            {"-26000", -26L, -3},
 
             // edge values
-            {"0", 0, 0},
             {"0.000000000000000003", 3, 18},
             {"123456789012345678", 123456789012345678L, 0},
             {"-123456789012345678", -123456789012345678L, 0},
@@ -71,6 +67,20 @@ public class DecimalFloatEncodingTest
             {"-0.123456789012345678", -123456789012345678L, 18},
             {"1.23456789012345678", 123456789012345678L, 17},
             {"-1.23456789012345678", -123456789012345678L, 17},
+
+            // zero values
+            {"0", 0, 0},
+            {"0.000", 0, 3},
+            {"0", 0, 4},
+            {"0", 0, -5},
+
+            // trailing zeros
+            {"12.7460", 127460, 4},
+            {"-12.7460", -127460, 4},
+            {"0.03400", 3400, 5},
+            {"-0.03400", -3400, 5},
+            {"400", 40L, -1},
+            {"-400", -40L, -1},
 
             // same positive value, range scale -2 to 19
             {"7400", 74, -2},
@@ -123,25 +133,67 @@ public class DecimalFloatEncodingTest
     }
 
     private final String input;
+    private final String expectedOutput;
     private final long value;
     private final int scale;
 
     public DecimalFloatEncodingTest(final String input, final long value, final int scale)
     {
         this.input = input;
+        this.expectedOutput = input;
         this.value = value;
         this.scale = scale;
+    }
+
+    private boolean isExpectedOutputContainDecimalPoint()
+    {
+        return expectedOutput.indexOf('.') >= 0;
+    }
+
+    private boolean isExpectedOutputContainTrailingZeros()
+    {
+        if (isExpectedOutputContainDecimalPoint())
+        {
+            final String trimmed = expectedOutput.trim();
+            return (trimmed.charAt(trimmed.length() - 1) == '0');
+        }
+        return false;
     }
 
     @Test
     public void canEncodeDecimalFloat()
     {
+        // ignoring test since expected output has Trailing Zeros
+        if (isExpectedOutputContainTrailingZeros())
+        {
+            return;
+        }
+
         final int length = input.length();
         final UnsafeBuffer buffer = new UnsafeBuffer(new byte[LONGEST_FLOAT_LENGTH]);
         final MutableAsciiBuffer string = new MutableAsciiBuffer(buffer);
         final DecimalFloat price = new DecimalFloat(value, scale);
 
         final int encodedLength = string.putFloatAscii(1, price);
+
+        assertEquals(input, string.getAscii(1, length));
+        assertEquals(length, encodedLength);
+    }
+
+    @Test
+    public void canEncodeValueAndScale()
+    {
+        // ignoring test since expected output has no Trailing Zeros for input value 0 (with positive scale)
+        if (value == 0 && scale > 0 && !isExpectedOutputContainTrailingZeros())
+        {
+            return;
+        }
+
+        final int length = input.length();
+        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[LONGEST_FLOAT_LENGTH]);
+        final MutableAsciiBuffer string = new MutableAsciiBuffer(buffer);
+
+        final int encodedLength = string.putFloatAscii(1, value, scale);
 
         assertEquals(input, string.getAscii(1, length));
         assertEquals(length, encodedLength);

@@ -598,12 +598,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 "Connecting to %s:%d from library %d%n", host, port, libraryId);
 
             final InetSocketAddress address = new InetSocketAddress(host, port);
+            final ConnectingSession connectingSession = new ConnectingSession(address, sessionContext.sessionId());
+            library.connectionStartsConnecting(correlationId, connectingSession);
             channelSupplier.open(address,
                 (channel, ex) ->
                 {
                     if (ex != null)
                     {
                         sessionContexts.onDisconnect(sessionContext.sessionId());
+                        library.connectionFinishesConnecting(correlationId);
                         saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
                         return;
                     }
@@ -640,6 +643,38 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
 
             return CONTINUE;
+        }
+
+        return CONTINUE;
+    }
+
+    public Action onMidConnectionDisconnect(final int libraryId, final long correlationId)
+    {
+        final LiveLibraryInfo library = idToLibrary.get(libraryId);
+        if (library == null)
+        {
+            saveError(GatewayError.UNKNOWN_LIBRARY, libraryId, correlationId, "");
+
+            return CONTINUE;
+        }
+
+        final ConnectingSession connectingSession = library.connectionFinishesConnecting(correlationId);
+        if (connectingSession == null)
+        {
+            saveError(GatewayError.UNKNOWN_SESSION, libraryId, correlationId,
+                "Engine doesn't think library is connecting this session");
+
+            return CONTINUE;
+        }
+
+        sessionContexts.onDisconnect(connectingSession.sessionId());
+        try
+        {
+            channelSupplier.stopConnecting(connectingSession.address());
+        }
+        catch (final IOException e)
+        {
+            errorHandler.onError(e);
         }
 
         return CONTINUE;
@@ -689,12 +724,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         try
         {
-            DebugLogger.log(
-                FIX_CONNECTION,
+            DebugLogger.log(FIX_CONNECTION,
                 "Initiating session %s from library %s%n", sessionContext.sessionId(), library.libraryId());
-
             final long connectionId = this.nextConnectionId++;
-
             sessionContext.onLogon(resetSequenceNumber || sequenceNumberType == TRANSIENT);
             final long sessionId = sessionContext.sessionId();
             final GatewaySession gatewaySession = setupConnection(
@@ -708,15 +740,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 resendRequestChunkSize,
                 sendRedundantResendRequests,
                 enableLastMsgSeqNumProcessed);
-
             library.addSession(gatewaySession);
 
-            final class FinishInitiatingConnection extends UnitOfWork
+            retryManager.schedule(new UnitOfWork()
             {
                 private int lastSentSequenceNumber;
                 private int lastReceivedSequenceNumber;
 
-                private FinishInitiatingConnection()
                 {
                     if (configuration.logInboundMessages())
                     {
@@ -730,7 +760,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
                 private long saveManageSession()
                 {
-                    return inboundPublication.saveManageSession(
+                    final long position = inboundPublication.saveManageSession(
                         libraryId,
                         connectionId,
                         sessionId,
@@ -758,6 +788,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         address.toString(),
                         username,
                         password);
+
+                    if (position > 0)
+                    {
+                        library.connectionFinishesConnecting(correlationId);
+                    }
+
+                    return position;
                 }
 
                 private long checkLoggerUpToDate()
@@ -773,9 +810,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
                     return BACK_PRESSURED;
                 }
-            }
-
-            retryManager.schedule(new FinishInitiatingConnection());
+            });
         }
         catch (final Exception e)
         {
