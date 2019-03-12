@@ -360,7 +360,12 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     }
 
     /**
-     * keeping given scale. will not trim needed trailing zeros
+     * Put's a float value in an ascii encoding. This method keeps given scale and will not trim needed trailing zeros.
+     *
+     * @param offset the position at which to start putting ascii encoded float.
+     * @param value the value of the float to encode - see {@link DecimalFloat} for details.
+     * @param scale the scale of the float to encode - see {@link DecimalFloat} for details.
+     * @return the length of the encoded value
      */
     public int putFloatAscii(final int offset, final long value, final int scale)
     {
@@ -368,6 +373,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         {
             return handleZero(offset, scale);
         }
+
         final long remainder = calculateRemainderAndPutMinus(offset, value);
         final int minusAdj = value < 0 ? 1 : 0;
         final int start = offset + minusAdj;
