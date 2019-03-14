@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.util;
 
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -25,6 +24,7 @@ import uk.co.real_logic.artio.fields.DecimalFloat;
 import java.util.Arrays;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static org.junit.Assert.assertEquals;
 
 @RunWith(Parameterized.class)
 public class DecimalFloatDecodingTest
@@ -66,6 +66,7 @@ public class DecimalFloatDecodingTest
             {"-0.00007875", -7875, 8},
             {"1.00109125", 100109125, 8},
             {"-1.00109125", -100109125, 8},
+            {"6456.00000001", 645600000001L, 8}
         });
     }
 
@@ -78,6 +79,29 @@ public class DecimalFloatDecodingTest
         this.input = input;
         this.value = value;
         this.scale = scale;
+    }
+
+    @Test
+    public void shouldDecodeFromString()
+    {
+        final DecimalFloat price = new DecimalFloat();
+
+        price.fromString(input);
+
+        assertEquals("Incorrect Value", value, price.value());
+        assertEquals("Incorrect Scale", scale, price.scale());
+    }
+
+    @Test
+    public void shouldDecodeFromStringWithOffset()
+    {
+        final DecimalFloat price = new DecimalFloat();
+
+        final String extendedInput = ' ' + input + ' ';
+        price.fromString(extendedInput, 1, input.length());
+
+        assertEquals("Incorrect Value", value, price.value());
+        assertEquals("Incorrect Scale", scale, price.scale());
     }
 
     @Test
@@ -103,8 +127,8 @@ public class DecimalFloatDecodingTest
 
         string.getFloat(price, 1, bytes.length);
 
-        Assert.assertEquals("Incorrect Value", value, price.value());
-        Assert.assertEquals("Incorrect Scale", scale, price.scale());
+        assertEquals("Incorrect Value", value, price.value());
+        assertEquals("Incorrect Scale", scale, price.scale());
     }
 
 }

@@ -310,6 +310,103 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         return true;
     }
 
+    public DecimalFloat fromString(final CharSequence string)
+    {
+        return fromString(string, 0, string.length());
+    }
+
+    public DecimalFloat fromString(final CharSequence string, final int start, final int length)
+    {
+        // Throw away trailing spaces or zeros
+        int offset = start;
+        int end = offset + length;
+        for (int index = end - 1; isSpace(string, index) && index > offset; index--)
+        {
+            end--;
+        }
+
+        int endDiff = 0;
+        for (int index = end - 1; isZero(string, index) && index > offset; index--)
+        {
+            endDiff++;
+        }
+
+        boolean isFloatingPoint = false;
+        for (int index = end - endDiff - 1; index > offset; index--)
+        {
+            if (string.charAt(index) == '.')
+            {
+                isFloatingPoint = true;
+                break;
+            }
+        }
+
+        if (isFloatingPoint)
+        {
+            end -= endDiff;
+        }
+
+        // Throw away leading spaces
+        for (int index = offset; isSpace(string, index) && index < end; index++)
+        {
+            offset++;
+        }
+
+        // Is it negative?
+        final boolean negative = string.charAt(offset) == '-';
+        if (negative)
+        {
+            offset++;
+        }
+
+        // Throw away leading zeros
+        for (int index = offset; isZero(string, index) && index < end; index++)
+        {
+            offset++;
+        }
+
+        int scale = 0;
+        long value = 0;
+        for (int index = offset; index < end; index++)
+        {
+            final char charValue = string.charAt(index);
+            if (charValue == '.')
+            {
+                // number of digits after the dot
+                scale = end - (index + 1);
+            }
+            else
+            {
+                final int digit = getDigit(index, charValue);
+                value = value * 10 + digit;
+            }
+        }
+
+        set(negative ? -1 * value : value, scale);
+
+        return this;
+    }
+
+    private int getDigit(final int index, final char charValue)
+    {
+        final int numericValue = Character.getNumericValue(charValue);
+        if (numericValue == -1)
+        {
+            throw new NumberFormatException("'" + charValue + "' isn't a valid digit @ " + index);
+        }
+        return numericValue;
+    }
+
+    private boolean isSpace(final CharSequence input, final int index)
+    {
+        return Character.isSpaceChar(input.charAt(index));
+    }
+
+    private boolean isZero(final CharSequence input, final int index)
+    {
+        return input.charAt(index) == '0';
+    }
+
     public boolean isNaNValue()
     {
         return value == VALUE_NAN_VALUE && scale == SCALE_NAN_VALUE;
