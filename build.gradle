@@ -18,20 +18,13 @@ import org.gradle.plugins.ide.eclipse.model.Classpath
 buildscript {
     repositories {
         mavenCentral()
-        mavenLocal()
-        maven {
-            url 'https://plugins.gradle.org/m2/'
-        }
-    }
-
-    dependencies {
-        classpath "com.github.jengelman.gradle.plugins:shadow:5.0.0"
-        classpath 'net.researchgate:gradle-release:2.8.0'
     }
 }
 
-apply plugin: 'net.researchgate.release'
-apply plugin: 'com.github.johnrengelman.shadow'
+plugins {
+    id 'com.github.johnrengelman.shadow' version '5.0.0' apply false
+    id 'net.researchgate.release' version '2.8.0'
+}
 
 def aeronVersion = '1.16.0'
 def agronaVersion = '0.9.34'
@@ -102,7 +95,7 @@ subprojects {
         checkstyle 'com.puppycrawl.tools:checkstyle:8.18'
 
         testCompile 'junit:junit:4.12'
-        testCompile 'org.mockito:mockito-core:2.25.0'
+        testCompile 'org.mockito:mockito-core:2.25.1'
         testCompile 'org.hamcrest:hamcrest-library:1.3'
     }
 
