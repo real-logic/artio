@@ -21,6 +21,8 @@ import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 
+import java.util.concurrent.ThreadFactory;
+
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.artio.CommonConfiguration.backoffIdleStrategy;
 
@@ -54,8 +56,9 @@ public class DefaultEngineScheduler implements EngineScheduler
         archivingRunner = new AgentRunner(
             configuration.archiverIdleStrategy(), errorHandler, null, indexingAgent);
 
-        startOnThread(framerRunner);
-        startOnThread(archivingRunner);
+        final ThreadFactory threadFactory = configuration.threadFactory();
+        startOnThread(framerRunner, threadFactory);
+        startOnThread(archivingRunner, threadFactory);
 
         if (monitoringAgent != null)
         {
