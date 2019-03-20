@@ -178,7 +178,7 @@ public class SequenceNumberIndexWriter implements Index
             case ResetSequenceNumberDecoder.TEMPLATE_ID:
             {
                 resetSequenceNumber.wrap(buffer, offset, actingBlockLength, version);
-                saveRecord(1, resetSequenceNumber.session());
+                saveRecord(0, resetSequenceNumber.session());
             }
         }
 
