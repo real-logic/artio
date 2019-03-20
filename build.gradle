@@ -29,7 +29,7 @@ plugins {
 def aeronVersion = '1.16.0'
 def agronaVersion = '0.9.34'
 def sbeVersion = '1.12.3'
-def artioJavaVersion = '1.8'
+def artioJavaVersion = JavaVersion.VERSION_1_8
 def artioGroup = 'uk.co.real-logic'
 
 defaultTasks 'clean', 'build', 'javadoc', 'install'
