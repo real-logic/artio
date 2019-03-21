@@ -132,8 +132,7 @@ public class DecoderGeneratorTest
     @Test
     public void generatesGetters() throws NoSuchMethodException
     {
-        final Method onBehalfOfCompID = heartbeat.getMethod(ON_BEHALF_OF_COMP_ID);
-        assertEquals(char[].class, onBehalfOfCompID.getReturnType());
+        assertHasMethod(ON_BEHALF_OF_COMP_ID, char[].class, heartbeat);
     }
 
     @Test
@@ -498,6 +497,23 @@ public class DecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(COMPONENT_MESSAGE);
 
         assertEquals(2, get(decoder, "componentField"));
+
+        assertValid(decoder);
+    }
+
+    @Test
+    public void shouldDecodeNestedComponentsWithRepeatingGroups() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NESTED_COMPONENT_MESSAGE);
+
+        assertEquals(2, get(decoder, "componentField"));
+        assertEquals(180, get(decoder, "nestedComponentField"));
+        assertEquals(2, get(decoder, "noNestedComponentGroupGroupCounter"));
+        assertNotNull(get(decoder, "nestedComponentGroupGroupIterator"));
+        final Class<?> nestedComponent = heartbeat.getClassLoader().loadClass(NESTED_COMPONENT_DECODER);
+
+        assertHasMethod("nestedComponentField", int.class, nestedComponent);
+        assertHasMethod("noNestedComponentGroupGroupCounter", int.class, nestedComponent);
 
         assertValid(decoder);
     }
@@ -1422,16 +1438,17 @@ public class DecoderGeneratorTest
 
     private void assertHasComponentFieldGetter() throws NoSuchMethodException, ClassNotFoundException
     {
-        assertHasMethod("componentField", int.class);
-        assertHasMethod(HAS_COMPONENT_FIELD, boolean.class);
+        assertHasMethod("componentField", int.class, component);
+        assertHasMethod(HAS_COMPONENT_FIELD, boolean.class, component);
 
         final Class<?> clazz = heartbeat.getClassLoader().loadClass(
             "uk.co.real_logic.artio.builder.test.EgComponentDecoder$ComponentGroupGroupDecoder");
 
-        assertHasMethod("componentGroupGroup", clazz);
+        assertHasMethod("componentGroupGroup", clazz, component);
     }
 
-    private void assertHasMethod(final String name, final Class<?> expectedReturnType) throws NoSuchMethodException
+    private void assertHasMethod(final String name, final Class<?> expectedReturnType, final Class<?> component)
+        throws NoSuchMethodException
     {
         final Method method = component.getMethod(name);
         assertEquals(expectedReturnType, method.getReturnType());
