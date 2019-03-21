@@ -503,6 +503,17 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void shouldDecodeNestedComponentsWithRepeatingGroups() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NESTED_COMPONENT_MESSAGE);
+
+        assertEquals(2, get(decoder, "componentField"));
+        assertEquals(180, get(decoder, "nestedComponentField"));
+
+        assertValid(decoder);
+    }
+
+    @Test
     public void shouldGenerateComponentToString() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(COMPONENT_MESSAGE);
