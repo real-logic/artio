@@ -281,7 +281,7 @@ public class DecoderGenerator extends Generator
         if (aggregate.containsGroup())
         {
             final List<Field> groupFields = aggregate
-                .allChildEntries()
+                .allFieldsIncludingComponents()
                 .map(Entry::element)
                 .map(element -> (Field)element)
                 .collect(toList());
@@ -290,7 +290,7 @@ public class DecoderGenerator extends Generator
         }
 
         final String enumValidation = aggregate
-            .allChildEntries()
+            .allFieldsIncludingComponents()
             .filter((entry) -> entry.element().isEnumField())
             .map((entry) -> validateEnum(entry, out))
             .collect(joining("\n"));
@@ -363,7 +363,7 @@ public class DecoderGenerator extends Generator
             messageValidation,
             enumValidation,
             groupValidation,
-            2 * aggregate.allChildEntries().count()));
+            2 * aggregate.allFieldsIncludingComponents().count()));
     }
 
     private String generateFieldDictionary(final Collection<Field> fields, final String name,
@@ -511,13 +511,7 @@ public class DecoderGenerator extends Generator
             (out) ->
             {
                 out.append(fileHeader(builderPackage));
-
-                final List<String> interfaces = component.entries()
-                    .stream()
-                    .flatMap(e -> e.isComponent() ? Stream.concat(Stream.of(e),
-                    ((Component)e.element()).entries().stream()) :
-                    Stream.of(e))
-                    .filter(e -> e.element() instanceof Component)
+                final List<String> interfaces = component.allComponents()
                     .map((comp) -> decoderClassName((Aggregate)comp.element()))
                     .collect(toList());
 
@@ -544,7 +538,7 @@ public class DecoderGenerator extends Generator
         entry.forEach(
             (field) -> out.append(fieldInterfaceGetter(entry, field)),
             (group) -> groupInterfaceGetter(parent, group, out),
-            (component) -> componentInterfaceGetter(component, out));
+            (component) -> {});
     }
 
     private void groupInterfaceGetter(final Aggregate parent, final Group group, final Writer out) throws IOException
@@ -560,19 +554,6 @@ public class DecoderGenerator extends Generator
             "    public %1$s %2$s();\n",
             decoderClassName(group),
             formatPropertyName(group.name())));
-    }
-
-    private void componentInterfaceGetter(final Component component, final Writer out)
-        throws IOException
-    {
-//        final String fieldName = formatPropertyName(component.name());
-//
-//        out.append(String.format(
-//                "    public %1$s %2$s();\n",
-//                decoderClassName(component),
-//                fieldName
-//        ));
-//        wrappedForEachEntry(component, out, (entry) -> interfaceGetter(component, entry, out));
     }
 
     private void wrappedForEachEntry(
