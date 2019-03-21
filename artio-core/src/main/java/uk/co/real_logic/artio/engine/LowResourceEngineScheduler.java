@@ -70,7 +70,7 @@ public class LowResourceEngineScheduler implements EngineScheduler
             errorHandler,
             null,
             new CompositeAgent(agents));
-        startOnThread(runner);
+        startOnThread(runner, configuration.threadFactory());
     }
 
     public void close()
