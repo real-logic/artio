@@ -512,11 +512,24 @@ public class DecoderGenerator extends Generator
             {
                 out.append(fileHeader(builderPackage));
 
+                final List<String> interfaces = component.entries()
+                    .stream()
+                    .flatMap(e -> e.isComponent() ? Stream.concat(Stream.of(e),
+                    ((Component)e.element()).entries().stream()) :
+                    Stream.of(e))
+                    .filter(e -> e.element() instanceof Component)
+                    .map((comp) -> decoderClassName((Aggregate)comp.element()))
+                    .collect(toList());
+
+                final String interfaceExtension = interfaces.isEmpty() ? "" : " extends " +
+                    String.join(", ", interfaces);
+
                 generateImports("Decoder", AggregateType.COMPONENT, out);
                 out.append(String.format(
-                    "\npublic interface %1$s\n" +
+                    "\npublic interface %1$s %2$s\n" +
                     "{\n\n",
-                    className));
+                    className,
+                    interfaceExtension));
 
                 for (final Entry entry : component.entries())
                 {
@@ -551,7 +564,14 @@ public class DecoderGenerator extends Generator
     private void componentInterfaceGetter(final Component component, final Writer out)
         throws IOException
     {
-        wrappedForEachEntry(component, out, (entry) -> interfaceGetter(component, entry, out));
+//        final String fieldName = formatPropertyName(component.name());
+//
+//        out.append(String.format(
+//                "    public %1$s %2$s();\n",
+//                decoderClassName(component),
+//                fieldName
+//        ));
+//        wrappedForEachEntry(component, out, (entry) -> interfaceGetter(component, entry, out));
     }
 
     private void wrappedForEachEntry(

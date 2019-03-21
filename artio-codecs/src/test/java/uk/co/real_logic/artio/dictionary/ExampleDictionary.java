@@ -63,6 +63,7 @@ public final class ExampleDictionary
     public static final String FIELDS_MESSAGE_DECODER = TEST_PACKAGE + "." + FIELDS_MESSAGE + "Decoder";
     public static final String HEADER_DECODER = TEST_PACKAGE + ".HeaderDecoder";
     public static final String COMPONENT_DECODER = TEST_PACKAGE + "." + EG_COMPONENT + "Decoder";
+    public static final String NESTED_COMPONENT_DECODER = TEST_PACKAGE + "." + EG_NESTED_COMPONENT + "Decoder";
     public static final String OTHER_MESSAGE_DECODER = TEST_PACKAGE + ".OtherMessageDecoder";
     public static final String OTHER_MESSAGE_ENCODER = TEST_PACKAGE + ".OtherMessageEncoder";
     public static final String ENUM_TEST_MESSAGE_DECODER = TEST_PACKAGE + ".EnumTestMessageDecoder";
