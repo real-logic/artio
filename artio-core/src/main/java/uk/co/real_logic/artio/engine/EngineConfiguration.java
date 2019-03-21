@@ -779,6 +779,17 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Sets factory for threads such as framer, archivingRunner, etc in EngineScheduler
+     * @param threadFactory factory for custom thread creating
+     * @return this
+     */
+    public EngineConfiguration threadFactory(final ThreadFactory threadFactory)
+    {
+        this.threadFactory = threadFactory;
+        return this;
+    }
+
     public AeronArchive.Context aeronArchiveContext()
     {
         return archiveContext;
