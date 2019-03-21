@@ -54,7 +54,7 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
         archivingRunner = new AgentRunner(
             configuration.archiverIdleStrategy(), errorHandler, null, indexingAgent);
 
-        startOnThread(archivingRunner);
+        startOnThread(archivingRunner, configuration.threadFactory());
 
         if (monitoringAgent != null)
         {
