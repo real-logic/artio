@@ -41,7 +41,9 @@ public final class ExampleDictionary
     public static final String NO_SECOND_EG_GROUP = "NoSecondEgGroup";
     public static final String NO_ADMIN_EG_GROUP = "NoAdminEgGroup";
     public static final String NO_COMPONENT_GROUP = "NoComponentGroup";
+    public static final String NO_NESTED_COMPONENT_GROUP = "NoNestedComponentGroup";
     public static final String EG_COMPONENT = "EgComponent";
+    public static final String EG_NESTED_COMPONENT = "EgNestedComponent";
     public static final String FIELDS_MESSAGE = "FieldsMessage";
 
     public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
@@ -61,6 +63,7 @@ public final class ExampleDictionary
     public static final String FIELDS_MESSAGE_DECODER = TEST_PACKAGE + "." + FIELDS_MESSAGE + "Decoder";
     public static final String HEADER_DECODER = TEST_PACKAGE + ".HeaderDecoder";
     public static final String COMPONENT_DECODER = TEST_PACKAGE + "." + EG_COMPONENT + "Decoder";
+    public static final String NESTED_COMPONENT_DECODER = TEST_PACKAGE + "." + EG_NESTED_COMPONENT + "Decoder";
     public static final String OTHER_MESSAGE_DECODER = TEST_PACKAGE + ".OtherMessageDecoder";
     public static final String OTHER_MESSAGE_ENCODER = TEST_PACKAGE + ".OtherMessageEncoder";
     public static final String ENUM_TEST_MESSAGE_DECODER = TEST_PACKAGE + ".EnumTestMessageDecoder";
@@ -182,6 +185,9 @@ public final class ExampleDictionary
         "      \"ComponentGroupField\": \"2\",\n" +
         "    }\n" +
         "    ]\n" +
+        "    \"EgNestedComponent\":  {\n" +
+        "      \"MessageName\": \"EgNestedComponent\",\n" +
+        "    }\n" +
         "  }";
 
     public static final String ENCODED_MESSAGE =
@@ -355,6 +361,10 @@ public final class ExampleDictionary
         "8=FIX.4.4\0019=77\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
         "\001124=2\001130=2\001131=1\001131=2\00110=069\001";
 
+    public static final String NESTED_COMPONENT_MESSAGE =
+        "8=FIX.4.4\0019=77\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001124=2\001130=2\001131=1\001131=2\001141=180\001142=2\001143=99\001143=100\00110=069\001";
+
     public static final String SHORT_TIMESTAMP_MESSAGE =
         "8=FIX.4.4\0019=49\00135=0\001115=abc\001116=2\001117=1.1" +
         "\001127=19700101-00:00:00\00110=113\001";
@@ -476,9 +486,18 @@ public final class ExampleDictionary
         final Group componentGroup = Group.of(registerField(messageEgFields, 130, NO_COMPONENT_GROUP, INT));
         componentGroup.optionalEntry(registerField(messageEgFields, 131, "ComponentGroupField", INT));
 
+        final Group nestedComponentGroup = Group.of(registerField(messageEgFields, 142,
+            NO_NESTED_COMPONENT_GROUP, INT));
+        nestedComponentGroup.optionalEntry(registerField(messageEgFields, 143, "NestedComponentGroupField", INT));
+
+        final Component nestedComponent = new Component(EG_NESTED_COMPONENT);
+        nestedComponent.optionalEntry(registerField(messageEgFields, 141, "NestedComponentField", INT));
+        nestedComponent.optionalEntry(nestedComponentGroup);
+
         final Component egComponent = new Component(EG_COMPONENT);
         egComponent.optionalEntry(registerField(messageEgFields, 124, "ComponentField", INT));
         egComponent.optionalEntry(componentGroup);
+        egComponent.optionalEntry(nestedComponent);
 
         final Group groupForAdmin = Group.of(registerField(messageEgFields, 139, NO_ADMIN_EG_GROUP, INT));
         groupForAdmin.optionalEntry(registerField(messageEgFields, 140, "AdminFirstGroupField", STRING));
@@ -541,6 +560,7 @@ public final class ExampleDictionary
         fieldsMessage.optionalEntry(registerField(messageEgFields, 1006, "OptionalCountryField", COUNTRY));
         fieldsMessage.optionalEntry(registerField(messageEgFields, 9001, "HighNumberField", INT));
         fieldsMessage.optionalEntry(groupForAdmin);
+        fieldsMessage.optionalEntry(nestedComponent);
 
         final Message enumTestMessage = new Message(ENUM_TEST_MESSAGE, ENUM_TEST_MESSAGE_TYPE, APP);
         enumTestMessage.optionalEntry(registerField(messageEgFields, 501, "CharEnumOpt", CHAR)
@@ -581,6 +601,7 @@ public final class ExampleDictionary
 
         final Map<String, Component> components = new HashMap<>();
         components.put(EG_COMPONENT, egComponent);
+        components.put(EG_NESTED_COMPONENT, nestedComponent);
 
         return new Dictionary(messages, messageEgFields, components, header, trailer, "FIX", 4, 4);
     }

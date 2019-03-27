@@ -39,6 +39,7 @@ public class LowResourceEngineSchedulerTest
     public void shouldPrintErrorIfRepeatedlyThrown() throws Exception
     {
         when(configuration.framerIdleStrategy()).thenReturn(new BusySpinIdleStrategy());
+        when(configuration.threadFactory()).thenReturn(Thread::new);
         when(framer.doWork()).thenThrow(IOException.class);
 
         try (EngineScheduler scheduler = new LowResourceEngineScheduler())

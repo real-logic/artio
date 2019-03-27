@@ -52,14 +52,25 @@ public abstract class Aggregate
     /**
      * @return all entries including those of nested components
      */
-    public Stream<Entry> allChildEntries()
+    public Stream<Entry> allFieldsIncludingComponents()
     {
         return entries.stream()
             .flatMap(
                 (entry) -> entry.match(
                     (ele, field) -> Stream.of(ele),
                     (ele, group) -> Stream.empty(),
-                    (ele, component) -> component.allChildEntries()
+                    (ele, component) -> component.allFieldsIncludingComponents()
+                ));
+    }
+
+    public Stream<Entry> allComponents()
+    {
+        return entries.stream()
+            .flatMap(
+                (entry) -> entry.match(
+                    (e, field) -> Stream.empty(),
+                    (e, group) -> Stream.empty(),
+                    (e, component) -> Stream.concat(Stream.of(e), component.allComponents())
                 ));
     }
 
