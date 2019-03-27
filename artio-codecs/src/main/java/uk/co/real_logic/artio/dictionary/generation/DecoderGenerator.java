@@ -1003,6 +1003,7 @@ public class DecoderGenerator extends Generator
             endGroupCheck +
             "            final int valueOffset = equalsPosition + 1;\n" +
             "            final int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
+            malformedMessageCheck() +
             "            final int valueLength = endOfField - valueOffset;\n" +
             "            if (" + CODEC_VALIDATION_ENABLED + ")\n" +
             "            {\n" +
@@ -1070,6 +1071,16 @@ public class DecoderGenerator extends Generator
             "    }\n\n";
 
         return prefix + body + suffix;
+    }
+
+    private String malformedMessageCheck()
+    {
+        return "            if (endOfField == AsciiBuffer.UNKNOWN_INDEX || " +
+               "equalsPosition == AsciiBuffer.UNKNOWN_INDEX)\n" +
+               "            {\n" +
+               "                rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
+               "                break;\n" +
+               "            }\n";
     }
 
     private String decodeTrailerOrReturn(final boolean hasCommonCompounds, final int indent)

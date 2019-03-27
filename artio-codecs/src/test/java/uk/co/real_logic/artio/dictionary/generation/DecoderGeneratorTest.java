@@ -22,6 +22,7 @@ import org.junit.Test;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 import uk.co.real_logic.artio.fields.DecimalFloat;
+import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
 import org.agrona.AsciiSequenceView;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -1174,6 +1175,25 @@ public class DecoderGeneratorTest
 
         final int highNumberField = getInt(decoder, "highNumberField");
         assertEquals(highNumberField, 1);
+    }
+
+    @Test
+    public void shouldHandleMalformedMessage() throws Exception
+    {
+        final Decoder decoder1 = decodeHeartbeat("8=FIX.4.4\u00019=105\u000135=0\001115=abc");
+        final Decoder decoder2 = decodeHeartbeat("8=FIX.4.4\u00019=105\u000135=0\001115");
+        final Decoder decoder3 = decodeHeartbeat("8=FIX.4.4\u00019=105\u000135=0\001115=");
+        final Decoder decoder4 = decodeHeartbeat("8=FIX.4.4\u00019=105\u000135=0\001115=abc\u0001 ");
+
+        assertThat(decoder1.validate(), is(false));
+        assertThat(decoder2.validate(), is(false));
+        assertThat(decoder3.validate(), is(false));
+        assertThat(decoder4.validate(), is(false));
+
+        assertThat(RejectReason.decode(decoder1.rejectReason()), is(RejectReason.VALUE_IS_INCORRECT));
+        assertThat(RejectReason.decode(decoder2.rejectReason()), is(RejectReason.VALUE_IS_INCORRECT));
+        assertThat(RejectReason.decode(decoder3.rejectReason()), is(RejectReason.VALUE_IS_INCORRECT));
+        assertThat(RejectReason.decode(decoder4.rejectReason()), is(RejectReason.VALUE_IS_INCORRECT));
     }
 
     private void assertRepeatingGroupAndFieldsDecoded(final Decoder decoder) throws Exception
