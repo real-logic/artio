@@ -586,11 +586,11 @@ public class EncoderGenerator extends Generator
         final String enumSetter)
     {
         return String.format(
-            "    private DecimalFloat %1$s = new DecimalFloat();\n\n" +
+            "    private final DecimalFloat %1$s = new DecimalFloat();\n\n" +
             "%2$s" +
             "    public %3$s %1$s(DecimalFloat value)\n" +
             "    {\n" +
-            "        %1$s = value;\n" +
+            "        %1$s.set(value);\n" +
             "%4$s" +
             "        return this;\n" +
             "    }\n\n" +
