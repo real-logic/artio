@@ -26,9 +26,9 @@ plugins {
     id 'net.researchgate.release' version '2.8.0'
 }
 
-def aeronVersion = '1.16.0'
-def agronaVersion = '0.9.34'
-def sbeVersion = '1.12.3'
+def aeronVersion = '1.17.0'
+def agronaVersion = '0.9.35'
+def sbeVersion = '1.12.4'
 def artioJavaVersion = JavaVersion.VERSION_1_8
 def artioGroup = 'uk.co.real-logic'
 
