@@ -128,7 +128,7 @@ public class AbstractGatewayToGatewaySystemTest
             });
     }
 
-    private void assertNotSession(final FakeHandler sessionHandler, final Session session)
+    void assertNotSession(final FakeHandler sessionHandler, final Session session)
     {
         assertThat(sessionHandler.sessions(), not(hasItem(session)));
     }
