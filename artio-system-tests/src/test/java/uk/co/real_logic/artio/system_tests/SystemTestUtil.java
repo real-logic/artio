@@ -139,14 +139,14 @@ public final class SystemTestUtil
     static Reply<Session> initiate(
         final FixLibrary library,
         final int port,
-        final String initiatorId,
-        final String acceptorId)
+        final String senderCompId,
+        final String targetCompId)
     {
         final SessionConfiguration config = SessionConfiguration.builder()
             .address("localhost", port)
             .credentials(USERNAME, PASSWORD)
-            .senderCompId(initiatorId)
-            .targetCompId(acceptorId)
+            .senderCompId(senderCompId)
+            .targetCompId(targetCompId)
             .build();
 
         return library.initiate(config);
