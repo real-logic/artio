@@ -48,7 +48,7 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
     {
         return new CompositeKeyImpl(
             header.targetCompID(), header.targetCompIDLength(),
-            header.targetSubID(), header.targetSubIDLength(),
+            header.senderSubID(), header.senderSubIDLength(),
             header.senderCompID(), header.senderCompIDLength());
     }
 
