@@ -18,9 +18,6 @@ package uk.co.real_logic.artio;
 
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
-import uk.co.real_logic.artio.sbe_util.MessageDumper;
-import uk.co.real_logic.artio.sbe_util.MessageSchemaIr;
-import uk.co.real_logic.sbe.json.JsonPrinter;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -28,8 +25,7 @@ import java.io.PrintStream;
 import java.nio.ByteBuffer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static uk.co.real_logic.artio.CommonConfiguration.DEBUG_PRINT_THREAD;
-import static uk.co.real_logic.artio.CommonConfiguration.DEBUG_TAGS;
+import static uk.co.real_logic.artio.CommonConfiguration.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEBUG_FILE;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEBUG_PRINT_MESSAGES;
 
@@ -76,35 +72,10 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            log(tag, formatString, Integer.valueOf(value), buffer, offset, length);
-        }
-    }
-
-    public static void log(
-        final LogTag tag,
-        final String formatString,
-        final Object value,
-        final DirectBuffer buffer,
-        final int offset,
-        final int length)
-    {
-        if (isEnabled(tag))
-        {
             final byte[] data = new byte[length];
             buffer.getBytes(offset, data);
-            printf(tag, formatString, value, new String(data, US_ASCII));
-        }
-    }
-
-    public static void logSbeMessage(
-        final LogTag tag,
-        final DirectBuffer buffer,
-        final int offset,
-        final int length)
-    {
-        if (isEnabled(tag))
-        {
-            println(toStringSbeMessage(buffer, offset, length));
+            substituteSeparator(data);
+            printf(tag, formatString, Integer.valueOf(value), new String(data, US_ASCII));
         }
     }
 
@@ -118,12 +89,6 @@ public final class DebugLogger
         }
     }
 
-    private static String toStringSbeMessage(final DirectBuffer buffer, final int offset, final int length)
-    {
-        final JsonPrinter dumper = new JsonPrinter(MessageSchemaIr.SCHEMA_IR);
-        return MessageDumper.print(dumper, buffer, offset, length);
-    }
-
     public static void log(
         final LogTag tag,
         final String formatString,
@@ -135,6 +100,7 @@ public final class DebugLogger
         {
             final byte[] data = new byte[length];
             buffer.getBytes(offset, data);
+            substituteSeparator(data);
             printf(tag, formatString, new String(data, US_ASCII));
         }
     }
@@ -153,6 +119,7 @@ public final class DebugLogger
             byteBuffer.get(data);
             ByteBufferUtil.position(byteBuffer, originalPosition);
 
+            substituteSeparator(data);
             printf(tag, formatString, new String(data, US_ASCII));
         }
     }
@@ -181,35 +148,11 @@ public final class DebugLogger
     public static void log(
         final LogTag tag,
         final String formatString,
-        final long first,
-        final boolean second)
-    {
-        if (isEnabled(tag))
-        {
-            printf(tag, formatString, first, second);
-        }
-    }
-
-    public static void log(
-        final LogTag tag,
-        final String formatString,
         final long first)
     {
         if (isEnabled(tag))
         {
             printf(tag, formatString, first);
-        }
-    }
-
-    public static void log(
-        final LogTag tag,
-        final String formatString,
-        final Object first,
-        final Object second)
-    {
-        if (isEnabled(tag))
-        {
-            printf(tag, formatString, first, second);
         }
     }
 
@@ -318,79 +261,18 @@ public final class DebugLogger
         return Thread.currentThread().getName();
     }
 
-    public static void log(
-        final LogTag tag,
-        final String formatString,
-        final Object first,
-        final Object second,
-        final Object third)
+    private static void substituteSeparator(final byte[] data)
     {
-        if (isEnabled(tag))
+        if (DEBUG_LOGGING_SEPARATOR != DEFAULT_DEBUG_LOGGING_SEPARATOR)
         {
-            printf(tag, formatString, first, second, third);
-        }
-    }
-
-    public static void log(
-        final LogTag tag,
-        final String formatString,
-        final long first,
-        final long second,
-        final long third,
-        final long fourth,
-        final long fifth)
-    {
-        if (isEnabled(tag))
-        {
-            printf(tag, formatString, first, second, third, fourth, fifth);
-        }
-    }
-
-    public static void log(
-        final LogTag tag,
-        final String formatString,
-        final long first,
-        final long second,
-        final long third,
-        final long fourth,
-        final long fifth,
-        final long sixth)
-    {
-        if (isEnabled(tag))
-        {
-            printf(tag, formatString, first, second, third, fourth, fifth, sixth);
-        }
-    }
-
-    public static void log(
-        final LogTag tag,
-        final String formatString,
-        final long first,
-        final long second,
-        final long third,
-        final long fourth,
-        final long fifth,
-        final long sixth,
-        final long seventh)
-    {
-        if (isEnabled(tag))
-        {
-            printf(tag, formatString, first, second, third, fourth, fifth, sixth, seventh);
-        }
-    }
-
-    public static void log(
-        final LogTag tag,
-        final String formatString,
-        final Object first,
-        final long second,
-        final long third,
-        final long fourth,
-        final long fifth)
-    {
-        if (isEnabled(tag))
-        {
-            printf(tag, formatString, first, second, third, fourth, fifth);
+            final int size = data.length;
+            for (int i = 0; i < size; i++)
+            {
+                if (data[i] == DEFAULT_DEBUG_LOGGING_SEPARATOR)
+                {
+                    data[i] = DEBUG_LOGGING_SEPARATOR;
+                }
+            }
         }
     }
 

@@ -101,6 +101,11 @@ public class CommonConfiguration
      */
     public static final String HISTOGRAM_LOGGING_FILE_PROPERTY = "fix.benchmark.histogram_file";
 
+    /**
+     * Property name for character to separate debug logging of FIX messages
+     */
+    public static final String LOGGING_SEPARATOR_PROPERTY = "fix.core.debug.separator";
+
     public static void validateTimeout(final long timeoutInMs)
     {
         if (timeoutInMs <= 0)
@@ -121,6 +126,8 @@ public class CommonConfiguration
     public static final boolean DEBUG_PRINT_MESSAGES;
     public static final Set<LogTag> DEBUG_TAGS;
     public static final String DEBUG_PRINT_THREAD;
+    public static final byte DEFAULT_DEBUG_LOGGING_SEPARATOR = '\001';
+    public static final byte DEBUG_LOGGING_SEPARATOR;
 
     static
     {
@@ -156,6 +163,10 @@ public class CommonConfiguration
         DEBUG_PRINT_THREAD = debugPrintThreadValue == null ? null : debugPrintThreadValue + " : ";
         DEBUG_PRINT_MESSAGES = debugPrintMessages;
         DEBUG_TAGS = debugTags;
+
+        final String loggingSeparator = getProperty(LOGGING_SEPARATOR_PROPERTY);
+        DEBUG_LOGGING_SEPARATOR =
+            loggingSeparator == null ? DEFAULT_DEBUG_LOGGING_SEPARATOR : (byte)loggingSeparator.charAt(0);
     }
 
     public static final String DEBUG_FILE = System.getProperty(DEBUG_FILE_PROPERTY);
@@ -491,6 +502,7 @@ public class CommonConfiguration
         this.outboundLibraryStream = outboundLibraryStream;
         return this;
     }
+
 
     public Aeron.Context aeronContext()
     {
