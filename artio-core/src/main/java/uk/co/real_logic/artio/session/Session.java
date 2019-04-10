@@ -906,7 +906,7 @@ public class Session implements AutoCloseable
         this.nextRequiredInboundMessageTimeInMs = time + heartbeatIntervalInMs() + reasonableTransmissionTimeInMs;
     }
 
-    public Action onLogon(
+    Action onLogon(
         final int heartbeatInterval,
         final int msgSeqNum,
         final long sendingTime,
@@ -1456,8 +1456,7 @@ public class Session implements AutoCloseable
         return logonTime != NO_LOGON_TIME;
     }
 
-    // Visible for testing
-    public Action onInvalidMessage(
+    Action onInvalidMessage(
         final int refSeqNum,
         final int refTagId,
         final char[] refMsgType,

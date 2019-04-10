@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.session;
 
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.messages.SessionState;
@@ -127,4 +128,15 @@ public class InternalSession extends Session
     {
         super.updateLastMessageProcessed();
     }
+
+    public ControlledFragmentHandler.Action onInvalidMessage(
+        final int refSeqNum,
+        final int refTagId,
+        final char[] refMsgType,
+        final int refMsgTypeLength,
+        final int rejectReason)
+    {
+        return super.onInvalidMessage(refSeqNum, refTagId, refMsgType, refMsgTypeLength, rejectReason);
+    }
+
 }

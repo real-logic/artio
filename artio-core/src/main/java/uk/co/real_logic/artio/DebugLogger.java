@@ -234,6 +234,7 @@ public final class DebugLogger
         }
     }
 
+    // Used by fix-integration project
     public static void log(
         final LogTag tag,
         final String formatString,
