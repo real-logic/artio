@@ -18,17 +18,19 @@ package uk.co.real_logic.artio.system_tests;
 import org.agrona.concurrent.EpochClock;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.builder.HeartbeatEncoder;
+import uk.co.real_logic.artio.builder.LogonEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.library.SessionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.*;
-import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.List;
 
@@ -36,7 +38,6 @@ import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
-import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
@@ -45,6 +46,19 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
     private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
     private final FakeSessionProxy fakeSessionProxy = new FakeSessionProxy();
     private FollowerSession acceptingFollowerSession = null;
+    private FakeHandler acceptingHandler = new FakeHandler(acceptingOtfAcceptor)
+    {
+        @Override
+        public SessionHandler onSessionAcquired(final Session session, final boolean isSlow)
+        {
+            acceptingFollowerSession = acceptingLibrary.followerSession(
+                session.id(),
+                session.connectionId(),
+                session.sequenceIndex());
+
+            return super.onSessionAcquired(session, isSlow);
+        }
+    };
 
     private int sessionProxyRequests = 0;
 
@@ -56,7 +70,7 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
         mediaDriver = launchMediaDriver();
 
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
-        // acceptingConfig.soleLibraryMode(true);
+        acceptingConfig.soleLibraryMode(true);
 
         acceptingEngine = FixEngine.launch(acceptingConfig);
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
@@ -72,27 +86,41 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
         connectSessions();
     }
 
-    // TODO: verify data passed into the SPF buffer.
-    // TODO: verify that the engine passes on the session
-    // TODO: wireup the followerSession and pass data through to it
-
     @Test(timeout = 10_000L)
     public void shouldRoundTripMessagesViaCluster()
     {
-        // TODO: remove this and replace with .soleLibraryMode(true);
-        acquireAcceptingSession();
-
-        acceptingFollowerSession = acceptingLibrary.followerSession(
-            acceptingSession.id(),
-            acceptingSession.connectionId(),
-            acceptingSession.sequenceIndex());
+        awaitForwardingOfAcceptingSession();
 
         assertNotNull(acceptingFollowerSession);
         assertEquals(1, sessionProxyRequests);
 
         messagesCanBeExchanged();
 
+        assertEquals(1, fakeSessionProxy.sentHeartbeats);
+
         assertInitiatingSequenceIndexIs(0);
+    }
+
+    // TODO: messages stored via followerSession can be read afterwards.
+    // TODO: restarting connections and failover
+
+    private void awaitForwardingOfAcceptingSession()
+    {
+        Timing.assertEventuallyTrue(
+            "Couldn't acquire session",
+            () ->
+            {
+                testSystem.poll();
+                acceptingSession = acceptingHandler.lastSession();
+
+                return acceptingSession != null;
+            });
+
+        acceptingHandler.resetSession();
+        final CompositeKey compositeKey = acceptingSession.compositeKey();
+        assertEquals(INITIATOR_ID, compositeKey.remoteCompId());
+        assertEquals(ACCEPTOR_ID, compositeKey.localCompId());
+        assertNotNull("unable to acquire accepting session", acceptingSession);
     }
 
     private SessionProxy sessionProxyFactory(
@@ -113,10 +141,11 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
         private final SessionIdStrategy sessionIdStrategy = SessionIdStrategy.senderAndTarget();
         private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
         private final HeartbeatEncoder heartbeat = new HeartbeatEncoder();
-        private final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]);
-        private final List<HeaderEncoder> headers = asList(heartbeat.header());
+        private final LogonEncoder logon = new LogonEncoder();
+        private final List<HeaderEncoder> headers = asList(logon.header(), heartbeat.header());
 
         private int sentHeartbeats = 0;
+        private boolean seqNumResetRequested = false;
 
         public void setupSession(final long sessionId, final CompositeKey sessionKey)
         {
@@ -152,7 +181,25 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
             final int sequenceIndex,
             final int lastMsgSeqNumProcessed)
         {
-            return 0;
+            final HeaderEncoder header = logon.header();
+            setupHeader(header, msgSeqNo);
+
+            logon
+                .heartBtInt(heartbeatIntervalInS)
+                .resetSeqNumFlag(resetSeqNumFlag)
+                .encryptMethod(0);
+
+            if (notNullOrEmpty(username))
+            {
+                logon.username(username);
+            }
+            if (notNullOrEmpty(password))
+            {
+                logon.password(password);
+            }
+            seqNumResetRequested = logon.resetSeqNumFlag();
+
+            return acceptingFollowerSession.send(logon, msgSeqNo);
         }
 
         public long logout(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
@@ -266,7 +313,7 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
 
         public boolean seqNumResetRequested()
         {
-            return false;
+            return seqNumResetRequested;
         }
 
         private void setupHeader(final HeaderEncoder header, final int msgSeqNo)
@@ -274,6 +321,11 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
             final UtcTimestampEncoder timestampEncoder = this.timestampEncoder;
             header.sendingTime(timestampEncoder.buffer(), timestampEncoder.update(System.currentTimeMillis()));
             header.msgSeqNum(msgSeqNo);
+        }
+
+        private boolean notNullOrEmpty(final String string)
+        {
+            return string != null && string.length() > 0;
         }
     }
 }

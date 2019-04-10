@@ -276,9 +276,20 @@ class ReceiverEndPoint
                 }
                 else
                 {
-                    if (requiresAuthentication() && !authenticate(offset, length))
+                    if (requiresAuthentication())
                     {
-                        return offset;
+                        if (!authenticate(offset, length))
+                        {
+                            return offset;
+                        }
+
+                        // Might be paused at this point to ensure that a library has been notified of
+                        // the new session in soleLibraryMode
+                        if (isPaused)
+                        {
+                            moveRemainingDataToBufferStart(offset);
+                            return offset;
+                        }
                     }
 
                     messagesRead.incrementOrdered();
@@ -412,6 +423,8 @@ class ReceiverEndPoint
 
         sessionId = gatewaySession.sessionId();
         sequenceIndex = gatewaySession.sequenceIndex();
+
+        framer.onLogonMessageReceived(gatewaySession);
 
         if (authenticationResult.isBackPressured())
         {

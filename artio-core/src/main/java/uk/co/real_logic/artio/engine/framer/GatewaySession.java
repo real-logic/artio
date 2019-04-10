@@ -117,18 +117,25 @@ class GatewaySession implements SessionInfo
         senderEndPoint.libraryId(ENGINE_LIBRARY_ID, blockablePosition);
     }
 
+    // sets management to a library and also cleans up locally associated session.
     void handoverManagementTo(
         final int libraryId,
         final BlockablePosition blockablePosition)
     {
-        receiverEndPoint.libraryId(libraryId);
-        receiverEndPoint.pause();
-        senderEndPoint.libraryId(libraryId, blockablePosition);
+        setManagementTo(libraryId, blockablePosition);
+
         sessionParser = null;
         session.logonListener(null);
         context.updateAndSaveFrom(session);
         session.close();
         session = null;
+    }
+
+    void setManagementTo(final int libraryId, final BlockablePosition blockablePosition)
+    {
+        receiverEndPoint.libraryId(libraryId);
+        receiverEndPoint.pause();
+        senderEndPoint.libraryId(libraryId, blockablePosition);
     }
 
     void play()

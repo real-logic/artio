@@ -768,7 +768,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 sessionKey,
                 connectionId,
                 sessionId,
-                gatewaySession, header.sessionId(), header.position(), address.toString());
+                gatewaySession,
+                header.sessionId(),
+                header.position(),
+                address.toString(),
+                INITIATOR);
         }
         catch (final Exception e)
         {
@@ -800,7 +804,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final GatewaySession gatewaySession,
         final int aeronSessionId,
         final long requiredPosition,
-        final String address)
+        final String address,
+        final ConnectionType connectionType)
     {
         retryManager.schedule(new UnitOfWork()
         {
@@ -843,7 +848,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     Session.NO_LOGON_TIME,
                     SessionStatus.SESSION_HANDOVER,
                     SlowStatus.NOT_SLOW,
-                    INITIATOR,
+                    connectionType,
                     CONNECTED,
                     false,
                     heartbeatIntervalInS,
@@ -866,6 +871,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 if (position > 0)
                 {
                     library.connectionFinishesConnecting(correlationId);
+                    gatewaySession.play();
                 }
 
                 return position;
@@ -1368,46 +1374,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void onSessionLogon(final GatewaySession gatewaySession)
     {
-        if (configuration.soleLibraryMode())
-        {
-            // Hand over management of this new session to the sole library
-            if (idToLibrary.size() != 1)
-            {
-                // TODO: error case
-            }
-
-            final LiveLibraryInfo library = idToLibrary.values().iterator().next();
-            final CompositeKey sessionKey = gatewaySession.sessionKey();
-            final int libraryAeronSessionId = library.aeronSessionId();
-            final long requiredPosition = librarySubscription.imageBySessionId(libraryAeronSessionId).position();
-
-            handoverNewConnectionToLibrary(
-                library.libraryId(),
-                sessionKey.localCompId(),
-                sessionKey.localSubId(),
-                sessionKey.localLocationId(),
-                sessionKey.remoteCompId(),
-                sessionKey.remoteSubId(),
-                sessionKey.remoteLocationId(),
-                gatewaySession.closedResendInterval(),
-                gatewaySession.resendRequestChunkSize(),
-                gatewaySession.sendRedundantResendRequests(),
-                gatewaySession.enableLastMsgSeqNumProcessed(),
-                gatewaySession.username(),
-                gatewaySession.password(),
-                gatewaySession.heartbeatIntervalInS(),
-                NO_CORRELATION_ID,
-                library,
-                gatewaySession.context(),
-                sessionKey,
-                gatewaySession.connectionId(),
-                gatewaySession.sessionId(),
-                gatewaySession,
-                libraryAeronSessionId,
-                requiredPosition,
-                gatewaySession.address());
-        }
-        else
+        if (!configuration.soleLibraryMode())
         {
             // Notify libraries of the existence of this logged on session.
             schedule(() ->
@@ -1430,6 +1397,55 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     gatewaySession.connectionId(),
                     session, NO_CORRELATION_ID);
             });
+        }
+    }
+
+    void onLogonMessageReceived(final GatewaySession gatewaySession)
+    {
+        if (configuration.soleLibraryMode() && gatewaySession.connectionType() == ACCEPTOR)
+        {
+            // Hand over management of this new session to the sole library
+            if (idToLibrary.size() != 1)
+            {
+                // TODO: error case
+                System.err.println("Error, invalid numbers of libraryies: " + idToLibrary.size());
+            }
+
+            final LiveLibraryInfo libraryInfo = idToLibrary.values().iterator().next();
+            final CompositeKey sessionKey = gatewaySession.sessionKey();
+            final int libraryAeronSessionId = libraryInfo.aeronSessionId();
+            final long requiredPosition = librarySubscription.imageBySessionId(libraryAeronSessionId).position();
+
+            final int libraryId = libraryInfo.libraryId();
+            gatewaySession.setManagementTo(libraryId, libraryInfo.librarySlowPeeker());
+            libraryInfo.addSession(gatewaySession);
+
+            handoverNewConnectionToLibrary(
+                libraryId,
+                sessionKey.localCompId(),
+                sessionKey.localSubId(),
+                sessionKey.localLocationId(),
+                sessionKey.remoteCompId(),
+                sessionKey.remoteSubId(),
+                sessionKey.remoteLocationId(),
+                gatewaySession.closedResendInterval(),
+                gatewaySession.resendRequestChunkSize(),
+                gatewaySession.sendRedundantResendRequests(),
+                gatewaySession.enableLastMsgSeqNumProcessed(),
+                gatewaySession.username(),
+                gatewaySession.password(),
+                gatewaySession.heartbeatIntervalInS(),
+                NO_CORRELATION_ID,
+                libraryInfo,
+                gatewaySession.context(),
+                sessionKey,
+                gatewaySession.connectionId(),
+                gatewaySession.sessionId(),
+                gatewaySession,
+                libraryAeronSessionId,
+                requiredPosition,
+                gatewaySession.address(),
+                ACCEPTOR);
         }
     }
 
