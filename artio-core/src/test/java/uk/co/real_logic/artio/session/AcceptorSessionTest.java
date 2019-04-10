@@ -25,7 +25,7 @@ import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_REASONAB
 import static uk.co.real_logic.artio.library.SessionConfiguration.DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED;
 import static uk.co.real_logic.artio.messages.SessionState.*;
 import static uk.co.real_logic.artio.session.Session.ACTIVE_VALUE;
-import static uk.co.real_logic.artio.session.SessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
+import static uk.co.real_logic.artio.session.DirectSessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
 
 public class AcceptorSessionTest extends AbstractSessionTest
 {

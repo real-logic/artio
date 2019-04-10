@@ -1049,7 +1049,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
         final int sessionBufferSize = configuration.sessionBufferSize();
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
-        final SessionProxy sessionProxy = sessionProxy(connectionId, asciiBuffer);
+        final SessionProxy sessionProxy = sessionProxy(connectionId);
         final int initialReceivedSequenceNumber = initiatorNewSequenceNumber(
             sessionConfiguration, SessionConfiguration::initialReceivedSequenceNumber, lastReceivedSequenceNumber);
         final int initialSentSequenceNumber = initiatorNewSequenceNumber(
@@ -1116,8 +1116,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long sendingTimeWindow = configuration.sendingTimeWindowInMs();
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
-        final int sessionBufferSize = configuration.sessionBufferSize();
-        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
+        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[configuration.sessionBufferSize()]);
         final int split = address.lastIndexOf(':');
         final int start = address.startsWith("/") ? 1 : 0;
         final String host = address.substring(start, split);
@@ -1127,7 +1126,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             heartbeatIntervalInS,
             connectionId,
             clock,
-            sessionProxy(connectionId, asciiBuffer),
+            sessionProxy(connectionId),
             publication,
             sessionIdStrategy,
             sendingTimeWindow,
@@ -1144,10 +1143,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return session;
     }
 
-    private SessionProxy sessionProxy(final long connectionId, final MutableAsciiBuffer asciiBuffer)
+    private SessionProxy sessionProxy(final long connectionId)
     {
-        return new SessionProxy(
-            asciiBuffer,
+        return configuration.sessionProxyFactory().make(
+            configuration.sessionBufferSize(),
             transport.outboundPublication(),
             sessionIdStrategy,
             configuration.sessionCustomisationStrategy(),

@@ -51,7 +51,7 @@ import static uk.co.real_logic.artio.library.SessionConfiguration.NO_RESEND_REQU
 import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionState.*;
-import static uk.co.real_logic.artio.session.SessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
+import static uk.co.real_logic.artio.session.DirectSessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound.
@@ -112,8 +112,7 @@ public class Session implements AutoCloseable
     protected final GatewayPublication publication;
     protected final MutableAsciiBuffer asciiBuffer;
     protected final int libraryId;
-
-    final SessionProxy proxy;
+    protected final SessionProxy proxy;
 
     private final EpochClock clock;
     private final long sendingTimeWindowInMs;

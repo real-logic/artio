@@ -48,7 +48,7 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.APPLICATION_DISCO
 import static uk.co.real_logic.artio.messages.SessionState.*;
 import static uk.co.real_logic.artio.session.Session.TEST_REQ_ID;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
-import static uk.co.real_logic.artio.session.SessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
+import static uk.co.real_logic.artio.session.DirectSessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
 
 public abstract class AbstractSessionTest
 {
@@ -67,7 +67,7 @@ public abstract class AbstractSessionTest
 
     static final long POSITION = 1024;
 
-    SessionProxy sessionProxy = mock(SessionProxy.class);
+    DirectSessionProxy sessionProxy = mock(DirectSessionProxy.class);
     GatewayPublication mockPublication = mock(GatewayPublication.class);
     FakeEpochClock fakeClock = new FakeEpochClock();
     AtomicCounter mockReceivedMsgSeqNo = mock(AtomicCounter.class);
