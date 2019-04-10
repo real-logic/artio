@@ -96,8 +96,7 @@ public class FramerContext
             sessionContexts,
             configuration.sessionPersistenceStrategy(),
             sentSequenceNumberIndex,
-            receivedSequenceNumberIndex,
-            configuration.sessionProxyFactory());
+            receivedSequenceNumberIndex);
 
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,

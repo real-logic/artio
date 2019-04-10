@@ -63,7 +63,6 @@ class GatewaySessions
     private final SessionPersistenceStrategy sessionPersistenceStrategy;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
-    private final SessionProxyFactory sessionProxyFactory;
 
     private ErrorHandler errorHandler;
 
@@ -83,8 +82,7 @@ class GatewaySessions
         final SessionContexts sessionContexts,
         final SessionPersistenceStrategy sessionPersistenceStrategy,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
-        final SequenceNumberIndexReader receivedSequenceNumberIndex,
-        final SessionProxyFactory sessionProxyFactory)
+        final SequenceNumberIndexReader receivedSequenceNumberIndex)
     {
         this.clock = clock;
         this.outboundPublication = outboundPublication;
@@ -102,7 +100,6 @@ class GatewaySessions
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
-        this.sessionProxyFactory = sessionProxyFactory;
     }
 
     void acquire(
@@ -121,7 +118,7 @@ class GatewaySessions
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
 
-        final SessionProxy proxy = sessionProxyFactory.make(
+        final SessionProxy proxy = new DirectSessionProxy(
             sessionBufferSize,
             outboundPublication,
             sessionIdStrategy,

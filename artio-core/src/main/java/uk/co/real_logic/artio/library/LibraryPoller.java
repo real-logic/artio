@@ -216,6 +216,17 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             resendFromSequenceIndex);
     }
 
+    FollowerSession followerSession(final long id, final long connectionId, final int sequenceIndex)
+    {
+        return new FollowerSession(
+            libraryId,
+            id,
+            connectionId,
+            sessionBuffer(),
+            outboundPublication,
+            sequenceIndex);
+    }
+
     void disableSession(final InternalSession session)
     {
         sessions = ArrayUtil.remove(sessions, session);
@@ -1047,8 +1058,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int defaultInterval = configuration.defaultHeartbeatIntervalInS();
         final GatewayPublication publication = transport.outboundPublication();
 
-        final int sessionBufferSize = configuration.sessionBufferSize();
-        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
+        final MutableAsciiBuffer asciiBuffer = sessionBuffer();
         final SessionProxy sessionProxy = sessionProxy(connectionId);
         final int initialReceivedSequenceNumber = initiatorNewSequenceNumber(
             sessionConfiguration, SessionConfiguration::initialReceivedSequenceNumber, lastReceivedSequenceNumber);
@@ -1077,6 +1087,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         session.lastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
 
         return session;
+    }
+
+    private MutableAsciiBuffer sessionBuffer()
+    {
+        return new MutableAsciiBuffer(new byte[configuration.sessionBufferSize()]);
     }
 
     private int initiatorNewSequenceNumber(
@@ -1116,7 +1131,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long sendingTimeWindow = configuration.sendingTimeWindowInMs();
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
-        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[configuration.sessionBufferSize()]);
+        final MutableAsciiBuffer asciiBuffer = sessionBuffer();
         final int split = address.lastIndexOf(':');
         final int start = address.startsWith("/") ? 1 : 0;
         final String host = address.substring(start, split);

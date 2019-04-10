@@ -306,4 +306,9 @@ class GatewaySession implements SessionInfo
     {
         return enableLastMsgSeqNumProcessed;
     }
+
+    public SessionContext context()
+    {
+        return context;
+    }
 }

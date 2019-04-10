@@ -26,6 +26,7 @@ import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.GatewayProcess;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
+import uk.co.real_logic.artio.session.FollowerSession;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.timing.LibraryTimers;
 
@@ -330,6 +331,11 @@ public class FixLibrary extends GatewayProcess
     {
         CommonConfiguration.validateTimeout(timeoutInMs);
         return poller.requestSession(sessionId, resendFromSequenceNumber, resendFromSequenceIndex, timeoutInMs);
+    }
+
+    public FollowerSession followerSession(final long id, final long connectionId, final int sequenceIndex)
+    {
+        return poller.followerSession(id, connectionId, sequenceIndex);
     }
 
     public String currentAeronChannel()

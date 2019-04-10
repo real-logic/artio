@@ -19,10 +19,8 @@ import io.aeron.Aeron;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.artio.session.DirectSessionProxy;
 import uk.co.real_logic.artio.session.SessionCustomisationStrategy;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
-import uk.co.real_logic.artio.session.SessionProxyFactory;
 import uk.co.real_logic.artio.timing.HistogramHandler;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
@@ -205,7 +203,6 @@ public class CommonConfiguration
 
     public static final int DEFAULT_INBOUND_LIBRARY_STREAM = 1;
     public static final int DEFAULT_OUTBOUND_LIBRARY_STREAM = 2;
-    public static final SessionProxyFactory DEFAULT_SESSION_PROXY_FACTORY = DirectSessionProxy::new;
 
     private long reasonableTransmissionTimeInMs = DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
     private boolean printAeronStreamIdentifiers = DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS;
@@ -235,7 +232,6 @@ public class CommonConfiguration
     private String agentNamePrefix = DEFAULT_NAME_PREFIX;
     private int inboundLibraryStream = DEFAULT_INBOUND_LIBRARY_STREAM;
     private int outboundLibraryStream = DEFAULT_OUTBOUND_LIBRARY_STREAM;
-    private SessionProxyFactory sessionProxyFactory = DEFAULT_SESSION_PROXY_FACTORY;
 
     private final AtomicBoolean isConcluded = new AtomicBoolean(false);
 
@@ -507,12 +503,6 @@ public class CommonConfiguration
         return this;
     }
 
-    public CommonConfiguration sessionProxyFactory(final SessionProxyFactory sessionProxyFactory)
-    {
-        this.sessionProxyFactory = sessionProxyFactory;
-        return this;
-    }
-
     public Aeron.Context aeronContext()
     {
         return aeronContext;
@@ -606,11 +596,6 @@ public class CommonConfiguration
     public boolean printAeronStreamIdentifiers()
     {
         return printAeronStreamIdentifiers;
-    }
-
-    public SessionProxyFactory sessionProxyFactory()
-    {
-        return sessionProxyFactory;
     }
 
     protected void conclude(final String fixSuffix)

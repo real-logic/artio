@@ -212,6 +212,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int acceptedSessionResendRequestChunkSize = NO_RESEND_REQUEST_CHUNK_SIZE;
     private boolean acceptedSessionSendRedundantResendRequests = DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS;
     private boolean acceptedEnableLastMsgSeqNumProcessed = DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED;
+    private boolean soleLibraryMode = false;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -579,6 +580,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration soleLibraryMode(final boolean singleLibraryMode)
+    {
+        this.soleLibraryMode = singleLibraryMode;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -732,6 +739,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public ReplayHandler replayHandler()
     {
         return replayHandler;
+    }
+
+    public boolean soleLibraryMode()
+    {
+        return soleLibraryMode;
     }
 
     /**

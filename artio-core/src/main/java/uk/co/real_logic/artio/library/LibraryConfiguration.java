@@ -18,7 +18,9 @@ package uk.co.real_logic.artio.library;
 import org.agrona.Verify;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.session.DirectSessionProxy;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
+import uk.co.real_logic.artio.session.SessionProxyFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -61,6 +63,8 @@ public final class LibraryConfiguration extends CommonConfiguration
         }
     };
 
+    public static final SessionProxyFactory DEFAULT_SESSION_PROXY_FACTORY = DirectSessionProxy::new;
+
     private final int libraryId;
 
     {
@@ -83,6 +87,7 @@ public final class LibraryConfiguration extends CommonConfiguration
     private LibraryConnectHandler libraryConnectHandler = DEFAULT_LIBRARY_CONNECT_HANDLER;
     private LibraryScheduler scheduler = new DefaultLibraryScheduler();
     private String libraryName = "";
+    private SessionProxyFactory sessionProxyFactory = DEFAULT_SESSION_PROXY_FACTORY;
 
     /**
      * When a new session connects to the gateway you register a callback handler to find
@@ -176,6 +181,11 @@ public final class LibraryConfiguration extends CommonConfiguration
         return scheduler;
     }
 
+    public SessionProxyFactory sessionProxyFactory()
+    {
+        return sessionProxyFactory;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -212,6 +222,12 @@ public final class LibraryConfiguration extends CommonConfiguration
     public LibraryConfiguration libraryAeronChannels(final List<String> libraryAeronChannels)
     {
         this.libraryAeronChannels = libraryAeronChannels;
+        return this;
+    }
+
+    public LibraryConfiguration sessionProxyFactory(final SessionProxyFactory sessionProxyFactory)
+    {
+        this.sessionProxyFactory = sessionProxyFactory;
         return this;
     }
 
