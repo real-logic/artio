@@ -422,6 +422,8 @@ public final class SessionConfiguration
          * communicate with the engine and also to perform the initiation of the TCP connection and logon
          * to the external system.
          *
+         * This does not set the FIX heartbeat timeout, for that use CommonConfiguration.defaultHeartbeatIntervalInS().
+         *
          * @param timeoutInMs the timeout for this operation
          * @return this builder
          */
