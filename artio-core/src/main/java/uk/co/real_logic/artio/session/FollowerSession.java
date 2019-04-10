@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.session;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.builder.Encoder;
+import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -88,5 +89,10 @@ public class FollowerSession
     {
         return publication.saveMessage(
             messageBuffer, offset, length, libraryId, messageType, id, sequenceIndex, connectionId, OK, seqNum);
+    }
+
+    public long requestDisconnect(final long connectionId, final DisconnectReason reason)
+    {
+        return publication.saveRequestDisconnect(libraryId, connectionId, reason);
     }
 }

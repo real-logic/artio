@@ -154,8 +154,7 @@ public class DirectSessionProxy implements SessionProxy
 
     @Override
     public long logon(
-        final int heartbeatIntervalInS,
-        final int msgSeqNo,
+        final int msgSeqNo, final int heartbeatIntervalInS,
         final String username,
         final String password,
         final boolean resetSeqNumFlag,
@@ -190,13 +189,11 @@ public class DirectSessionProxy implements SessionProxy
         return string != null && string.length() > 0;
     }
 
-    @Override
     public long logout(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
         return logout(msgSeqNo, null, 0, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    @Override
     public long logout(
         final int msgSeqNo, final int sequenceIndex, final int rejectReason, final int lastMsgSeqNumProcessed)
     {
@@ -230,7 +227,6 @@ public class DirectSessionProxy implements SessionProxy
         return send(result, LogoutDecoder.MESSAGE_TYPE, sequenceIndex, logout, msgSeqNo);
     }
 
-    @Override
     public long lowSequenceNumberLogout(
         final int msgSeqNo,
         final int expectedSeqNo,
@@ -249,28 +245,24 @@ public class DirectSessionProxy implements SessionProxy
         return position;
     }
 
-    @Override
     public long incorrectBeginStringLogout(
         final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
         return logout(msgSeqNo, INCORRECT_BEGIN_STRING, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    @Override
     public long negativeHeartbeatLogout(
         final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
         return logout(msgSeqNo, NEGATIVE_HEARTBEAT, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    @Override
     public long receivedMessageWithoutSequenceNumber(
         final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
         return logout(msgSeqNo, NO_MSG_SEQ_NO, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    @Override
     public long rejectWhilstNotLoggedOn(
         final int msgSeqNo, final RejectReason reason, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
@@ -278,18 +270,15 @@ public class DirectSessionProxy implements SessionProxy
             msgSeqNo, NOT_LOGGED_ON_SESSION_REJECT_REASONS[reason.ordinal()], sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    @Override
     public long heartbeat(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
         return heartbeat(
-            null, 0, msgSeqNo, sequenceIndex, lastMsgSeqNumProcessed);
+            msgSeqNo, null, 0, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    @Override
     public long heartbeat(
-        final char[] testReqId,
+        final int msgSeqNo, final char[] testReqId,
         final int testReqIdLength,
-        final int msgSeqNo,
         final int sequenceIndex,
         final int lastMsgSeqNumProcessed)
     {
@@ -309,7 +298,6 @@ public class DirectSessionProxy implements SessionProxy
         return send(result, HeartbeatDecoder.MESSAGE_TYPE, sequenceIndex, heartbeat, msgSeqNo);
     }
 
-    @Override
     public long reject(
         final int msgSeqNo,
         final int refSeqNum,
@@ -342,7 +330,6 @@ public class DirectSessionProxy implements SessionProxy
         return send(result, RejectDecoder.MESSAGE_TYPE, sequenceIndex, reject, msgSeqNo);
     }
 
-    @Override
     public long testRequest(
         final int msgSeqNo, final CharSequence testReqID, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
@@ -355,7 +342,6 @@ public class DirectSessionProxy implements SessionProxy
         return send(result, TestRequestDecoder.MESSAGE_TYPE, sequenceIndex, testRequest, msgSeqNo);
     }
 
-    @Override
     public long sequenceReset(
         final int msgSeqNo, final int newSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
@@ -401,7 +387,6 @@ public class DirectSessionProxy implements SessionProxy
         return position;
     }
 
-    @Override
     public void libraryConnected(final boolean libraryConnected)
     {
         this.libraryConnected = libraryConnected;

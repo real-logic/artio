@@ -131,7 +131,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
     private void verifyLogon()
     {
         verify(sessionProxy).logon(
-            HEARTBEAT_INTERVAL, 1, null, null, false, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+            1, HEARTBEAT_INTERVAL, null, null, false, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
     }
 
 }

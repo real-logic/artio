@@ -569,7 +569,7 @@ public class Session implements AutoCloseable
         final int heartbeatIntervalInS = (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs);
         nextSequenceIndex();
         final long position = proxy.logon(
-            heartbeatIntervalInS, sentSeqNum, username(), password(), true, sequenceIndex(), lastMsgSeqNumProcessed);
+            sentSeqNum, heartbeatIntervalInS, username(), password(), true, sequenceIndex(), lastMsgSeqNumProcessed);
         lastSentMsgSeqNum(sentSeqNum, position);
 
         return position;
@@ -1015,8 +1015,7 @@ public class Session implements AutoCloseable
         if (lastSentMsgSeqNum() != INITIAL_SEQUENCE_NUMBER)
         {
             final int logonSequenceIndex = isInitialRequest() ? sequenceIndex() : sequenceIndex() + 1;
-            final long position = proxy.logon(heartbeatInterval,
-                INITIAL_SEQUENCE_NUMBER,
+            final long position = proxy.logon(INITIAL_SEQUENCE_NUMBER, heartbeatInterval,
                 null,
                 null,
                 true,
@@ -1091,7 +1090,7 @@ public class Session implements AutoCloseable
     private Action replyToLogon(final int heartbeatInterval)
     {
         return checkPosition(proxy.logon(
-            heartbeatInterval, newSentSeqNum(), null, null, false, sequenceIndex(), lastMsgSeqNumProcessed));
+            newSentSeqNum(), heartbeatInterval, null, null, false, sequenceIndex(), lastMsgSeqNumProcessed));
     }
 
     private Action validateOrRejectSendingTime(final long sendingTime)
@@ -1186,7 +1185,7 @@ public class Session implements AutoCloseable
         {
             final int sentSeqNum = newSentSeqNum();
             final long position = proxy.heartbeat(
-                testReqId, testReqIdLength, sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed);
+                sentSeqNum, testReqId, testReqIdLength, sequenceIndex(), lastMsgSeqNumProcessed);
             if (position < 0)
             {
                 return ABORT;

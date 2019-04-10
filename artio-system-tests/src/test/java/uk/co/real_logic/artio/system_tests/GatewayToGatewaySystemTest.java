@@ -361,9 +361,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         disconnectSessions();
 
-        assertThat(initiatingLibrary.sessions(), hasSize(0));
-        assertThat(acceptingLibrary.sessions(), hasSize(0));
-
         final long sessionId = acceptingSession.id();
         final int sequenceIndex = sequenceIndexSupplier.getAsInt();
 
@@ -868,21 +865,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         final List<LibraryInfo> libraries = libraries(engine);
         assertThat(libraries.get(0).sessions(), contains(hasSessionId(sessionId)));
-    }
-
-    private void disconnectSessions()
-    {
-        logoutAcceptingSession();
-
-        assertSessionsDisconnected();
-
-        acceptingSession.close();
-        initiatingSession.close();
-    }
-
-    private void logoutAcceptingSession()
-    {
-        assertThat(acceptingSession.startLogout(), greaterThan(0L));
     }
 
     private void libraryNotifiedThatGatewayOwnsSession(final FakeHandler handler, final long expectedSessionId)

@@ -104,6 +104,21 @@ public class AbstractGatewayToGatewaySystemTest
             });
     }
 
+    void disconnectSessions()
+    {
+        logoutAcceptingSession();
+
+        assertSessionsDisconnected();
+
+        acceptingSession.close();
+        initiatingSession.close();
+    }
+
+    void logoutAcceptingSession()
+    {
+        assertThat(acceptingSession.startLogout(), greaterThan(0L));
+    }
+
     void assertSessionsDisconnected()
     {
         assertSessionDisconnected(initiatingSession);

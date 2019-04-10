@@ -359,7 +359,7 @@ public abstract class AbstractSessionTest
 
         session().onTestRequest(1, testReqId, testReqIdLength, sendingTime(), UNKNOWN, false, false);
 
-        verify(sessionProxy).heartbeat(testReqId, testReqIdLength, 1, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+        verify(sessionProxy).heartbeat(1, testReqId, testReqIdLength, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
     }
 
     @Test
@@ -987,7 +987,7 @@ public abstract class AbstractSessionTest
     private void verifySetsSentSequenceNumbersToTwo(final int sequenceIndex)
     {
         verify(sessionProxy).logon(
-            eq(HEARTBEAT_INTERVAL), eq(1), any(), any(), eq(true), eq(sequenceIndex), anyInt());
+            eq(1), eq(HEARTBEAT_INTERVAL), any(), any(), eq(true), eq(sequenceIndex), anyInt());
         assertEquals(1, session().lastSentMsgSeqNum());
         verifyNoFurtherMessages();
     }
@@ -1159,7 +1159,7 @@ public abstract class AbstractSessionTest
         final int testReqIdLength = 5;
 
         session().onTestRequest(4, testReqId, testReqIdLength, sendingTime(), UNKNOWN, false, false);
-        verify(sessionProxy).heartbeat(eq(testReqId), eq(testReqIdLength), anyInt(), eq(SEQUENCE_INDEX), anyInt());
+        verify(sessionProxy).heartbeat(anyInt(), eq(testReqId), eq(testReqIdLength), eq(SEQUENCE_INDEX), anyInt());
         verifyConnected();
     }
 

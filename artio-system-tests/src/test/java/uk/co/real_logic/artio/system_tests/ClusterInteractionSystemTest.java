@@ -17,11 +17,13 @@ package uk.co.real_logic.artio.system_tests;
 
 import org.agrona.concurrent.EpochClock;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.builder.HeartbeatEncoder;
 import uk.co.real_logic.artio.builder.LogonEncoder;
+import uk.co.real_logic.artio.builder.LogoutEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.fields.RejectReason;
@@ -92,13 +94,30 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
         awaitForwardingOfAcceptingSession();
 
         assertNotNull(acceptingFollowerSession);
-        assertEquals(1, sessionProxyRequests);
 
         messagesCanBeExchanged();
 
+        assertEquals(1, sessionProxyRequests);
         assertEquals(1, fakeSessionProxy.sentHeartbeats);
+    }
 
-        assertInitiatingSequenceIndexIs(0);
+    @Ignore
+    @Test(timeout = 10_000L)
+    public void shouldReconnectConnections()
+    {
+        shouldRoundTripMessagesViaCluster();
+
+        disconnectSessions();
+        acceptingSession = null;
+        initiatingSession = null;
+
+        connectSessions();
+
+        awaitForwardingOfAcceptingSession();
+        messagesCanBeExchanged();
+
+        assertEquals(2, sessionProxyRequests);
+        assertEquals(2, fakeSessionProxy.sentHeartbeats);
     }
 
     // TODO: messages stored via followerSession can be read afterwards.
@@ -142,7 +161,8 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
         private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
         private final HeartbeatEncoder heartbeat = new HeartbeatEncoder();
         private final LogonEncoder logon = new LogonEncoder();
-        private final List<HeaderEncoder> headers = asList(logon.header(), heartbeat.header());
+        private final LogoutEncoder logout = new LogoutEncoder();
+        private final List<HeaderEncoder> headers = asList(logon.header(), heartbeat.header(), logout.header());
 
         private int sentHeartbeats = 0;
         private boolean seqNumResetRequested = false;
@@ -173,8 +193,7 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
         }
 
         public long logon(
-            final int heartbeatIntervalInS,
-            final int msgSeqNo,
+            final int msgSeqNo, final int heartbeatIntervalInS,
             final String username,
             final String password,
             final boolean resetSeqNumFlag,
@@ -204,7 +223,10 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
 
         public long logout(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
         {
-            return 0;
+            final HeaderEncoder header = logout.header();
+            setupHeader(header, msgSeqNo);
+
+            return acceptingFollowerSession.send(logout, msgSeqNo);
         }
 
         public long logout(
@@ -258,9 +280,8 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
         }
 
         public long heartbeat(
-            final char[] testReqId,
+            final int msgSeqNo, final char[] testReqId,
             final int testReqIdLength,
-            final int msgSeqNo,
             final int sequenceIndex,
             final int lastMsgSeqNumProcessed)
         {
