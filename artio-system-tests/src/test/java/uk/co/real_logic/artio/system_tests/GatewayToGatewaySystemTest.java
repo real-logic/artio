@@ -465,21 +465,16 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertAllMessagesHaveSequenceIndex(0);
         clearMessages();
 
-        assertEventuallyTrue(
-            "Library failed to disconnect",
-            () ->
-            {
-                testSystem.poll();
-
-                return !acceptingLibrary.isConnected();
-            });
-
         testSystem.close(acceptingLibrary);
         acceptingHandler.clearSessions();
 
+        initiatingEngineHasLibraryConnected();
+
         launchAcceptingEngine();
 
-        acceptingLibrary = testSystem.add(newAcceptingLibrary(acceptingHandler));
+        acceptingLibrary = testSystem.connect(acceptingLibraryConfig(acceptingHandler));
+
+        initiatingEngineHasLibraryConnected();
 
         assertTrue("acceptingLibrary has failed to connect", acceptingLibrary.isConnected());
         assertTrue("initiatingLibrary is no longer connected", initiatingLibrary.isConnected());
@@ -489,6 +484,14 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         messagesCanBeExchanged();
 
         assertSequenceIndicesAre(1);
+    }
+
+    private void initiatingEngineHasLibraryConnected()
+    {
+        final Reply<List<LibraryInfo>> libraries = initiatingEngine.libraries();
+        testSystem.awaitCompletedReplies(libraries);
+        final List<LibraryInfo> libraryInfos = libraries.resultIfPresent();
+        assertThat(libraryInfos, hasSize(2));
     }
 
     @Test
