@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.session;
 
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
-import uk.co.real_logic.artio.builder.HeaderEncoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.storage.messages.SenderAndTargetCompositeKeyDecoder;
@@ -71,7 +71,7 @@ class SenderAndTargetSessionIdStrategy implements SessionIdStrategy
             senderCompID, senderCompID.length, targetCompID, targetCompID.length);
     }
 
-    public void setupSession(final CompositeKey compositeKey, final HeaderEncoder headerEncoder)
+    public void setupSession(final CompositeKey compositeKey, final SessionHeaderEncoder headerEncoder)
     {
         requireNonNull(compositeKey, "compositeKey");
         requireNonNull(headerEncoder, "headerEncoder");

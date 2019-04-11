@@ -264,9 +264,9 @@ class GatewaySession implements SessionInfo
     public String toString()
     {
         return "GatewaySession{" +
-               "sessionId=" + sessionId +
-               ", sessionKey=" + sessionKey +
-               '}';
+            "sessionId=" + sessionId +
+            ", sessionKey=" + sessionKey +
+            '}';
     }
 
     void disconnectAt(final long disconnectTimeout)
@@ -317,5 +317,10 @@ class GatewaySession implements SessionInfo
     public SessionContext context()
     {
         return context;
+    }
+
+    boolean hasDisconnected()
+    {
+        return receiverEndPoint.hasDisconnected();
     }
 }

@@ -24,7 +24,7 @@ import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.Encoder;
-import uk.co.real_logic.artio.builder.HeaderEncoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.fields.RejectReason;
@@ -449,7 +449,7 @@ public class Session implements AutoCloseable
         validateCanSendMessage();
 
         final int sentSeqNum = newSentSeqNum();
-        final HeaderEncoder header = (HeaderEncoder)encoder.header();
+        final SessionHeaderEncoder header = encoder.header();
         header
             .msgSeqNum(sentSeqNum)
             .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(time()));
