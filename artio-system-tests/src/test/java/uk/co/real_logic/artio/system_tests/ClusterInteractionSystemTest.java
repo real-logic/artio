@@ -105,7 +105,6 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
         assertEquals(0, fakeSessionProxy.sentResendRequests);
     }
 
-    @Ignore
     @Test(timeout = 10_000L)
     public void shouldReconnectConnections()
     {
@@ -122,6 +121,8 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
 
         assertEquals(2, sessionProxyRequests);
         assertEquals(2, fakeSessionProxy.sentHeartbeats);
+        assertEquals(2, fakeSessionProxy.sentLogons);
+        assertEquals(0, fakeSessionProxy.sentResendRequests);
     }
 
     // TODO: messages stored via followerSession can be read afterwards.
