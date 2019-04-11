@@ -31,8 +31,6 @@ public interface LibraryEndPointHandler
 
     Action onNewSentPosition(int libraryId, long position);
 
-    Action onNotLeader(int libraryId, long replyToId, String libraryChannel);
-
     Action onControlNotification(int libraryId, SessionsDecoder sessions);
 
     Action onSlowStatusNotification(int libraryId, long connectionId, boolean hasBecomeSlow);
@@ -67,4 +65,6 @@ public interface LibraryEndPointHandler
         String address,
         String username,
         String password);
+
+    Action onFollowerSessionReply(int libraryId, long replyToId, long session);
 }

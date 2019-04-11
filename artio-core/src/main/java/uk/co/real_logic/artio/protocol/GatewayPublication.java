@@ -37,7 +37,6 @@ import static uk.co.real_logic.artio.DebugLogger.logSbeMessage;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.messages.ErrorDecoder.messageHeaderLength;
 import static uk.co.real_logic.artio.messages.ErrorEncoder.BLOCK_LENGTH;
-import static uk.co.real_logic.artio.messages.NotLeaderEncoder.libraryChannelHeaderLength;
 
 /**
  * A proxy for publishing messages fix related messages
@@ -61,8 +60,6 @@ public class GatewayPublication extends ClaimablePublication
     private static final int REQUEST_SESSION_REPLY_LENGTH = HEADER_LENGTH + RequestSessionReplyEncoder.BLOCK_LENGTH;
     private static final int CONNECT_FIXED_LENGTH =
         HEADER_LENGTH + ConnectEncoder.BLOCK_LENGTH + ConnectEncoder.addressHeaderLength();
-    private static final int NOT_LEADER_BLOCK_LENGTH =
-        NotLeaderEncoder.BLOCK_LENGTH + HEADER_LENGTH + libraryChannelHeaderLength();
     private static final int SLOW_STATUS_NOTIFICATION_LENGTH =
         HEADER_LENGTH + SlowStatusNotificationEncoder.BLOCK_LENGTH;
     private static final byte MIDDLE_FLAG = 0;
@@ -74,6 +71,10 @@ public class GatewayPublication extends ClaimablePublication
         GroupSizeEncodingEncoder.ENCODED_LENGTH;
     private static final int MID_CONNECTION_DISCONNECT_LENGTH =
         HEADER_LENGTH + MidConnectionDisconnectEncoder.BLOCK_LENGTH;
+    private static final int FOLLOWER_SESSION_REQUEST_LENGTH =
+        HEADER_LENGTH + FollowerSessionRequestEncoder.BLOCK_LENGTH + FollowerSessionRequestEncoder.headerHeaderLength();
+    private static final int FOLLOWER_SESSION_REPLY_LENGTH =
+        HEADER_LENGTH + FollowerSessionReplyEncoder.BLOCK_LENGTH;
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -91,13 +92,14 @@ public class GatewayPublication extends ClaimablePublication
     private final ConnectEncoder connect = new ConnectEncoder();
     private final NewSentPositionEncoder newSentPosition = new NewSentPositionEncoder();
     private final ResetSessionIdsEncoder resetSessionIds = new ResetSessionIdsEncoder();
-    private final NotLeaderEncoder notLeader = new NotLeaderEncoder();
     private final ControlNotificationEncoder controlNotification = new ControlNotificationEncoder();
     private final LibraryTimeoutEncoder libraryTimeout = new LibraryTimeoutEncoder();
     private final ResetSequenceNumberEncoder resetSequenceNumber = new ResetSequenceNumberEncoder();
     private final ResetLibrarySequenceNumberEncoder resetLibrarySequenceNumber =
         new ResetLibrarySequenceNumberEncoder();
     private final SlowStatusNotificationEncoder slowStatusNotification = new SlowStatusNotificationEncoder();
+    private final FollowerSessionRequestEncoder followerSessionRequest = new FollowerSessionRequestEncoder();
+    private final FollowerSessionReplyEncoder followerSessionReply = new FollowerSessionReplyEncoder();
 
     private final Clock clock;
     private final int maxPayloadLength;
@@ -712,37 +714,15 @@ public class GatewayPublication extends ClaimablePublication
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         final int offset = bufferClaim.offset();
 
-        requestSessionReply.wrapAndApplyHeader(buffer, offset, header).replyToId(replyToId).status(status);
+        requestSessionReply
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .replyToId(replyToId)
+            .status(status);
 
         bufferClaim.commit();
 
         logSbeMessage(GATEWAY_MESSAGE, requestSessionReply);
-
-        return position;
-    }
-
-    public long saveNotLeader(final int libraryId, final long replyToId, final DirectBuffer channel)
-    {
-        final int channelLength = (channel == null ? 0 : channel.capacity());
-        final long position = claim(NOT_LEADER_BLOCK_LENGTH + channelLength);
-        if (position < 0)
-        {
-            return position;
-        }
-
-        final MutableDirectBuffer buffer = bufferClaim.buffer();
-        final int offset = bufferClaim.offset();
-
-        notLeader.wrapAndApplyHeader(buffer, offset, header).libraryId(libraryId).replyToId(replyToId);
-
-        if (channel != null)
-        {
-            notLeader.putLibraryChannel(channel, 0, channelLength);
-        }
-
-        bufferClaim.commit();
-
-        logSbeMessage(GATEWAY_MESSAGE, notLeader);
 
         return position;
     }
@@ -834,11 +814,68 @@ public class GatewayPublication extends ClaimablePublication
         slowStatusNotification
             .wrapAndApplyHeader(buffer, offset, header)
             .libraryId(libraryId)
-            .connectionId(connectionId).status(status);
+            .connectionId(connectionId)
+            .status(status);
 
         bufferClaim.commit();
 
         logSbeMessage(GATEWAY_MESSAGE, slowStatusNotification);
+
+        return position;
+    }
+
+    public long saveFollowerSessionRequest(
+        final int libraryId,
+        final long correlationId,
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int srcLength)
+    {
+        final long position = claim(FOLLOWER_SESSION_REQUEST_LENGTH + srcLength);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        followerSessionRequest
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .correlationId(correlationId)
+            .putHeader(srcBuffer, srcOffset, srcLength);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, followerSessionRequest);
+
+        return position;
+    }
+
+    public long saveFollowerSessionReply(
+        final int libraryId,
+        final long replyToId,
+        final long sessionId)
+    {
+        final long position = claim(FOLLOWER_SESSION_REPLY_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        followerSessionReply
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .replyToId(replyToId)
+            .session(sessionId);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, followerSessionReply);
 
         return position;
     }

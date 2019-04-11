@@ -107,7 +107,7 @@ public class EncoderGenerator extends Generator
         "    }\n" +
         "\n" +
         "    // 35=...| + other header fields\n" +
-        "    long startMessage(final MutableAsciiBuffer buffer, final int offset)\n" +
+        "    public long startMessage(final MutableAsciiBuffer buffer, final int offset)\n" +
         "    {\n" +
         "        final int start = offset + beginStringLength + 16;\n" +
         "        int position = start;";

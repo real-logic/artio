@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
@@ -47,6 +48,7 @@ import java.util.function.ToIntFunction;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
+import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
@@ -216,7 +218,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             resendFromSequenceIndex);
     }
 
-    SessionWriter sessionWriter(final long id, final long connectionId, final int sequenceIndex)
+    SessionWriter followerSession(final long id, final long connectionId, final int sequenceIndex)
     {
         return new SessionWriter(
             libraryId,
@@ -225,6 +227,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             sessionBuffer(),
             outboundPublication,
             sequenceIndex);
+    }
+
+    Reply<SessionWriter> followerSession(final HeaderEncoder headerEncoder, final long timeoutInMs)
+    {
+        return new FollowerSessionReply(
+            this, timeInMs() + timeoutInMs, headerEncoder);
     }
 
     void disableSession(final InternalSession session)
@@ -300,6 +308,19 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
         return outboundPublication.saveRequestSession(
             libraryId, sessionId, correlationId, lastReceivedSequenceNumber, sequenceIndex);
+    }
+
+    long saveFollowerSessionRequest(
+        final long correlationId, final MutableAsciiBuffer buffer, final int offset, final int length)
+    {
+        checkState();
+
+        return outboundPublication.saveFollowerSessionRequest(
+            libraryId,
+            correlationId,
+            buffer,
+            offset,
+            length);
     }
 
     int poll(final int fragmentLimit)
@@ -871,7 +892,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    public Action onRequestSessionReply(final int toId, final long replyToId, final SessionReplyStatus status)
+    public Action onRequestSessionReply(final int libraryId, final long replyToId, final SessionReplyStatus status)
     {
         final RequestSessionReply reply = (RequestSessionReply)correlationIdToReply.remove(replyToId);
         if (reply != null)
@@ -882,38 +903,22 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    public Action onNewSentPosition(final int libraryId, final long position)
+    public Action onFollowerSessionReply(final int libraryId, final long replyToId, final long sessionId)
     {
-        if (this.libraryId == libraryId)
+        final FollowerSessionReply reply = (FollowerSessionReply)correlationIdToReply.remove(replyToId);
+        if (reply != null)
         {
-            return sentPositionHandler.onSendCompleted(position);
+            reply.onComplete(followerSession(sessionId, NO_CONNECTION_ID, 0));
         }
 
         return CONTINUE;
     }
 
-    public Action onNotLeader(final int libraryId, final long replyToId, final String libraryChannel)
+    public Action onNewSentPosition(final int libraryId, final long position)
     {
-        if (libraryId == this.libraryId && replyToId >= connectCorrelationId)
+        if (this.libraryId == libraryId)
         {
-            final long timeInMs = timeInMs();
-            if (libraryChannel.isEmpty())
-            {
-                connectToNextEngineNow(timeInMs);
-            }
-            else
-            {
-                DebugLogger.log(
-                    LIBRARY_CONNECT,
-                    "%d: Attempting connect to (%s) claimed leader%n",
-                    libraryId,
-                    currentAeronChannel);
-
-                currentAeronChannel = libraryChannel;
-                state = ATTEMPT_CURRENT_NODE;
-            }
-
-            return BREAK;
+            return sentPositionHandler.onSendCompleted(position);
         }
 
         return CONTINUE;
@@ -1199,4 +1204,5 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             state = CLOSED;
         }
     }
+
 }

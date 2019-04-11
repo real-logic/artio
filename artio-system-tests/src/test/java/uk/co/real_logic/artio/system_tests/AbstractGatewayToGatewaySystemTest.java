@@ -176,7 +176,7 @@ public class AbstractGatewayToGatewaySystemTest
 
         initiatingSession = reply.resultIfPresent();
 
-        assertEquals(State.COMPLETED, reply.state());
+        assertEquals(reply.toString(), State.COMPLETED, reply.state());
         assertConnected(initiatingSession);
     }
 

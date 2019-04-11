@@ -25,9 +25,10 @@ import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.GatewayProcess;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
-import uk.co.real_logic.artio.session.SessionWriter;
 import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.session.SessionWriter;
 import uk.co.real_logic.artio.timing.LibraryTimers;
 
 import java.io.File;
@@ -333,9 +334,16 @@ public class FixLibrary extends GatewayProcess
         return poller.requestSession(sessionId, resendFromSequenceNumber, resendFromSequenceIndex, timeoutInMs);
     }
 
-    public SessionWriter sessionWriter(final long id, final long connectionId, final int sequenceIndex)
+    public SessionWriter sessionWriter(
+        final long sessionId, final long connectionId, final int sequenceIndex)
     {
-        return poller.sessionWriter(id, connectionId, sequenceIndex);
+        return poller.followerSession(sessionId, connectionId, sequenceIndex);
+    }
+
+    public Reply<SessionWriter> followerSession(
+        final HeaderEncoder headerEncoder, final long timeoutInMs)
+    {
+        return poller.followerSession(headerEncoder, timeoutInMs);
     }
 
     public String currentAeronChannel()

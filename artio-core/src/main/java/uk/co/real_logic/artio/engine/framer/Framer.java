@@ -34,6 +34,7 @@ import org.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LivenessDetector;
 import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.CompletionPosition;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -49,6 +50,8 @@ import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.timing.Timer;
+import uk.co.real_logic.artio.util.AsciiBuffer;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.File;
 import java.io.IOException;
@@ -66,7 +69,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.collections.CollectionUtil.removeIf;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
-import static uk.co.real_logic.artio.GatewayProcess.UNKNOWN_CONNECTION_ID;
+import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.Pressure.isBackPressured;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -147,6 +150,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final AgentInvoker conductorAgentInvoker;
     private final RecordingCoordinator recordingCoordinator;
     private final PositionSender nonLoggingPositionSender;
+
+    private final HeaderDecoder headerDecoder = new HeaderDecoder();
+    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
@@ -542,7 +548,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             connectionId = this.nextConnectionId++;
         }
-        while (connectionId == UNKNOWN_CONNECTION_ID);
+        while (connectionId == NO_CONNECTION_ID);
 
         return connectionId;
     }
@@ -1261,6 +1267,30 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             lastRecvSeqNum);
 
         return retryManager.firstAttempt(correlationId, new UnitOfWork(continuations));
+    }
+
+    public Action onFollowerSessionRequest(
+        final int libraryId,
+        final long correlationId,
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int srcLength)
+    {
+        asciiBuffer.wrap(srcBuffer);
+        headerDecoder.decode(asciiBuffer, srcOffset, srcLength);
+
+        final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(headerDecoder);
+        final SessionContext sessionContext = sessionContexts.newSessionContext(compositeKey);
+        final long sessionId = sessionContext.sessionId();
+
+        final long position = inboundPublication.saveFollowerSessionReply(
+            libraryId,
+            correlationId,
+            sessionId);
+
+        // TODO: handle back pressure
+
+        return CONTINUE;
     }
 
     private long saveManageSession(

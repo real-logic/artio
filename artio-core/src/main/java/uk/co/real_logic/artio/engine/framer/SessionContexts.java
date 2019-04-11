@@ -213,7 +213,7 @@ public class SessionContexts
 
     public SessionContext onLogon(final CompositeKey compositeKey)
     {
-        final SessionContext sessionContext = compositeToContext.computeIfAbsent(compositeKey, onNewLogonFunc);
+        final SessionContext sessionContext = newSessionContext(compositeKey);
 
         if (!currentlyAuthenticatedSessionIds.add(sessionContext.sessionId()))
         {
@@ -221,6 +221,11 @@ public class SessionContexts
         }
 
         return sessionContext;
+    }
+
+    public SessionContext newSessionContext(final CompositeKey compositeKey)
+    {
+        return compositeToContext.computeIfAbsent(compositeKey, onNewLogonFunc);
     }
 
     private SessionContext onNewLogon(final CompositeKey compositeKey)

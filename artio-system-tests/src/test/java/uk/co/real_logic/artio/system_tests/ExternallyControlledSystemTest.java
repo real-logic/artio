@@ -37,7 +37,7 @@ import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
-import static uk.co.real_logic.artio.GatewayProcess.UNKNOWN_CONNECTION_ID;
+import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.Timing.withTimeout;
@@ -170,9 +170,15 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
 
     private void writeMessageWithSessionWriter()
     {
-        final int sessionId = 1;
-        final SessionWriter sessionWriter = acceptingLibrary
-            .sessionWriter(sessionId, UNKNOWN_CONNECTION_ID, 0);
+        final HeaderEncoder headerEncoder = new HeaderEncoder()
+            .senderCompID(INITIATOR_ID)
+            .targetCompID(ACCEPTOR_ID);
+
+        final Reply<SessionWriter> reply = acceptingLibrary.followerSession(headerEncoder, DEFAULT_TIMEOUT_IN_MS);
+        testSystem.awaitCompletedReplies(reply);
+        assertEquals(COMPLETED, reply.state());
+
+        final SessionWriter sessionWriter = reply.resultIfPresent();
 
         writeMessageWith(sessionWriter, 1);
     }
@@ -206,9 +212,6 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         assertTrue(acceptingLibrary.isConnected());
         assertThat(sessionWriter.send(newOrderSingle, msgSeqNum), greaterThan(0L));
     }
-
-    // TODO: messages stored via sessionWriter can be read afterwards.
-    // TODO: restarting connections and failover
 
     private void awaitForwardingOfAcceptingSession()
     {

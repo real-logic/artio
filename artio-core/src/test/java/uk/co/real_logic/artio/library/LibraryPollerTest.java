@@ -34,8 +34,6 @@ import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.timing.LibraryTimers;
 
 import java.util.List;
-import java.util.function.IntSupplier;
-import java.util.function.LongSupplier;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Arrays.asList;
@@ -45,7 +43,6 @@ import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.LivenessDetector.SEND_INTERVAL_FRACTION;
-import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.SessionConfiguration.*;
 import static uk.co.real_logic.artio.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
@@ -152,18 +149,6 @@ public class LibraryPollerTest
         disconnectDueToTimeout();
 
         reconnectAfterTimeout();
-    }
-
-    @Test
-    public void shouldAttemptAnotherEngineWhenNotLeader()
-    {
-        shouldReplyToOnNotLeaderWith(this::libraryId, this::connectCorrelationId, FIRST_CHANNEL, LEADER_CHANNEL);
-    }
-
-    @Test
-    public void shouldNotAttemptAnotherEngineWithDifferentLibraryId()
-    {
-        shouldReplyToOnNotLeaderWith(() -> ENGINE_LIBRARY_ID, this::connectCorrelationId, FIRST_CHANNEL);
     }
 
     @Test
@@ -291,33 +276,6 @@ public class LibraryPollerTest
     private long connectCorrelationId()
     {
         return library.connectCorrelationId();
-    }
-
-    private void shouldReplyToOnNotLeaderWith(
-        final IntSupplier libraryId,
-        final LongSupplier connectCorrelationId,
-        final String... channels)
-    {
-        whenPolled()
-            .then(
-                (inv) ->
-                {
-                    library.onNotLeader(libraryId.getAsInt(), connectCorrelationId.getAsLong(), LEADER_CHANNEL);
-                    return 1;
-                })
-            .then(replyWithApplicationHeartbeat())
-            .then(noReply());
-
-        newLibraryPoller(CLUSTER_CHANNELS);
-
-        library.startConnecting();
-
-        pollTwice();
-
-        poll();
-
-        attemptToConnectTo(channels);
-        verify(connectHandler).onConnect(fixLibrary);
     }
 
     private void attemptToConnectTo(final String... channels)
