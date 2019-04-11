@@ -123,7 +123,6 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         assertEquals(0, fakeSessionProxy.sentResendRequests);
     }
 
-
     @Test(timeout = 10_000L)
     public void shouldBeAbleToContinueProcessingAFollowersSession()
     {
@@ -133,22 +132,52 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
 
         shouldRoundTripMessagesViaExternalSystem();
 
-        awaitReplayOfMessageFromSessionWriter();
+        final FixMessage resentNewOrderSingle = awaitMessageFromSessionWriter(3, 1);
+        assertEquals("Y", resentNewOrderSingle.possDup());
     }
 
-    private void awaitReplayOfMessageFromSessionWriter()
+    @Test(timeout = 10_000L)
+    public void shouldBeAbleToAdjustSequenceNumbersFromTheControlSystem()
     {
-        assertEquals(3, initiatingSession.lastReceivedMsgSeqNum());
-        final FixMessage resentNewOrderSingle = withTimeout("Unable to find NOS", () ->
+        connectSessions();
+        awaitForwardingOfAcceptingSession();
+
+        // Write a message from the control system mid-stream
+        writeMessageWith(acceptingSessionWriter, 2);
+        fakeSessionProxy.sequenceNumberAdjustment = 1;
+
+        awaitMessageFromSessionWriter(2, 2);
+
+        messagesCanBeExchanged();
+
+        assertEquals(1, sessionProxyRequests);
+        assertEquals(1, fakeSessionProxy.sentHeartbeats);
+        assertEquals(1, fakeSessionProxy.sentLogons);
+        assertEquals(0, fakeSessionProxy.sentResendRequests);
+    }
+
+    private FixMessage awaitMessageFromSessionWriter(final int lastReceivedMsgSeqNum, final int newOrderSingleSeqNum)
+    {
+        final FixMessage receivedNewOrderSingle = withTimeout("Unable to find NOS", () ->
         {
             testSystem.poll();
             return initiatingOtfAcceptor.hasReceivedMessage("D").findFirst();
         }, DEFAULT_TIMEOUT_IN_MS);
-        assertEquals(1, resentNewOrderSingle.messageSequenceNumber());
-        assertEquals("Y", resentNewOrderSingle.possDup());
+        assertEquals(newOrderSingleSeqNum, receivedNewOrderSingle.messageSequenceNumber());
+        assertEquals(lastReceivedMsgSeqNum, initiatingSession.lastReceivedMsgSeqNum());
+        return receivedNewOrderSingle;
     }
 
     private void writeMessageWithSessionWriter()
+    {
+        final int sessionId = 1;
+        final SessionWriter sessionWriter = acceptingLibrary
+            .sessionWriter(sessionId, UNKNOWN_CONNECTION_ID, 0);
+
+        writeMessageWith(sessionWriter, 1);
+    }
+
+    private void writeMessageWith(final SessionWriter sessionWriter, final int msgSeqNum)
     {
         final NewOrderSingleEncoder newOrderSingle = new NewOrderSingleEncoder();
         final DecimalFloat price = new DecimalFloat(100);
@@ -172,15 +201,10 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
             .senderCompID(ACCEPTOR_ID)
             .targetCompID(INITIATOR_ID)
             .sendingTime(time.buffer(), timeLength)
-            .msgSeqNum(1);
+            .msgSeqNum(msgSeqNum);
 
         assertTrue(acceptingLibrary.isConnected());
-
-        final int sessionId = 1;
-        final SessionWriter sessionWriter = acceptingLibrary
-            .sessionWriter(sessionId, UNKNOWN_CONNECTION_ID, 0);
-
-        assertThat(sessionWriter.send(newOrderSingle, 1), greaterThan(0L));
+        assertThat(sessionWriter.send(newOrderSingle, msgSeqNum), greaterThan(0L));
     }
 
     // TODO: messages stored via sessionWriter can be read afterwards.
