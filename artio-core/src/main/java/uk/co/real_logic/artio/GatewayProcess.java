@@ -35,6 +35,8 @@ public class GatewayProcess implements AutoCloseable
     /** Common id used by messages in both engine and library */
     public static final long NO_CORRELATION_ID = 0;
 
+    public static final long UNKNOWN_CONNECTION_ID = -1;
+
     private static long startTimeInMs = System.currentTimeMillis();
 
     private DistinctErrorLog distinctErrorLog;

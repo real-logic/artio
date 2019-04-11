@@ -24,7 +24,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
-public class FollowerSession
+public class SessionWriter
 {
     private final int libraryId;
     private final long id;
@@ -33,7 +33,7 @@ public class FollowerSession
     private final GatewayPublication publication;
     private int sequenceIndex;
 
-    public FollowerSession(
+    public SessionWriter(
         final int libraryId,
         final long id,
         final long connectionId,

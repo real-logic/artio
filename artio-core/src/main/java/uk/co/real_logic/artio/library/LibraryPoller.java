@@ -216,9 +216,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             resendFromSequenceIndex);
     }
 
-    FollowerSession followerSession(final long id, final long connectionId, final int sequenceIndex)
+    SessionWriter sessionWriter(final long id, final long connectionId, final int sequenceIndex)
     {
-        return new FollowerSession(
+        return new SessionWriter(
             libraryId,
             id,
             connectionId,

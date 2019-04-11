@@ -66,6 +66,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.collections.CollectionUtil.removeIf;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
+import static uk.co.real_logic.artio.GatewayProcess.UNKNOWN_CONNECTION_ID;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.Pressure.isBackPressured;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -77,12 +78,12 @@ import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.GatewayError.*;
-import static uk.co.real_logic.artio.messages.SessionStatus.LIBRARY_NOTIFICATION;
 import static uk.co.real_logic.artio.messages.SequenceNumberType.PERSISTENT;
 import static uk.co.real_logic.artio.messages.SequenceNumberType.TRANSIENT;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.*;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.artio.messages.SessionState.CONNECTED;
+import static uk.co.real_logic.artio.messages.SessionStatus.LIBRARY_NOTIFICATION;
 
 /**
  * Handles incoming connections from clients and outgoing connections to exchanges.
@@ -493,7 +494,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void onNewConnection(final long timeInMs, final TcpChannel channel)
     {
-        final long connectionId = this.nextConnectionId++;
+        final long connectionId = newConnectionId();
         final GatewaySession gatewaySession = setupConnection(
             channel,
             connectionId,
@@ -532,6 +533,18 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             errorHandler.onError(new IllegalStateException(
                 "Failed to log connect from " + address + " due to backpressure"));
         }
+    }
+
+    private long newConnectionId()
+    {
+        long connectionId;
+        do
+        {
+            connectionId = this.nextConnectionId++;
+        }
+        while (connectionId == UNKNOWN_CONNECTION_ID);
+
+        return connectionId;
     }
 
     public Action onInitiateConnection(
@@ -732,7 +745,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             DebugLogger.log(FIX_CONNECTION,
                 "Initiating session %s from library %s%n", sessionContext.sessionId(), library.libraryId());
-            final long connectionId = this.nextConnectionId++;
+            final long connectionId = newConnectionId();
             sessionContext.onLogon(resetSequenceNumber || sequenceNumberType == TRANSIENT);
             final long sessionId = sessionContext.sessionId();
             final GatewaySession gatewaySession = setupConnection(
