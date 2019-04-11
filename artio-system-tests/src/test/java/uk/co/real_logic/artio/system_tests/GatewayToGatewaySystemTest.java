@@ -475,6 +475,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             });
 
         testSystem.close(acceptingLibrary);
+        acceptingHandler.clearSessions();
 
         launchAcceptingEngine();
 

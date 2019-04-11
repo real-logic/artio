@@ -306,4 +306,9 @@ class GatewaySession implements SessionInfo
     {
         return enableLastMsgSeqNumProcessed;
     }
+
+    public boolean hasDisconnected()
+    {
+        return receiverEndPoint.hasDisconnected();
+    }
 }
