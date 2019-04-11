@@ -71,6 +71,7 @@ import static uk.co.real_logic.artio.Pressure.isBackPressured;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.framer.Continuation.COMPLETE;
+import static uk.co.real_logic.artio.engine.framer.GatewaySession.adjustLastSequenceNumber;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.UNKNOWN_SESSION;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.messages.ConnectionType.ACCEPTOR;
@@ -780,6 +781,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
     }
 
+    // Used when handing over a new connection that has never been gateway managed.
+    // Eg: accepted sessions in soleLibraryMode and also initiated sessions
     private void handoverNewConnectionToLibrary(
         final int libraryId,
         final String senderCompId,
@@ -825,10 +828,26 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
             private long checkLoggerUpToDate()
             {
+                if (gatewaySession.initialResetSeqNum())
+                {
+                    lastSentSequenceNumber = 0;
+                    lastReceivedSequenceNumber = 0;
+                    return 0;
+                }
+
                 if (sentIndexedPosition(aeronSessionId, requiredPosition))
                 {
                     lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
                     lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+
+                    // Accptors are adjusted here - symmetrically with the non soleLibraryMode case, whilst
+                    // Initiator configuration is always adjusted on the library side.
+                    if (connectionType == ACCEPTOR)
+                    {
+                        lastSentSequenceNumber = adjustLastSequenceNumber(lastSentSequenceNumber);
+                        lastReceivedSequenceNumber = adjustLastSequenceNumber(lastReceivedSequenceNumber);
+                    }
+
                     gatewaySession.onLogon(
                         sessionId, sessionContext, sessionKey, username, password, heartbeatIntervalInS);
                     return 0;

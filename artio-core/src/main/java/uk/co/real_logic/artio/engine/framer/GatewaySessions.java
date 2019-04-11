@@ -291,9 +291,10 @@ class GatewaySessions
         final String password = SessionParser.password(logon);
 
         sessionContext.onLogon(resetSeqNum);
-
+        gatewaySession.initialResetSeqNum(resetSeqNum);
         gatewaySession.onLogon(sessionId, sessionContext, compositeKey, username, password, logon.heartBtInt());
 
+        // See Framer.handoverNewConnectionToLibrary for sole library mode equivalent
         if (resetSeqNum)
         {
             gatewaySession.acceptorSequenceNumbers(SessionInfo.UNK_SESSION, SessionInfo.UNK_SESSION);

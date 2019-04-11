@@ -19,6 +19,8 @@ import org.agrona.concurrent.EpochClock;
 import org.junit.Before;
 import org.junit.Ignore;
 import org.junit.Test;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.builder.HeartbeatEncoder;
@@ -99,6 +101,8 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
 
         assertEquals(1, sessionProxyRequests);
         assertEquals(1, fakeSessionProxy.sentHeartbeats);
+        assertEquals(1, fakeSessionProxy.sentLogons);
+        assertEquals(0, fakeSessionProxy.sentResendRequests);
     }
 
     @Ignore
@@ -164,7 +168,10 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
         private final LogoutEncoder logout = new LogoutEncoder();
         private final List<HeaderEncoder> headers = asList(logon.header(), heartbeat.header(), logout.header());
 
+        private int sentLogons = 0;
         private int sentHeartbeats = 0;
+        private int sentResendRequests = 0;
+
         private boolean seqNumResetRequested = false;
 
         public void setupSession(final long sessionId, final CompositeKey sessionKey)
@@ -184,22 +191,28 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
             final int sequenceIndex,
             final int lastMsgSeqNumProcessed)
         {
+            sentResendRequests++;
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.resendRequest");
             return 0;
         }
 
         public long requestDisconnect(final long connectionId, final DisconnectReason reason)
         {
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.requestDisconnect");
             return 0;
         }
 
         public long logon(
-            final int msgSeqNo, final int heartbeatIntervalInS,
+            final int msgSeqNo,
+            final int heartbeatIntervalInS,
             final String username,
             final String password,
             final boolean resetSeqNumFlag,
             final int sequenceIndex,
             final int lastMsgSeqNumProcessed)
         {
+            sentLogons++;
+
             final HeaderEncoder header = logon.header();
             setupHeader(header, msgSeqNo);
 
@@ -235,6 +248,7 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
             final int rejectReason,
             final int lastMsgSeqNumProcessed)
         {
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.logout");
             return 0;
         }
 
@@ -245,6 +259,7 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
             final int sequenceIndex,
             final int lastMsgSeqNumProcessed)
         {
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.lowSequenceNumberLogout");
             return 0;
         }
 
@@ -253,34 +268,39 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
             final int sequenceIndex,
             final int lastMsgSeqNumProcessed)
         {
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.incorrectBeginStringLogout");
             return 0;
         }
 
         public long negativeHeartbeatLogout(
             final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
         {
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.negativeHeartbeatLogout");
             return 0;
         }
 
         public long receivedMessageWithoutSequenceNumber(
             final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
         {
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.receivedMessageWithoutSequenceNumber");
             return 0;
         }
 
         public long rejectWhilstNotLoggedOn(
             final int msgSeqNo, final RejectReason reason, final int sequenceIndex, final int lastMsgSeqNumProcessed)
         {
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.rejectWhilstNotLoggedOn");
             return 0;
         }
 
         public long heartbeat(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
         {
-            return 0;
+            return heartbeat(msgSeqNo, null, 0, sequenceIndex, lastMsgSeqNumProcessed);
         }
 
         public long heartbeat(
-            final int msgSeqNo, final char[] testReqId,
+            final int msgSeqNo,
+            final char[] testReqId,
             final int testReqIdLength,
             final int sequenceIndex,
             final int lastMsgSeqNumProcessed)
@@ -312,24 +332,27 @@ public class ClusterInteractionSystemTest extends AbstractGatewayToGatewaySystem
             final int sequenceIndex,
             final int lastMsgSeqNumProcessed)
         {
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.reject");
             return 0;
         }
 
         public long testRequest(
             final int msgSeqNo, final CharSequence testReqID, final int sequenceIndex, final int lastMsgSeqNumProcessed)
         {
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.testRequest");
             return 0;
         }
 
         public long sequenceReset(
             final int msgSeqNo, final int newSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
         {
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.sequenceReset");
             return 0;
         }
 
         public void libraryConnected(final boolean libraryConnected)
         {
-
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.libraryConnected");
         }
 
         public boolean seqNumResetRequested()

@@ -856,7 +856,8 @@ public class Session implements AutoCloseable
             newSentSeqNum(),
             expectedSeqNo,
             endSeqNo,
-            sequenceIndex(), lastMsgSeqNumProcessed);
+            sequenceIndex(),
+            lastMsgSeqNumProcessed);
 
         if (position > 0 && chunkedResend)
         {
@@ -1400,14 +1401,14 @@ public class Session implements AutoCloseable
     }
 
     // Also checks the sequence index
-    public Session lastReceivedMsgSeqNum(final int value)
+    public Session lastReceivedMsgSeqNum(final int lastReceivedMsgSeqNum)
     {
-        if (lastReceivedMsgSeqNum > value)
+        if (this.lastReceivedMsgSeqNum > lastReceivedMsgSeqNum)
         {
             nextSequenceIndex();
         }
 
-        lastReceivedMsgSeqNumOnly(value);
+        lastReceivedMsgSeqNumOnly(lastReceivedMsgSeqNum);
 
         return this;
     }

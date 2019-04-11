@@ -55,6 +55,7 @@ class GatewaySession implements SessionInfo
 
     private Consumer<GatewaySession> onGatewaySessionLogon;
     private SessionLogonListener logonListener = this::onSessionLogon;
+    private boolean initialResetSeqNum;
 
     GatewaySession(
         final long connectionId,
@@ -247,16 +248,16 @@ class GatewaySession implements SessionInfo
         return heartbeatIntervalInS;
     }
 
-    void acceptorSequenceNumbers(final int sentSequenceNumber, final int receivedSequenceNumber)
+    void acceptorSequenceNumbers(final int retrievedSentSequenceNumber, final int retrievedReceivedSequenceNumber)
     {
         if (session != null)
         {
-            session.lastSentMsgSeqNum(adjustLastSequenceNumber(sentSequenceNumber));
-            session.lastReceivedMsgSeqNum(adjustLastSequenceNumber(receivedSequenceNumber));
+            session.lastSentMsgSeqNum(adjustLastSequenceNumber(retrievedSentSequenceNumber));
+            session.lastReceivedMsgSeqNum(adjustLastSequenceNumber(retrievedReceivedSequenceNumber));
         }
     }
 
-    private int adjustLastSequenceNumber(final int lastSequenceNumber)
+    static int adjustLastSequenceNumber(final int lastSequenceNumber)
     {
         return (lastSequenceNumber == UNK_SESSION) ? 0 : lastSequenceNumber;
     }
@@ -322,5 +323,15 @@ class GatewaySession implements SessionInfo
     boolean hasDisconnected()
     {
         return receiverEndPoint.hasDisconnected();
+    }
+
+    void initialResetSeqNum(final boolean resetSeqNum)
+    {
+        initialResetSeqNum = resetSeqNum;
+    }
+
+    boolean initialResetSeqNum()
+    {
+        return initialResetSeqNum;
     }
 }
