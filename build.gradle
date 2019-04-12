@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd.
+ * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +16,27 @@
 import org.gradle.plugins.ide.eclipse.model.Classpath
 
 buildscript {
-    dependencies {
-        classpath "com.github.jengelman.gradle.plugins:shadow:2.0.4"
-        classpath 'net.researchgate:gradle-release:2.6.0'
+    repositories {
+        mavenCentral()
     }
 }
 
-apply plugin: 'maven'
-apply plugin: 'signing'
-apply plugin: 'net.researchgate.release'
-apply plugin: 'com.github.johnrengelman.shadow'
+plugins {
+    id 'com.github.johnrengelman.shadow' version '5.0.0' apply false
+    id 'net.researchgate.release' version '2.8.0'
+}
 
-def aeronVersion = '1.9.3'
-def agronaVersion = '0.9.18'
-def sbeVersion = '1.8.1'
+def aeronVersion = '1.17.0'
+def agronaVersion = '0.9.35'
+def sbeVersion = '1.12.4'
+def artioJavaVersion = JavaVersion.VERSION_1_8
+def artioGroup = 'uk.co.real-logic'
 
-defaultTasks 'clean', 'build', 'install'
+defaultTasks 'clean', 'build', 'javadoc', 'install'
 
 ext {
-    group = fixGroup
+    group = artioGroup
+    isReleaseVersion = !version.endsWith("SNAPSHOT")
 
     if (!project.hasProperty('ossrhUsername')) {
         ossrhUsername = ''
@@ -46,6 +48,8 @@ ext {
 }
 
 allprojects {
+    apply plugin: 'maven'
+    apply plugin: 'signing'
     apply plugin: 'eclipse'
 
     repositories {
@@ -56,7 +60,6 @@ allprojects {
 
 subprojects {
     apply plugin: 'java'
-    apply plugin: 'maven'
     apply plugin: 'checkstyle'
     apply plugin: 'idea'
 
@@ -71,26 +74,33 @@ subprojects {
         }
     }
 
-    group = fixGroup
+    group = artioGroup
+    version = version
 
     compileJava {
-        sourceCompatibility = '1.8'
-        targetCompatibility = '1.8'
+        sourceCompatibility = artioJavaVersion
+        targetCompatibility = artioJavaVersion
+        options.encoding = 'UTF-8'
+        options.deprecation = true
     }
 
-    [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
+    compileTestJava {
+        sourceCompatibility = artioJavaVersion
+        targetCompatibility = artioJavaVersion
+        options.encoding = 'UTF-8'
+        options.deprecation = true
+    }
 
     dependencies {
-        checkstyle 'com.puppycrawl.tools:checkstyle:8.10.1'
+        checkstyle 'com.puppycrawl.tools:checkstyle:8.19'
 
         testCompile 'junit:junit:4.12'
-        testCompile 'org.mockito:mockito-core:2.18.3'
+        testCompile 'org.mockito:mockito-core:2.27.0'
         testCompile 'org.hamcrest:hamcrest-library:1.3'
     }
 
     checkstyle {
-        configFile = new File(rootDir, 'config/checkstyle/checkstyle.xml')
-        toolVersion = "8.10.1"
+        toolVersion = "8.19"
     }
 
     test {
@@ -126,26 +136,34 @@ subprojects {
 
     javadoc {
         title = '<h1>Artio</h1>'
-        options.bottom = '<i>Copyright &#169; 2015-2018 Real Logic Ltd. All Rights Reserved.</i>'
-        if (JavaVersion.current() == JavaVersion.VERSION_1_10) {
+        options.bottom = '<i>Copyright &#169; 2015-2019 Real Logic Ltd. All Rights Reserved.</i>'
+        if (JavaVersion.current().ordinal() >= JavaVersion.VERSION_1_10.ordinal()) {
             options.addBooleanOption 'html5', true
         }
     }
 
+    task javadocJar(type: Jar) {
+        archiveClassifier = 'javadoc'
+        from javadoc
+    }
+
     task sourcesJar(type: Jar) {
-        classifier = 'sources'
+        archiveClassifier = 'sources'
         from sourceSets.main.allSource
     }
 
-    task testJar(type: Jar, dependsOn: testClasses) {
-        classifier = 'tests'
-        baseName = "test-${project.archivesBaseName}"
-        from sourceSets.test.output
+    jar {
+        manifest.attributes(
+            'Implementation-Title': 'Artio',
+            'Implementation-Version': "${version}",
+            'Implementation-Vendor': 'Real Logic Limited'
+        )
     }
 
-    task javadocJar(type: Jar) {
-        classifier = 'javadoc'
-        from javadoc.destinationDir
+    task testJar(type: Jar, dependsOn: testClasses) {
+        archiveClassifier = 'tests'
+        archiveBaseName = "test-${project.archivesBaseName}"
+        from sourceSets.test.output
     }
 
     task allDeps(type: DependencyReportTask) {}
@@ -155,10 +173,13 @@ subprojects {
     }
 
     artifacts {
-        archives sourcesJar
-        archives javadocJar
-        archives testJar
+        archives javadocJar, sourcesJar, testJar
         tests testJar
+    }
+
+    signing {
+        required { isReleaseVersion && gradle.taskGraph.hasTask("uploadArchives") }
+        sign configurations.archives
     }
 
     idea {
@@ -186,8 +207,13 @@ project(':artio-codecs') {
     }
 
     // Code Generation Configuration
-    compileGeneratedJava.dependsOn 'generateMessages'
-    compileGeneratedJava.classpath += sourceSets.main.runtimeClasspath
+    compileGeneratedJava {
+        dependsOn 'generateMessages'
+        sourceCompatibility = artioJavaVersion
+        targetCompatibility = artioJavaVersion
+        options.deprecation = true
+        classpath += sourceSets.main.runtimeClasspath
+    }
 
     task generateMessages(type: JavaExec) {
         main = 'uk.co.real_logic.sbe.SbeTool'
@@ -198,7 +224,6 @@ project(':artio-codecs') {
             'sbe.validation.xsd': validationXsdPath)
         args = [
             'src/main/resources/uk/co/real_logic/artio/messages/message-schema.xml',
-            'src/main/resources/uk/co/real_logic/artio/replication/replication-message-schema.xml',
             'src/main/resources/uk/co/real_logic/artio/storage/storage-message-schema.xml'
         ]
     }
@@ -213,7 +238,6 @@ project(':artio-codecs') {
 }
 
 project(':artio-session-codecs') {
-
     dependencies {
         compile project(path: ':artio-codecs')
     }
@@ -223,9 +247,13 @@ project(':artio-session-codecs') {
         generated.java.srcDir generatedDir
     }
 
-    // Code Generation Configuration
-    compileGeneratedJava.dependsOn 'generateCodecs'
-    compileGeneratedJava.classpath += sourceSets.main.runtimeClasspath
+    compileGeneratedJava {
+        dependsOn 'generateCodecs'
+        sourceCompatibility = artioJavaVersion
+        targetCompatibility = artioJavaVersion
+        options.deprecation = true
+        classpath += sourceSets.main.runtimeClasspath
+    }
 
     task generateCodecs(type: JavaExec) {
         main = 'uk.co.real_logic.artio.dictionary.CodecGenerationTool'
@@ -254,9 +282,13 @@ project(':artio-session-fixt-codecs') {
         generated.java.srcDir generatedDir
     }
 
-    // Code Generation Configuration
-    compileGeneratedJava.dependsOn 'generateCodecs'
-    compileGeneratedJava.classpath += sourceSets.main.runtimeClasspath
+    compileGeneratedJava {
+        dependsOn 'generateCodecs'
+        sourceCompatibility = artioJavaVersion
+        targetCompatibility = artioJavaVersion
+        options.deprecation = true
+        classpath += sourceSets.main.runtimeClasspath
+    }
 
     task generateCodecs(type: JavaExec) {
         main = 'uk.co.real_logic.artio.dictionary.CodecGenerationTool'
@@ -275,9 +307,6 @@ project(':artio-session-fixt-codecs') {
 }
 
 project(':artio-core') {
-    apply plugin: 'application'
-
-    mainClassName = 'uk.co.real_logic.artio.FixEngine'
 
     dependencies {
         testCompile project(path: ':artio-codecs', configuration: 'tests')
@@ -285,16 +314,9 @@ project(':artio-core') {
         compile project(':artio-codecs')
 
         compile "io.aeron:aeron-client:${aeronVersion}"
+        compile "io.aeron:aeron-archive:${aeronVersion}"
         compile "io.aeron:aeron-driver:${aeronVersion}"
-        compile 'org.hdrhistogram:HdrHistogram:2.1.10'
-    }
-
-    run {
-        systemProperties(System.properties)
-    }
-
-    build.doLast {
-        distZip
+        compile 'org.hdrhistogram:HdrHistogram:2.1.11'
     }
 
     test {
@@ -341,7 +363,7 @@ project(':artio-system-tests') {
 
     task benchmarks(dependsOn: perfClasses) {
         shadowJar {
-            classifier = "benchmarks"
+            archiveClassifier = "benchmarks"
 
             from sourceSets.main.output
             from sourceSets.perf.output
@@ -364,7 +386,7 @@ project(':artio-samples') {
     }
 
     shadowJar {
-        baseName = 'samples.jar'
+        archiveFileName = 'samples.jar'
     }
 
     build.doLast {
@@ -372,53 +394,52 @@ project(':artio-samples') {
     }
 }
 
-if (System.properties["uploadArchives"] != null) {
-    println "Enabling uploading of archives"
+subprojects {
+    uploadArchives {
+        repositories {
+            mavenDeployer {
+                beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 
-    subprojects {
-        uploadArchives {
-            repositories {
-                mavenDeployer {
-                    snapshotRepository(url: project.ext.repoSnapshotUrl) {
-                        authentication(userName: ossrhUsername, password: ossrhPassword)
+                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
+                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                }
+
+                snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
+                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                }
+
+                pom.project {
+                    name = 'artio'
+                    packaging = 'jar'
+                    description = 'High-Performance FIX Gateway'
+
+                    url = 'https://github.com/real-logic/artio'
+
+                    scm {
+                        connection = 'scm:git:https://github.com/real-logic/artio.git'
+                        developerConnection = 'scm:git:https://github.com/real-logic/artio.git'
+                        url = 'https://github.com/real-logic/artio.git'
                     }
-                    repository(url: project.ext.repoReleaseUrl) {
-                        authentication(userName: ossrhUsername, password: ossrhPassword)
+
+                    licenses {
+                        license {
+                            name = 'The Apache License, Version 2.0'
+                            url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                        }
                     }
 
-                    pom.project {
-                        name = 'artio'
-                        packaging = 'pom'
-                        description = 'Resilient High-Performance FIX Gateway'
-
-                        url = 'https://github.com/real-logic/artio'
-
-                        scm {
-                            connection = 'scm:git:https://github.com/real-logic/artio.git'
-                            developerConnection = 'scm:git:https://github.com/real-logic/artio.git'
-                            url = 'https://github.com/real-logic/artio.git'
+                    developers {
+                        developer {
+                            id = 'RichardWarburton'
+                            name = 'Richard Warburton'
+                            email = 'richard.warburton@gmail.com'
+                            url = 'https://github.com/RichardWarburton'
                         }
-
-                        licenses {
-                            license {
-                                name = 'The Apache License, Version 2.0'
-                                url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-                            }
-                        }
-
-                        developers {
-                            developer {
-                                id = 'mjpt777'
-                                name = 'Martin Thompson'
-                                email = 'mjpt777@gmail.com'
-                                url = 'https://github.com/mjpt777'
-                            }
-                            developer {
-                                id = 'RichardWarburton'
-                                name = 'Richard Warburton'
-                                email = 'richard.warburton@gmail.com'
-                                url = 'https://github.com/RichardWarburton'
-                            }
+                        developer {
+                            id = 'mjpt777'
+                            name = 'Martin Thompson'
+                            email = 'mjpt777@gmail.com'
+                            url = 'https://github.com/mjpt777'
                         }
                     }
                 }
@@ -427,7 +448,16 @@ if (System.properties["uploadArchives"] != null) {
     }
 }
 
-task wrapper(type: Wrapper) {
-    gradleVersion = '4.7'
+task uploadToMavenCentral {
+    dependsOn 'artio-core:uploadArchives',
+        'artio-samples:uploadArchives',
+        'artio-system-tests:uploadArchives',
+        'artio-codecs:uploadArchives',
+        'artio-session-codecs:uploadArchives',
+        'artio-session-fixt-codecs:uploadArchives'
+}
+
+wrapper {
+    gradleVersion = '5.3.1'
     distributionType = 'ALL'
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,17 +18,15 @@ package uk.co.real_logic.artio.engine.framer;
 import io.aeron.Image;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
-import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.*;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.EngineContext;
-import uk.co.real_logic.artio.engine.EngineDescriptorStore;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
-import uk.co.real_logic.artio.replication.ClusterableStreams;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.timing.EngineTimers;
 
@@ -54,9 +52,8 @@ public class FramerContext
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
     private final GatewayPublication outboundPublication;
-    private final GatewayPublication inboundLibraryPublication;
+    private final GatewayPublication inboundPublication;
     private final SessionContexts sessionContexts;
-    private final AgentInvoker conductorAgentInvoker;
 
     public FramerContext(
         final EngineConfiguration configuration,
@@ -65,24 +62,23 @@ public class FramerContext
         final ErrorHandler errorHandler,
         final Image replayImage,
         final Image slowReplayImage,
-        final EngineDescriptorStore engineDescriptorStore,
         final EngineTimers timers,
-        final AgentInvoker conductorAgentInvoker)
+        final AgentInvoker conductorAgentInvoker,
+        final RecordingCoordinator recordingCoordinator)
     {
-        this.conductorAgentInvoker = conductorAgentInvoker;
-        final ClusterableStreams streams = engineContext.streams();
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
         this.sessionContexts = new SessionContexts(configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
         final Streams outboundLibraryStreams = engineContext.outboundLibraryStreams();
-        final Streams inboundLibraryStreams = engineContext.inboundLibraryStreams();
 
         final SystemEpochClock clock = new SystemEpochClock();
-        final LongHashSet replicatedConnectionIds = new LongHashSet();
-        final GatewayPublication inboundClusterablePublication =
-            inboundLibraryStreams.gatewayPublication(idleStrategy, "inboundPublication");
-        this.inboundLibraryPublication = engineContext.inboundLibraryPublication();
+        this.inboundPublication = engineContext.inboundPublication();
         this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "outboundPublication");
+
+        sentSequenceNumberIndex = new SequenceNumberIndexReader(
+            configuration.sentSequenceNumberBuffer(), errorHandler);
+        receivedSequenceNumberIndex = new SequenceNumberIndexReader(
+            configuration.receivedSequenceNumberBuffer(), errorHandler);
 
         gatewaySessions = new GatewaySessions(
             clock,
@@ -95,24 +91,21 @@ public class FramerContext
             configuration.sessionBufferSize(),
             configuration.sendingTimeWindowInMs(),
             configuration.reasonableTransmissionTimeInMs(),
+            configuration.logAllMessages(),
             errorHandler,
             sessionContexts,
-            configuration.sessionPersistenceStrategy());
+            configuration.sessionPersistenceStrategy(),
+            sentSequenceNumberIndex,
+            receivedSequenceNumberIndex);
 
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,
             sessionContexts,
-            inboundLibraryPublication,
-            inboundClusterablePublication,
+            inboundPublication,
             fixCounters,
             errorHandler,
-            replicatedConnectionIds,
-            gatewaySessions);
-
-        sentSequenceNumberIndex = new SequenceNumberIndexReader(
-            configuration.sentSequenceNumberBuffer(), errorHandler);
-        receivedSequenceNumberIndex = new SequenceNumberIndexReader(
-            configuration.receivedSequenceNumberBuffer(), errorHandler);
+            gatewaySessions,
+            engineContext.senderSequenceNumbers());
 
         final FinalImagePositions finalImagePositions = new FinalImagePositions();
 
@@ -122,9 +115,6 @@ public class FramerContext
             timers.sendTimer(),
             configuration,
             endPointFactory,
-            streams,
-            engineContext.outboundClusterSubscription(),
-            engineContext.outboundClusterSubscription(),
             engineContext.outboundLibrarySubscription(
                 "outboundLibrarySubscription", finalImagePositions),
             engineContext.outboundLibrarySubscription(
@@ -133,7 +123,7 @@ public class FramerContext
             slowReplayImage,
             engineContext.inboundReplayQuery(),
             outboundPublication,
-            inboundLibraryPublication,
+            inboundPublication,
             adminCommands,
             sessionIdStrategy,
             sessionContexts,
@@ -141,14 +131,12 @@ public class FramerContext
             receivedSequenceNumberIndex,
             gatewaySessions,
             errorHandler,
-            engineDescriptorStore,
-            replicatedConnectionIds,
             configuration.agentNamePrefix(),
             engineContext.inboundCompletionPosition(),
             engineContext.outboundLibraryCompletionPosition(),
-            engineContext.outboundClusterCompletionPosition(),
             finalImagePositions,
-            conductorAgentInvoker);
+            conductorAgentInvoker,
+            recordingCoordinator);
     }
 
     public Agent framer()
@@ -176,7 +164,7 @@ public class FramerContext
             sessionContexts,
             receivedSequenceNumberIndex,
             sentSequenceNumberIndex,
-            inboundLibraryPublication,
+            inboundPublication,
             outboundPublication);
 
         if (adminCommands.offer(reply))

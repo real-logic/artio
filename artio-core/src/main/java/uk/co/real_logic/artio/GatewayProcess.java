@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,20 +32,17 @@ import static uk.co.real_logic.artio.dictionary.generation.Exceptions.closeAll;
 
 public class GatewayProcess implements AutoCloseable
 {
-    public static final int INBOUND_LIBRARY_STREAM = 1;
-    public static final int OUTBOUND_LIBRARY_STREAM = 2;
-    public static final int OUTBOUND_REPLAY_STREAM = 3;
-
     /** Common id used by messages in both engine and library */
     public static final long NO_CORRELATION_ID = 0;
 
     private static long startTimeInMs = System.currentTimeMillis();
 
+    private DistinctErrorLog distinctErrorLog;
+
     protected CommonConfiguration configuration;
     protected MonitoringFile monitoringFile;
     protected FixCounters fixCounters;
     protected ErrorHandler errorHandler;
-    protected DistinctErrorLog distinctErrorLog;
     protected Aeron aeron;
     protected Agent monitoringAgent;
 
@@ -59,7 +56,6 @@ public class GatewayProcess implements AutoCloseable
     protected void initMonitoring(final CommonConfiguration configuration)
     {
         monitoringFile = new MonitoringFile(true, configuration);
-        fixCounters = new FixCounters(monitoringFile.createCountersManager());
         final EpochClock clock = new SystemEpochClock();
         distinctErrorLog = new DistinctErrorLog(monitoringFile.errorBuffer(), clock);
         errorHandler =
@@ -75,7 +71,10 @@ public class GatewayProcess implements AutoCloseable
 
     protected void initAeron(final CommonConfiguration configuration)
     {
-        aeronConnect(configureAeronContext(configuration));
+        final Aeron.Context context = configureAeronContext(configuration);
+        aeron = Aeron.connect(context);
+        CloseChecker.onOpen(context.aeronDirectoryName(), aeron);
+        fixCounters = new FixCounters(aeron);
     }
 
     public Agent conductorAgent()
@@ -87,12 +86,6 @@ public class GatewayProcess implements AutoCloseable
         }
 
         return invoker.agent();
-    }
-
-    protected void aeronConnect(final Aeron.Context context)
-    {
-        aeron = Aeron.connect(context);
-        CloseChecker.onOpen(context.aeronDirectoryName(), aeron);
     }
 
     protected Aeron.Context configureAeronContext(final CommonConfiguration configuration)
@@ -139,6 +132,7 @@ public class GatewayProcess implements AutoCloseable
     public void close()
     {
         closeAll(
+            fixCounters,
             () ->
             {
                 aeron.close();

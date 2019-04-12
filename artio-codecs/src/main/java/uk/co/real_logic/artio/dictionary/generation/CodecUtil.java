@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import java.util.Arrays;
+
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
 public final class CodecUtil
@@ -23,17 +25,21 @@ public final class CodecUtil
     {
     }
 
-    public static final int BODY_LENGTH_GAP = 4;
-    public static final int BODY_LENGTH_SIZE = BODY_LENGTH_GAP + 1;
     public static final byte[] BODY_LENGTH = "9=0000\001".getBytes(US_ASCII);
 
     public static final int MISSING_INT = Integer.MIN_VALUE;
     public static final char MISSING_CHAR = '\001';
     public static final long MISSING_LONG = Long.MIN_VALUE;
 
-    /**
-     * NB: only valid for ASCII bytes.
-     */
+    public static final char ENUM_MISSING_CHAR = MISSING_CHAR;
+    public static final int ENUM_MISSING_INT = MISSING_INT;
+    public static final String ENUM_MISSING_STRING = Character.toString(ENUM_MISSING_CHAR);
+
+    public static final char ENUM_UNKNOWN_CHAR = '\002';
+    public static final int ENUM_UNKNOWN_INT = Integer.MAX_VALUE;
+    public static final String ENUM_UNKNOWN_STRING = Character.toString(ENUM_UNKNOWN_CHAR);
+
+    // NB: only valid for ASCII bytes.
     public static byte[] toBytes(final CharSequence value, final byte[] oldBuffer)
     {
         final int length = value.length();
@@ -46,14 +52,13 @@ public final class CodecUtil
         return buffer;
     }
 
-    /**
-     * NB: only valid for ASCII bytes.
-     */
+    // NB: only valid for ASCII bytes.
     public static byte[] toBytes(final char[] value, final byte[] oldBuffer, final int length)
     {
         return toBytes(value, oldBuffer, 0, length);
     }
 
+    // NB: only valid for ASCII bytes.
     public static byte[] toBytes(final char[] value, final byte[] oldBuffer, final int offset, final int length)
     {
         final byte[] buffer = (oldBuffer.length < length) ? new byte[length] : oldBuffer;
@@ -64,6 +69,7 @@ public final class CodecUtil
         return buffer;
     }
 
+    // NB: only valid for ASCII bytes.
     public static byte[] toBytes(final char[] value, final int length)
     {
         final byte[] buffer = new byte[length];
@@ -75,8 +81,27 @@ public final class CodecUtil
         return buffer;
     }
 
-    public static boolean equals(final char[] value, final char[] expected, final int offset,
-        final int expectedOffset, final int length)
+    // NB: only valid for ASCII bytes.
+    public static byte[] subsequenceBytes(
+        final byte[] value, final byte[] oldBuffer, final int offset, final int length)
+    {
+        if (oldBuffer.length >= length)
+        {
+            System.arraycopy(value, offset, oldBuffer, 0, length);
+            return oldBuffer;
+        }
+        else
+        {
+            return Arrays.copyOfRange(value, offset, offset + length);
+        }
+    }
+
+    public static boolean equals(
+        final char[] value,
+        final char[] expected,
+        final int offset,
+        final int expectedOffset,
+        final int length)
     {
         if (value.length < length || expected.length < length)
         {

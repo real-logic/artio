@@ -33,33 +33,38 @@ public class FixMessage extends Int2ObjectHashMap<String>
     private Session session;
     private int sequenceIndex;
 
-    FixMessage()
+    public FixMessage()
     {
     }
 
-    String getMsgType()
+    public String msgType()
     {
         return get(Constants.MSG_TYPE);
     }
 
-    String getTestReqId()
+    public String testReqId()
     {
         return get(Constants.TEST_REQ_ID);
     }
 
-    boolean isLogon()
+    public boolean isLogon()
     {
-        return LOGON_MESSAGE_AS_STR.equals(getMsgType());
+        return LOGON_MESSAGE_AS_STR.equals(msgType());
     }
 
-    String getPossDup()
+    public String possDup()
     {
         return get(Constants.POSS_DUP_FLAG);
     }
 
-    int getMessageSequenceNumber()
+    public int messageSequenceNumber()
     {
         return Integer.parseInt(get(Constants.MSG_SEQ_NUM));
+    }
+
+    public void messageSequenceNumber(final int messageSequenceNumber)
+    {
+        put(Constants.MSG_SEQ_NUM, String.valueOf(messageSequenceNumber));
     }
 
     public Session session()
@@ -72,14 +77,37 @@ public class FixMessage extends Int2ObjectHashMap<String>
         this.session = session;
     }
 
-    void sequenceIndex(final int sequenceIndex)
+    public void sequenceIndex(final int sequenceIndex)
     {
         this.sequenceIndex = sequenceIndex;
     }
 
-    int sequenceIndex()
+    public int sequenceIndex()
     {
         return sequenceIndex;
+    }
+
+    public int lastMsgSeqNumProcessed()
+    {
+        return Integer.parseInt(get(Constants.LAST_MSG_SEQ_NUM_PROCESSED));
+    }
+
+    public FixMessage clone()
+    {
+        final FixMessage theClone = new FixMessage();
+        theClone.session(session);
+        theClone.sequenceIndex(sequenceIndex);
+        theClone.putAll(this);
+        return theClone;
+    }
+
+    public void flipCompIds()
+    {
+        final String oldSenderCompId = get(Constants.SENDER_COMP_ID);
+        final String oldTargetCompId = get(Constants.TARGET_COMP_ID);
+
+        put(Constants.TARGET_COMP_ID, oldSenderCompId);
+        put(Constants.SENDER_COMP_ID, oldTargetCompId);
     }
 
     static Matcher<FixMessage> hasSequenceIndex(final int sequenceIndex)
@@ -91,7 +119,7 @@ public class FixMessage extends Int2ObjectHashMap<String>
     {
         return hasResult(
             "messageSequenceNumber",
-            FixMessage::getMessageSequenceNumber,
+            FixMessage::messageSequenceNumber,
             equalTo(sequenceNumber));
     }
 }

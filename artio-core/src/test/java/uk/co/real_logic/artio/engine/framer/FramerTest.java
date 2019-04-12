@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
-import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.QueuedPipe;
 import org.hamcrest.Matcher;
@@ -34,14 +33,13 @@ import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.engine.CompletionPosition;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.EngineDescriptorStore;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
-import uk.co.real_logic.artio.replication.ClusterableStreams;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
@@ -67,7 +65,7 @@ import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_NAME_PREFIX;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
-import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
+import static uk.co.real_logic.artio.library.SessionConfiguration.*;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.DisconnectReason.APPLICATION_DISCONNECT;
 import static uk.co.real_logic.artio.messages.GatewayError.*;
@@ -115,7 +113,6 @@ public class FramerTest
     private final Image replaySlowImage = mock(Image.class);
     private final Image peekImage = mock(Image.class);
     private final Image normalImage = mock(Image.class);
-    private final ClusterableStreams node = mock(ClusterableStreams.class);
     private final CompositeKey sessionKey = SessionIdStrategy
         .senderAndTarget()
         .onInitiateLogon("local", "", "", "remote", "", "");
@@ -148,8 +145,7 @@ public class FramerTest
         when(outboundLibrarySubscription.imageBySessionId(anyInt())).thenReturn(normalImage);
 
         when(mockEndPointFactory.receiverEndPoint(
-            any(), connectionId.capture(), anyLong(), anyInt(), anyInt(), any(),
-            eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any(), any()))
+            any(), connectionId.capture(), anyLong(), anyInt(), anyInt(), any()))
             .thenReturn(mockReceiverEndPoint);
 
         when(mockEndPointFactory.senderEndPoint(any(), anyLong(), anyInt(), any(), any()))
@@ -166,17 +162,12 @@ public class FramerTest
         when(session.logonTime()).thenReturn(-1L);
         when(session.compositeKey()).thenReturn(sessionKey);
 
-        isLeader(true);
-
         framer = new Framer(
             mockClock,
             mock(Timer.class),
             mock(Timer.class),
             engineConfiguration,
             mockEndPointFactory,
-            node,
-            null,
-            null,
             outboundLibrarySubscription,
             outboundSlowSubscription,
             replayImage,
@@ -191,25 +182,18 @@ public class FramerTest
             receivedSequenceNumberIndex,
             gatewaySessions,
             errorHandler,
-            mock(EngineDescriptorStore.class),
-            new LongHashSet(),
             DEFAULT_NAME_PREFIX,
             mock(CompletionPosition.class),
             mock(CompletionPosition.class),
-            mock(CompletionPosition.class),
             finalImagePositions,
-            mock(AgentInvoker.class));
+            mock(AgentInvoker.class),
+            mock(RecordingCoordinator.class));
 
         when(sessionContexts.onLogon(any())).thenReturn(new SessionContext(SESSION_ID,
             SessionContext.UNKNOWN_SEQUENCE_INDEX,
             Session.NO_LOGON_TIME,
             sessionContexts,
             0));
-    }
-
-    private void isLeader(final boolean value)
-    {
-        when(node.isLeader()).thenReturn(value);
     }
 
     @After
@@ -263,7 +247,7 @@ public class FramerTest
             () ->
             {
                 doWork();
-                verify(mockReceiverEndPoint).pollForData();
+                verify(mockReceiverEndPoint).poll();
             });
     }
 
@@ -467,7 +451,7 @@ public class FramerTest
 
         libraryConnects();
 
-        verifySessionExistsSaved(times(1), LogonStatus.LIBRARY_NOTIFICATION);
+        verifySessionExistsSaved(times(1), SessionStatus.LIBRARY_NOTIFICATION);
     }
 
     @Test
@@ -480,14 +464,12 @@ public class FramerTest
         backPressureSaveSessionExists();
 
         final Action actual = onLibraryConnect();
-//        final MockingDetails mockingDetails = Mockito.mockingDetails(inboundPublication);
-//        System.out.println(mockingDetails.printInvocations());
 
         assertEquals(ABORT, actual);
 
         libraryConnects();
 
-        verifySessionExistsSaved(times(2), LogonStatus.LIBRARY_NOTIFICATION);
+        verifySessionExistsSaved(times(2), SessionStatus.LIBRARY_NOTIFICATION);
     }
 
     @Test
@@ -516,19 +498,6 @@ public class FramerTest
     }
 
     @Test
-    public void shouldDisconnectConnectionsToFollowers() throws Exception
-    {
-        isLeader(false);
-
-        openSocket();
-
-        framer.doWork();
-
-        verifyClientDisconnected();
-        verify(errorHandler).onError(any(IllegalStateException.class));
-    }
-
-    @Test
     public void shouldHandoverSessionToLibraryUponRequest() throws IOException
     {
         aClientConnects();
@@ -549,9 +518,16 @@ public class FramerTest
             any(),
             any(),
             any(),
+            anyBoolean(),
             anyInt(),
+            anyBoolean(),
+            anyInt(),
+            anyBoolean(),
+            anyBoolean(),
             anyLong(),
             anyInt(),
+            any(),
+            any(),
             any(),
             any(),
             any(),
@@ -578,9 +554,16 @@ public class FramerTest
             any(),
             any(),
             any(),
+            anyBoolean(),
             anyInt(),
+            anyBoolean(),
+            anyInt(),
+            anyBoolean(),
+            anyBoolean(),
             anyLong(),
             anyInt(),
+            any(),
+            any(),
             any(),
             any(),
             any(),
@@ -684,9 +667,9 @@ public class FramerTest
         saveRequestSessionReply();
     }
 
-    private long saveRequestSessionReply()
+    private void saveRequestSessionReply()
     {
-        return verify(inboundPublication).saveRequestSessionReply(LIBRARY_ID, OK, CORR_ID);
+        verify(inboundPublication).saveRequestSessionReply(LIBRARY_ID, OK, CORR_ID);
     }
 
     private Action onRequestSession()
@@ -715,12 +698,12 @@ public class FramerTest
             SESSION_ID,
             CORR_ID,
             ACTIVE,
+            false,
             HEARTBEAT_INTERVAL_IN_MS,
             0,
             0,
             "",
-            "",
-            header));
+            "", header));
     }
 
     private Action onLibraryConnect()
@@ -737,26 +720,7 @@ public class FramerTest
 
     private void backPressureFirstSaveAttempts()
     {
-        when(inboundPublication.saveManageSession(eq(LIBRARY_ID),
-            anyLong(),
-            anyLong(),
-            anyInt(),
-            anyInt(),
-            anyLong(),
-            any(),
-            eq(SlowStatus.NOT_SLOW),
-            eq(INITIATOR),
-            any(),
-            anyInt(),
-            anyLong(),
-            anyInt(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any(),
-            any())).thenReturn(BACK_PRESSURED, POSITION);
+        backPressureSaveSessionExists();
     }
 
     private void backPressureSaveSessionExists()
@@ -771,9 +735,16 @@ public class FramerTest
             any(),
             any(),
             any(),
+            anyBoolean(),
             anyInt(),
+            anyBoolean(),
+            anyInt(),
+            anyBoolean(),
+            anyBoolean(),
             anyLong(),
             anyInt(),
+            any(),
+            any(),
             any(),
             any(),
             any(),
@@ -793,6 +764,7 @@ public class FramerTest
         verify(gatewaySessions, times).acquire(
             any(),
             eq(state),
+            eq(false),
             eq(HEARTBEAT_INTERVAL_IN_S),
             anyInt(),
             anyInt(),
@@ -815,7 +787,7 @@ public class FramerTest
     private void libraryConnects()
     {
         when(outboundLibrarySubscription.imageBySessionId(anyInt())).thenReturn(mock(Image.class));
-        assertEquals(Action.CONTINUE, onLibraryConnect());
+        assertEquals(CONTINUE, onLibraryConnect());
     }
 
     private void initiateConnection() throws Exception
@@ -849,6 +821,10 @@ public class FramerTest
             AUTOMATIC_INITIAL_SEQUENCE_NUMBER,
             AUTOMATIC_INITIAL_SEQUENCE_NUMBER,
             false,
+            DEFAULT_CLOSED_RESEND_INTERVAL,
+            NO_RESEND_REQUEST_CHUNK_SIZE,
+            DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS,
+            false,
             "",
             "",
             HEARTBEAT_INTERVAL_IN_S,
@@ -881,13 +857,20 @@ public class FramerTest
             anyInt(),
             anyInt(),
             anyLong(),
-            eq(LogonStatus.NEW),
+            eq(SessionStatus.SESSION_HANDOVER),
             eq(SlowStatus.NOT_SLOW),
             eq(INITIATOR),
             any(),
+            anyBoolean(),
             anyInt(),
+            anyBoolean(),
+            anyInt(),
+            anyBoolean(),
+            anyBoolean(),
             anyLong(),
             anyInt(),
+            any(),
+            any(),
             any(),
             any(),
             any(),
@@ -897,7 +880,7 @@ public class FramerTest
             any());
     }
 
-    private void verifySessionExistsSaved(final VerificationMode times, final LogonStatus status)
+    private void verifySessionExistsSaved(final VerificationMode times, final SessionStatus status)
     {
         verify(inboundPublication, times).saveManageSession(eq(LIBRARY_ID),
             eq(connectionId.getValue()),
@@ -906,12 +889,19 @@ public class FramerTest
             anyInt(),
             anyLong(),
             eq(status),
-            any(), // todo(Nick): Should be NOT_SLOW? ,
             any(),
             any(),
+            any(),
+            anyBoolean(),
             anyInt(),
+            anyBoolean(),
+            anyInt(),
+            anyBoolean(),
+            anyBoolean(),
             anyLong(),
             anyInt(),
+            any(),
+            any(),
             any(),
             any(),
             any(),
@@ -927,11 +917,10 @@ public class FramerTest
         assertEquals("Has written bytes", clientBuffer.remaining(), client.write(clientBuffer));
     }
 
-    private void verifyEndpointsCreated() throws IOException
+    private void verifyEndpointsCreated()
     {
         verify(mockEndPointFactory).receiverEndPoint(
-            notNull(), anyLong(), anyLong(), anyInt(), eq(ENGINE_LIBRARY_ID), eq(framer),
-            eq(sentSequenceNumberIndex), eq(receivedSequenceNumberIndex), any(), any());
+            notNull(), anyLong(), anyLong(), anyInt(), eq(ENGINE_LIBRARY_ID), eq(framer));
 
         verify(mockEndPointFactory).senderEndPoint(
             notNull(), anyLong(), eq(ENGINE_LIBRARY_ID), any(LibrarySlowPeeker.class), eq(framer));

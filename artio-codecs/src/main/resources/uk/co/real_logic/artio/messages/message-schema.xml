@@ -39,6 +39,10 @@
             <validValue name="ACCEPTOR">0</validValue>
             <validValue name="INITIATOR">1</validValue>
         </enum>
+        <enum name="AwaitingResend" encodingType="uint8">
+            <validValue name="NO">0</validValue>
+            <validValue name="YES">1</validValue>
+        </enum>
         <enum name="ResetSequenceNumber" encodingType="uint8">
             <validValue name="NO">0</validValue>
             <validValue name="YES">1</validValue>
@@ -55,6 +59,8 @@
             <validValue name="DUPLICATE_LIBRARY_ID">4</validValue>
             <validValue name="DUPLICATE_ACCEPTOR">5</validValue>
             <validValue name="UNKNOWN_SESSION">6</validValue>
+            <validValue name="UNABLE_TO_LOGON">7</validValue>
+            <validValue name="INVALID_CONFIGURATION">8</validValue>
         </enum>
         <enum name="MessageStatus" encodingType="uint8">
             <validValue name="OK">0</validValue>
@@ -100,6 +106,8 @@
                         description="We disconnected due to the authentication strategy returning false">16</validValue>
             <validValue name="INVALID_FIX_MESSAGE"
                         description="We disconnected due to codec validation failing">17</validValue>
+            <validValue name="INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES"
+                        description="Persistence Strategy specified INDEXED but EngineConfiguration has disabled required logging of messsages">18</validValue>
         </enum>
         <enum name="SessionState" encodingType="uint8">
             <validValue name="CONNECTING"
@@ -110,8 +118,6 @@
                         description="Initiator only state - sent logon message but it hasn't received the reply yet.">2</validValue>
             <validValue name="ACTIVE"
                         description="Session is fully authenticated and ready to execute.">3</validValue>
-            <validValue name="AWAITING_RESEND"
-                        description="Login had too high a sequence number and a resend or gap fill is required.">4</validValue>
             <validValue name="LOGGING_OUT"
                         description="Session is trying to send logout, will retry sending until not backpressured">5</validValue>
             <validValue name="LOGGING_OUT_AND_DISCONNECTING"
@@ -137,9 +143,9 @@
             <validValue name="MISSING_LOG_ENTRIES">2</validValue>
         </enum>
 
-        <enum name="Vote" encodingType="uint8">
-            <validValue name="FOR">0</validValue>
-            <validValue name="AGAINST">1</validValue>
+        <enum name="Bool" encodingType="uint8">
+            <validValue name="TRUE">0</validValue>
+            <validValue name="FALSE">1</validValue>
         </enum>
 
         <enum name="SessionReplyStatus" encodingType="uint8">
@@ -157,10 +163,12 @@
                         description="Can't replay to that sequence number: haven't archived it yet">5</validValue>
             <validValue name="MISSING_MESSAGES"
                         description="We can't find the required number of messages in the log">6</validValue>
+            <validValue name="INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES"
+                        description="You've requested replay of messages, but EngineConfiguration has disabled required logging of messsages">7</validValue>
         </enum>
 
-        <enum name="LogonStatus" encodingType="uint8">
-            <validValue name="NEW">0</validValue>
+        <enum name="SessionStatus" encodingType="uint8">
+            <validValue name="SESSION_HANDOVER">0</validValue>
             <validValue name="LIBRARY_NOTIFICATION">1</validValue>
         </enum>
     </types>
@@ -175,6 +183,10 @@
         <field name="resetSequenceNumber" id="6" type="ResetSequenceNumber"/>
         <field name="correlationId" id="7" type="CorrelationId"/>
         <field name="requestedInitialSentSequenceNumber" id="17" type="int32"/>
+        <field name="closedResendInterval" id="18" type="Bool" />
+        <field name="resendRequestChunkSize" id="19" type="int32" />
+        <field name="sendRedundantResendRequests" id="20" type="Bool" />
+        <field name="enableLastMsgSeqNumProcessed" id="21" type="Bool" />
         <data name="host" id="8" type="Utf8String"/>
         <data name="senderCompId" id="9" type="Utf8String"/>
         <data name="senderSubId" id="10" type="Utf8String"/>
@@ -210,6 +222,7 @@
         <field name="state" id="6" type="SessionState"/>
         <field name="lastSentSequenceNumber" id="7" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="8" type="int32"/>
+        <field name="awaitingResend" id="11" type="AwaitingResend" />
         <data name="username" id="9" type="Utf8String"/>
         <data name="password" id="10" type="Utf8String"/>
     </sbe:message>
@@ -221,6 +234,12 @@
         <field name="sessionId" id="3" type="FixSessionId"/>
         <field name="lastReceivedSequenceNumber" id="4" type="int32"/>
         <field name="sequenceIndex" id="5" type="SequenceIndex" />
+    </sbe:message>
+
+    <sbe:message name="MidConnectionDisconnect" id="46"
+                 description="disconnect, even though you haven't finished connecting">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="correlationId" id="2" type="CorrelationId"/>
     </sbe:message>
 
     <!-- Messages From Engine To Library -->
@@ -235,23 +254,6 @@
         <data name="address" id="2" type="Utf8String"/>
     </sbe:message>
 
-    <!--
-    <sbe:message name="ManageConnection" id="10" description="Here's a connection to manage">
-        <field name="libraryId" id="1" type="LibraryId"/>
-        <field name="connection" id="2" type="ConnectionId"/>
-        <field name="session" id="10" type="FixSessionId"/>
-        <field name="logonTime" id="12" type="Timestamp" />
-        <field name="connectionType" id="3" type="ConnectionType"/>
-        <field name="lastSentSequenceNumber" id="4" type="int32"/>
-        <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
-        <field name="sessionState" id="6" type="SessionState"/>
-        <field name="heartbeatIntervalInS" id="7" type="int32"/>
-        <field name="replyToId" id="8" type="CorrelationId"/>
-        <field name="sequenceIndex" id="11" type="SequenceIndex" />
-        <data name="address" id="9" type="Utf8String"/>
-    </sbe:message>
-    -->
-
     <sbe:message name="ResetSessionIds" id="36" description="All session ids have been reset">
     </sbe:message>
 
@@ -261,42 +263,29 @@
         <field name="session" id="3" type="FixSessionId"/>
         <field name="lastSentSequenceNumber" id="4" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
-        <field name="logonTime" id="12" type="Timestamp" />
-        <field name="logonStatus" id="6" type="LogonStatus"/>
-        <field name="slowStatus" id="7" type="SlowStatus"/>
-        <field name="connectionType" id="3" type="ConnectionType"/>
-        <field name="sessionState" id="6" type="SessionState"/>
-        <field name="heartbeatIntervalInS" id="7" type="int32"/>
-        <field name="replyToId" id="8" type="CorrelationId"/>
-        <field name="sequenceIndex" id="11" type="SequenceIndex" />
-        <data name="localCompId" id="8" type="Utf8String"/>
-        <data name="localSubId" id="9" type="Utf8String"/>
-        <data name="localLocationId" id="10" type="Utf8String"/>
-        <data name="remoteCompId" id="11" type="Utf8String"/>
-        <data name="remoteSubId" id="12" type="Utf8String"/>
-        <data name="remoteLocationId" id="13" type="Utf8String"/>
-        <data name="address" id="9" type="Utf8String"/>
+        <field name="logonTime" id="6" type="Timestamp" />
+        <field name="sessionStatus" id="7" type="SessionStatus"/>
+        <field name="slowStatus" id="8" type="SlowStatus"/>
+        <field name="connectionType" id="9" type="ConnectionType"/>
+        <field name="sessionState" id="10" type="SessionState"/>
+        <field name="heartbeatIntervalInS" id="11" type="int32"/>
+        <field name="replyToId" id="12" type="CorrelationId"/>
+        <field name="sequenceIndex" id="13" type="SequenceIndex" />
+        <field name="awaitingResend" id="21" type="AwaitingResend" />
+        <field name="closedResendInterval" id="22" type="Bool" />
+        <field name="resendRequestChunkSize" id="23" type="int32" />
+        <field name="sendRedundantResendRequests" id="24" type="Bool" />
+        <field name="enableLastMsgSeqNumProcessed" id="25" type="Bool" />
+        <data name="localCompId" id="14" type="Utf8String"/>
+        <data name="localSubId" id="15" type="Utf8String"/>
+        <data name="localLocationId" id="16" type="Utf8String"/>
+        <data name="remoteCompId" id="17" type="Utf8String"/>
+        <data name="remoteSubId" id="18" type="Utf8String"/>
+        <data name="remoteLocationId" id="19" type="Utf8String"/>
+        <data name="address" id="20" type="Utf8String"/>
+        <data name="username" id="26" type="Utf8String"/>
+        <data name="password" id="27" type="Utf8String"/>
     </sbe:message>
-
-    <!--
-    <sbe:message name="SessionExists" id="9" description="A session exists at the gateway">
-        <field name="libraryId" id="1" type="LibraryId"/>
-        <field name="connection" id="2" type="ConnectionId"/>
-        <field name="session" id="3" type="FixSessionId"/>
-        <field name="lastSentSequenceNumber" id="4" type="int32"/>
-        <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
-        <field name="logonStatus" id="6" type="LogonStatus"/>
-        <field name="slowStatus" id="7" type="SlowStatus"/>
-        <data name="localCompId" id="8" type="Utf8String"/>
-        <data name="localSubId" id="9" type="Utf8String"/>
-        <data name="localLocationId" id="10" type="Utf8String"/>
-        <data name="remoteCompId" id="11" type="Utf8String"/>
-        <data name="remoteSubId" id="12" type="Utf8String"/>
-        <data name="remoteLocationId" id="13" type="Utf8String"/>
-        <data name="username" id="14" type="Utf8String"/>
-        <data name="password" id="15" type="Utf8String"/>
-    </sbe:message>
-    -->
 
     <sbe:message name="Error" id="13" description="An error has occurred">
         <field name="errorType" id="1" type="GatewayError"/>
@@ -358,7 +347,9 @@
         <field name="libraryId" id="6" type="LibraryId"/>
         <field name="bytesSent" id="7" type="int32" />
         <field name="sequenceIndex" id="8" type="SequenceIndex" />
-        <data name="body" id="9" type="AsciiString"/>
+        <!-- only visible outbound -->
+        <field name="sequenceNumber" id="9" type="int32" />
+        <data name="body" id="10" type="AsciiString"/>
     </sbe:message>
 
     <sbe:message name="ApplicationHeartbeat" id="16"
@@ -367,20 +358,8 @@
         <field name="connectCorrelationId" id="2" type="CorrelationId"/>
     </sbe:message>
 
-    <sbe:message name="ReplicatedMessage" id="41"
-                 description="A header for replicated messages">
-        <field name="libraryId" id="1" type="LibraryId"/>
-        <field name="position" id="2" type="int64"/>
-    </sbe:message>
-
     <sbe:message name="ResetSequenceNumber" id="42"
                  description="Tells the sequence index to reset the sequence number of a logged out session">
-        <field name="session" id="2" type="FixSessionId"/>
-    </sbe:message>
-
-    <sbe:message name="ResetLibrarySequenceNumber" id="44"
-                 description="Tells the library to reset the sequence number of a session that it owns">
-        <field name="libraryId" id="1" type="LibraryId"/>
         <field name="session" id="2" type="FixSessionId"/>
     </sbe:message>
 
@@ -389,6 +368,17 @@
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="connectionId" id="2" type="ConnectionId"/>
         <field name="status" id="3" type="SlowStatus"/>
+    </sbe:message>
+
+    <sbe:message name="ResetLibrarySequenceNumber" id="44"
+                 description="Tells the library to reset the sequence number of a session that it owns">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="session" id="2" type="FixSessionId"/>
+    </sbe:message>
+
+    <sbe:message name="ReplayComplete" id="45"
+                 description="Replayer tells SenderEndPoint that the current replay is complete">
+        <field name="connection" id="1" type="ConnectionId"/>
     </sbe:message>
 
 </sbe:messageSchema>

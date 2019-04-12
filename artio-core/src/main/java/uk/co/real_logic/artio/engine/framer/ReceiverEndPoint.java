@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
-import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
@@ -24,11 +23,9 @@ import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.dictionary.StandardFixConstants;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
-import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.artio.messages.*;
+import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
-import uk.co.real_logic.artio.validation.PersistenceLevel;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -41,14 +38,11 @@ import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.dictionary.StandardFixConstants.MIN_MESSAGE_SIZE;
 import static uk.co.real_logic.artio.dictionary.StandardFixConstants.START_OF_HEADER;
-import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
-import static uk.co.real_logic.artio.messages.SequenceNumberType.TRANSIENT;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
+import static uk.co.real_logic.artio.util.AsciiBuffer.SEPARATOR;
 import static uk.co.real_logic.artio.util.AsciiBuffer.UNKNOWN_INDEX;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.LOCAL_ARCHIVE;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.REPLICATED;
 
 /**
  * Handles incoming data from sockets.
@@ -70,27 +64,24 @@ class ReceiverEndPoint
     private static final byte CHECKSUM3 = (byte)'=';
 
     private static final int MIN_CHECKSUM_SIZE = " 10=".length() + 1;
+    private static final int CHECKSUM_TAG_SIZE = "10=".length();
     private static final int SOCKET_DISCONNECTED = -1;
     private static final int UNKNOWN_MESSAGE_TYPE = -1;
+    private static final int BREAK = -1;
 
     private final LogonDecoder logon = new LogonDecoder();
 
     private final TcpChannel channel;
-    private final GatewayPublication libraryPublication;
-    private final GatewayPublication clusterablePublication;
+    private final GatewayPublication publication;
     private final long connectionId;
     private final SessionContexts sessionContexts;
-    private final SequenceNumberIndexReader sentSequenceNumberIndex;
-    private final SequenceNumberIndexReader receivedSequenceNumberIndex;
     private final AtomicCounter messagesRead;
     private final Framer framer;
     private final ErrorHandler errorHandler;
     private final MutableAsciiBuffer buffer;
     private final ByteBuffer byteBuffer;
-    private final LongHashSet replicatedConnectionIds;
     private final GatewaySessions gatewaySessions;
 
-    private GatewayPublication publication;
     private int libraryId;
     private GatewaySession gatewaySession;
     private long sessionId;
@@ -100,54 +91,42 @@ class ReceiverEndPoint
     private SelectionKey selectionKey;
     private boolean isPaused = false;
 
+    private AuthenticationResult backpressuredAuthenticationResult;
+    private int backpressuredAuthenticationOffset;
+    private int backpressuredAuthenticationLength;
+
     ReceiverEndPoint(
         final TcpChannel channel,
         final int bufferSize,
-        final GatewayPublication libraryPublication,
-        final GatewayPublication clusterablePublication,
+        final GatewayPublication publication,
         final long connectionId,
         final long sessionId,
         final int sequenceIndex,
         final SessionContexts sessionContexts,
-        final SequenceNumberIndexReader sentSequenceNumberIndex,
-        final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final AtomicCounter messagesRead,
         final Framer framer,
         final ErrorHandler errorHandler,
         final int libraryId,
-        final SequenceNumberType sequenceNumberType,
-        final ConnectionType connectionType,
-        final LongHashSet replicatedConnectionIds,
         final GatewaySessions gatewaySessions)
     {
-        Objects.requireNonNull(clusterablePublication, "clusterablePublication");
-        Objects.requireNonNull(libraryPublication, "libraryPublication");
+        Objects.requireNonNull(publication, "publication");
         Objects.requireNonNull(sessionContexts, "sessionContexts");
         Objects.requireNonNull(gatewaySessions, "gatewaySessions");
 
         this.channel = channel;
-        this.clusterablePublication = clusterablePublication;
-        this.libraryPublication = libraryPublication;
+        this.publication = publication;
         this.connectionId = connectionId;
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
         this.sessionContexts = sessionContexts;
-        this.sentSequenceNumberIndex = sentSequenceNumberIndex;
-        this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.messagesRead = messagesRead;
         this.framer = framer;
         this.errorHandler = errorHandler;
         this.libraryId = libraryId;
-        this.replicatedConnectionIds = replicatedConnectionIds;
         this.gatewaySessions = gatewaySessions;
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
         buffer = new MutableAsciiBuffer(byteBuffer);
-        // Initiator sessions are persistent if the sequence numbers are expected to be persistent.
-        if (connectionType == INITIATOR)
-        {
-            choosePublication(sequenceNumberType == TRANSIENT ? LOCAL_ARCHIVE : REPLICATED);
-        }
     }
 
     public long connectionId()
@@ -155,11 +134,16 @@ class ReceiverEndPoint
         return connectionId;
     }
 
-    int pollForData()
+    int poll()
     {
         if (isPaused || hasDisconnected())
         {
             return 0;
+        }
+
+        if (backpressuredAuthenticationResult != null)
+        {
+            return retryBackpressuredAuthenticationResult();
         }
 
         try
@@ -180,6 +164,33 @@ class ReceiverEndPoint
             }
 
             onDisconnectDetected();
+            return 1;
+        }
+    }
+
+    private int retryBackpressuredAuthenticationResult()
+    {
+        if (gatewaySessions.lookupSequenceNumbers(
+            gatewaySession, backpressuredAuthenticationResult.requiredPosition()))
+        {
+            backpressuredAuthenticationResult = null;
+
+            int offset = this.backpressuredAuthenticationOffset;
+            final int length = this.backpressuredAuthenticationLength;
+
+            if (!saveMessage(offset, LogonDecoder.MESSAGE_TYPE, length))
+            {
+                return offset;
+            }
+            else
+            {
+                offset += length;
+                moveRemainingDataToBufferStart(offset);
+                return offset;
+            }
+        }
+        else
+        {
             return 1;
         }
     }
@@ -230,7 +241,7 @@ class ReceiverEndPoint
 
                 final int startOfChecksumTag = endOfBodyLength + getBodyLength(startOfBodyLength, endOfBodyLength);
 
-                final int endOfChecksumTag = startOfChecksumTag + 3;
+                final int endOfChecksumTag = startOfChecksumTag + MIN_CHECKSUM_SIZE;
                 if (endOfChecksumTag >= usedBufferData)
                 {
                     break;
@@ -238,13 +249,12 @@ class ReceiverEndPoint
 
                 if (!validateBodyLength(startOfChecksumTag))
                 {
-                    if (saveInvalidMessage(offset, startOfChecksumTag))
+                    final int endOfMessage = onInvalidBodyLength(offset, startOfChecksumTag);
+                    if (endOfMessage == BREAK)
                     {
-                        return offset;
+                        break;
                     }
-                    close(INVALID_BODY_LENGTH);
-                    removeEndpointFromFramer();
-                    break;
+                    return endOfMessage;
                 }
 
                 final int startOfChecksumValue = startOfChecksumTag + MIN_CHECKSUM_SIZE;
@@ -255,10 +265,9 @@ class ReceiverEndPoint
                     break;
                 }
 
-                // TODO(Nick): We already scan for the message type so we can check for logon messages here?
                 final int messageType = getMessageType(endOfBodyLength, endOfMessage);
                 final int length = (endOfMessage + 1) - offset;
-                if (validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
+                if (!validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
                 {
                     if (saveInvalidChecksumMessage(offset, messageType, length))
                     {
@@ -267,13 +276,13 @@ class ReceiverEndPoint
                 }
                 else
                 {
-                    if (UNKNOWN == sessionId && checkSessionId(offset, length))
+                    if (requiresAuthentication() && !authenticate(offset, length))
                     {
                         return offset;
                     }
 
                     messagesRead.incrementOrdered();
-                    if (saveMessage(offset, messageType, length))
+                    if (!saveMessage(offset, messageType, length))
                     {
                         return offset;
                     }
@@ -297,6 +306,41 @@ class ReceiverEndPoint
         return offset;
     }
 
+    private int onInvalidBodyLength(final int offset, final int startOfChecksumTag)
+    {
+        int checksumTagScanPoint = startOfChecksumTag + 1;
+        while (!isStartOfChecksum(checksumTagScanPoint))
+        {
+            final int endOfScanPoint = checksumTagScanPoint + CHECKSUM_TAG_SIZE;
+            if (endOfScanPoint >= usedBufferData)
+            {
+                return BREAK;
+            }
+
+            checksumTagScanPoint++;
+        }
+
+        final int endOfScanPoint = checksumTagScanPoint + CHECKSUM_TAG_SIZE;
+        final int endOfMessage = buffer.scan(endOfScanPoint, usedBufferData, SEPARATOR) + 1;
+        if (endOfMessage > usedBufferData)
+        {
+            return BREAK;
+        }
+
+        if (saveInvalidMessage(offset, endOfMessage))
+        {
+            return offset;
+        }
+
+        moveRemainingDataToBufferStart(endOfMessage);
+        return offset;
+    }
+
+    private boolean requiresAuthentication()
+    {
+        return UNKNOWN == sessionId;
+    }
+
     private boolean validateChecksum(
         final int endOfMessage,
         final int startOfChecksumValue,
@@ -305,7 +349,7 @@ class ReceiverEndPoint
     {
         final int expectedChecksum = buffer.getInt(startOfChecksumValue - 1, endOfMessage);
         final int computedChecksum = buffer.computeChecksum(offset, startOfChecksumTag + 1);
-        return expectedChecksum != computedChecksum;
+        return expectedChecksum == computedChecksum;
     }
 
     private int scanEndOfMessage(final int startOfChecksumValue)
@@ -346,8 +390,7 @@ class ReceiverEndPoint
         return buffer.scan(startScan + 1, usedBufferData - 1, START_OF_HEADER);
     }
 
-
-    private boolean checkSessionId(final int offset, final int length)
+    private boolean authenticate(final int offset, final int length)
     {
         if (sessionId != UNKNOWN)
         {
@@ -356,33 +399,29 @@ class ReceiverEndPoint
 
         logon.decode(buffer, offset, length);
 
-        final AuthenticationResult authResult = gatewaySessions.authenticateAndInitiate(
+        final AuthenticationResult authenticationResult = gatewaySessions.authenticate(
             logon,
             connectionId(),
-            sentSequenceNumberIndex,
-            receivedSequenceNumberIndex,
             gatewaySession);
 
-        if (authResult.isDuplicateSession())
+        if (!authenticationResult.isValid())
         {
-            close(DisconnectReason.DUPLICATE_SESSION);
-            removeEndpointFromFramer();
-
-            return true;
-        }
-
-        if (!authResult.isValid())
-        {
-            onInvalidLogon();
-            return true;
+            completeDisconnect(authenticationResult.reason());
+            return false;
         }
 
         sessionId = gatewaySession.sessionId();
         sequenceIndex = gatewaySession.sequenceIndex();
 
-        choosePublication(gatewaySession.persistenceLevel());
+        if (authenticationResult.isBackPressured())
+        {
+            backpressuredAuthenticationResult = authenticationResult;
+            backpressuredAuthenticationOffset = offset;
+            backpressuredAuthenticationLength = length;
+            return false;
+        }
 
-        return false;
+        return true;
     }
 
     private boolean stashIfBackPressured(final int offset, final long position)
@@ -406,21 +445,27 @@ class ReceiverEndPoint
             sessionId,
             sequenceIndex,
             connectionId,
-            OK);
+            OK,
+            0);
 
         if (Pressure.isBackPressured(position))
         {
             moveRemainingDataToBufferStart(offset);
-            return true;
+            return false;
         }
         else
         {
             gatewaySession.onMessage(buffer, offset, length, messageType, sessionId);
-            return false;
+            return true;
         }
     }
 
     private boolean validateBodyLength(final int startOfChecksumTag)
+    {
+        return isStartOfChecksum(startOfChecksumTag);
+    }
+
+    private boolean isStartOfChecksum(final int startOfChecksumTag)
     {
         return buffer.getByte(startOfChecksumTag) == CHECKSUM0 &&
             buffer.getByte(startOfChecksumTag + 1) == CHECKSUM1 &&
@@ -472,23 +517,24 @@ class ReceiverEndPoint
 
     private boolean saveInvalidMessage(final int offset, final int startOfChecksumTag)
     {
-        final long position = libraryPublication.saveMessage(
+        final long position = publication.saveMessage(
             buffer,
             offset,
-            libraryId,
             startOfChecksumTag,
+            libraryId,
             UNKNOWN_MESSAGE_TYPE,
             sessionId,
             sequenceIndex,
             connectionId,
-            INVALID_BODYLENGTH);
+            INVALID_BODYLENGTH,
+            0);
 
         return stashIfBackPressured(offset, position);
     }
 
-    private boolean saveInvalidMessage(final int offset)
+    private void saveInvalidMessage(final int offset)
     {
-        final long position = libraryPublication.saveMessage(buffer,
+        final long position = publication.saveMessage(buffer,
             offset,
             usedBufferData,
             libraryId,
@@ -496,7 +542,8 @@ class ReceiverEndPoint
             sessionId,
             sequenceIndex,
             connectionId,
-            INVALID);
+            INVALID,
+            0);
 
         final boolean backPressured = stashIfBackPressured(offset, position);
 
@@ -504,8 +551,6 @@ class ReceiverEndPoint
         {
             clearBuffer();
         }
-
-        return backPressured;
     }
 
     private void clearBuffer()
@@ -515,7 +560,7 @@ class ReceiverEndPoint
 
     private boolean saveInvalidChecksumMessage(final int offset, final int messageType, final int length)
     {
-        final long position = libraryPublication.saveMessage(buffer,
+        final long position = publication.saveMessage(buffer,
             offset,
             length,
             libraryId,
@@ -523,7 +568,8 @@ class ReceiverEndPoint
             sessionId,
             sequenceIndex,
             connectionId,
-            INVALID_CHECKSUM);
+            INVALID_CHECKSUM,
+            0);
 
         return stashIfBackPressured(offset, position);
     }
@@ -558,25 +604,23 @@ class ReceiverEndPoint
 
     private void onDisconnectDetected()
     {
-        disconnectEndpoint(REMOTE_DISCONNECT);
-        removeEndpointFromFramer();
+        completeDisconnect(REMOTE_DISCONNECT);
     }
 
     void onNoLogonDisconnect()
     {
-        disconnectEndpoint(NO_LOGON);
-        removeEndpointFromFramer();
+        completeDisconnect(NO_LOGON);
     }
 
-    private void onInvalidLogon()
+    private void completeDisconnect(final DisconnectReason reason)
     {
-        disconnectEndpoint(DisconnectReason.FAILED_AUTHENTICATION);
+        disconnectEndpoint(reason);
         removeEndpointFromFramer();
     }
 
     private void disconnectEndpoint(final DisconnectReason reason)
     {
-        framer.schedule(() -> libraryPublication.saveDisconnect(libraryId, connectionId, reason));
+        framer.schedule(() -> publication.saveDisconnect(libraryId, connectionId, reason));
 
         sessionContexts.onDisconnect(sessionId);
         if (selectionKey != null)
@@ -620,18 +664,5 @@ class ReceiverEndPoint
     void play()
     {
         isPaused = false;
-    }
-
-    private void choosePublication(final PersistenceLevel persistenceLevel)
-    {
-        if (persistenceLevel == REPLICATED)
-        {
-            publication = clusterablePublication;
-            replicatedConnectionIds.add(connectionId);
-        }
-        else
-        {
-            publication = libraryPublication;
-        }
     }
 }

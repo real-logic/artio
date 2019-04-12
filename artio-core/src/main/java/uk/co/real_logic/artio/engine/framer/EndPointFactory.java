@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,26 +16,20 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
-import org.agrona.collections.LongHashSet;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.artio.messages.ConnectionType;
-import uk.co.real_logic.artio.messages.SequenceNumberType;
+import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
-
-import java.io.IOException;
 
 class EndPointFactory
 {
     private final EngineConfiguration configuration;
     private final SessionContexts sessionContexts;
     private final GatewayPublication inboundLibraryPublication;
-    private final GatewayPublication inboundClusterablePublication;
     private final FixCounters fixCounters;
     private final ErrorHandler errorHandler;
-    private final LongHashSet replicatedConnectionIds;
     private final GatewaySessions gatewaySessions;
+    private final SenderSequenceNumbers senderSequenceNumbers;
 
     private SlowPeeker replaySlowPeeker;
 
@@ -43,20 +37,18 @@ class EndPointFactory
         final EngineConfiguration configuration,
         final SessionContexts sessionContexts,
         final GatewayPublication inboundLibraryPublication,
-        final GatewayPublication inboundClusterablePublication,
         final FixCounters fixCounters,
         final ErrorHandler errorHandler,
-        final LongHashSet replicatedConnectionIds,
-        final GatewaySessions gatewaySessions)
+        final GatewaySessions gatewaySessions,
+        final SenderSequenceNumbers senderSequenceNumbers)
     {
         this.configuration = configuration;
         this.sessionContexts = sessionContexts;
         this.inboundLibraryPublication = inboundLibraryPublication;
-        this.inboundClusterablePublication = inboundClusterablePublication;
         this.fixCounters = fixCounters;
         this.errorHandler = errorHandler;
-        this.replicatedConnectionIds = replicatedConnectionIds;
         this.gatewaySessions = gatewaySessions;
+        this.senderSequenceNumbers = senderSequenceNumbers;
     }
 
     ReceiverEndPoint receiverEndPoint(
@@ -65,30 +57,20 @@ class EndPointFactory
         final long sessionId,
         final int sequenceIndex,
         final int libraryId,
-        final Framer framer,
-        final SequenceNumberIndexReader sentSequenceNumberIndex,
-        final SequenceNumberIndexReader receivedSequenceNumberIndex,
-        final SequenceNumberType sequenceNumberType,
-        final ConnectionType connectionType) throws IOException
+        final Framer framer)
     {
         return new ReceiverEndPoint(
             channel,
             configuration.receiverBufferSize(),
             inboundLibraryPublication,
-            inboundClusterablePublication,
             connectionId,
             sessionId,
             sequenceIndex,
             sessionContexts,
-            sentSequenceNumberIndex,
-            receivedSequenceNumberIndex,
             fixCounters.messagesRead(connectionId, channel.remoteAddress()),
             framer,
             errorHandler,
             libraryId,
-            sequenceNumberType,
-            connectionType,
-            replicatedConnectionIds,
             gatewaySessions
         );
     }
@@ -98,7 +80,7 @@ class EndPointFactory
         final long connectionId,
         final int libraryId,
         final BlockablePosition libraryBlockablePosition,
-        final Framer framer) throws IOException
+        final Framer framer)
     {
         final String remoteAddress = channel.remoteAddress();
         return new SenderEndPoint(
@@ -113,8 +95,8 @@ class EndPointFactory
             framer,
             configuration.senderMaxBytesInBuffer(),
             configuration.slowConsumerTimeoutInMs(),
-            System.currentTimeMillis()
-        );
+            System.currentTimeMillis(),
+            senderSequenceNumbers.onNewSender(connectionId));
     }
 
     void replaySlowPeeker(final SlowPeeker replaySlowPeeker)

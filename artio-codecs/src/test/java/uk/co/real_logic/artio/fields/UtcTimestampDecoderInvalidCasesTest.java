@@ -19,8 +19,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import uk.co.real_logic.artio.util.AsciiBuffer;
-import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.Arrays;
 
@@ -54,7 +52,12 @@ public class UtcTimestampDecoderInvalidCasesTest
     @Test(expected = IllegalArgumentException.class)
     public void cannotParseTimestamp()
     {
-        final AsciiBuffer timestampBytes = new MutableAsciiBuffer(timestamp.getBytes(US_ASCII));
-        UtcTimestampDecoder.decode(timestampBytes, 0, timestamp.length());
+        new UtcTimestampDecoder().decode(timestamp.getBytes(US_ASCII));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void cannotParseTimestampMicros()
+    {
+        new UtcTimestampDecoder().decodeMicros(timestamp.getBytes(US_ASCII));
     }
 }

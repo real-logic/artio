@@ -15,38 +15,49 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import org.agrona.LangUtil;
 import org.agrona.collections.IntHashSet;
 import org.agrona.generation.OutputManager;
-
-
+import uk.co.real_logic.artio.builder.CharRepresentable;
+import uk.co.real_logic.artio.builder.IntRepresentable;
+import uk.co.real_logic.artio.builder.StringRepresentable;
 import uk.co.real_logic.artio.dictionary.CharArrayMap;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Field;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
 import uk.co.real_logic.artio.dictionary.ir.Field.Value;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import static java.lang.String.format;
 import static java.util.stream.Collectors.joining;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.INDENT;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.Var;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.constructor;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.optionalStaticInit;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.*;
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
 
 public final class EnumGenerator
 {
+    static final String NULL_VAL_NAME = "NULL_VAL";
+    public static final String NULL_VAL_CHAR_AS_STRING = Character.toString(ENUM_MISSING_CHAR);
+    public static final String NULL_VAL_INT_AS_STRING = Integer.toString(ENUM_MISSING_INT);
+    public static final String NULL_VAL_STRING = ENUM_MISSING_STRING;
+
+    static final String UNKNOWN_NAME = "ARTIO_UNKNOWN";
+    public static final String UNKNOWN_CHAR_AS_STRING = Character.toString(ENUM_UNKNOWN_CHAR);
+    public static final String UNKNOWN_INT_AS_STRING = Integer.toString(ENUM_UNKNOWN_INT);
+    public static final String UNKNOWN_STRING = ENUM_UNKNOWN_STRING;
+
     private final Dictionary dictionary;
     private final String builderPackage;
     private final OutputManager outputManager;
 
-    public EnumGenerator(final Dictionary dictionary, final String builderPackage, final OutputManager outputManager)
+    public EnumGenerator(
+        final Dictionary dictionary,
+        final String builderPackage,
+        final OutputManager outputManager)
     {
         this.dictionary = dictionary;
         this.builderPackage = builderPackage;
@@ -73,6 +84,41 @@ public final class EnumGenerator
         final String enumName = field.name();
         final Type type = field.type();
         final List<Value> values = field.values();
+        final String nullValue;
+        final String unknownValue;
+        final String interfaceToImplement;
+        final String interfaceToImport;
+
+        if (isCharBased(type))
+        {
+            nullValue = NULL_VAL_CHAR_AS_STRING;
+            unknownValue = UNKNOWN_CHAR_AS_STRING;
+            interfaceToImplement = "Char";
+            interfaceToImport = importFor(CharRepresentable.class);
+        }
+        else if (type.isIntBased())
+        {
+            nullValue = NULL_VAL_INT_AS_STRING;
+            unknownValue = UNKNOWN_INT_AS_STRING;
+            interfaceToImplement = "Int";
+            interfaceToImport = importFor(IntRepresentable.class);
+        }
+        else if (type.isStringBased())
+        {
+            nullValue = NULL_VAL_STRING;
+            unknownValue = UNKNOWN_STRING;
+            interfaceToImplement = "String";
+            interfaceToImport = importFor(StringRepresentable.class);
+        }
+        else
+        {
+            System.err.printf("Unable to generate an enum for type: %s. No sentinel defined for %s\n", enumName, type);
+            return;
+        }
+
+        final List<Value> valuesWithSentinels = new ArrayList<>(values);
+        valuesWithSentinels.add(new Value(nullValue, NULL_VAL_NAME));
+        valuesWithSentinels.add(new Value(unknownValue, UNKNOWN_NAME));
 
         outputManager.withOutput(enumName, (out) ->
         {
@@ -83,9 +129,10 @@ public final class EnumGenerator
                 out.append(importFor(IntHashSet.class));
                 out.append(importFor(Map.class));
                 out.append(importFor(HashMap.class));
-                out.append(generateEnumDeclaration(enumName));
+                out.append(interfaceToImport);
+                out.append(generateEnumDeclaration(enumName, interfaceToImplement));
 
-                out.append(generateEnumValues(values, type));
+                out.append(generateEnumValues(valuesWithSentinels, type));
 
                 out.append(generateEnumBody(enumName, type));
                 out.append(generateEnumLookupMethod(enumName, values, type));
@@ -106,9 +153,15 @@ public final class EnumGenerator
         });
     }
 
-    private String generateEnumDeclaration(final String name)
+    private boolean isCharBased(final Type type)
     {
-        return "public enum " + name + "\n{\n";
+        return type == Type.CHAR || type == Type.MULTIPLECHARVALUE;
+    }
+
+    private String generateEnumDeclaration(final String name, final String interfaceToImplement)
+    {
+        final String format = "public enum " + name + " implements %sRepresentable\n{\n";
+        return String.format(format, interfaceToImplement);
     }
 
     private String generateEnumValues(final List<Value> allValues, final Type type)
@@ -137,7 +190,7 @@ public final class EnumGenerator
         }
 
         final String optionalCharArrayDecode = optionalCharArrayDecode(name, allValues, type);
-        final String enumValidation = enumValidation(name, allValues, type);
+        final String enumValidation = enumValidation(allValues, type);
 
         final Var representation = representation(type);
 
@@ -154,17 +207,19 @@ public final class EnumGenerator
             "        switch(representation)\n" +
             "        {\n" +
             "%s" +
-            "        default: throw new IllegalArgumentException(\"Unknown: \" + representation);\n" +
+            "        default:\n" +
+            "            return %s;\n" +
             "        }\n" +
             "    }\n",
             optionalCharArrayDecode,
             enumValidation,
             name,
             representation.methodArgsDeclaration(),
-            cases);
+            cases,
+            UNKNOWN_NAME);
     }
 
-    private String enumValidation(final String typeName, final List<Value> allValues, final Type type)
+    private String enumValidation(final List<Value> allValues, final Type type)
     {
         switch (type)
         {
@@ -257,10 +312,16 @@ public final class EnumGenerator
                     "\n" +
                     "    public static %1$s decode(final char[] representation, final int length)\n" +
                     "    {\n" +
-                    "        return charMap.get(representation, length);\n" +
+                            "        final %1$s value = charMap.get(representation, length);\n" +
+                            "        if (value == null)\n" +
+                            "        {\n" +
+                            "            return %3$s;\n" +
+                            "        }\n" +
+                            "        return value;\n" +
                     "    }\n",
                     typeName,
-                    entries);
+                    entries,
+                    UNKNOWN_NAME);
             case MULTIPLECHARVALUE:
 
                 return format(

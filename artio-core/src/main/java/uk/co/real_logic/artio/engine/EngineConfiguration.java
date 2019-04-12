@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,15 @@
  */
 package uk.co.real_logic.artio.engine;
 
+import io.aeron.archive.client.AeronArchive;
 import org.agrona.CloseHelper;
-import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
-import uk.co.real_logic.artio.replication.ClusterConfiguration;
-import uk.co.real_logic.artio.replication.RoleHandler;
+import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
 
 import java.io.File;
@@ -33,14 +32,15 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ThreadFactory;
 import java.util.function.Function;
 
 import static java.lang.Integer.getInteger;
 import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
-import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysLocallyArchive;
-import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysReplicated;
+import static uk.co.real_logic.artio.library.SessionConfiguration.*;
+import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysUnindexed;
 
 /**
  * Configuration that exists for the entire duration of a fix gateway. Some options are configurable via
@@ -132,11 +132,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_SESSION_ID_BUFFER_SIZE = 4 * 1024 * 1024;
     public static final int DEFAULT_SENDER_MAX_BYTES_IN_BUFFER = 4 * 1024 * 1024;
     public static final int DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT = (int)SECONDS.toMillis(5);
-    public static final int DEFAULT_CLUSTER_TIMEOUT_IN_MS = 1000;
     public static final String DEFAULT_SESSION_ID_FILE = "session_id_buffer";
     public static final String DEFAULT_SEQUENCE_NUMBERS_SENT_FILE = "sequence_numbers_sent";
     public static final String DEFAULT_SEQUENCE_NUMBERS_RECEIVED_FILE = "sequence_numbers_received";
-    public static final short NO_NODE_ID = -1;
     public static final long DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS = 10_000;
     public static final ReplayHandler DEFAULT_REPLAY_HANDLER =
         (buffer, offset, length, libraryId, sessionId, sequenceIndex, messageType) ->
@@ -157,6 +155,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES = Collections.unmodifiableSet(defaultGapFillOnReplayMessageTypes);
     }
 
+    public static final int DEFAULT_OUTBOUND_REPLAY_STREAM = 3;
+    public static final int DEFAULT_ARCHIVE_REPLAY_STREAM = 4;
+    public static final int DEFAULT_ARCHIVE_SCANNER_STREAM = 5;
+
     private String host = null;
     private int port;
     private int replayIndexFileSize = getInteger(REPLAY_INDEX_FILE_SIZE_PROP, DEFAULT_REPLAY_INDEX_FILE_SIZE);
@@ -165,6 +167,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int loggerCacheSetSize = DEFAULT_LOGGER_CACHE_SET_SIZE;
     private boolean logInboundMessages = true;
     private boolean logOutboundMessages = true;
+    private boolean printStartupWarnings = true;
     private IdleStrategy framerIdleStrategy = backoffIdleStrategy();
     private IdleStrategy archiverIdleStrategy = backoffIdleStrategy();
     private AtomicBuffer sentSequenceNumberBuffer;
@@ -173,10 +176,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private MappedFile receivedSequenceNumberIndex;
     private MappedFile sessionIdBuffer;
     private Set<String> gapfillOnReplayMessageTypes = new HashSet<>(DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES);
-    private String clusterAeronChannel = null;
-    private short nodeId = NO_NODE_ID;
-    private IntHashSet otherNodes = new IntHashSet();
-    private long clusterTimeoutIntervalInMs = DEFAULT_CLUSTER_TIMEOUT_IN_MS;
+    private final AeronArchive.Context archiveContext = new AeronArchive.Context();
+    private ThreadFactory threadFactory;
 
     private int outboundLibraryFragmentLimit =
         getInteger(OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP, DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT);
@@ -201,11 +202,16 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     private String libraryAeronChannel = null;
     private Function<EngineConfiguration, TcpChannelSupplier> channelSupplierFactory = TcpChannelSupplier::new;
-    private RoleHandler roleHandler = ClusterConfiguration.DEFAULT_NODE_HANDLER;
     private SessionPersistenceStrategy sessionPersistenceStrategy;
     private long slowConsumerTimeoutInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
     private EngineScheduler scheduler = new DefaultEngineScheduler();
     private ReplayHandler replayHandler = DEFAULT_REPLAY_HANDLER;
+    private int outboundReplayStream = DEFAULT_OUTBOUND_REPLAY_STREAM;
+    private int archiveReplayStream = DEFAULT_ARCHIVE_REPLAY_STREAM;
+    private boolean acceptedSessionClosedResendInterval = DEFAULT_CLOSED_RESEND_INTERVAL;
+    private int acceptedSessionResendRequestChunkSize = NO_RESEND_REQUEST_CHUNK_SIZE;
+    private boolean acceptedSessionSendRedundantResendRequests = DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS;
+    private boolean acceptedEnableLastMsgSeqNumProcessed = DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -279,11 +285,14 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * Sets the size of index files.
+     * Sets the size of index files. This is the size in bytes for the replay index file that is used for each session.
+     * If you want to size in terms of the last N Fix message fragments that you have received then
+     * use the formula: INITIAL_RECORD_OFFSET + N * ReplayIndexDescriptor.RECORD_LENGTH.
      *
      * @param indexFileSize the size of index files.
      * @return this
      * @see EngineConfiguration#REPLAY_INDEX_FILE_SIZE_PROP
+     * @see EngineConfiguration#DEFAULT_REPLAY_INDEX_FILE_SIZE
      */
     public EngineConfiguration replayIndexFileSize(final int indexFileSize)
     {
@@ -296,7 +305,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * <p>
      * The logging and archival mechanism
      * has several caches of open memory mapped files which it stores streams of messages
-     * into. This and {@link this#loggerCacheNumSets} controls the size of those caches.
+     * into. This and {@link #loggerCacheNumSets} controls the size of those caches.
      * Should be increased if you see files being opened/closed in that area too frequently.
      * <p>
      * {@link org.agrona.collections.Int2ObjectCache} explains the difference between set size
@@ -314,9 +323,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * Sets the number of sets of in the logger's caches.
      *
+     * @see #loggerCacheSetSize(int)
+     *
      * @param loggerCacheNumSets the number of sets of in the logger's caches.
      * @return this
-     * @see this#loggerCacheSetSize(int)
      */
     public EngineConfiguration loggerCacheNumSets(final int loggerCacheNumSets)
     {
@@ -330,6 +340,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * Switch off if you don't want the logging system to store all inbound messages in the archival system.
      * <p>
      * Default: true.
+     *
+     * NB: if this configuration parameter is switched off then any replay requests will be gap filled.
      *
      * @param logInboundMessages logging of inbound messages.
      * @return this
@@ -354,6 +366,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration logOutboundMessages(final boolean logOutboundMessages)
     {
         this.logOutboundMessages = logOutboundMessages;
+        return this;
+    }
+
+    public EngineConfiguration printStartupWarnings(final boolean printStartupWarnings)
+    {
+        this.printStartupWarnings = printStartupWarnings;
         return this;
     }
 
@@ -438,71 +456,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
-    /**
-     * Sets the aeron channel to use for clustered communications.
-     *
-     * @param clusterAeronChannel the aeron channel to use for clustered communications.
-     * @return this
-     */
-    public EngineConfiguration clusterAeronChannel(final String clusterAeronChannel)
-    {
-        this.clusterAeronChannel = clusterAeronChannel;
-        return this;
-    }
-
-    /**
-     * Sets the node id for this node in the cluster.
-     *
-     * @param nodeId the node id for this node in the cluster.
-     * @return this
-     */
-    public EngineConfiguration nodeId(final short nodeId)
-    {
-        if (nodeId == NO_NODE_ID)
-        {
-            throw new IllegalArgumentException(NO_NODE_ID + " is reserved to mean that you don't have a node id");
-        }
-        this.nodeId = nodeId;
-        return this;
-    }
-
-    /**
-     * Adds the specified node ids of the other nodes in this cluster.
-     *
-     * @param otherNodes the ids to be added
-     * @return this
-     */
-    public EngineConfiguration addOtherNodes(final int... otherNodes)
-    {
-        for (final int otherNode : otherNodes)
-        {
-            this.otherNodes.add(otherNode);
-        }
-
-        return this;
-    }
-
-    /**
-     * Set the timeout interval on the cluster in milliseconds.
-     *
-     * @param clusterTimeoutIntervalInMs the timeout interval on the cluster in milliseconds.
-     * @return this
-     */
-    public EngineConfiguration clusterTimeoutIntervalInMs(final long clusterTimeoutIntervalInMs)
-    {
-        this.clusterTimeoutIntervalInMs = clusterTimeoutIntervalInMs;
-        return this;
-    }
-
     public EngineConfiguration channelSupplierFactory(final Function<EngineConfiguration, TcpChannelSupplier> value)
     {
         this.channelSupplierFactory = value;
-        return this;
-    }
-
-    public EngineConfiguration roleHandler(final RoleHandler roleHandler)
-    {
-        this.roleHandler = roleHandler;
         return this;
     }
 
@@ -554,6 +510,72 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration replayHandler(final ReplayHandler replayHandler)
     {
         this.replayHandler = replayHandler;
+        return this;
+    }
+
+    public EngineConfiguration outboundReplayStream(final int outboundReplayStream)
+    {
+        this.outboundReplayStream = outboundReplayStream;
+        return this;
+    }
+
+    public EngineConfiguration archiveReplayStream(final int archiveReplayStream)
+    {
+        this.archiveReplayStream = archiveReplayStream;
+        return this;
+    }
+
+    /**
+     * Sets the {@link SessionConfiguration#closedResendInterval()} property for accepted Sessions.
+     *
+     * @param acceptedSessionClosedResendInterval the {@link SessionConfiguration#closedResendInterval()} property for
+     *                                           accepted Sessions.
+     * @return this
+     */
+    public EngineConfiguration acceptedSessionClosedResendInterval(final boolean acceptedSessionClosedResendInterval)
+    {
+        this.acceptedSessionClosedResendInterval = acceptedSessionClosedResendInterval;
+        return this;
+    }
+
+    /**
+     * Sets the {@link SessionConfiguration#resendRequestChunkSize()} property for accepted Sessions.
+     *
+     * @param acceptedSessionResendRequestChunkSize the {@link SessionConfiguration#resendRequestChunkSize()} property
+     *                                             for accepted Sessions.
+     * @return this
+     */
+    public EngineConfiguration acceptedSessionResendRequestChunkSize(final int acceptedSessionResendRequestChunkSize)
+    {
+        this.acceptedSessionResendRequestChunkSize = acceptedSessionResendRequestChunkSize;
+        return this;
+    }
+
+    /**
+     * Sets the {@link SessionConfiguration#sendRedundantResendRequests()} property for accepted Sessions.
+     *
+     * @param acceptedSessionSendRedundantResendRequests the {@link SessionConfiguration#sendRedundantResendRequests()}
+     *                                                   property for accepted Sessions.
+     * @return this
+     */
+    public EngineConfiguration acceptedSessionSendRedundantResendRequests(
+        final boolean acceptedSessionSendRedundantResendRequests)
+    {
+        this.acceptedSessionSendRedundantResendRequests = acceptedSessionSendRedundantResendRequests;
+        return this;
+    }
+
+    /**
+     * Sets the {@link SessionConfiguration#enableLastMsgSeqNumProcessed()} property for accepted Sessions.
+     *
+     * @param acceptedEnableLastMsgSeqNumProcessed the {@link SessionConfiguration#enableLastMsgSeqNumProcessed()}
+     *                                             property for accepted Sessions.
+     * @return this
+     */
+    public EngineConfiguration acceptedEnableLastMsgSeqNumProcessed(
+        final boolean acceptedEnableLastMsgSeqNumProcessed)
+    {
+        this.acceptedEnableLastMsgSeqNumProcessed = acceptedEnableLastMsgSeqNumProcessed;
         return this;
     }
 
@@ -610,6 +632,21 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public boolean logOutboundMessages()
     {
         return logOutboundMessages;
+    }
+
+    public boolean printStartupWarnings()
+    {
+        return printStartupWarnings;
+    }
+
+    boolean logAnyMessages()
+    {
+        return logInboundMessages || logOutboundMessages;
+    }
+
+    public boolean logAllMessages()
+    {
+        return logInboundMessages && logOutboundMessages;
     }
 
     public IdleStrategy framerIdleStrategy()
@@ -677,36 +714,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return noLogonDisconnectTimeoutInMs;
     }
 
-    public String clusterAeronChannel()
-    {
-        return clusterAeronChannel;
-    }
-
-    public boolean isClustered()
-    {
-        return clusterAeronChannel() != null;
-    }
-
-    public short nodeId()
-    {
-        return nodeId;
-    }
-
-    public IntHashSet otherNodes()
-    {
-        return otherNodes;
-    }
-
-    public long clusterTimeoutIntervalInMs()
-    {
-        return clusterTimeoutIntervalInMs;
-    }
-
-    public RoleHandler roleHandler()
-    {
-        return roleHandler;
-    }
-
     public SessionPersistenceStrategy sessionPersistenceStrategy()
     {
         return sessionPersistenceStrategy;
@@ -728,7 +735,10 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * {@inheritDoc}
+     * Sets the aeron channel that libraries will use to communicate with this FixEngine instance.
+     *
+     * @param libraryAeronChannel the aeron channel that libraries will use to communicate with this FixEngine instance.
+     * @return this
      */
     public EngineConfiguration libraryAeronChannel(final String libraryAeronChannel)
     {
@@ -761,6 +771,57 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     {
         super.replyTimeoutInMs(replyTimeoutInMs);
         return this;
+    }
+
+    /**
+     * Sets factory for threads such as framer, archivingRunner, etc in EngineScheduler
+     * @param threadFactory factory for custom thread creating
+     * @return this
+     */
+    public EngineConfiguration threadFactory(final ThreadFactory threadFactory)
+    {
+        this.threadFactory = threadFactory;
+        return this;
+    }
+
+    public AeronArchive.Context aeronArchiveContext()
+    {
+        return archiveContext;
+    }
+
+    public int outboundReplayStream()
+    {
+        return outboundReplayStream;
+    }
+
+    public int archiveReplayStream()
+    {
+        return archiveReplayStream;
+    }
+
+    public boolean acceptedSessionClosedResendInterval()
+    {
+        return acceptedSessionClosedResendInterval;
+    }
+
+    public int acceptedSessionResendRequestChunkSize()
+    {
+        return acceptedSessionResendRequestChunkSize;
+    }
+
+    public boolean acceptedSessionSendRedundantResendRequests()
+    {
+        return acceptedSessionSendRedundantResendRequests;
+    }
+
+    public boolean acceptedEnableLastMsgSeqNumProcessed()
+    {
+        return acceptedEnableLastMsgSeqNumProcessed;
+    }
+
+    public ThreadFactory threadFactory()
+    {
+        return threadFactory;
     }
 
     public EngineConfiguration conclude()
@@ -808,7 +869,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
         if (sessionPersistenceStrategy() == null)
         {
-            sessionPersistenceStrategy(isClustered() ? alwaysReplicated() : alwaysLocallyArchive());
+            sessionPersistenceStrategy(alwaysUnindexed());
+        }
+
+        if (threadFactory == null)
+        {
+            threadFactory = Thread::new;
         }
 
         return this;

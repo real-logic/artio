@@ -21,7 +21,7 @@ import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-public class AcceptorSession extends Session
+public class AcceptorSession extends InternalSession
 {
     public AcceptorSession(
         final int defaultInterval,
@@ -38,7 +38,8 @@ public class AcceptorSession extends Session
         final int sequenceIndex,
         final SessionState state,
         final long reasonableTransmissionTimeInMs,
-        final MutableAsciiBuffer asciiBuffer)
+        final MutableAsciiBuffer asciiBuffer,
+        final boolean enableLastMsgSeqNumProcessed)
     {
         super(
             defaultInterval,
@@ -55,6 +56,7 @@ public class AcceptorSession extends Session
             initialSequenceNumber,
             sequenceIndex,
             reasonableTransmissionTimeInMs,
-            asciiBuffer);
+            asciiBuffer,
+            enableLastMsgSeqNumProcessed);
     }
 }

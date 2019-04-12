@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,18 +17,18 @@ package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
-import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
-import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.InOrder;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.artio.messages.*;
+import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.messages.MessageStatus;
+import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
@@ -40,13 +40,12 @@ import java.nio.channels.ClosedChannelException;
 import java.util.function.ToIntFunction;
 
 import static io.aeron.Publication.BACK_PRESSURED;
-import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES;
 import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
-import static uk.co.real_logic.artio.messages.SequenceNumberType.DETERMINE_AT_LOGON;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
 import static uk.co.real_logic.artio.util.TestMessages.*;
 
@@ -59,31 +58,29 @@ public class ReceiverEndPointTest
     private static final long POSITION = 1024L;
     private static final int BUFFER_SIZE = 16 * 1024;
     private static final int SEQUENCE_INDEX = 0;
+    private static final int BACKPRESSURED_REQUIRED_POSITION = 1024;
 
     private TcpChannel mockChannel = mock(TcpChannel.class);
-    private GatewayPublication libraryPublication = mock(GatewayPublication.class);
-    private GatewayPublication clusterablePublication = mock(GatewayPublication.class);
+    private GatewayPublication publication = mock(GatewayPublication.class);
     private SessionContexts mockSessionContexts = mock(SessionContexts.class);
     private AtomicCounter messagesRead = mock(AtomicCounter.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
-    private SequenceNumberIndexReader sentSequenceNumbers = mock(SequenceNumberIndexReader.class);
-    private SequenceNumberIndexReader receivedSequenceNumbers = mock(SequenceNumberIndexReader.class);
     private Framer framer = mock(Framer.class);
     private GatewaySession gatewaySession = mock(GatewaySession.class);
     private Session session = mock(Session.class);
-    private final LongHashSet replicatedConnectionIds = new LongHashSet();
-    private final AuthenticationResult authenticationResult = AuthenticationResult.authenticatedSession(
-        gatewaySession, 1, 1);
+    private final AuthenticationResult authenticationResult = new AuthenticationResult(gatewaySession);
+    private final AuthenticationResult backpressuredAuthenticationResult = new AuthenticationResult(
+        gatewaySession, BACKPRESSURED_REQUIRED_POSITION);
     private GatewaySessions mockGatewaySessions = mock(GatewaySessions.class);
     private CompositeKey sessionKey = SessionIdStrategy
         .senderAndTarget()
         .onInitiateLogon("ACCEPTOR", "", "", "INIATOR", "", "");
 
     private ReceiverEndPoint endPoint = new ReceiverEndPoint(
-        mockChannel, BUFFER_SIZE, libraryPublication, clusterablePublication,
+        mockChannel, BUFFER_SIZE, publication,
         CONNECTION_ID, UNKNOWN, SEQUENCE_INDEX, mockSessionContexts,
-        sentSequenceNumbers, receivedSequenceNumbers, messagesRead, framer, errorHandler, LIBRARY_ID,
-        DETERMINE_AT_LOGON, ConnectionType.ACCEPTOR, replicatedConnectionIds, mockGatewaySessions);
+        messagesRead, framer, errorHandler, LIBRARY_ID,
+        mockGatewaySessions);
 
     @Before
     public void setUp()
@@ -93,11 +90,7 @@ public class ReceiverEndPointTest
         when(gatewaySession.sessionKey()).thenReturn(sessionKey);
         when(gatewaySession.sessionId()).thenReturn(SESSION_ID);
         when(session.state()).thenReturn(SessionState.CONNECTED);
-        when(mockGatewaySessions.authenticateAndInitiate(any(),
-            anyLong(),
-            any(),
-            any(),
-            eq(gatewaySession))).thenReturn(authenticationResult);
+        givenAuthenticationResult(authenticationResult);
 
         doAnswer(
             (inv) ->
@@ -107,11 +100,13 @@ public class ReceiverEndPointTest
             }).when(framer).schedule(any(Continuation.class));
     }
 
-    @After
-    public void tearDown()
+    private void givenAuthenticationResult(final AuthenticationResult authenticationResult)
     {
-        verifyNoMoreInteractions(clusterablePublication);
-        assertThat(replicatedConnectionIds, hasSize(0));
+        when(mockGatewaySessions.authenticate(
+            any(),
+            anyLong(),
+            eq(gatewaySession)))
+            .thenReturn(authenticationResult);
     }
 
     @Test
@@ -121,7 +116,7 @@ public class ReceiverEndPointTest
 
         theEndpointReceivesACompleteMessage();
 
-        pollsData(MSG_LEN);
+        polls(MSG_LEN);
 
         verifyDuplicateSession(times(1));
     }
@@ -131,7 +126,7 @@ public class ReceiverEndPointTest
     {
         theEndpointReceivesACompleteMessage();
 
-        pollsData(2 * MSG_LEN);
+        polls(2 * MSG_LEN);
 
         savesAFramedMessage();
 
@@ -144,10 +139,10 @@ public class ReceiverEndPointTest
         firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesACompleteMessage();
-        pollsData(MSG_LEN);
+        polls(MSG_LEN);
 
         theEndpointReceivesNothing();
-        pollsData(MSG_LEN);
+        polls(MSG_LEN);
 
         savesFramedMessages(2, OK, MSG_LEN);
 
@@ -155,15 +150,33 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldIgnoreGarbledMessages() throws IOException
+    public void shouldIgnoreGarbledMessages()
     {
         final int length = GARBLED_MESSAGE.length;
         theEndpointReceives(GARBLED_MESSAGE, 0, length);
 
-        endPoint.pollForData();
+        endPoint.poll();
 
         savesInvalidMessage(length, times(1));
         verifyNoError();
+        verifyNotDisconnected();
+        sessionReceivesNoMessages();
+    }
+
+    @Test
+    public void shouldIgnoreMessageWithBodyLengthTooShort()
+    {
+        final int length = INVALID_LENGTH_MESSAGE.length;
+        theEndpointReceives(INVALID_LENGTH_MESSAGE, 0, length);
+
+        endPoint.poll();
+
+        savesInvalidMessage(length, times(1), INVALID_BODYLENGTH);
+        verifyNoError();
+        verifyNotDisconnected();
+        sessionReceivesNoMessages();
+
+        shouldFrameValidFixMessage();
     }
 
     @Test
@@ -171,7 +184,7 @@ public class ReceiverEndPointTest
     {
         theEndpointReceivesAnIncompleteMessage();
 
-        endPoint.pollForData();
+        endPoint.poll();
 
         nothingMoreSaved();
     }
@@ -180,10 +193,10 @@ public class ReceiverEndPointTest
     public void shouldFrameSplitFixMessage()
     {
         theEndpointReceivesAnIncompleteMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         theEndpointReceivesTheRestOfTheMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         savesAFramedMessage();
 
@@ -195,7 +208,7 @@ public class ReceiverEndPointTest
     {
         theEndpointReceivesTwoCompleteMessages();
 
-        endPoint.pollForData();
+        endPoint.poll();
 
         savesTwoFramedMessages(1);
 
@@ -207,7 +220,7 @@ public class ReceiverEndPointTest
     {
         theEndpointReceivesACompleteAndAnIncompleteMessage();
 
-        endPoint.pollForData();
+        endPoint.poll();
 
         savesAFramedMessage();
 
@@ -218,10 +231,10 @@ public class ReceiverEndPointTest
     public void shouldFrameSecondSplitMessage()
     {
         theEndpointReceivesACompleteAndAnIncompleteMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         theEndpointReceivesTheRestOfTheMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         savesFramedMessages(2, OK, MSG_LEN);
 
@@ -233,10 +246,10 @@ public class ReceiverEndPointTest
     {
         theChannelIsClosedByException();
 
-        endPoint.pollForData();
+        endPoint.poll();
 
         verify(mockSessionContexts).onDisconnect(anyLong());
-        assertSavesDisconnect();
+        verifyDisconnected();
     }
 
     @Test
@@ -244,9 +257,9 @@ public class ReceiverEndPointTest
     {
         theChannelIsClosed();
 
-        endPoint.pollForData();
+        endPoint.poll();
 
-        assertSavesDisconnect();
+        verifyDisconnected();
     }
 
     @Test
@@ -254,7 +267,7 @@ public class ReceiverEndPointTest
     {
         theEndpointReceivesAMessageWithInvalidChecksum();
 
-        endPoint.pollForData();
+        endPoint.poll();
 
         // Test for bug where invalid message re-saved.
         pollWithNoData();
@@ -270,9 +283,9 @@ public class ReceiverEndPointTest
 
         theEndpointReceivesAMessageWithInvalidChecksum();
 
-        endPoint.pollForData();
+        endPoint.poll();
 
-        endPoint.pollForData();
+        endPoint.poll();
 
         savesInvalidChecksumMessage(times(2));
     }
@@ -309,10 +322,10 @@ public class ReceiverEndPointTest
         firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesAnIncompleteMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         theEndpointReceivesTheRestOfTheMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         pollWithNoData();
 
@@ -327,7 +340,7 @@ public class ReceiverEndPointTest
         firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesTwoCompleteMessages();
-        endPoint.pollForData();
+        endPoint.poll();
 
         pollWithNoData();
 
@@ -342,7 +355,7 @@ public class ReceiverEndPointTest
         firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesACompleteAndAnIncompleteMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         pollWithNoData();
 
@@ -355,20 +368,42 @@ public class ReceiverEndPointTest
         firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesACompleteAndAnIncompleteMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         theEndpointReceivesTheRestOfTheMessage();
-        endPoint.pollForData();
+        endPoint.poll();
 
         savesFramedMessages(2, OK, MSG_LEN);
 
         sessionReceivesTwoMessages();
     }
 
+    @Test
+    public void shouldFrameLogonMessageWhenLoggerBehind()
+    {
+        givenAuthenticationResult(backpressuredAuthenticationResult);
+
+        theEndpointReceivesACompleteMessage();
+
+        // Backpressured attempt
+        polls(MSG_LEN);
+
+        nothingMoreSaved();
+
+        when(mockGatewaySessions.lookupSequenceNumbers(gatewaySession, BACKPRESSURED_REQUIRED_POSITION))
+            .thenReturn(true);
+
+        // Successful attempt
+        polls(MSG_LEN);
+
+        savesFramedMessages(1, OK, MSG_LEN, LogonDecoder.MESSAGE_TYPE);
+    }
+
     private void firstSaveAttemptIsBackPressured()
     {
-        when(libraryPublication
-            .saveMessage(anyBuffer(), anyInt(), anyInt(), anyInt(), anyInt(), anyLong(), anyInt(), anyLong(), any()))
+        when(publication
+            .saveMessage(
+                anyBuffer(), anyInt(), anyInt(), anyInt(), anyInt(), anyLong(), anyInt(), anyLong(), any(), anyInt()))
             .thenReturn(BACK_PRESSURED, POSITION);
     }
 
@@ -377,9 +412,9 @@ public class ReceiverEndPointTest
         return any(AtomicBuffer.class);
     }
 
-    private void pollsData(final int bytesReadAndSaved)
+    private void polls(final int bytesReadAndSaved)
     {
-        assertEquals(bytesReadAndSaved, endPoint.pollForData());
+        assertEquals(bytesReadAndSaved, endPoint.poll());
     }
 
     private void verifyNoError()
@@ -390,15 +425,25 @@ public class ReceiverEndPointTest
 
     private void savesInvalidMessage(final int length, final VerificationMode mode)
     {
-        verify(libraryPublication, mode).saveMessage(
-            anyBuffer(), eq(0), eq(length), eq(LIBRARY_ID),
-            anyInt(), anyLong(), anyInt(), eq(CONNECTION_ID),
-            eq(INVALID));
+        savesInvalidMessage(length, mode, INVALID);
     }
 
-    private void assertSavesDisconnect()
+    private void savesInvalidMessage(final int length, final VerificationMode mode, final MessageStatus status)
     {
-        verify(libraryPublication).saveDisconnect(LIBRARY_ID, CONNECTION_ID, REMOTE_DISCONNECT);
+        verify(publication, mode).saveMessage(
+            anyBuffer(), eq(0), eq(length), eq(LIBRARY_ID),
+            anyInt(), anyLong(), anyInt(), eq(CONNECTION_ID),
+            eq(status), eq(0));
+    }
+
+    private void verifyDisconnected()
+    {
+        verify(publication).saveDisconnect(LIBRARY_ID, CONNECTION_ID, REMOTE_DISCONNECT);
+    }
+
+    private void verifyNotDisconnected()
+    {
+        verify(publication, never()).saveDisconnect(anyInt(), anyLong(), any());
     }
 
     private void theChannelIsClosed() throws IOException
@@ -421,16 +466,22 @@ public class ReceiverEndPointTest
         final MessageStatus status,
         final int msgLen)
     {
-        verify(libraryPublication, times(numberOfMessages)).saveMessage(
+        savesFramedMessages(numberOfMessages, status, msgLen, MESSAGE_TYPE);
+    }
+
+    private long savesFramedMessages(
+        final int numberOfMessages, final MessageStatus status, final int msgLen, final int messageType)
+    {
+        return verify(publication, times(numberOfMessages)).saveMessage(
             anyBuffer(), eq(0), eq(msgLen), eq(LIBRARY_ID),
-            eq(MESSAGE_TYPE), eq(SESSION_ID), eq(SEQUENCE_INDEX), eq(CONNECTION_ID),
-            eq(status));
+            eq(messageType), eq(SESSION_ID), eq(SEQUENCE_INDEX), eq(CONNECTION_ID),
+            eq(status), eq(0));
     }
 
     private void savesTwoFramedMessages(final int firstMessageSaveAttempts)
     {
-        final InOrder inOrder = Mockito.inOrder(libraryPublication);
-        inOrder.verify(libraryPublication, times(firstMessageSaveAttempts)).saveMessage(
+        final InOrder inOrder = Mockito.inOrder(publication);
+        inOrder.verify(publication, times(firstMessageSaveAttempts)).saveMessage(
             anyBuffer(),
             eq(0),
             eq(MSG_LEN),
@@ -439,9 +490,10 @@ public class ReceiverEndPointTest
             eq(SESSION_ID),
             eq(SEQUENCE_INDEX),
             eq(CONNECTION_ID),
-            eq(OK));
+            eq(OK),
+            eq(0));
 
-        inOrder.verify(libraryPublication, times(1)).saveMessage(
+        inOrder.verify(publication, times(1)).saveMessage(
             anyBuffer(),
             eq(MSG_LEN),
             eq(MSG_LEN),
@@ -450,14 +502,15 @@ public class ReceiverEndPointTest
             eq(SESSION_ID),
             eq(SEQUENCE_INDEX),
             eq(CONNECTION_ID),
-            eq(OK));
+            eq(OK),
+            eq(0));
 
         inOrder.verifyNoMoreInteractions();
     }
 
     private void nothingMoreSaved()
     {
-        verifyNoMoreInteractions(libraryPublication);
+        verifyNoMoreInteractions(publication);
     }
 
     private void theEndpointReceivesACompleteMessage()
@@ -515,7 +568,7 @@ public class ReceiverEndPointTest
         final int length = TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES.length;
 
         theEndpointReceives(TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES, 0, length);
-        endPoint.pollForData();
+        endPoint.poll();
         return length;
     }
 
@@ -544,7 +597,7 @@ public class ReceiverEndPointTest
 
     private void savesInvalidChecksumMessage(final VerificationMode mode)
     {
-        verify(libraryPublication, mode).saveMessage(
+        verify(publication, mode).saveMessage(
             anyBuffer(),
             eq(0),
             eq(INVALID_CHECKSUM_LEN),
@@ -553,7 +606,8 @@ public class ReceiverEndPointTest
             anyLong(),
             anyInt(),
             eq(CONNECTION_ID),
-            eq(INVALID_CHECKSUM));
+            eq(INVALID_CHECKSUM),
+            eq(0));
     }
 
     private void sessionReceivesOneMessage()
@@ -587,20 +641,25 @@ public class ReceiverEndPointTest
             .onMessage(any(), eq(offset), eq(length), eq(MESSAGE_TYPE), eq(SESSION_ID));
     }
 
+    private void sessionReceivesNoMessages()
+    {
+        verify(gatewaySession, never())
+            .onMessage(any(), anyInt(), anyInt(), anyInt(), anyLong());
+    }
+
     private void pollWithNoData()
     {
         theEndpointReceivesNothing();
-        endPoint.pollForData();
+        endPoint.poll();
     }
 
     private void verifyDuplicateSession(final VerificationMode times)
     {
-        verify(libraryPublication, times).saveDisconnect(anyInt(), anyLong(), eq(DisconnectReason.DUPLICATE_SESSION));
+        verify(publication, times).saveDisconnect(anyInt(), anyLong(), eq(DisconnectReason.DUPLICATE_SESSION));
     }
 
     private void givenADuplicateSession()
     {
-        when(mockGatewaySessions.authenticateAndInitiate(any(), anyLong(), any(), any(), any())).thenReturn(
-            AuthenticationResult.DUPLICATE_SESSION);
+        givenAuthenticationResult(AuthenticationResult.DUPLICATE_SESSION);
     }
 }

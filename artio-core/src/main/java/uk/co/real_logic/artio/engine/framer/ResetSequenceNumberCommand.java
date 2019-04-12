@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,6 @@ import java.util.function.LongToIntFunction;
 
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.Reply.State.ERRORED;
-import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 
 class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
 {
@@ -44,6 +43,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
     private final GatewayPublication outboundPublication;
     private Session session;
     private LongToIntFunction libraryLookup;
+    private long waitSequence = 1;
 
     void libraryLookup(final LongToIntFunction libraryLookup)
     {
@@ -166,6 +166,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
                 final long position = session.resetSequenceNumbers();
                 if (!Pressure.isBackPressured(position))
                 {
+                    waitSequence = 1;
                     step = Step.AWAIT_RECV;
                 }
                 return false;
@@ -179,6 +180,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
                     if (!Pressure.isBackPressured(
                         inboundPublication.saveResetLibrarySequenceNumber(libraryId, sessionId)))
                     {
+                        waitSequence = 1;
                         step = Step.AWAIT_RECV;
                     }
                 }
@@ -192,9 +194,11 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
             }
 
             case RESET_RECV:
+                waitSequence = 0;
                 return reset(inboundPublication, Step.RESET_SENT);
 
             case RESET_SENT:
+                waitSequence = 0;
                 return reset(outboundPublication, Step.AWAIT_RECV);
 
             case AWAIT_RECV:
@@ -227,7 +231,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
 
     private boolean await(final SequenceNumberIndexReader sequenceNumberIndex)
     {
-        final boolean done = sequenceNumberIndex.lastKnownSequenceNumber(sessionId) == 1;
+        final boolean done = sequenceNumberIndex.lastKnownSequenceNumber(sessionId) <= waitSequence;
         if (done)
         {
             step = Step.DONE;
@@ -238,7 +242,7 @@ class ResetSequenceNumberCommand implements Reply<Void>, AdminCommand
 
     private boolean sessionIsUnknown()
     {
-        return sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId) == UNK_SESSION;
+        return !sessionContexts.isKnownSessionId(sessionId);
     }
 
     public String toString()

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import io.aeron.Aeron;
 import org.agrona.CloseHelper;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.AgentRunner;
 import org.agrona.concurrent.CompositeAgent;
 
@@ -37,39 +36,32 @@ import static org.agrona.concurrent.AgentRunner.startOnThread;
  */
 public class LowResourceEngineScheduler implements EngineScheduler
 {
-    private final AgentInvoker driverAgentInvoker;
-
     private AgentRunner runner;
+    private RecordingCoordinator recordingCoordinator;
 
     public LowResourceEngineScheduler()
     {
-        this(null);
-    }
-
-    public LowResourceEngineScheduler(final AgentInvoker driverAgentInvoker)
-    {
-        this.driverAgentInvoker = driverAgentInvoker;
     }
 
     public void launch(
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
         final Agent framer,
-        final Agent archivingAgent,
+        final Agent indexingAgent,
         final Agent monitoringAgent,
-        final Agent conductorAgent)
+        final Agent conductorAgent,
+        final RecordingCoordinator recordingCoordinator)
     {
+        this.recordingCoordinator = recordingCoordinator;
+
         if (runner != null)
         {
             EngineScheduler.fail();
         }
 
         final List<Agent> agents = new ArrayList<>();
-        Collections.addAll(agents, monitoringAgent, framer, archivingAgent, conductorAgent);
-        if (driverAgentInvoker != null)
-        {
-            agents.add(driverAgentInvoker.agent());
-        }
+        Collections.addAll(agents,
+            monitoringAgent, framer, indexingAgent, new RecordingCoordinatorAgent(), conductorAgent);
 
         agents.removeIf(Objects::isNull);
 
@@ -78,7 +70,7 @@ public class LowResourceEngineScheduler implements EngineScheduler
             errorHandler,
             null,
             new CompositeAgent(agents));
-        startOnThread(runner);
+        startOnThread(runner, configuration.threadFactory());
     }
 
     public void close()
@@ -91,10 +83,30 @@ public class LowResourceEngineScheduler implements EngineScheduler
     public void configure(final Aeron.Context aeronContext)
     {
         aeronContext.useConductorAgentInvoker(true);
+    }
 
-        if (driverAgentInvoker != null)
+    /**
+     * Adapt a recording coordinator to the Agent interface to enable it to be shutdown in order.
+     */
+    private class RecordingCoordinatorAgent implements Agent
+    {
+        @Override
+        public int doWork()
         {
-            aeronContext.driverAgentInvoker(driverAgentInvoker);
+            // Deliberately empty
+            return 0;
+        }
+
+        @Override
+        public String roleName()
+        {
+            return "RecordingCoordinator";
+        }
+
+        @Override
+        public void onClose()
+        {
+            recordingCoordinator.close();
         }
     }
 }

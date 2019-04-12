@@ -25,7 +25,7 @@ import static org.junit.Assert.fail;
 public final class Timing
 {
     // Long timeout, but one that doesn't cause long overflow.
-    public static final long DEFAULT_TIMEOUT_IN_MS = isDebuggerAttached() ? Integer.MAX_VALUE : 10_000;
+    public static final long DEFAULT_TIMEOUT_IN_MS = isDebuggerAttached() ? Integer.MAX_VALUE : 20_000;
 
     public static <T> T withTimeout(final String message, final Supplier<Optional<T>> supplier, final long timeoutInMs)
     {
@@ -57,9 +57,7 @@ public final class Timing
             () -> {});
     }
 
-    public static void assertEventuallyTrue(
-        final String message,
-        final Block runnable)
+    public static void assertEventuallyTrue(final String message, final Block runnable)
     {
         assertEventuallyTrue(message, runnable, DEFAULT_TIMEOUT_IN_MS);
     }
@@ -77,9 +75,9 @@ public final class Timing
                 runnable.run();
                 return;
             }
-            catch (final Throwable ignore)
+            catch (final Throwable ex)
             {
-                lastThrowable = ignore;
+                lastThrowable = ex;
             }
 
             Thread.yield();

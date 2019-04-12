@@ -55,8 +55,6 @@ public class FixLibrary extends GatewayProcess
     private final LibraryPoller poller;
     private boolean isPolling = false;
 
-
-
     FixLibrary(final LibraryConfiguration configuration)
     {
         this.configuration = configuration;
@@ -67,7 +65,7 @@ public class FixLibrary extends GatewayProcess
         {
             scheduler.configure(configuration.aeronContext());
             init(configuration);
-            final LibraryTimers timers = new LibraryTimers(configuration.nanoClock());
+            final LibraryTimers timers = new LibraryTimers(configuration.clock());
             initMonitoringAgent(timers.all(), configuration);
 
             final LibraryTransport transport = new LibraryTransport(configuration, fixCounters, aeron);
@@ -163,7 +161,7 @@ public class FixLibrary extends GatewayProcess
      * and events that have received from or should be sent to the engine.
      *
      * @param fragmentLimit the maximum number of events to read from the engine.
-     * @return 0 if no work was performed, > 0 otherwise.
+     * @return 0 if no work was performed, &gt; 0 otherwise.
      */
     public int poll(final int fragmentLimit)
     {
@@ -277,7 +275,7 @@ public class FixLibrary extends GatewayProcess
      * Release this session object to the gateway to manage. If the release
      * operation has successfully completed then it will return {@link SessionReplyStatus#OK}.
      *
-     * Similar to {@link this#initiate(SessionConfiguration)} this is a non-blocking operation that
+     * Similar to {@link #initiate(SessionConfiguration)} this is a non-blocking operation that
      * returns a reply object that indicates what has happened to its result.
      *
      * @param session the session to release
@@ -299,23 +297,26 @@ public class FixLibrary extends GatewayProcess
      * {@link SessionReplyStatus#SEQUENCE_NUMBER_TOO_HIGH} if the sequence number you have passed in
      * is higher than the current sequence number known by the engine. This may happen to a sequence reset.
      * In this case you will still get the callback to the {@link SessionAcquireHandler} but won't get a
-     * replay on any messages.
+     * replay on any messages. You will also get a callback on the {@link SessionAcquireHandler} in the
+     * {@link SessionReplyStatus#MISSING_MESSAGES} and
+     * {@link SessionReplyStatus#INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES} case but you won't necessarily get the
+     * requested replay of messages.
      *
      * If another library has acquired the session then this method will return
      * {@link SessionReplyStatus#OTHER_SESSION_OWNER}. If the connection id refers
      * to an unknown session then the method returns {@link SessionReplyStatus#UNKNOWN_SESSION}.
      * If this library instance is unknown to the gateway, for example if its heartbeating
-     * mechanism has timed out due to {@link this#poll(int)} not being called often enough.
+     * mechanism has timed out due to {@link #poll(int)} not being called often enough.
      *
      * @param sessionId the id of the session to acquire.
-     * @param lastReceivedSequenceNumber the last received message sequence number
+     * @param resendFromSequenceNumber the last received message sequence number
      *                                   that you know about. You will get a stream
      *                                   of messages replayed to you from
-     *                                   <code>lastReceivedMessageSequenceNumber + 1</code>
+     *                                   <code>resendFromSequenceNumber</code>
      *                                   to the latest message sequence number.
      *                                   If you don't care about message replay then
      *                                   use {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
-     * @param sequenceIndex the index of the sequence within which the lastReceivedSequenceNumber
+     * @param resendFromSequenceIndex the index of the sequence within which the resendFromSequenceNumber
      *                      refers. If you don't care about message replay then use
      *                      {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
      * @param timeoutInMs the timeout for this operation
@@ -323,12 +324,12 @@ public class FixLibrary extends GatewayProcess
      */
     public Reply<SessionReplyStatus> requestSession(
         final long sessionId,
-        final int lastReceivedSequenceNumber,
-        final int sequenceIndex,
+        final int resendFromSequenceNumber,
+        final int resendFromSequenceIndex,
         final long timeoutInMs)
     {
         CommonConfiguration.validateTimeout(timeoutInMs);
-        return poller.requestSession(sessionId, lastReceivedSequenceNumber, sequenceIndex, timeoutInMs);
+        return poller.requestSession(sessionId, resendFromSequenceNumber, resendFromSequenceIndex, timeoutInMs);
     }
 
     public String currentAeronChannel()

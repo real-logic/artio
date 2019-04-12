@@ -22,21 +22,22 @@ import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.timing.Timer;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.BREAK;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
+import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_LOGON;
 
 class SessionSubscriber implements AutoCloseable
 {
     private final SessionParser parser;
-    private final Session session;
+    private final InternalSession session;
     private final Timer receiveTimer;
     private final Timer sessionTimer;
 
     private SessionHandler handler;
+    private InitiateSessionReply initiateSessionReply;
 
     SessionSubscriber(
         final SessionParser parser,
-        final Session session,
+        final InternalSession session,
         final Timer receiveTimer,
         final Timer sessionTimer)
     {
@@ -72,21 +73,24 @@ class SessionSubscriber implements AutoCloseable
                         return BREAK;
                     }
 
-                    if (session.isConnected())
+                    // Can receive messages when no longer disconnected.
+                    final Action handlerAction = handler.onMessage(
+                        buffer,
+                        offset,
+                        length,
+                        libraryId,
+                        session,
+                        sequenceIndex,
+                        messageType,
+                        timestamp,
+                        position);
+
+                    if (handlerAction == CONTINUE || handlerAction == COMMIT)
                     {
-                        return handler.onMessage(
-                            buffer,
-                            offset,
-                            length,
-                            libraryId,
-                            session,
-                            sequenceIndex,
-                            messageType,
-                            timestamp,
-                            position);
+                        session.updateLastMessageProcessed();
                     }
 
-                    return action;
+                    return handlerAction;
 
                 case CATCHUP_REPLAY:
                     return handler.onMessage(
@@ -112,39 +116,34 @@ class SessionSubscriber implements AutoCloseable
 
     Action onDisconnect(final int libraryId, final DisconnectReason reason)
     {
-        session.onDisconnect();
-        return handler.onDisconnect(libraryId, session, reason);
-    }
-
-    void onLogon(
-        final long sessionId,
-        final int lastSentSequenceNumber,
-        final int lastReceivedSequenceNumber,
-        final CompositeKey compositeKey)
-    {
-        if (compositeKey != null)
+        final Action action = handler.onDisconnect(libraryId, session, reason);
+        if (action != ABORT)
         {
-            session.setupSession(sessionId, compositeKey);
+            session.onDisconnect();
+            // We've been disconnected before an initiator session has finished logging on, eg: wrong msgSeqNum in logon
+            if (initiateSessionReply != null)
+            {
+                initiateSessionReply.onError(UNABLE_TO_LOGON, "Disconnected before session active");
+                initiateSessionReply = null;
+            }
         }
-        else
-        {
-            session.id(sessionId);
-        }
-
-        // Acceptors need to wait for Logon message to identify
-        if (session instanceof AcceptorSession)
-        {
-            session.lastSentMsgSeqNum(lastSentSequenceNumber);
-            session.lastReceivedMsgSeqNum(lastReceivedSequenceNumber);
-        }
+        return action;
     }
 
     private void onSessionLogon(final Session session)
     {
         // Should only be fired if we already own the session and the client sends another logon to run and end of day.
-        if (session.logonTime() != Session.NO_LOGON_TIME)
+        if (session.hasLogonTime())
         {
             handler.onSessionStart(session);
+        }
+
+        if (initiateSessionReply != null)
+        {
+            initiateSessionReply.onComplete(session);
+            // Don't want to hold a reference to the reply object for the
+            // lifetime of the Session
+            initiateSessionReply = null;
         }
     }
 
@@ -163,7 +162,7 @@ class SessionSubscriber implements AutoCloseable
         session.requestDisconnect();
     }
 
-    Session session()
+    InternalSession session()
     {
         return session;
     }
@@ -171,5 +170,10 @@ class SessionSubscriber implements AutoCloseable
     void handler(final SessionHandler handler)
     {
         this.handler = handler;
+    }
+
+    void reply(final InitiateSessionReply reply)
+    {
+        this.initiateSessionReply = reply;
     }
 }

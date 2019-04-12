@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.ExclusivePublication;
 import io.aeron.Publication;
-import io.aeron.logbuffer.ExclusiveBufferClaim;
+import io.aeron.logbuffer.BufferClaim;
 import org.agrona.BitUtil;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.mockito.verification.VerificationMode;
@@ -33,7 +33,8 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.mockito.Mockito.*;
-import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.artio.TestFixtures.MESSAGE_BUFFER_SIZE_IN_BYTES;
 import static uk.co.real_logic.artio.engine.logger.Replayer.SIZE_OF_LENGTH_FIELD;
 
 public class AbstractLogTest
@@ -44,30 +45,36 @@ public class AbstractLogTest
 
     protected static final long SESSION_ID = 1;
     protected static final long SESSION_ID_2 = 2;
+
     protected static final long CONNECTION_ID = 1;
-    protected static final int STREAM_ID = OUTBOUND_LIBRARY_STREAM;
+    protected static final long CONNECTION_ID_2 = 2;
+
+    protected static final int STREAM_ID = DEFAULT_OUTBOUND_LIBRARY_STREAM;
     protected static final int START = FRAME_ALIGNMENT;
     protected static final int SEQUENCE_NUMBER = 2;
-    protected static final int AERON_SESSION_ID = -10;
     protected static final int LIBRARY_ID = 7;
     protected static final int BEGIN_SEQ_NO = 2;
     protected static final int END_SEQ_NO = 2;
     protected static final int SEQUENCE_INDEX = 1;
-    protected static final int ENCODE_OFFSET = 1;
-    public static final String BUFFER_SENDER = "sender";
-    public static final String BUFFER_TARGET = "target";
-    public static final String RESEND_SENDER = "target";
-    public static final String RESEND_TARGET = "sender";
+    private static final int ENCODE_OFFSET = 1;
+    static final String BUFFER_SENDER = "sender";
+    static final String BUFFER_TARGET = "target";
+    private static final String RESEND_SENDER = "target";
+    private static final String RESEND_TARGET = "sender";
+    static final String RESEND_TARGET_2 = "sender2";
+    public static final int PREFIX_LENGTH =
+        MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + SIZE_OF_LENGTH_FIELD;
+    public static final int BIG_BUFFER_LENGTH = MESSAGE_BUFFER_SIZE_IN_BYTES + 500;
 
     protected MessageHeaderEncoder header = new MessageHeaderEncoder();
     protected FixMessageEncoder messageFrame = new FixMessageEncoder();
 
     protected ExclusivePublication publication = mock(ExclusivePublication.class);
-    protected ExclusiveBufferClaim claim = mock(ExclusiveBufferClaim.class);
+    protected BufferClaim claim = mock(BufferClaim.class);
     protected UnsafeBuffer resultBuffer;
     protected MutableAsciiBuffer resultAsciiBuffer = new MutableAsciiBuffer();
 
-    protected UnsafeBuffer buffer = new UnsafeBuffer(new byte[512]);
+    protected UnsafeBuffer buffer = new UnsafeBuffer(new byte[BIG_BUFFER_LENGTH]);
 
     protected int logEntryLength;
     protected int offset;
@@ -80,9 +87,19 @@ public class AbstractLogTest
     protected void bufferContainsExampleMessage(
         final boolean hasPossDupFlag, final long sessionId, final int sequenceNumber, final int sequenceIndex)
     {
+        bufferContainsExampleMessage(hasPossDupFlag, sessionId, sequenceNumber, sequenceIndex, "abc");
+    }
+
+    protected void bufferContainsExampleMessage(
+        final boolean hasPossDupFlag,
+        final long sessionId,
+        final int sequenceNumber,
+        final int sequenceIndex,
+        final String testReqId)
+    {
         final ExampleMessageEncoder exampleMessage = new ExampleMessageEncoder();
         final HeaderEncoder header = exampleMessage.header();
-        exampleMessage.testReqID("abc");
+        exampleMessage.testReqID(testReqId);
 
         if (hasPossDupFlag)
         {
@@ -116,7 +133,7 @@ public class AbstractLogTest
     {
         final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
         final int timestampLength = timestampEncoder.encode(ORIGINAL_SENDING_EPOCH_MS);
-        MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[450]);
+        MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[BIG_BUFFER_LENGTH]);
 
         header
             .sendingTime(timestampEncoder.buffer(), timestampLength)
@@ -149,7 +166,7 @@ public class AbstractLogTest
             .libraryId(LIBRARY_ID)
             .putBody(asciiBuffer, 0, logEntryLength);
 
-        offset += MessageHeaderEncoder.ENCODED_LENGTH + messageFrame.sbeBlockLength() + SIZE_OF_LENGTH_FIELD;
+        offset += PREFIX_LENGTH;
     }
 
     protected int fragmentLength()
@@ -169,6 +186,11 @@ public class AbstractLogTest
 
     protected long bufferHasResendRequest(final int endSeqNo)
     {
+        return bufferHasResendRequest(endSeqNo, RESEND_TARGET);
+    }
+
+    protected long bufferHasResendRequest(final int endSeqNo, final String targetCompId)
+    {
         final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
         timestampEncoder.encode(System.currentTimeMillis());
 
@@ -179,7 +201,7 @@ public class AbstractLogTest
             .sendingTime(timestampEncoder.buffer())
             .msgSeqNum(1)
             .senderCompID(RESEND_SENDER)
-            .targetCompID(RESEND_TARGET);
+            .targetCompID(targetCompId);
 
         return resendRequest
             .beginSeqNo(BEGIN_SEQ_NO)

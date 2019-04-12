@@ -47,7 +47,8 @@ public final class FixMessagePredicates
      * @param predicate the predicate to filter messages.
      * @return a new composed consumer.
      */
-    public static FixMessageConsumer filterBy(final FixMessageConsumer consumer, final FixMessagePredicate predicate)
+    public static FixMessageConsumer filterBy(
+        final FixMessageConsumer consumer, final FixMessagePredicate predicate)
     {
         return (message, buffer, offset, length, header) ->
         {
@@ -66,37 +67,47 @@ public final class FixMessagePredicates
     /**
      * Filters a timestamp to be between these begin and end times.
      *
+     * Timestamps filtered in precision of CommonConfiguration.clock().
+     *
+     * @param beginTimestampInclusive the message's timestamp must be &gt;= this value.
+     * @param endTimestampExclusive the message's timestamp must be &lt; this value.
      * @return the resulting predicate
      */
     public static FixMessagePredicate between(
-        final long beginTimestampInclusiveInMs,
-        final long endTimestampExclusiveInMs)
+        final long beginTimestampInclusive,
+        final long endTimestampExclusive)
     {
-        return from(beginTimestampInclusiveInMs).and(to(endTimestampExclusiveInMs));
+        return from(beginTimestampInclusive).and(to(endTimestampExclusive));
     }
 
     /**
      * Filters a timestamp from a given begin time.
      *
+     * @param beginTimestampInclusive the message's timestamp must be &gt;= this value.
      * @return the resulting predicate
      */
-    public static FixMessagePredicate from(final long beginTimestampInclusiveInMs)
+    public static FixMessagePredicate from(final long beginTimestampInclusive)
     {
-        return (message) -> message.timestamp() >= beginTimestampInclusiveInMs;
+        return (message) -> message.timestamp() >= beginTimestampInclusive;
     }
 
     /**
      * Filters a timestamp to a given end time.
      *
+     * Timestamps filtered in precision of CommonConfiguration.clock().
+     *
+     * @param endTimestampExclusive the message's timestamp must be &lt; this value.
      * @return the resulting predicate
      */
-    public static FixMessagePredicate to(final long endTimestampExclusiveInMs)
+    public static FixMessagePredicate to(final long endTimestampExclusive)
     {
-        return (message) -> message.timestamp() < endTimestampExclusiveInMs;
+        return (message) -> message.timestamp() < endTimestampExclusive;
     }
 
     /**
      * Filter messages by the message type of their fix message.
+     *
+     * Timestamps filtered in precision of CommonConfiguration.clock().
      *
      * @param messageTypes the fix message type strings that you see in the message.
      * @return the resulting predicate

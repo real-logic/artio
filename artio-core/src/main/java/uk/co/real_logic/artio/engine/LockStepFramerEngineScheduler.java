@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,15 +31,18 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
     private AgentRunner archivingRunner;
     private AgentRunner monitoringRunner;
     private AgentInvoker framerInvoker;
+    private RecordingCoordinator recordingCoordinator;
 
     public void launch(
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
         final Agent framer,
-        final Agent archivingAgent,
+        final Agent indexingAgent,
         final Agent monitoringAgent,
-        final Agent conductorAgent)
+        final Agent conductorAgent,
+        final RecordingCoordinator recordingCoordinator)
     {
+        this.recordingCoordinator = recordingCoordinator;
         framerInvoker = new AgentInvoker(errorHandler, null, framer);
         framerInvoker.start();
 
@@ -49,9 +52,9 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
         }
 
         archivingRunner = new AgentRunner(
-            configuration.archiverIdleStrategy(), errorHandler, null, archivingAgent);
+            configuration.archiverIdleStrategy(), errorHandler, null, indexingAgent);
 
-        startOnThread(archivingRunner);
+        startOnThread(archivingRunner, configuration.threadFactory());
 
         if (monitoringAgent != null)
         {
@@ -79,7 +82,7 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
         EngineScheduler.awaitRunnerStart(archivingRunner);
         EngineScheduler.awaitRunnerStart(monitoringRunner);
 
-        Exceptions.closeAll(framerInvoker, archivingRunner, monitoringRunner);
+        Exceptions.closeAll(framerInvoker, recordingCoordinator, archivingRunner, monitoringRunner);
     }
 
     public void configure(final Aeron.Context aeronContext)

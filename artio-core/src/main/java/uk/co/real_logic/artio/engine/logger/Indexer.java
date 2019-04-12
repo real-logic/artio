@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,92 +15,146 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import io.aeron.Image;
+import io.aeron.Subscription;
+import io.aeron.archive.client.AeronArchive;
+import io.aeron.archive.client.ArchiveException;
+import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
 import org.agrona.collections.CollectionUtil;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.AgentInvoker;
+import org.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.CompletionPosition;
-import uk.co.real_logic.artio.replication.ClusterFragmentHandler;
-import uk.co.real_logic.artio.replication.ClusterHeader;
-import uk.co.real_logic.artio.replication.ClusterableSubscription;
 
 import java.util.List;
 
+import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static io.aeron.protocol.DataHeaderFlyweight.HEADER_LENGTH;
-import static uk.co.real_logic.artio.engine.logger.ArchiveDescriptor.alignTerm;
 
 /**
  * Incrementally builds indexes by polling a subscription.
  */
-public class Indexer implements Agent, ClusterFragmentHandler
+@SuppressWarnings("ForLoopReplaceableByForEach")
+public class Indexer implements Agent, ControlledFragmentHandler
 {
     private static final int LIMIT = 20;
 
     private final List<Index> indices;
-    private final ArchiveReader archiveReader;
-    private final ClusterableSubscription subscription;
+    private final Subscription subscription;
     private final String agentNamePrefix;
     private final CompletionPosition completionPosition;
+    private final int archiveReplayStream;
 
     public Indexer(
         final List<Index> indices,
-        final ArchiveReader archiveReader,
-        final ClusterableSubscription subscription,
+        final Subscription subscription,
         final String agentNamePrefix,
-        final CompletionPosition completionPosition)
+        final CompletionPosition completionPosition,
+        final AeronArchive aeronArchive,
+        final ErrorHandler errorHandler,
+        final int archiveReplayStream)
     {
         this.indices = indices;
-        this.archiveReader = archiveReader;
         this.subscription = subscription;
         this.agentNamePrefix = agentNamePrefix;
         this.completionPosition = completionPosition;
-        catchIndexUp();
+        this.archiveReplayStream = archiveReplayStream;
+        catchIndexUp(aeronArchive, errorHandler);
     }
 
-    public int doWork() throws Exception
+    public int doWork()
     {
-        return subscription.poll(this, LIMIT) + CollectionUtil.sum(indices, Index::doWork);
+        return subscription.controlledPoll(this, LIMIT) + CollectionUtil.sum(indices, Index::doWork);
     }
 
-    private void catchIndexUp()
+    private void catchIndexUp(final AeronArchive aeronArchive, final ErrorHandler errorHandler)
     {
-        for (final Index index : indices)
+        final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
+        final AgentInvoker aeronInvoker = aeronArchive.context().aeron().conductorAgentInvoker();
+
+        for (int i = 0, size = indices.size(); i < size; i++)
         {
-            index.readLastPosition((aeronSessionId, endOfLastMessageposition) ->
-            {
-                final ArchiveReader.SessionReader sessionReader = archiveReader.session(aeronSessionId);
-                if (sessionReader != null)
-                {
-                    do
-                    {
+            final Index index = indices.get(i);
 
-                        final long nextMessagePosition = alignTerm(endOfLastMessageposition) + HEADER_LENGTH;
-                        endOfLastMessageposition = sessionReader.read(nextMessagePosition, index);
+            index.readLastPosition((aeronSessionId, recordingId, indexStoppedPosition) ->
+            {
+                try
+                {
+                    final long recordingStoppedPosition = aeronArchive.getStopPosition(recordingId);
+                    if (recordingStoppedPosition > indexStoppedPosition)
+                    {
+                        DebugLogger.log(
+                            LogTag.INDEX,
+                            "Catchup [%s]: recordingId = %d, recordingStopped @ %d, indexStopped @ %d",
+                            index.getName(),
+                            recordingId,
+                            recordingStoppedPosition,
+                            indexStoppedPosition);
+
+                        final long length = recordingStoppedPosition - indexStoppedPosition;
+                        try (Subscription subscription = aeronArchive.replay(
+                            recordingId, indexStoppedPosition, length, IPC_CHANNEL, archiveReplayStream))
+                        {
+                            // Only do 1 replay at a time
+                            while (subscription.imageCount() != 1)
+                            {
+                                idle(idleStrategy, aeronInvoker);
+                                aeronArchive.checkForErrorResponse();
+                            }
+                            idleStrategy.reset();
+
+                            final Image replayImage = subscription.imageAtIndex(0);
+
+                            while (replayImage.position() < recordingStoppedPosition)
+                            {
+                                replayImage.poll(index, LIMIT);
+
+                                idle(idleStrategy, aeronInvoker);
+                            }
+                            idleStrategy.reset();
+                        }
                     }
-                    while (endOfLastMessageposition > 0);
+                }
+                catch (final ArchiveException ex)
+                {
+                    errorHandler.onError(ex);
                 }
             });
         }
     }
 
-    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final ClusterHeader header)
+    private void idle(final IdleStrategy idleStrategy, final AgentInvoker aeronInvoker)
+    {
+        if (aeronInvoker != null)
+        {
+            aeronInvoker.invoke();
+        }
+
+        idleStrategy.idle();
+    }
+
+    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         final int streamId = header.streamId();
         final int aeronSessionId = header.sessionId();
-        final long position = header.position();
+        final long endPosition = header.position();
         DebugLogger.log(
             LogTag.INDEX,
             "Indexing @ %d from [%d, %d]%n",
-            position,
+            endPosition,
             streamId,
             aeronSessionId);
-        for (final Index index : indices)
+
+        for (int i = 0, size = indices.size(); i < size; i++)
         {
-            index.indexRecord(buffer, offset, length, streamId, aeronSessionId, position);
+            indices.get(i).onFragment(buffer, offset, length, header);
         }
 
         return CONTINUE;
@@ -110,7 +164,7 @@ public class Indexer implements Agent, ClusterFragmentHandler
     {
         quiesce();
 
-        Exceptions.closeAll(() -> Exceptions.closeAll(indices), archiveReader, subscription);
+        Exceptions.closeAll(() -> Exceptions.closeAll(indices), subscription);
     }
 
     private void quiesce()
@@ -126,11 +180,10 @@ public class Indexer implements Agent, ClusterFragmentHandler
         }
 
         // We know that any remaining data to quiesce at this point must be in the subscription.
-        subscription.poll(this::quiesceFragment, Integer.MAX_VALUE);
+        subscription.controlledPoll(this::quiesceFragment, Integer.MAX_VALUE);
     }
 
-    private Action quiesceFragment(
-        final DirectBuffer buffer, final int offset, final int length, final ClusterHeader header)
+    private Action quiesceFragment(final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         if (completedPosition(header.sessionId()) <= header.position())
         {

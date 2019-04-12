@@ -15,10 +15,14 @@
  */
 package uk.co.real_logic.artio.server;
 
-import io.aeron.driver.MediaDriver;
+import io.aeron.archive.Archive;
+import io.aeron.archive.ArchiveThreadingMode;
+import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.driver.MediaDriver.Context;
 import org.agrona.IoUtil;
+import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.SigInt;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.SampleUtil;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -64,7 +68,12 @@ public final class SampleServer
         final Context context = new Context()
             .threadingMode(SHARED)
             .dirDeleteOnStart(true);
-        try (MediaDriver driver = MediaDriver.launch(context);
+
+        final Archive.Context archiveContext = new Archive.Context()
+            .threadingMode(ArchiveThreadingMode.SHARED)
+            .deleteArchiveOnStart(true);
+
+        try (ArchivingMediaDriver driver = ArchivingMediaDriver.launch(context, archiveContext);
             FixEngine gateway = FixEngine.launch(configuration))
         {
             final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
@@ -77,6 +86,8 @@ public final class SampleServer
                 .sessionExistsHandler(new AcquiringSessionExistsHandler())
                 .libraryAeronChannels(singletonList(aeronChannel));
 
+            final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
+
             try (FixLibrary library = SampleUtil.blockingConnect(libraryConfiguration))
             {
                 final AtomicBoolean running = new AtomicBoolean(true);
@@ -84,14 +95,12 @@ public final class SampleServer
 
                 while (running.get())
                 {
-                    library.poll(1);
+                    idleStrategy.idle(library.poll(1));
 
                     if (session != null && session.state() == DISCONNECTED)
                     {
                         break;
                     }
-
-                    Thread.sleep(100);
                 }
             }
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -37,13 +38,15 @@ import static java.nio.channels.SelectionKey.OP_CONNECT;
 public class TcpChannelSupplier implements AutoCloseable
 {
     private final EngineConfiguration configuration;
+    private final boolean hasBindAddress;
+    private final Set<SocketChannel> openingSocketChannels = new HashSet<>();
 
     private Selector selector;
     private ServerSocketChannel listeningChannel;
 
     public TcpChannelSupplier(final EngineConfiguration configuration)
     {
-        final boolean hasBindAddress = configuration.hasBindAddress();
+        hasBindAddress = configuration.hasBindAddress();
         this.configuration = configuration;
         try
         {
@@ -69,51 +72,60 @@ public class TcpChannelSupplier implements AutoCloseable
 
     public int pollSelector(final long timeInMs, final NewChannelHandler handler) throws IOException
     {
-        selector.selectNow();
-        final Set<SelectionKey> selectionKeys = selector.selectedKeys();
-        final int unprocessedConnections = selectionKeys.size();
-        if (unprocessedConnections > 0)
+        if (hasBindAddress || openingSocketChannels.size() > 0)
         {
-            final Iterator<SelectionKey> it = selectionKeys.iterator();
-            while (it.hasNext())
+            selector.selectNow();
+            final Set<SelectionKey> selectionKeys = selector.selectedKeys();
+            final int unprocessedConnections = selectionKeys.size();
+            if (unprocessedConnections > 0)
             {
-                final SelectionKey selectionKey = it.next();
-
-                if (selectionKey.isAcceptable())
+                final Iterator<SelectionKey> it = selectionKeys.iterator();
+                while (it.hasNext())
                 {
-                    final SocketChannel channel = listeningChannel.accept();
-                    if (channel != null)
-                    {
-                        configure(channel);
-                        channel.configureBlocking(false);
+                    final SelectionKey selectionKey = it.next();
 
-                        handler.onNewChannel(timeInMs, newTcpChannel(channel));
-                    }
-
-                    it.remove();
-                }
-                else if (selectionKey.isConnectable())
-                {
-                    final InitiatedChannelHandler channelHandler = (InitiatedChannelHandler)selectionKey.attachment();
-                    final SocketChannel channel = (SocketChannel)selectionKey.channel();
-                    try
+                    if (selectionKey.isAcceptable())
                     {
-                        if (channel.finishConnect())
+                        final SocketChannel channel = listeningChannel.accept();
+                        if (channel != null)
                         {
-                            channelHandler.onInitiatedChannel(newTcpChannel(channel), null);
-                            it.remove();
+                            configure(channel);
+                            channel.configureBlocking(false);
+
+                            handler.onNewChannel(timeInMs, newTcpChannel(channel));
                         }
-                    }
-                    catch (final IOException e)
-                    {
-                        channelHandler.onInitiatedChannel(null, e);
+
                         it.remove();
+                    }
+                    else if (selectionKey.isConnectable())
+                    {
+                        final InitiatedChannelHandler channelHandler =
+                            (InitiatedChannelHandler)selectionKey.attachment();
+                        final SocketChannel channel = (SocketChannel)selectionKey.channel();
+                        try
+                        {
+                            if (channel.finishConnect())
+                            {
+                                channelHandler.onInitiatedChannel(newTcpChannel(channel), null);
+                                selectionKey.interestOps(selectionKey.interestOps() & (~OP_CONNECT));
+                                it.remove();
+                                openingSocketChannels.remove(channel);
+                            }
+                        }
+                        catch (final IOException e)
+                        {
+                            channelHandler.onInitiatedChannel(null, e);
+                            it.remove();
+                            openingSocketChannels.remove(channel);
+                        }
                     }
                 }
             }
+
+            return unprocessedConnections;
         }
 
-        return unprocessedConnections;
+        return 0;
     }
 
     private void configure(final SocketChannel channel) throws IOException
@@ -129,7 +141,7 @@ public class TcpChannelSupplier implements AutoCloseable
         }
     }
 
-    public void close() throws Exception
+    public void close()
     {
         CloseHelper.close(listeningChannel);
         CloseHelper.close(selector);
@@ -142,11 +154,26 @@ public class TcpChannelSupplier implements AutoCloseable
         channel.register(selector, OP_CONNECT, channelHandler);
         configure(channel);
         channel.connect(address);
+        openingSocketChannels.add(channel);
     }
 
     protected TcpChannel newTcpChannel(final SocketChannel channel) throws IOException
     {
         return new TcpChannel(channel);
+    }
+
+    protected void stopConnecting(final InetSocketAddress address) throws IOException
+    {
+        final Iterator<SocketChannel> iterator = openingSocketChannels.iterator();
+        while (iterator.hasNext())
+        {
+            final SocketChannel channel = iterator.next();
+            if (channel.getRemoteAddress().equals(address))
+            {
+                iterator.remove();
+                break;
+            }
+        }
     }
 
     @FunctionalInterface

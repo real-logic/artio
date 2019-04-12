@@ -42,6 +42,8 @@ public interface LibraryScheduler
 
     /**
      * Invoked by the Library to stop the threads. Should only return once they are completed stopped.
+     *
+     * @param libraryId the id of the library that is being closed.
      */
     void close(int libraryId);
 

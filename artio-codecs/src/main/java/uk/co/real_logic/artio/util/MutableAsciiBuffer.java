@@ -32,19 +32,6 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     private static final byte Y = (byte)'Y';
     private static final byte N = (byte)'N';
 
-    private static final int[] INT_ROUNDS =
-    {
-        9, 99, 999, 9999, 99999, 999999, 9999999, 99999999, 999999999, Integer.MAX_VALUE
-    };
-
-    private static final long[] LONG_ROUNDS =
-    {
-        9L, 99L, 999L, 9999L, 99999L, 999999L, 9999999L, 99999999L, 999999999L,
-        9_999999999L, 99_999999999L, 999_999999999L, 9999_999999999L,
-        99999_999999999L, 999999_999999999L, 9999999_999999999L, 99999999_999999999L,
-        999999999_999999999L, Long.MAX_VALUE
-    };
-
     private static final byte[] MIN_INTEGER_VALUE = String.valueOf(Integer.MIN_VALUE).getBytes(US_ASCII);
     private static final byte[] MIN_LONG_VALUE = String.valueOf(Long.MIN_VALUE).getBytes(US_ASCII);
 
@@ -90,47 +77,18 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
     public int getNatural(final int startInclusive, final int endExclusive)
     {
-        int tally = 0;
-        for (int index = startInclusive; index < endExclusive; index++)
-        {
-            tally = (tally * 10) + getDigit(index);
-        }
-
-        return tally;
+        return super.parseNaturalIntAscii(startInclusive, endExclusive - startInclusive);
     }
 
     public long getNaturalLong(final int startInclusive, final int endExclusive)
     {
-        long tally = 0;
-        for (int index = startInclusive; index < endExclusive; index++)
-        {
-            tally = (tally * 10) + getDigit(index);
-        }
-
-        return tally;
+        return super.parseNaturalLongAscii(startInclusive, endExclusive - startInclusive);
     }
 
     @SuppressWarnings("FinalParameters")
     public int getInt(int startInclusive, final int endExclusive)
     {
-        final byte first = getByte(startInclusive);
-        if (first == NEGATIVE)
-        {
-            startInclusive++;
-        }
-
-        int tally = 0;
-        for (int index = startInclusive; index < endExclusive; index++)
-        {
-            tally = (tally * 10) + getDigit(index);
-        }
-
-        if (first == NEGATIVE)
-        {
-            tally *= -1;
-        }
-
-        return tally;
+        return super.parseIntAscii(startInclusive, endExclusive - startInclusive);
     }
 
     public int getDigit(final int index)
@@ -149,7 +107,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     {
         if (value < 0x30 || value > 0x39)
         {
-            throw new AsciiEncodingException("'" + ((char)value) + "' isn't a valid digit @ " + index);
+            throw new NumberFormatException("'" + ((char)value) + "' isn't a valid digit @ " + index);
         }
 
         return value - 0x30;
@@ -185,8 +143,8 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     /**
      * Not at all a performant conversion: don't use this on a critical application path.
      *
-     * @param offset
-     * @param length
+     * @param offset The offset within the buffer to start at.
+     * @param length the length in bytes to convert to a String
      * @return a String
      */
     public String getAscii(final int offset, final int length)
@@ -276,8 +234,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
             }
         }
 
-        number.value(negative ? -1 * value : value);
-        number.scale(scale);
+        number.set(negative ? -1 * value : value, scale);
         return number;
     }
 
@@ -375,49 +332,10 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         putByte(index, SEPARATOR);
     }
 
-    public int putAsciiBoolean(final int offset, final boolean value)
+    public int putBooleanAscii(final int offset, final boolean value)
     {
         putByte(offset, value ? Y : N);
         return 1;
-    }
-
-    public void putNatural(final int offset, final int length, final int value)
-    {
-        final int end = offset + length;
-        int remainder = value;
-        for (int index = end - 1; index >= offset; index--)
-        {
-            final int digit = remainder % 10;
-            remainder = remainder / 10;
-            putByte(index, (byte)(ZERO + digit));
-        }
-
-        if (remainder != 0)
-        {
-            throw new AsciiEncodingException(String.format("Cannot write %d in %d bytes", value, length));
-        }
-    }
-
-    /**
-     * Encode a natural number starting at its end position.
-     *
-     * @param value        the natural number to encode
-     * @param endExclusive index after the last character encoded
-     * @return startInclusive index of first character encoded
-     */
-    public int putNaturalFromEnd(final int value, final int endExclusive)
-    {
-        int remainder = value;
-        int index = endExclusive;
-        while (remainder > 0)
-        {
-            index--;
-            final int digit = remainder % 10;
-            remainder = remainder / 10;
-            putByte(index, (byte)(ZERO + digit));
-        }
-
-        return index;
     }
 
     public static int lengthInAscii(final int value)
@@ -430,124 +348,30 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         return characterCount;
     }
 
-    /**
-     * Puts an int into the buffer
-     *
-     * @param offset the offset at which to put the int
-     * @param value  the int to write
-     * @return the number of bytes that the int took up encoded
-     */
-    public int putAsciiInt(final int offset, final int value)
-    {
-        if (zero(offset, value))
-        {
-            return 1;
-        }
-
-        if (value == Integer.MIN_VALUE)
-        {
-            putBytes(offset, MIN_INTEGER_VALUE);
-            return MIN_INTEGER_VALUE.length;
-        }
-
-        int start = offset;
-        int quotient = value;
-        int length = 1;
-        if (value < 0)
-        {
-            putChar(offset, '-');
-            start++;
-            length++;
-            quotient = -quotient;
-        }
-
-        int i = endOffset(quotient);
-        length += i;
-
-        while (i >= 0)
-        {
-            final int remainder = quotient % 10;
-            quotient = quotient / 10;
-            putByte(i + start, (byte)(ZERO + remainder));
-            i--;
-        }
-
-        return length;
-    }
-
-    private static int endOffset(final int value)
-    {
-        for (int i = 0; true; i++)
-        {
-            if (value <= INT_ROUNDS[i])
-            {
-                return i;
-            }
-        }
-    }
-
-    public int putAsciiLong(final int offset, final long value)
-    {
-        if (zero(offset, value))
-        {
-            return 1;
-        }
-
-        if (value == Long.MIN_VALUE)
-        {
-            putBytes(offset, MIN_LONG_VALUE);
-            return MIN_LONG_VALUE.length;
-        }
-
-        int start = offset;
-        long quotient = value;
-        int length = 1;
-        if (value < 0)
-        {
-            putChar(offset, '-');
-            start++;
-            length++;
-            quotient = -quotient;
-        }
-
-        int i = endOffset(quotient);
-        length += i;
-
-        while (i >= 0)
-        {
-            final long remainder = quotient % 10;
-            quotient = quotient / 10;
-            putByte(i + start, (byte)(ZERO + remainder));
-            i--;
-        }
-
-        return length;
-    }
-
-    public int putAsciiChar(final int index, final char value)
+    public int putCharAscii(final int index, final char value)
     {
         putByte(index, (byte)value);
         return 1;
     }
 
-    private static int endOffset(final long value)
+    public int putFloatAscii(final int offset, final DecimalFloat price)
     {
-        for (int i = 0; true; i++)
-        {
-            if (value <= LONG_ROUNDS[i])
-            {
-                return i;
-            }
-        }
+        return putFloatAscii(offset, price.value(), price.scale());
     }
 
-    public int putAsciiFloat(final int offset, final DecimalFloat price)
+    /**
+     * Put's a float value in an ascii encoding. This method keeps given scale and will not trim needed trailing zeros.
+     *
+     * @param offset the position at which to start putting ascii encoded float.
+     * @param value the value of the float to encode - see {@link DecimalFloat} for details.
+     * @param scale the scale of the float to encode - see {@link DecimalFloat} for details.
+     * @return the length of the encoded value
+     */
+    public int putFloatAscii(final int offset, final long value, final int scale)
     {
-        final long value = price.value();
-        final int scale = price.scale();
-        if (zero(offset, value))
+        if (value == 0)
         {
-            return 1;
+            return handleZero(offset, scale);
         }
 
         final long remainder = calculateRemainderAndPutMinus(offset, value);
@@ -557,7 +381,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         // Encode the value into a tmp space, leaving the longest possible space required
         final int tmpEnd = start + LONGEST_LONG_LENGTH;
         final int tmpStart = putLong(remainder, tmpEnd) + 1;
-        final int length = tmpEnd - tmpStart + DOT_LENGTH;
+        final int length = tmpEnd - tmpStart + 1;
 
         // Move the value to the beginning once you've encoded it
         if (scale > 0)
@@ -565,9 +389,10 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
             final int end = start + length;
             final int split = end - scale;
             final int digitsBeforeDot = length - scale;
-            if (digitsBeforeDot < 0)
+            if (digitsBeforeDot <= 0)
             {
                 int cursor = start;
+                putByte(cursor++, ZERO);
                 putByte(cursor++, DOT);
                 final int numberOfZeros = -digitsBeforeDot;
                 final int endOfZeros = cursor + numberOfZeros;
@@ -577,31 +402,48 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
                 }
                 putBytes(cursor, this, tmpStart, length);
 
-                return minusAdj + numberOfZeros + DOT_LENGTH + length;
+                return minusAdj + ZERO_LENGTH + DOT_LENGTH + numberOfZeros + length;
             }
             else
             {
                 putBytes(start, this, tmpStart, digitsBeforeDot);
                 putByte(split, DOT);
                 putBytes(split + 1, this, tmpStart + digitsBeforeDot, scale);
+
+                return minusAdj + length + DOT_LENGTH;
             }
-            return length + DOT_LENGTH + minusAdj;
         }
         else
         {
             putBytes(start, this, tmpStart, length);
-            return length + minusAdj;
+            final int trailingZeros = -scale;
+            if (trailingZeros > 0)
+            {
+                putTrailingZero(start + length, trailingZeros);
+            }
+            return length + minusAdj + trailingZeros;
         }
     }
 
-    private boolean zero(final int offset, final long value)
+    private void putTrailingZero(final int offset, final int zerosCount)
     {
-        if (value == 0)
+        for (int ix = 0; ix < zerosCount; ix++)
         {
-            putByte(offset, ZERO);
-            return true;
+            putByte(offset + ix, ZERO);
         }
-        return false;
+    }
+
+    private int handleZero(final int offset, final int scale)
+    {
+        putByte(offset, ZERO);
+        if (scale <= 0)
+        {
+            return 1;
+        }
+        putByte(offset + 1, DOT);
+        putTrailingZero(offset + 2, scale);
+
+        return 2 + scale;
     }
 
     private long calculateRemainderAndPutMinus(final int offset, final long value)

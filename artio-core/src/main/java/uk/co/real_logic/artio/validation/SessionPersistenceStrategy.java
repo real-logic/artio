@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ package uk.co.real_logic.artio.validation;
 
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 
-import static uk.co.real_logic.artio.validation.PersistenceLevel.LOCAL_ARCHIVE;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.REPLICATED;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
 
 /**
  * Determines whether a session should be replicated or not.
@@ -26,23 +26,23 @@ import static uk.co.real_logic.artio.validation.PersistenceLevel.REPLICATED;
 @FunctionalInterface
 public interface SessionPersistenceStrategy
 {
-    static SessionPersistenceStrategy alwaysReplicated()
+    static SessionPersistenceStrategy alwaysIndexed()
     {
-        return (logon) -> REPLICATED;
+        return (logon) -> INDEXED;
     }
 
-    static SessionPersistenceStrategy alwaysLocallyArchive()
+    static SessionPersistenceStrategy alwaysUnindexed()
     {
-        return (logon) -> LOCAL_ARCHIVE;
+        return (logon) -> UNINDEXED;
     }
 
     static boolean resetSequenceNumbersUponLogon(final PersistenceLevel persistenceLevel)
     {
         switch (persistenceLevel)
         {
-            case REPLICATED:
+            case INDEXED:
                 return false;
-            case LOCAL_ARCHIVE:
+            case UNINDEXED:
                 return true;
             default:
                 throw new IllegalArgumentException("persistenceLevel=" + persistenceLevel);

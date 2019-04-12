@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.library;
 
-import io.aeron.driver.MediaDriver;
+import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.exceptions.DriverTimeoutException;
 import org.agrona.CloseHelper;
 import org.agrona.IoUtil;
@@ -34,11 +34,11 @@ public class FixLibraryCleanupTest
     @Test
     public void shouldCleanupLibrary()
     {
-        final MediaDriver mediaDriver = TestFixtures.launchMediaDriver();
+        final ArchivingMediaDriver mediaDriver = TestFixtures.launchMediaDriver();
         try
         {
-            final LibraryConfiguration configuration = new LibraryConfiguration()
-                .libraryAeronChannels(singletonList(IPC_CHANNEL));
+            final LibraryConfiguration configuration = newLibraryConfiguration();
+
             final FixLibrary library = FixLibrary.connect(configuration);
 
             final File monitoringFile = new File(configuration.monitoringFile());
@@ -62,11 +62,17 @@ public class FixLibraryCleanupTest
         }
     }
 
+    private LibraryConfiguration newLibraryConfiguration()
+    {
+        return new LibraryConfiguration()
+            .libraryAeronChannels(singletonList(IPC_CHANNEL))
+            .sessionAcquireHandler((session, isSlow) -> null);
+    }
+
     @Test
     public void shouldCleanupLibraryIfItCannotConnect()
     {
-        final LibraryConfiguration configuration = new LibraryConfiguration()
-            .libraryAeronChannels(singletonList(IPC_CHANNEL));
+        final LibraryConfiguration configuration = newLibraryConfiguration();
 
         shouldCleanupLibraryIfItCannotConnect(configuration);
     }
@@ -92,8 +98,7 @@ public class FixLibraryCleanupTest
     @Test
     public void shouldCleanupLibraryIfNoAeronCNCFile()
     {
-        final LibraryConfiguration configuration = new LibraryConfiguration()
-            .libraryAeronChannels(singletonList(IPC_CHANNEL));
+        final LibraryConfiguration configuration = newLibraryConfiguration();
 
         // Ensure that we test the CNC file not found path
         IoUtil.delete(new File(configuration.aeronContext().aeronDirectoryName()), true);

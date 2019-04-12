@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,16 +21,6 @@ import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 
 public final class ArchiveDescriptor
 {
-    static int nextTerm(final int termOffset, final int frameLength)
-    {
-        return termOffset + alignTerm(frameLength);
-    }
-
-    static long nextTerm(final long position, final int frameLength)
-    {
-        return position + alignTerm(frameLength);
-    }
-
     public static int alignTerm(final int frameLength)
     {
         return BitUtil.align(frameLength, FRAME_ALIGNMENT);
@@ -43,6 +33,6 @@ public final class ArchiveDescriptor
 
     private static long align(final long value, final long alignment)
     {
-        return (value + (alignment - 1)) & ~(alignment - 1);
+        return (value + (alignment - 1)) & -alignment;
     }
 }

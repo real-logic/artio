@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,7 +27,6 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2LongHashMap.KeyIterator;
-import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.EpochClock;
@@ -38,17 +37,14 @@ import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.CompletionPosition;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.EngineDescriptorStore;
+import uk.co.real_logic.artio.engine.PositionSender;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.*;
-import uk.co.real_logic.artio.replication.ClusterFragmentAssembler;
-import uk.co.real_logic.artio.replication.ClusterFragmentHandler;
-import uk.co.real_logic.artio.replication.ClusterSubscription;
-import uk.co.real_logic.artio.replication.ClusterableStreams;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
@@ -57,7 +53,6 @@ import uk.co.real_logic.artio.timing.Timer;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -68,13 +63,10 @@ import java.util.function.Predicate;
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.agrona.collections.CollectionUtil.removeIf;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
-import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
-import static uk.co.real_logic.artio.LogTag.APPLICATION_HEARTBEAT;
-import static uk.co.real_logic.artio.LogTag.CLUSTER_MANAGEMENT;
+import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.Pressure.isBackPressured;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
@@ -84,8 +76,8 @@ import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.GatewayError.*;
-import static uk.co.real_logic.artio.messages.LogonStatus.LIBRARY_NOTIFICATION;
-import static uk.co.real_logic.artio.messages.SequenceNumberType.DETERMINE_AT_LOGON;
+import static uk.co.real_logic.artio.messages.SessionStatus.LIBRARY_NOTIFICATION;
+import static uk.co.real_logic.artio.messages.SequenceNumberType.PERSISTENT;
 import static uk.co.real_logic.artio.messages.SequenceNumberType.TRANSIENT;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.*;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
@@ -96,14 +88,6 @@ import static uk.co.real_logic.artio.messages.SessionState.CONNECTED;
  */
 class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 {
-    private static final ByteBuffer CONNECT_ERROR;
-
-    static
-    {
-        final byte[] errorBytes =
-            "This is not the cluster's leader node, please connect to the leader".getBytes(US_ASCII);
-        CONNECT_ERROR = ByteBuffer.wrap(errorBytes);
-    }
 
     private final RetryManager retryManager = new RetryManager();
     private final List<ResetSequenceNumberCommand> replies = new ArrayList<>();
@@ -121,7 +105,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ControlledFragmentHandler librarySubscriber;
     private final ControlledFragmentHandler replaySubscriber;
     private final ControlledFragmentHandler replaySlowSubscriber;
-    private final ClusterFragmentHandler clusterSubscriber;
 
     private final ReceiverEndPoints receiverEndPoints = new ReceiverEndPoints();
     private final ControlledFragmentAssembler senderEndPointAssembler;
@@ -129,9 +112,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private final EngineConfiguration configuration;
     private final EndPointFactory endPointFactory;
-    private final ClusterableStreams clusterableStreams;
-    private final ClusterSubscription clusterSubscription;
-    private final ClusterSlowPeeker clusterSlowPeeker;
     private final Subscription librarySubscription;
     private final SubscriptionSlowPeeker librarySlowPeeker;
     private final Image replayImage;
@@ -141,7 +121,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final String agentNamePrefix;
     private final CompletionPosition inboundCompletionPosition;
     private final CompletionPosition outboundLibraryCompletionPosition;
-    private final CompletionPosition outboundClusterCompletionPosition;
     private final FinalImagePositions finalImagePositions;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionContexts sessionContexts;
@@ -163,6 +142,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Long2LongHashMap resendSlowStatus = new Long2LongHashMap(-1);
     private final Long2LongHashMap resendNotSlowStatus = new Long2LongHashMap(-1);
     private final AgentInvoker conductorAgentInvoker;
+    private final RecordingCoordinator recordingCoordinator;
+    private final PositionSender nonLoggingPositionSender;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
@@ -172,9 +153,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final Timer sendTimer,
         final EngineConfiguration configuration,
         final EndPointFactory endPointFactory,
-        final ClusterableStreams clusterableStreams,
-        final ClusterSubscription clusterSubscription,
-        final ClusterSubscription clusterSlowSubscription,
         final Subscription librarySubscription,
         final Subscription slowSubscription,
         final Image replayImage,
@@ -189,21 +167,18 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final GatewaySessions gatewaySessions,
         final ErrorHandler errorHandler,
-        final EngineDescriptorStore engineDescriptorStore,
-        final LongHashSet replicatedConnectionIds,
         final String agentNamePrefix,
         final CompletionPosition inboundCompletionPosition,
         final CompletionPosition outboundLibraryCompletionPosition,
-        final CompletionPosition outboundClusterCompletionPosition,
         final FinalImagePositions finalImagePositions,
-        final AgentInvoker conductorAgentInvoker)
+        final AgentInvoker conductorAgentInvoker,
+        final RecordingCoordinator recordingCoordinator)
     {
         this.clock = clock;
         this.outboundTimer = outboundTimer;
         this.sendTimer = sendTimer;
         this.configuration = configuration;
         this.endPointFactory = endPointFactory;
-        this.clusterSubscription = clusterSubscription;
         this.librarySubscription = librarySubscription;
         this.replayImage = replayImage;
         this.gatewaySessions = gatewaySessions;
@@ -211,13 +186,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.errorHandler = errorHandler;
         this.outboundPublication = outboundPublication;
         this.inboundPublication = inboundPublication;
-        this.clusterableStreams = clusterableStreams;
         this.agentNamePrefix = agentNamePrefix;
         this.inboundCompletionPosition = inboundCompletionPosition;
         this.outboundLibraryCompletionPosition = outboundLibraryCompletionPosition;
-        this.outboundClusterCompletionPosition = outboundClusterCompletionPosition;
         this.senderEndPoints = new SenderEndPoints(errorHandler);
         this.conductorAgentInvoker = conductorAgentInvoker;
+        this.recordingCoordinator = recordingCoordinator;
         this.senderEndPointAssembler = new ControlledFragmentAssembler(senderEndPoints, 0, true);
         this.sessionIdStrategy = sessionIdStrategy;
         this.sessionContexts = sessionContexts;
@@ -235,32 +209,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.replaySlowPeeker = new SlowPeeker(replaySlowImage, replayImage);
         endPointFactory.replaySlowPeeker(replaySlowPeeker);
 
-        if (isClustered())
-        {
-            clusterSlowPeeker = new ClusterSlowPeeker(clusterSubscription, clusterSlowSubscription);
-            engineBlockablePosition = clusterSlowPeeker;
-            librarySubscriber = new ControlledFragmentAssembler(new SubscriptionSplitter(
-                clusterableStreams,
-                new EngineProtocolSubscription(this),
-                clusterableStreams.publication(OUTBOUND_LIBRARY_STREAM, "outboundLibraryStream"),
-                inboundPublication,
-                engineDescriptorStore,
-                configuration.bindAddress().toString(),
-                replicatedConnectionIds),
-                0,
-                true);
-            clusterSubscriber = new ClusterFragmentAssembler(ProtocolSubscription.of(this));
-        }
-        else
-        {
-            engineBlockablePosition = getOutboundSlowPeeker(outboundPublication);
-            librarySubscriber = new ControlledFragmentAssembler(
-                ProtocolSubscription.of(this, new EngineProtocolSubscription(this)),
-                0,
-                true);
-            clusterSubscriber = null;
-            clusterSlowPeeker = null;
-        }
+
+        engineBlockablePosition = getOutboundSlowPeeker(outboundPublication);
+        librarySubscriber = new ControlledFragmentAssembler(
+            ProtocolSubscription.of(this, new EngineProtocolSubscription(this)),
+            0,
+            true);
+        nonLoggingPositionSender = configuration.logOutboundMessages() ?
+            null : new PositionSender(inboundPublication);
 
         // We lookup replayed message by session id, since the connection id may have changed
         // if it's a persistent session.
@@ -277,6 +233,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 final int messageType,
                 final long timestamp,
                 final MessageStatus status,
+                final int sequenceNumber,
                 final long position)
             {
                 return senderEndPoints.onReplayMessage(connectionId, buffer, offset, length, position);
@@ -287,7 +244,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 // Should never be replayed.
                 return Action.CONTINUE;
             }
-        }),
+        },
+        new ReplayProtocolSubscription(senderEndPoints::onReplayComplete)),
         0,
         true);
 
@@ -304,6 +262,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 final int messageType,
                 final long timestamp,
                 final MessageStatus status,
+                final int sequenceNumber,
                 final long position)
             {
                 return senderEndPoints.onSlowReplayMessage(connectionId, buffer, offset, length, position);
@@ -314,7 +273,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 // Should never be replayed.
                 return Action.CONTINUE;
             }
-        }));
+        },
+        new ReplayProtocolSubscription(senderEndPoints::onReplayComplete)));
 
         channelSupplier = configuration.channelSupplier();
     }
@@ -334,11 +294,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         return outboundSlowPeeker;
-    }
-
-    private boolean isClustered()
-    {
-        return clusterSubscription != null;
     }
 
     public int doWork() throws Exception
@@ -398,10 +353,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         int messagesRead = librarySubscription.controlledPoll(librarySubscriber, outboundLibraryFragmentLimit);
         messagesRead += librarySlowPeeker.peek(senderEndPointAssembler);
 
-        if (isClustered())
+        if (nonLoggingPositionSender != null)
         {
-            messagesRead += clusterSubscription.poll(clusterSubscriber, outboundLibraryFragmentLimit);
-            messagesRead += clusterSlowPeeker.peek(senderEndPoints);
+            nonLoggingPositionSender.doWork();
         }
 
         return messagesRead;
@@ -417,7 +371,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             total += library.poll(timeInMs);
             if (!library.isConnected())
             {
-                DebugLogger.log(CLUSTER_MANAGEMENT, "Timing out connection to library %s%n", library.libraryId());
+                DebugLogger.log(LIBRARY_MANAGEMENT, "Timing out connection to library %s%n", library.libraryId());
 
                 iterator.remove();
                 library.releaseSlowPeeker();
@@ -441,7 +395,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             libraryPosition = image.position();
         }
 
-        final boolean indexed = indexedPosition(librarySessionId, libraryPosition);
+        final boolean indexed = sentIndexedPosition(librarySessionId, libraryPosition);
         if (indexed)
         {
             acquireLibrarySessions(library);
@@ -455,7 +409,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private boolean retryAcquireLibrarySessions(final LiveLibraryInfo library)
     {
-        final boolean indexed = indexedPosition(library.aeronSessionId(), library.acquireAtPosition());
+        final boolean indexed = sentIndexedPosition(library.aeronSessionId(), library.acquireAtPosition());
         if (indexed)
         {
             acquireLibrarySessions(library);
@@ -464,7 +418,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return indexed;
     }
 
-    private boolean indexedPosition(final int aeronSessionId, final long position)
+    private boolean sentIndexedPosition(final int aeronSessionId, final long position)
     {
         return sentSequenceNumberIndex.indexedPosition(aeronSessionId) >= position;
     }
@@ -489,12 +443,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final SessionState state = hasLoggedIn ? ACTIVE : CONNECTED;
 
             DebugLogger.log(
-                CLUSTER_MANAGEMENT,
+                LIBRARY_MANAGEMENT,
                 "Acquiring session %s from library %s%n", session.sessionId(), library.libraryId());
 
             gatewaySessions.acquire(
                 session,
                 state,
+                false,
                 session.heartbeatIntervalInS(),
                 sentSequenceNumber,
                 receivedSequenceNumber,
@@ -507,7 +462,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 session,
                 sentSequenceNumber,
                 receivedSequenceNumber,
-                LogonStatus.LIBRARY_NOTIFICATION));
+                SessionStatus.LIBRARY_NOTIFICATION));
         }
 
         finalImagePositions.removePosition(library.aeronSessionId());
@@ -534,47 +489,42 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return channelSupplier.pollSelector(timeInMs, onNewConnectionFunc);
     }
 
-    private void onNewConnection(final long timeInMs, final TcpChannel channel) throws IOException
+    private void onNewConnection(final long timeInMs, final TcpChannel channel)
     {
-        if (clusterableStreams.isLeader())
+        final long connectionId = this.nextConnectionId++;
+        final GatewaySession session = setupConnection(
+            channel,
+            connectionId,
+            UNKNOWN_SESSION,
+            null,
+            ENGINE_LIBRARY_ID,
+            ACCEPTOR,
+            configuration.acceptedSessionClosedResendInterval(),
+            configuration.acceptedSessionResendRequestChunkSize(),
+            configuration.acceptedSessionSendRedundantResendRequests(),
+            configuration.acceptedEnableLastMsgSeqNumProcessed());
+
+        session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
+
+        gatewaySessions.acquire(
+            session,
+            CONNECTED,
+            false,
+            configuration.defaultHeartbeatIntervalInS(),
+            UNK_SESSION,
+            UNK_SESSION,
+            null,
+            null,
+            engineBlockablePosition);
+
+        final String address = channel.remoteAddress();
+        // In this case the save connect is simply logged for posterities sake
+        // So in the back-pressure we should just drop it
+        final long position = inboundPublication.saveConnect(connectionId, address);
+        if (isBackPressured(position))
         {
-            final long connectionId = this.nextConnectionId++;
-            final GatewaySession session = setupConnection(
-                channel, connectionId, UNKNOWN_SESSION, null, ENGINE_LIBRARY_ID, ACCEPTOR, DETERMINE_AT_LOGON);
-
-            session.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
-
-            gatewaySessions.acquire(
-                session,
-                CONNECTED,
-                configuration.defaultHeartbeatIntervalInS(),
-                UNK_SESSION,
-                UNK_SESSION,
-                null,
-                null,
-                engineBlockablePosition);
-
-            final String address = channel.remoteAddress();
-            // In this case the save connect is simply logged for posterities sake
-            // So in the back-pressure we should just drop it
-            final long position = inboundPublication.saveConnect(connectionId, address);
-            if (isBackPressured(position))
-            {
-                errorHandler.onError(new IllegalStateException(
-                    "Failed to log connect from " + address + " due to backpressure"));
-            }
-        }
-        else
-        {
-            final String address = channel.remoteAddress();
             errorHandler.onError(new IllegalStateException(
-                String.format("Attempted connection from %s whilst follower", address)));
-
-            // NB: channel is still blocking at this point, so will be placed in buffer
-            // NB: Writing error message is best effort, possible that other end closes
-            // Before receipt.
-            channel.write(CONNECT_ERROR);
-            channel.close();
+                "Failed to log connect from " + address + " due to backpressure"));
         }
     }
 
@@ -592,6 +542,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int requestedInitialReceivedSequenceNumber,
         final int requestedInitialSentSequenceNumber,
         final boolean resetSequenceNumber,
+        final boolean closedResendInterval,
+        final int resendRequestChunkSize,
+        final boolean sendRedundantResendRequests,
+        final boolean enableLastMsgSeqNumProcessed,
         final String username,
         final String password,
         final int heartbeatIntervalInS,
@@ -604,6 +558,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             saveError(GatewayError.UNKNOWN_LIBRARY, libraryId, correlationId, "");
 
             return CONTINUE;
+        }
+
+        final boolean logInboundMessages = configuration.logInboundMessages();
+        final boolean logOutboundMessages = configuration.logOutboundMessages();
+        if (sequenceNumberType == PERSISTENT && !configuration.logAllMessages())
+        {
+            return badSequenceNumberConfiguration(libraryId, correlationId, logInboundMessages, logOutboundMessages);
         }
 
         final CompositeKey sessionKey = sessionIdStrategy.onInitiateLogon(
@@ -632,13 +593,20 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         try
         {
+            DebugLogger.log(
+                FIX_CONNECTION,
+                "Connecting to %s:%d from library %d%n", host, port, libraryId);
+
             final InetSocketAddress address = new InetSocketAddress(host, port);
+            final ConnectingSession connectingSession = new ConnectingSession(address, sessionContext.sessionId());
+            library.connectionStartsConnecting(correlationId, connectingSession);
             channelSupplier.open(address,
                 (channel, ex) ->
                 {
                     if (ex != null)
                     {
                         sessionContexts.onDisconnect(sessionContext.sessionId());
+                        library.connectionFinishesConnecting(correlationId);
                         saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
                         return;
                     }
@@ -653,6 +621,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         targetLocationId,
                         sequenceNumberType,
                         resetSequenceNumber,
+                        closedResendInterval,
+                        resendRequestChunkSize,
+                        sendRedundantResendRequests,
+                        enableLastMsgSeqNumProcessed,
                         username,
                         password,
                         heartbeatIntervalInS,
@@ -676,6 +648,55 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return CONTINUE;
     }
 
+    public Action onMidConnectionDisconnect(final int libraryId, final long correlationId)
+    {
+        final LiveLibraryInfo library = idToLibrary.get(libraryId);
+        if (library == null)
+        {
+            saveError(GatewayError.UNKNOWN_LIBRARY, libraryId, correlationId, "");
+
+            return CONTINUE;
+        }
+
+        final ConnectingSession connectingSession = library.connectionFinishesConnecting(correlationId);
+        if (connectingSession == null)
+        {
+            saveError(GatewayError.UNKNOWN_SESSION, libraryId, correlationId,
+                "Engine doesn't think library is connecting this session");
+
+            return CONTINUE;
+        }
+
+        sessionContexts.onDisconnect(connectingSession.sessionId());
+        try
+        {
+            channelSupplier.stopConnecting(connectingSession.address());
+        }
+        catch (final IOException e)
+        {
+            errorHandler.onError(e);
+        }
+
+        return CONTINUE;
+    }
+
+    private Action badSequenceNumberConfiguration(
+        final int libraryId,
+        final long correlationId,
+        final boolean logInboundMessages,
+        final boolean logOutboundMessages)
+    {
+        final String msg =
+            "You need to enable the logging of inbound and outbound messages on your EngineConfiguration" +
+            "in order to initiate a connection with persistent sequence numbers. " +
+            "logInboundMessages = " + logInboundMessages +
+            "logOutboundMessages = " + logOutboundMessages;
+
+        saveError(INVALID_CONFIGURATION, libraryId, correlationId, msg);
+
+        return CONTINUE;
+    }
+
     private void onConnectionOpen(
         final int libraryId,
         final String senderCompId,
@@ -686,6 +707,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final String targetLocationId,
         final SequenceNumberType sequenceNumberType,
         final boolean resetSequenceNumber,
+        final boolean closedResendInterval,
+        final int resendRequestChunkSize,
+        final boolean sendRedundantResendRequests,
+        final boolean enableLastMsgSeqNumProcessed,
         final String username,
         final String password,
         final int heartbeatIntervalInS,
@@ -699,49 +724,59 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         try
         {
-            DebugLogger.log(
-                CLUSTER_MANAGEMENT,
+            DebugLogger.log(FIX_CONNECTION,
                 "Initiating session %s from library %s%n", sessionContext.sessionId(), library.libraryId());
-
             final long connectionId = this.nextConnectionId++;
-
             sessionContext.onLogon(resetSequenceNumber || sequenceNumberType == TRANSIENT);
             final long sessionId = sessionContext.sessionId();
-            final GatewaySession session = setupConnection(
+            final GatewaySession gatewaySession = setupConnection(
                 channel,
                 connectionId,
                 sessionContext,
                 sessionKey,
                 libraryId,
                 INITIATOR,
-                sequenceNumberType);
+                closedResendInterval,
+                resendRequestChunkSize,
+                sendRedundantResendRequests,
+                enableLastMsgSeqNumProcessed);
+            library.addSession(gatewaySession);
 
-            library.addSession(session);
-
-            final class FinishInitiatingConnection extends UnitOfWork
+            retryManager.schedule(new UnitOfWork()
             {
                 private int lastSentSequenceNumber;
                 private int lastReceivedSequenceNumber;
 
-                private FinishInitiatingConnection()
                 {
-                    work(this::checkLoggerUpToDate, this::saveManageSession);
+                    if (configuration.logInboundMessages())
+                    {
+                        work(this::checkLoggerUpToDate, this::saveManageSession);
+                    }
+                    else
+                    {
+                        work(this::saveManageSession);
+                    }
                 }
 
                 private long saveManageSession()
                 {
-                    return inboundPublication.saveManageSession(
+                    final long position = inboundPublication.saveManageSession(
                         libraryId,
                         connectionId,
                         sessionId,
                         lastSentSequenceNumber,
                         lastReceivedSequenceNumber,
                         Session.NO_LOGON_TIME,
-                        LogonStatus.NEW,
+                        SessionStatus.SESSION_HANDOVER,
                         SlowStatus.NOT_SLOW,
                         INITIATOR,
                         CONNECTED,
+                        false,
                         heartbeatIntervalInS,
+                        closedResendInterval,
+                        resendRequestChunkSize,
+                        sendRedundantResendRequests,
+                        enableLastMsgSeqNumProcessed,
                         correlationId,
                         sessionContext.sequenceIndex(),
                         senderCompId,
@@ -750,25 +785,32 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         targetCompId,
                         targetSubId,
                         targetLocationId,
-                        address.toString());
+                        address.toString(),
+                        username,
+                        password);
+
+                    if (position > 0)
+                    {
+                        library.connectionFinishesConnecting(correlationId);
+                    }
+
+                    return position;
                 }
 
                 private long checkLoggerUpToDate()
                 {
-                    if (indexedPosition(header.sessionId(), header.position()))
+                    if (sentIndexedPosition(header.sessionId(), header.position()))
                     {
                         lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
                         lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
-                        session.onLogon(
+                        gatewaySession.onLogon(
                             sessionId, sessionContext, sessionKey, username, password, heartbeatIntervalInS);
                         return 0;
                     }
 
                     return BACK_PRESSURED;
                 }
-            }
-
-            retryManager.schedule(new FinishInitiatingConnection());
+            });
         }
         catch (final Exception e)
         {
@@ -798,16 +840,19 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int messageType,
         final long timestamp,
         final MessageStatus status,
+        final int sequenceNumber,
         final long position)
     {
         final long now = outboundTimer.recordSince(timestamp);
 
-        if (!clusterableStreams.isLeader())
-        {
-            sessionContexts.onSentFollowerMessage(sessionId, sequenceIndex, messageType, buffer, offset, length);
-        }
+        sessionContexts.onSentFollowerMessage(sessionId, sequenceIndex, messageType, buffer, offset, length);
 
-        senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length, position);
+        senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length, sequenceNumber, position);
+
+        if (nonLoggingPositionSender != null)
+        {
+            nonLoggingPositionSender.newPosition(libraryId, position);
+        }
 
         sendTimer.recordSince(now);
 
@@ -821,8 +866,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final CompositeKey sessionKey,
         final int libraryId,
         final ConnectionType connectionType,
-        final SequenceNumberType sequenceNumberType)
-        throws IOException
+        final boolean closedResendInterval,
+        final int resendRequestChunkSize,
+        final boolean sendRedundantResendRequests,
+        final boolean enableLastMsgSeqNumProcessed)
     {
         final ReceiverEndPoint receiverEndPoint = endPointFactory.receiverEndPoint(
             channel,
@@ -830,11 +877,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             context.sessionId(),
             context.sequenceIndex(),
             libraryId,
-            this,
-            sentSequenceNumberIndex,
-            receivedSequenceNumberIndex,
-            sequenceNumberType,
-            connectionType);
+            this);
         receiverEndPoints.add(receiverEndPoint);
 
         final BlockablePosition libraryBlockablePosition = getLibraryBlockablePosition(libraryId);
@@ -850,7 +893,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             sessionKey,
             receiverEndPoint,
             senderEndPoint,
-            this.onSessionlogon);
+            this.onSessionlogon,
+            closedResendInterval,
+            resendRequestChunkSize,
+            sendRedundantResendRequests,
+            enableLastMsgSeqNumProcessed);
 
         receiverEndPoint.gatewaySession(gatewaySession);
 
@@ -938,7 +985,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 libraryId, libraryName, livenessDetector, aeronSessionId, librarySlowPeeker);
             idToLibrary.put(libraryId, library);
 
-            DebugLogger.log(CLUSTER_MANAGEMENT, "Library %s - %s connected %n", libraryId, libraryName);
+            DebugLogger.log(LIBRARY_MANAGEMENT, "Library %s - %s connected %n", libraryId, libraryName);
 
             return COMPLETE;
         });
@@ -981,6 +1028,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long sessionId,
         final long correlationId,
         final SessionState state,
+        final boolean awaitingResend,
         final long heartbeatIntervalInMs,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
@@ -996,7 +1044,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         DebugLogger.log(
-            CLUSTER_MANAGEMENT,
+            LIBRARY_MANAGEMENT,
             "Releasing session %s with connectionId %s from library %s%n",
             sessionId,
             connectionId,
@@ -1020,6 +1068,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySessions.acquire(
                 session,
                 state,
+                awaitingResend,
                 (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs),
                 lastSentSequenceNumber,
                 lastReceivedSequenceNumber,
@@ -1032,7 +1081,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 session,
                 lastSentSequenceNumber,
                 lastReceivedSequenceNumber,
-                LogonStatus.LIBRARY_NOTIFICATION));
+                SessionStatus.LIBRARY_NOTIFICATION));
         }
 
         return action;
@@ -1050,6 +1099,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             return action;
         }
+
+        final int aeronSessionId = outboundPublication.id();
+        final long requiredPosition = outboundPublication.position();
 
         final LiveLibraryInfo libraryInfo = idToLibrary.get(libraryId);
         if (libraryInfo == null)
@@ -1075,36 +1127,35 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long connectionId = gatewaySession.connectionId();
         final int lastSentSeqNum = session.lastSentMsgSeqNum();
         final int lastRecvSeqNum = session.lastReceivedMsgSeqNum();
-        final SessionState sessionState = session.state();
-        final long logonTime = session.logonTime();
+
         gatewaySession.handoverManagementTo(libraryId, libraryInfo.librarySlowPeeker());
         libraryInfo.addSession(gatewaySession);
 
-        DebugLogger.log(CLUSTER_MANAGEMENT, "Handing control for session %s to library %s%n", sessionId, libraryId);
+        DebugLogger.log(LIBRARY_MANAGEMENT, "Handing control for session %s to library %s%n", sessionId, libraryId);
+
 
         final List<Continuation> continuations = new ArrayList<>();
 
-        continuations.add(() -> inboundPublication.saveManageSession(
+        // Ensure that we've indexed up to this point in time.
+        // If we don't do this then the indexer thread could receive a message sent from the Framer after
+        // the library has sent its first message and get the wrong sent sequence number.
+        // Only applies if there's a position to wait for and if the indexer is actually running on those messages.
+        if (requiredPosition > 0 && configuration.logOutboundMessages())
+        {
+            continuations.add(() ->
+                sentIndexedPosition(aeronSessionId, requiredPosition) ? COMPLETE : BACK_PRESSURED);
+        }
+
+        continuations.add(() -> saveManageSession(
             libraryId,
-            connectionId,
-            sessionId,
+            gatewaySession,
             lastSentSeqNum,
             lastRecvSeqNum,
-            logonTime,
-            LogonStatus.NEW,
-            gatewaySession.slowStatus(),
-            gatewaySession.connectionType(),
-            sessionState,
-            gatewaySession.heartbeatIntervalInS(),
-            correlationId,
-            gatewaySession.sequenceIndex(),
-            session.compositeKey().localCompId(),
-            session.compositeKey().localSubId(),
-            session.compositeKey().localLocationId(),
-            session.compositeKey().remoteCompId(),
-            session.compositeKey().remoteSubId(),
-            session.compositeKey().remoteLocationId(),
-            gatewaySession.address()));
+            SessionStatus.SESSION_HANDOVER,
+            session.compositeKey(),
+            connectionId,
+            session,
+            correlationId));
 
         catchupSession(
             continuations,
@@ -1124,37 +1175,68 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final GatewaySession gatewaySession,
         final int lastSentSeqNum,
         final int lastReceivedSeqNum,
-        final LogonStatus logonstatus)
+        final SessionStatus logonstatus)
     {
         final CompositeKey compositeKey = gatewaySession.sessionKey();
         if (compositeKey != null)
         {
             final long connectionId = gatewaySession.connectionId();
 
-            return inboundPublication.saveManageSession(
+            final Session session = gatewaySession.session();
+            return saveManageSession(
                 libraryId,
-                connectionId,
-                gatewaySession.sessionId(),
+                gatewaySession,
                 lastSentSeqNum,
                 lastReceivedSeqNum,
-                gatewaySession.session().logonTime(),
                 logonstatus,
-                gatewaySession.slowStatus(),
-                gatewaySession.connectionType(),
-                gatewaySession.session().state(),
-                gatewaySession.heartbeatIntervalInS(),
-                NO_CORRELATION_ID,
-                gatewaySession.sequenceIndex(),
-                compositeKey.localCompId(),
-                compositeKey.localSubId(),
-                compositeKey.localLocationId(),
-                compositeKey.remoteCompId(),
-                compositeKey.remoteSubId(),
-                compositeKey.remoteLocationId(),
-                gatewaySession.address());
+                compositeKey,
+                connectionId,
+                session,
+                NO_CORRELATION_ID);
         }
 
         return COMPLETE;
+    }
+
+    private long saveManageSession(
+        final int libraryId,
+        final GatewaySession gatewaySession,
+        final int lastSentSeqNum,
+        final int lastReceivedSeqNum,
+        final SessionStatus logonstatus,
+        final CompositeKey compositeKey,
+        final long connectionId,
+        final Session session,
+        final long correlationId)
+    {
+        return inboundPublication.saveManageSession(
+            libraryId,
+            connectionId,
+            gatewaySession.sessionId(),
+            lastSentSeqNum,
+            lastReceivedSeqNum,
+            session.logonTime(),
+            logonstatus,
+            gatewaySession.slowStatus(),
+            gatewaySession.connectionType(),
+            session.state(),
+            session.awaitingResend(),
+            gatewaySession.heartbeatIntervalInS(),
+            gatewaySession.closedResendInterval(),
+            gatewaySession.resendRequestChunkSize(),
+            gatewaySession.sendRedundantResendRequests(),
+            gatewaySession.enableLastMsgSeqNumProcessed(),
+            correlationId,
+            gatewaySession.sequenceIndex(),
+            compositeKey.localCompId(),
+            compositeKey.localSubId(),
+            compositeKey.localLocationId(),
+            compositeKey.remoteCompId(),
+            compositeKey.remoteSubId(),
+            compositeKey.remoteLocationId(),
+            gatewaySession.address(),
+            gatewaySession.username(),
+            gatewaySession.password());
     }
 
     private void catchupSession(
@@ -1169,6 +1251,21 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         if (replayFromSequenceNumber != NO_MESSAGE_REPLAY)
         {
+            if (!configuration.logInboundMessages())
+            {
+                continuations.add(() ->
+                {
+                    final long position = inboundPublication.saveRequestSessionReply(
+                        libraryId, INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES, correlationId);
+                    if (position > 0)
+                    {
+                        session.play();
+                    }
+                    return position;
+                });
+                return;
+            }
+
             final int sequenceIndex = session.sequenceIndex();
             if (replayFromSequenceIndex > sequenceIndex ||
                 (replayFromSequenceIndex == sequenceIndex && replayFromSequenceNumber > lastReceivedSeqNum))
@@ -1218,7 +1315,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         schedule(() ->
         {
-            if (null == gatewaySession.session())
+            final Session session = gatewaySession.session();
+            if (null == session)
             {
                 // Generally means that another library is now handling the session
                 // so we shouldn't publish availability.
@@ -1226,26 +1324,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }
 
             final CompositeKey key = gatewaySession.sessionKey();
-            return inboundPublication.saveManageSession(ENGINE_LIBRARY_ID,
+            return saveManageSession(
+                ENGINE_LIBRARY_ID,
+                gatewaySession,
+                session.lastSentMsgSeqNum(),
+                session.lastReceivedMsgSeqNum(),
+                SessionStatus.SESSION_HANDOVER,
+                key,
                 gatewaySession.connectionId(),
-                gatewaySession.sessionId(),
-                gatewaySession.session().lastSentMsgSeqNum(),
-                gatewaySession.session().lastReceivedMsgSeqNum(),
-                gatewaySession.session().logonTime(),
-                LogonStatus.NEW,
-                gatewaySession.slowStatus(),
-                gatewaySession.connectionType(),
-                gatewaySession.session().state(),
-                gatewaySession.heartbeatIntervalInS(),
-                NO_CORRELATION_ID,
-                gatewaySession.sequenceIndex(),
-                key.localCompId(),
-                key.localSubId(),
-                key.localLocationId(),
-                key.remoteCompId(),
-                key.remoteSubId(),
-                key.remoteLocationId(),
-                gatewaySession.address());
+                session, NO_CORRELATION_ID);
         });
     }
 
@@ -1361,13 +1448,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         outboundLibraryCompletionPosition.complete(outboundPositions);
 
-        if (isClustered())
-        {
-            final Long2LongHashMap outboundClusterPositions = new Long2LongHashMap(CompletionPosition.MISSING_VALUE);
-            final long position = clusterSubscription.position();
-            outboundClusterPositions.put(OUTBOUND_LIBRARY_STREAM, position);
-            outboundClusterCompletionPosition.complete(outboundClusterPositions);
-        }
+        recordingCoordinator.completionPositions(inboundPositions, outboundPositions);
     }
 
     public String roleName()

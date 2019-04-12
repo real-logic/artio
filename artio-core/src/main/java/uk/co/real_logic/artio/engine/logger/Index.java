@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,10 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.FragmentHandler;
-import io.aeron.logbuffer.Header;
-import org.agrona.DirectBuffer;
 
 /**
  * Different indexes to be run on the archiver implement this interface.
@@ -26,39 +23,8 @@ import org.agrona.DirectBuffer;
  * Extends {@link FragmentHandler} so that it can be easily used to replay/catchup
  * a Stream.
  */
-public interface Index extends ControlledFragmentHandler, AutoCloseable
+public interface Index extends FragmentHandler, AutoCloseable
 {
-    default Action onFragment(DirectBuffer buffer, int offset, int length, Header header)
-    {
-        indexRecord(
-            buffer,
-            offset,
-            length,
-            header.streamId(),
-            header.sessionId(),
-            header.position());
-
-        return Action.CONTINUE;
-    }
-
-    /**
-     * Index a record from an aeron stream.
-     *
-     * @param buffer buffer where the record is stored.
-     * @param offset offset within the buffer.
-     * @param length length of the data record within the buffer.
-     * @param streamId the Aeron stream Id of the data
-     * @param aeronSessionId the Aeron session id.
-     * @param endPosition the position to which the image has advanced on reading this message.
-     */
-    void indexRecord(
-        DirectBuffer buffer,
-        int offset,
-        int length,
-        int streamId,
-        int aeronSessionId,
-        long endPosition);
-
     default String getName()
     {
         return getClass().getSimpleName();

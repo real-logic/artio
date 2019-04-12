@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +18,11 @@ package uk.co.real_logic.artio.system_tests;
 import org.agrona.IoUtil;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
-import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.Constants;
+import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.TestFixtures;
+import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.DynamicLibraryScheduler;
@@ -37,17 +37,17 @@ import java.util.Objects;
 import java.util.function.Consumer;
 
 import static org.junit.Assert.*;
-import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.artio.Timing.*;
+import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.Constants.SEQUENCE_RESET_MESSAGE_AS_STR;
+import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.artio.TestFixtures.mediaDriverContext;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
-import static uk.co.real_logic.artio.messages.SessionReplyStatus.MISSING_MESSAGES;
-import static uk.co.real_logic.artio.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
+import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasSequenceIndex;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.REPLICATED;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
 
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
@@ -66,15 +66,16 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private Consumer<Reply<Session>> onInitiateReply = reply ->
     {
+        assertEquals("Repy failed: " + reply, Reply.State.COMPLETED, reply.state());
         initiatingSession = reply.resultIfPresent();
         assertConnected(initiatingSession);
-        sessionLogsOn(testSystem, initiatingSession, DEFAULT_TIMEOUT_IN_MS);
     };
 
-    private Runnable duringRestart = this::nothing;
+    private Runnable duringRestart = () -> dirsDeleteOnStart = false;
     private Runnable beforeReconnect = this::nothing;
     private boolean printErrorMessages = true;
     private boolean resetSequenceNumbersOnLogon = false;
+    private boolean dirsDeleteOnStart = true;
 
     @Before
     public void setUp() throws IOException
@@ -111,36 +112,20 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertSequenceIndicesAre(0);
     }
 
-    // Replicate a bug that Nick Reported
     @Test(timeout = TEST_TIMEOUT)
     public void shouldCopeWithReplayOfMissingMessages()
     {
+        printErrorMessages = false;
+
         duringRestart = this::deleteAcceptorLogs;
 
-        onAcquireSession = () -> assertFailStatusWhenReplayRequested(SEQUENCE_NUMBER_TOO_HIGH);
+        onAcquireSession = () -> assertFailStatusWhenReplayRequested(OK);
 
         resetSequenceNumbersOnLogon = true;
 
         exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER);
 
         assertOnlyAcceptorSequenceReset();
-    }
-
-    @Test(timeout = TEST_TIMEOUT)
-    public void shouldCopeWithReplayOfMissingMessagesAfterPartialCleanout()
-    {
-        // Avoid spamming the build log with error missing messages error message
-        printErrorMessages = false;
-
-        duringRestart = this::deleteArchiveOfAcceptorLogs;
-
-        onAcquireSession = () -> assertFailStatusWhenReplayRequested(MISSING_MESSAGES);
-
-        resetSequenceNumbersOnLogon = true;
-
-        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER);
-
-        assertSequenceIndicesAre(1);
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -153,22 +138,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         initiatingOtfAcceptor.messages().clear();
 
-        assertEventuallyTrue(
-            "Unable to send resend request",
-            () ->
-            {
-                testSystem.poll();
-                return initiatingSession.send(resendRequest) > 0;
-            });
+        testSystem.send(initiatingSession, resendRequest);
 
-        final FixMessage message = withTimeout(
-            "Failed to receive reply",
-            () ->
-            {
-                testSystem.poll();
-                return initiatingOtfAcceptor.hasReceivedMessage(SEQUENCE_RESET_MESSAGE_AS_STR).findFirst();
-            },
-            2_000);
+        final FixMessage message = testSystem.awaitMessageOf(initiatingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
 
         assertEquals(message.get(Constants.MSG_SEQ_NUM), "1");
         assertEquals(message.get(Constants.SENDER_COMP_ID), ACCEPTOR_ID);
@@ -201,7 +173,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         beforeReconnect = this::resetSequenceNumbers;
 
-        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 2);
+        exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1);
 
         assertSequenceIndicesAre(1);
     }
@@ -218,11 +190,29 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertSequenceIndicesAre(1);
     }
 
-    @Ignore
     @Test(timeout = TEST_TIMEOUT)
-    public void shouldReceiveRelevantErrorsDuringConnect()
+    public void shouldReceiveRelevantLogoutErrorTextDuringConnect()
     {
-        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, this::nothing, false);
+        onInitiateReply = reply ->
+        {
+            initiatingSession = reply.resultIfPresent();
+            assertTrue("reply did not end in an error", reply.hasErrored());
+        };
+
+        onAcquireSession = this::nothing;
+
+        // connect but fail to logon because the initial sequence number is invalid.
+        launch(0, this::nothing, false);
+
+        // No session established due to error during logon
+        assertNull(initiatingSession);
+
+        // In this case we just get immediately disconnected.
+        final FixMessage lastMessage = testSystem.awaitMessageOf(initiatingOtfAcceptor, LOGOUT_MESSAGE_AS_STR);
+
+        assertEquals(LOGOUT_MESSAGE_AS_STR, lastMessage.msgType());
+        assertEquals(1, lastMessage.messageSequenceNumber());
+        assertEquals("MsgSeqNum too low, expecting 1 but received 0", lastMessage.get(Constants.TEXT));
     }
 
     private void resetSequenceNumbers()
@@ -244,13 +234,17 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final Runnable beforeConnect,
         final boolean resetSequenceNumbersOnLogon)
     {
-        mediaDriver = launchMediaDriver();
+        mediaDriver = launchMediaDriver(mediaDriverContext(
+            TestFixtures.TERM_BUFFER_LENGTH,
+            dirsDeleteOnStart));
 
         final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
-        config.sessionPersistenceStrategy(logon -> REPLICATED);
+        config.sessionPersistenceStrategy(logon -> INDEXED);
         config.printErrorMessages(printErrorMessages);
         acceptingEngine = FixEngine.launch(config);
-        initiatingEngine = launchInitiatingEngineWithSameLogs(libraryAeronPort);
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
+        initiatingConfig.printErrorMessages(printErrorMessages);
+        initiatingEngine = FixEngine.launch(initiatingConfig);
 
         // Use so that the SharedLibraryScheduler is integration tested
         final DynamicLibraryScheduler libraryScheduler = new DynamicLibraryScheduler();
@@ -281,7 +275,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             .build();
 
         final Reply<Session> reply = initiatingLibrary.initiate(config);
-        awaitLibraryReply(initiatingLibrary, reply);
+        testSystem.awaitReply(reply);
 
         onInitiateReply.accept(reply);
 

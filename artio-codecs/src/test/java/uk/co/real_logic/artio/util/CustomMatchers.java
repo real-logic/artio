@@ -16,7 +16,6 @@
 
 package uk.co.real_logic.artio.util;
 
-import org.agrona.DirectBuffer;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
@@ -26,8 +25,6 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Objects;
 import java.util.function.Function;
-
-import static org.junit.Assert.assertEquals;
 
 /**
  * Custom hamcrest matchers to support our own types in tests.
@@ -39,9 +36,6 @@ public final class CustomMatchers
     {
     }
 
-    /**
-     * Assert that a range of an ascii flyweight equals a String.
-     */
     public static Matcher<AsciiBuffer> sequenceEqualsAscii(final String expectedValue, final int offset)
     {
         return sequenceEqualsAscii(expectedValue, offset, expectedValue.length());
@@ -73,29 +67,6 @@ public final class CustomMatchers
         };
     }
 
-    public static Matcher<DirectBuffer> containsString(final String expectedValue, final int offset, final int length)
-    {
-        Objects.requireNonNull(expectedValue);
-
-        return new TypeSafeMatcher<DirectBuffer>()
-        {
-            private final Matcher<AsciiBuffer> flyweightMatcher = sequenceEqualsAscii(expectedValue, offset, length);
-
-            protected boolean matchesSafely(final DirectBuffer item)
-            {
-                return flyweightMatcher.matches(new MutableAsciiBuffer(item));
-            }
-
-            public void describeTo(final Description description)
-            {
-                flyweightMatcher.describeTo(description);
-            }
-        };
-    }
-
-    /**
-     * Doesn't use getters for properties, like hamcrest.
-     */
     public static <T> Matcher<T> hasFluentProperty(final String name, final Matcher<?> valueMatcher)
     {
         return new TypeSafeMatcher<T>()
@@ -180,10 +151,4 @@ public final class CustomMatchers
         return hasFluentProperty(name, Matchers.equalTo(value));
     }
 
-    public static void assertCharsEquals(final String expectedValue, final char[] chars, final int length)
-    {
-        assertEquals("length wasn't equal", expectedValue.length(), length);
-        final String value = new String(chars, 0, length);
-        assertEquals(expectedValue, value);
-    }
 }

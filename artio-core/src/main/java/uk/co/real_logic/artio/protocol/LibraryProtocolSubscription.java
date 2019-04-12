@@ -278,11 +278,16 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.lastSentSequenceNumber(),
             manageSession.lastReceivedSequenceNumber(),
             manageSession.logonTime(),
-            manageSession.logonStatus(),
+            manageSession.sessionStatus(),
             manageSession.slowStatus(),
             manageSession.connectionType(),
             manageSession.sessionState(),
+            manageSession.awaitingResend() == AwaitingResend.YES,
             manageSession.heartbeatIntervalInS(),
+            manageSession.closedResendInterval() == Bool.TRUE,
+            manageSession.resendRequestChunkSize(),
+            manageSession.sendRedundantResendRequests() == Bool.TRUE,
+            manageSession.enableLastMsgSeqNumProcessed() == Bool.TRUE,
             manageSession.replyToId(),
             manageSession.sequenceIndex(),
             manageSession.localCompId(),
@@ -291,6 +296,8 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.remoteCompId(),
             manageSession.remoteSubId(),
             manageSession.remoteLocationId(),
-            manageSession.address());
+            manageSession.address(),
+            manageSession.username(),
+            manageSession.password());
     }
 }

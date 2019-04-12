@@ -15,17 +15,17 @@
  */
 package uk.co.real_logic.artio.protocol;
 
-import io.aeron.logbuffer.ExclusiveBufferClaim;
+import io.aeron.ExclusivePublication;
+import io.aeron.logbuffer.BufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.NanoClock;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationEncoder.SessionsEncoder;
-import uk.co.real_logic.artio.replication.ClusterablePublication;
 
 import java.util.List;
 
@@ -45,6 +45,7 @@ import static uk.co.real_logic.artio.messages.NotLeaderEncoder.libraryChannelHea
 public class GatewayPublication extends ClaimablePublication
 {
     public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
+
     private static final int FRAMED_MESSAGE_SIZE = MessageHeaderEncoder.ENCODED_LENGTH + FRAME_SIZE;
 
     private static final byte[] NO_BYTES = {};
@@ -66,15 +67,18 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + SlowStatusNotificationEncoder.BLOCK_LENGTH;
     private static final byte MIDDLE_FLAG = 0;
     private static final int MANAGE_SESSION_BLOCK_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
-        ManageSessionEncoder.BLOCK_LENGTH + ManageSessionEncoder.localCompIdHeaderLength() * 7;
+        ManageSessionEncoder.BLOCK_LENGTH + ManageSessionEncoder.localCompIdHeaderLength() * 9;
     private static final int INITIATE_CONNECTION_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
         InitiateConnectionEncoder.BLOCK_LENGTH + InitiateConnectionDecoder.hostHeaderLength() * 9;
     private static final int CONTROL_NOTIFICATION_LENGTH = HEADER_LENGTH + ControlNotificationEncoder.BLOCK_LENGTH +
         GroupSizeEncodingEncoder.ENCODED_LENGTH;
+    private static final int MID_CONNECTION_DISCONNECT_LENGTH =
+        HEADER_LENGTH + MidConnectionDisconnectEncoder.BLOCK_LENGTH;
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
     private final RequestDisconnectEncoder requestDisconnect = new RequestDisconnectEncoder();
+    private final MidConnectionDisconnectEncoder midConnectionDisconnect = new MidConnectionDisconnectEncoder();
     private final DisconnectEncoder disconnect = new DisconnectEncoder();
     private final FixMessageEncoder fixMessage = new FixMessageEncoder();
     private final ErrorEncoder error = new ErrorEncoder();
@@ -95,19 +99,19 @@ public class GatewayPublication extends ClaimablePublication
         new ResetLibrarySequenceNumberEncoder();
     private final SlowStatusNotificationEncoder slowStatusNotification = new SlowStatusNotificationEncoder();
 
-    private final NanoClock nanoClock;
+    private final Clock clock;
     private final int maxPayloadLength;
     private final int maxInitialBodyLength;
 
     public GatewayPublication(
-        final ClusterablePublication dataPublication,
+        final ExclusivePublication dataPublication,
         final AtomicCounter fails,
         final IdleStrategy idleStrategy,
-        final NanoClock nanoClock,
+        final Clock clock,
         final int maxClaimAttempts)
     {
         super(maxClaimAttempts, idleStrategy, fails, dataPublication);
-        this.nanoClock = nanoClock;
+        this.clock = clock;
         this.maxPayloadLength = dataPublication.maxPayloadLength();
         this.maxInitialBodyLength = maxPayloadLength - FRAMED_MESSAGE_SIZE;
     }
@@ -121,10 +125,11 @@ public class GatewayPublication extends ClaimablePublication
         final long sessionId,
         final int sequenceIndex,
         final long connectionId,
-        final MessageStatus status)
+        final MessageStatus status,
+        final int sequenceNumber)
     {
-        final ExclusiveBufferClaim bufferClaim = this.bufferClaim;
-        final long timestamp = nanoClock.nanoTime();
+        final BufferClaim bufferClaim = this.bufferClaim;
+        final long timestamp = clock.time();
         final int framedLength = FRAMED_MESSAGE_SIZE + srcLength;
         final boolean fragmented = framedLength > maxPayloadLength;
         final int claimLength = fragmented ? maxPayloadLength : framedLength;
@@ -156,6 +161,7 @@ public class GatewayPublication extends ClaimablePublication
             .connection(connectionId)
             .timestamp(timestamp)
             .status(status)
+            .sequenceNumber(sequenceNumber)
             .putBody(srcBuffer, srcFragmentOffset, srcFragmentLength);
 
         if (!fragmented)
@@ -188,7 +194,7 @@ public class GatewayPublication extends ClaimablePublication
             }
         }
 
-        DebugLogger.log(FIX_MESSAGE, "Enqueued %s%n", srcBuffer, srcOffset, srcLength);
+        DebugLogger.log(FIX_MESSAGE_FLOW, "Enqueued %s%n", srcBuffer, srcOffset, srcLength);
 
         return position;
     }
@@ -205,11 +211,16 @@ public class GatewayPublication extends ClaimablePublication
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
         final long logonTime,
-        final LogonStatus logonStatus,
+        final SessionStatus sessionStatus,
         final SlowStatus slowStatus,
         final ConnectionType connectionType,
         final SessionState sessionState,
+        final boolean awaitingResend,
         final int heartbeatIntervalInS,
+        final boolean closedResendInterval,
+        final int resendRequestChunkSize,
+        final boolean sendRedundantResendRequests,
+        final boolean enableLastMsgSeqNumProcessed,
         final long replyToId,
         final int sequenceIndex,
         final String localCompId,
@@ -218,7 +229,9 @@ public class GatewayPublication extends ClaimablePublication
         final String remoteCompId,
         final String remoteSubId,
         final String remoteLocationId,
-        final String address)
+        final String address,
+        final String username,
+        final String password)
     {
         final byte[] localCompIdBytes = bytes(localCompId);
         final byte[] localSubIdBytes = bytes(localSubId);
@@ -227,11 +240,13 @@ public class GatewayPublication extends ClaimablePublication
         final byte[] remoteSubIdBytes = bytes(remoteSubId);
         final byte[] remoteLocationIdBytes = bytes(remoteLocationId);
         final byte[] addressBytes = bytes(address);
+        final byte[] usernameBytes = bytes(username);
+        final byte[] passwordBytes = bytes(password);
 
         final long position = claim(
             MANAGE_SESSION_BLOCK_LENGTH + localCompIdBytes.length + localSubIdBytes.length +
             localLocationIdBytes.length + remoteCompIdBytes.length + remoteSubIdBytes.length +
-            remoteLocationIdBytes.length + addressBytes.length);
+            remoteLocationIdBytes.length + addressBytes.length + usernameBytes.length + passwordBytes.length);
 
         if (position < 0)
         {
@@ -248,11 +263,16 @@ public class GatewayPublication extends ClaimablePublication
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
             .logonTime(logonTime)
-            .logonStatus(logonStatus)
+            .sessionStatus(sessionStatus)
             .slowStatus(slowStatus)
             .connectionType(connectionType)
             .sessionState(sessionState)
+            .awaitingResend(encodeAwaitingResend(awaitingResend))
             .heartbeatIntervalInS(heartbeatIntervalInS)
+            .closedResendInterval(toBool(closedResendInterval))
+            .resendRequestChunkSize(resendRequestChunkSize)
+            .sendRedundantResendRequests(toBool(sendRedundantResendRequests))
+            .enableLastMsgSeqNumProcessed(toBool(enableLastMsgSeqNumProcessed))
             .replyToId(replyToId)
             .sequenceIndex(sequenceIndex)
             .putLocalCompId(localCompIdBytes, 0, localCompIdBytes.length)
@@ -261,7 +281,9 @@ public class GatewayPublication extends ClaimablePublication
             .putRemoteCompId(remoteCompIdBytes, 0, remoteCompIdBytes.length)
             .putRemoteSubId(remoteSubIdBytes, 0, remoteSubIdBytes.length)
             .putRemoteLocationId(remoteLocationIdBytes, 0, remoteLocationIdBytes.length)
-            .putAddress(addressBytes, 0, addressBytes.length);
+            .putAddress(addressBytes, 0, addressBytes.length)
+            .putUsername(usernameBytes, 0, usernameBytes.length)
+            .putPassword(passwordBytes, 0, passwordBytes.length);
 
         bufferClaim.commit();
 
@@ -403,6 +425,29 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
+    public long saveMidConnectionDisconnect(final int libraryId, final long correlationId)
+    {
+        final long position = claim(MID_CONNECTION_DISCONNECT_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        midConnectionDisconnect
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .correlationId(correlationId);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, midConnectionDisconnect);
+
+        return position;
+    }
+
     public long saveInitiateConnection(
         final int libraryId,
         final String host,
@@ -417,6 +462,10 @@ public class GatewayPublication extends ClaimablePublication
         final boolean resetSequenceNumber,
         final int requestedInitialReceivedSequenceNumber,
         final int requestedInitialSentSequenceNumber,
+        final boolean closedResendInterval,
+        final int resendRequestChunkSize,
+        final boolean sendRedundantResendRequests,
+        final boolean enableLastMsgSeqNumProcessed,
         final String username,
         final String password,
         final int heartbeatIntervalInS,
@@ -454,6 +503,10 @@ public class GatewayPublication extends ClaimablePublication
             .heartbeatIntervalInS(heartbeatIntervalInS)
             .resetSequenceNumber(resetSequenceNumber ? ResetSequenceNumber.YES : ResetSequenceNumber.NO)
             .correlationId(correlationId)
+            .closedResendInterval(toBool(closedResendInterval))
+            .resendRequestChunkSize(resendRequestChunkSize)
+            .sendRedundantResendRequests(toBool(sendRedundantResendRequests))
+            .enableLastMsgSeqNumProcessed(toBool(enableLastMsgSeqNumProcessed))
             .putHost(hostBytes, 0, hostBytes.length)
             .putSenderCompId(senderCompIdBytes, 0, senderCompIdBytes.length)
             .putSenderSubId(senderSubIdBytes, 0, senderSubIdBytes.length)
@@ -469,6 +522,11 @@ public class GatewayPublication extends ClaimablePublication
         logSbeMessage(GATEWAY_MESSAGE, initiateConnection);
 
         return position;
+    }
+
+    private Bool toBool(final boolean value)
+    {
+        return value ? Bool.TRUE : Bool.FALSE;
     }
 
     public long saveError(final GatewayError errorType, final int libraryId, final long replyToId, final String message)
@@ -549,6 +607,7 @@ public class GatewayPublication extends ClaimablePublication
         final long sessionId,
         final long correlationId,
         final SessionState state,
+        final boolean awaitingResend,
         final long heartbeatIntervalInMs,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
@@ -574,6 +633,7 @@ public class GatewayPublication extends ClaimablePublication
             .correlationId(correlationId)
             .heartbeatIntervalInMs(heartbeatIntervalInMs)
             .state(state)
+            .awaitingResend(encodeAwaitingResend(awaitingResend))
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
             .putUsername(usernameBytes, 0, usernameBytes.length)
@@ -584,6 +644,11 @@ public class GatewayPublication extends ClaimablePublication
         logSbeMessage(GATEWAY_MESSAGE, releaseSession);
 
         return position;
+    }
+
+    private AwaitingResend encodeAwaitingResend(final boolean awaitingResend)
+    {
+        return awaitingResend ? AwaitingResend.YES : AwaitingResend.NO;
     }
 
     public long saveReleaseSessionReply(final int libraryId, final SessionReplyStatus status, final long replyToId)
@@ -780,7 +845,7 @@ public class GatewayPublication extends ClaimablePublication
 
     public int id()
     {
-        return dataPublication.id();
+        return dataPublication.sessionId();
     }
 
     public long position()
@@ -802,4 +867,5 @@ public class GatewayPublication extends ClaimablePublication
     {
         return maxPayloadLength;
     }
+
 }

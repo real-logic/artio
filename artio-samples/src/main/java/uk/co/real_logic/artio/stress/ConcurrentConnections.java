@@ -49,8 +49,7 @@ public final class ConcurrentConnections
         final String aeronChannel = "aeron:udp?endpoint=localhost:10002";
         final EngineConfiguration engineConfiguration = new EngineConfiguration()
             .libraryAeronChannel(aeronChannel)
-            .logFileDir("stress-client-logs")
-            .bindTo("localhost", 10001);
+            .logFileDir("stress-client-logs");
         engineConfiguration.authenticationStrategy((logon) -> true);
 
         System.out.println("Client Logs at " + engineConfiguration.logFileDir());

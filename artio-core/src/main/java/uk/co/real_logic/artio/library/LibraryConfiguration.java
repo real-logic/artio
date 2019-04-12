@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.library;
 
+import org.agrona.Verify;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
@@ -203,7 +204,10 @@ public final class LibraryConfiguration extends CommonConfiguration
     }
 
     /**
-     * {@inheritDoc}
+     * Sets the list of aeron channels used to connect to the Engine
+     *
+     * @param libraryAeronChannels the list of aeron channels used to connect to the Engine
+     * @return this
      */
     public LibraryConfiguration libraryAeronChannels(final List<String> libraryAeronChannels)
     {
@@ -223,6 +227,8 @@ public final class LibraryConfiguration extends CommonConfiguration
     void conclude()
     {
         super.conclude("library-" + libraryId());
+
+        Verify.notNull(sessionAcquireHandler, "sessionAcquireHandler");
 
         if (libraryAeronChannels.isEmpty())
         {

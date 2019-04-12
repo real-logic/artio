@@ -15,39 +15,31 @@
  */
 package uk.co.real_logic.artio.fields;
 
-import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import java.util.Arrays;
-
-@RunWith(Parameterized.class)
 public class UtcTimestampEncoderInvalidCasesTest
 {
-    private final long timestamp;
-
-    @Parameters(name = "{0}")
-    public static Iterable<Object> data()
+    @Test(expected = IllegalArgumentException.class)
+    public void cannotParseTimestampTooLow()
     {
-        return Arrays.asList(
-            new Long[] {UtcTimestampEncoder.MIN_EPOCH_MILLIS - 1},
-            new Long[] {UtcTimestampEncoder.MAX_EPOCH_MILLIS + 1}
-        );
-    }
-
-    public UtcTimestampEncoderInvalidCasesTest(final long timestamp)
-    {
-        this.timestamp = timestamp;
+        new UtcTimestampEncoder().encode(UtcTimestampEncoder.MIN_EPOCH_MILLIS - 1);
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void cannotParseTimestamp()
+    public void cannotParseTimestampTooHigh()
     {
-        final UnsafeBuffer buffer = new UnsafeBuffer(new byte[UtcTimestampEncoder.LENGTH_WITH_MILLISECONDS]);
-        final MutableAsciiBuffer timestampBytes = new MutableAsciiBuffer(buffer);
-        UtcTimestampEncoder.encode(timestamp, timestampBytes, 0);
+        new UtcTimestampEncoder().encode(UtcTimestampEncoder.MAX_EPOCH_MILLIS + 1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void cannotParseTimestampTooLowMicros()
+    {
+        new UtcTimestampEncoder(false).encode(UtcTimestampEncoder.MIN_EPOCH_MICROS - 1);
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void cannotParseTimestampTooHighMicros()
+    {
+        new UtcTimestampEncoder(false).encode(UtcTimestampEncoder.MAX_EPOCH_MICROS + 1);
     }
 }

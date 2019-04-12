@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +15,13 @@
  */
 package uk.co.real_logic.artio.dictionary;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.function.Consumer;
+import org.agrona.LangUtil;
+import org.agrona.Verify;
+import org.w3c.dom.*;
+import uk.co.real_logic.artio.dictionary.ir.*;
+import uk.co.real_logic.artio.dictionary.ir.Dictionary;
+import uk.co.real_logic.artio.dictionary.ir.Field.Type;
+import uk.co.real_logic.artio.dictionary.ir.Field.Value;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -33,31 +30,13 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-
-import org.agrona.LangUtil;
-import org.agrona.Verify;
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NamedNodeMap;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
-
-
-import uk.co.real_logic.artio.dictionary.ir.Aggregate;
-import uk.co.real_logic.artio.dictionary.ir.Category;
-import uk.co.real_logic.artio.dictionary.ir.Component;
-import uk.co.real_logic.artio.dictionary.ir.Dictionary;
-import uk.co.real_logic.artio.dictionary.ir.Entry;
-import uk.co.real_logic.artio.dictionary.ir.Field;
-import uk.co.real_logic.artio.dictionary.ir.Field.Type;
-import uk.co.real_logic.artio.dictionary.ir.Field.Value;
-import uk.co.real_logic.artio.dictionary.ir.Group;
-import uk.co.real_logic.artio.dictionary.ir.Message;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.*;
+import java.util.function.Consumer;
 
 import static javax.xml.xpath.XPathConstants.NODESET;
-import static uk.co.real_logic.artio.dictionary.ir.Field.Type.CHAR;
-import static uk.co.real_logic.artio.dictionary.ir.Field.Type.NUMINGROUP;
-import static uk.co.real_logic.artio.dictionary.ir.Field.Type.STRING;
+import static uk.co.real_logic.artio.dictionary.ir.Field.Type.*;
 
 /**
  * Parses XML format dictionary files and into instances of
@@ -106,7 +85,7 @@ public final class DictionaryParser
         final List<Message> messages = parseMessages(document, fields, components, forwardReferences);
 
         reconnectForwardReferences(forwardReferences, components);
-        sanitizeDictionary(fields, components, messages);
+        sanitizeDictionary(fields, messages);
 
         if (fixtDictionary != null)
         {
@@ -150,47 +129,6 @@ public final class DictionaryParser
     private boolean hasMultipleCharacters(final Field field)
     {
         return field.values().stream().anyMatch(value -> value.representation().length() > 1);
-    }
-
-    private void simplifyComponentsThatAreJustGroups(final Map<String, Component> components,
-        final List<Message> messages)
-    {
-        final List<String> toRemove = new ArrayList<>();
-        components.forEach((name, component) ->
-        {
-            if (isJustGroup(component))
-            {
-                toRemove.add(name);
-                final Entry.Element group = extractFirst(component);
-                messages.forEach(aggregate -> replaceComponent(aggregate, component, group));
-                components.values().forEach(aggregate -> replaceComponent(aggregate, component, group));
-            }
-        });
-
-        toRemove.forEach(components::remove);
-    }
-
-    private void replaceComponent(
-        final Aggregate aggregate,
-        final Component component,
-        final Entry.Element group)
-    {
-        aggregate.entriesWith(element -> element == component)
-            .forEach((entry) -> entry.element(group));
-
-        aggregate.entriesWith(element -> element instanceof Aggregate)
-            .forEach((entry) -> replaceComponent((Aggregate)entry.element(), component, group));
-    }
-
-    private Entry.Element extractFirst(final Component component)
-    {
-        return component.entries().get(0).element();
-    }
-
-    private boolean isJustGroup(final Component component)
-    {
-        final List<Entry> entries = component.entries();
-        return entries.size() == 1 && entries.get(0).element() instanceof Group;
     }
 
     private void reconnectForwardReferences(final Map<Entry, String> forwardReferences,
@@ -428,10 +366,8 @@ public final class DictionaryParser
     }
 
     private void sanitizeDictionary(final Map<String, Field> fields,
-        final Map<String, Component> components,
         final List<Message> messages)
     {
-        simplifyComponentsThatAreJustGroups(components, messages);
         correctMultiCharacterCharEnums(fields);
         identifyDuplicateFieldDefinitionsForMessages(messages);
     }
@@ -444,7 +380,8 @@ public final class DictionaryParser
         for (final Message message : messages)
         {
             final Set<Integer> allFieldsForMessage = new HashSet<>();
-            identifyDuplicateFieldDefinitionsForMessage(message.name(), message, allFieldsForMessage, errorMessage);
+            identifyDuplicateFieldDefinitionsForMessage(
+                message.name(), message, allFieldsForMessage, new ArrayDeque<>(), errorMessage);
         }
 
         if (errorMessage.length() > 0)
@@ -457,6 +394,7 @@ public final class DictionaryParser
         final String messageName,
         final Aggregate aggregate,
         final Set<Integer> allFields,
+        final Deque<String> path,
         final StringBuilder errorCollector)
     {
         try
@@ -464,17 +402,29 @@ public final class DictionaryParser
             for (final Entry e : aggregate.entries())
             {
                 e.forEach(
-                    (field) -> addField(messageName, field, allFields, errorCollector),
-                    (group) -> identifyDuplicateFieldDefinitionsForMessage(
-                    messageName,
-                    group,
-                    allFields,
-                    errorCollector),
-                    (component) -> identifyDuplicateFieldDefinitionsForMessage(
-                    messageName,
-                    component,
-                    allFields,
-                    errorCollector)
+                    (field) -> addField(messageName, field, allFields, path, errorCollector),
+                    (group) ->
+                    {
+                        path.push(group.name());
+                        identifyDuplicateFieldDefinitionsForMessage(
+                            messageName,
+                            group,
+                            allFields,
+                            path,
+                            errorCollector);
+                        path.pop();
+                    },
+                    (component) ->
+                    {
+                        path.push(component.name());
+                        identifyDuplicateFieldDefinitionsForMessage(
+                            messageName,
+                            component,
+                            allFields,
+                            path,
+                            errorCollector);
+                        path.pop();
+                    }
                 );
             }
         }
@@ -488,6 +438,7 @@ public final class DictionaryParser
         final String messageName,
         final Field field,
         final Set<Integer> fieldsForMessage,
+        final Deque<String> path,
         final StringBuilder errorCollector)
     {
         if (!fieldsForMessage.add(field.number()))
@@ -504,7 +455,14 @@ public final class DictionaryParser
                 .append(field.name())
                 .append(" (")
                 .append(field.number())
-                .append(")\n");
+                .append(")");
+
+            if (!path.isEmpty())
+            {
+                errorCollector.append(" Through Path: ").append(path.toString());
+            }
+
+            errorCollector.append('\n');
         }
     }
 

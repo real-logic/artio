@@ -22,10 +22,7 @@ import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
-import static uk.co.real_logic.artio.decoder.LogonDecoder.MESSAGE_TYPE_BYTES;
-
-public class InitiatorSession extends Session
+public class InitiatorSession extends InternalSession
 {
     private final boolean resetSeqNum;
 
@@ -45,7 +42,8 @@ public class InitiatorSession extends Session
         final SessionState state,
         final boolean resetSeqNum,
         final long reasonableTransmissionTimeInMs,
-        final MutableAsciiBuffer asciiBuffer)
+        final MutableAsciiBuffer asciiBuffer,
+        final boolean enableLastMsgSeqNumProcessed)
     {
         super(
             heartbeatInterval,
@@ -62,78 +60,20 @@ public class InitiatorSession extends Session
             initialSentSequenceNumber,
             sequenceIndex,
             reasonableTransmissionTimeInMs,
-            asciiBuffer);
+            asciiBuffer,
+            enableLastMsgSeqNumProcessed);
         this.resetSeqNum = resetSeqNum;
     }
 
-    public Action onLogon(
-        final int heartbeatInterval,
-        final int msgSeqNo,
-        final long sessionId,
-        final CompositeKey sessionKey,
-        final long sendingTime,
-        final long origSendingTime,
-        final String username,
-        final String password,
-        final boolean isPossDupOrResend,
-        final boolean resetSeqNumFlag)
+    protected SessionState initialState()
     {
+        return SessionState.SENT_LOGON;
+    }
 
-        // We aren't checking CODEC_VALIDATION_ENABLED here because these are required values in order to
-        // have a stable FIX connection.
-        Action action = validateOrRejectHeartbeat(heartbeatInterval);
-        if (action != null)
-        {
-            return action;
-        }
-
-        action = validateOrRejectSendingTime(sendingTime);
-        if (action != null)
-        {
-            return action;
-        }
-
-        final long logonTime = sendingTime(sendingTime, origSendingTime);
-
-        if (resetSeqNumFlag)
-        {
-            // Either we sent out a resetSeqNum flag when we connected or this session is already connected and they
-            // have sent one to us to run an end of day.
-            setupSession(sessionId, sessionKey);
-
-            return onResetSeqNumLogon(heartbeatInterval, username, password, logonTime);
-        }
-
-        if (msgSeqNo == expectedReceivedSeqNum() && state() == SessionState.SENT_LOGON)
-        {
-            setupSession(sessionId, sessionKey);
-            setLogonState(heartbeatInterval, username, password);
-
-            if (INITIAL_SEQUENCE_NUMBER == msgSeqNo)
-            {
-                // Outgoing connections could be exchanging logons because of a network disconnection
-                // So we still only want this to occur on the initial logon.
-                logonTime(logonTime);
-            }
-
-            notifyLogonListener();
-            action = onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
-
-            if (action == ABORT)
-            {
-                return ABORT;
-            }
-        }
-        else
-        {
-
-            // Shouldn't this be an error case?...
-            // I guess onMessage will check that the session is logged in and it isn't so it will disconnect...
-            // Its pretty opaque...
-            return onMessage(msgSeqNo, MESSAGE_TYPE_BYTES, sendingTime, origSendingTime, isPossDupOrResend);
-        }
-
-        return Action.CONTINUE;
+    protected Action respondToLogon(final int heartbeatInterval)
+    {
+        // Initiator sends its logon first, so has no need to reply
+        return null;
     }
 
     public int poll(final long time)
@@ -149,7 +89,8 @@ public class InitiatorSession extends Session
                 username(),
                 password(),
                 resetSeqNum,
-                sequenceIndex());
+                sequenceIndex(),
+                lastMsgSeqNumProcessed());
             if (position >= 0)
             {
                 lastSentMsgSeqNum(sentSeqNum);

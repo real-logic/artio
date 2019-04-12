@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio.fields;
 
 /**
- * SessionRejectReason which is common across both FIX 4.2 and 4.4 versions to be used by session parsing logic.
+ * SessionRejectReason which is common across both FIX 4.2, 4.4, and 5.0 versions to be used by session parsing logic.
  */
 public enum RejectReason
 {
@@ -32,6 +32,13 @@ public enum RejectReason
     COMPID_PROBLEM(9),
     SENDINGTIME_ACCURACY_PROBLEM(10),
     INVALID_MSGTYPE(11),
+    XML_VALIDATION_ERROR(12),
+    TAG_APPEARS_MORE_THAN_ONCE(13),
+    TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER(14),
+    REPEATING_GROUP_FIELDS_OUT_OF_ORDER(15),
+    INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP(16),
+    NON_DATA_VALUE_INCLUDES_FIELD_DELIMITER(17),
+    INVALID_UNSUPPORTED_APPLICATION_VERSION(18),
     OTHER(99);
 
     private final int representation;
@@ -62,6 +69,13 @@ public enum RejectReason
             case 9: return COMPID_PROBLEM;
             case 10: return SENDINGTIME_ACCURACY_PROBLEM;
             case 11: return INVALID_MSGTYPE;
+            case 12: return XML_VALIDATION_ERROR;
+            case 13: return TAG_APPEARS_MORE_THAN_ONCE;
+            case 14: return TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER;
+            case 15: return REPEATING_GROUP_FIELDS_OUT_OF_ORDER;
+            case 16: return INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP;
+            case 17: return NON_DATA_VALUE_INCLUDES_FIELD_DELIMITER;
+            case 18: return INVALID_UNSUPPORTED_APPLICATION_VERSION;
             case 99: return OTHER;
             default: throw new IllegalArgumentException("Unknown: " + representation);
         }

@@ -34,6 +34,7 @@ public interface SessionHandler
      * @param length the length of the message within the buffer.
      * @param libraryId the id of library which has received this message.
      * @param session the session which has received this message.
+     * @param sequenceIndex the sequence index of this message.
      * @param messageType the FIX msgType field, encoded as an int.
      * @param timestampInNs the time of the message in nanoseconds.
      * @param position the position in the Aeron stream at the end of the message.

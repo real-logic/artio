@@ -88,7 +88,7 @@ class ReceiverEndPoints extends TransportPoller
             {
                 for (int i = numEndPoints - 1; i >= 0; i--)
                 {
-                    bytesReceived += endPoints[i].pollForData();
+                    bytesReceived += endPoints[i].poll();
                 }
             }
             else
@@ -98,7 +98,7 @@ class ReceiverEndPoints extends TransportPoller
                 final SelectionKey[] keys = selectedKeySet.keys();
                 for (int i = selectedKeySet.size() - 1; i >= 0; i--)
                 {
-                    bytesReceived += ((ReceiverEndPoint)keys[i].attachment()).pollForData();
+                    bytesReceived += ((ReceiverEndPoint)keys[i].attachment()).poll();
                 }
 
                 selectedKeySet.reset();

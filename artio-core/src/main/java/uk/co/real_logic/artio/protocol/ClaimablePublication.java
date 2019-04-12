@@ -15,13 +15,14 @@
  */
 package uk.co.real_logic.artio.protocol;
 
-import io.aeron.logbuffer.ExclusiveBufferClaim;
+import io.aeron.ExclusivePublication;
+import io.aeron.logbuffer.BufferClaim;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
-import uk.co.real_logic.artio.replication.ClusterablePublication;
 
 import static io.aeron.Publication.CLOSED;
+import static io.aeron.Publication.MAX_POSITION_EXCEEDED;
 
 /**
  * A publication designed for deterministic claiming.
@@ -33,8 +34,8 @@ class ClaimablePublication implements AutoCloseable
     private final long maxClaimAttempts;
     private final AtomicCounter fails;
     protected final MessageHeaderEncoder header = new MessageHeaderEncoder();
-    protected final ExclusiveBufferClaim bufferClaim = new ExclusiveBufferClaim();
-    protected final ClusterablePublication dataPublication;
+    protected final BufferClaim bufferClaim = new BufferClaim();
+    protected final ExclusivePublication dataPublication;
 
     protected final IdleStrategy idleStrategy;
 
@@ -42,7 +43,7 @@ class ClaimablePublication implements AutoCloseable
         final int maxClaimAttempts,
         final IdleStrategy idleStrategy,
         final AtomicCounter fails,
-        final ClusterablePublication dataPublication)
+        final ExclusivePublication dataPublication)
     {
         this.maxClaimAttempts = maxClaimAttempts;
         this.idleStrategy = idleStrategy;
@@ -55,7 +56,7 @@ class ClaimablePublication implements AutoCloseable
         return claim(framedLength, bufferClaim);
     }
 
-    public long claim(final int framedLength, final ExclusiveBufferClaim bufferClaim)
+    public long claim(final int framedLength, final BufferClaim bufferClaim)
     {
         long position;
         long i = 0;
@@ -79,7 +80,7 @@ class ClaimablePublication implements AutoCloseable
 
         idleStrategy.reset();
 
-        if (position == CLOSED)
+        if (position == CLOSED || position == MAX_POSITION_EXCEEDED)
         {
             throw new NotConnectedException(position);
         }

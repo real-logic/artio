@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,7 +38,7 @@ import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
 import java.util.ArrayList;
 import java.util.List;
 
-import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.DUPLICATE_SESSION;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.resetSequenceNumbersUponLogon;
 
@@ -58,8 +58,11 @@ class GatewaySessions
     private final int sessionBufferSize;
     private final long sendingTimeWindowInMs;
     private final long reasonableTransmissionTimeInMs;
+    private final boolean logAllMessages;
     private final SessionContexts sessionContexts;
     private final SessionPersistenceStrategy sessionPersistenceStrategy;
+    private final SequenceNumberIndexReader sentSequenceNumberIndex;
+    private final SequenceNumberIndexReader receivedSequenceNumberIndex;
 
     private ErrorHandler errorHandler;
 
@@ -74,9 +77,12 @@ class GatewaySessions
         final int sessionBufferSize,
         final long sendingTimeWindowInMs,
         final long reasonableTransmissionTimeInMs,
+        final boolean logAllMessages,
         final ErrorHandler errorHandler,
         final SessionContexts sessionContexts,
-        final SessionPersistenceStrategy sessionPersistenceStrategy)
+        final SessionPersistenceStrategy sessionPersistenceStrategy,
+        final SequenceNumberIndexReader sentSequenceNumberIndex,
+        final SequenceNumberIndexReader receivedSequenceNumberIndex)
     {
         this.clock = clock;
         this.outboundPublication = outboundPublication;
@@ -88,14 +94,18 @@ class GatewaySessions
         this.sessionBufferSize = sessionBufferSize;
         this.sendingTimeWindowInMs = sendingTimeWindowInMs;
         this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
+        this.logAllMessages = logAllMessages;
         this.errorHandler = errorHandler;
         this.sessionContexts = sessionContexts;
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
+        this.sentSequenceNumberIndex = sentSequenceNumberIndex;
+        this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
     }
 
     void acquire(
         final GatewaySession gatewaySession,
         final SessionState state,
+        final boolean awaitingResend,
         final int heartbeatIntervalInS,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
@@ -117,7 +127,7 @@ class GatewaySessions
             connectionId,
             FixEngine.ENGINE_LIBRARY_ID);
 
-        final Session session = new Session(
+        final InternalSession session = new InternalSession(
             heartbeatIntervalInS,
             connectionId,
             clock,
@@ -133,7 +143,13 @@ class GatewaySessions
             // This gets set by the receiver end point once the logon message has been received.
             0,
             reasonableTransmissionTimeInMs,
-            asciiBuffer);
+            asciiBuffer,
+            gatewaySession.enableLastMsgSeqNumProcessed());
+
+        session.awaitingResend(awaitingResend);
+        session.closedResendInterval(gatewaySession.closedResendInterval());
+        session.resendRequestChunkSize(gatewaySession.resendRequestChunkSize());
+        session.sendRedundantResendRequests(gatewaySession.sendRedundantResendRequests());
 
         final SessionParser sessionParser = new SessionParser(
             session,
@@ -144,7 +160,7 @@ class GatewaySessions
         gatewaySession.manage(sessionParser, session, engineBlockablePosition);
 
         final CompositeKey sessionKey = gatewaySession.sessionKey();
-        DebugLogger.log(FIX_MESSAGE, "Gateway Acquired Session %d%n", connectionId);
+        DebugLogger.log(FIX_CONNECTION, "Gateway Acquired Session %d%n", connectionId);
         if (sessionKey != null)
         {
             gatewaySession.onLogon(username, password, heartbeatIntervalInS);
@@ -190,14 +206,13 @@ class GatewaySessions
         return -1;
     }
 
-    GatewaySession releaseByConnectionId(final long connectionId)
+    void releaseByConnectionId(final long connectionId)
     {
         final GatewaySession session = removeSessionByConnectionId(connectionId, sessions);
         if (session != null)
         {
             session.close();
         }
-        return session;
     }
 
     int pollSessions(final long time)
@@ -205,10 +220,18 @@ class GatewaySessions
         final List<GatewaySession> sessions = this.sessions;
 
         int eventsProcessed = 0;
-        for (int i = 0, size = sessions.size(); i < size; i++)
+        for (int i = 0, size = sessions.size(); i < size;)
         {
             final GatewaySession session = sessions.get(i);
             eventsProcessed += session.poll(time);
+            if (session.hasDisconnected())
+            {
+                size--;
+            }
+            else
+            {
+                i++;
+            }
         }
         return eventsProcessed;
     }
@@ -233,11 +256,9 @@ class GatewaySessions
         return null;
     }
 
-    AuthenticationResult authenticateAndInitiate(
+    AuthenticationResult authenticate(
         final LogonDecoder logon,
         final long connectionId,
-        final SequenceNumberIndexReader sentSequenceNumberIndex,
-        final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final GatewaySession gatewaySession)
     {
         final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(logon.header());
@@ -248,72 +269,104 @@ class GatewaySessions
             return AuthenticationResult.DUPLICATE_SESSION;
         }
 
-        boolean authenticated;
-        try
-        {
-            authenticated = authenticationStrategy.authenticate(logon);
-        }
-        catch (final Throwable throwable)
-        {
-            // TODO(Nick): Maybe this should go back to also logging the message that was being decoded.
-            onStrategyError("authentication", throwable, connectionId);
-            authenticated = false;
-        }
-
+        final boolean authenticated = authenticate(logon, connectionId);
         if (!authenticated)
         {
             return AuthenticationResult.FAILED_AUTHENTICATION;
         }
 
-        PersistenceLevel persistenceLevel;
-        try
-        {
-            persistenceLevel = sessionPersistenceStrategy.getPersistenceLevel(logon);
-        }
-        catch (final Throwable throwable)
-        {
-            final String message = String.format(
-                "Exception thrown by persistence strategy for connectionId=%d, defaulted to LOCAL_ARCHIVE",
-                connectionId);
-            errorHandler.onError(new FixGatewayException(message, throwable));
-            persistenceLevel = PersistenceLevel.LOCAL_ARCHIVE;
-        }
-
+        final PersistenceLevel persistenceLevel = getPersistenceLevel(logon, connectionId);
         final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
         final boolean resetSeqNum = resetSequenceNumbersUponLogon(persistenceLevel) || resetSeqNumFlag;
-        final int sentSequenceNumber = sequenceNumber(sentSequenceNumberIndex, resetSeqNum, sessionId);
-        final int receivedSequenceNumber = sequenceNumber(receivedSequenceNumberIndex, resetSeqNum, sessionId);
+
+        if (persistenceLevel == PersistenceLevel.INDEXED && !logAllMessages)
+        {
+            onError(new IllegalStateException(
+                "Persistence Strategy specified INDEXED but " +
+                "EngineConfiguration has disabled required logging of messsages"));
+            return AuthenticationResult.INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES;
+        }
+
         final String username = SessionParser.username(logon);
         final String password = SessionParser.password(logon);
 
         sessionContext.onLogon(resetSeqNum);
 
         gatewaySession.onLogon(sessionId, sessionContext, compositeKey, username, password, logon.heartBtInt());
-        gatewaySession.acceptorSequenceNumbers(sentSequenceNumber, receivedSequenceNumber);
-        gatewaySession.persistenceLevel(persistenceLevel);
 
-        return AuthenticationResult.authenticatedSession(gatewaySession, sentSequenceNumber, receivedSequenceNumber);
-    }
-
-    private int sequenceNumber(
-        final SequenceNumberIndexReader sequenceNumberIndexReader,
-        final boolean resetSeqNum,
-        final long sessionId)
-    {
         if (resetSeqNum)
         {
-            return SessionInfo.UNK_SESSION;
+            gatewaySession.acceptorSequenceNumbers(SessionInfo.UNK_SESSION, SessionInfo.UNK_SESSION);
+        }
+        else
+        {
+            final long requiredPosition = outboundPublication.position();
+
+            if (!lookupSequenceNumbers(gatewaySession, requiredPosition))
+            {
+                return new AuthenticationResult(gatewaySession, requiredPosition);
+            }
         }
 
-        return sequenceNumberIndexReader.lastKnownSequenceNumber(sessionId);
+        return new AuthenticationResult(gatewaySession);
     }
 
-    private void onStrategyError(final String strategyName, final Throwable throwable, final long connectionId)
+    public boolean lookupSequenceNumbers(final GatewaySession gatewaySession, final long requiredPosition)
+    {
+        final int aeronSessionId = outboundPublication.id();
+        // At requiredPosition=0 there won't be anything indexed, so indexedPosition will be -1
+        if (requiredPosition > 0 && sentSequenceNumberIndex.indexedPosition(aeronSessionId) < requiredPosition)
+        {
+            return false;
+        }
+
+        final long sessionId = gatewaySession.sessionId();
+        final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+        final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
+        gatewaySession.acceptorSequenceNumbers(lastSentSequenceNumber, lastReceivedSequenceNumber);
+
+        return true;
+    }
+
+    private PersistenceLevel getPersistenceLevel(final LogonDecoder logon, final long connectionId)
+    {
+        try
+        {
+            return sessionPersistenceStrategy.getPersistenceLevel(logon);
+        }
+        catch (final Throwable throwable)
+        {
+            onStrategyError("persistence", throwable, connectionId, "UNINDEXED", logon);
+            return PersistenceLevel.UNINDEXED;
+        }
+    }
+
+    private boolean authenticate(final LogonDecoder logon, final long connectionId)
+    {
+        try
+        {
+            return authenticationStrategy.authenticate(logon);
+        }
+        catch (final Throwable throwable)
+        {
+            onStrategyError("authentication", throwable, connectionId, "false", logon);
+            return false;
+        }
+    }
+
+    private void onStrategyError(
+        final String strategyName,
+        final Throwable throwable,
+        final long connectionId,
+        final String theDefault,
+        final LogonDecoder logon)
     {
         final String message = String.format(
-            "Exception thrown by %s strategy for connectionId=%d, [%s], defaulted to false",
+            "Exception thrown by %s strategy for connectionId=%d, processing [%s], defaulted to %s",
             strategyName,
-            connectionId);
+            connectionId,
+            logon.toString(),
+            theDefault);
         onError(new FixGatewayException(message, throwable));
     }
 

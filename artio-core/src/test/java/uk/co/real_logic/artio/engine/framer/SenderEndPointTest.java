@@ -23,6 +23,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Test;
 import org.mockito.stubbing.Answer;
 import org.mockito.verification.VerificationMode;
+import uk.co.real_logic.artio.engine.SenderSequenceNumber;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 import java.io.IOException;
@@ -30,7 +31,7 @@ import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
@@ -48,7 +49,7 @@ public class SenderEndPointTest
     private static final int BODY_LENGTH = 84;
     private static final int LENGTH = FRAME_SIZE + BODY_LENGTH;
     private static final int FRAGMENT_LENGTH = alignTerm(HEADER_LENGTH + FRAME_SIZE + BODY_LENGTH);
-    private static final long BEGIN_POSITION = POSITION - FRAGMENT_LENGTH;
+    private static final long BEGIN_POSITION = 8000;
     private static final int MAX_BYTES_IN_BUFFER = 3 * BODY_LENGTH;
 
     private TcpChannel tcpChannel = mock(TcpChannel.class);
@@ -60,6 +61,7 @@ public class SenderEndPointTest
     private UnsafeBuffer buffer = new UnsafeBuffer(byteBuffer);
     private BlockablePosition libraryBlockablePosition = mock(BlockablePosition.class);
     private BlockablePosition replayBlockablePosition = mock(BlockablePosition.class);
+    private SenderSequenceNumber senderSequenceNumber = mock(SenderSequenceNumber.class);
 
     private SenderEndPoint endPoint = new SenderEndPoint(
         CONNECTION_ID,
@@ -73,10 +75,11 @@ public class SenderEndPointTest
         framer,
         MAX_BYTES_IN_BUFFER,
         DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS,
-        0);
+        0,
+        senderSequenceNumber);
 
     @Test
-    public void shouldRetrySlowConsumerMessage() throws IOException
+    public void shouldRetrySlowConsumerMessage()
     {
         becomeSlowConsumer();
 
@@ -89,7 +92,7 @@ public class SenderEndPointTest
     }
 
     @Test
-    public void shouldBeAbleToFragmentSlowConsumerRetries() throws IOException
+    public void shouldBeAbleToFragmentSlowConsumerRetries()
     {
         becomeSlowConsumer();
 
@@ -124,7 +127,7 @@ public class SenderEndPointTest
         channelWillWrite(0);
         onOutboundMessage(timeInMs, position);
 
-        timeInMs += DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  + 1;
+        timeInMs += DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS + 1;
 
         endPoint.checkTimeouts(timeInMs);
 
@@ -139,7 +142,7 @@ public class SenderEndPointTest
         channelWillWrite(BODY_LENGTH);
         onOutboundMessage(timeInMs, POSITION);
 
-        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1);
+        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS - 1);
 
         endPoint.checkTimeouts(timeInMs);
 
@@ -156,13 +159,13 @@ public class SenderEndPointTest
         channelWillWrite(0);
         onOutboundMessage(timeInMs, POSITION);
 
-        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1);
+        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS - 1);
 
         channelWillWrite(replayWrites);
         onSlowOutboundMessage(timeInMs);
         verifyBlocksLibraryAt(BEGIN_POSITION);
 
-        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1);
+        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS - 1);
 
         endPoint.checkTimeouts(timeInMs);
 
@@ -173,7 +176,7 @@ public class SenderEndPointTest
     @Test
     public void shouldNotDisconnectAtStartDueToTimeout()
     {
-        final long timeInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  - 1;
+        final long timeInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS - 1;
 
         endPoint.checkTimeouts(timeInMs);
 
@@ -189,7 +192,7 @@ public class SenderEndPointTest
         channelWillWrite(BODY_LENGTH);
         onOutboundMessage(timeInMs, POSITION);
 
-        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  + 1);
+        timeInMs += (DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS + 1);
 
         endPoint.checkTimeouts(timeInMs);
 
@@ -212,7 +215,7 @@ public class SenderEndPointTest
         onSlowOutboundMessage();
         verifyBlocksLibraryAt(BEGIN_POSITION);
 
-        endPoint.checkTimeouts(DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS  + 101);
+        endPoint.checkTimeouts(DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS + 101);
 
         verifySlowConsumerDisconnect(times(1));
         errorLogged();
@@ -252,10 +255,16 @@ public class SenderEndPointTest
         onReplayMessage(0, position);
         byteBufferWritten();
 
+        onNormalStreamReplayComplete();
+        assertReplayPaused();
+
         channelWillWrite(BODY_LENGTH);
         onSlowReplayMessage(0, position);
         byteBufferWritten();
         verifyDoesNotBlockLibrary();
+
+        onSlowStreamReplayComplete();
+        assertNotReplayPaused();
 
         assertBytesInBuffer(0);
     }
@@ -291,11 +300,17 @@ public class SenderEndPointTest
         byteBufferWritten();
         verifyDoesNotBlockLibrary();
 
+        onNormalStreamReplayComplete();
+        assertReplayPaused();
+
         channelWillWrite(firstWrites);
         onSlowReplayMessage(0, position);
         byteBufferWritten();
         assertBytesInBuffer(remaining);
         verifyBlocksReplayAt(BEGIN_POSITION);
+
+        onSlowStreamReplayComplete();
+        assertReplayPaused();
 
         channelWillWrite(remaining);
         onSlowReplayMessage(0, position);
@@ -303,6 +318,9 @@ public class SenderEndPointTest
         assertBytesInBuffer(0);
         verifyNoMoreErrors();
         verifyDoesNotBlockLibrary();
+
+        onSlowStreamReplayComplete();
+        assertNotReplayPaused();
     }
 
     @Test
@@ -316,10 +334,16 @@ public class SenderEndPointTest
         onReplayMessage(0, position);
         byteBufferWritten();
 
+        onNormalStreamReplayComplete();
+        assertReplayPaused();
+
         channelWillWrite(firstWrites);
         onSlowReplayMessage(0, position);
         byteBufferWritten();
         assertBytesInBuffer(remaining);
+
+        onSlowStreamReplayComplete();
+        assertReplayPaused();
 
         onOutboundMessage(0, position);
         byteBufferNotWritten();
@@ -334,6 +358,9 @@ public class SenderEndPointTest
         onSlowReplayMessage(0, position);
         byteBufferWritten();
         assertBytesInBuffer(BODY_LENGTH);
+
+        onSlowStreamReplayComplete();
+        assertNotReplayPaused();
 
         channelWillWrite(BODY_LENGTH);
         onSlowOutboundMessage();
@@ -363,9 +390,15 @@ public class SenderEndPointTest
         byteBufferNotWritten();
         assertBytesInBuffer(remaining + BODY_LENGTH);
 
+        onNormalStreamReplayComplete();
+        assertNotReplayPaused();
+
         onSlowReplayMessage(0, position);
         byteBufferNotWritten();
         assertBytesInBuffer(remaining + BODY_LENGTH);
+
+        onSlowStreamReplayComplete();
+        assertNotReplayPaused();
 
         channelWillWrite(remaining);
         onSlowOutboundMessage();
@@ -376,6 +409,9 @@ public class SenderEndPointTest
         onSlowReplayMessage(0, BODY_LENGTH);
         byteBufferWritten();
         assertBytesInBuffer(0);
+
+        onSlowStreamReplayComplete();
+        assertNotReplayPaused();
 
         verifyNoMoreErrors();
     }
@@ -397,7 +433,7 @@ public class SenderEndPointTest
 
     private void onOutboundMessage(final long timeInMs, final long position)
     {
-        endPoint.onOutboundMessage(LIBRARY_ID, buffer, 0, BODY_LENGTH, position, timeInMs);
+        endPoint.onOutboundMessage(LIBRARY_ID, buffer, 0, BODY_LENGTH, 0, position, timeInMs);
     }
 
     private void onReplayMessage(final long timeInMs, final long position)
@@ -521,5 +557,25 @@ public class SenderEndPointTest
     {
         verify(blockablePosition).blockPosition(position);
         reset(blockablePosition);
+    }
+
+    private void assertNotReplayPaused()
+    {
+        assertFalse("should not be replay paused", endPoint.replayPaused());
+    }
+
+    private void assertReplayPaused()
+    {
+        assertTrue("should be replay paused", endPoint.replayPaused());
+    }
+
+    private void onSlowStreamReplayComplete()
+    {
+        endPoint.onReplayComplete();
+    }
+
+    private void onNormalStreamReplayComplete()
+    {
+        endPoint.onReplayComplete();
     }
 }

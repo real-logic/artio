@@ -33,6 +33,7 @@ public interface ProtocolHandler
         int messageType,
         long timestamp,
         MessageStatus status,
+        int sequenceNumber,
         long position);
 
     Action onDisconnect(int libraryId, long connectionId, DisconnectReason reason);

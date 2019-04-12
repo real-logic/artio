@@ -39,10 +39,11 @@ public final class LocalMktDateDecoder
     }
 
     /**
+     * Decode a FIX local mkt date value from a buffer into an epoch days int value.
      *
-     * @param timestamp
-     * @param offset
-     * @param length
+     * @param timestamp the buffer containing the FIX local mkt date value
+     * @param offset the position in the buffer where the value starts
+     * @param length the length of the value in bytes
      * @return an int representing the number of days since the beginning of the epoch in the local timezone.
      */
     public static int decode(final AsciiBuffer timestamp, final int offset, final int length)

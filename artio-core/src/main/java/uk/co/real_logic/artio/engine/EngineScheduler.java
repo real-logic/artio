@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,18 +31,19 @@ public interface EngineScheduler extends AutoCloseable
      * @param configuration the engine's configuration object.
      * @param errorHandler the ErrorHandler used by the engine.
      * @param framer the framer agent to schedule.
-     * @param archivingAgent the archiver agent to schedule.
+     * @param indexingAgent the archiver agent to schedule.
      * @param monitoringAgent the monitoring agent to schedule.
      * @param conductorAgent if aeron has useConductorInvoker enable it
-     *                       is the agent for the conductor, otherwise null.
+     * @param recordingCoordinator must be shut down after the Framer but before the conductorAgent.
      */
     void launch(
         EngineConfiguration configuration,
         ErrorHandler errorHandler,
         Agent framer,
-        Agent archivingAgent,
+        Agent indexingAgent,
         Agent monitoringAgent,
-        Agent conductorAgent);
+        Agent conductorAgent,
+        RecordingCoordinator recordingCoordinator);
 
     /**
      * Invoked by the FIX Engine to stop the threads. Should only return once they are completed stopped.

@@ -16,9 +16,12 @@
 package uk.co.real_logic.artio.system_tests;
 
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.Timing;
+import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.engine.LockStepFramerEngineScheduler;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.session.Session;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -124,5 +127,37 @@ public class TestSystem
             });
 
         return reply;
+    }
+
+    public FixMessage awaitMessageOf(final FakeOtfAcceptor otfAcceptor, final String messageType)
+    {
+        return Timing.withTimeout("Never received " + messageType, () ->
+        {
+            poll();
+
+            return otfAcceptor.hasReceivedMessage(messageType).findFirst();
+        },
+        Timing.DEFAULT_TIMEOUT_IN_MS);
+    }
+
+    public void awaitReceivedSequenceNumber(final Session session, final int sequenceNumber)
+    {
+        Timing.assertEventuallyTrue(session + " Never get to " + sequenceNumber, () ->
+        {
+            poll();
+
+            return session.lastReceivedMsgSeqNum() == sequenceNumber;
+        });
+    }
+
+    public void send(final Session session, final Encoder encoder)
+    {
+        assertEventuallyTrue(
+            "Unable to send " + encoder.getClass().getSimpleName(),
+            () ->
+            {
+                poll();
+                return session.send(encoder) > 0;
+            });
     }
 }

@@ -19,16 +19,12 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.SlowStatus;
-import uk.co.real_logic.artio.session.CompositeKey;
-import uk.co.real_logic.artio.session.Session;
-import uk.co.real_logic.artio.session.SessionLogonListener;
-import uk.co.real_logic.artio.session.SessionParser;
+import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
-import uk.co.real_logic.artio.validation.PersistenceLevel;
 
 import java.util.function.Consumer;
 
-import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_FLOW;
 import static uk.co.real_logic.artio.LogTag.GATEWAY_MESSAGE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 
@@ -40,20 +36,23 @@ class GatewaySession implements SessionInfo
     private SessionContext context;
     private final String address;
     private final ConnectionType connectionType;
+    private final boolean closedResendInterval;
+    private final int resendRequestChunkSize;
+    private final boolean sendRedundantResendRequests;
+    private final boolean enableLastMsgSeqNumProcessed;
 
     private ReceiverEndPoint receiverEndPoint;
     private SenderEndPoint senderEndPoint;
 
     private long sessionId;
     private SessionParser sessionParser;
-    private Session session;
+    private InternalSession session;
     private CompositeKey sessionKey;
     private String username;
     private String password;
     private int heartbeatIntervalInS;
     private long disconnectTimeout = NO_TIMEOUT;
 
-    private PersistenceLevel persistenceLevel;
     private Consumer<GatewaySession> onGatewaySessionLogon;
     private SessionLogonListener logonListener = this::onSessionLogon;
 
@@ -65,7 +64,11 @@ class GatewaySession implements SessionInfo
         final CompositeKey sessionKey,
         final ReceiverEndPoint receiverEndPoint,
         final SenderEndPoint senderEndPoint,
-        final Consumer<GatewaySession> onGatewaySessionLogon)
+        final Consumer<GatewaySession> onGatewaySessionLogon,
+        final boolean closedResendInterval,
+        final int resendRequestChunkSize,
+        final boolean sendRedundantResendRequests,
+        final boolean enableLastMsgSeqNumProcessed)
     {
         this.connectionId = connectionId;
         this.sessionId = context.sessionId();
@@ -76,6 +79,10 @@ class GatewaySession implements SessionInfo
         this.receiverEndPoint = receiverEndPoint;
         this.senderEndPoint = senderEndPoint;
         this.onGatewaySessionLogon = onGatewaySessionLogon;
+        this.closedResendInterval = closedResendInterval;
+        this.resendRequestChunkSize = resendRequestChunkSize;
+        this.sendRedundantResendRequests = sendRedundantResendRequests;
+        this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
     }
 
     public long connectionId()
@@ -98,7 +105,10 @@ class GatewaySession implements SessionInfo
         return sessionKey;
     }
 
-    void manage(final SessionParser sessionParser, final Session session, final BlockablePosition blockablePosition)
+    void manage(
+        final SessionParser sessionParser,
+        final InternalSession session,
+        final BlockablePosition blockablePosition)
     {
         this.sessionParser = sessionParser;
         this.session = session;
@@ -178,7 +188,7 @@ class GatewaySession implements SessionInfo
     {
         if (sessionParser != null)
         {
-            DebugLogger.log(FIX_MESSAGE, "Gateway Received %s %n", buffer, offset, length);
+            DebugLogger.log(FIX_MESSAGE_FLOW, "Gateway Received %s %n", buffer, offset, length);
 
             sessionParser.onMessage(buffer, offset, length, messageType, sessionId);
         }
@@ -277,13 +287,28 @@ class GatewaySession implements SessionInfo
         return bytesInBuffer() > 0 ? SlowStatus.SLOW : SlowStatus.NOT_SLOW;
     }
 
-    void persistenceLevel(final PersistenceLevel persistenceLevel)
+    public boolean closedResendInterval()
     {
-        this.persistenceLevel = persistenceLevel;
+        return closedResendInterval;
     }
 
-    PersistenceLevel persistenceLevel()
+    public int resendRequestChunkSize()
     {
-        return this.persistenceLevel;
+        return resendRequestChunkSize;
+    }
+
+    public boolean sendRedundantResendRequests()
+    {
+        return sendRedundantResendRequests;
+    }
+
+    public boolean enableLastMsgSeqNumProcessed()
+    {
+        return enableLastMsgSeqNumProcessed;
+    }
+
+    public boolean hasDisconnected()
+    {
+        return receiverEndPoint.hasDisconnected();
     }
 }

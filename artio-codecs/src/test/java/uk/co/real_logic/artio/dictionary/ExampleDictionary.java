@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,8 +38,12 @@ public final class ExampleDictionary
 {
 
     public static final String NO_EG_GROUP = "NoEgGroup";
+    public static final String NO_SECOND_EG_GROUP = "NoSecondEgGroup";
+    public static final String NO_ADMIN_EG_GROUP = "NoAdminEgGroup";
     public static final String NO_COMPONENT_GROUP = "NoComponentGroup";
+    public static final String NO_NESTED_COMPONENT_GROUP = "NoNestedComponentGroup";
     public static final String EG_COMPONENT = "EgComponent";
+    public static final String EG_NESTED_COMPONENT = "EgNestedComponent";
     public static final String FIELDS_MESSAGE = "FieldsMessage";
 
     public static final String EG_ENUM = PARENT_PACKAGE + "." + "EgEnum";
@@ -53,28 +57,31 @@ public final class ExampleDictionary
 
     public static final String HEARTBEAT_ENCODER = TEST_PACKAGE + ".HeartbeatEncoder";
     public static final String COMPONENT_ENCODER = TEST_PACKAGE + "." + EG_COMPONENT + "Encoder";
-    public static final String HEADER_ENCODER = TEST_PACKAGE + ".HeaderEncoder";
 
     public static final String HEARTBEAT_DECODER = TEST_PACKAGE + ".HeartbeatDecoder";
     public static final String ALL_REQ_FIELD_TYPES_MESSAGE_DECODER = TEST_PACKAGE + ".AllReqFieldTypesMessageDecoder";
     public static final String FIELDS_MESSAGE_DECODER = TEST_PACKAGE + "." + FIELDS_MESSAGE + "Decoder";
     public static final String HEADER_DECODER = TEST_PACKAGE + ".HeaderDecoder";
     public static final String COMPONENT_DECODER = TEST_PACKAGE + "." + EG_COMPONENT + "Decoder";
+    public static final String NESTED_COMPONENT_DECODER = TEST_PACKAGE + "." + EG_NESTED_COMPONENT + "Decoder";
     public static final String OTHER_MESSAGE_DECODER = TEST_PACKAGE + ".OtherMessageDecoder";
     public static final String OTHER_MESSAGE_ENCODER = TEST_PACKAGE + ".OtherMessageEncoder";
+    public static final String ENUM_TEST_MESSAGE_DECODER = TEST_PACKAGE + ".EnumTestMessageDecoder";
 
     public static final String PRINTER = TEST_PACKAGE + ".PrinterImpl";
 
     public static final String ABC = "abc";
     public static final byte[] VALUE_IN_BYTES = {97, 98, 99};
+    public static final byte[] LONG_VALUE_IN_BYTES = { 97, 98, 99, 100 };
+    public static final byte[] PREFIXED_VALUE_IN_BYTES = {0, 97, 98, 99, 100, 0};
     public static final String TEST_REQ_ID = "testReqID";
     public static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
     public static final String INT_FIELD = "intField";
-    public static final String CHAR_FIELD = "charField";
     public static final String FLOAT_FIELD = "floatField";
     public static final String BOOLEAN_FIELD = "booleanField";
     public static final String DATA_FIELD = "dataField";
     public static final String TEST_REQ_ID_LENGTH = "testReqIDLength";
+    public static final String TEST_REQ_ID_OFFSET = "testReqIDOffset";
     public static final String ON_BEHALF_OF_COMP_ID_LENGTH = "onBehalfOfCompIDLength";
     public static final String SOME_TIME_FIELD = "someTimeField";
     public static final String COMPONENT_FIELD = "componentField";
@@ -90,7 +97,6 @@ public final class ExampleDictionary
     public static final String CHAR_ENUM_RF = "CharEnumRF";
 
     public static final String HAS_TEST_REQ_ID = "hasTestReqID";
-    public static final String HAS_ON_BEHALF_OF_COMP_ID = "hasonBehalfOfCompID";
     public static final String HAS_BOOLEAN_FIELD = "hasBooleanField";
     public static final String HAS_DATA_FIELD = "hasDataField";
     public static final String HAS_COMPONENT_FIELD = "hasComponentField";
@@ -152,6 +158,13 @@ public final class ExampleDictionary
         "  \"FloatField\": \"1.1\",\n" +
         "  \"SomeTimeField\": \"19700101-00:00:00.001\"";
 
+    public static final String STRING_ONLY_TESTREQ_MESSAGE_SUFFIX =
+        "  \"OnBehalfOfCompID\": \"abc\",\n" +
+        "  \"TestReqID\": \"abc\",\n" +
+        "  \"IntField\": \"2\",\n" +
+        "  \"FloatField\": \"1.1\",\n" +
+        "  \"SomeTimeField\": \"19700101-00:00:00.001\"";
+
     public static final String STRING_NO_OPTIONAL_MESSAGE_EXAMPLE =
         "{\n" +
         "  \"MessageName\": \"Heartbeat\",\n" +
@@ -172,11 +185,26 @@ public final class ExampleDictionary
         "      \"ComponentGroupField\": \"2\",\n" +
         "    }\n" +
         "    ]\n" +
+        "    \"EgNestedComponent\":  {\n" +
+        "      \"MessageName\": \"EgNestedComponent\",\n" +
+        "    }\n" +
         "  }";
 
     public static final String ENCODED_MESSAGE =
         "8=FIX.4.4\0019=75\00135=0\001115=abc\001112=abc\001116=2\001117=1.1" +
         "\001118=Y\001119=123\001127=19700101-00:00:00.001\00110=199\001";
+
+    public static final String ENCODED_MESSAGE_FIXT11 =
+        "8=FIXT.1.1\0019=75\00135=0\001115=abc\001112=abc\001116=2\001117=1.1" +
+        "\001118=Y\001119=123\001127=19700101-00:00:00.001\00110=021\001";
+
+    public static final String ENCODED_MESSAGE_WITH_SIGNATURE =
+        "8=FIX.4.4\0019=96\00135=0\001115=abc\001112=abc\001116=2\001117=1.1" +
+        "\001118=Y\001119=123\001127=19700101-00:00:00.001\00193=11\00189=Good to go!\00110=040\001";
+
+    public static final String ONLY_TESTREQ_ENCODED_MESSAGE =
+        "8=FIX.4.4\0019=61\00135=0\001115=abc\001112=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\00110=034\001";
 
     public static final String NO_OPTIONAL_MESSAGE =
         "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
@@ -186,9 +214,61 @@ public final class ExampleDictionary
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001117=1.1\001127=19700101-00:00:00.001" +
         "\00110=161\001";
 
+    public static final String MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001136=1\001137=TOM\00110=043\001";
+
+    public static final String MULTIPLE_ENTRY_REPEATING_GROUP =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001136=2\001137=TOM\001138=2\001137=ANDREY\001138=13\00110=043\001";
+
+    public static final String MULTIPLE_ENTRY_REPEATING_GROUP_WITHOUT_OPTIONAL =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001136=2\001138=2\001138=13\00110=043\001";
+
+    public static final String MULTI_ENTRY_NESTED_GROUP_MESSAGE =
+        "8=FIX.4.4\0019=77\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001120=2\001121=1\001122=2\001123=1\001123=2\001121=2\001122=2\001123=3\001123=4\00110=063\001";
+
+    public static final String MULTI_ENTRY_NESTED_GROUP_MESSAGE_WITHOUT_NESTED_FIELDS =
+        "8=FIX.4.4\0019=77\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001120=2\001121=1\001121=2\00110=063\001";
+
+    public static final String NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001136=1\001138=180\001137=TOM\00110=043\001";
+
+    public static final String FIELD_DEFINED_TWICE_IN_MESSAGE =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001136=2\001138=180\001137=TOM\001117=1.1\001138=22\001137=KEVIN\00110=043\001";
+
+    public static final String UNKNOWN_FIELD_MESSAGE =
+        "8=FIX.4.4\0019=0027\00135=0\001115=abc\001117=1.1\0011000=UNKNOWN FIELD\001116=2" +
+        "\001127=19700101-00:00:00.001\00110=161\001";
+
+    public static final String NO_REPEATING_GROUP_IN_REPEATING_GROUP_MESSAGE =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\00110=043\001";
+
+    public static final String REPEATING_GROUP_WITH_UNKNOWN_FIELD =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001136=2\001138=180\0011000=UNKNOWN\001137=TOM\001138=123\001137=Barbara\00110=043\001";
+
+    public static final String CONTAINS_UNKNOWN_REPEATING_GROUP =
+        "8=FIX.4.4\0019=0049\00135=Z\0011001=USD\0011002=N\0011003=US" +
+        "\001136=2\001138=180\0011000=UNKNOWN\001137=TOM\001138=123\001137=Barbara\00110=043\001";
+
+    public static final String CONTAINS_UNKNOWN_NESTED_REPEATING_GROUP =
+        "8=FIX.4.4\0019=71\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001120=2\001121=1\001139=4\001140=Tom\001140=Judd\001140=Zam\001140=Stephen\001121=2\00110=053\001";
+
+    public static final String REPEATING_GROUP_WITH_FIELD_UNKNOWN_TO_MESSAGE_BUT_IN_SPEC =
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001136=2\001138=180\001501=UNKNOWN\001137=TOM\001138=123\001137=Barbara\00110=043\001";
+
     public static final String INVALID_TAG_NUMBER_MESSAGE =
-        "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-        "\0019999=9999\00110=161\001";
+        "8=FIX.4.4\0019=0027\00135=0\001115=abc\0019999=9999\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\00110=161\001";
 
     public static final String TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE_MESSAGE =
         "8=FIX.4.4\0019=0027\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
@@ -281,6 +361,10 @@ public final class ExampleDictionary
         "8=FIX.4.4\0019=77\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
         "\001124=2\001130=2\001131=1\001131=2\00110=069\001";
 
+    public static final String NESTED_COMPONENT_MESSAGE =
+        "8=FIX.4.4\0019=77\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001124=2\001130=2\001131=1\001131=2\001141=180\001142=2\001143=99\001143=100\00110=069\001";
+
     public static final String SHORT_TIMESTAMP_MESSAGE =
         "8=FIX.4.4\0019=49\00135=0\001115=abc\001116=2\001117=1.1" +
         "\001127=19700101-00:00:00\00110=113\001";
@@ -295,6 +379,18 @@ public final class ExampleDictionary
     public static final String EG_HIGH_NUMBER_FIELD_MESSAGE =
         "8=FIX.4.4\0019=0049\00135=Z\0019001=1\0011001=USD\0011002=N\0011003=US\00110=209\001";
 
+    public static final String ET_ALL_FIELDS =
+        "8=FIX.4.4\0019=0049\00135=ET\001501=a\001502=10\001503=alpha\001511=c\001512=30\001513=gamma\00110=209\001";
+
+    public static final String ET_ONLY_REQ_FIELDS =
+        "8=FIX.4.4\0019=0049\00135=ET\001511=d\001512=40\001513=delta\00110=209\001";
+
+    public static final String ET_ONLY_REQ_FIELDS_WITH_BAD_VALUES =
+        "8=FIX.4.4\0019=0049\00135=ET\001511=X\001512=-1\001513=X\00110=209\001";
+
+    public static final String ET_MISSING_REQ_FIELD =
+        "8=FIX.4.4\0019=0049\00135=ET\001511=d\001512=40\00110=209\001";
+
     public static final String RF_ALL_FIELDS =
         "8=FIX.4.4\0019=0049\00135=Z\001700=one\001701=10\001702=b\001703=123.456\001" +
         "704=one\001705=10\001706=b\00110=209\001";
@@ -307,6 +403,8 @@ public final class ExampleDictionary
     public static final String OTHER_MESSAGE_TYPE = "AB";
     public static final byte[] OTHER_MESSAGE_TYPE_BYTES = OTHER_MESSAGE_TYPE.getBytes(US_ASCII);
     public static final int OTHER_MESSAGE_TYPE_PACKED = GenerationUtil.packMessageType(OTHER_MESSAGE_TYPE);
+    private static final String ENUM_TEST_MESSAGE = "EnumTestMessage";
+    private static final String ENUM_TEST_MESSAGE_TYPE = "ET";
 
     static
     {
@@ -322,7 +420,21 @@ public final class ExampleDictionary
         final Field beginString = registerField(messageEgFields, 8, "BeginString", Type.STRING);
         final Field bodyLength = registerField(messageEgFields, 9, "BodyLength", INT);
         final Field msgType = registerField(messageEgFields, 35, "MsgType", Type.STRING);
+        final Field senderCompID = registerField(messageEgFields, 49, "SenderCompID", Type.STRING);
+        final Field targetCompID = registerField(messageEgFields, 56, "TargetCompID", Type.STRING);
+        final Field msgSeqNum = registerField(messageEgFields, 34, "MsgSeqNum", Type.SEQNUM);
+        final Field senderSubID = registerField(messageEgFields, 50, "SenderSubID", Type.STRING);
+        final Field senderLocationID = registerField(messageEgFields, 142, "SenderLocationID", Type.STRING);
+        final Field targetSubID = registerField(messageEgFields, 57, "TargetSubID", Type.STRING);
+        final Field targetLocationID = registerField(messageEgFields, 143, "TargetLocationID", Type.STRING);
+        final Field possDupFlag = registerField(messageEgFields, 43, "PossDupFlag", Type.BOOLEAN);
+        final Field possResend = registerField(messageEgFields, 97, "PossResend", Type.BOOLEAN);
+        final Field sendingTime = registerField(messageEgFields, 52, "SendingTime", Type.UTCTIMESTAMP);
+        final Field origSendingTime = registerField(messageEgFields, 122, "OrigSendingTime", Type.UTCTIMESTAMP);
+        final Field lastMsgSeqNumProcessed = registerField(messageEgFields, 369, "LastMsgSeqNumProcessed", Type.SEQNUM);
 
+        final Field signatureLength = registerField(messageEgFields, 93, "SignatureLength", Type.LENGTH);
+        final Field signature = registerField(messageEgFields, 89, "Signature", Type.DATA);
         final Field checkSum = registerField(messageEgFields, 10, "CheckSum", Type.STRING);
 
         final Field onBehalfOfCompID = registerField(messageEgFields, 115, "OnBehalfOfCompID", Type.STRING)
@@ -337,28 +449,28 @@ public final class ExampleDictionary
         final Field floatField = registerField(messageEgFields, 117, "FloatField", Type.PRICE);
         final Field booleanField = registerField(messageEgFields, 118, "BooleanField", Type.BOOLEAN);
         final Field dataField = registerField(messageEgFields, 119, "DataField", Type.DATA);
-        final Field someTime = registerField(messageEgFields, 127,  "SomeTimeField", Type.UTCTIMESTAMP);
-        final Field charField = registerField(messageEgFields, 128,  "CharField", Type.CHAR)
+        final Field someTime = registerField(messageEgFields, 127, "SomeTimeField", Type.UTCTIMESTAMP);
+        final Field charField = registerField(messageEgFields, 128, "CharField", Type.CHAR)
             .addValue("a", "One")
             .addValue("b", "Two");
-        final Field multiCharField = registerField(messageEgFields, 132,  "MultiCharField", Type.MULTIPLECHARVALUE)
+        final Field multiCharField = registerField(messageEgFields, 132, "MultiCharField", Type.MULTIPLECHARVALUE)
             .addValue("a", "One")
             .addValue("b", "Two");
 
-        final Field multiValStringField = registerField(messageEgFields, 133,  "MultiValueStringField",
+        final Field multiValStringField = registerField(messageEgFields, 133, "MultiValueStringField",
             Type.MULTIPLEVALUESTRING)
             .addValue("ab", "One")
             .addValue("cd", "Two");
 
-        final Field multiStringValField = registerField(messageEgFields, 135,  "MultiStringValueField",
+        final Field multiStringValField = registerField(messageEgFields, 135, "MultiStringValueField",
             Type.MULTIPLEVALUESTRING)
             .addValue("ab", "One")
             .addValue("cd", "Two");
 
-        final Field multiCharFieldNotAnEnum = registerField(messageEgFields, 134,  "MultiValueCharNoEnumField",
+        final Field multiCharFieldNotAnEnum = registerField(messageEgFields, 134, "MultiValueCharNoEnumField",
             Type.MULTIPLECHARVALUE);
 
-        final Field dayOfMonthField = registerField(messageEgFields, 129,  "DayOfMonthField", Type.DAYOFMONTH);
+        final Field dayOfMonthField = registerField(messageEgFields, 129, "DayOfMonthField", Type.DAYOFMONTH);
 
         final Group nestedGroup = Group.of(registerField(messageEgFields, 122, "NoNestedGroup", INT));
         nestedGroup.optionalEntry(registerField(messageEgFields, 123, "NestedField", INT));
@@ -367,12 +479,28 @@ public final class ExampleDictionary
         egGroup.optionalEntry(registerField(messageEgFields, 121, "GroupField", INT));
         egGroup.optionalEntry(nestedGroup);
 
+        final Group groupWithRequiredField = Group.of(registerField(messageEgFields, 136, NO_SECOND_EG_GROUP, INT));
+        groupWithRequiredField.optionalEntry(registerField(messageEgFields, 137, "SecondGroupField", STRING));
+        groupWithRequiredField.requiredEntry(registerField(messageEgFields, 138, "ThirdGroupField", INT));
+
         final Group componentGroup = Group.of(registerField(messageEgFields, 130, NO_COMPONENT_GROUP, INT));
         componentGroup.optionalEntry(registerField(messageEgFields, 131, "ComponentGroupField", INT));
+
+        final Group nestedComponentGroup = Group.of(registerField(messageEgFields, 142,
+            NO_NESTED_COMPONENT_GROUP, INT));
+        nestedComponentGroup.optionalEntry(registerField(messageEgFields, 143, "NestedComponentGroupField", INT));
+
+        final Component nestedComponent = new Component(EG_NESTED_COMPONENT);
+        nestedComponent.optionalEntry(registerField(messageEgFields, 141, "NestedComponentField", INT));
+        nestedComponent.optionalEntry(nestedComponentGroup);
 
         final Component egComponent = new Component(EG_COMPONENT);
         egComponent.optionalEntry(registerField(messageEgFields, 124, "ComponentField", INT));
         egComponent.optionalEntry(componentGroup);
+        egComponent.optionalEntry(nestedComponent);
+
+        final Group groupForAdmin = Group.of(registerField(messageEgFields, 139, NO_ADMIN_EG_GROUP, INT));
+        groupForAdmin.optionalEntry(registerField(messageEgFields, 140, "AdminFirstGroupField", STRING));
 
         final Field dataFieldLength = registerField(messageEgFields, 200, "DataFieldLength", Type.LENGTH);
 
@@ -394,14 +522,30 @@ public final class ExampleDictionary
         heartbeat.optionalEntry(egGroup);
         heartbeat.requiredEntry(egComponent);
         heartbeat.optionalEntry(dataFieldLength);
+        heartbeat.optionalEntry(groupWithRequiredField);
 
         final Component header = new Component("Header");
         header
             .requiredEntry(beginString)
             .requiredEntry(bodyLength)
-            .requiredEntry(msgType);
+            .requiredEntry(msgType)
+            .optionalEntry(senderCompID)
+            .optionalEntry(targetCompID)
+            .optionalEntry(msgSeqNum)
+            .optionalEntry(senderSubID)
+            .optionalEntry(senderLocationID)
+            .optionalEntry(targetSubID)
+            .optionalEntry(targetLocationID)
+            .optionalEntry(possDupFlag)
+            .optionalEntry(possResend)
+            .optionalEntry(sendingTime)
+            .optionalEntry(origSendingTime)
+            .optionalEntry(lastMsgSeqNumProcessed);
+
 
         final Component trailer = new Component("Trailer");
+        trailer.optionalEntry(signatureLength);
+        trailer.optionalEntry(signature);
         trailer.requiredEntry(checkSum);
 
         final Message otherMessage = new Message("OtherMessage", OTHER_MESSAGE_TYPE, ADMIN);
@@ -415,6 +559,28 @@ public final class ExampleDictionary
         fieldsMessage.optionalEntry(registerField(messageEgFields, 1005, "OptionalExchangeField", EXCHANGE));
         fieldsMessage.optionalEntry(registerField(messageEgFields, 1006, "OptionalCountryField", COUNTRY));
         fieldsMessage.optionalEntry(registerField(messageEgFields, 9001, "HighNumberField", INT));
+        fieldsMessage.optionalEntry(groupForAdmin);
+        fieldsMessage.optionalEntry(nestedComponent);
+
+        final Message enumTestMessage = new Message(ENUM_TEST_MESSAGE, ENUM_TEST_MESSAGE_TYPE, APP);
+        enumTestMessage.optionalEntry(registerField(messageEgFields, 501, "CharEnumOpt", CHAR)
+            .addValue("a", "A")
+            .addValue("b", "B"));
+        enumTestMessage.optionalEntry(registerField(messageEgFields, 502, "IntEnumOpt", INT)
+            .addValue("10", "TEN")
+            .addValue("20", "TWENTY"));
+        enumTestMessage.optionalEntry(registerField(messageEgFields, 503, "StringEnumOpt", STRING)
+            .addValue("alpha", "ALPHA")
+            .addValue("beta", "BETA"));
+        enumTestMessage.requiredEntry(registerField(messageEgFields, 511, "CharEnumReq", CHAR)
+            .addValue("c", "C")
+            .addValue("d", "D"));
+        enumTestMessage.requiredEntry(registerField(messageEgFields, 512, "IntEnumReq", INT)
+            .addValue("30", "THIRTY")
+            .addValue("40", "FORTY"));
+        enumTestMessage.requiredEntry(registerField(messageEgFields, 513, "StringEnumReq", STRING)
+            .addValue("gamma", "GAMMA")
+            .addValue("delta", "DELTA"));
 
         final Message allReqFieldTypesMessage = new Message(ALL_REQ_FIELD_TYPES_MESSAGE_NAME,
             ALL_REQ_FIELD_TYPES_MESSAGE_TYPE, APP);
@@ -430,10 +596,12 @@ public final class ExampleDictionary
             .addValue("a", "APPLE").addValue("b", "BANANA"));
 
 
-        final List<Message> messages = asList(heartbeat, otherMessage, fieldsMessage, allReqFieldTypesMessage);
+        final List<Message> messages = asList(heartbeat, otherMessage, fieldsMessage, allReqFieldTypesMessage,
+            enumTestMessage);
 
         final Map<String, Component> components = new HashMap<>();
         components.put(EG_COMPONENT, egComponent);
+        components.put(EG_NESTED_COMPONENT, nestedComponent);
 
         return new Dictionary(messages, messageEgFields, components, header, trailer, "FIX", 4, 4);
     }
@@ -465,7 +633,6 @@ public final class ExampleDictionary
         fieldEgFields.put("multiStringValueEnum", multiStringValueEnum);
         fieldEgFields.put("egNotEnum", new Field(125, "EgNotEnum", Type.CHAR));
 
-        return new Dictionary(emptyList(), fieldEgFields, emptyMap(), null, null,
-            "FIX", 4, 4);
+        return new Dictionary(emptyList(), fieldEgFields, emptyMap(), null, null, "FIX", 4, 4);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import io.aeron.driver.MediaDriver;
+import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.hamcrest.Matcher;
 import org.junit.After;
@@ -46,7 +46,7 @@ public class EngineAndLibraryIntegrationTest
 {
     private static final int SHORT_TIMEOUT_IN_MS = 100;
 
-    private MediaDriver mediaDriver;
+    private ArchivingMediaDriver mediaDriver;
     private FixEngine engine;
     private FixLibrary library;
     private FixLibrary library2;

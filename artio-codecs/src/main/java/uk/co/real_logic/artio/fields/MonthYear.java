@@ -28,11 +28,10 @@ import static uk.co.real_logic.artio.fields.CalendricalUtil.isValidMonth;
  * Allocation free representation + codec for the FIX MonthYear data type.
  * <p>
  * A Month Year could be:
- * <p>
  * <ul>
- * <li>A pair of Year & Month</li>
- * <li>A pair of Year & Month with a day</li>
- * <li>A pair of Year & Month with a week</li>
+ * <li>A pair of Year &amp; Month</li>
+ * <li>A pair of Year &amp; Month with a day</li>
+ * <li>A pair of Year &amp; Month with a week</li>
  * </ul>
  * <p>
  * Since the month year field may represent calendrical values with differing
@@ -196,13 +195,13 @@ public final class MonthYear
         final int endYear = offset + SIZE_OF_YEAR;
         final int endMonth = endYear + SIZE_OF_MONTH;
 
-        buffer.putNatural(offset, SIZE_OF_YEAR, year());
-        buffer.putNatural(endYear, SIZE_OF_MONTH, month().getValue());
+        buffer.putNaturalPaddedIntAscii(offset, SIZE_OF_YEAR, year());
+        buffer.putNaturalPaddedIntAscii(endYear, SIZE_OF_MONTH, month().getValue());
 
         final int dayOfMonth = dayOfMonth();
         if (dayOfMonth != NONE)
         {
-            buffer.putNatural(endMonth, SIZE_OF_DAY_OF_MONTH, dayOfMonth);
+            buffer.putNaturalPaddedIntAscii(endMonth, SIZE_OF_DAY_OF_MONTH, dayOfMonth);
             return LONG_LENGTH;
         }
         else
@@ -211,7 +210,7 @@ public final class MonthYear
             if (weekOfMonth != NONE)
             {
                 buffer.putChar(endMonth, 'w');
-                buffer.putNatural(endMonth + 1, SIZE_OF_WEEK_OF_MONTH, weekOfMonth);
+                buffer.putNaturalPaddedIntAscii(endMonth + 1, SIZE_OF_WEEK_OF_MONTH, weekOfMonth);
                 return LONG_LENGTH;
             }
         }

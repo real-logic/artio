@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,15 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.decoder.HeaderDecoder;
-import uk.co.real_logic.artio.engine.logger.FixArchiveScanner.MessageType;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 
 import java.util.function.Predicate;
 
 import static java.lang.Long.parseLong;
-import static uk.co.real_logic.artio.engine.logger.FixArchiveScanner.MessageType.SENT;
+import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ARCHIVE_SCANNER_STREAM;
 import static uk.co.real_logic.artio.engine.logger.FixMessagePredicates.*;
 
 /**
@@ -37,10 +38,12 @@ public final class FixArchivePrinter
 {
     public static void main(final String[] args)
     {
-        String logFileDir = null;
+        String aeronDirectoryName = null;
         String aeronChannel = null;
-        MessageType direction = SENT;
+        int queryStreamId = DEFAULT_OUTBOUND_LIBRARY_STREAM;
+        int archiveScannerStreamId = DEFAULT_ARCHIVE_SCANNER_STREAM;
         FixMessagePredicate predicate = FixMessagePredicates.alwaysTrue();
+        boolean follow = false;
 
         Predicate<HeaderDecoder> headerPredicate = null;
 
@@ -55,14 +58,13 @@ public final class FixArchivePrinter
                 case "help":
                     printHelp();
                     return;
-            }
 
-            // Options with arguments
-            if (eqIndex == -1)
-            {
-                System.err.println("--help is the only option that doesn't take a value");
-                printHelp();
-                System.exit(-1);
+                case "follow":
+                    follow = true;
+                    break;
+
+                default:
+                    requiredArgument(eqIndex);
             }
 
             final String optionValue = arg.substring(eqIndex + 1);
@@ -106,12 +108,16 @@ public final class FixArchivePrinter
                     headerPredicate = safeAnd(headerPredicate, targetLocationIdOf(optionValue));
                     break;
 
-                case "direction":
-                    direction = MessageType.valueOf(optionValue.toUpperCase());
+                case "query-stream-id":
+                    queryStreamId = Integer.parseInt(optionValue);
                     break;
 
-                case "log-file-dir":
-                    logFileDir = optionValue;
+                case "archive-scanner-stream-id":
+                    archiveScannerStreamId = Integer.parseInt(optionValue);
+                    break;
+
+                case "aeron-dir-name":
+                    aeronDirectoryName = optionValue;
                     break;
 
                 case "aeron-channel":
@@ -120,20 +126,49 @@ public final class FixArchivePrinter
             }
         }
 
-        requiredArgument(logFileDir, "log-file-dir");
+        requiredArgument(aeronDirectoryName, "aeron-dir-name");
         requiredArgument(aeronChannel, "aeron-channel");
 
+        scanArchive(aeronDirectoryName, aeronChannel, queryStreamId, predicate, follow, headerPredicate,
+            archiveScannerStreamId);
+    }
+
+    private static void requiredArgument(final int eqIndex)
+    {
+        if (eqIndex == -1)
+        {
+            System.err.println("--help and --follow are the only options that don't take a value");
+            printHelp();
+            System.exit(-1);
+        }
+    }
+
+    private static void scanArchive(
+        final String aeronDirectoryName,
+        final String aeronChannel,
+        final int queryStreamId,
+        final FixMessagePredicate otherPredicate,
+        final boolean follow,
+        final Predicate<HeaderDecoder> headerPredicate,
+        final int archiveScannerStreamId)
+    {
+        FixMessagePredicate predicate = otherPredicate;
         if (headerPredicate != null)
         {
             predicate = whereHeader(headerPredicate).and(predicate);
         }
 
-        final FixArchiveScanner scanner = new FixArchiveScanner(logFileDir);
+        final FixArchiveScanner.Context context = new FixArchiveScanner.Context()
+            .aeronDirectoryName(aeronDirectoryName)
+            .idleStrategy(CommonConfiguration.backoffIdleStrategy());
+
+        final FixArchiveScanner scanner = new FixArchiveScanner(context);
         scanner.scan(
             aeronChannel,
-            direction,
+            queryStreamId,
             filterBy(FixArchivePrinter::print, predicate),
-            Throwable::printStackTrace);
+            follow,
+            archiveScannerStreamId);
     }
 
     private static void requiredArgument(final String argument, final String description)
@@ -152,8 +187,9 @@ public final class FixArchivePrinter
         System.out.println("All options are specified in the form: --optionName=optionValue");
 
         printOption(
-            "log-file-dir",
-            "Specifies the directory to look in, should be the same as your configuration.logFileDir()",
+            "aeron-dir-name",
+            "Specifies the directory to use for archiving, should be the same as your " +
+            "aeronContext.aeronDirectoryName()",
             true);
         printOption(
             "aeron-channel",
@@ -162,15 +198,11 @@ public final class FixArchivePrinter
 
         printOption(
             "from",
-            "Time in milliseconds that messages are not earlier than",
-            false);
-        printOption(
-            "from",
-            "Time in milliseconds that messages are not earlier than",
+            "Time in precision of CommonConfiguration.clock() that messages are not earlier than",
             false);
         printOption(
             "to",
-            "Time in milliseconds that messages are not later than",
+            "Time in precision of CommonConfiguration.clock() that messages are not later than",
             false);
         printOption(
             "message-types",
@@ -201,9 +233,14 @@ public final class FixArchivePrinter
             "Only print messages where the header's sender comp id field matches this",
             false);
         printOption(
-            "direction",
-            "Only print messages where the direction matches this. Must be either 'sent' or 'received'." +
-            "Defaults to sent.",
+            "query-stream-id",
+            "Only print messages where the query-stream-id matches this." +
+            " This should be your configuration.inboundLibraryStream() or configuration.outboundLibraryStream()" +
+            " Defaults to sent.",
+            false);
+        printOption(
+            "follow",
+            "Continue to print out archive messages for a recording that is still in flight. defaults to off",
             false);
         printOption(
             "help",

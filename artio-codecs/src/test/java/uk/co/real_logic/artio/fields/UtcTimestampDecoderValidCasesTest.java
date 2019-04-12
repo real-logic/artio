@@ -32,7 +32,9 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.time.temporal.ChronoField.MILLI_OF_SECOND;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
-import static uk.co.real_logic.artio.fields.UtcTimestampDecoder.LONG_LENGTH;
+import static uk.co.real_logic.artio.fields.CalendricalUtil.MICROS_IN_MILLIS;
+import static uk.co.real_logic.artio.fields.UtcTimestampDecoder.LENGTH_WITH_MICROSECONDS;
+import static uk.co.real_logic.artio.fields.UtcTimestampDecoder.LENGTH_WITH_MILLISECONDS;
 
 @RunWith(Parameterized.class)
 public class UtcTimestampDecoderValidCasesTest
@@ -74,19 +76,31 @@ public class UtcTimestampDecoderValidCasesTest
     @Test
     public void canParseTimestampWithLongLength()
     {
-        canParseTimestamp(LONG_LENGTH);
+        canParseTimestamp(LENGTH_WITH_MILLISECONDS);
     }
 
     private void canParseTimestamp(final int length)
     {
-        final long expected = toEpochMillis(timestamp);
+        final long expectedEpochMillis = toEpochMillis(timestamp);
 
         final byte[] bytes = timestamp.getBytes(US_ASCII);
-        final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[LONG_LENGTH + 2]);
+        final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[LENGTH_WITH_MICROSECONDS + 2]);
         buffer.putBytes(1, bytes);
 
         final long epochMillis = UtcTimestampDecoder.decode(buffer, 1, length);
-        assertEquals("Failed testcase for: " + timestamp, expected, epochMillis);
+        assertEquals("Failed Millis testcase for: " + timestamp, expectedEpochMillis, epochMillis);
+
+        long expectedEpochMicros = expectedEpochMillis * MICROS_IN_MILLIS;
+
+        // If they've got the suffix field, then test microseconds, add 1 to the value
+        if (timestamp.length() == LENGTH_WITH_MILLISECONDS)
+        {
+            expectedEpochMicros++;
+            buffer.putAscii(timestamp.length() + 1, "001");
+        }
+
+        final long epochMicros = UtcTimestampDecoder.decodeMicros(buffer, 1, length + 3);
+        assertEquals("Failed Micros testcase for: " + timestamp, expectedEpochMicros, epochMicros);
     }
 
     // TODO: test leap second conversion 60

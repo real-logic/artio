@@ -54,7 +54,8 @@ public class SessionParserTest
 
         parser.onMessage(buffer, 0, buffer.capacity(), 'B', 1);
 
-        verify(mockSession).onMessage(eq(MISSING_INT), any(), anyInt(), anyLong(), anyLong(), eq(false));
+        verify(mockSession).onMessage(
+            eq(MISSING_INT), any(), anyInt(), anyLong(), anyLong(), eq(false), eq(false));
     }
 
     @Test

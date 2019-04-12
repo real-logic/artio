@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,8 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import io.aeron.ControlledFragmentAssembler;
 import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.logbuffer.ExclusiveBufferClaim;
+import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
@@ -31,6 +30,7 @@ import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.decoder.HeartbeatDecoder;
 import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
 import uk.co.real_logic.artio.engine.PossDupEnabler;
+import uk.co.real_logic.artio.engine.logger.ReplayOperation;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
@@ -58,6 +58,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     private enum State
     {
+        REPLAY_QUERY,
         REPLAYING,
         SEND_MISSING,
         SEND_OK
@@ -71,8 +72,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final HeaderDecoder headerDecoder = new HeaderDecoder();
-    private final ExclusiveBufferClaim bufferClaim = new ExclusiveBufferClaim();
-    private final ControlledFragmentAssembler assembler = new ControlledFragmentAssembler(this);
+    private final BufferClaim bufferClaim = new BufferClaim();
 
     private final PossDupEnabler possDupEnabler;
     private final ReplayQuery inboundMessages;
@@ -88,14 +88,15 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     private int replayFromSequenceNumber;
     private int replayFromSequenceIndex;
-    private boolean abortedReplay;
-    private State state = State.REPLAYING;
+    private State state = State.REPLAY_QUERY;
 
     private SequenceResetEncoder sequenceResetEncoder;
     private UtcTimestampEncoder timestampEncoder;
     private MutableAsciiBuffer encodeBuffer;
 
     private int heartbeatRangeSequenceNumberStart = OUT_OF_RANGE;
+
+    private ReplayOperation replayOperation = null;
 
     CatchupReplayer(
         final ReplayQuery inboundMessages,
@@ -244,7 +245,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
             encodeBuffer, encodedOffset, encodedLength,
             libraryId, SequenceResetDecoder.MESSAGE_TYPE,
             messageDecoder.session(), replayFromSequenceIndex, libraryId,
-            CATCHUP_REPLAY) > 0;
+            CATCHUP_REPLAY, heartbeatRangeSequenceNumberEnd) > 0;
 
         if (sent)
         {
@@ -268,14 +269,8 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
             // store the point to continue from if an abort happens.
             replayFromSequenceNumber = headerDecoder.msgSeqNum() + 1;
             replayFromSequenceIndex = messageDecoder.sequenceIndex();
-
-            return CONTINUE;
         }
-        else
-        {
-            abortedReplay = true;
-            return ABORT;
-        }
+        return action;
     }
 
     public long attempt()
@@ -283,53 +278,54 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         DebugLogger.log(CATCHUP, "Attempt replay for %d%n", session.sessionId());
         switch (state)
         {
-            case REPLAYING:
+            case REPLAY_QUERY:
             {
                 if (notLoggingInboundMessages())
                 {
-                    state = State.SEND_MISSING;
-                    return sendMissingMessages();
+                    return switchToMissingMessages();
                 }
 
-                // Know at this point that we've indexed up to the latest message.
-                // adding 1 to convert to inclusive numbering
-                abortedReplay = false;
-                try
-                {
-                    DebugLogger.log(CATCHUP,
-                        "Querying for %d, currently at (%d, %d)%n",
-                        session.sessionId(), lastReceivedSeqNum, currentSequenceIndex);
+                DebugLogger.log(CATCHUP,
+                    "Querying for %d, currently at (%d, %d)%n",
+                    session.sessionId(), lastReceivedSeqNum, currentSequenceIndex);
 
-                    inboundMessages.query(
-                        assembler,
-                        session.sessionId(),
-                        replayFromSequenceNumber,
-                        replayFromSequenceIndex,
-                        lastReceivedSeqNum,
-                        currentSequenceIndex);
-                }
-                catch (final IllegalStateException e)
+                replayOperation = inboundMessages.query(
+                    this,
+                    session.sessionId(),
+                    replayFromSequenceNumber,
+                    replayFromSequenceIndex,
+                    lastReceivedSeqNum,
+                    currentSequenceIndex);
+
+                state = State.REPLAYING;
+
+                return BACK_PRESSURED;
+            }
+
+            case REPLAYING:
+            {
+                // Timeout the catchup operations
+                if (System.currentTimeMillis() > catchupEndTimeInMs)
                 {
-                    // Missing file, just retry the next time round.
-                    abortedReplay = true;
+                    return switchToMissingMessages();
                 }
 
-                if (abortedReplay || replayIncomplete())
+                if (replayOperation.attemptReplay())
                 {
-                    if (System.currentTimeMillis() > catchupEndTimeInMs)
+                    if (hasMissingMessages())
                     {
-                        state = State.SEND_MISSING;
-                        return sendMissingMessages();
+                        return switchToMissingMessages();
                     }
                     else
                     {
-                        return BACK_PRESSURED;
+                        state = State.SEND_OK;
+                        return sendOk(inboundPublication, correlationId, session);
                     }
                 }
                 else
                 {
-                    state = State.SEND_OK;
-                    return sendOk(inboundPublication, correlationId, session);
+                    // Incomplete operation
+                    return BACK_PRESSURED;
                 }
             }
 
@@ -351,7 +347,13 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         }
     }
 
-    private boolean replayIncomplete()
+    private long switchToMissingMessages()
+    {
+        state = State.SEND_MISSING;
+        return sendMissingMessages();
+    }
+
+    private boolean hasMissingMessages()
     {
         return replayFromSequenceIndex < currentSequenceIndex || replayFromSequenceNumber < lastReceivedSeqNum;
     }

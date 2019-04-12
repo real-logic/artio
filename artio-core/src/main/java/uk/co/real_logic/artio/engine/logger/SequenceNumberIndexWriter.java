@@ -1,5 +1,5 @@
 /*
- * Copyright 2015=2016 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,9 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.logbuffer.Header;
 import io.aeron.protocol.DataHeaderFlyweight;
+import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2LongHashMap;
@@ -31,6 +33,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.File;
 
+import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
@@ -66,6 +69,7 @@ public class SequenceNumberIndexWriter implements Index
     private final File writablePath;
     private final File passingPlacePath;
     private final int fileCapacity;
+    private final RecordingIdLookup recordingIdLookup;
     private final int streamId;
     private final int indexedPositionsOffset;
     private final IndexedPositionWriter positions;
@@ -78,13 +82,15 @@ public class SequenceNumberIndexWriter implements Index
         final AtomicBuffer inMemoryBuffer,
         final MappedFile indexFile,
         final ErrorHandler errorHandler,
-        final int streamId)
+        final int streamId,
+        final RecordingIdLookup recordingIdLookup)
     {
         this.inMemoryBuffer = inMemoryBuffer;
         this.indexFile = indexFile;
         this.errorHandler = errorHandler;
         this.streamId = streamId;
         this.fileCapacity = indexFile.buffer().capacity();
+        this.recordingIdLookup = recordingIdLookup;
 
         final String indexFilePath = indexFile.file().getAbsolutePath();
         indexPath = indexFile.file();
@@ -107,21 +113,28 @@ public class SequenceNumberIndexWriter implements Index
         }
         catch (final Exception e)
         {
-            writableFile.close();
+            CloseHelper.close(writableFile);
             indexFile.close();
             throw e;
         }
     }
 
-    public void indexRecord(
+    public void onFragment(
         final DirectBuffer buffer,
         final int srcOffset,
         final int length,
-        final int streamId,
-        final int aeronSessionId,
-        final long endPosition)
+        final Header header)
     {
+        final int streamId = header.streamId();
+        final long endPosition = header.position();
+        final int aeronSessionId = header.sessionId();
+
         if (streamId != this.streamId)
+        {
+            return;
+        }
+
+        if ((header.flags() & BEGIN_FLAG) != BEGIN_FLAG)
         {
             return;
         }
@@ -138,6 +151,11 @@ public class SequenceNumberIndexWriter implements Index
             case FixMessageEncoder.TEMPLATE_ID:
             {
                 messageFrame.wrap(buffer, offset, actingBlockLength, version);
+
+                if (messageFrame.status() != MessageStatus.OK)
+                {
+                    return;
+                }
 
                 offset += actingBlockLength + 2;
 
@@ -160,12 +178,14 @@ public class SequenceNumberIndexWriter implements Index
             case ResetSequenceNumberDecoder.TEMPLATE_ID:
             {
                 resetSequenceNumber.wrap(buffer, offset, actingBlockLength, version);
-                saveRecord(1, resetSequenceNumber.session());
+                saveRecord(0, resetSequenceNumber.session());
             }
         }
 
         checkTermRoll(buffer, srcOffset, endPosition, length);
-        positions.indexedUpTo(aeronSessionId, endPosition);
+
+        final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
+        positions.indexedUpTo(aeronSessionId, recordingId, endPosition);
     }
 
     void resetSequenceNumbers()

@@ -31,7 +31,7 @@ public interface SessionExistsHandler
      * be passed as an argument.
      *
      * @param library the library object that this callback is associated with
-     * @param surrogateId the identifying number of the session that now exists.
+     * @param surrogateSessionId the identifying number of the session that now exists.
      * @param localCompId the compId for the local party in the logon message (eg targetCompId if acceptor).
      * @param localSubId the subId for the local party in the logon message (eg targetSubId if acceptor).
      * @param localLocationId the locationId for the local party in the logon message (eg targetLocationId if acceptor)
@@ -41,7 +41,7 @@ public interface SessionExistsHandler
      */
     void onSessionExists(
         FixLibrary library,
-        long surrogateId,
+        long surrogateSessionId,
         String localCompId,
         String localSubId,
         String localLocationId,

@@ -59,7 +59,35 @@
             <field name="Username" required="N"/>
             <field name="Password" required="N"/>
         </message>
+
+        <!-- Messages for Samples -->
+        <message name="NewOrderSingle" msgtype="D" msgcat="app">
+            <field name="ClOrdID" required="Y"/>
+            <component name="Instrument" required="Y"/>
+            <field name="Side" required="Y"/>
+            <field name="TransactTime" required="Y"/>
+            <component name="OrderQtyData" required="Y"/>
+            <field name="OrdType" required="Y"/>
+            <field name="Price" required="N"/>
+        </message>
+        <message name="ExecutionReport" msgtype="8" msgcat="app">
+            <field name="OrderID" required="Y"/>
+            <field name="ExecID" required="Y"/>
+            <field name="ExecType" required="Y"/>
+            <field name="OrdStatus" required="Y"/>
+            <component name="Instrument" required="Y"/>
+            <field name="Side" required="Y"/>
+        </message>
     </messages>
+    <components>
+        <!-- Components for Samples -->
+        <component name="Instrument">
+            <field name="Symbol" required="Y"/>
+        </component>
+        <component name="OrderQtyData">
+            <field name="OrderQty" required="N"/>
+        </component>
+    </components>
     <fields>
         <field number="8" name="BeginString" type="STRING"/>
         <field number="9" name="BodyLength" type="LENGTH"/>
@@ -110,6 +138,7 @@
             <value enum="15" description="REPEATING_GROUP_FIELDS_OUT_OF_ORDER"/>
             <value enum="16" description="INCORRECT_NUMINGROUP_COUNT_FOR_REPEATING_GROUP"/>
             <value enum="17" description="NON_DATA_VALUE_INCLUDES_FIELD_DELIMITER"/>
+            <value enum="18" description="INVALID/UNSUPPORTED_APPLICATION_VERSION"/>
             <value enum="99" description="OTHER"/>
         </field>
         <field number="58" name="Text" type="STRING"/>
@@ -133,5 +162,33 @@
         <field number="464" name="TestMessageIndicator" type="BOOLEAN"/>
         <field number="553" name="Username" type="STRING"/>
         <field number="554" name="Password" type="STRING"/>
+
+        <!-- Fields for Samples -->
+        <field number="11" name="ClOrdID" type="STRING"/>
+        <field number="17" name="ExecID" type="STRING"/>
+        <field number="37" name="OrderID" type="STRING"/>
+        <field number="38" name="OrderQty" type="QTY"/>
+        <field number="39" name="OrdStatus" type="CHAR">
+            <value enum="0" description="NEW"/>
+            <value enum="2" description="FILLED"/>
+            <value enum="4" description="CANCELED"/>
+        </field>
+        <field number="44" name="Price" type="PRICE"/>
+        <field number="54" name="Side" type="CHAR">
+            <value enum="1" description="BUY"/>
+            <value enum="2" description="SELL"/>
+        </field>
+        <field number="55" name="Symbol" type="STRING"/>
+        <field number="60" name="TransactTime" type="UTCTIMESTAMP"/>
+        <field number="40" name="OrdType" type="CHAR">
+            <value enum="1" description="MARKET"/>
+            <value enum="2" description="LIMIT"/>
+        </field>
+        <field number="150" name="ExecType" type="CHAR">
+            <value enum="0" description="NEW"/>
+            <value enum="2" description="FILL"/>
+            <value enum="4" description="CANCELED"/>
+        </field>
+
     </fields>
 </fix>

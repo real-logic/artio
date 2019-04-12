@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.Subscription;
 import io.aeron.driver.Configuration;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
@@ -28,7 +29,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.mockito.stubbing.OngoingStubbing;
 import org.mockito.verification.VerificationMode;
@@ -37,17 +37,19 @@ import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.ReplayHandler;
+import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
-import uk.co.real_logic.artio.replication.ClusterableSubscription;
+import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
+import uk.co.real_logic.artio.messages.ReplayCompleteDecoder;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
-import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.*;
@@ -73,7 +75,7 @@ public class ReplayerTest extends AbstractLogTest
     private static final int MAX_CLAIM_ATTEMPTS = 100;
 
     private ReplayQuery replayQuery = mock(ReplayQuery.class);
-    private ClusterableSubscription subscription = mock(ClusterableSubscription.class);
+    private Subscription subscription = mock(Subscription.class);
     private IdleStrategy idleStrategy = mock(IdleStrategy.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private EpochClock clock = mock(EpochClock.class);
@@ -81,6 +83,8 @@ public class ReplayerTest extends AbstractLogTest
         ArgumentCaptor.forClass(ControlledFragmentHandler.class);
     private Header fragmentHeader = mock(Header.class);
     private ReplayHandler replayHandler = mock(ReplayHandler.class);
+    private SenderSequenceNumbers senderSequenceNumbers = mock(SenderSequenceNumbers.class);
+    private ReplayOperation replayOperation = mock(ReplayOperation.class);
 
     private Replayer replayer;
 
@@ -90,8 +94,13 @@ public class ReplayerTest extends AbstractLogTest
         when(fragmentHeader.flags()).thenReturn((byte)DataHeaderFlyweight.BEGIN_AND_END_FLAGS);
         when(clock.time()).thenReturn(DATE_TIME_EPOCH_MS);
         when(publication.tryClaim(anyInt(), any())).thenReturn(1L);
-        when(publication.maxPayloadLength()).thenReturn(Configuration.MTU_LENGTH);
-        whenReplayQueried().thenReturn(1);
+        when(publication.maxPayloadLength()).thenReturn(Configuration.mtuLength() - DataHeaderFlyweight.HEADER_LENGTH);
+
+        when(replayQuery.query(handler.capture(), anyLong(), anyInt(), anyInt(), anyInt(), anyInt()))
+            .thenReturn(replayOperation);
+        when(replayOperation.attemptReplay()).thenReturn(true);
+
+        setReplayedMessages(1);
 
         replayer = new Replayer(
             replayQuery,
@@ -104,53 +113,89 @@ public class ReplayerTest extends AbstractLogTest
             DEFAULT_NAME_PREFIX,
             clock,
             EngineConfiguration.DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES,
-            replayHandler);
-
-        verify(publication).maxPayloadLength();
+            replayHandler,
+            senderSequenceNumbers);
     }
 
-    private OngoingStubbing<Integer> whenReplayQueried()
+    private void setReplayedMessages(final int replayedMessages)
     {
-        return when(replayQuery.query(handler.capture(), anyLong(), anyInt(), anyInt(), anyInt(), anyInt()));
+        when(replayOperation.replayedMessages()).thenReturn(replayedMessages);
+    }
+
+    private OngoingStubbing<Boolean> whenReplayQueried()
+    {
+        return when(replayOperation.attemptReplay());
     }
 
     @Test
     public void shouldParseResendRequest()
     {
         final long result = bufferHasResendRequest(END_SEQ_NO);
-        onContinuedRequestResendMessage(result);
+        onRequestResendMessage(result);
 
         verifyQueriedService(END_SEQ_NO);
-        verifyNoMoreInteractions(publication);
+        verifyPublicationOnlyPayloadQueried();
     }
 
     @Test
     public void shouldPublishAllRemainingMessages()
     {
         final long result = bufferHasResendRequest(MOST_RECENT_MESSAGE);
-        onContinuedRequestResendMessage(result);
+        onRequestResendMessage(result);
 
         verifyQueriedService(MOST_RECENT_MESSAGE);
-        verifyNoMoreInteractions(publication);
+        verifyPublicationOnlyPayloadQueried();
     }
 
     @Test
     public void shouldPublishMessagesWithSetPossDupFlag()
     {
-        onReplay(END_SEQ_NO, inv ->
-        {
-            bufferContainsExampleMessage(true);
+        onReplay(END_SEQ_NO, inv -> true);
 
-            final int srcLength = fragmentLength();
-            setupMessage(srcLength);
+        bufferContainsExampleMessage(true);
 
-            onFragment(srcLength);
+        final int srcLength = fragmentLength();
+        setupMessage(srcLength);
 
-            assertHasResentWithPossDupFlag(srcLength, times(1));
+        onFragment(srcLength);
 
-            return 1;
-        });
+        assertHasResentWithPossDupFlag(srcLength, times(1));
+
+        replayer.doWork();
+        replayer.doWork();
+
+        verifyReplayCompleteMessageSent();
     }
+
+    @Test
+    public void shouldSupportConcurrentReplayRequests()
+    {
+        onReplay(END_SEQ_NO, inv -> true);
+
+        onReplayOtherSession(END_SEQ_NO);
+
+        // Two queries means two handlers
+        final List<ControlledFragmentHandler> handlers = handler.getAllValues();
+        assertEquals(2, handlers.size());
+        final ControlledFragmentHandler firstHandler = handlers.get(0);
+        final ControlledFragmentHandler secondHandler = handlers.get(1);
+        assertNotSame(firstHandler, secondHandler);
+
+        // First replay
+        bufferContainsExampleMessage(true);
+        final int srcLength = fragmentLength();
+        setupMessage(srcLength);
+        onFragment(srcLength, CONTINUE, firstHandler);
+
+        // Second replay
+        bufferContainsExampleMessage(true, SESSION_ID_2, SEQUENCE_NUMBER, SEQUENCE_INDEX);
+        setupMessage(srcLength);
+        onFragment(srcLength, CONTINUE, secondHandler);
+
+        assertHasResentWithPossDupFlag(srcLength, times(2));
+    }
+
+    // TODO: queue replay requests by fix session
 
     @Test
     public void shouldGapFillAdminMessages()
@@ -160,17 +205,24 @@ public class ReplayerTest extends AbstractLogTest
         {
             onTestRequest(SEQUENCE_NUMBER);
 
-            return 1;
+            return true;
         });
 
-        assertReSentGapFill(SEQUENCE_NUMBER, END_SEQ_NO, offset, times(1));
+        replayer.doWork();
+
+        assertSentGapFill(SEQUENCE_NUMBER, END_SEQ_NO + 1, offset, times(1));
+
+        replayer.doWork();
+
+        verifyReplayCompleteMessageSent();
     }
 
     @Test
     public void shouldGapFillOnceForTwoConsecutiveAdminMessages()
     {
-        final int endSeqNo = replayTwoMessages();
+        final int endSeqNo = endSeqNoForTwoMessages();
         final int offset = setupCapturingClaim();
+        setReplayedMessages(2);
 
         onReplay(endSeqNo, inv ->
         {
@@ -178,40 +230,60 @@ public class ReplayerTest extends AbstractLogTest
 
             onTestRequest(SEQUENCE_NUMBER + 1);
 
-            return 2;
+            return true;
         });
 
-        assertReSentGapFill(SEQUENCE_NUMBER, endSeqNo, offset, times(1));
+        replayer.doWork();
+
+        assertSentGapFill(SEQUENCE_NUMBER, endSeqNo + 1, offset, times(1));
+
+        replayer.doWork();
+
+        verifyReplayCompleteMessageSent();
     }
 
     @Test
     public void shouldGapFillOnceForTwoConsecutiveAdminMessagesWhenBackPressured()
     {
-        final int endSeqNo = replayTwoMessages();
+        final int endSeqNo = endSeqNoForTwoMessages();
 
         backpressureTryClaim();
 
-        onReplay(endSeqNo, ABORT, inv ->
+        setReplayedMessages(2);
+        whenReplayQueried().then(inv ->
         {
             onTestRequest(SEQUENCE_NUMBER);
 
             onTestRequest(SEQUENCE_NUMBER + 1);
 
-            return 2;
+            return true;
         });
 
-        reset(replayQuery);
+        // try to send the gap fill, but get back pressured
+        final long result = bufferHasResendRequest(endSeqNo);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
+        replayer.doWork(); // receives the callback with the two test requests
 
+        replayer.doWork(); // attempts the replay and get's back pressured
         claimedAndNothingMore();
 
-        shouldGapFillOnceForTwoConsecutiveAdminMessages();
+        // resend the gap fill, don't get back pressured
+        final int offset = setupCapturingClaim();
+        replayer.doWork();
+        assertSentGapFill(SEQUENCE_NUMBER, endSeqNo + 1, offset, times(1));
+
+        replayer.doWork();
+
+        verifyReplayCompleteMessageSent();
     }
 
     @Test
     public void shouldGapFillForAdminMessagesFollowedByAppMessage()
     {
-        final int endSeqNo = replayTwoMessages();
+        final int endSeqNo = endSeqNoForTwoMessages();
         final int offset = setupCapturingClaim();
+
+        setReplayedMessages(2);
 
         onReplay(endSeqNo, inv ->
         {
@@ -221,7 +293,7 @@ public class ReplayerTest extends AbstractLogTest
 
             assertResentGapFillThenMessage(endSeqNo, offset, srcLength);
 
-            return 2;
+            return true;
         });
     }
 
@@ -231,7 +303,9 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldResendTwoAppMessages()
     {
-        final int endSeqNo = replayTwoMessages();
+        final int endSeqNo = endSeqNoForTwoMessages();
+
+        setReplayedMessages(2);
 
         onReplay(endSeqNo, inv ->
         {
@@ -243,10 +317,16 @@ public class ReplayerTest extends AbstractLogTest
 
             assertHasResentWithPossDupFlag(srcLength, times(2));
 
-            return 2;
+            return true;
         });
 
+        replayer.doWork();
+
         assertReplayHandlerInvoked(endSeqNo);
+
+        replayer.doWork();
+
+        verifyReplayCompleteMessageSent();
     }
 
     private void assertReplayHandlerInvoked(final int endSeqNo)
@@ -278,118 +358,130 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldResendTwoAppMessagesWhenBackPressured()
     {
-        final int endSeqNo = replayTwoMessages();
+        final int endSeqNo = endSeqNoForTwoMessages();
 
-        onReplay(endSeqNo, ABORT, inv ->
+        // First message resent
+        whenReplayQueried().then(inv ->
         {
             setupCapturingClaim();
 
-            final int srcLength = onExampleMessage(BEGIN_SEQ_NO);
+            // First message resent
+            final int srcLength1 = onExampleMessage(BEGIN_SEQ_NO);
+            assertHasResentWithPossDupFlag(srcLength1, times(1));
 
-            assertHasResentWithPossDupFlag(srcLength, times(1));
-
-            backpressureTryClaim();
-
-            onExampleMessage(endSeqNo, ABORT);
-
-            return 1;
+            return false;
         });
+
+        final long result = bufferHasResendRequest(endSeqNo);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
+
+        replayer.doWork();
 
         verifyClaim();
-        reset(publication, claim, replayQuery);
+        resetMocks();
 
-        onReplay(endSeqNo, inv ->
-        {
-            assertBeginSeqNo(endSeqNo, inv);
+        // Second message back pressured
+        backpressureTryClaim();
+        onExampleMessage(endSeqNo, ABORT);
 
-            setupCapturingClaim();
+        // Resend of second message.
+        replayer.doWork();
 
-            final int srcLength = onExampleMessage(endSeqNo);
+        setupCapturingClaim();
+        final int srcLength = onExampleMessage(endSeqNo);
+        assertHasResentWithPossDupFlag(srcLength, times(1));
+    }
 
-            assertHasResentWithPossDupFlag(srcLength, times(1));
-
-            return 1;
-        });
+    private void resetMocks()
+    {
+        reset(publication, claim, replayQuery, replayOperation);
     }
 
     @Test
     public void shouldResendAppThenAdminGapFillWhenBackPressured()
     {
-        final int endSeqNo = replayTwoMessages();
+        final int endSeqNo = endSeqNoForTwoMessages();
+        setReplayedMessages(2);
 
-        onReplay(endSeqNo, ABORT, inv ->
+        whenReplayQueried().then(inv ->
         {
             setupCapturingClaim();
-
             final int srcLength = onExampleMessage(BEGIN_SEQ_NO);
-
             assertHasResentWithPossDupFlag(srcLength, times(1));
 
             backpressureTryClaim();
-
             onTestRequest(endSeqNo);
 
-            return 1;
+            return true;
         });
 
+        // Processes the resend request
+        final long result = bufferHasResendRequest(endSeqNo);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
+
+        // Processes the backpressured try claim
+        replayer.doWork();
+
         verifyClaim();
-        reset(publication, claim, replayQuery);
+        resetMocks();
+        whenReplayQueried().thenReturn(true);
 
         final int offset = setupCapturingClaim();
 
-        onReplay(endSeqNo, inv ->
-        {
-            assertBeginSeqNo(endSeqNo, inv);
+        replayer.doWork();
 
-            onTestRequest(endSeqNo);
+        assertSentGapFill(endSeqNo, endSeqNo + 1, offset, times(1));
 
-            return 1;
-        });
+        replayer.doWork();
 
-        assertReSentGapFill(endSeqNo, endSeqNo, offset, times(1));
-    }
-
-    private void assertBeginSeqNo(final int endSeqNo, final InvocationOnMock inv)
-    {
-        final int beginSeqNo = (int)inv.getArguments()[2];
-        assertEquals(endSeqNo, beginSeqNo);
+        verifyReplayCompleteMessageSent();
     }
 
     @Test
     public void shouldGapFillMissingMesages()
     {
-        final int endSeqNo = replayTwoMessages();
+        final int endSeqNo = endSeqNoForTwoMessages();
 
         final int offset = setupCapturingClaim();
-        whenReplayQueried().thenReturn(0);
+        setReplayedMessages(0);
 
         final long result = bufferHasResendRequest(endSeqNo);
-        onContinuedRequestResendMessage(result);
+        onRequestResendMessage(result);
 
-        assertReSentGapFill(SEQUENCE_NUMBER, endSeqNo + 1, offset, times(1));
+        replayer.doWork();
+
+        assertSentGapFill(SEQUENCE_NUMBER, endSeqNo + 1, offset, times(1));
         verifyIllegalStateException();
     }
 
     @Test
     public void shouldGapFillMissingMesagesWhenBackPressured()
     {
-        final int endSeqNo = replayTwoMessages();
+        final int endSeqNo = endSeqNoForTwoMessages();
 
         backpressureTryClaim();
-        whenReplayQueried().thenReturn(0);
+        setReplayedMessages(0);
 
         final long result = bufferHasResendRequest(endSeqNo);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, ABORT);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
+
+        replayer.doWork();
 
         claimedAndNothingMore();
 
-        shouldGapFillMissingMesages();
+        final int offset = setupCapturingClaim();
+        setReplayedMessages(0);
+
+        replayer.doWork();
+
+        assertSentGapFill(SEQUENCE_NUMBER, endSeqNo + 1, offset, times(1));
+        verifyIllegalStateException();
     }
 
     @Test
     public void shouldGapFillMissingMesagesFollowedByApplicationMessage()
     {
-        final int endSeqNo = replayTwoMessages();
+        final int endSeqNo = endSeqNoForTwoMessages();
 
         onReplay(endSeqNo, inv ->
         {
@@ -399,15 +491,13 @@ public class ReplayerTest extends AbstractLogTest
 
             assertResentGapFillThenMessage(BEGIN_SEQ_NO, offset, srcLength);
 
-            return 1;
+            return true;
         });
+
+        replayer.doWork();
 
         verifyIllegalStateException();
     }
-
-    // TODO: implications of back pressure
-    //          failure to commit the gapfill (retry gapfill on abort?)
-    //          failure to commit the messages
 
     @Test
     public void shouldReplayMessageWithExpandingBodyLength()
@@ -426,28 +516,32 @@ public class ReplayerTest extends AbstractLogTest
 
             assertEndsWithValidChecksum(offset + 1);
 
-            return 1;
+            return true;
         });
     }
 
     @Test
     public void shouldReplayMessageWithExpandingBodyLengthWhenBackPressured()
     {
-        onReplay(END_SEQ_NO, ABORT, inv ->
+        whenReplayQueried().then(inv ->
         {
             bufferContainsMessage(MESSAGE_REQUIRING_LONGER_BODY_LENGTH);
 
             backpressureTryClaim();
 
-            onFragment(fragmentLength(), ABORT);
+            onFragment(fragmentLength(), COMMIT, getHandler());
 
             verifyClaim();
 
-            return 1;
+            return true;
         });
 
-        verifyNoMoreInteractions(publication, claim);
-        reset(publication, claim, replayQuery);
+        final long result = bufferHasResendRequest(END_SEQ_NO);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
+
+        verifyPublicationOnlyPayloadQueried();
+        verifyNoMoreInteractions(claim);
+        resetMocks();
 
         shouldReplayMessageWithExpandingBodyLength();
     }
@@ -474,7 +568,7 @@ public class ReplayerTest extends AbstractLogTest
 
             assertEndsWithValidChecksum(afterOffset);
 
-            return 1;
+            return true;
         });
     }
 
@@ -490,7 +584,7 @@ public class ReplayerTest extends AbstractLogTest
     public void shouldValidateResendRequestMessageSequenceNumbers()
     {
         final long result = bufferHasResendRequest(BEGIN_SEQ_NO - 1);
-        onContinuedRequestResendMessage(result);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, CONTINUE);
 
         verify(errorHandler).onError(any());
         verifyNoMoreInteractions(replayQuery, publication);
@@ -505,7 +599,8 @@ public class ReplayerTest extends AbstractLogTest
     private void claimedAndNothingMore()
     {
         verifyClaim();
-        verifyNoMoreInteractions(publication, claim);
+        verifyPublicationOnlyPayloadQueried();
+        verifyNoMoreInteractions(claim);
         reset(publication);
     }
 
@@ -513,7 +608,7 @@ public class ReplayerTest extends AbstractLogTest
     {
         doAnswer(commitInv ->
         {
-            assertReSentGapFill(SEQUENCE_NUMBER, endSeqNo, offset, times(2));
+            assertSentGapFill(SEQUENCE_NUMBER, endSeqNo, offset, times(2));
             return null;
         }).when(claim).commit();
 
@@ -529,22 +624,17 @@ public class ReplayerTest extends AbstractLogTest
     {
         bufferContainsExampleMessage(true, SESSION_ID, endSeqNo, SEQUENCE_INDEX);
         final int srcLength = fragmentLength();
-        onFragment(srcLength, expectedAction);
+        onFragment(srcLength, expectedAction, getHandler());
         return srcLength;
     }
 
     private void onTestRequest(final int sequenceNumber)
     {
-        onTestRequest(sequenceNumber, CONTINUE);
-    }
-
-    private void onTestRequest(final int sequenceNumber, final Action expectedAction)
-    {
         bufferContainsTestRequest(sequenceNumber);
-        onFragment(fragmentLength(), expectedAction);
+        onFragment(fragmentLength(), CONTINUE, getHandler());
     }
 
-    private int replayTwoMessages()
+    private int endSeqNoForTwoMessages()
     {
         // inclusive numbering
         return BEGIN_SEQ_NO + 1;
@@ -552,31 +642,34 @@ public class ReplayerTest extends AbstractLogTest
 
     private void onFragment(final int length)
     {
-        onFragment(length, CONTINUE);
+        onFragment(length, CONTINUE, getHandler());
     }
 
-    private void onReplay(final int endSeqNo, final Answer<?> answer)
-    {
-        onReplay(endSeqNo, Action.CONTINUE, answer);
-    }
-
-    private void onFragment(final int length, final Action expectedAction)
-    {
-        final Action action = handler
-            .getValue()
-            .onFragment(buffer, START, length, fragmentHeader);
-        assertEquals(expectedAction, action);
-    }
-
-    private void onReplay(
-        final int endSeqNo,
-        final Action expectedAction,
-        final Answer<?> answer)
+    private void onReplay(final int endSeqNo, final Answer<Boolean> answer)
     {
         whenReplayQueried().then(answer);
 
         final long result = bufferHasResendRequest(endSeqNo);
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, expectedAction);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
+    }
+
+    private void onReplayOtherSession(final int endSeqNo)
+    {
+        whenReplayQueried().thenReturn(true);
+
+        final long result = bufferHasResendRequest(endSeqNo, RESEND_TARGET_2);
+        onMessageWithSession(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT, SESSION_ID_2, CONNECTION_ID_2);
+    }
+
+    private void onFragment(final int length, final Action expectedAction, final ControlledFragmentHandler handler)
+    {
+        final Action action = handler.onFragment(buffer, START, length, fragmentHeader);
+        assertEquals(expectedAction, action);
+    }
+
+    private ControlledFragmentHandler getHandler()
+    {
+        return handler.getValue();
     }
 
     private void verifyIllegalStateException()
@@ -591,7 +684,7 @@ public class ReplayerTest extends AbstractLogTest
         verifyCommit(times);
     }
 
-    private void assertReSentGapFill(
+    private void assertSentGapFill(
         final int msgSeqNum,
         final int newSeqNo,
         final int offset,
@@ -668,18 +761,28 @@ public class ReplayerTest extends AbstractLogTest
             containsString("52=" + DATE_TIME_STR + '\001'));
     }
 
-    private void onContinuedRequestResendMessage(final long result)
+    private void onRequestResendMessage(final long result)
     {
-        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, CONTINUE);
+        onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
     }
 
     private void onMessage(final int messageType, final long result, final Action expectedAction)
+    {
+        onMessageWithSession(messageType, result, expectedAction, SESSION_ID, CONNECTION_ID);
+    }
+
+    private void onMessageWithSession(
+        final int messageType,
+        final long result,
+        final Action expectedAction,
+        final long sessionId,
+        final long connectionId)
     {
         final int length = Encoder.length(result);
         final int offset = Encoder.offset(result);
         final Action action = replayer.onMessage(
             buffer, offset, length,
-            LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX, messageType, 0L, OK, 0L);
+            LIBRARY_ID, connectionId, sessionId, SEQUENCE_INDEX, messageType, 0L, OK, 0, 0L);
         assertEquals(expectedAction, action);
     }
 
@@ -688,5 +791,25 @@ public class ReplayerTest extends AbstractLogTest
         logEntryLength = message.length;
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(message);
         bufferContainsMessage(SESSION_ID, SEQUENCE_NUMBER, asciiBuffer, MESSAGE_TYPE);
+    }
+
+    private void verifyPublicationOnlyPayloadQueried()
+    {
+        verify(publication).maxPayloadLength();
+        verifyNoMoreInteractions(publication);
+    }
+
+    private void verifyReplayCompleteMessageSent()
+    {
+        final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
+        final ReplayCompleteDecoder replayComplete = new ReplayCompleteDecoder();
+
+        int offset = offset();
+        messageHeader.wrap(resultBuffer, offset);
+        offset += MessageHeaderDecoder.ENCODED_LENGTH;
+
+        assertEquals(ReplayCompleteDecoder.TEMPLATE_ID, messageHeader.templateId());
+        replayComplete.wrap(resultBuffer, offset, messageHeader.blockLength(), messageHeader.version());
+        assertEquals(CONNECTION_ID, replayComplete.connection());
     }
 }

@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <!DOCTYPE module PUBLIC "-//Puppy Crawl//DTD Check Configuration 1.2//EN"
-        "http://www.puppycrawl.com/dtds/configuration_1_2.dtd">
+        "https://checkstyle.org/dtds/configuration_1_3.dtd">
 <module name="Checker">
     <module name="SuppressionFilter">
-        <property name="file" value="config/checkstyle/suppress.xml"/>
+        <property name="file" value="${config_loc}/suppressions.xml"/>
     </module>
 
     <module name="SuppressWarningsFilter"/>
@@ -88,6 +88,8 @@
             <property name="allowEmptyLambdas" value="true"/>
         </module>
 
+        <module name="SingleSpaceSeparator"/>
+
         <module name="OperatorWrap">
             <property name="option" value="eol"/>
         </module>
@@ -167,6 +169,11 @@
             <property name="format" value="[ \t]+$"/>
             <property name="illegalPattern" value="true"/>
             <property name="message" value="Trailing whitespace"/>
+        </module>
+
+        <module name="JavadocMethod">
+            <property name="allowMissingJavadoc" value="true"/>
+            <property name="allowUndeclaredRTE" value="true"/>
         </module>
     </module>
 </module>

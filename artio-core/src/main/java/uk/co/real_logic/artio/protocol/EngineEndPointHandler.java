@@ -43,6 +43,10 @@ public interface EngineEndPointHandler
         int requestedInitialSequenceNumber,
         int requestedInitialSentSequenceNumber,
         boolean resetSequenceNumber,
+        boolean closedResendInterval,
+        int resendRequestChunkSize,
+        boolean sendRedundantResendRequests,
+        boolean enableLastMsgSeqNumProcessed,
         String username,
         String password,
         int heartbeatIntervalInS,
@@ -59,6 +63,7 @@ public interface EngineEndPointHandler
         long sessionId,
         long correlationId,
         SessionState state,
+        boolean awaitingResend,
         long heartbeatIntervalInMs,
         int lastSentSequenceNumber,
         int lastReceivedSequenceNumber,
@@ -72,4 +77,6 @@ public interface EngineEndPointHandler
         long correlationId,
         int lastReceivedSequenceNumber,
         int sequenceIndex);
+
+    Action onMidConnectionDisconnect(int libraryId, long correlationId);
 }

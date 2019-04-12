@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,16 +17,13 @@ package uk.co.real_logic.artio.library;
 
 import io.aeron.Aeron;
 import io.aeron.Subscription;
-import org.agrona.concurrent.NanoClock;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.StreamInformation;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
-import uk.co.real_logic.artio.replication.ClusterableStreams;
 
-import static uk.co.real_logic.artio.GatewayProcess.INBOUND_LIBRARY_STREAM;
-import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.LogTag.LIBRARY_CONNECT;
 
 class LibraryTransport
@@ -34,7 +31,7 @@ class LibraryTransport
     private final LibraryConfiguration configuration;
     private final FixCounters fixCounters;
     private final Aeron aeron;
-    private final NanoClock nanoClock;
+    private final Clock clock;
 
     private Subscription inboundSubscription;
     private GatewayPublication outboundPublication;
@@ -47,25 +44,30 @@ class LibraryTransport
         this.configuration = configuration;
         this.fixCounters = fixCounters;
         this.aeron = aeron;
-        this.nanoClock = configuration.nanoClock();
+        this.clock = configuration.clock();
     }
 
     void initStreams(final String aeronChannel)
     {
-        final ClusterableStreams soloNode = ClusterableStreams.solo(
-            aeron, aeronChannel, configuration.printAeronStreamIdentifiers());
         DebugLogger.log(LIBRARY_CONNECT, "Directed streams at %s%n", aeronChannel);
 
         final Streams outboundLibraryStreams = new Streams(
-            soloNode, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock,
-            configuration.outboundMaxClaimAttempts());
+            aeron,
+            aeronChannel,
+            configuration.printAeronStreamIdentifiers(),
+            fixCounters.failedOutboundPublications(),
+            configuration.outboundLibraryStream(),
+            clock,
+            configuration.outboundMaxClaimAttempts(),
+            null);
 
         if (isReconnect())
         {
             inboundSubscription.close();
             outboundPublication.close();
         }
-        inboundSubscription = aeron.addSubscription(aeronChannel, INBOUND_LIBRARY_STREAM);
+
+        inboundSubscription = aeron.addSubscription(aeronChannel, configuration.inboundLibraryStream());
         StreamInformation.print(
             "library " + configuration.libraryId() + " inboundSubscription", inboundSubscription, configuration);
         outboundPublication = outboundLibraryStreams.gatewayPublication(

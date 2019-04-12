@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.library;
 import org.agrona.collections.IntArrayList;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.messages.GatewayError;
+import uk.co.real_logic.artio.session.InternalSession;
 import uk.co.real_logic.artio.session.Session;
 
 import java.util.List;
@@ -82,7 +83,9 @@ class InitiateSessionReply extends LibraryReply<Session>
 
     void onComplete(final Session result)
     {
-        result.address(configuration.hosts().get(addressIndex), configuration.ports().getInt(addressIndex));
+        final String host = configuration.hosts().get(addressIndex);
+        final int port = configuration.ports().getInt(addressIndex);
+        ((InternalSession)result).address(host, port);
         super.onComplete(result);
     }
 
@@ -94,6 +97,16 @@ class InitiateSessionReply extends LibraryReply<Session>
         }
 
         return super.poll(timeInMs);
+    }
+
+    protected boolean onTimeout()
+    {
+        if (libraryPoller.saveMidConnectionDisconnect(correlationId) > 0)
+        {
+            super.onTimeout();
+        }
+
+        return false;
     }
 
     SessionConfiguration configuration()

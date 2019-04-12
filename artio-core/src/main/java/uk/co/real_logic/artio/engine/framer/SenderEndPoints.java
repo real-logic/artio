@@ -23,14 +23,12 @@ import org.agrona.collections.Long2ObjectHashMap;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.replication.ClusterFragmentHandler;
-import uk.co.real_logic.artio.replication.ClusterHeader;
 
 import java.util.function.LongToIntFunction;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
-class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, ClusterFragmentHandler
+class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
 {
     private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
 
@@ -80,12 +78,13 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
         final DirectBuffer buffer,
         final int offset,
         final int length,
+        final int sequenceNumber,
         final long position)
     {
         final SenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
-            endPoint.onOutboundMessage(libraryId, buffer, offset, length, position, timeInMs);
+            endPoint.onOutboundMessage(libraryId, buffer, offset, length, sequenceNumber, position, timeInMs);
         }
     }
 
@@ -135,11 +134,6 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
         return onSlowConsumerMessageFragment(buffer, offset, length, header.position());
     }
 
-    public Action onFragment(final DirectBuffer buffer, final int offset, final int length, final ClusterHeader header)
-    {
-        return onSlowConsumerMessageFragment(buffer, offset, length, header.position());
-    }
-
     @SuppressWarnings("FinalParameters")
     private Action onSlowConsumerMessageFragment(
         final DirectBuffer buffer,
@@ -165,6 +159,16 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler, Clust
             }
         }
 
+        return CONTINUE;
+    }
+
+    Action onReplayComplete(final long connectionId)
+    {
+        final SenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
+        if (senderEndPoint != null)
+        {
+            return senderEndPoint.onReplayComplete();
+        }
         return CONTINUE;
     }
 

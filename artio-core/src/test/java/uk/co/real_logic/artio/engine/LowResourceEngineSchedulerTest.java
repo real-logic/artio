@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,8 @@
 package uk.co.real_logic.artio.engine;
 
 import org.agrona.ErrorHandler;
-import org.agrona.concurrent.*;
+import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.BusySpinIdleStrategy;
 import org.junit.Test;
 
 import java.io.IOException;
@@ -32,11 +33,13 @@ public class LowResourceEngineSchedulerTest
     private EngineConfiguration configuration = mock(EngineConfiguration.class);
     private Agent conductorAgent = mock(Agent.class);
     private ErrorHandler mockErrorHandler = mock(ErrorHandler.class);
+    private RecordingCoordinator recordingCoordinator = mock(RecordingCoordinator.class);
 
     @Test
     public void shouldPrintErrorIfRepeatedlyThrown() throws Exception
     {
         when(configuration.framerIdleStrategy()).thenReturn(new BusySpinIdleStrategy());
+        when(configuration.threadFactory()).thenReturn(Thread::new);
         when(framer.doWork()).thenThrow(IOException.class);
 
         try (EngineScheduler scheduler = new LowResourceEngineScheduler())
@@ -47,7 +50,8 @@ public class LowResourceEngineSchedulerTest
                 framer,
                 archivingAgent,
                 monitoringAgent,
-                conductorAgent);
+                conductorAgent,
+                recordingCoordinator);
 
             assertEventuallyTrue(
                 "Failed to invoke monitoring agent",

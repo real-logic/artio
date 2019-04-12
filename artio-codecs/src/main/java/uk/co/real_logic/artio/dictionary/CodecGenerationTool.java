@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.dictionary;
 
 import org.agrona.generation.PackageOutputManager;
+import uk.co.real_logic.artio.builder.RejectUnknownField;
 import uk.co.real_logic.artio.builder.Validation;
 import uk.co.real_logic.artio.dictionary.generation.*;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
@@ -36,10 +37,10 @@ public final class CodecGenerationTool
 
         final String outputPath = args[0];
         final String files = args[1];
-        final  String[] fileNames = files.split(";");
+        final String[] fileNames = files.split(";");
         if (fileNames.length > 2)
         {
-            System.err.printf("Two many dictionary files(1 or 2 dictionaries supported).%s", files);
+            System.err.print("Two many dictionary files(1 or 2 dictionaries supported)." + files);
             printUsageAndExit();
         }
         Dictionary dictionary = null;
@@ -60,10 +61,10 @@ public final class CodecGenerationTool
             1,
             ENCODER_PACKAGE,
             PARENT_PACKAGE,
-            new PackageOutputManager(outputPath, ENCODER_PACKAGE), Validation.class);
+            new PackageOutputManager(outputPath, ENCODER_PACKAGE), Validation.class, RejectUnknownField.class);
 
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
-            dictionary, 1, DECODER_PACKAGE, PARENT_PACKAGE, decoder, Validation.class);
+            dictionary, 1, DECODER_PACKAGE, PARENT_PACKAGE, decoder, Validation.class, RejectUnknownField.class);
         final PrinterGenerator printerGenerator = new PrinterGenerator(dictionary, DECODER_PACKAGE, decoder);
         final AcceptorGenerator acceptorGenerator = new AcceptorGenerator(dictionary, DECODER_PACKAGE, decoder);
 
@@ -82,13 +83,13 @@ public final class CodecGenerationTool
         final DictionaryParser parser = new DictionaryParser();
         if (!xmlFile.exists())
         {
-            System.err.printf("xmlFile does not exist: %s\n", xmlFile.getAbsolutePath());
+            System.err.println("xmlFile does not exist: " + xmlFile.getAbsolutePath());
             printUsageAndExit();
         }
 
         if (!xmlFile.isFile())
         {
-            System.out.printf("xmlFile isn't a file, are the arguments the correct way around?\n");
+            System.out.println("xmlFile isn't a file, are the arguments the correct way around?");
             printUsageAndExit();
         }
         try (FileInputStream input = new FileInputStream(xmlFile))

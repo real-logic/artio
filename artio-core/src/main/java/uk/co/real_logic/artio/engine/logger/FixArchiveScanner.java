@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,25 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.Aeron;
+import io.aeron.FragmentAssembler;
+import io.aeron.Image;
+import io.aeron.Subscription;
+import io.aeron.archive.client.AeronArchive;
 import io.aeron.logbuffer.FragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
-import org.agrona.ErrorHandler;
+import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.replication.StreamIdentifier;
 
-import static uk.co.real_logic.artio.GatewayProcess.INBOUND_LIBRARY_STREAM;
-import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
-import static uk.co.real_logic.artio.engine.logger.FixArchiveScanner.MessageType.SENT;
+import java.util.ArrayList;
+import java.util.List;
+
+import static io.aeron.CommonContext.IPC_CHANNEL;
+import static io.aeron.archive.client.AeronArchive.NULL_LENGTH;
+import static io.aeron.archive.client.AeronArchive.NULL_POSITION;
+import static java.util.Comparator.comparingLong;
 
 /**
  * Scan the archive for fix messages. Can be combined with predicates to create rich queries.
@@ -34,40 +42,159 @@ import static uk.co.real_logic.artio.engine.logger.FixArchiveScanner.MessageType
  * @see FixMessagePredicate
  * @see FixMessagePredicates
  */
-public class FixArchiveScanner
+public class FixArchiveScanner implements AutoCloseable
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder fixMessage = new FixMessageDecoder();
     private final LogEntryHandler logEntryHandler = new LogEntryHandler();
+    private final FragmentAssembler fragmentAssembler = new FragmentAssembler(logEntryHandler);
 
-    private final ArchiveScanner archiveScanner;
+    private final Aeron aeron;
+    private final AeronArchive aeronArchive;
+    private final IdleStrategy idleStrategy;
 
     private FixMessageConsumer handler;
 
-    public enum MessageType
+    public static class Context
     {
-        /** Messages sent from the engine to another FIX system */
-        SENT,
+        private String aeronDirectoryName;
+        private IdleStrategy idleStrategy;
 
-        /** Messages received by the engine from another FIX system */
-        RECEIVED,
+        public Context()
+        {
+        }
+
+        public Context aeronDirectoryName(final String aeronDirectoryName)
+        {
+            this.aeronDirectoryName = aeronDirectoryName;
+            return this;
+        }
+
+        public String aeronDirectoryName()
+        {
+            return aeronDirectoryName;
+        }
+
+        public Context idleStrategy(final IdleStrategy idleStrategy)
+        {
+            this.idleStrategy = idleStrategy;
+            return this;
+        }
+
+        public IdleStrategy idleStrategy()
+        {
+            return idleStrategy;
+        }
     }
 
-    public FixArchiveScanner(final String logFileDir)
+    public FixArchiveScanner(final Context context)
     {
-        archiveScanner = new ArchiveScanner(logFileDir);
+        this.idleStrategy = context.idleStrategy();
+
+        final Aeron.Context aeronContext = new Aeron.Context().aeronDirectoryName(context.aeronDirectoryName());
+        aeron = Aeron.connect(aeronContext);
+        aeronArchive = AeronArchive.connect(new AeronArchive.Context().aeron(aeron).ownsAeronClient(true));
     }
 
     public void scan(
         final String aeronChannel,
-        final MessageType messageType,
+        final int queryStreamId,
         final FixMessageConsumer handler,
-        final ErrorHandler errorHandler)
+        final boolean follow,
+        final int archiveScannerStreamId)
     {
         this.handler = handler;
-        final StreamIdentifier id = new StreamIdentifier(
-            aeronChannel, messageType == SENT ? OUTBOUND_LIBRARY_STREAM : INBOUND_LIBRARY_STREAM);
-        archiveScanner.forEachFragment(id, logEntryHandler, errorHandler);
+
+        final List<ArchiveLocation> archiveLocations = lookupArchiveLocations(aeronChannel, queryStreamId);
+
+        try (Subscription replaySubscription = aeron.addSubscription(IPC_CHANNEL, archiveScannerStreamId))
+        {
+            archiveLocations.forEach(archiveLocation ->
+            {
+                final long recordingId = archiveLocation.recordingId;
+                final boolean stillArchiving = archiveLocation.stopPosition == NULL_POSITION;
+
+                final long stopPosition;
+                final long length;
+                if (stillArchiving)
+                {
+                    if (follow)
+                    {
+                        length = NULL_LENGTH;
+                        stopPosition = NULL_POSITION;
+                    }
+                    else
+                    {
+                        stopPosition = aeronArchive.getRecordingPosition(recordingId);
+                        length = stopPosition - archiveLocation.startPosition;
+                    }
+                }
+                else
+                {
+                    stopPosition = archiveLocation.stopPosition;
+                    length = stopPosition - archiveLocation.startPosition;
+                }
+
+                final int sessionId = (int)aeronArchive.startReplay(
+                    recordingId,
+                    archiveLocation.startPosition,
+                    length,
+                    IPC_CHANNEL,
+                    archiveScannerStreamId);
+
+                final Image image = lookupImage(replaySubscription, sessionId);
+
+                while (stopPosition == NULL_POSITION || image.position() < stopPosition)
+                {
+                    idleStrategy.idle(image.poll(fragmentAssembler, 10));
+                }
+            });
+        }
+    }
+
+    private Image lookupImage(final Subscription replaySubscription, final int sessionId)
+    {
+        Image image = null;
+
+        while (image == null)
+        {
+            idleStrategy.idle();
+            image = replaySubscription.imageBySessionId(sessionId);
+        }
+        idleStrategy.reset();
+
+        return image;
+    }
+
+    private List<ArchiveLocation> lookupArchiveLocations(final String aeronChannel, final int queryStreamId)
+    {
+        final List<ArchiveLocation> archiveLocations = new ArrayList<>();
+        aeronArchive.listRecordingsForUri(
+            0,
+            Integer.MAX_VALUE,
+            aeronChannel,
+            queryStreamId,
+            (controlSessionId,
+            correlationId,
+            recordingId,
+            startTimestamp,
+            stopTimestamp,
+            startPosition,
+            stopPosition,
+            initialTermId,
+            segmentFileLength,
+            termBufferLength,
+            mtuLength,
+            sessionId,
+            streamId,
+            strippedChannel,
+            originalChannel,
+            sourceIdentity) -> archiveLocations.add(new ArchiveLocation(recordingId, startPosition, stopPosition)));
+
+        // Any uncompleted recording is at the end
+        archiveLocations.sort(comparingLong(ArchiveLocation::stopPosition).reversed());
+
+        return archiveLocations;
     }
 
     class LogEntryHandler implements FragmentHandler
@@ -88,4 +215,36 @@ public class FixArchiveScanner
         }
     }
 
+    class ArchiveLocation
+    {
+        final long recordingId;
+        final long startPosition;
+        final long stopPosition;
+
+        ArchiveLocation(final long recordingId, final long startPosition, final long stopPosition)
+        {
+            this.recordingId = recordingId;
+            this.startPosition = startPosition;
+            this.stopPosition = stopPosition;
+        }
+
+        public long stopPosition()
+        {
+            return stopPosition;
+        }
+
+        public String toString()
+        {
+            return "ArchiveReplayInfo{" +
+                "recordingId=" + recordingId +
+                ", startPosition=" + startPosition +
+                ", stopPosition=" + stopPosition +
+                '}';
+        }
+    }
+
+    public void close()
+    {
+        aeronArchive.close();
+    }
 }

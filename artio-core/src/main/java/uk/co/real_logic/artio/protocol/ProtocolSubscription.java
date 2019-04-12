@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,18 +22,13 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.messages.DisconnectDecoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.messages.ReplicatedMessageDecoder;
-import uk.co.real_logic.artio.replication.ClusterFragmentHandler;
-import uk.co.real_logic.artio.replication.ClusterHeader;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
 import static uk.co.real_logic.artio.protocol.GatewayPublication.FRAME_SIZE;
 
-public final class ProtocolSubscription implements ControlledFragmentHandler, ClusterFragmentHandler
+public final class ProtocolSubscription implements ControlledFragmentHandler
 {
-    private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
-
     private static final Action UNKNOWN_TEMPLATE = null;
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
@@ -72,12 +67,6 @@ public final class ProtocolSubscription implements ControlledFragmentHandler, Cl
     }
 
     public Action onFragment(
-        final DirectBuffer buffer, final int offset, final int length, final ClusterHeader header)
-    {
-        return onFragment(buffer, offset, length, header.position());
-    }
-
-    public Action onFragment(
         final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         return onFragment(buffer, offset, length, header.position());
@@ -103,14 +92,6 @@ public final class ProtocolSubscription implements ControlledFragmentHandler, Cl
             {
                 return onDisconnect(buffer, offset, blockLength, version);
             }
-
-            case ReplicatedMessageDecoder.TEMPLATE_ID:
-            {
-                // Skip over replicated message header to its payload
-                offset += ReplicatedMessageDecoder.BLOCK_LENGTH;
-                length -= HEADER_LENGTH + ReplicatedMessageDecoder.BLOCK_LENGTH;
-                return onFragment(buffer, offset, length, position);
-            }
         }
 
         return defaultAction;
@@ -121,7 +102,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler, Cl
     {
         disconnect.wrap(buffer, offset, blockLength, version);
         final long connectionId = disconnect.connection();
-        DebugLogger.log(FIX_MESSAGE, "FixSubscription Disconnect: %d%n", connectionId);
+        DebugLogger.log(FIX_CONNECTION, "FixSubscription Disconnect: %d%n", connectionId);
         return protocolHandler.onDisconnect(disconnect.libraryId(), connectionId, disconnect.reason());
     }
 
@@ -145,6 +126,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler, Cl
             messageFrame.messageType(),
             messageFrame.timestamp(),
             messageFrame.status(),
+            messageFrame.sequenceNumber(),
             position);
     }
 }

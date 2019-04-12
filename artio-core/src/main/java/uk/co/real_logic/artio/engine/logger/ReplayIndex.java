@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.logbuffer.FrameDescriptor;
+import io.aeron.logbuffer.Header;
 import org.agrona.BitUtil;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
@@ -36,6 +36,7 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.function.LongFunction;
 
+import static io.aeron.logbuffer.FrameDescriptor.*;
 import static org.agrona.UnsafeAccess.UNSAFE;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
@@ -71,6 +72,7 @@ public class ReplayIndex implements Index
     private final int indexFileSize;
     private final BufferFactory bufferFactory;
     private final AtomicBuffer positionBuffer;
+    private final RecordingIdLookup recordingIdLookup;
 
     public ReplayIndex(
         final String logFileDir,
@@ -80,14 +82,17 @@ public class ReplayIndex implements Index
         final int cacheSetSize,
         final BufferFactory bufferFactory,
         final AtomicBuffer positionBuffer,
-        final ErrorHandler errorHandler)
+        final ErrorHandler errorHandler,
+        final RecordingIdLookup recordingIdLookup)
     {
         this.logFileDir = logFileDir;
         this.requiredStreamId = requiredStreamId;
         this.indexFileSize = indexFileSize;
-        checkIndexFileSize(indexFileSize);
         this.bufferFactory = bufferFactory;
         this.positionBuffer = positionBuffer;
+        this.recordingIdLookup = recordingIdLookup;
+
+        checkIndexFileSize(indexFileSize);
         fixSessionIdToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
         final String replayPositionPath = replayPositionPath(logFileDir, requiredStreamId);
         positionWriter = new IndexedPositionWriter(
@@ -95,45 +100,66 @@ public class ReplayIndex implements Index
         positionReader = new IndexedPositionReader(positionBuffer);
     }
 
-    public void indexRecord(
+    private long continuedFixSessionId;
+    private int continuedSequenceNumber;
+    private int continuedSequenceIndex;
+
+    public void onFragment(
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int srcLength,
-        final int streamId,
-        final int aeronSessionId,
-        final long endPosition)
+        final Header header)
     {
+        final int streamId = header.streamId();
+        final long endPosition = header.position();
+        final byte flags = header.flags();
+        final int length = BitUtil.align(srcLength, FRAME_ALIGNMENT);
+
         if (streamId != requiredStreamId)
         {
             return;
         }
 
-        int offset = srcOffset;
-        frameHeaderDecoder.wrap(srcBuffer, offset);
-        if (frameHeaderDecoder.templateId() == FixMessageEncoder.TEMPLATE_ID)
+        final boolean beginMessage = (flags & BEGIN_FRAG_FLAG) == BEGIN_FRAG_FLAG;
+        if ((flags & UNFRAGMENTED) == UNFRAGMENTED || beginMessage)
         {
-            final int actingBlockLength = frameHeaderDecoder.blockLength();
-            offset += frameHeaderDecoder.encodedLength();
-
-            messageFrame.wrap(srcBuffer, offset, actingBlockLength, frameHeaderDecoder.version());
-            if (messageFrame.status() == OK)
+            int offset = srcOffset;
+            frameHeaderDecoder.wrap(srcBuffer, offset);
+            if (frameHeaderDecoder.templateId() == FixMessageEncoder.TEMPLATE_ID)
             {
-                offset += actingBlockLength + 2;
+                final int actingBlockLength = frameHeaderDecoder.blockLength();
+                offset += frameHeaderDecoder.encodedLength();
 
-                asciiBuffer.wrap(srcBuffer);
-                fixHeader.decode(asciiBuffer, offset, messageFrame.bodyLength());
+                messageFrame.wrap(srcBuffer, offset, actingBlockLength, frameHeaderDecoder.version());
+                if (messageFrame.status() == OK)
+                {
+                    offset += actingBlockLength + 2;
 
-                final int alignedLength = BitUtil.align(srcLength, FrameDescriptor.FRAME_ALIGNMENT);
-                final long beginPosition = endPosition - alignedLength;
+                    asciiBuffer.wrap(srcBuffer);
+                    fixHeader.decode(asciiBuffer, offset, messageFrame.bodyLength());
 
-                final int sequenceNumber = fixHeader.msgSeqNum();
-                final int sequenceIndex = messageFrame.sequenceIndex();
-                final long fixSessionId = messageFrame.session();
+                    final long fixSessionId = messageFrame.session();
+                    final int sequenceNumber = fixHeader.msgSeqNum();
+                    final int sequenceIndex = messageFrame.sequenceIndex();
 
-                fixSessionIdToIndex
-                    .computeIfAbsent(fixSessionId, newSessionIndex)
-                    .onRecord(streamId, aeronSessionId, beginPosition, endPosition, sequenceNumber, sequenceIndex);
+                    if (beginMessage)
+                    {
+                        continuedFixSessionId = fixSessionId;
+                        continuedSequenceNumber = sequenceNumber;
+                        continuedSequenceIndex = sequenceIndex;
+                    }
+
+                    fixSessionIdToIndex
+                        .computeIfAbsent(fixSessionId, newSessionIndex)
+                        .onRecord(endPosition, length, sequenceNumber, sequenceIndex, header);
+                }
             }
+        }
+        else
+        {
+            fixSessionIdToIndex
+                .computeIfAbsent(continuedFixSessionId, newSessionIndex)
+                .onRecord(endPosition, length, continuedSequenceNumber, continuedSequenceIndex, header);
         }
     }
 
@@ -153,16 +179,16 @@ public class ReplayIndex implements Index
     {
         private final ByteBuffer wrappedBuffer;
         private final AtomicBuffer buffer;
-        private final int capacity;
+        private final int recordCapacity;
 
-        private SessionIndex(final long fixSessionId)
+        SessionIndex(final long fixSessionId)
         {
-            final File logFile = logFile(logFileDir, fixSessionId, requiredStreamId);
+            final File logFile = replayIndexFile(logFileDir, fixSessionId, requiredStreamId);
             final boolean exists = logFile.exists();
             this.wrappedBuffer = bufferFactory.map(logFile, indexFileSize);
             this.buffer = new UnsafeBuffer(wrappedBuffer);
 
-            capacity = recordCapacity(buffer.capacity());
+            recordCapacity = recordCapacity(buffer.capacity());
             if (!exists)
             {
                 indexHeaderEncoder
@@ -175,37 +201,39 @@ public class ReplayIndex implements Index
             else
             {
                 // Reset the positions in order to avoid wraps at the start.
-                final int resetPosition = offset(beginChange(buffer), capacity);
+                final long resetPosition = beginChange(buffer) + RECORD_LENGTH;
                 beginChangeOrdered(buffer, resetPosition);
                 endChangeOrdered(buffer, resetPosition);
             }
         }
 
-        private void onRecord(
-            final int streamId,
-            final int aeronSessionId,
-            final long beginPosition,
+        void onRecord(
             final long endPosition,
+            final int length,
             final int sequenceNumber,
-            final int sequenceIndex)
+            final int sequenceIndex,
+            final Header header)
         {
             final long beginChangePosition = beginChange(buffer);
             final long changePosition = beginChangePosition + RECORD_LENGTH;
+            final int aeronSessionId = header.sessionId();
+            final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
+            final long beginPosition = endPosition - length;
 
             beginChangeOrdered(buffer, changePosition);
             UNSAFE.storeFence();
 
-            final int offset = offset(beginChangePosition, capacity);
+            final int offset = offset(beginChangePosition, recordCapacity);
 
             replayIndexRecord
                 .wrap(buffer, offset)
-                .streamId(streamId)
-                .aeronSessionId(aeronSessionId)
                 .position(beginPosition)
                 .sequenceNumber(sequenceNumber)
-                .sequenceIndex(sequenceIndex);
+                .sequenceIndex(sequenceIndex)
+                .recordingId(recordingId)
+                .length(length);
 
-            positionWriter.indexedUpTo(aeronSessionId, endPosition);
+            positionWriter.indexedUpTo(aeronSessionId, recordingId, endPosition);
             positionWriter.updateChecksums();
 
             endChangeOrdered(buffer, changePosition);

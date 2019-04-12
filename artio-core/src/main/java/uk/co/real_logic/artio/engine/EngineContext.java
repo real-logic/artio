@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,97 +19,71 @@ import io.aeron.Aeron;
 import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
 import io.aeron.UnavailableImageHandler;
-import io.aeron.logbuffer.ExclusiveBufferClaim;
+import io.aeron.archive.client.AeronArchive;
+import io.aeron.logbuffer.BufferClaim;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.CompositeAgent;
 import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.NanoClock;
 import org.agrona.concurrent.SystemEpochClock;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.StreamInformation;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.logger.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
-import uk.co.real_logic.artio.replication.ClusterSubscription;
-import uk.co.real_logic.artio.replication.ClusterableStreams;
-import uk.co.real_logic.artio.replication.StreamIdentifier;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static java.util.Arrays.asList;
-import static uk.co.real_logic.artio.GatewayProcess.INBOUND_LIBRARY_STREAM;
-import static uk.co.real_logic.artio.GatewayProcess.OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.suppressingClose;
-import static uk.co.real_logic.artio.replication.ReservedValue.NO_FILTER;
 
-public abstract class EngineContext implements AutoCloseable
+public class EngineContext implements AutoCloseable
 {
-    protected final NanoClock nanoClock;
-    protected final EngineConfiguration configuration;
-    protected final ErrorHandler errorHandler;
-    protected final FixCounters fixCounters;
-    protected final Aeron aeron;
-
+    private final Clock clock;
+    private final EngineConfiguration configuration;
+    private final ErrorHandler errorHandler;
+    private final FixCounters fixCounters;
+    private final Aeron aeron;
+    private final SenderSequenceNumbers senderSequenceNumbers;
+    private final AeronArchive aeronArchive;
+    private final RecordingCoordinator recordingCoordinator;
+    private final ExclusivePublication replayPublication;
     private final SequenceNumberIndexWriter sentSequenceNumberIndex;
     private final SequenceNumberIndexWriter receivedSequenceNumberIndex;
     private final CompletionPosition inboundCompletionPosition = new CompletionPosition();
     private final CompletionPosition outboundLibraryCompletionPosition = new CompletionPosition();
     private final CompletionPosition outboundClusterCompletionPosition = new CompletionPosition();
 
-    protected Streams inboundLibraryStreams;
-    protected Streams outboundLibraryStreams;
-    // Indexers are owned by the archivingAgent
-    protected Indexer inboundIndexer;
-    protected Indexer outboundIndexer;
-    protected Agent archivingAgent;
+    private Streams inboundLibraryStreams;
+    private Streams outboundLibraryStreams;
 
-    public static EngineContext of(
+    // Indexers are owned by the archivingAgent
+    private Indexer inboundIndexer;
+    private Indexer outboundIndexer;
+    private Agent archivingAgent;
+
+    EngineContext(
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
         final ExclusivePublication replayPublication,
         final FixCounters fixCounters,
         final Aeron aeron,
-        final EngineDescriptorStore engineDescriptorStore)
-    {
-        if (configuration.isClustered())
-        {
-            if (!configuration.logInboundMessages() || !configuration.logOutboundMessages())
-            {
-                throw new IllegalArgumentException(
-                    "If you are enabling clustering, then you must enable both inbound and outbound logging");
-            }
-
-            return new ClusterContext(
-                configuration,
-                errorHandler,
-                replayPublication,
-                fixCounters,
-                aeron,
-                engineDescriptorStore);
-        }
-        else
-        {
-            return new SoloContext(
-                configuration,
-                errorHandler,
-                replayPublication,
-                fixCounters,
-                aeron);
-        }
-    }
-
-    public EngineContext(
-        final EngineConfiguration configuration,
-        final ErrorHandler errorHandler,
-        final FixCounters fixCounters,
-        final Aeron aeron)
+        final AeronArchive aeronArchive,
+        final RecordingCoordinator recordingCoordinator)
     {
         this.configuration = configuration;
         this.errorHandler = errorHandler;
         this.fixCounters = fixCounters;
         this.aeron = aeron;
-        this.nanoClock = configuration.nanoClock();
+        this.clock = configuration.clock();
+        this.replayPublication = replayPublication;
+        this.aeronArchive = aeronArchive;
+        this.recordingCoordinator = recordingCoordinator;
+
+        senderSequenceNumbers = new SenderSequenceNumbers(configuration.framerIdleStrategy());
 
         try
         {
@@ -117,36 +91,59 @@ public abstract class EngineContext implements AutoCloseable
                 configuration.sentSequenceNumberBuffer(),
                 configuration.sentSequenceNumberIndex(),
                 errorHandler,
-                OUTBOUND_LIBRARY_STREAM);
+                configuration.outboundLibraryStream(),
+                recordingCoordinator.outboundRecordingIdLookup());
             receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.receivedSequenceNumberBuffer(),
                 configuration.receivedSequenceNumberIndex(),
                 errorHandler,
-                INBOUND_LIBRARY_STREAM);
+                configuration.inboundLibraryStream(),
+                recordingCoordinator.inboundRecordingIdLookup());
+
+            newStreams();
+            newArchivingAgent();
         }
         catch (final Exception e)
         {
+            completeDuringStartup();
+
             suppressingClose(this, e);
 
             throw e;
         }
     }
 
-    protected void newStreams(final ClusterableStreams node)
+    private void newStreams()
     {
+        final String libraryAeronChannel = configuration.libraryAeronChannel();
+        final boolean printAeronStreamIdentifiers = configuration.printAeronStreamIdentifiers();
+
         inboundLibraryStreams = new Streams(
-            node, fixCounters.failedInboundPublications(), INBOUND_LIBRARY_STREAM, nanoClock,
-            configuration.inboundMaxClaimAttempts());
+            aeron,
+            libraryAeronChannel,
+            printAeronStreamIdentifiers,
+            fixCounters.failedInboundPublications(),
+            configuration.inboundLibraryStream(),
+            clock,
+            configuration.inboundMaxClaimAttempts(),
+            recordingCoordinator);
         outboundLibraryStreams = new Streams(
-            node, fixCounters.failedOutboundPublications(), OUTBOUND_LIBRARY_STREAM, nanoClock,
-            configuration.outboundMaxClaimAttempts());
+            aeron,
+            libraryAeronChannel,
+            printAeronStreamIdentifiers,
+            fixCounters.failedOutboundPublications(),
+            configuration.outboundLibraryStream(),
+            clock,
+            configuration.outboundMaxClaimAttempts(),
+            recordingCoordinator);
     }
 
-    protected ReplayIndex newReplayIndex(
+    private ReplayIndex newReplayIndex(
         final int cacheSetSize,
         final int cacheNumSets,
         final String logFileDir,
-        final int streamId)
+        final int streamId,
+        final RecordingIdLookup recordingIdLookup)
     {
         return new ReplayIndex(
             logFileDir,
@@ -156,64 +153,36 @@ public abstract class EngineContext implements AutoCloseable
             cacheSetSize,
             LoggerUtil::map,
             ReplayIndexDescriptor.replayPositionBuffer(logFileDir, streamId),
-            errorHandler);
+            errorHandler,
+            recordingIdLookup);
     }
 
-    protected ReplayQuery newReplayQuery(final ArchiveReader archiveReader, final IdleStrategy idleStrategy)
+    private ReplayQuery newReplayQuery(final IdleStrategy idleStrategy, final int streamId)
     {
         final String logFileDir = configuration.logFileDir();
         final int cacheSetSize = configuration.loggerCacheSetSize();
         final int cacheNumSets = configuration.loggerCacheNumSets();
-        final int streamId = archiveReader.fullStreamId().streamId();
+        final int archiveReplayStream = configuration.archiveReplayStream();
+
         return new ReplayQuery(
             logFileDir,
             cacheNumSets,
             cacheSetSize,
             LoggerUtil::mapExistingFile,
-            archiveReader,
             streamId,
-            idleStrategy);
+            idleStrategy,
+            aeronArchive,
+            errorHandler,
+            archiveReplayStream);
     }
 
-    public void close()
-    {
-        sentSequenceNumberIndex.close();
-        receivedSequenceNumberIndex.close();
-    }
-
-    protected ArchiveReader archiveReader(final StreamIdentifier streamId)
-    {
-        return archiveReader(streamId, NO_FILTER);
-    }
-
-    protected ArchiveReader archiveReader(final StreamIdentifier streamId, final int reservedValueFilter)
-    {
-        return new ArchiveReader(
-            LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
-            configuration.loggerCacheNumSets(),
-            configuration.loggerCacheSetSize(),
-            streamId,
-            reservedValueFilter);
-    }
-
-    protected Archiver archiver(final StreamIdentifier streamId, final CompletionPosition completionPosition)
-    {
-        return new Archiver(
-            LoggerUtil.newArchiveMetaData(configuration.logFileDir()),
-            configuration.loggerCacheNumSets(),
-            configuration.loggerCacheSetSize(),
-            streamId,
-            configuration.agentNamePrefix(),
-            completionPosition);
-    }
-
-    protected Replayer newReplayer(
-        final ExclusivePublication replayPublication, final ArchiveReader outboundArchiveReader)
+    private Replayer newReplayer(
+        final ExclusivePublication replayPublication)
     {
         return new Replayer(
-            newReplayQuery(outboundArchiveReader, configuration.archiverIdleStrategy()),
+            newReplayQuery(configuration.archiverIdleStrategy(), configuration.outboundLibraryStream()),
             replayPublication,
-            new ExclusiveBufferClaim(),
+            new BufferClaim(),
             configuration.archiverIdleStrategy(),
             errorHandler,
             configuration.outboundMaxClaimAttempts(),
@@ -221,64 +190,117 @@ public abstract class EngineContext implements AutoCloseable
             configuration.agentNamePrefix(),
             new SystemEpochClock(),
             configuration.gapfillOnReplayMessageTypes(),
-            configuration.replayHandler());
+            configuration.replayHandler(),
+            senderSequenceNumbers);
     }
 
-    protected void newIndexers(
-        final ArchiveReader inboundArchiveReader,
-        final ArchiveReader outboundArchiveReader,
-        final Index extraOutboundIndex)
+    private void newIndexers()
     {
         final int cacheSetSize = configuration.loggerCacheSetSize();
         final int cacheNumSets = configuration.loggerCacheNumSets();
         final String logFileDir = configuration.logFileDir();
 
-        final ReplayIndex replayIndex = newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, INBOUND_LIBRARY_STREAM);
+        final ReplayIndex inboundReplayIndex = newReplayIndex(
+            cacheSetSize,
+            cacheNumSets,
+            logFileDir,
+            configuration.inboundLibraryStream(),
+            recordingCoordinator.inboundRecordingIdLookup());
 
         inboundIndexer = new Indexer(
-            asList(replayIndex, receivedSequenceNumberIndex),
-            inboundArchiveReader,
+            asList(inboundReplayIndex, receivedSequenceNumberIndex),
             inboundLibraryStreams.subscription("inboundIndexer"),
             configuration.agentNamePrefix(),
-            inboundCompletionPosition);
+            inboundCompletionPosition,
+            aeronArchive,
+            errorHandler,
+            configuration.archiveReplayStream());
 
         final List<Index> outboundIndices = new ArrayList<>();
-        outboundIndices.add(newReplayIndex(cacheSetSize, cacheNumSets, logFileDir, OUTBOUND_LIBRARY_STREAM));
+        outboundIndices.add(newReplayIndex(
+            cacheSetSize,
+            cacheNumSets,
+            logFileDir,
+            configuration.outboundLibraryStream(),
+            recordingCoordinator.outboundRecordingIdLookup()));
         outboundIndices.add(sentSequenceNumberIndex);
-        if (extraOutboundIndex != null)
-        {
-            outboundIndices.add(extraOutboundIndex);
-        }
+        outboundIndices.add(new PositionSender(inboundPublication()));
 
         outboundIndexer = new Indexer(
             outboundIndices,
-            outboundArchiveReader,
             outboundLibraryStreams.subscription("outboundIndexer"),
             configuration.agentNamePrefix(),
-            outboundLibraryCompletionPosition);
+            outboundLibraryCompletionPosition,
+            aeronArchive,
+            errorHandler,
+            configuration.archiveReplayStream());
     }
 
-    public abstract Streams outboundLibraryStreams();
+    private void newArchivingAgent()
+    {
+        if (configuration.logOutboundMessages())
+        {
+            newIndexers();
 
-    public abstract Streams inboundLibraryStreams();
+            final Replayer replayer = newReplayer(replayPublication);
 
-    public abstract ClusterSubscription outboundClusterSubscription();
+            final List<Agent> agents = new ArrayList<>();
+            agents.add(inboundIndexer);
+            agents.add(outboundIndexer);
+            agents.add(replayer);
+
+            archivingAgent = new CompositeAgent(agents);
+        }
+        else
+        {
+            final GatewayPublication replayGatewayPublication = new GatewayPublication(
+                replayPublication,
+                fixCounters.failedReplayPublications(),
+                configuration.archiverIdleStrategy(),
+                clock,
+                configuration.outboundMaxClaimAttempts());
+
+            archivingAgent = new GapFiller(
+                inboundLibraryStreams.subscription("replayer"),
+                replayGatewayPublication,
+                configuration.agentNamePrefix(),
+                senderSequenceNumbers);
+        }
+    }
+
+    public Streams outboundLibraryStreams()
+    {
+        return outboundLibraryStreams;
+    }
 
     // Each invocation should return a new instance of the subscription
     public Subscription outboundLibrarySubscription(
         final String name, final UnavailableImageHandler unavailableImageHandler)
     {
         final Subscription subscription = aeron.addSubscription(
-            configuration.libraryAeronChannel(), OUTBOUND_LIBRARY_STREAM, null, unavailableImageHandler);
+            configuration.libraryAeronChannel(),
+            configuration.outboundLibraryStream(),
+            null,
+            unavailableImageHandler);
         StreamInformation.print(name, subscription, configuration);
         return subscription;
     }
 
-    public abstract ReplayQuery inboundReplayQuery();
+    public ReplayQuery inboundReplayQuery()
+    {
+        if (!configuration.logInboundMessages())
+        {
+            return null;
+        }
 
-    public abstract ClusterableStreams streams();
+        return newReplayQuery(configuration.framerIdleStrategy(), configuration.inboundLibraryStream());
+    }
 
-    public abstract GatewayPublication inboundLibraryPublication();
+    public GatewayPublication inboundPublication()
+    {
+        return inboundLibraryStreams.gatewayPublication(
+            configuration.framerIdleStrategy(), "inboundPublication");
+    }
 
     public CompletionPosition inboundCompletionPosition()
     {
@@ -288,11 +310,6 @@ public abstract class EngineContext implements AutoCloseable
     public CompletionPosition outboundLibraryCompletionPosition()
     {
         return outboundLibraryCompletionPosition;
-    }
-
-    public CompletionPosition outboundClusterCompletionPosition()
-    {
-        return outboundClusterCompletionPosition;
     }
 
     void completeDuringStartup()
@@ -305,5 +322,16 @@ public abstract class EngineContext implements AutoCloseable
     Agent archivingAgent()
     {
         return archivingAgent;
+    }
+
+    public SenderSequenceNumbers senderSequenceNumbers()
+    {
+        return senderSequenceNumbers;
+    }
+
+    public void close()
+    {
+        Exceptions.closeAll(
+            sentSequenceNumberIndex, receivedSequenceNumberIndex);
     }
 }

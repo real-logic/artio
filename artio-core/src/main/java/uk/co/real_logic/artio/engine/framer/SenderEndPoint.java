@@ -22,6 +22,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
+import uk.co.real_logic.artio.engine.SenderSequenceNumber;
 import uk.co.real_logic.artio.engine.logger.ArchiveDescriptor;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
@@ -35,7 +36,7 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.EXCEPTION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
 import static uk.co.real_logic.artio.protocol.GatewayPublication.FRAME_SIZE;
 
-class SenderEndPoint implements AutoCloseable
+class SenderEndPoint
 {
     private final long connectionId;
     private final TcpChannel channel;
@@ -45,13 +46,14 @@ class SenderEndPoint implements AutoCloseable
     private final Framer framer;
     private final int maxBytesInBuffer;
     private final long slowConsumerTimeoutInMs;
-
     private final StreamTracker outboundTracker;
     private final StreamTracker replayTracker;
+    private final SenderSequenceNumber senderSequenceNumber;
 
     private int libraryId;
     private long sessionId;
     private long sendingTimeoutTimeInMs;
+    private boolean replayPaused;
 
     SenderEndPoint(
         final long connectionId,
@@ -65,7 +67,8 @@ class SenderEndPoint implements AutoCloseable
         final Framer framer,
         final int maxBytesInBuffer,
         final long slowConsumerTimeoutInMs,
-        final long timeInMs)
+        final long timeInMs,
+        final SenderSequenceNumber senderSequenceNumber)
     {
         this.connectionId = connectionId;
         this.libraryId = libraryId;
@@ -76,10 +79,10 @@ class SenderEndPoint implements AutoCloseable
         this.framer = framer;
         this.maxBytesInBuffer = maxBytesInBuffer;
         this.slowConsumerTimeoutInMs = slowConsumerTimeoutInMs;
+        this.senderSequenceNumber = senderSequenceNumber;
 
         outboundTracker = new StreamTracker(outboundBlockablePosition);
         replayTracker = new StreamTracker(replayBlockablePosition);
-
         sendingTimeoutTimeInMs = timeInMs + slowConsumerTimeoutInMs;
     }
 
@@ -88,6 +91,7 @@ class SenderEndPoint implements AutoCloseable
         final DirectBuffer directBuffer,
         final int offset,
         final int bodyLength,
+        final int sequenceNumber,
         final long position,
         final long timeInMs)
     {
@@ -97,7 +101,16 @@ class SenderEndPoint implements AutoCloseable
             return;
         }
 
+        if (replayPaused)
+        {
+            dropFurtherBehind(bodyLength);
+
+            return;
+        }
+
         attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, position, outboundTracker);
+
+        senderSequenceNumber.onNewMessage(sequenceNumber);
     }
 
     Action onReplayMessage(
@@ -107,6 +120,11 @@ class SenderEndPoint implements AutoCloseable
         final long timeInMs,
         final long position)
     {
+        if (!isSlowConsumer())
+        {
+            replayPaused = true;
+        }
+
         attemptFramedMessage(directBuffer, offset, bodyLength, timeInMs, position, replayTracker);
 
         return CONTINUE;
@@ -119,6 +137,11 @@ class SenderEndPoint implements AutoCloseable
         final long timeInMs,
         final long position)
     {
+        if (!outboundTracker.partiallySentMessage)
+        {
+            replayPaused = true;
+        }
+
         final int offsetAfterHeader = offset - FRAME_SIZE;
         final int length = bodyLength + FRAME_SIZE;
 
@@ -135,13 +158,7 @@ class SenderEndPoint implements AutoCloseable
     {
         if (isSlowConsumer())
         {
-            final long bytesInBuffer = bytesInBufferWeak() + bodyLength;
-            if (bytesInBuffer > maxBytesInBuffer)
-            {
-                removeEndpoint(SLOW_CONSUMER);
-            }
-
-            this.bytesInBuffer.setOrdered(bytesInBuffer);
+            dropFurtherBehind(bodyLength);
 
             return;
         }
@@ -163,6 +180,17 @@ class SenderEndPoint implements AutoCloseable
         {
             onError(ex);
         }
+    }
+
+    private void dropFurtherBehind(final int bodyLength)
+    {
+        final long bytesInBuffer = bytesInBufferWeak() + bodyLength;
+        if (bytesInBuffer > maxBytesInBuffer)
+        {
+            removeEndpoint(SLOW_CONSUMER);
+        }
+
+        this.bytesInBuffer.setOrdered(bytesInBuffer);
     }
 
     private int writeFramedMessage(
@@ -258,6 +286,11 @@ class SenderEndPoint implements AutoCloseable
         {
             invalidLibraryAttempts.increment();
             return CONTINUE;
+        }
+
+        if (replayPaused)
+        {
+            return blockPosition(position, length, outboundTracker);
         }
 
         return attemptSlowMessage(
@@ -421,6 +454,16 @@ class SenderEndPoint implements AutoCloseable
         return false;
     }
 
+    Action onReplayComplete()
+    {
+        if (!replayTracker.partiallySentMessage)
+        {
+            replayPaused = false;
+        }
+
+        return CONTINUE;
+    }
+
     // Struct for tracking the slow state of the replay and outbound streams
     static class StreamTracker
     {
@@ -438,5 +481,10 @@ class SenderEndPoint implements AutoCloseable
         {
             sentPosition += delta;
         }
+    }
+
+    boolean replayPaused()
+    {
+        return replayPaused;
     }
 }

@@ -23,23 +23,36 @@ class SlowPeeker extends BlockablePosition
     final Image normalImage;
     final Image peekImage;
 
+    private final int peekImageTermLengthMask;
+
     SlowPeeker(final Image peekImage, final Image normalImage)
     {
         this.peekImage = peekImage;
         this.normalImage = normalImage;
+
+        peekImageTermLengthMask = peekImage.termBufferLength() - 1;
     }
 
     int peek(final ControlledFragmentHandler handler)
     {
         blockPosition = DID_NOT_BLOCK;
-        final long limitPosition = normalImage.position();
         final long initialPosition = peekImage.position();
+        final long peekImageLimitPosition = peekImageLimitPosition(initialPosition);
+        final long limitPosition = Math.min(normalImage.position(), peekImageLimitPosition);
         final long resultingPosition = peekImage.controlledPeek(
             initialPosition, handler, limitPosition);
         final long delta = resultingPosition - initialPosition;
         if (!peekImage.isClosed())
         {
-            peekImage.position(blockPosition != DID_NOT_BLOCK ? blockPosition : resultingPosition);
+            if (blockPosition != DID_NOT_BLOCK)
+            {
+                final long newLimitPosition = peekImage.position() + peekImage.termBufferLength();
+                peekImage.position(Math.min(newLimitPosition, blockPosition));
+            }
+            else
+            {
+                peekImage.position(resultingPosition);
+            }
 
             return (int)delta;
         }
@@ -47,5 +60,10 @@ class SlowPeeker extends BlockablePosition
         {
             return 0;
         }
+    }
+
+    private long peekImageLimitPosition(final long currentPosition)
+    {
+        return (currentPosition - (currentPosition & peekImageTermLengthMask)) + peekImageTermLengthMask + 1;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,37 +15,17 @@
  */
 package uk.co.real_logic.artio.dictionary;
 
-import java.util.List;
-
 import org.hamcrest.Matcher;
 import org.junit.Before;
 import org.junit.Test;
-
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasItem;
-import static org.hamcrest.Matchers.hasItems;
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.typeCompatibleWith;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-
-import uk.co.real_logic.artio.dictionary.ir.Component;
-import uk.co.real_logic.artio.dictionary.ir.Dictionary;
-import uk.co.real_logic.artio.dictionary.ir.Entry;
-import uk.co.real_logic.artio.dictionary.ir.Field;
+import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
 import uk.co.real_logic.artio.dictionary.ir.Field.Value;
-import uk.co.real_logic.artio.dictionary.ir.Group;
-import uk.co.real_logic.artio.dictionary.ir.Message;
 
+import java.util.List;
+
+import static org.hamcrest.Matchers.*;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.INT;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.STRING;
@@ -192,9 +172,12 @@ public class DictionaryParserTest
     {
         final Field field = field("LinesOfText");
         assertThat(field.name(), is("NoLinesOfText"));
-        final Message newsMessage = dictionary.messages().stream()
-            .filter(m -> m.name().equals("News")).findFirst().orElseThrow(() -> new AssertionError(
-            "Did not find news message"));
+        final Message newsMessage = dictionary
+            .messages()
+            .stream()
+            .filter((m) -> m.name().equals("News"))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("Did not find news message"));
         final Entry linesOfText = newsMessage.entries().get(0);
         assertTrue(linesOfText.isGroup());
         assertThat(((Group)linesOfText.element()).numberField().name(), is("NoLinesOfTextGroupCounter"));
@@ -268,8 +251,8 @@ public class DictionaryParserTest
             IllegalStateException.class,
             "Cannot have the same field defined more than once on a message; this is against the FIX spec. " +
             "Details to follow:\n" +
-            "Message: PoorlyDefinedMessage Field : MemberSubID (104)\n" +
-            "Message: PoorlyDefinedMessage Field : MemberSubID (104)\n");
+            "Message: PoorlyDefinedMessage Field : MemberSubID (104) Through Path: [NextComponent, Members]\n" +
+            "Message: PoorlyDefinedMessage Field : MemberSubID (104) Through Path: [NextComponent]\n");
     }
 
     private Component component(final String name)
@@ -370,7 +353,7 @@ public class DictionaryParserTest
         }
     }
 
-    private interface ThrowingRunnable
+    interface ThrowingRunnable
     {
         void run() throws Exception;
     }

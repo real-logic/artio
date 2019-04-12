@@ -29,15 +29,11 @@
 
     <!-- ARCHIVAL DATA STRUCTURES -->
     <sbe:message name="ReplayIndexRecord" id="5" description="Stores index information about a single record">
-        <field name="streamId" id="1" type="int32"/>
-        <field name="aeronSessionId" id="2" type="int32"/>
         <field name="position" id="3" type="int64"/>
         <field name="sequenceNumber" id="4" type="int32"/>
         <field name="sequenceIndex" id="5" type="SequenceIndex"/>
-    </sbe:message>
-    <sbe:message name="ArchiveMetaData" id="6" description="Meta data about 1 session's archive">
-        <field name="initialTermId" id="1" type="int32"/>
-        <field name="termBufferLength" id="2" type="int32"/>
+        <field name="recordingId" id="6" type="int64"/>
+        <field name="length" id="7" type="int32"/>
     </sbe:message>
 
     <!-- Sequence Number Cache Structure -->
@@ -50,6 +46,7 @@
     <sbe:message name="IndexedPosition" id="25" description="">
         <field name="streamId" id="1" type="int32"/>
         <field name="sessionId" id="2" type="int32"/>
+        <field name="recordingId" id="4" type="int64"/>
         <field name="position" id="3" type="int64"/>
     </sbe:message>
 

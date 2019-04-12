@@ -46,11 +46,16 @@ public interface LibraryEndPointHandler
         int lastSentSeqNum,
         int lastRecvSeqNum,
         long logonTime,
-        LogonStatus logonStatus,
+        SessionStatus sessionStatus,
         SlowStatus slowStatus,
         ConnectionType connectionType,
         SessionState sessionState,
+        boolean awaitingResend,
         int heartBeatInt,
+        boolean closedResendInterval,
+        int resendRequestChunkSize,
+        boolean sendRedundantResendRequests,
+        boolean enableLastMsgSeqNumProcessed,
         long correlationId,
         int sequenceIndex,
         String localCompId,
@@ -59,5 +64,7 @@ public interface LibraryEndPointHandler
         String remoteCompId,
         String remoteSubId,
         String remoteLocationId,
-        String address);
+        String address,
+        String username,
+        String password);
 }

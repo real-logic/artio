@@ -51,3 +51,13 @@ liblagent.so
 
 *attach_pid*
 file-leak-detector-*
+
+*/aeron-archive/*
+aeron-archive/
+buyer/
+
+*-example
+artio-samples/src/main/java/uk/co/real_logic/artio/reproduction/
+
+client-aeron-archive/
+client-aeron/

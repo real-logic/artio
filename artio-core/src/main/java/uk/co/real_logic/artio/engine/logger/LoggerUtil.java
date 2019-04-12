@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,15 +52,7 @@ public final class LoggerUtil
         return IoUtil.mapExistingFile(file, file.getName());
     }
 
-    public static ArchiveMetaData newArchiveMetaData(final String logFileDir)
-    {
-        final LogDirectoryDescriptor directoryDescriptor = new LogDirectoryDescriptor(logFileDir);
-        return new ArchiveMetaData(directoryDescriptor, LoggerUtil::mapExistingFile, LoggerUtil::mapNewFile);
-    }
-
-    /**
-     * Returns true if the buffer has been initialised this time round, false if it was already initialised.
-     */
+    // Returns true if the buffer has been initialised this time round, false if it was already initialised.
     public static boolean initialiseBuffer(
         final AtomicBuffer buffer,
         final MessageHeaderEncoder headerEncoder,
@@ -118,7 +110,7 @@ public final class LoggerUtil
     }
 
     // Returns false if not valid
-    public static boolean validateBuffer(
+    static boolean validateBuffer(
         final AtomicBuffer buffer,
         final MessageHeaderDecoder headerDecoder,
         final int sbeSchemaId,

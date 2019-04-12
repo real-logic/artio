@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -335,9 +335,6 @@ public class SessionContexts
     {
         if (messageType == LogonDecoder.MESSAGE_TYPE && recordedSessions.add(sessionId))
         {
-            // Ensure no future collision if you take over as leader of the cluster.
-            counter = sessionId + 1;
-
             asciiBuffer.wrap(buffer);
             logonDecoder.decode(asciiBuffer, offset, length);
 
@@ -388,5 +385,10 @@ public class SessionContexts
     boolean isAuthenticated(final long sessionId)
     {
         return currentlyAuthenticatedSessionIds.contains(sessionId);
+    }
+
+    boolean isKnownSessionId(final long sessionId)
+    {
+        return compositeToContext.values().stream().anyMatch(context -> context.sessionId() == sessionId);
     }
 }

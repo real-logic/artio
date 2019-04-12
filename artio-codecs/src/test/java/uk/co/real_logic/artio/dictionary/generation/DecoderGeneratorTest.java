@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,9 @@ import org.junit.Test;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 import uk.co.real_logic.artio.fields.DecimalFloat;
+import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
-import uk.co.real_logic.artio.util.AsciiSequenceView;
+import org.agrona.AsciiSequenceView;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.util.Reflection;
 
@@ -41,8 +42,9 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.builder.Decoder.NO_ERROR;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
-import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
+import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.*;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.*;
+import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.UNKNOWN_NAME;
 import static uk.co.real_logic.artio.fields.DecimalFloat.MISSING_FLOAT;
 import static uk.co.real_logic.artio.util.Reflection.*;
 
@@ -54,21 +56,30 @@ public class DecoderGeneratorTest
     private static final char[] MULTI_CHAR_VALUE = "a b".toCharArray();
     private static final char[] MULTI_CHAR_VALUE_NO_ENUM = "a b z f".toCharArray();
     private static final char[] MULTI_VALUE_STRING = "ab cd".toCharArray();
+    private static final String CHAR_ENUM_OPT = "charEnumOpt";
+    private static final String INT_ENUM_OPT = "intEnumOpt";
+    private static final String STRING_ENUM_OPT = "stringEnumOpt";
+    private static final String CHAR_ENUM_REQ = "charEnumReq";
+    private static final String INT_ENUM_REQ = "intEnumReq";
+    private static final String STRING_ENUM_REQ = "stringEnumReq";
 
     private static Class<?> heartbeatWithoutValidation;
+    private static Class<?> heartbeatWithRejectingUnknownFields;
     private static Class<?> heartbeat;
     private static Class<?> component;
     private static Class<?> otherMessage;
     private static Class<?> fieldsMessage;
     private static Class<?> allReqFieldTypesMessage;
+    private static Class<?> enumTestMessage;
 
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
     @BeforeClass
     public static void generate() throws Exception
     {
-        final Map<String, CharSequence> sourcesWithValidation = generateSources(true);
-        final Map<String, CharSequence> sourcesWithoutValidation = generateSources(false);
+        final Map<String, CharSequence> sourcesWithValidation = generateSources(true, false);
+        final Map<String, CharSequence> sourcesWithoutValidation = generateSources(false, false);
+        final Map<String, CharSequence> sourcesRejectingUnknownFields = generateSources(true, true);
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sourcesWithValidation);
         if (heartbeat == null || CODEC_LOGGING)
         {
@@ -78,8 +89,10 @@ public class DecoderGeneratorTest
         fieldsMessage = heartbeat.getClassLoader().loadClass(FIELDS_MESSAGE_DECODER);
         compileInMemory(HEADER_DECODER, sourcesWithValidation);
         otherMessage = compileInMemory(OTHER_MESSAGE_DECODER, sourcesWithValidation);
+        enumTestMessage = compileInMemory(ENUM_TEST_MESSAGE_DECODER, sourcesWithValidation);
 
         heartbeatWithoutValidation = compileInMemory(HEARTBEAT_DECODER, sourcesWithoutValidation);
+        heartbeatWithRejectingUnknownFields = compileInMemory(HEARTBEAT_DECODER, sourcesRejectingUnknownFields);
         allReqFieldTypesMessage = compileInMemory(ALL_REQ_FIELD_TYPES_MESSAGE_DECODER, sourcesWithoutValidation);
         if (heartbeatWithoutValidation == null || CODEC_LOGGING)
         {
@@ -87,15 +100,18 @@ public class DecoderGeneratorTest
         }
     }
 
-    private static Map<String, CharSequence> generateSources(final boolean validation)
+    private static Map<String, CharSequence> generateSources(final boolean validation,
+        final boolean rejectingUnknownFields)
     {
         final Class<?> validationClass = validation ? ValidationOn.class : ValidationOff.class;
+        final Class<?> rejectUnknownField = rejectingUnknownFields ?
+            RejectUnknownFieldOn.class : RejectUnknownFieldOff.class;
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
         final ConstantGenerator constantGenerator = new ConstantGenerator(
             MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
-            MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass);
+            MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass, rejectUnknownField);
 
         constantGenerator.generate();
         enumGenerator.generate();
@@ -117,8 +133,7 @@ public class DecoderGeneratorTest
     @Test
     public void generatesGetters() throws NoSuchMethodException
     {
-        final Method onBehalfOfCompID = heartbeat.getMethod(ON_BEHALF_OF_COMP_ID);
-        assertEquals(char[].class, onBehalfOfCompID.getReturnType());
+        assertHasMethod(ON_BEHALF_OF_COMP_ID, char[].class, heartbeat);
     }
 
     @Test
@@ -139,7 +154,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldNotRetainStringFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
     {
-        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        final Decoder decoder = createRequiredFieldMessageDecoder();
         decode(RF_ALL_FIELDS, decoder);
         assertEquals("one", getMethod(decoder, STRING_RF + "AsString"));
 
@@ -151,7 +166,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldNotRetainIntegerFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
     {
-        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        final Decoder decoder = createRequiredFieldMessageDecoder();
         decode(RF_ALL_FIELDS, decoder);
         assertEquals(10, getMethod(decoder, INT_RF));
 
@@ -163,7 +178,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldNotRetainCharFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
     {
-        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        final Decoder decoder = createRequiredFieldMessageDecoder();
         decode(RF_ALL_FIELDS, decoder);
         assertEquals('b', getMethod(decoder, CHAR_RF));
 
@@ -175,14 +190,12 @@ public class DecoderGeneratorTest
     @Test
     public void shouldNotRetainDecimalFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
     {
-        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        final Decoder decoder = createRequiredFieldMessageDecoder();
         decode(RF_ALL_FIELDS, decoder);
         assertEquals(new DecimalFloat(123456, 3), getMethod(decoder, DECIMAL_RF));
 
         decoder.reset();
         decode(RF_NO_FIELDS, decoder);
-        // TODO: we propose changing decimal sentinel to something like
-        // new DecimalFloat(Long.MAX_VALUE, Integer.MAX_VALUE) or new DecimalFloat(Long.MAX_VALUE, Integer.MIN_VALUE)
         assertEquals(DecimalFloat.MISSING_FLOAT, getMethod(decoder, DECIMAL_RF));
         assertEquals(DecimalFloat.ZERO, getMethod(decoder, DECIMAL_RF));
     }
@@ -190,7 +203,7 @@ public class DecoderGeneratorTest
     @Test
     public void shouldNotRetainStringEnumFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
     {
-        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        final Decoder decoder = createRequiredFieldMessageDecoder();
         decode(RF_ALL_FIELDS, decoder);
         assertEquals("one", getMethod(decoder, STRING_ENUM_RF + "AsString"));
         assertEquals("ONE", getMethod(decoder, STRING_ENUM_RF + "AsEnum").toString());
@@ -198,32 +211,35 @@ public class DecoderGeneratorTest
         decoder.reset();
         decode(RF_NO_FIELDS, decoder);
         assertEquals("", getMethod(decoder, STRING_ENUM_RF + "AsString"));
+        assertEquals(UNKNOWN_NAME, getMethod(decoder, STRING_ENUM_RF + "AsEnum").toString());
     }
 
     @Test
     public void shouldNotRetainIntEnumFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
     {
-        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        final Decoder decoder = createRequiredFieldMessageDecoder();
         decode(RF_ALL_FIELDS, decoder);
         assertEquals(10, getMethod(decoder, INT_ENUM_RF));
         assertEquals("TEN", getMethod(decoder, INT_ENUM_RF + "AsEnum").toString());
 
         decoder.reset();
         decode(RF_NO_FIELDS, decoder);
-        assertEquals(Integer.MIN_VALUE, getMethod(decoder, INT_ENUM_RF));
+        assertEquals(MISSING_INT, getMethod(decoder, INT_ENUM_RF));
+        assertEquals(UNKNOWN_NAME, getMethod(decoder, INT_ENUM_RF + "AsEnum").toString());
     }
 
     @Test
     public void shouldNotRetainCharEnumFromPreviousMessagesForRequiredFieldsWhenReset() throws Throwable
     {
-        final Decoder decoder = (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+        final Decoder decoder = createRequiredFieldMessageDecoder();
         decode(RF_ALL_FIELDS, decoder);
         assertEquals('b', getMethod(decoder, CHAR_ENUM_RF));
         assertEquals("BANANA", getMethod(decoder, CHAR_ENUM_RF + "AsEnum").toString());
 
         decoder.reset();
         decode(RF_NO_FIELDS, decoder);
-        assertEquals('\u0001', getMethod(decoder, CHAR_ENUM_RF));
+        assertEquals(MISSING_CHAR, getMethod(decoder, CHAR_ENUM_RF));
+        assertEquals(UNKNOWN_NAME, getMethod(decoder, CHAR_ENUM_RF + "AsEnum").toString());
     }
 
     @Test
@@ -239,14 +255,50 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void decodesPrimitiveValuesAsEnum() throws Exception
+    public void decodesEnumValuesUsingAsEnumMethods() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_MESSAGE);
-        assertEquals(2, getRepresentation(get(decoder, INT_FIELD + "AsEnum")));
-        assertNull(get(decoder, CHAR_FIELD + "AsEnum"));
+        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        decode(ET_ALL_FIELDS, decoder);
+        assertEquals('a', getRepresentation(get(decoder, CHAR_ENUM_OPT + "AsEnum")));
+        assertEquals(10, getRepresentation(get(decoder, INT_ENUM_OPT + "AsEnum")));
+        assertEquals("alpha", getRepresentation(get(decoder, STRING_ENUM_OPT + "AsEnum")));
+        assertEquals('c', getRepresentation(get(decoder, CHAR_ENUM_REQ + "AsEnum")));
+        assertEquals(30, getRepresentation(get(decoder, INT_ENUM_REQ + "AsEnum")));
+        assertEquals("gamma", getRepresentation(get(decoder, STRING_ENUM_REQ + "AsEnum")));
         assertValid(decoder);
     }
 
+    @Test
+    public void decodesMissingOptionalEnumValuesAsSentinelsUsingAsEnumMethods() throws Exception
+    {
+        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        decode(ET_ONLY_REQ_FIELDS, decoder);
+        assertEquals(ENUM_MISSING_CHAR, getRepresentation(get(decoder, CHAR_ENUM_OPT + "AsEnum")));
+        assertEquals(ENUM_MISSING_INT, getRepresentation(get(decoder, INT_ENUM_OPT + "AsEnum")));
+        assertEquals(ENUM_MISSING_STRING, getRepresentation(get(decoder, STRING_ENUM_OPT + "AsEnum")));
+        assertValid(decoder);
+    }
+
+    @Test
+    public void decodesBadEnumValuesAsSentinelsUsingAsEnumMethods() throws Exception
+    {
+        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        decode(ET_ONLY_REQ_FIELDS_WITH_BAD_VALUES, decoder);
+        assertEquals(ENUM_UNKNOWN_CHAR, getRepresentation(get(decoder, CHAR_ENUM_REQ + "AsEnum")));
+        assertEquals(ENUM_UNKNOWN_INT, getRepresentation(get(decoder, INT_ENUM_REQ + "AsEnum")));
+        assertEquals(ENUM_UNKNOWN_STRING, getRepresentation(get(decoder, STRING_ENUM_REQ + "AsEnum")));
+        assertInvalid(decoder);
+    }
+
+    @Test
+    public void decodesMissingRequiredEnumFieldUsingAsEnumMethod() throws Exception
+    {
+        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        decode(ET_MISSING_REQ_FIELD, decoder);
+        assertEquals(UNKNOWN_NAME, get(decoder, STRING_ENUM_REQ + "AsEnum").toString());
+        assertEquals(ENUM_UNKNOWN_STRING, getRepresentation(get(decoder, STRING_ENUM_REQ + "AsEnum")));
+        assertInvalid(decoder);
+    }
 
     @Test
     public void shouldIgnoreMissingOptionalValues() throws Exception
@@ -441,6 +493,23 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void shouldDecodeNestedComponentsWithRepeatingGroups() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NESTED_COMPONENT_MESSAGE);
+
+        assertEquals(2, get(decoder, "componentField"));
+        assertEquals(180, get(decoder, "nestedComponentField"));
+        assertEquals(2, get(decoder, "noNestedComponentGroupGroupCounter"));
+        assertNotNull(get(decoder, "nestedComponentGroupGroupIterator"));
+        final Class<?> nestedComponent = heartbeat.getClassLoader().loadClass(NESTED_COMPONENT_DECODER);
+
+        assertHasMethod("nestedComponentField", int.class, nestedComponent);
+        assertHasMethod("noNestedComponentGroupGroupCounter", int.class, nestedComponent);
+
+        assertValid(decoder);
+    }
+
+    @Test
     public void shouldGenerateComponentToString() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(COMPONENT_MESSAGE);
@@ -482,9 +551,109 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void shouldValidateTagNumbers() throws Exception
+    public void shouldValidateMissingRequiredFieldsInRepeatingGroup() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(INVALID_TAG_NUMBER_MESSAGE);
+        final Decoder decoder = decodeHeartbeat(MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE);
+
+        assertFalse("Passed validation with missing fields", decoder.validate());
+        assertEquals("Wrong tag id", 138, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", REQUIRED_TAG_MISSING, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateIfNoRequiredFieldsMissingInRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE);
+
+        assertTrue("Failed validation when it should have passed", decoder.validate());
+    }
+
+    @Test
+    public void shouldLeaveDecoderInUsableIfValidationFailsDuringRepeatingGroup() throws Exception
+    {
+        //Given
+        final Decoder decoder = decodeHeartbeat(FIELD_DEFINED_TWICE_IN_MESSAGE);
+
+        //When
+        assertFalse("Failed validation when it should have passed", decoder.validate());
+        assertEquals("Wrong reject reason", TAG_APPEARS_MORE_THAN_ONCE, decoder.rejectReason());
+
+        //Then
+        decoder.reset();
+        decode(NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE, decoder);
+        assertTrue("Failed validation when it should have passed", decoder.validate());
+    }
+
+    @Test
+    public void shouldLeaveDecoderInUsableIfUnknownFieldForRepeatingGroupReachedAndRejectingOn() throws Exception
+    {
+        //Given
+        final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
+
+        //When
+        assertFalse("Passed validation with missing fields", decoder.validate());
+        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
+
+        //Then
+        decoder.reset();
+        decode(NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE, decoder);
+        assertTrue("Failed validation when it should have passed", decoder.validate());
+    }
+
+    @Test
+    public void shouldSkipUnknownFieldInRepeatingGroupAndPassValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
+
+        assertTrue("Failed validation with missing fields", decoder.validate());
+
+        Object group = get(decoder, "secondEgGroupGroup");
+        assertEquals("TOM", get(group, "secondGroupFieldAsString"));
+        assertEquals(180, get(group, "thirdGroupField"));
+
+        group = next(group);
+        assertEquals("Barbara", get(group, "secondGroupFieldAsString"));
+        assertEquals(123, get(group, "thirdGroupField"));
+    }
+
+    @Test
+    public void shouldSkipUnknownRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = (Decoder)fieldsMessage.getConstructor().newInstance();
+        decode(CONTAINS_UNKNOWN_REPEATING_GROUP, decoder);
+
+        assertValid(decoder);
+
+        assertRequiredFieldsMessageFieldsDecoded(decoder, "USD", "N", "US");
+
+        assertOptionalDifferentFieldsNotDecoded(decoder);
+    }
+
+    @Test
+    public void shouldSkipUnknownNestedRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(CONTAINS_UNKNOWN_NESTED_REPEATING_GROUP);
+
+        assertValid(decoder);
+
+        canIterateOverGroup(decoder);
+    }
+
+    @Test
+    public void shouldFailValidationForUnknownFieldInsideRepeatingGroupWhenUnknownFieldPropIsSet() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
+
+        assertFalse("Passed validation with missing fields", decoder.validate());
+        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateTagNumbersWhenUnknownFieldPropIsSet() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(INVALID_TAG_NUMBER_MESSAGE);
 
         assertFalse("Passed validation with invalid tag number", decoder.validate());
         assertEquals("Wrong tag id", 9999, decoder.invalidTagId());
@@ -492,13 +661,59 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void shouldValidateTagNumbersDefinedForThisMessage() throws Exception
+    public void shouldFailValidationRegardingUnknownFieldRatherThanMissingRequiredFieldWhenUnknownFieldPropIsSet()
+        throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE_MESSAGE);
+        final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(UNKNOWN_FIELD_MESSAGE);
+
+        assertFalse("Passed validation with invalid tag number ", decoder.validate());
+        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateTagNumbersDefinedForThisMessageWhenUnknownFieldPropIsSet() throws Exception
+    {
+        final Decoder decoder =
+            decodeHeartbeatWithRejectingUnknownFields(TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE_MESSAGE);
 
         assertFalse("Passed validation with invalid tag number", decoder.validate());
         assertEquals("Wrong tag id", 99, decoder.invalidTagId());
         assertEquals("Wrong reject reason", TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldSkipFieldUnknownToMessageButDefinedInFIXSpec() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_WITH_FIELD_UNKNOWN_TO_MESSAGE_BUT_IN_SPEC);
+
+        assertTrue("Failed validation with missing fields", decoder.validate());
+
+        Object group = get(decoder, "secondEgGroupGroup");
+        assertEquals("TOM", get(group, "secondGroupFieldAsString"));
+        assertEquals(180, get(group, "thirdGroupField"));
+
+        group = next(group);
+        assertEquals("Barbara", get(group, "secondGroupFieldAsString"));
+        assertEquals(123, get(group, "thirdGroupField"));
+    }
+
+    @Test
+    public void shouldValidateIfNoRepeatingGroup() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(NO_REPEATING_GROUP_IN_REPEATING_GROUP_MESSAGE);
+
+        assertTrue("Failed validation when it should have passed", decoder.validate());
+    }
+
+    @Test
+    public void shouldSkipUnknownFieldForMessageAndPassValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(INVALID_TAG_NUMBER_MESSAGE);
+
+        assertTrue("Failed validation with invalid tag number", decoder.validate());
+
+        assertEquals(2, getIntField(decoder));
     }
 
     @Test
@@ -604,6 +819,51 @@ public class DecoderGeneratorTest
     }
 
     @Test
+    public void shouldResetAllRepeatingGroupEntries() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MULTIPLE_ENTRY_REPEATING_GROUP);
+        Object group = get(decoder, "secondEgGroupGroup");
+        assertEquals("TOM", get(group, "secondGroupFieldAsString"));
+
+        group = next(group);
+        assertEquals("ANDREY", get(group, "secondGroupFieldAsString"));
+
+        decoder.reset();
+        decode(MULTIPLE_ENTRY_REPEATING_GROUP_WITHOUT_OPTIONAL, decoder);
+
+        group = get(decoder, "secondEgGroupGroup");
+        assertNull(get(group, "secondGroupFieldAsString"));
+
+        group = next(group);
+        assertNull(get(group, "secondGroupFieldAsString"));
+    }
+
+    @Test
+    public void shouldResetAllNestedRepeatingGroupEntries() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MULTI_ENTRY_NESTED_GROUP_MESSAGE);
+        assertEquals(2, getNoEgGroupGroupCounter(decoder));
+
+        Object group = getEgGroup(decoder);
+        assertNestedRepeating(group, 1, 1, 2);
+
+        group = next(group);
+        assertNestedRepeating(group, 2, 3, 4);
+
+        decoder.reset();
+
+        decode(MULTI_ENTRY_NESTED_GROUP_MESSAGE_WITHOUT_NESTED_FIELDS, decoder);
+        assertEquals(2, getNoEgGroupGroupCounter(decoder));
+
+        group = getEgGroup(decoder);
+
+        assertNestedRepeating(group, 1, CodecUtil.MISSING_INT, CodecUtil.MISSING_INT);
+
+        group = next(group);
+        assertNestedRepeating(group, 2, CodecUtil.MISSING_INT, CodecUtil.MISSING_INT);
+    }
+
+    @Test
     public void shouldDecodeShortTimestampMessageCorrectly() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(SHORT_TIMESTAMP_MESSAGE);
@@ -651,20 +911,6 @@ public class DecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(NO_REPEATING_GROUP_MESSAGE);
 
         canNotIteratorOverRepeatingGroup(decoder);
-    }
-
-    @Test
-    public void shouldGenerateAllFieldsSet() throws Exception
-    {
-        final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
-        final Object allFieldsField = getField(decoder, ALL_FIELDS);
-        assertThat(allFieldsField, instanceOf(IntHashSet.class));
-
-        @SuppressWarnings("unchecked") final Set<Integer> allFields = (Set<Integer>)allFieldsField;
-        assertThat(allFields, hasItem(123));
-        assertThat(allFields, hasItem(124));
-        assertThat(allFields, hasItem(35));
-        assertThat(allFields, not(hasItem(999)));
     }
 
     @Test
@@ -919,6 +1165,25 @@ public class DecoderGeneratorTest
 
         final int highNumberField = getInt(decoder, "highNumberField");
         assertEquals(highNumberField, 1);
+    }
+
+    @Test
+    public void shouldHandleMalformedMessage() throws Exception
+    {
+        final Decoder decoder1 = decodeHeartbeat("8=FIX.4.4\u00019=105\u000135=0\001115=abc");
+        final Decoder decoder2 = decodeHeartbeat("8=FIX.4.4\u00019=105\u000135=0\001115");
+        final Decoder decoder3 = decodeHeartbeat("8=FIX.4.4\u00019=105\u000135=0\001115=");
+        final Decoder decoder4 = decodeHeartbeat("8=FIX.4.4\u00019=105\u000135=0\001115=abc\u0001 ");
+
+        assertThat(decoder1.validate(), is(false));
+        assertThat(decoder2.validate(), is(false));
+        assertThat(decoder3.validate(), is(false));
+        assertThat(decoder4.validate(), is(false));
+
+        assertThat(RejectReason.decode(decoder1.rejectReason()), is(RejectReason.VALUE_IS_INCORRECT));
+        assertThat(RejectReason.decode(decoder2.rejectReason()), is(RejectReason.VALUE_IS_INCORRECT));
+        assertThat(RejectReason.decode(decoder3.rejectReason()), is(RejectReason.VALUE_IS_INCORRECT));
+        assertThat(RejectReason.decode(decoder4.rejectReason()), is(RejectReason.VALUE_IS_INCORRECT));
     }
 
     private void assertRepeatingGroupAndFieldsDecoded(final Decoder decoder) throws Exception
@@ -1183,16 +1448,17 @@ public class DecoderGeneratorTest
 
     private void assertHasComponentFieldGetter() throws NoSuchMethodException, ClassNotFoundException
     {
-        assertHasMethod("componentField", int.class);
-        assertHasMethod(HAS_COMPONENT_FIELD, boolean.class);
+        assertHasMethod("componentField", int.class, component);
+        assertHasMethod(HAS_COMPONENT_FIELD, boolean.class, component);
 
         final Class<?> clazz = heartbeat.getClassLoader().loadClass(
             "uk.co.real_logic.artio.builder.test.EgComponentDecoder$ComponentGroupGroupDecoder");
 
-        assertHasMethod("componentGroupGroup", clazz);
+        assertHasMethod("componentGroupGroup", clazz, component);
     }
 
-    private void assertHasMethod(final String name, final Class<?> expectedReturnType) throws NoSuchMethodException
+    private void assertHasMethod(final String name, final Class<?> expectedReturnType, final Class<?> component)
+        throws NoSuchMethodException
     {
         final Method method = component.getMethod(name);
         assertEquals(expectedReturnType, method.getReturnType());
@@ -1247,6 +1513,13 @@ public class DecoderGeneratorTest
         return decoder;
     }
 
+    private Decoder decodeHeartbeatWithRejectingUnknownFields(final String example) throws Exception
+    {
+        final Decoder decoder = (Decoder)heartbeatWithRejectingUnknownFields.getConstructor().newInstance();
+        decode(example, decoder);
+        return decoder;
+    }
+
     private void decode(final String example, final Decoder decoder)
     {
         buffer.putAscii(1, example);
@@ -1274,6 +1547,11 @@ public class DecoderGeneratorTest
     }
 
     private boolean hasBooleanField(final Decoder decoder) throws Exception
+    {
+        return (boolean)getField(decoder, HAS_BOOLEAN_FIELD);
+    }
+
+    private boolean hasNestedField(final Decoder decoder) throws Exception
     {
         return (boolean)getField(decoder, HAS_BOOLEAN_FIELD);
     }
@@ -1373,6 +1651,37 @@ public class DecoderGeneratorTest
         return get(decoder, new String(chars));
     }
 
+    private Decoder createRequiredFieldMessageDecoder() throws Exception
+    {
+        return (Decoder)allReqFieldTypesMessage.getConstructor().newInstance();
+    }
+
+    private void assertNestedRepeating(final Object group, final int groupField,
+        final int nestedValue1, final int nestedValue2)
+        throws Exception
+    {
+        assertEquals(groupField, getGroupField(group));
+
+        Object nestedGroup = getNestedGroup(group);
+        assertEquals(
+            heartbeat.getName() + "$EgGroupGroupDecoder$NestedGroupGroupDecoder",
+            nestedGroup.getClass().getName());
+
+        final boolean expectingValue1 = nestedValue1 != CodecUtil.MISSING_INT;
+        assertEquals(expectingValue1, get(nestedGroup, "hasNestedField"));
+        if (expectingValue1)
+        {
+            assertEquals(nestedValue1, get(nestedGroup, "nestedField"));
+        }
+
+        nestedGroup = next(nestedGroup);
+        final boolean expectingValue2 = nestedValue2 != CodecUtil.MISSING_INT;
+        assertEquals(expectingValue2, get(nestedGroup, "hasNestedField"));
+        if (expectingValue2)
+        {
+            assertEquals(nestedValue2, get(nestedGroup, "nestedField"));
+        }
+    }
 
     private interface ExceptionThrowingCommand
     {

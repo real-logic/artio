@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.engine;
 import io.aeron.ExclusivePublication;
 import io.aeron.Image;
 import io.aeron.Subscription;
+import io.aeron.archive.client.AeronArchive;
 import org.agrona.concurrent.AgentInvoker;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.FixCounters;
@@ -26,7 +27,6 @@ import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.StreamInformation;
 import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
-import uk.co.real_logic.artio.replication.ClusterableStreams;
 import uk.co.real_logic.artio.timing.EngineTimers;
 
 import java.io.File;
@@ -39,7 +39,7 @@ import static uk.co.real_logic.artio.dictionary.generation.Exceptions.suppressin
 /**
  * A FIX Engine is a process in the gateway that accepts or initiates FIX connections and
  * hands them off to different FixLibrary instances. The engine can replicate and/or durably
- * store streams of FIX messages for replay, archival, administrative or analytics purposes.
+ * store streams2 of FIX messages for replay, archival, administrative or analytics purposes.
  * <p>
  * Each engine can have one or more associated libraries that manage sessions and perform business
  * logic. These may run in the same JVM process or a different JVM process.
@@ -54,12 +54,11 @@ public final class FixEngine extends GatewayProcess
 
     private final EngineTimers timers;
     private final EngineConfiguration configuration;
-    private final EngineDescriptorStore engineDescriptorStore;
+    private final RecordingCoordinator recordingCoordinator;
 
     private EngineScheduler scheduler;
     private FramerContext framerContext;
     private EngineContext engineContext;
-    private ClusterableStreams streams;
 
     /**
      * Launch the engine. This method starts up the engine threads and then returns.
@@ -95,6 +94,7 @@ public final class FixEngine extends GatewayProcess
      *
      * @param backupLocation the location to backup the current session ids file to.
      *                       Can be null to indicate that no backup is required.
+     * @param idleStrategy the idle strategy to use when polling this blocking operation.
      *
      * @return the reply object, or null if the request hasn't been successfully enqueued.
      */
@@ -151,24 +151,32 @@ public final class FixEngine extends GatewayProcess
     {
         try
         {
-            timers = new EngineTimers(configuration.nanoClock());
+            this.configuration = configuration;
+
+            timers = new EngineTimers(configuration.clock());
             scheduler = configuration.scheduler();
             scheduler.configure(configuration.aeronContext());
             init(configuration);
-            this.configuration = configuration;
-            engineDescriptorStore = new EngineDescriptorStore(errorHandler);
+            final AeronArchive.Context archiveContext = configuration.aeronArchiveContext();
+            final AeronArchive aeronArchive =
+                configuration.logAnyMessages() ? AeronArchive.connect(archiveContext.aeron(aeron)) : null;
+            recordingCoordinator = new RecordingCoordinator(
+                aeronArchive,
+                configuration,
+                configuration.archiverIdleStrategy());
 
             final ExclusivePublication replayPublication = replayPublication();
-            engineContext = EngineContext.of(
+            engineContext = new EngineContext(
                 configuration,
                 errorHandler,
                 replayPublication,
                 fixCounters,
                 aeron,
-                engineDescriptorStore);
-            streams = engineContext.streams();
+                aeronArchive,
+                recordingCoordinator);
             initFramer(configuration, fixCounters, replayPublication.sessionId());
             initMonitoringAgent(timers.all(), configuration);
+            recordingCoordinator.awaitReady();
         }
         catch (final Exception e)
         {
@@ -186,7 +194,7 @@ public final class FixEngine extends GatewayProcess
     private ExclusivePublication replayPublication()
     {
         final ExclusivePublication publication = aeron.addExclusivePublication(
-            IPC_CHANNEL, OUTBOUND_REPLAY_STREAM);
+            IPC_CHANNEL, configuration.outboundReplayStream());
         StreamInformation.print("replayPublication", publication, configuration);
         return publication;
     }
@@ -201,30 +209,15 @@ public final class FixEngine extends GatewayProcess
             errorHandler,
             replayImage("replay", replaySessionId),
             replayImage("slow-replay", replaySessionId),
-            engineDescriptorStore,
             timers,
-            aeron.conductorAgentInvoker());
-    }
-
-    /**
-     * Check whether this node believes itself to bethe leader of a cluster. NB: if you aren't running in a cluster
-     * this will always return true.
-     *
-     * NB: This is provided on a "best effort" basis. If this node has become netsplit from other members in a cluster
-     * and they have timed it out, and elected a new leader, this method may return true when another node is actually
-     * considered the leader by a quorum of members.
-     *
-     * @return true if this node believes itself to be a cluster leader, false otherwise
-     */
-    public boolean isLeader()
-    {
-        return streams.isLeader();
+            aeron.conductorAgentInvoker(),
+            recordingCoordinator);
     }
 
     private Image replayImage(final String name, final int replaySessionId)
     {
         final Subscription subscription = aeron.addSubscription(
-            IPC_CHANNEL, OUTBOUND_REPLAY_STREAM);
+            IPC_CHANNEL, configuration.outboundReplayStream());
         StreamInformation.print(name, subscription, configuration);
 
         // Await replay publication
@@ -260,7 +253,8 @@ public final class FixEngine extends GatewayProcess
             framerContext.framer(),
             engineContext.archivingAgent(),
             monitoringAgent,
-            conductorAgent());
+            conductorAgent(),
+            recordingCoordinator);
 
         return this;
     }

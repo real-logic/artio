@@ -84,8 +84,8 @@ public class SenderTargetAndSubSessionIdStrategyTest
                     when(headerDecoder.senderCompIDLength()).thenReturn(acceptorSenderComp.length());
                     when(headerDecoder.targetCompID()).thenReturn(acceptorTargetComp.toCharArray());
                     when(headerDecoder.targetCompIDLength()).thenReturn(acceptorTargetComp.length());
-                    when(headerDecoder.targetSubID()).thenReturn(acceptorTargetSub.toCharArray());
-                    when(headerDecoder.targetSubIDLength()).thenReturn(acceptorTargetSub.length());
+                    when(headerDecoder.senderSubID()).thenReturn(acceptorTargetSub.toCharArray());
+                    when(headerDecoder.senderSubIDLength()).thenReturn(acceptorTargetSub.length());
 
                     final Object second = strategy.onAcceptLogon(headerDecoder);
                     assertEquals(first, second);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,15 @@
  */
 package uk.co.real_logic.artio;
 
+import io.aeron.archive.Archive;
+import io.aeron.archive.ArchiveThreadingMode;
+import io.aeron.archive.ArchivingMediaDriver;
 import io.aeron.driver.MediaDriver;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.YieldingIdleStrategy;
 
 import java.io.File;
+import java.util.Arrays;
 
 import static io.aeron.driver.ThreadingMode.SHARED;
 
@@ -27,6 +31,8 @@ public final class TestFixtures
 {
     private static final int LOW_PORT = 9999;
     private static final int HIGH_PORT = 99999;
+
+    public static final int MESSAGE_BUFFER_SIZE_IN_BYTES = 15000;
     public static final int TERM_BUFFER_LENGTH = 4 * 1024 * 1024;
 
     private static int port = LOW_PORT;
@@ -41,19 +47,26 @@ public final class TestFixtures
         throw new IllegalStateException("The test framework has run out of ports");
     }
 
-    public static MediaDriver launchMediaDriver()
+    public static ArchivingMediaDriver launchMediaDriver()
     {
         return launchMediaDriver(TERM_BUFFER_LENGTH);
     }
 
-    public static MediaDriver launchMediaDriver(final int termBufferLength)
+    public static MediaDriver launchJustMediaDriver()
+    {
+        return MediaDriver.launch(mediaDriverContext(TERM_BUFFER_LENGTH, true));
+    }
+
+    public static ArchivingMediaDriver launchMediaDriver(final int termBufferLength)
     {
         return launchMediaDriver(mediaDriverContext(termBufferLength, true));
     }
 
-    public static MediaDriver launchMediaDriver(final MediaDriver.Context context)
+    public static ArchivingMediaDriver launchMediaDriver(final MediaDriver.Context context)
     {
-        final MediaDriver mediaDriver = MediaDriver.launch(context);
+        final Archive.Context archiveCtx = new Archive.Context().deleteArchiveOnStart(context.dirDeleteOnStart());
+        final ArchivingMediaDriver mediaDriver = ArchivingMediaDriver.launch(context, archiveCtx);
+        archiveCtx.threadingMode(ArchiveThreadingMode.INVOKER);
         final String aeronDirectoryName = context.aeronDirectoryName();
         CloseChecker.onOpen(aeronDirectoryName, mediaDriver);
 
@@ -72,7 +85,7 @@ public final class TestFixtures
             .ipcTermBufferLength(termBufferLength);
     }
 
-    public static void cleanupMediaDriver(final MediaDriver mediaDriver)
+    public static void cleanupMediaDriver(final ArchivingMediaDriver mediaDriver)
     {
         if (mediaDriver != null)
         {
@@ -87,16 +100,19 @@ public final class TestFixtures
         }
     }
 
-    public static String closeMediaDriver(final MediaDriver mediaDriver)
+    public static String closeMediaDriver(final ArchivingMediaDriver archivingMediaDriver)
     {
-        final String aeronDirectoryName = mediaDriver.aeronDirectoryName();
-        CloseChecker.onClose(aeronDirectoryName, mediaDriver);
-        mediaDriver.close();
+        final String aeronDirectoryName = archivingMediaDriver.mediaDriver().aeronDirectoryName();
+        CloseChecker.onClose(aeronDirectoryName, archivingMediaDriver);
+        archivingMediaDriver.close();
         return aeronDirectoryName;
     }
 
-    public static String clusteredAeronChannel()
+    public static String largeTestReqId()
     {
-        return "aeron:udp?endpoint=224.0.1.1:" + unusedPort();
+        final char[] testReqIDChars = new char[MESSAGE_BUFFER_SIZE_IN_BYTES - 100];
+        Arrays.fill(testReqIDChars, 'A');
+
+        return new String(testReqIDChars);
     }
 }

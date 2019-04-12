@@ -29,7 +29,7 @@ public class DecimalFloatToStringTest
     @Parameters(name = "{index}: {1},{2} => {0}")
     public static Iterable<Object[]> data1()
     {
-        return DecimalFloatEncodingTest.data1();
+        return DecimalFloatEncodingTest.decimalFloatCodecData();
     }
 
     private final String input;
@@ -48,6 +48,6 @@ public class DecimalFloatToStringTest
     {
         final DecimalFloat price = new DecimalFloat(value, scale);
 
-        assertEquals(input, price.toString());
+        assertEquals(Float.valueOf(input), Float.valueOf(price.toString()));
     }
 }

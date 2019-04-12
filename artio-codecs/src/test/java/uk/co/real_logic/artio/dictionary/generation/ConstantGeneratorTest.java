@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,15 +15,19 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.artio.util.Reflection;
 
 import java.util.Map;
+import java.util.Set;
 
 import static org.agrona.generation.CompilerUtil.compileInMemory;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.artio.util.Reflection.getField;
 
@@ -40,9 +44,15 @@ public class ConstantGeneratorTest
     {
         constantGenerator.generate();
         final Map<String, CharSequence> sources = outputManager.getSources();
-        //System.out.println(sources);
         final Class<?> constantsClass = compileInMemory(TEST_PACKAGE + "." + ConstantGenerator.CLASS_NAME, sources);
-        constants = constantsClass.getConstructor().newInstance();
+        if (constantsClass == null)
+        {
+            System.out.println(sources);
+        }
+        else
+        {
+            constants = constantsClass.getConstructor().newInstance();
+        }
     }
 
     @Test
@@ -70,6 +80,19 @@ public class ConstantGeneratorTest
         final Object version = getField(constants, ConstantGenerator.VERSION);
 
         assertEquals("FIX.4.4", version);
+    }
+
+    @Test
+    public void shouldGenerateAllFieldsSet() throws Exception
+    {
+        final Object allFieldsField = getField(constants, "ALL_FIELDS");
+        assertThat(allFieldsField, instanceOf(IntHashSet.class));
+
+        @SuppressWarnings("unchecked") final Set<Integer> allFields = (Set<Integer>)allFieldsField;
+        assertThat(allFields, hasItem(123));
+        assertThat(allFields, hasItem(124));
+        assertThat(allFields, hasItem(35));
+        assertThat(allFields, not(hasItem(999)));
     }
 
     @Test(expected = NoSuchFieldException.class)

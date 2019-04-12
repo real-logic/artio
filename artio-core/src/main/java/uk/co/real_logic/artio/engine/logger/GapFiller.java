@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.Agent;
@@ -23,12 +24,12 @@ import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.decoder.ResendRequestDecoder;
 import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
+import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.ProtocolHandler;
 import uk.co.real_logic.artio.protocol.ProtocolSubscription;
-import uk.co.real_logic.artio.replication.ClusterableSubscription;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -42,23 +43,31 @@ public class GapFiller implements ProtocolHandler, Agent
     private final GapFillEncoder encoder = new GapFillEncoder();
 
     private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
-    private final ClusterableSubscription subscription;
+    private final Subscription inboundSubscription;
     private final GatewayPublication publication;
     private final String agentNamePrefix;
+    private final SenderSequenceNumbers senderSequenceNumbers;
 
     public GapFiller(
-        final ClusterableSubscription subscription,
+        final Subscription inboundSubscription,
         final GatewayPublication publication,
-        final String agentNamePrefix)
+        final String agentNamePrefix,
+        final SenderSequenceNumbers senderSequenceNumbers)
     {
-        this.subscription = subscription;
+        this.inboundSubscription = inboundSubscription;
         this.publication = publication;
         this.agentNamePrefix = agentNamePrefix;
+        this.senderSequenceNumbers = senderSequenceNumbers;
     }
 
-    public int doWork() throws Exception
+    public int doWork()
     {
-        return subscription.poll(protocolSubscription, FRAGMENT_LIMIT);
+        return senderSequenceNumbers.poll() + inboundSubscription.controlledPoll(protocolSubscription, FRAGMENT_LIMIT);
+    }
+
+    public String roleName()
+    {
+        return agentNamePrefix + "GapFiller";
     }
 
     public Action onMessage(
@@ -72,6 +81,7 @@ public class GapFiller implements ProtocolHandler, Agent
         final int messageType,
         final long timestamp,
         final MessageStatus status,
+        final int sequenceNumber,
         final long position)
     {
         if (messageType == ResendRequestDecoder.MESSAGE_TYPE && status == MessageStatus.OK)
@@ -82,14 +92,19 @@ public class GapFiller implements ProtocolHandler, Agent
             final HeaderDecoder reqHeader = resendRequest.header();
             final int beginSeqNo = resendRequest.beginSeqNo();
             final int endSeqNo = resendRequest.endSeqNo();
+            final int lastSentSeqNo = newSeqNo(connectionId);
 
-            final long result = encoder.encode(reqHeader, beginSeqNo, endSeqNo);
+            // If the request was for an infinite replay then reply with the next expected sequence number
+            final int newSeqNo = endSeqNo == 0 ? lastSentSeqNo : endSeqNo;
+            final int gapFillMsgSeqNum = beginSeqNo;
+            encoder.setupMessage(reqHeader);
+            final long result = encoder.encode(gapFillMsgSeqNum, newSeqNo);
             final int encodedLength = Encoder.length(result);
             final int encodedOffset = Encoder.offset(result);
             final long sentPosition = publication.saveMessage(
                 encoder.buffer(), encodedOffset, encodedLength,
                 libraryId, SequenceResetDecoder.MESSAGE_TYPE, sessionId, sequenceIndex, connectionId,
-                MessageStatus.OK);
+                MessageStatus.OK, gapFillMsgSeqNum);
 
             if (Pressure.isBackPressured(sentPosition))
             {
@@ -100,13 +115,13 @@ public class GapFiller implements ProtocolHandler, Agent
         return Action.CONTINUE;
     }
 
+    private int newSeqNo(final long connectionId)
+    {
+        return senderSequenceNumbers.lastSentSequenceNumber(connectionId) + 1;
+    }
+
     public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
         return Action.CONTINUE;
-    }
-
-    public String roleName()
-    {
-        return agentNamePrefix + "GapFiller";
     }
 }

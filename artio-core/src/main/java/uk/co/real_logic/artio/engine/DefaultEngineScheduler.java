@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.AgentRunner;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 
+import java.util.concurrent.ThreadFactory;
+
 import static org.agrona.concurrent.AgentRunner.startOnThread;
 import static uk.co.real_logic.artio.CommonConfiguration.backoffIdleStrategy;
 
@@ -32,15 +34,18 @@ public class DefaultEngineScheduler implements EngineScheduler
     private AgentRunner framerRunner;
     private AgentRunner archivingRunner;
     private AgentRunner monitoringRunner;
+    private RecordingCoordinator recordingCoordinator;
 
     public void launch(
         final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
         final Agent framer,
-        final Agent archivingAgent,
+        final Agent indexingAgent,
         final Agent monitoringAgent,
-        final Agent conductorAgent)
+        final Agent conductorAgent,
+        final RecordingCoordinator recordingCoordinator)
     {
+        this.recordingCoordinator = recordingCoordinator;
         if (framerRunner != null)
         {
             EngineScheduler.fail();
@@ -49,10 +54,11 @@ public class DefaultEngineScheduler implements EngineScheduler
         framerRunner = new AgentRunner(
             configuration.framerIdleStrategy(), errorHandler, null, framer);
         archivingRunner = new AgentRunner(
-            configuration.archiverIdleStrategy(), errorHandler, null, archivingAgent);
+            configuration.archiverIdleStrategy(), errorHandler, null, indexingAgent);
 
-        startOnThread(framerRunner);
-        startOnThread(archivingRunner);
+        final ThreadFactory threadFactory = configuration.threadFactory();
+        startOnThread(framerRunner, threadFactory);
+        startOnThread(archivingRunner, threadFactory);
 
         if (monitoringAgent != null)
         {
@@ -68,7 +74,7 @@ public class DefaultEngineScheduler implements EngineScheduler
         EngineScheduler.awaitRunnerStart(archivingRunner);
         EngineScheduler.awaitRunnerStart(monitoringRunner);
 
-        Exceptions.closeAll(framerRunner, archivingRunner, monitoringRunner);
+        Exceptions.closeAll(framerRunner, archivingRunner, recordingCoordinator, monitoringRunner);
     }
 
     public void configure(final Aeron.Context aeronContext)

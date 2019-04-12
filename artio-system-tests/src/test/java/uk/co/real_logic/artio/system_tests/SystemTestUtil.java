@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,9 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.YieldingIdleStrategy;
 import org.hamcrest.Matcher;
 import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.TestRequestEncoder;
-import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
@@ -69,9 +69,8 @@ public final class SystemTestUtil
     static final int LIBRARY_LIMIT = 2;
 
     private static final String HI_ID = "hi";
-    private static final String USERNAME = "bob";
-    private static final String PASSWORD = "Uv1aegoh";
-    private static final int MESSAGE_BUFFER_SIZE_IN_BYTES = 15000;
+    static final String USERNAME = "bob";
+    static final String PASSWORD = "Uv1aegoh";
 
     static
     {
@@ -124,8 +123,7 @@ public final class SystemTestUtil
                 testSystem.poll();
                 return acceptor
                     .hasReceivedMessage("1")
-                    .filter((msg) -> testReqId.equals(msg.getTestReqId()))
-                    .count() > 0;
+                    .anyMatch((msg) -> testReqId.equals(msg.testReqId()));
             });
     }
 
@@ -141,14 +139,14 @@ public final class SystemTestUtil
     static Reply<Session> initiate(
         final FixLibrary library,
         final int port,
-        final String initiatorId,
-        final String acceptorId)
+        final String senderCompId,
+        final String targetCompId)
     {
         final SessionConfiguration config = SessionConfiguration.builder()
             .address("localhost", port)
             .credentials(USERNAME, PASSWORD)
-            .senderCompId(initiatorId)
-            .targetCompId(acceptorId)
+            .senderCompId(senderCompId)
+            .targetCompId(targetCompId)
             .build();
 
         return library.initiate(config);
@@ -232,7 +230,7 @@ public final class SystemTestUtil
 
         return configuration
             .bindTo("localhost", port)
-            .libraryAeronChannel("aeron:ipc")
+            .libraryAeronChannel(IPC_CHANNEL)
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(acceptorLogs)
             .scheduler(new LowResourceEngineScheduler());
@@ -310,22 +308,6 @@ public final class SystemTestUtil
         return session;
     }
 
-    static void sessionLogsOn(
-        final TestSystem testSystem,
-        final Session session,
-        final long timeoutInMs)
-    {
-        assertEventuallyTrue("Session has failed to logon",
-            () ->
-            {
-                testSystem.poll();
-                testSystem.assertConnected();
-
-                assertEquals(ACTIVE, session.state());
-            },
-            timeoutInMs);
-    }
-
     static FixLibrary newInitiatingLibrary(final int libraryAeronPort, final FakeHandler sessionHandler)
     {
         return connect(initiatingLibraryConfig(libraryAeronPort, sessionHandler));
@@ -366,7 +348,7 @@ public final class SystemTestUtil
     static void assertConnected(final Session session)
     {
         assertNotNull("Session is null", session);
-        assertTrue("Session has failed to connect", session.isConnected());
+        assertEquals("Session has failed to connect", ACTIVE, session.state());
     }
 
     static List<LibraryInfo> libraries(final FixEngine engine)
@@ -406,7 +388,6 @@ public final class SystemTestUtil
             .findFirst();
     }
 
-    @SuppressWarnings("ConstantConditions")
     static LibraryInfo engineLibrary(final List<LibraryInfo> libraries)
     {
         return libraryInfoById(libraries, ENGINE_LIBRARY_ID).get(); // Error if not present
@@ -436,8 +417,7 @@ public final class SystemTestUtil
 
                 return acceptor
                     .hasReceivedMessage("0")
-                    .filter((message) -> testReqId.equals(message.get(Constants.TEST_REQ_ID)))
-                    .count() > 0;
+                    .anyMatch((message) -> testReqId.equals(message.get(Constants.TEST_REQ_ID)));
             });
     }
 
@@ -463,13 +443,5 @@ public final class SystemTestUtil
                 final List<LibraryInfo> libraries = libraries(engine);
                 assertThat(libraries, containsInAnyOrder(libraryMatchers));
             });
-    }
-
-    static String largeTestReqId()
-    {
-        final char[] testReqIDChars = new char[MESSAGE_BUFFER_SIZE_IN_BYTES - 100];
-        Arrays.fill(testReqIDChars, 'A');
-
-        return new String(testReqIDChars);
     }
 }
