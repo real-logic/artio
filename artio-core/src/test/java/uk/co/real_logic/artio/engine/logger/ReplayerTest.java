@@ -481,7 +481,7 @@ public class ReplayerTest extends AbstractLogTest
     @Test
     public void shouldIgnoreIrrelevantFixMessages()
     {
-        onMessage(LogonDecoder.MESSAGE_TYPE, onMessageBuffer.capacity(), CONTINUE);
+        onMessage(LogonDecoder.MESSAGE_TYPE, buffer.capacity(), CONTINUE);
 
         verifyNoMoreInteractions(replayQuery, publication);
     }
@@ -564,7 +564,7 @@ public class ReplayerTest extends AbstractLogTest
     {
         final Action action = handler
             .getValue()
-            .onFragment(replayerBuffer, START, length, fragmentHeader);
+            .onFragment(buffer, START, length, fragmentHeader);
         assertEquals(expectedAction, action);
     }
 
@@ -678,7 +678,7 @@ public class ReplayerTest extends AbstractLogTest
         final int length = Encoder.length(result);
         final int offset = Encoder.offset(result);
         final Action action = replayer.onMessage(
-            onMessageBuffer, offset, length,
+            buffer, offset, length,
             LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX, messageType, 0L, OK, 0L);
         assertEquals(expectedAction, action);
     }

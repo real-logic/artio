@@ -289,7 +289,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
     private void indexRecord(final int position)
     {
-        writer.indexRecord(replayerBuffer, START, fragmentLength(), STREAM_ID, AERON_SESSION_ID, position);
+        writer.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_SESSION_ID, position);
     }
 
     private void assertLastKnownSequenceNumberIs(final long sessionId, final int expectedSequenceNumber)

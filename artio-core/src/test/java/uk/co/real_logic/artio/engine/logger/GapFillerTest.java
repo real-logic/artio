@@ -41,7 +41,7 @@ public class GapFillerTest extends AbstractLogTest
         final int encodedLength = Encoder.length(result);
         final int encodedOffset = Encoder.offset(result);
         gapFiller.onMessage(
-            onMessageBuffer, encodedOffset, encodedLength,
+            buffer, encodedOffset, encodedLength,
             LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX,
             ResendRequestDecoder.MESSAGE_TYPE, 0L, OK, 0L);
 

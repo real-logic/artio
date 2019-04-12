@@ -67,8 +67,7 @@ public class AbstractLogTest
     protected UnsafeBuffer resultBuffer;
     protected MutableAsciiBuffer resultAsciiBuffer = new MutableAsciiBuffer();
 
-    protected UnsafeBuffer replayerBuffer = new UnsafeBuffer(new byte[512]);
-    protected UnsafeBuffer onMessageBuffer = new UnsafeBuffer(new byte[512]);
+    protected UnsafeBuffer buffer = new UnsafeBuffer(new byte[512]);
 
     protected int logEntryLength;
     protected int offset;
@@ -142,7 +141,7 @@ public class AbstractLogTest
         offset = START;
 
         messageFrame
-            .wrapAndApplyHeader(replayerBuffer, offset, header)
+            .wrapAndApplyHeader(buffer, offset, header)
             .messageType(messageType)
             .session(sessionId)
             .connection(CONNECTION_ID)
@@ -185,7 +184,7 @@ public class AbstractLogTest
         return resendRequest
             .beginSeqNo(BEGIN_SEQ_NO)
             .endSeqNo(endSeqNo)
-            .encode(new MutableAsciiBuffer(onMessageBuffer), ENCODE_OFFSET);
+            .encode(new MutableAsciiBuffer(buffer), ENCODE_OFFSET);
     }
 
     protected void setupPublication(final int srcLength)

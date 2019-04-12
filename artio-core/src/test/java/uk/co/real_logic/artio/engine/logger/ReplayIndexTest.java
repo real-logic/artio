@@ -344,7 +344,7 @@ public class ReplayIndexTest extends AbstractLogTest
         offset = START;
 
         logon
-            .wrapAndApplyHeader(onMessageBuffer, offset, header)
+            .wrapAndApplyHeader(buffer, offset, header)
             .connection(CONNECTION_ID)
             .session(SESSION_ID);
 
@@ -400,8 +400,7 @@ public class ReplayIndexTest extends AbstractLogTest
 
     private void indexRecord()
     {
-        replayIndex.indexRecord(replayerBuffer, START, fragmentLength(), STREAM_ID, AERON_SESSION_ID,
-            alignedEndPosition());
+        replayIndex.indexRecord(buffer, START, fragmentLength(), STREAM_ID, AERON_SESSION_ID, alignedEndPosition());
     }
 
     private void indexExampleMessage(final int endSequenceNumber)
