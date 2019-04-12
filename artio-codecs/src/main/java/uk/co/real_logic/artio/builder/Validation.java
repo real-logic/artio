@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.builder;
 
 public final class Validation
 {
-    public static final String CODEC_VALIDATION_DISABLED_PROP = "fix.codecs.no_validation";
+    private static final String CODEC_VALIDATION_DISABLED_PROP = "fix.codecs.no_validation";
     public static final boolean CODEC_VALIDATION_DISABLED = Boolean.getBoolean(CODEC_VALIDATION_DISABLED_PROP);
     public static final boolean CODEC_VALIDATION_ENABLED = !CODEC_VALIDATION_DISABLED;
 
