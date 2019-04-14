@@ -819,7 +819,7 @@ public class DecoderGenerator extends Generator
             asEnumBody
         ) : "";
 
-        final String lazyStringInitialisation = thing(fieldName, type);
+        final String lazyStringInitialisation = stringBasedLazyInstantiating(fieldName, type);
 
         return String.format(
             "    private %1$s %2$s%3$s;\n\n" +
@@ -844,7 +844,7 @@ public class DecoderGenerator extends Generator
             lazyStringInitialisation);
     }
 
-    private static String thing(final String fieldName, final Type type)
+    private static String stringBasedLazyInstantiating(final String fieldName, final Type type)
     {
         switch (type)
         {
