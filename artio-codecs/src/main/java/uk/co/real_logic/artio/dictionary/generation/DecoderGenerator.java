@@ -765,11 +765,24 @@ public class DecoderGenerator extends Generator
         final Type type = field.type();
         final String optionalCheck = optionalCheck(entry);
 
-        final String asStringBody = String.format(entry.required() ?
-            "buffer.getStringWithoutLengthAscii(%1$sOffset, %1$sLength)" :
-            "has%2$s ? buffer.getStringWithoutLengthAscii(%1$sOffset, %1$sLength) : null",
-            fieldName,
-            name);
+        final String asStringBody;
+
+        if (GenerationUtil.FLYWEIGHT_STRINGS)
+        {
+            asStringBody = String.format(entry.required() ?
+                "buffer.getStringWithoutLengthAscii(%1$sOffset, %1$sLength)" :
+                "has%2$s ? buffer.getStringWithoutLengthAscii(%1$sOffset, %1$sLength) : null",
+                fieldName,
+                name);
+        }
+        else
+        {
+            asStringBody = String.format(entry.required() ?
+                "new String(%1$s, 0, %1$sLength)" :
+                "has%2$s ? new String(%1$s, 0, %1$sLength) : null",
+                fieldName,
+                name);
+        }
 
         final String enumValueDecoder = String.format(
             type.isStringBased() ?
@@ -841,7 +854,7 @@ public class DecoderGenerator extends Generator
             optionalGetter(entry),
             stringDecoder,
             enumDecoder,
-            lazyStringInitialisation);
+            GenerationUtil.FLYWEIGHT_STRINGS ? lazyStringInitialisation : "");
     }
 
     private static String stringBasedLazyInstantiating(final String fieldName, final Type type)
@@ -1332,7 +1345,12 @@ public class DecoderGenerator extends Generator
             case EXCHANGE:
             case COUNTRY:
             case LANGUAGE:
-                return "";
+                if (GenerationUtil.FLYWEIGHT_STRINGS)
+                {
+                    return "";
+                }
+                decodeMethod = String.format("buffer.getChars(%s, valueOffset, valueLength)", fieldName);
+                break;
 
             case BOOLEAN:
                 decodeMethod = "buffer.getBoolean(valueOffset)";
