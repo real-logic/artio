@@ -1162,6 +1162,7 @@ public class Session implements AutoCloseable
             return ABORT;
         }
 
+        lastReceivedMsgSeqNum(msgSeqNo);
         if (state() == AWAITING_LOGOUT)
         {
             requestDisconnect(LOGOUT);
