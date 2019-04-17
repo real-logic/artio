@@ -244,8 +244,14 @@ public class FixLibrary extends GatewayProcess
 
     private void removeParentDirectory(final String path)
     {
-        final File parentFile = new File(path).getParentFile();
-        if (parentFile.exists())
+        final File file = new File(path);
+        if (file.exists() && !file.delete())
+        {
+            errorHandler.onError(new RuntimeException("Unable to delete: " + path));
+        }
+
+        final File parentFile = file.getParentFile();
+        if (parentFile != null & parentFile.exists() && parentFile.listFiles().length == 0)
         {
             IoUtil.delete(parentFile, true);
         }
