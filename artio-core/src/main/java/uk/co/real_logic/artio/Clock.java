@@ -23,6 +23,7 @@ package uk.co.real_logic.artio;
  * of the messages going through the system. You could also choose to use milliseconds if
  * You would prefer a stable measure time of time.
  */
+@FunctionalInterface
 public interface Clock
 {
     static Clock systemNanoTime()
