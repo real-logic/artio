@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+@FunctionalInterface
 interface AdminCommand
 {
     void execute(Framer framer);

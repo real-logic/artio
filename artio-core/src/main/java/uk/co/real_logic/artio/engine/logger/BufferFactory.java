@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.engine.logger;
 import java.io.File;
 import java.nio.ByteBuffer;
 
+@FunctionalInterface
 public interface BufferFactory
 {
     ByteBuffer map(File file, int size);

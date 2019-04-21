@@ -16,7 +16,14 @@
 package uk.co.real_logic.artio.protocol;
 
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 
+/**
+ * Provide the appropriate action when a message has been replayed.
+ *
+ * @see Action
+ */
+@FunctionalInterface
 public interface ReplayProtocolHandler
 {
     ControlledFragmentHandler.Action onReplayComplete(long connectionId);
