@@ -15,3 +15,8 @@ Just run the standard Gradle build and install process:
 ```
 
 After the first build this is all that is required.
+
+## Downloading
+
+Binaries can be found on [Maven Central](https://search.maven.org/search?q=artio)
+

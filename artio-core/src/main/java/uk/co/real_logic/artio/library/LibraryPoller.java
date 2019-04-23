@@ -489,8 +489,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     // return true if sent, false otherwise
     private void sendLibraryConnect(final long timeInMs)
     {
-        checkState();
-
+        // TODO: ban connecting from everything but library connect
         try
         {
             final long correlationId = ++currentCorrelationId;
@@ -666,82 +665,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final String username,
         final String password)
     {
-        if (libraryId == ENGINE_LIBRARY_ID)
+        if (state == CONNECTED)
         {
-            // Simple case of engine notifying that it has a session available.
-            sessionExistsHandler.onSessionExists(
-                fixLibrary,
-                sessionId,
-                localCompId,
-                localSubId,
-                localLocationId,
-                remoteCompId,
-                remoteSubId,
-                remoteLocationId);
-        }
-        else if (libraryId == this.libraryId)
-        {
-            final InternalSession session;
-            InitiateSessionReply reply = null;
-            if (sessionStatus == SessionStatus.SESSION_HANDOVER)
+            if (libraryId == ENGINE_LIBRARY_ID)
             {
-                // From manageConnection - ie set up the session in this library.
-                if (connectionType == INITIATOR)
-                {
-                    DebugLogger.log(FIX_CONNECTION, "Init Connect: %d, %d%n", connection, libraryId);
-                    final boolean isReply = correlationIdToReply.get(correlationId) instanceof InitiateSessionReply;
-                    if (isReply)
-                    {
-                        reply = (InitiateSessionReply)correlationIdToReply.remove(correlationId);
-                    }
-                    session = newInitiatorSession(
-                        connection,
-                        lastSentSeqNum,
-                        lastRecvSeqNum,
-                        sessionState,
-                        isReply ? reply.configuration() : null,
-                        sequenceIndex,
-                        enableLastMsgSeqNumProcessed);
-                }
-                else
-                {
-                    DebugLogger.log(FIX_CONNECTION, "Acct Connect: %d, %d%n", connection, libraryId);
-                    session = acceptSession(
-                        connection, address, sessionState, heartbeatIntervalInS, sequenceIndex,
-                        enableLastMsgSeqNumProcessed);
-                    session.lastSentMsgSeqNum(lastSentSeqNum);
-                    session.lastReceivedMsgSeqNum(lastRecvSeqNum);
-                }
-
-                final CompositeKey compositeKey = sessionIdStrategy.onInitiateLogon(
-                    localCompId,
-                    localSubId,
-                    localLocationId,
-                    remoteCompId,
-                    remoteSubId,
-                    remoteLocationId);
-
-                session.username(username);
-                session.password(password);
-                session.setupSession(sessionId, compositeKey);
-                session.logonTime(logonTime);
-                session.closedResendInterval(closedResendInterval);
-                session.resendRequestChunkSize(resendRequestChunkSize);
-                session.sendRedundantResendRequests(sendRedundantResendRequests);
-                session.awaitingResend(awaitingResend);
-
-                createSessionSubscriber(connection, session, reply, slowStatus);
-                insertSession(session, connectionType, sessionState);
-
-                DebugLogger.log(GATEWAY_MESSAGE,
-                    "onSessionExists: conn=%d, sess=%d, sentSeqNo=%d, recvSeqNo=%d%n",
-                    connection,
-                    sessionId,
-                    lastSentSeqNum,
-                    lastRecvSeqNum);
-            }
-            else
-            {
+                // Simple case of engine notifying that it has a session available.
                 sessionExistsHandler.onSessionExists(
                     fixLibrary,
                     sessionId,
@@ -751,6 +679,80 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     remoteCompId,
                     remoteSubId,
                     remoteLocationId);
+            }
+            else if (libraryId == this.libraryId)
+            {
+                final InternalSession session;
+                InitiateSessionReply reply = null;
+                if (sessionStatus == SessionStatus.SESSION_HANDOVER)
+                {
+                    // From manageConnection - ie set up the session in this library.
+                    if (connectionType == INITIATOR)
+                    {
+                        DebugLogger.log(FIX_CONNECTION, "Init Connect: %d, %d%n", connection, libraryId);
+                        final boolean isReply = correlationIdToReply.get(correlationId) instanceof InitiateSessionReply;
+                        if (isReply)
+                        {
+                            reply = (InitiateSessionReply)correlationIdToReply.remove(correlationId);
+                        }
+                        session = newInitiatorSession(
+                            connection,
+                            lastSentSeqNum,
+                            lastRecvSeqNum,
+                            sessionState,
+                            isReply ? reply.configuration() : null,
+                            sequenceIndex,
+                            enableLastMsgSeqNumProcessed);
+                    }
+                    else
+                    {
+                        DebugLogger.log(FIX_CONNECTION, "Acct Connect: %d, %d%n", connection, libraryId);
+                        session = acceptSession(
+                            connection, address, sessionState, heartbeatIntervalInS, sequenceIndex,
+                            enableLastMsgSeqNumProcessed);
+                        session.lastSentMsgSeqNum(lastSentSeqNum);
+                        session.lastReceivedMsgSeqNum(lastRecvSeqNum);
+                    }
+
+                    final CompositeKey compositeKey = sessionIdStrategy.onInitiateLogon(
+                        localCompId,
+                        localSubId,
+                        localLocationId,
+                        remoteCompId,
+                        remoteSubId,
+                        remoteLocationId);
+
+                    session.username(username);
+                    session.password(password);
+                    session.setupSession(sessionId, compositeKey);
+                    session.logonTime(logonTime);
+                    session.closedResendInterval(closedResendInterval);
+                    session.resendRequestChunkSize(resendRequestChunkSize);
+                    session.sendRedundantResendRequests(sendRedundantResendRequests);
+                    session.awaitingResend(awaitingResend);
+
+                    createSessionSubscriber(connection, session, reply, slowStatus);
+                    insertSession(session, connectionType, sessionState);
+
+                    DebugLogger.log(GATEWAY_MESSAGE,
+                        "onSessionExists: conn=%d, sess=%d, sentSeqNo=%d, recvSeqNo=%d%n",
+                        connection,
+                        sessionId,
+                        lastSentSeqNum,
+                        lastRecvSeqNum);
+                }
+                else
+                {
+                    sessionExistsHandler.onSessionExists(
+                        fixLibrary,
+                        sessionId,
+                        localCompId,
+                        localSubId,
+                        localLocationId,
+                        remoteCompId,
+                        remoteSubId,
+                        remoteLocationId);
+                }
             }
         }
 
@@ -1177,8 +1179,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private void checkState()
     {
-        // TODO: ban connecting from everything but library connect
-        if (state == CLOSED)
+        if (state != CONNECTED)
         {
             throw new IllegalStateException("Library has been closed");
         }

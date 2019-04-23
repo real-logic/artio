@@ -4,6 +4,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
 
 import static org.junit.Assert.assertEquals;
@@ -25,7 +26,11 @@ public class MultipleConnectionSystemTest extends AbstractGatewayToGatewaySystem
         launchAcceptingEngine();
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
-        testSystem = new TestSystem(initiatingLibrary);
+
+        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
+        acceptingLibrary = connect(acceptingLibraryConfig);
+
+        testSystem = new TestSystem(initiatingLibrary, acceptingLibrary);
 
         connectSessions();
     }
@@ -58,12 +63,16 @@ public class MultipleConnectionSystemTest extends AbstractGatewayToGatewaySystem
     @Test
     public void shouldSupportRepeatedConnectionOfTheSameSessionId()
     {
+        acquireAcceptingSession();
+
         // on first session
         messagesCanBeExchanged();
 
         failedAuthenticationWithInvalidCompId();
 
-        initiatingSession.startLogout();
+        acceptingSession.logoutAndDisconnect();
+
+        //initiatingSession.logoutAndDisconnect();
         assertSessionDisconnected(initiatingSession);
 
         assertEventuallyTrue("libraries receive disconnect messages",
