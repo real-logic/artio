@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package uk.co.real_logic.artio;
 
 import java.util.Optional;
@@ -50,10 +51,18 @@ public final class Timing
 
     public static void assertEventuallyTrue(final String message, final BooleanSupplier condition)
     {
+        assertEventuallyTrue(message, condition, DEFAULT_TIMEOUT_IN_MS);
+    }
+
+    public static void assertEventuallyTrue(
+        final String message,
+        final BooleanSupplier condition,
+        final long timeoutInMs)
+    {
         assertEventuallyTrue(
             () -> message,
             condition,
-            DEFAULT_TIMEOUT_IN_MS,
+            timeoutInMs,
             () -> {});
     }
 
