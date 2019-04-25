@@ -20,6 +20,7 @@ import org.HdrHistogram.Histogram;
 /**
  * Callback for monitoring code that has to read the latency histograms.
  */
+@FunctionalInterface
 public interface HistogramLogHandler
 {
     /**

@@ -135,18 +135,21 @@ public class FixArchiveScanner implements AutoCloseable
                     length = stopPosition - archiveLocation.startPosition;
                 }
 
-                final int sessionId = (int)aeronArchive.startReplay(
-                    recordingId,
-                    archiveLocation.startPosition,
-                    length,
-                    IPC_CHANNEL,
-                    archiveScannerStreamId);
-
-                final Image image = lookupImage(replaySubscription, sessionId);
-
-                while (stopPosition == NULL_POSITION || image.position() < stopPosition)
+                if (length != 0)
                 {
-                    idleStrategy.idle(image.poll(fragmentAssembler, 10));
+                    final int sessionId = (int)aeronArchive.startReplay(
+                        recordingId,
+                        archiveLocation.startPosition,
+                        length,
+                        IPC_CHANNEL,
+                        archiveScannerStreamId);
+
+                    final Image image = lookupImage(replaySubscription, sessionId);
+
+                    while (stopPosition == NULL_POSITION || image.position() < stopPosition)
+                    {
+                        idleStrategy.idle(image.poll(fragmentAssembler, 10));
+                    }
                 }
             });
         }
