@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.builder;
 
 public final class RejectUnknownField
 {
-    public static final String CODEC_REJECT_UNKNOWN_FIELD_PROP = "fix.codecs.reject_unknown_field";
+    private static final String CODEC_REJECT_UNKNOWN_FIELD_PROP = "fix.codecs.reject_unknown_field";
     public static final boolean CODEC_REJECT_UNKNOWN_FIELD_ENABLED =
         Boolean.getBoolean(CODEC_REJECT_UNKNOWN_FIELD_PROP);
 }

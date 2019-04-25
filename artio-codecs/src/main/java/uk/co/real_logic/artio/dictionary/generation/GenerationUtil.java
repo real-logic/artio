@@ -25,8 +25,10 @@ import static java.util.stream.Collectors.joining;
 
 public final class GenerationUtil
 {
-    public static final int MESSAGE_TYPE_BITSHIFT = 8;
+    private static final int MESSAGE_TYPE_BITSHIFT = 8;
     public static final String PARENT_PACKAGE = System.getProperty("PARENT_PACKAGE", "uk.co.real_logic.artio");
+    public static final boolean FLYWEIGHT_STRINGS =
+        Boolean.parseBoolean(System.getProperty("FLYWEIGHT_STRINGS", "false"));
 
     public static final String ENCODER_PACKAGE = PARENT_PACKAGE + ".builder";
     public static final String DECODER_PACKAGE = PARENT_PACKAGE + ".decoder";
