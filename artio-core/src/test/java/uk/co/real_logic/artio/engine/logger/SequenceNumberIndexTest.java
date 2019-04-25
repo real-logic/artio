@@ -29,7 +29,6 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.SessionInfo;
@@ -40,7 +39,12 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.agrona.IoUtil.deleteIfExists;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchJustMediaDriver;
 import static uk.co.real_logic.artio.engine.SectorFramer.SECTOR_SIZE;
@@ -194,7 +198,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         final ArgumentCaptor<FileSystemCorruptionException> exception =
             ArgumentCaptor.forClass(FileSystemCorruptionException.class);
-        Mockito.verify(errorHandler, times(2)).onError(exception.capture());
+        verify(errorHandler).onError(exception.capture());
         assertThat(
             exception.getValue().getMessage(),
             Matchers.containsString("The SequenceNumberIndex file is corrupted"));
@@ -212,7 +216,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         newInstanceAfterRestart();
 
-        verify(errorHandler, times(3), IllegalStateException.class);
+        verify(errorHandler, times(2), IllegalStateException.class);
     }
 
     private void corruptIndexFile(final int from, final int length)
@@ -277,7 +281,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     public void verifyNoErrors()
     {
         writer.close();
-        Mockito.verify(errorHandler, never()).onError(any());
+        verify(errorHandler, never()).onError(any());
 
         CloseHelper.close(aeron);
         CloseHelper.close(mediaDriver);
