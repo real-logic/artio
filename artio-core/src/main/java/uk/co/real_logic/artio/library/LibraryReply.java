@@ -29,10 +29,13 @@ import uk.co.real_logic.artio.messages.GatewayError;
  */
 abstract class LibraryReply<T> implements Reply<T>
 {
-    private final long latestReplyArrivalTimeInMs;
     final LibraryPoller libraryPoller;
 
+    private final long latestReplyArrivalTimeInMs;
+
+    boolean requiresResend;
     long correlationId;
+
     private Exception error;
     private T result;
     private State state = State.EXECUTING;
@@ -51,6 +54,8 @@ abstract class LibraryReply<T> implements Reply<T>
             onError(new FixGatewayException("Not connected to the Gateway"));
         }
     }
+
+    protected abstract void sendMessage();
 
     protected void register()
     {
@@ -84,7 +89,9 @@ abstract class LibraryReply<T> implements Reply<T>
         state = State.ERRORED;
     }
 
-    abstract void onError(GatewayError errorType, String errorMessage);
+    void onError(final GatewayError errorType, final String errorMessage)
+    {
+    }
 
     protected boolean onTimeout()
     {
@@ -102,6 +109,11 @@ abstract class LibraryReply<T> implements Reply<T>
      */
     boolean poll(final long timeInMs)
     {
+        if (requiresResend)
+        {
+            sendMessage();
+        }
+
         if (timeInMs >= latestReplyArrivalTimeInMs)
         {
             return onTimeout();

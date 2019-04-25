@@ -33,5 +33,17 @@ public interface AuthenticationStrategy
         return (logon) -> delegate.validate(logon.header());
     }
 
+    default void authenticateAsync(LogonDecoder logon, AuthenticationProxy authProxy)
+    {
+        if (authenticate(logon))
+        {
+            authProxy.accept();
+        }
+        else
+        {
+            authProxy.reject();
+        }
+    }
+
     boolean authenticate(LogonDecoder logon);
 }

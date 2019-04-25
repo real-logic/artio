@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,7 @@ import static uk.co.real_logic.artio.library.SessionConfiguration.NO_RESEND_REQU
 import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionState.*;
-import static uk.co.real_logic.artio.session.SessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
+import static uk.co.real_logic.artio.session.DirectSessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound.
@@ -112,8 +112,7 @@ public class Session implements AutoCloseable
     protected final GatewayPublication publication;
     protected final MutableAsciiBuffer asciiBuffer;
     protected final int libraryId;
-
-    final SessionProxy proxy;
+    protected final SessionProxy proxy;
 
     private final EpochClock clock;
     private final long sendingTimeWindowInMs;
@@ -397,7 +396,7 @@ public class Session implements AutoCloseable
         long position = NO_OPERATION;
         if (state() != DISCONNECTED)
         {
-            position = proxy.requestDisconnect(connectionId, reason);
+            position = proxy.sendRequestDisconnect(connectionId, reason);
             state(position < 0 ? DISCONNECTING : DISCONNECTED);
         }
 
@@ -525,7 +524,7 @@ public class Session implements AutoCloseable
         final int nextSentMessageSequenceNumber)
     {
         nextSequenceIndex();
-        final long position = proxy.sequenceReset(
+        final long position = proxy.sendSequenceReset(
             lastSentMsgSeqNum, nextSentMessageSequenceNumber, sequenceIndex(), lastMsgSeqNumProcessed);
         lastSentMsgSeqNum(nextSentMessageSequenceNumber - 1, position);
 
@@ -569,8 +568,8 @@ public class Session implements AutoCloseable
         final int sentSeqNum = 1;
         final int heartbeatIntervalInS = (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs);
         nextSequenceIndex();
-        final long position = proxy.logon(
-            heartbeatIntervalInS, sentSeqNum, username(), password(), true, sequenceIndex(), lastMsgSeqNumProcessed);
+        final long position = proxy.sendLogon(
+            sentSeqNum, heartbeatIntervalInS, username(), password(), true, sequenceIndex(), lastMsgSeqNumProcessed);
         lastSentMsgSeqNum(sentSeqNum, position);
 
         return position;
@@ -691,7 +690,7 @@ public class Session implements AutoCloseable
         {
             final int sentSeqNum = newSentSeqNum();
             return checkPositionAndDisconnect(
-                proxy.receivedMessageWithoutSequenceNumber(sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed),
+                proxy.sendReceivedMessageWithoutSequenceNumber(sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed),
                 MSG_SEQ_NO_MISSING);
         }
 
@@ -722,7 +721,7 @@ public class Session implements AutoCloseable
         {
             if (origSendingTime == UNKNOWN)
             {
-                return checkPosition(proxy.reject(
+                return checkPosition(proxy.sendReject(
                     newSentSeqNum(),
                     msgSeqNum,
                     MISSING_INT,
@@ -853,11 +852,12 @@ public class Session implements AutoCloseable
             endSeqNo = closedResendInterval ? receivedMsgSeqNo : 0;
         }
 
-        final long position = proxy.resendRequest(
+        final long position = proxy.sendResendRequest(
             newSentSeqNum(),
             expectedSeqNo,
             endSeqNo,
-            sequenceIndex(), lastMsgSeqNumProcessed);
+            sequenceIndex(),
+            lastMsgSeqNumProcessed);
 
         if (position > 0 && chunkedResend)
         {
@@ -870,7 +870,7 @@ public class Session implements AutoCloseable
     private Action msgSeqNumTooLow(final int msgSeqNo, final int expectedSeqNo)
     {
         return checkPositionAndDisconnect(
-            proxy.lowSequenceNumberLogout(
+            proxy.sendLowSequenceNumberLogout(
                 newSentSeqNum(), expectedSeqNo, msgSeqNo, sequenceIndex(), lastMsgSeqNumProcessed),
             MSG_SEQ_NO_TOO_LOW);
     }
@@ -890,7 +890,7 @@ public class Session implements AutoCloseable
 
     private Action rejectDueToSendingTime(final int msgSeqNo, final char[] msgType, final int msgTypeLength)
     {
-        return checkPosition(proxy.reject(
+        return checkPosition(proxy.sendReject(
             newSentSeqNum(),
             msgSeqNo,
             Constants.SENDING_TIME,
@@ -1016,8 +1016,7 @@ public class Session implements AutoCloseable
         if (lastSentMsgSeqNum() != INITIAL_SEQUENCE_NUMBER)
         {
             final int logonSequenceIndex = isInitialRequest() ? sequenceIndex() : sequenceIndex() + 1;
-            final long position = proxy.logon(heartbeatInterval,
-                INITIAL_SEQUENCE_NUMBER,
+            final long position = proxy.sendLogon(INITIAL_SEQUENCE_NUMBER, heartbeatInterval,
                 null,
                 null,
                 true,
@@ -1091,8 +1090,8 @@ public class Session implements AutoCloseable
 
     private Action replyToLogon(final int heartbeatInterval)
     {
-        return checkPosition(proxy.logon(
-            heartbeatInterval, newSentSeqNum(), null, null, false, sequenceIndex(), lastMsgSeqNumProcessed));
+        return checkPosition(proxy.sendLogon(
+            newSentSeqNum(), heartbeatInterval, null, null, false, sequenceIndex(), lastMsgSeqNumProcessed));
     }
 
     private Action validateOrRejectSendingTime(final long sendingTime)
@@ -1109,7 +1108,7 @@ public class Session implements AutoCloseable
         }
 
         return checkPositionAndDisconnect(
-            proxy.rejectWhilstNotLoggedOn(
+            proxy.sendRejectWhilstNotLoggedOn(
                 newSentSeqNum(), SENDINGTIME_ACCURACY_PROBLEM, sequenceIndex(), lastMsgSeqNumProcessed),
             INVALID_SENDING_TIME);
     }
@@ -1119,7 +1118,7 @@ public class Session implements AutoCloseable
         if (heartbeatInterval < 0)
         {
             return checkPositionAndDisconnect(
-                proxy.negativeHeartbeatLogout(newSentSeqNum(), sequenceIndex(), lastMsgSeqNumProcessed),
+                proxy.sendNegativeHeartbeatLogout(newSentSeqNum(), sequenceIndex(), lastMsgSeqNumProcessed),
                 NEGATIVE_HEARTBEAT_INTERVAL);
         }
         else
@@ -1163,6 +1162,7 @@ public class Session implements AutoCloseable
             return ABORT;
         }
 
+        lastReceivedMsgSeqNum(msgSeqNo);
         if (state() == AWAITING_LOGOUT)
         {
             requestDisconnect(LOGOUT);
@@ -1186,8 +1186,8 @@ public class Session implements AutoCloseable
         if (msgSeqNo != MISSING_INT)
         {
             final int sentSeqNum = newSentSeqNum();
-            final long position = proxy.heartbeat(
-                testReqId, testReqIdLength, sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed);
+            final long position = proxy.sendHeartbeat(
+                sentSeqNum, testReqId, testReqIdLength, sequenceIndex(), lastMsgSeqNumProcessed);
             if (position < 0)
             {
                 return ABORT;
@@ -1232,7 +1232,7 @@ public class Session implements AutoCloseable
         }
         else if (newSeqNo < expectedMsgSeqNo)
         {
-            return checkPosition(proxy.reject(
+            return checkPosition(proxy.sendReject(
                 newSentSeqNum(),
                 receivedMsgSeqNo,
                 NEW_SEQ_NO,
@@ -1333,7 +1333,7 @@ public class Session implements AutoCloseable
             if (!isLogon)
             {
                 final int sentMsgSeqNum = newSentSeqNum();
-                final long position = proxy.incorrectBeginStringLogout(
+                final long position = proxy.sendIncorrectBeginStringLogout(
                     sentMsgSeqNum, sequenceIndex(), lastMsgSeqNumProcessed);
                 if (position < 0)
                 {
@@ -1362,8 +1362,8 @@ public class Session implements AutoCloseable
     {
         final int sentSeqNum = newSentSeqNum();
         final long position = (logoutRejectReason == NO_LOGOUT_REJECT_REASON) ?
-            proxy.logout(sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed) :
-            proxy.logout(sentSeqNum, sequenceIndex(), logoutRejectReason, lastMsgSeqNumProcessed);
+            proxy.sendLogout(sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed) :
+            proxy.sendLogout(sentSeqNum, sequenceIndex(), logoutRejectReason, lastMsgSeqNumProcessed);
         if (position >= 0)
         {
             lastSentMsgSeqNum(sentSeqNum);
@@ -1402,14 +1402,14 @@ public class Session implements AutoCloseable
     }
 
     // Also checks the sequence index
-    public Session lastReceivedMsgSeqNum(final int value)
+    public Session lastReceivedMsgSeqNum(final int lastReceivedMsgSeqNum)
     {
-        if (lastReceivedMsgSeqNum > value)
+        if (this.lastReceivedMsgSeqNum > lastReceivedMsgSeqNum)
         {
             nextSequenceIndex();
         }
 
-        lastReceivedMsgSeqNumOnly(value);
+        lastReceivedMsgSeqNumOnly(lastReceivedMsgSeqNum);
 
         return this;
     }
@@ -1463,7 +1463,7 @@ public class Session implements AutoCloseable
         final int refMsgTypeLength,
         final int rejectReason)
     {
-        final Action action = checkPosition(proxy.reject(
+        final Action action = checkPosition(proxy.sendReject(
             newSentSeqNum(),
             refSeqNum,
             refTagId,
@@ -1500,7 +1500,7 @@ public class Session implements AutoCloseable
 
     Action onInvalidMessageType(final int msgSeqNum, final char[] msgType, final int msgTypeLength)
     {
-        return checkPosition(proxy.reject(
+        return checkPosition(proxy.sendReject(
             newSentSeqNum(),
             msgSeqNum,
             MISSING_INT,
@@ -1540,7 +1540,7 @@ public class Session implements AutoCloseable
                 if (incorrectBeginString)
                 {
                     final int sentMsgSeqNum = newSentSeqNum();
-                    final long position = proxy.incorrectBeginStringLogout(
+                    final long position = proxy.sendIncorrectBeginStringLogout(
                         sentMsgSeqNum, sequenceIndex(), lastMsgSeqNumProcessed);
                     if (position < 0)
                     {
@@ -1581,7 +1581,7 @@ public class Session implements AutoCloseable
                 {
                     // Drop when back pressured: retried on duty cycle
                     final int sentSeqNum = newSentSeqNum();
-                    final long position = proxy.heartbeat(sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed);
+                    final long position = proxy.sendHeartbeat(sentSeqNum, sequenceIndex(), lastMsgSeqNumProcessed);
                     lastSentMsgSeqNum(sentSeqNum, position);
                     actions++;
                 }
@@ -1596,7 +1596,8 @@ public class Session implements AutoCloseable
                     else if (isActive)
                     {
                         final int sentSeqNum = newSentSeqNum();
-                        if (proxy.testRequest(sentSeqNum, TEST_REQ_ID, sequenceIndex(), lastMsgSeqNumProcessed) >= 0)
+                        if (proxy.sendTestRequest(
+                            sentSeqNum, TEST_REQ_ID, sequenceIndex(), lastMsgSeqNumProcessed) >= 0)
                         {
                             lastSentMsgSeqNum(sentSeqNum);
                             awaitingHeartbeat = true;

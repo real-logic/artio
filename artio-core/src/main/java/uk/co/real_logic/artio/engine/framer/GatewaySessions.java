@@ -26,14 +26,12 @@ import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
-import uk.co.real_logic.artio.validation.AuthenticationStrategy;
-import uk.co.real_logic.artio.validation.MessageValidationStrategy;
-import uk.co.real_logic.artio.validation.PersistenceLevel;
-import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
+import uk.co.real_logic.artio.validation.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -102,6 +100,21 @@ class GatewaySessions
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
     }
 
+    static GatewaySession removeSessionByConnectionId(final long connectionId, final List<GatewaySession> sessions)
+    {
+        for (int i = 0, size = sessions.size(); i < size; i++)
+        {
+            final GatewaySession session = sessions.get(i);
+            if (session.connectionId() == connectionId)
+            {
+                sessions.remove(i);
+                return session;
+            }
+        }
+
+        return null;
+    }
+
     void acquire(
         final GatewaySession gatewaySession,
         final SessionState state,
@@ -118,8 +131,8 @@ class GatewaySessions
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
 
-        final SessionProxy proxy = new SessionProxy(
-            asciiBuffer,
+        final SessionProxy proxy = new DirectSessionProxy(
+            sessionBufferSize,
             outboundPublication,
             sessionIdStrategy,
             customisationStrategy,
@@ -153,7 +166,7 @@ class GatewaySessions
 
         final SessionParser sessionParser = new SessionParser(
             session,
-            sessionIdStrategy, validationStrategy,
+            validationStrategy,
             errorHandler);
 
         sessions.add(gatewaySession);
@@ -220,7 +233,7 @@ class GatewaySessions
         final List<GatewaySession> sessions = this.sessions;
 
         int eventsProcessed = 0;
-        for (int i = 0, size = sessions.size(); i < size;)
+        for (int i = 0, size = sessions.size(); i < size; )
         {
             final GatewaySession session = sessions.get(i);
             eventsProcessed += session.poll(time);
@@ -241,74 +254,15 @@ class GatewaySessions
         return sessions;
     }
 
-    static GatewaySession removeSessionByConnectionId(final long connectionId, final List<GatewaySession> sessions)
-    {
-        for (int i = 0, size = sessions.size(); i < size; i++)
-        {
-            final GatewaySession session = sessions.get(i);
-            if (session.connectionId() == connectionId)
-            {
-                sessions.remove(i);
-                return session;
-            }
-        }
-
-        return null;
-    }
-
-    AuthenticationResult authenticate(
+    AcceptorLogonResult authenticate(
         final LogonDecoder logon,
         final long connectionId,
         final GatewaySession gatewaySession)
     {
         final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(logon.header());
         final SessionContext sessionContext = sessionContexts.onLogon(compositeKey);
-        final long sessionId = sessionContext.sessionId();
-        if (sessionContext == DUPLICATE_SESSION)
-        {
-            return AuthenticationResult.DUPLICATE_SESSION;
-        }
 
-        final boolean authenticated = authenticate(logon, connectionId);
-        if (!authenticated)
-        {
-            return AuthenticationResult.FAILED_AUTHENTICATION;
-        }
-
-        final PersistenceLevel persistenceLevel = getPersistenceLevel(logon, connectionId);
-        final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
-        final boolean resetSeqNum = resetSequenceNumbersUponLogon(persistenceLevel) || resetSeqNumFlag;
-
-        if (persistenceLevel == PersistenceLevel.INDEXED && !logAllMessages)
-        {
-            onError(new IllegalStateException(
-                "Persistence Strategy specified INDEXED but " +
-                "EngineConfiguration has disabled required logging of messsages"));
-            return AuthenticationResult.INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES;
-        }
-
-        final String username = SessionParser.username(logon);
-        final String password = SessionParser.password(logon);
-
-        sessionContext.onLogon(resetSeqNum);
-
-        gatewaySession.onLogon(sessionId, sessionContext, compositeKey, username, password, logon.heartBtInt());
-
-        if (resetSeqNum)
-        {
-            gatewaySession.acceptorSequenceNumbers(SessionInfo.UNK_SESSION, SessionInfo.UNK_SESSION);
-        }
-        else
-        {
-            final long requiredPosition = outboundPublication.position();
-
-            if (!lookupSequenceNumbers(gatewaySession, requiredPosition))
-            {
-                return new AuthenticationResult(gatewaySession, requiredPosition);
-            }
-        }
-
-        return new AuthenticationResult(gatewaySession);
+        return new PendingAcceptorLogon(sessionContext, gatewaySession, logon, connectionId, compositeKey);
     }
 
     public boolean lookupSequenceNumbers(final GatewaySession gatewaySession, final long requiredPosition)
@@ -328,59 +282,207 @@ class GatewaySessions
         return true;
     }
 
-    private PersistenceLevel getPersistenceLevel(final LogonDecoder logon, final long connectionId)
+    enum AuthenticationState
     {
-        try
-        {
-            return sessionPersistenceStrategy.getPersistenceLevel(logon);
-        }
-        catch (final Throwable throwable)
-        {
-            onStrategyError("persistence", throwable, connectionId, "UNINDEXED", logon);
-            return PersistenceLevel.UNINDEXED;
-        }
+        PENDING,
+        AUTHENTICATED,
+        INDEXER_CATCHUP,
+        ACCEPTED,
+        REJECTED
     }
 
-    private boolean authenticate(final LogonDecoder logon, final long connectionId)
+    private final class PendingAcceptorLogon implements AuthenticationProxy, AcceptorLogonResult
     {
-        try
-        {
-            return authenticationStrategy.authenticate(logon);
-        }
-        catch (final Throwable throwable)
-        {
-            onStrategyError("authentication", throwable, connectionId, "false", logon);
-            return false;
-        }
-    }
+        private static final long NO_REQUIRED_POSITION = -1;
+        private final SessionContext sessionContext;
+        private final LogonDecoder logon;
+        private final CompositeKey compositeKey;
+        private final boolean resetSeqNum;
+        private volatile AuthenticationState state = AuthenticationState.PENDING;
+        private GatewaySession session;
+        private DisconnectReason reason;
+        private long requiredPosition = NO_REQUIRED_POSITION;
 
-    private void onStrategyError(
-        final String strategyName,
-        final Throwable throwable,
-        final long connectionId,
-        final String theDefault,
-        final LogonDecoder logon)
-    {
-        final String message = String.format(
-            "Exception thrown by %s strategy for connectionId=%d, processing [%s], defaulted to %s",
-            strategyName,
-            connectionId,
-            logon.toString(),
-            theDefault);
-        onError(new FixGatewayException(message, throwable));
-    }
+        PendingAcceptorLogon(
+            final SessionContext sessionContext,
+            final GatewaySession gatewaySession,
+            final LogonDecoder logon,
+            final long connectionId,
+            final CompositeKey compositeKey)
+        {
+            this.sessionContext = sessionContext;
+            this.session = gatewaySession;
+            this.logon = logon;
+            this.compositeKey = compositeKey;
 
-    private void onError(final Throwable throwable)
-    {
-        // Library code should throw the exception to make users aware of it
-        // Engine code should log it through the normal error handling process.
-        if (errorHandler == null)
-        {
-            LangUtil.rethrowUnchecked(throwable);
+            if (sessionContext == DUPLICATE_SESSION)
+            {
+                resetSeqNum = false;
+                reject(DisconnectReason.DUPLICATE_SESSION);
+                return;
+            }
+
+            final PersistenceLevel persistenceLevel = getPersistenceLevel(logon, connectionId);
+            final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
+
+            resetSeqNum = resetSequenceNumbersUponLogon(persistenceLevel) || resetSeqNumFlag;
+
+            if (persistenceLevel == PersistenceLevel.INDEXED && !logAllMessages)
+            {
+                onError(new IllegalStateException(
+                    "Persistence Strategy specified INDEXED but " +
+                    "EngineConfiguration has disabled required logging of messsages"));
+
+                reject(DisconnectReason.INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES);
+                return;
+            }
+
+            authenticate(logon, connectionId);
         }
-        else
+
+        private PersistenceLevel getPersistenceLevel(final LogonDecoder logon, final long connectionId)
         {
-            errorHandler.onError(throwable);
+            try
+            {
+                return sessionPersistenceStrategy.getPersistenceLevel(logon);
+            }
+            catch (final Throwable throwable)
+            {
+                onStrategyError("persistence", throwable, connectionId, "UNINDEXED", logon);
+                return PersistenceLevel.UNINDEXED;
+            }
+        }
+
+        private void authenticate(final LogonDecoder logon, final long connectionId)
+        {
+            try
+            {
+                authenticationStrategy.authenticateAsync(logon, this);
+            }
+            catch (final Throwable throwable)
+            {
+                onStrategyError("authentication", throwable, connectionId, "false", logon);
+
+                reject();
+            }
+        }
+
+        private void onStrategyError(
+            final String strategyName,
+            final Throwable throwable,
+            final long connectionId,
+            final String theDefault,
+            final LogonDecoder logon)
+        {
+            final String message = String.format(
+                "Exception thrown by %s strategy for connectionId=%d, processing [%s], defaulted to %s",
+                strategyName,
+                connectionId,
+                logon.toString(),
+                theDefault);
+            onError(new FixGatewayException(message, throwable));
+        }
+
+        private void onError(final Throwable throwable)
+        {
+            // Library code should throw the exception to make users aware of it
+            // Engine code should log it through the normal error handling process.
+            if (errorHandler == null)
+            {
+                LangUtil.rethrowUnchecked(throwable);
+            }
+            else
+            {
+                errorHandler.onError(throwable);
+            }
+        }
+
+        @Override
+        public DisconnectReason reason()
+        {
+            return reason;
+        }
+
+        @Override
+        public void accept()
+        {
+            state = AuthenticationState.AUTHENTICATED;
+        }
+
+        @Override
+        public boolean poll()
+        {
+            switch (state)
+            {
+                case AUTHENTICATED:
+                    onAuthenticated();
+                    return false;
+
+                case ACCEPTED:
+                case REJECTED:
+                    return true;
+
+                case INDEXER_CATCHUP:
+                    onIndexerCatchup();
+                    return false;
+
+                default:
+                    return false;
+            }
+        }
+
+        private void onIndexerCatchup()
+        {
+            if (lookupSequenceNumbers(session, requiredPosition))
+            {
+                state = AuthenticationState.ACCEPTED;
+            }
+        }
+
+        private void onAuthenticated()
+        {
+            final String username = SessionParser.username(logon);
+            final String password = SessionParser.password(logon);
+
+            sessionContext.onLogon(resetSeqNum);
+            session.initialResetSeqNum(resetSeqNum);
+            session.onLogon(
+                sessionContext.sessionId(),
+                sessionContext,
+                compositeKey,
+                username,
+                password,
+                logon.heartBtInt());
+
+            // See Framer.handoverNewConnectionToLibrary for sole library mode equivalent
+            if (resetSeqNum)
+            {
+                session.acceptorSequenceNumbers(SessionInfo.UNK_SESSION, SessionInfo.UNK_SESSION);
+                state = AuthenticationState.ACCEPTED;
+            }
+            else
+            {
+                requiredPosition = outboundPublication.position();
+                state = AuthenticationState.INDEXER_CATCHUP;
+            }
+        }
+
+        public void reject()
+        {
+            reject(DisconnectReason.FAILED_AUTHENTICATION);
+        }
+
+        private void reject(final DisconnectReason reason)
+        {
+            this.session = null;
+            this.reason = reason;
+            this.state = AuthenticationState.REJECTED;
+        }
+
+        @Override
+        public boolean isAccepted()
+        {
+            return AuthenticationState.ACCEPTED == state;
         }
     }
 }

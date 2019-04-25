@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
@@ -47,6 +48,7 @@ import java.util.function.ToIntFunction;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
+import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
@@ -216,6 +218,23 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             resendFromSequenceIndex);
     }
 
+    SessionWriter followerSession(final long id, final long connectionId, final int sequenceIndex)
+    {
+        return new SessionWriter(
+            libraryId,
+            id,
+            connectionId,
+            sessionBuffer(),
+            outboundPublication,
+            sequenceIndex);
+    }
+
+    Reply<SessionWriter> followerSession(final HeaderEncoder headerEncoder, final long timeoutInMs)
+    {
+        return new FollowerSessionReply(
+            this, timeInMs() + timeoutInMs, headerEncoder);
+    }
+
     void disableSession(final InternalSession session)
     {
         sessions = ArrayUtil.remove(sessions, session);
@@ -289,6 +308,19 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
         return outboundPublication.saveRequestSession(
             libraryId, sessionId, correlationId, lastReceivedSequenceNumber, sequenceIndex);
+    }
+
+    long saveFollowerSessionRequest(
+        final long correlationId, final MutableAsciiBuffer buffer, final int offset, final int length)
+    {
+        checkState();
+
+        return outboundPublication.saveFollowerSessionRequest(
+            libraryId,
+            correlationId,
+            buffer,
+            offset,
+            length);
     }
 
     int poll(final int fragmentLimit)
@@ -862,7 +894,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    public Action onRequestSessionReply(final int toId, final long replyToId, final SessionReplyStatus status)
+    public Action onRequestSessionReply(final int libraryId, final long replyToId, final SessionReplyStatus status)
     {
         final RequestSessionReply reply = (RequestSessionReply)correlationIdToReply.remove(replyToId);
         if (reply != null)
@@ -873,38 +905,22 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    public Action onNewSentPosition(final int libraryId, final long position)
+    public Action onFollowerSessionReply(final int libraryId, final long replyToId, final long sessionId)
     {
-        if (this.libraryId == libraryId)
+        final FollowerSessionReply reply = (FollowerSessionReply)correlationIdToReply.remove(replyToId);
+        if (reply != null)
         {
-            return sentPositionHandler.onSendCompleted(position);
+            reply.onComplete(followerSession(sessionId, NO_CONNECTION_ID, 0));
         }
 
         return CONTINUE;
     }
 
-    public Action onNotLeader(final int libraryId, final long replyToId, final String libraryChannel)
+    public Action onNewSentPosition(final int libraryId, final long position)
     {
-        if (libraryId == this.libraryId && replyToId >= connectCorrelationId)
+        if (this.libraryId == libraryId)
         {
-            final long timeInMs = timeInMs();
-            if (libraryChannel.isEmpty())
-            {
-                connectToNextEngineNow(timeInMs);
-            }
-            else
-            {
-                DebugLogger.log(
-                    LIBRARY_CONNECT,
-                    "%d: Attempting connect to (%s) claimed leader%n",
-                    libraryId,
-                    currentAeronChannel);
-
-                currentAeronChannel = libraryChannel;
-                state = ATTEMPT_CURRENT_NODE;
-            }
-
-            return BREAK;
+            return sentPositionHandler.onSendCompleted(position);
         }
 
         return CONTINUE;
@@ -1024,7 +1040,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
-            session, sessionIdStrategy, validationStrategy, null);
+            session, validationStrategy, null);
         final SessionSubscriber subscriber = new SessionSubscriber(
             parser,
             session,
@@ -1049,9 +1065,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int defaultInterval = configuration.defaultHeartbeatIntervalInS();
         final GatewayPublication publication = transport.outboundPublication();
 
-        final int sessionBufferSize = configuration.sessionBufferSize();
-        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
-        final SessionProxy sessionProxy = sessionProxy(connectionId, asciiBuffer);
+        final MutableAsciiBuffer asciiBuffer = sessionBuffer();
+        final SessionProxy sessionProxy = sessionProxy(connectionId);
         final int initialReceivedSequenceNumber = initiatorNewSequenceNumber(
             sessionConfiguration, SessionConfiguration::initialReceivedSequenceNumber, lastReceivedSequenceNumber);
         final int initialSentSequenceNumber = initiatorNewSequenceNumber(
@@ -1079,6 +1094,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         session.lastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
 
         return session;
+    }
+
+    private MutableAsciiBuffer sessionBuffer()
+    {
+        return new MutableAsciiBuffer(new byte[configuration.sessionBufferSize()]);
     }
 
     private int initiatorNewSequenceNumber(
@@ -1118,8 +1138,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long sendingTimeWindow = configuration.sendingTimeWindowInMs();
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
-        final int sessionBufferSize = configuration.sessionBufferSize();
-        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
+        final MutableAsciiBuffer asciiBuffer = sessionBuffer();
         final int split = address.lastIndexOf(':');
         final int start = address.startsWith("/") ? 1 : 0;
         final String host = address.substring(start, split);
@@ -1129,7 +1148,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             heartbeatIntervalInS,
             connectionId,
             clock,
-            sessionProxy(connectionId, asciiBuffer),
+            sessionProxy(connectionId),
             publication,
             sessionIdStrategy,
             sendingTimeWindow,
@@ -1146,10 +1165,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return session;
     }
 
-    private SessionProxy sessionProxy(final long connectionId, final MutableAsciiBuffer asciiBuffer)
+    private SessionProxy sessionProxy(final long connectionId)
     {
-        return new SessionProxy(
-            asciiBuffer,
+        return configuration.sessionProxyFactory().make(
+            configuration.sessionBufferSize(),
             transport.outboundPublication(),
             sessionIdStrategy,
             configuration.sessionCustomisationStrategy(),
@@ -1186,4 +1205,5 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             state = CLOSED;
         }
     }
+
 }

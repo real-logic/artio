@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.library;
 
-import uk.co.real_logic.artio.messages.GatewayError;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 
 /**
@@ -26,8 +25,6 @@ class RequestSessionReply extends LibraryReply<SessionReplyStatus>
     private final long sessionId;
     private final int resendFromSequenceNumber;
     private final int resendFromSequenceIndex;
-
-    private boolean requiresResend;
 
     RequestSessionReply(
         final LibraryPoller libraryPoller,
@@ -46,7 +43,7 @@ class RequestSessionReply extends LibraryReply<SessionReplyStatus>
         }
     }
 
-    private void sendMessage()
+    protected void sendMessage()
     {
         final long position = libraryPoller.saveRequestSession(
             sessionId, correlationId, resendFromSequenceNumber, resendFromSequenceIndex);
@@ -57,19 +54,5 @@ class RequestSessionReply extends LibraryReply<SessionReplyStatus>
     void onComplete(final SessionReplyStatus result)
     {
         super.onComplete(result);
-    }
-
-    void onError(final GatewayError errorType, final String errorMessage)
-    {
-    }
-
-    boolean poll(final long timeInMs)
-    {
-        if (requiresResend)
-        {
-            sendMessage();
-        }
-
-        return super.poll(timeInMs);
     }
 }

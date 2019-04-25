@@ -242,6 +242,13 @@
         <field name="correlationId" id="2" type="CorrelationId"/>
     </sbe:message>
 
+    <sbe:message name="FollowerSessionRequest" id="47"
+                 description="">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="correlationId" id="2" type="CorrelationId"/>
+        <data name="header" id="3" type="AsciiString"/>
+    </sbe:message>
+
     <!-- Messages From Engine To Library -->
     <sbe:message name="Disconnect" id="7" description="A connection has disconnected">
         <field name="libraryId" id="1" type="LibraryId"/>
@@ -313,12 +320,6 @@
         <field name="position" id="2" type="int64"/>
     </sbe:message>
 
-    <sbe:message name="NotLeader" id="37" description="Let a library know that you aren't the leader">
-        <field name="libraryId" id="1" type="LibraryId"/>
-        <field name="replyToId" id="2" type="CorrelationId"/>
-        <data name="libraryChannel" id="3" type="Utf8String"/>
-    </sbe:message>
-
     <sbe:message name="EngineDescriptor" id="38" description="">
         <data name="libraryChannel" id="1" type="Utf8String"/>
     </sbe:message>
@@ -335,6 +336,13 @@
                  description="notifies library instances that they have been timed out, added for monitoring purposes">
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="connectCorrelationId" id="2" type="CorrelationId"/>
+    </sbe:message>
+
+    <sbe:message name="FollowerSessionReply" id="48"
+                 description="">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="replyToId" id="2" type="CorrelationId"/>
+        <field name="session" id="3" type="FixSessionId"/>
     </sbe:message>
 
     <!-- Messages In Either Direction -->

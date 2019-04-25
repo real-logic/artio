@@ -503,7 +503,6 @@ public class CommonConfiguration
         return this;
     }
 
-
     public Aeron.Context aeronContext()
     {
         return aeronContext;

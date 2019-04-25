@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.protocol;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
+import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.SequenceNumberType;
 import uk.co.real_logic.artio.messages.SessionState;
@@ -79,4 +80,11 @@ public interface EngineEndPointHandler
         int sequenceIndex);
 
     Action onMidConnectionDisconnect(int libraryId, long correlationId);
+
+    Action onFollowerSessionRequest(
+        int libraryId,
+        long correlationId,
+        DirectBuffer srcBuffer,
+        int srcOffset,
+        int srcLength);
 }

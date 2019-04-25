@@ -367,7 +367,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         if (acceptingSession != null)
         {
             // Require replay of at least one message that has been sent
-            final int lastReceivedMsgSeqNum = acceptingSession.lastReceivedMsgSeqNum() - 1;
+            final int lastReceivedMsgSeqNum = acceptingSession.lastReceivedMsgSeqNum() - 2;
             final int sequenceIndex = acceptingSession.sequenceIndex();
             final SessionReplyStatus reply = requestSession(
                 acceptingLibrary, sessionId, lastReceivedMsgSeqNum, sequenceIndex, testSystem);

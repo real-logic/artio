@@ -25,7 +25,7 @@ import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_REASONAB
 import static uk.co.real_logic.artio.library.SessionConfiguration.DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED;
 import static uk.co.real_logic.artio.messages.SessionState.*;
 import static uk.co.real_logic.artio.session.Session.ACTIVE_VALUE;
-import static uk.co.real_logic.artio.session.SessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
+import static uk.co.real_logic.artio.session.DirectSessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
 
 public class AcceptorSessionTest extends AbstractSessionTest
 {
@@ -85,7 +85,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
         onLogon(3);
 
         verifyLogon();
-        verify(sessionProxy).resendRequest(2, 1, 0, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+        verify(sessionProxy).sendResendRequest(2, 1, 0, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
         verify(sessionProxy).seqNumResetRequested();
         verifyNoFurtherMessages();
     }
@@ -130,8 +130,8 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
     private void verifyLogon()
     {
-        verify(sessionProxy).logon(
-            HEARTBEAT_INTERVAL, 1, null, null, false, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+        verify(sessionProxy).sendLogon(
+            1, HEARTBEAT_INTERVAL, null, null, false, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
     }
 
 }
