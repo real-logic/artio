@@ -142,8 +142,6 @@ public class EncoderGenerator extends Generator
         "            next.reset();\n" +
         "        }\n";
 
-    public static final String METHOD_DELIMITER = "\n\n";
-
     private static String encoderClassName(final String name)
     {
         return formatClassName(name + "Encoder");
@@ -166,7 +164,8 @@ public class EncoderGenerator extends Generator
         final Class<?> validationClass,
         final Class<?> rejectUnknownClass)
     {
-        super(dictionary, builderPackage, builderCommonPackage, outputManager, validationClass, rejectUnknownClass);
+        super(dictionary, builderPackage, builderCommonPackage, outputManager, validationClass, rejectUnknownClass,
+            false);
 
         final Component header = dictionary.header();
         validateHasField(header, BEGIN_STRING);
@@ -718,7 +717,7 @@ public class EncoderGenerator extends Generator
         final String fieldName = formatPropertyName(name);
         final Field.Type type = field.type();
         final boolean mustCheckFlag = hasFlag(entry, field);
-        final boolean mustCheckLength = type.hasLengthField();
+        final boolean mustCheckLength = type.hasLengthField(false);
         final boolean needsMissingThrow =
             (mustCheckFlag || mustCheckLength) && entry.required() && !"MsgSeqNum".equals(name);
 
@@ -953,7 +952,7 @@ public class EncoderGenerator extends Generator
     protected boolean hasFlag(final Entry entry, final Field field)
     {
         final Type type = field.type();
-        return (!entry.required() && !type.hasLengthField()) || type.isFloatBased() || type.isIntBased();
+        return (!entry.required() && !type.hasLengthField(false)) || type.isFloatBased() || type.isIntBased();
     }
 
     protected String resetTemporalValue(final String name)
@@ -991,11 +990,11 @@ public class EncoderGenerator extends Generator
 
     protected String optionalReset(final Field field, final String name)
     {
-        return field.type().hasLengthField() ? resetLength(name) : resetByFlag(name);
+        return field.type().hasLengthField(false) ? resetLength(name) : resetByFlag(name);
     }
 
     protected boolean toStringChecksHasGetter(final Entry entry, final Field field)
     {
-        return hasFlag(entry, field) || field.type().hasLengthField();
+        return hasFlag(entry, field) || field.type().hasLengthField(false);
     }
 }

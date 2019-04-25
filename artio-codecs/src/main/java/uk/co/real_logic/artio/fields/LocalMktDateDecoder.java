@@ -52,7 +52,7 @@ public final class LocalMktDateDecoder
         final int endMonth = endYear + 2;
         final int endDay = endMonth + 2;
 
-        final int year = timestamp.getNatural(offset, endYear);
+        final int year = timestamp.parseNaturalIntAscii(offset, 4);
         final int month = getValidInt(timestamp, endYear, endMonth, 1, 12);
         final int day = getValidInt(timestamp, endMonth, endDay, 1, 31);
 

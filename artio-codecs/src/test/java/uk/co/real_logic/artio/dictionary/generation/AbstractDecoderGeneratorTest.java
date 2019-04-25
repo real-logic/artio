@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.dictionary.generation;
 import org.agrona.AsciiSequenceView;
 import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;

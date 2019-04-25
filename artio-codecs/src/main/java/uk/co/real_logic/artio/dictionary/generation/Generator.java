@@ -88,6 +88,7 @@ public abstract class Generator
     protected final OutputManager outputManager;
     protected final Class<?> validationClass;
     protected final Class<?> rejectUnknownClass;
+    protected final boolean flyweightsEnabled;
 
     protected Generator(
         final Dictionary dictionary,
@@ -95,7 +96,8 @@ public abstract class Generator
         final String commonPackage,
         final OutputManager outputManager,
         final Class<?> validationClass,
-        final Class<?> rejectUnknownClass)
+        final Class<?> rejectUnknownClass,
+        final boolean flyweightsEnabled)
     {
         this.dictionary = dictionary;
         this.builderPackage = thisPackage;
@@ -103,6 +105,7 @@ public abstract class Generator
         this.outputManager = outputManager;
         this.validationClass = validationClass;
         this.rejectUnknownClass = rejectUnknownClass;
+        this.flyweightsEnabled = flyweightsEnabled;
     }
 
     public void generate()
@@ -295,14 +298,14 @@ public abstract class Generator
                 return resetRequiredFloat(name);
 
             case CHAR:
-                return resetFieldValue(name, "MISSING_CHAR");
+                return resetFieldValue(field, "MISSING_CHAR");
 
             case DATA:
             case XMLDATA:
-                return resetFieldValue(name, "null");
+                return resetFieldValue(field, "null");
 
             case BOOLEAN:
-                return resetFieldValue(name, "false");
+                return resetFieldValue(field, "false");
 
             case STRING:
             case MULTIPLEVALUESTRING:
@@ -418,22 +421,16 @@ public abstract class Generator
             nameOfResetMethod(name));
     }
 
-    protected String resetByMethod(final String name)
+    protected String resetFieldValue(final Field field, final String resetValue)
     {
-        return String.format(
-            "    public void %2$s()\n" +
-            "    {\n" +
-            "        %1$s.reset();\n" +
-            "    }\n\n",
-            formatPropertyName(name),
-            nameOfResetMethod(name));
-    }
+        final String name = field.name();
+        final boolean hasLengthField = field.type().hasLengthField(flyweightsEnabled);
+        final String lengthReset = hasLengthField ? "        %2$sLength = 0;\n" : "";
 
-    protected String resetFieldValue(final String name, final String resetValue)
-    {
         return String.format(
             "    public void %1$s()\n" +
             "    {\n" +
+            lengthReset +
             "        %2$s = %3$s;\n" +
             "    }\n\n",
             nameOfResetMethod(name),
@@ -563,11 +560,23 @@ public abstract class Generator
             case TZTIMESTAMP:
                 return stringToString(fieldName);
 
+            // Call the getter for other choices in order to ensure that the flyweight version is populated
+
             case DATA:
             case XMLDATA:
-                return String.format("Arrays.toString(%s)", fieldName);
+                if (flyweightsEnabled)
+                {
+                    return String.format("Arrays.toString(%1$s())", fieldName);
+                }
+
+                return String.format("Arrays.toString(%1$s)", fieldName);
 
             default:
+                if (flyweightsEnabled)
+                {
+                    return String.format("%1$s()", fieldName);
+                }
+
                 return fieldName;
         }
     }
