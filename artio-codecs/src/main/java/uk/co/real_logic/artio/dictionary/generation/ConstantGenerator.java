@@ -72,7 +72,7 @@ public class ConstantGenerator
     {
         final String addFields = fields
             .stream()
-            .map((field) -> addField(field, name))
+            .map((field) -> addField(field, name, "        "))
             .collect(joining());
 
         final int hashMapSize = sizeHashSet(fields);

@@ -81,7 +81,7 @@ public class DecoderGenerator extends Generator
     private Aggregate currentAggregate = null;
 
     private final int initialBufferSize;
-    private final boolean flyweightStringsEnabled;
+    private final boolean flyweightsEnabled;
 
     public DecoderGenerator(
         final Dictionary dictionary,
@@ -91,11 +91,11 @@ public class DecoderGenerator extends Generator
         final OutputManager outputManager,
         final Class<?> validationClass,
         final Class<?> rejectUnknownClass,
-        final boolean flyweightStringsEnabled)
+        final boolean flyweightsEnabled)
     {
         super(dictionary, thisPackage, commonPackage, outputManager, validationClass, rejectUnknownClass);
         this.initialBufferSize = initialBufferSize;
-        this.flyweightStringsEnabled = flyweightStringsEnabled;
+        this.flyweightsEnabled = flyweightsEnabled;
     }
 
     protected void generateAggregateFile(final Aggregate aggregate, final AggregateType type)
@@ -372,7 +372,7 @@ public class DecoderGenerator extends Generator
     {
         final String addFields = fields
             .stream()
-            .map((field) -> addField(field, name))
+            .map((field) -> addField(field, name, "            "))
             .collect(joining());
         final String generatedFieldEntryCode;
 
@@ -381,7 +381,7 @@ public class DecoderGenerator extends Generator
             generatedFieldEntryCode =
                 "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
                 "        {\n" +
-                "          %s" +
+                "%s" +
                 "        }\n";
         }
         else
@@ -400,10 +400,11 @@ public class DecoderGenerator extends Generator
             String.format(generatedFieldEntryCode, addFields));
     }
 
-    public static String addField(final Field field, final String name)
+    public static String addField(final Field field, final String name, final String prefix)
     {
         return String.format(
-            "        %1$s.add(Constants.%2$s);\n",
+            "%1$s%2$s.add(Constants.%3$s);\n",
+            prefix,
             name,
             constantName(field.name()));
     }
@@ -768,7 +769,7 @@ public class DecoderGenerator extends Generator
 
         final String asStringBody;
 
-        if (flyweightStringsEnabled)
+        if (flyweightsEnabled)
         {
             asStringBody = String.format(entry.required() ?
                 "buffer.getStringWithoutLengthAscii(%1$sOffset, %1$sLength)" :
@@ -833,7 +834,7 @@ public class DecoderGenerator extends Generator
             asEnumBody
         ) : "";
 
-        final String lazyStringInitialisation = stringBasedLazyInstantiating(fieldName, type);
+        final String lazyInitialisation = lazyInstantialisation(fieldName, type);
 
         return String.format(
             "    private %1$s %2$s%3$s;\n\n" +
@@ -855,10 +856,10 @@ public class DecoderGenerator extends Generator
             optionalGetter(entry),
             stringDecoder,
             enumDecoder,
-            flyweightStringsEnabled ? lazyStringInitialisation : "");
+            flyweightsEnabled ? lazyInitialisation : "");
     }
 
-    private static String stringBasedLazyInstantiating(final String fieldName, final Type type)
+    private static String lazyInstantialisation(final String fieldName, final Type type)
     {
         switch (type)
         {
@@ -1346,7 +1347,7 @@ public class DecoderGenerator extends Generator
             case EXCHANGE:
             case COUNTRY:
             case LANGUAGE:
-                if (flyweightStringsEnabled)
+                if (flyweightsEnabled)
                 {
                     return "";
                 }
