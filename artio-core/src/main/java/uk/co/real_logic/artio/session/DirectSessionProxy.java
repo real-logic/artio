@@ -131,7 +131,7 @@ public class DirectSessionProxy implements SessionProxy
     }
 
     @Override
-    public long resendRequest(
+    public long sendResendRequest(
         final int msgSeqNo,
         final int beginSeqNo,
         final int endSeqNo,
@@ -147,13 +147,13 @@ public class DirectSessionProxy implements SessionProxy
     }
 
     @Override
-    public long requestDisconnect(final long connectionId, final DisconnectReason reason)
+    public long sendRequestDisconnect(final long connectionId, final DisconnectReason reason)
     {
         return gatewayPublication.saveRequestDisconnect(libraryId, connectionId, reason);
     }
 
     @Override
-    public long logon(
+    public long sendLogon(
         final int msgSeqNo, final int heartbeatIntervalInS,
         final String username,
         final String password,
@@ -189,25 +189,25 @@ public class DirectSessionProxy implements SessionProxy
         return string != null && string.length() > 0;
     }
 
-    public long logout(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
+    public long sendLogout(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
-        return logout(msgSeqNo, null, 0, sequenceIndex, lastMsgSeqNumProcessed);
+        return sendLogout(msgSeqNo, null, 0, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    public long logout(
+    public long sendLogout(
         final int msgSeqNo, final int sequenceIndex, final int rejectReason, final int lastMsgSeqNumProcessed)
     {
         final byte[] reasonText = LOGGED_ON_SESSION_REJECT_REASONS[rejectReason];
-        return logout(msgSeqNo, reasonText, reasonText.length, sequenceIndex, lastMsgSeqNumProcessed);
+        return sendLogout(msgSeqNo, reasonText, reasonText.length, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    private long logout(
+    private long sendLogout(
         final int msgSeqNo, final byte[] text, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
-        return logout(msgSeqNo, text, text.length, sequenceIndex, lastMsgSeqNumProcessed);
+        return sendLogout(msgSeqNo, text, text.length, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    private long logout(
+    private long sendLogout(
         final int msgSeqNo,
         final byte[] text,
         final int length,
@@ -227,7 +227,7 @@ public class DirectSessionProxy implements SessionProxy
         return send(result, LogoutDecoder.MESSAGE_TYPE, sequenceIndex, logout, msgSeqNo);
     }
 
-    public long lowSequenceNumberLogout(
+    public long sendLowSequenceNumberLogout(
         final int msgSeqNo,
         final int expectedSeqNo,
         final int receivedSeqNo,
@@ -238,45 +238,45 @@ public class DirectSessionProxy implements SessionProxy
             .with(expectedSeqNo)
             .with(receivedSeqNo);
 
-        final long position = logout(
+        final long position = sendLogout(
             msgSeqNo, lowSequenceNumber.value(), lowSequenceNumber.length(), sequenceIndex, lastMsgSeqNumProcessed);
         lowSequenceNumber.clear();
 
         return position;
     }
 
-    public long incorrectBeginStringLogout(
+    public long sendIncorrectBeginStringLogout(
         final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
-        return logout(msgSeqNo, INCORRECT_BEGIN_STRING, sequenceIndex, lastMsgSeqNumProcessed);
+        return sendLogout(msgSeqNo, INCORRECT_BEGIN_STRING, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    public long negativeHeartbeatLogout(
+    public long sendNegativeHeartbeatLogout(
         final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
-        return logout(msgSeqNo, NEGATIVE_HEARTBEAT, sequenceIndex, lastMsgSeqNumProcessed);
+        return sendLogout(msgSeqNo, NEGATIVE_HEARTBEAT, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    public long receivedMessageWithoutSequenceNumber(
+    public long sendReceivedMessageWithoutSequenceNumber(
         final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
-        return logout(msgSeqNo, NO_MSG_SEQ_NO, sequenceIndex, lastMsgSeqNumProcessed);
+        return sendLogout(msgSeqNo, NO_MSG_SEQ_NO, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    public long rejectWhilstNotLoggedOn(
+    public long sendRejectWhilstNotLoggedOn(
         final int msgSeqNo, final RejectReason reason, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
-        return logout(
+        return sendLogout(
             msgSeqNo, NOT_LOGGED_ON_SESSION_REJECT_REASONS[reason.ordinal()], sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    public long heartbeat(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
+    public long sendHeartbeat(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
-        return heartbeat(
+        return sendHeartbeat(
             msgSeqNo, null, 0, sequenceIndex, lastMsgSeqNumProcessed);
     }
 
-    public long heartbeat(
+    public long sendHeartbeat(
         final int msgSeqNo, final char[] testReqId,
         final int testReqIdLength,
         final int sequenceIndex,
@@ -298,7 +298,7 @@ public class DirectSessionProxy implements SessionProxy
         return send(result, HeartbeatDecoder.MESSAGE_TYPE, sequenceIndex, heartbeat, msgSeqNo);
     }
 
-    public long reject(
+    public long sendReject(
         final int msgSeqNo,
         final int refSeqNum,
         final int refTagId,
@@ -330,7 +330,7 @@ public class DirectSessionProxy implements SessionProxy
         return send(result, RejectDecoder.MESSAGE_TYPE, sequenceIndex, reject, msgSeqNo);
     }
 
-    public long testRequest(
+    public long sendTestRequest(
         final int msgSeqNo, final CharSequence testReqID, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
         final HeaderEncoder header = testRequest.header();
@@ -342,7 +342,7 @@ public class DirectSessionProxy implements SessionProxy
         return send(result, TestRequestDecoder.MESSAGE_TYPE, sequenceIndex, testRequest, msgSeqNo);
     }
 
-    public long sequenceReset(
+    public long sendSequenceReset(
         final int msgSeqNo, final int newSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
         final HeaderEncoder header = sequenceReset.header();

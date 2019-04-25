@@ -580,6 +580,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * NB: This is an experimental API and is subject to change or potentially removal.
+     *
+     * @param singleLibraryMode true to switch singleLibraryMode on or false (the default) to switch it off.
+     * @return this
+     */
     public EngineConfiguration soleLibraryMode(final boolean singleLibraryMode)
     {
         this.soleLibraryMode = singleLibraryMode;

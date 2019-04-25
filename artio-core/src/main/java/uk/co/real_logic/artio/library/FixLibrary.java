@@ -340,12 +340,37 @@ public class FixLibrary extends GatewayProcess
         return poller.requestSession(sessionId, resendFromSequenceNumber, resendFromSequenceIndex, timeoutInMs);
     }
 
+    /**
+     * NB: This is an experimental API and is subject to change or potentially removal.
+     *
+     * Creates a new SessionWriter for a specified session. This can be used in a clustered system to write messages
+     * outbound for a system on its primary node. In a clustered system the <code>SessionProxy</code> would be hooked so
+     * writing messages outbound on a normal Session object won't work.
+     *
+     * @param sessionId the id of the session to use.
+     * @param connectionId the id of the connection to use.
+     * @param sequenceIndex the sequence index that the SessionWriter should start at.
+     * @return the created SessionWriter
+     */
     public SessionWriter sessionWriter(
         final long sessionId, final long connectionId, final int sequenceIndex)
     {
         return poller.followerSession(sessionId, connectionId, sequenceIndex);
     }
 
+    /**
+     * NB: This is an experimental API and is subject to change or potentially removal.
+     *
+     * Create a SessionWriter for a Session from a different Artio instance. This SessionWriter can be used in a
+     * clustered system to fill the archive on a follower node with FIX messages that have been replicated by a
+     * leader node.
+     *
+     * @param headerEncoder the message header that contains fields that identify the Session. You could set the
+     *                      senderCompId and targetCompId on this header for example if those are the fields used to
+     *                      identify your session.
+     * @param timeoutInMs the timeout required for this operation.
+     * @return a <code>Reply</code> that will eventually contain the <code>SessionWriter</code>.
+     */
     public Reply<SessionWriter> followerSession(
         final HeaderEncoder headerEncoder, final long timeoutInMs)
     {

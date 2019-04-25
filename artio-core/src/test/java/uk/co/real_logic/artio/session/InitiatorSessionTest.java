@@ -126,7 +126,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
     private void verifyLogon()
     {
-        verify(sessionProxy, times(1)).logon(
+        verify(sessionProxy, times(1)).sendLogon(
             1, HEARTBEAT_INTERVAL, null, null, false, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
     }
 

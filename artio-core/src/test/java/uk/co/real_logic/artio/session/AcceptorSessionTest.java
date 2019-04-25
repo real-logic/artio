@@ -85,7 +85,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
         onLogon(3);
 
         verifyLogon();
-        verify(sessionProxy).resendRequest(2, 1, 0, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
+        verify(sessionProxy).sendResendRequest(2, 1, 0, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
         verify(sessionProxy).seqNumResetRequested();
         verifyNoFurtherMessages();
     }
@@ -130,7 +130,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
     private void verifyLogon()
     {
-        verify(sessionProxy).logon(
+        verify(sessionProxy).sendLogon(
             1, HEARTBEAT_INTERVAL, null, null, false, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
     }
 

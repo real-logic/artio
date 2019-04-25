@@ -24,6 +24,13 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
+/**
+ * A writer for a session that sends messages into the system.
+ *
+ * This can be used to integrate Artio into a clustering system by providing a way to write messages into the FIX log
+ * that have been acknowledged by a cluster. In this way a passive or follower FIX Gateway can be kept up to date with
+ * the messages from an active or leader Gateway.
+ */
 public class SessionWriter
 {
     private final int libraryId;
@@ -91,7 +98,14 @@ public class SessionWriter
             messageBuffer, offset, length, libraryId, messageType, id, sequenceIndex, connectionId, OK, seqNum);
     }
 
-    public long requestDisconnect(final long connectionId, final DisconnectReason reason)
+    /**
+     * Request the TCP disconnect of a session.
+     *
+     * @param reason the reason to log for the disconnect.
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     *         number indicating an error status.
+     */
+    public long requestDisconnect(final DisconnectReason reason)
     {
         return publication.saveRequestDisconnect(libraryId, connectionId, reason);
     }

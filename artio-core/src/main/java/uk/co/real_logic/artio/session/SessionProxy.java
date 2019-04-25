@@ -18,20 +18,26 @@ package uk.co.real_logic.artio.session;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
+/**
+ * A proxy that allows users to hook the sending of FIX session protocol messages through an external system. This can
+ * be used to integrate Artio into a clustering system. You implement the SessionProxy interface to write the
+ * session protocol messages into your clustering system. This enables you to achieve a strong concensus on the protocol
+ * mesages before using the <code>SessionWriter</code> class to write them back out.
+ */
 public interface SessionProxy
 {
     void setupSession(long sessionId, CompositeKey sessionKey);
 
-    long resendRequest(
+    long sendResendRequest(
         int msgSeqNo,
         int beginSeqNo,
         int endSeqNo,
         int sequenceIndex,
         int lastMsgSeqNumProcessed);
 
-    long requestDisconnect(long connectionId, DisconnectReason reason);
+    long sendRequestDisconnect(long connectionId, DisconnectReason reason);
 
-    long logon(
+    long sendLogon(
         int msgSeqNo,
         int heartbeatIntervalInS,
         String username,
@@ -40,40 +46,40 @@ public interface SessionProxy
         int sequenceIndex,
         int lastMsgSeqNumProcessed);
 
-    long logout(int msgSeqNo, int sequenceIndex, int lastMsgSeqNumProcessed);
+    long sendLogout(int msgSeqNo, int sequenceIndex, int lastMsgSeqNumProcessed);
 
-    long logout(
+    long sendLogout(
         int msgSeqNo, int sequenceIndex, int rejectReason, int lastMsgSeqNumProcessed);
 
-    long lowSequenceNumberLogout(
+    long sendLowSequenceNumberLogout(
         int msgSeqNo,
         int expectedSeqNo,
         int receivedSeqNo,
         int sequenceIndex,
         int lastMsgSeqNumProcessed);
 
-    long incorrectBeginStringLogout(
+    long sendIncorrectBeginStringLogout(
         int msgSeqNo, int sequenceIndex, int lastMsgSeqNumProcessed);
 
-    long negativeHeartbeatLogout(
+    long sendNegativeHeartbeatLogout(
         int msgSeqNo, int sequenceIndex, int lastMsgSeqNumProcessed);
 
-    long receivedMessageWithoutSequenceNumber(
+    long sendReceivedMessageWithoutSequenceNumber(
         int msgSeqNo, int sequenceIndex, int lastMsgSeqNumProcessed);
 
-    long rejectWhilstNotLoggedOn(
+    long sendRejectWhilstNotLoggedOn(
         int msgSeqNo, RejectReason reason, int sequenceIndex, int lastMsgSeqNumProcessed);
 
-    long heartbeat(int msgSeqNo, int sequenceIndex, int lastMsgSeqNumProcessed);
+    long sendHeartbeat(int msgSeqNo, int sequenceIndex, int lastMsgSeqNumProcessed);
 
-    long heartbeat(
+    long sendHeartbeat(
         int msgSeqNo,
         char[] testReqId,
         int testReqIdLength,
         int sequenceIndex,
         int lastMsgSeqNumProcessed);
 
-    long reject(
+    long sendReject(
         int msgSeqNo,
         int refSeqNum,
         int refTagId,
@@ -83,10 +89,10 @@ public interface SessionProxy
         int sequenceIndex,
         int lastMsgSeqNumProcessed);
 
-    long testRequest(
+    long sendTestRequest(
         int msgSeqNo, CharSequence testReqID, int sequenceIndex, int lastMsgSeqNumProcessed);
 
-    long sequenceReset(
+    long sendSequenceReset(
         int msgSeqNo, int newSeqNo, int sequenceIndex, int lastMsgSeqNumProcessed);
 
     void libraryConnected(boolean libraryConnected);

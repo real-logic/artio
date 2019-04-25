@@ -18,6 +18,11 @@ package uk.co.real_logic.artio.session;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
+/**
+ * A factory for constructing <code>SessionProxy</code> instances.
+ *
+ * @see SessionProxy
+ */
 public interface SessionProxyFactory
 {
     SessionProxy make(

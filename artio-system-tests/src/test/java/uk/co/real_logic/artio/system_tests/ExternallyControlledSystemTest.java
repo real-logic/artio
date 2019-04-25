@@ -272,7 +272,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
             }
         }
 
-        public long resendRequest(
+        public long sendResendRequest(
             final int msgSeqNo,
             final int beginSeqNo,
             final int endSeqNo,
@@ -280,17 +280,17 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
             final int lastMsgSeqNumProcessed)
         {
             sentResendRequests++;
-            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.resendRequest");
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.sendResendRequest");
             return 0;
         }
 
-        public long requestDisconnect(final long connectionId, final DisconnectReason reason)
+        public long sendRequestDisconnect(final long connectionId, final DisconnectReason reason)
         {
-            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.requestDisconnect");
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.sendRequestDisconnect");
             return 0;
         }
 
-        public long logon(
+        public long sendLogon(
             final int msgSeqNo,
             final int heartbeatIntervalInS,
             final String username,
@@ -323,7 +323,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
             return acceptingSessionWriter.send(logon, adjustedMsgSeqNo);
         }
 
-        public long logout(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
+        public long sendLogout(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
         {
             final int adjustedMsgSeqNo = msgSeqNo + sequenceNumberAdjustment;
             final HeaderEncoder header = logout.header();
@@ -332,7 +332,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
             return acceptingSessionWriter.send(logout, adjustedMsgSeqNo);
         }
 
-        public long logout(
+        public long sendLogout(
             final int msgSeqNo,
             final int sequenceIndex,
             final int rejectReason,
@@ -342,53 +342,53 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
             return 0;
         }
 
-        public long lowSequenceNumberLogout(
+        public long sendLowSequenceNumberLogout(
             final int msgSeqNo,
             final int expectedSeqNo,
             final int receivedSeqNo,
             final int sequenceIndex,
             final int lastMsgSeqNumProcessed)
         {
-            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.lowSequenceNumberLogout");
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.sendLowSequenceNumberLogout");
             return 0;
         }
 
-        public long incorrectBeginStringLogout(
+        public long sendIncorrectBeginStringLogout(
             final int msgSeqNo,
             final int sequenceIndex,
             final int lastMsgSeqNumProcessed)
         {
-            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.incorrectBeginStringLogout");
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.sendIncorrectBeginStringLogout");
             return 0;
         }
 
-        public long negativeHeartbeatLogout(
+        public long sendNegativeHeartbeatLogout(
             final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
         {
-            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.negativeHeartbeatLogout");
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.sendNegativeHeartbeatLogout");
             return 0;
         }
 
-        public long receivedMessageWithoutSequenceNumber(
+        public long sendReceivedMessageWithoutSequenceNumber(
             final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
         {
-            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.receivedMessageWithoutSequenceNumber");
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.sendReceivedMessageWithoutSequenceNumber");
             return 0;
         }
 
-        public long rejectWhilstNotLoggedOn(
+        public long sendRejectWhilstNotLoggedOn(
             final int msgSeqNo, final RejectReason reason, final int sequenceIndex, final int lastMsgSeqNumProcessed)
         {
-            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.rejectWhilstNotLoggedOn");
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.sendRejectWhilstNotLoggedOn");
             return 0;
         }
 
-        public long heartbeat(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
+        public long sendHeartbeat(final int msgSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
         {
-            return heartbeat(msgSeqNo, null, 0, sequenceIndex, lastMsgSeqNumProcessed);
+            return sendHeartbeat(msgSeqNo, null, 0, sequenceIndex, lastMsgSeqNumProcessed);
         }
 
-        public long heartbeat(
+        public long sendHeartbeat(
             final int msgSeqNo,
             final char[] testReqId,
             final int testReqIdLength,
@@ -413,7 +413,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
             return acceptingSessionWriter.send(heartbeat, adjustedMsgSeqNo);
         }
 
-        public long reject(
+        public long sendReject(
             final int msgSeqNo,
             final int refSeqNum,
             final int refTagId,
@@ -423,21 +423,21 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
             final int sequenceIndex,
             final int lastMsgSeqNumProcessed)
         {
-            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.reject");
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.sendReject");
             return 0;
         }
 
-        public long testRequest(
+        public long sendTestRequest(
             final int msgSeqNo, final CharSequence testReqID, final int sequenceIndex, final int lastMsgSeqNumProcessed)
         {
-            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.testRequest");
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.sendTestRequest");
             return 0;
         }
 
-        public long sequenceReset(
+        public long sendSequenceReset(
             final int msgSeqNo, final int newSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
         {
-            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.sequenceReset");
+            DebugLogger.log(LogTag.FIX_TEST, "FakeSessionProxy.sendSequenceReset");
             return 0;
         }
 

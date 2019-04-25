@@ -225,6 +225,14 @@ public final class LibraryConfiguration extends CommonConfiguration
         return this;
     }
 
+    /**
+     * Sets the factory for creating Session Proxies.
+     *
+     * @see uk.co.real_logic.artio.session.SessionProxy
+     *
+     * @param sessionProxyFactory the factory for creating Session Proxies.
+     * @return this
+     */
     public LibraryConfiguration sessionProxyFactory(final SessionProxyFactory sessionProxyFactory)
     {
         this.sessionProxyFactory = sessionProxyFactory;

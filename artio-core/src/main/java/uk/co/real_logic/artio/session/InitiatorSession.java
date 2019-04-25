@@ -84,7 +84,7 @@ public class InitiatorSession extends InternalSession
             state(SessionState.SENT_LOGON);
             final int heartbeatIntervalInS = (int)(heartbeatIntervalInMs() / 1000);
             final int sentSeqNum = resetSeqNum ? 1 : newSentSeqNum();
-            final long position = proxy.logon(sentSeqNum, heartbeatIntervalInS,
+            final long position = proxy.sendLogon(sentSeqNum, heartbeatIntervalInS,
                 username(),
                 password(),
                 resetSeqNum,
