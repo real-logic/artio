@@ -296,7 +296,7 @@ class ReceiverEndPoint
                 {
                     if (requiresAuthentication())
                     {
-                        startAuthenticationFlow(offset, length);
+                        startAuthenticationFlow(offset, length, messageType);
                         return offset;
                     }
 
@@ -409,19 +409,26 @@ class ReceiverEndPoint
         return buffer.scan(startScan + 1, usedBufferData - 1, START_OF_HEADER);
     }
 
-    private void startAuthenticationFlow(final int offset, final int length)
+    private void startAuthenticationFlow(final int offset, final int length, final int messageType)
     {
         if (sessionId != UNKNOWN)
         {
             return;
         }
 
-        logon.decode(buffer, offset, length);
+        if (messageType == LogonDecoder.MESSAGE_TYPE)
+        {
+            logon.decode(buffer, offset, length);
 
-        pendingAcceptorLogonMsgOffset = offset;
-        pendingAcceptorLogonMsgLength = length;
+            pendingAcceptorLogonMsgOffset = offset;
+            pendingAcceptorLogonMsgLength = length;
 
-        pendingAcceptorLogon = gatewaySessions.authenticate(logon, connectionId(), gatewaySession);
+            pendingAcceptorLogon = gatewaySessions.authenticate(logon, connectionId(), gatewaySession);
+        }
+        else
+        {
+            completeDisconnect(DisconnectReason.FIRST_MESSAGE_NOT_LOGON);
+        }
     }
 
     private boolean stashIfBackPressured(final int offset, final long position)

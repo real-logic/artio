@@ -59,6 +59,8 @@ public class ReceiverEndPointTest
     private static final long POSITION = 1024L;
     private static final int BUFFER_SIZE = 16 * 1024;
     private static final int SEQUENCE_INDEX = 0;
+    private static final int LOGON_LEN = LOGON_MESSAGE.length;
+
     private final AcceptorLogonResult pendingAuth = createSuccessfulPendingAuth();
     private final AcceptorLogonResult backpressuredPendingAuth = createBackpressuredPendingAuth();
     private TcpChannel mockChannel = mock(TcpChannel.class);
@@ -109,13 +111,13 @@ public class ReceiverEndPointTest
             }).when(framer).schedule(any(Continuation.class));
     }
 
-    private void givenAuthenticationResult(final AcceptorLogonResult authenticationResult)
+    private void givenLogonResult(final AcceptorLogonResult logonResult)
     {
         when(mockGatewaySessions.authenticate(
             any(),
             anyLong(),
             eq(gatewaySession)))
-            .thenReturn(authenticationResult);
+            .thenReturn(logonResult);
     }
 
     private void givenAnUnauthenticatedReceiverEndPoint()
@@ -138,18 +140,37 @@ public class ReceiverEndPointTest
         endPoint.gatewaySession(gatewaySession);
     }
 
+    private void theEndpointReceivesALogon()
+    {
+        theEndpointReceives(LOGON_MESSAGE, 0, LOGON_MESSAGE.length);
+    }
+
     @Test
     public void shouldNotifyDuplicateSession()
     {
         givenAnUnauthenticatedReceiverEndPoint();
         givenADuplicateSession();
 
+        theEndpointReceivesALogon();
+
+        polls(LOGON_MESSAGE.length);
+        pollWithNoData();
+
+        verifyDuplicateSession(times(1));
+    }
+
+    @Test
+    public void shouldDisconnectWhenFirstMessageIsNotALogon()
+    {
+        givenAnUnauthenticatedReceiverEndPoint();
+        givenLogonResult(pendingAuth);
+
         theEndpointReceivesACompleteMessage();
 
         polls(MSG_LEN);
         pollWithNoData();
 
-        verifyDuplicateSession(times(1));
+        verify(publication).saveDisconnect(anyInt(), anyLong(), eq(DisconnectReason.FIRST_MESSAGE_NOT_LOGON));
     }
 
     @Test
@@ -399,12 +420,12 @@ public class ReceiverEndPointTest
     public void shouldFrameLogonMessageWhenLoggerBehind()
     {
         givenAnUnauthenticatedReceiverEndPoint();
-        givenAuthenticationResult(backpressuredPendingAuth);
+        givenLogonResult(backpressuredPendingAuth);
 
-        theEndpointReceivesACompleteMessage();
+        theEndpointReceivesALogon();
 
         // Backpressured attempt
-        polls(MSG_LEN);
+        polls(LOGON_LEN);
 
         nothingMoreSaved();
 
@@ -412,7 +433,7 @@ public class ReceiverEndPointTest
         pollWithNoData();
         pollWithNoData();
 
-        savesFramedMessages(1, OK, MSG_LEN, LogonDecoder.MESSAGE_TYPE);
+        savesFramedMessages(1, OK, LOGON_LEN, LogonDecoder.MESSAGE_TYPE);
     }
 
     private void firstSaveAttemptIsBackPressured()
@@ -681,6 +702,6 @@ public class ReceiverEndPointTest
         when(pendingAcceptorLogon.isAccepted()).thenReturn(false);
         when(pendingAcceptorLogon.reason()).thenReturn(DUPLICATE_SESSION);
 
-        givenAuthenticationResult(pendingAcceptorLogon);
+        givenLogonResult(pendingAcceptorLogon);
     }
 }
