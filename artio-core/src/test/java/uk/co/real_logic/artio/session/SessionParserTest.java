@@ -37,7 +37,7 @@ public class SessionParserTest
     private MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId("das");
 
     private SessionParser parser = new SessionParser(
-        mockSession, mockSessionIdStrategy, validationStrategy, null);
+        mockSession, validationStrategy, null);
 
     @Before
     public void setUp()
