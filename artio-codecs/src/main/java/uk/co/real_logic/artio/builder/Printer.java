@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.builder;
 
 import uk.co.real_logic.artio.util.AsciiBuffer;
 
+@FunctionalInterface
 public interface Printer
 {
     String toString(AsciiBuffer input, int offset, int length, int messageType);

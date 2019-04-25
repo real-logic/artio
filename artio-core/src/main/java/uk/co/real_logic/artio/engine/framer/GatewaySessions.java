@@ -220,10 +220,18 @@ class GatewaySessions
         final List<GatewaySession> sessions = this.sessions;
 
         int eventsProcessed = 0;
-        for (int i = 0, size = sessions.size(); i < size; i++)
+        for (int i = 0, size = sessions.size(); i < size;)
         {
             final GatewaySession session = sessions.get(i);
             eventsProcessed += session.poll(time);
+            if (session.hasDisconnected())
+            {
+                size--;
+            }
+            else
+            {
+                i++;
+            }
         }
         return eventsProcessed;
     }
