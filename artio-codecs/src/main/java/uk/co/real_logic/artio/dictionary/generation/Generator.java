@@ -91,15 +91,15 @@ public abstract class Generator
 
     protected Generator(
         final Dictionary dictionary,
-        final String builderPackage,
-        final String builderCommonPackage,
+        final String thisPackage,
+        final String commonPackage,
         final OutputManager outputManager,
         final Class<?> validationClass,
         final Class<?> rejectUnknownClass)
     {
         this.dictionary = dictionary;
-        this.builderPackage = builderPackage;
-        this.builderCommonPackage = builderCommonPackage;
+        this.builderPackage = thisPackage;
+        this.builderCommonPackage = commonPackage;
         this.outputManager = outputManager;
         this.validationClass = validationClass;
         this.rejectUnknownClass = rejectUnknownClass;

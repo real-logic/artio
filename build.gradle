@@ -260,6 +260,7 @@ project(':artio-session-codecs') {
         classpath = sourceSets.main.runtimeClasspath
         args = [generatedDir, 'src/main/resources/session_dictionary.xml']
         outputs.dir generatedDir
+        systemProperty("fix.codecs.flyweight", "true")
     }
 
     jar {

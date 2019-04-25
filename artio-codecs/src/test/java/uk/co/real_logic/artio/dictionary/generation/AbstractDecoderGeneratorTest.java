@@ -15,16 +15,15 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.AsciiSequenceView;
 import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
-import org.agrona.AsciiSequenceView;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.util.Reflection;
 
@@ -48,8 +47,10 @@ import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.UNKNOWN
 import static uk.co.real_logic.artio.fields.DecimalFloat.MISSING_FLOAT;
 import static uk.co.real_logic.artio.util.Reflection.*;
 
-public class DecoderGeneratorTest
+public abstract class AbstractDecoderGeneratorTest
 {
+    private static final boolean CODEC_LOGGING = Boolean.getBoolean("fix.codec.log");
+
     private static final char[] ABC = "abc".toCharArray();
     private static final char[] AB = "ab".toCharArray();
     private static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
@@ -74,12 +75,14 @@ public class DecoderGeneratorTest
 
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
-    @BeforeClass
-    public static void generate() throws Exception
+    static void generate(final boolean flyweightStringsEnabled) throws Exception
     {
-        final Map<String, CharSequence> sourcesWithValidation = generateSources(true, false);
-        final Map<String, CharSequence> sourcesWithoutValidation = generateSources(false, false);
-        final Map<String, CharSequence> sourcesRejectingUnknownFields = generateSources(true, true);
+        final Map<String, CharSequence> sourcesWithValidation = generateSources(
+            true, false, flyweightStringsEnabled);
+        final Map<String, CharSequence> sourcesWithoutValidation = generateSources(
+            false, false, flyweightStringsEnabled);
+        final Map<String, CharSequence> sourcesRejectingUnknownFields = generateSources(
+            true, true, flyweightStringsEnabled);
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sourcesWithValidation);
         if (heartbeat == null || CODEC_LOGGING)
         {
@@ -100,8 +103,8 @@ public class DecoderGeneratorTest
         }
     }
 
-    private static Map<String, CharSequence> generateSources(final boolean validation,
-        final boolean rejectingUnknownFields)
+    static Map<String, CharSequence> generateSources(
+        final boolean validation, final boolean rejectingUnknownFields, final boolean flyweightStringsEnabled)
     {
         final Class<?> validationClass = validation ? ValidationOn.class : ValidationOff.class;
         final Class<?> rejectUnknownField = rejectingUnknownFields ?
@@ -111,7 +114,8 @@ public class DecoderGeneratorTest
             MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
-            MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass, rejectUnknownField);
+            MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass, rejectUnknownField,
+            flyweightStringsEnabled);
 
         constantGenerator.generate();
         enumGenerator.generate();
@@ -120,7 +124,7 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void generatesDecoderClass() throws Exception
+    public void generatesDecoderClass()
     {
         assertNotNull("Not generated anything", heartbeat);
         assertIsDecoder(heartbeat);
@@ -134,16 +138,6 @@ public class DecoderGeneratorTest
     public void generatesGetters() throws NoSuchMethodException
     {
         assertHasMethod(ON_BEHALF_OF_COMP_ID, char[].class, heartbeat);
-    }
-
-    @Test
-    public void stringGettersReadFromFields() throws Exception
-    {
-        final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
-        setField(decoder, ON_BEHALF_OF_COMP_ID, ABC);
-        setField(decoder, ON_BEHALF_OF_COMP_ID + "Length", 3);
-
-        assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
     }
 
     @Test

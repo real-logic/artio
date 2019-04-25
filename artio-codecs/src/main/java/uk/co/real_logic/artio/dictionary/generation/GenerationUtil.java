@@ -26,12 +26,13 @@ import static java.util.stream.Collectors.joining;
 public final class GenerationUtil
 {
     private static final int MESSAGE_TYPE_BITSHIFT = 8;
+
     public static final String PARENT_PACKAGE = System.getProperty("PARENT_PACKAGE", "uk.co.real_logic.artio");
-    public static final boolean FLYWEIGHT_STRINGS =
-        Boolean.parseBoolean(System.getProperty("FLYWEIGHT_STRINGS", "false"));
+    public static final boolean FLYWEIGHTS_ENABLED = Boolean.getBoolean("fix.codecs.flyweight");
 
     public static final String ENCODER_PACKAGE = PARENT_PACKAGE + ".builder";
     public static final String DECODER_PACKAGE = PARENT_PACKAGE + ".decoder";
+    public static final String DECODER_FLYWEIGHT_PACKAGE = PARENT_PACKAGE + ".decoder_flyweight";
     public static final String INDENT = "    ";
 
     private GenerationUtil()

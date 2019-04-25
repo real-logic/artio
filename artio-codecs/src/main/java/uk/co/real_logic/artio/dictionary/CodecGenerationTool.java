@@ -50,23 +50,34 @@ public final class CodecGenerationTool
             dictionary = parseDictionary(xmlFile, dictionary);
         }
 
-        final PackageOutputManager parent = new PackageOutputManager(outputPath, PARENT_PACKAGE);
-        final PackageOutputManager decoder = new PackageOutputManager(outputPath, DECODER_PACKAGE);
+        final PackageOutputManager parentOutput = new PackageOutputManager(outputPath, PARENT_PACKAGE);
+        final PackageOutputManager decoderOutput = new PackageOutputManager(outputPath, DECODER_PACKAGE);
+        final PackageOutputManager encoderOutput = new PackageOutputManager(outputPath, ENCODER_PACKAGE);
 
-        final EnumGenerator enumGenerator = new EnumGenerator(dictionary, PARENT_PACKAGE, parent);
-        final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, PARENT_PACKAGE, parent);
+        final EnumGenerator enumGenerator = new EnumGenerator(dictionary, PARENT_PACKAGE, parentOutput);
+        final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, PARENT_PACKAGE, parentOutput);
+
 
         final EncoderGenerator encoderGenerator = new EncoderGenerator(
             dictionary,
             1,
             ENCODER_PACKAGE,
             PARENT_PACKAGE,
-            new PackageOutputManager(outputPath, ENCODER_PACKAGE), Validation.class, RejectUnknownField.class);
+            encoderOutput,
+            Validation.class,
+            RejectUnknownField.class);
 
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
-            dictionary, 1, DECODER_PACKAGE, PARENT_PACKAGE, decoder, Validation.class, RejectUnknownField.class);
-        final PrinterGenerator printerGenerator = new PrinterGenerator(dictionary, DECODER_PACKAGE, decoder);
-        final AcceptorGenerator acceptorGenerator = new AcceptorGenerator(dictionary, DECODER_PACKAGE, decoder);
+            dictionary,
+            1,
+            DECODER_PACKAGE,
+            PARENT_PACKAGE,
+            decoderOutput,
+            Validation.class,
+            RejectUnknownField.class,
+            false);
+        final PrinterGenerator printerGenerator = new PrinterGenerator(dictionary, DECODER_PACKAGE, decoderOutput);
+        final AcceptorGenerator acceptorGenerator = new AcceptorGenerator(dictionary, DECODER_PACKAGE, decoderOutput);
 
         enumGenerator.generate();
         constantGenerator.generate();
@@ -76,6 +87,24 @@ public final class CodecGenerationTool
         decoderGenerator.generate();
         printerGenerator.generate();
         acceptorGenerator.generate();
+
+        if (FLYWEIGHTS_ENABLED)
+        {
+            final PackageOutputManager flyweightDecoderOutput =
+                new PackageOutputManager(outputPath, DECODER_FLYWEIGHT_PACKAGE);
+
+            final DecoderGenerator flyweightDecoderGenerator = new DecoderGenerator(
+                dictionary,
+                1,
+                DECODER_FLYWEIGHT_PACKAGE,
+                PARENT_PACKAGE,
+                flyweightDecoderOutput,
+                Validation.class,
+                RejectUnknownField.class,
+                true);
+
+            flyweightDecoderGenerator.generate();
+        }
     }
 
     private static Dictionary parseDictionary(final File xmlFile, final Dictionary parentDictionary) throws Exception

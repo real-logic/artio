@@ -49,8 +49,6 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 public class DecoderGenerator extends Generator
 {
-    public static final boolean CODEC_LOGGING = Boolean.getBoolean("fix.codec.log");
-
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
     public static final String GROUP_FIELDS = "GROUP_FIELDS";
 
@@ -83,18 +81,21 @@ public class DecoderGenerator extends Generator
     private Aggregate currentAggregate = null;
 
     private final int initialBufferSize;
+    private final boolean flyweightStringsEnabled;
 
     public DecoderGenerator(
         final Dictionary dictionary,
         final int initialBufferSize,
-        final String builderPackage,
-        final String builderCommonPackage,
+        final String thisPackage,
+        final String commonPackage,
         final OutputManager outputManager,
         final Class<?> validationClass,
-        final Class<?> rejectUnknownClass)
+        final Class<?> rejectUnknownClass,
+        final boolean flyweightStringsEnabled)
     {
-        super(dictionary, builderPackage, builderCommonPackage, outputManager, validationClass, rejectUnknownClass);
+        super(dictionary, thisPackage, commonPackage, outputManager, validationClass, rejectUnknownClass);
         this.initialBufferSize = initialBufferSize;
+        this.flyweightStringsEnabled = flyweightStringsEnabled;
     }
 
     protected void generateAggregateFile(final Aggregate aggregate, final AggregateType type)
@@ -767,7 +768,7 @@ public class DecoderGenerator extends Generator
 
         final String asStringBody;
 
-        if (GenerationUtil.FLYWEIGHT_STRINGS)
+        if (flyweightStringsEnabled)
         {
             asStringBody = String.format(entry.required() ?
                 "buffer.getStringWithoutLengthAscii(%1$sOffset, %1$sLength)" :
@@ -854,7 +855,7 @@ public class DecoderGenerator extends Generator
             optionalGetter(entry),
             stringDecoder,
             enumDecoder,
-            GenerationUtil.FLYWEIGHT_STRINGS ? lazyStringInitialisation : "");
+            flyweightStringsEnabled ? lazyStringInitialisation : "");
     }
 
     private static String stringBasedLazyInstantiating(final String fieldName, final Type type)
@@ -1345,7 +1346,7 @@ public class DecoderGenerator extends Generator
             case EXCHANGE:
             case COUNTRY:
             case LANGUAGE:
-                if (GenerationUtil.FLYWEIGHT_STRINGS)
+                if (flyweightStringsEnabled)
                 {
                     return "";
                 }
