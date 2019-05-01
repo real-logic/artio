@@ -36,7 +36,6 @@ import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
-import uk.co.real_logic.artio.messages.ManageSessionEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
 import java.io.File;
@@ -66,7 +65,6 @@ public class ReplayIndexTest extends AbstractLogTest
     private UnsafeBuffer replayPositionBuffer = new UnsafeBuffer(new byte[REPLAY_POSITION_BUFFER_SIZE]);
     private IndexedPositionConsumer positionConsumer = mock(IndexedPositionConsumer.class);
     private IndexedPositionReader positionReader = new IndexedPositionReader(replayPositionBuffer);
-    private ManageSessionEncoder logon = new ManageSessionEncoder();
 
     private ControlledFragmentHandler mockHandler = mock(ControlledFragmentHandler.class);
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
@@ -324,32 +322,6 @@ public class ReplayIndexTest extends AbstractLogTest
 
         verifyMappedFile(SESSION_ID);
         verifyMappedFile(SESSION_ID_2);
-    }
-
-    @Test(timeout = 20_000L)
-    public void shouldIgnoreOtherMessageTypes()
-    {
-        bufferContainsLogon();
-
-        publishBuffer();
-
-        indexRecord();
-
-        positionReader.readLastPosition(positionConsumer);
-
-        verifyNoMoreInteractions(existingBufferFactory, positionConsumer);
-    }
-
-    private void bufferContainsLogon()
-    {
-        offset = START;
-
-        logon
-            .wrapAndApplyHeader(buffer, offset, header)
-            .connection(CONNECTION_ID)
-            .session(SESSION_ID);
-
-        offset += header.encodedLength() + logon.encodedLength();
     }
 
     private void indexExampleMessage()
