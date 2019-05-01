@@ -60,7 +60,6 @@ public final class CodecGenerationTool
 
         final EncoderGenerator encoderGenerator = new EncoderGenerator(
             dictionary,
-            1,
             ENCODER_PACKAGE,
             PARENT_PACKAGE,
             encoderOutput,

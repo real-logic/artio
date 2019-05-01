@@ -15,6 +15,10 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.AsciiSequenceView;
+import org.agrona.DirectBuffer;
+import org.agrona.MutableDirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.OutputManager;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
@@ -143,13 +147,10 @@ public class EncoderGenerator extends Generator
 
     private final MutableAsciiBuffer string = new MutableAsciiBuffer(buffer);
 
-    private final int initialArraySize;
-
     private final String beginString;  // e.g. "FIX.4.4"
 
     public EncoderGenerator(
         final Dictionary dictionary,
-        final int initialArraySize,
         final String builderPackage,
         final String builderCommonPackage,
         final OutputManager outputManager,
@@ -163,7 +164,6 @@ public class EncoderGenerator extends Generator
         validateHasField(header, BEGIN_STRING);
         validateHasField(header, BODY_LENGTH);
 
-        this.initialArraySize = initialArraySize;
         beginString = String.format("%s.%d.%d",
                                     dictionary.specType(),
                                     dictionary.majorVersion(),
@@ -187,7 +187,14 @@ public class EncoderGenerator extends Generator
             (out) ->
             {
                 out.append(fileHeader(builderPackage));
-                generateImports("Encoder", aggregateType, out);
+                generateImports(
+                    "Encoder",
+                    aggregateType,
+                    out,
+                    DirectBuffer.class,
+                    MutableDirectBuffer.class,
+                    UnsafeBuffer.class,
+                    AsciiSequenceView.class);
                 generateAggregateClass(aggregate, aggregateType, className, out);
             });
     }
@@ -427,7 +434,7 @@ public class EncoderGenerator extends Generator
             case MONTHYEAR:
             case TZTIMEONLY:
             case TZTIMESTAMP:
-                return generateByteArraySetter(className, fieldName, name);
+                return generateBytesSetter(className, fieldName, name);
 
             default: throw new UnsupportedOperationException("Unknown type: " + field.type());
         }
@@ -459,12 +466,27 @@ public class EncoderGenerator extends Generator
             formatPropertyName(numberField.name())));
     }
 
-    private String generateByteArraySetter(final String className, final String fieldName, final String name)
+    private String generateBytesSetter(final String className, final String fieldName, final String name)
     {
         return String.format(
             "    private final MutableDirectBuffer %1$s = new UnsafeBuffer();\n\n" +
             "    private int %1$sOffset = 0;\n\n" +
             "    private int %1$sLength = 0;\n\n" +
+            "    public %2$s %1$s(final DirectBuffer value, final int offset, final int length)\n" +
+            "    {\n" +
+            "        %1$s.wrap(value);\n" +
+            "        %1$sOffset = offset;\n" +
+            "        %1$sLength = length;\n" +
+            "        return this;\n" +
+            "    }\n\n" +
+            "    public %2$s %1$s(final DirectBuffer value, final int length)\n" +
+            "    {\n" +
+            "        return %1$s(value, 0, length);\n" +
+            "    }\n\n" +
+            "    public %2$s %1$s(final DirectBuffer value)\n" +
+            "    {\n" +
+            "        return %1$s(value, 0, value.capacity());\n" +
+            "    }\n\n" +
             "    public %2$s %1$s(final byte[] value, final int offset, final int length)\n" +
             "    {\n" +
             "        %1$s.wrap(value);\n" +
@@ -525,7 +547,7 @@ public class EncoderGenerator extends Generator
             "    }\n\n" +
             "%4$s",
             fieldName,
-            generateByteArraySetter(className, fieldName, name),
+            generateBytesSetter(className, fieldName, name),
             className,
             enumSetter);
     }

@@ -15,10 +15,13 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.AsciiSequenceView;
+import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.EncodingException;
 import uk.co.real_logic.artio.builder.Encoder;
@@ -76,7 +79,7 @@ public class EncoderGeneratorTest
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final EncoderGenerator encoderGenerator =
-            new EncoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass,
+            new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass,
             rejectUnknownField);
         enumGenerator.generate();
         encoderGenerator.generate();
@@ -126,7 +129,7 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void byteArraySettersWriteToFields() throws Exception
+    public void shouldWriteByteArraySettersToFields() throws Exception
     {
         final Encoder encoder = newHeartbeat();
 
@@ -135,7 +138,6 @@ public class EncoderGeneratorTest
             .invoke(encoder, VALUE_IN_BYTES);
 
         assertTestReqIsValue(encoder);
-
         assertEncodesTestReqIdFully(encoder);
     }
 
@@ -144,7 +146,7 @@ public class EncoderGeneratorTest
     {
         final Encoder encoder = newHeartbeat();
 
-        setTestReqIdBytes(encoder, 1, 3);
+        setTestReqIdBytes(encoder);
 
         assertArrayEquals(PREFIXED_VALUE_IN_BYTES, getTestReqIdBytes(encoder));
         assertTestReqIdOffset(1, encoder);
@@ -153,12 +155,48 @@ public class EncoderGeneratorTest
         assertEncodesTestReqIdFully(encoder);
     }
 
-    private void setTestReqIdBytes(
-        final Object encoder, final int offset, final int length) throws Exception
+    @Test
+    public void shouldWriteDirectBufferSettersToFields() throws Exception
     {
+        final Encoder encoder = newHeartbeat();
+
         heartbeat
-            .getMethod(TEST_REQ_ID, byte[].class, int.class, int.class)
-            .invoke(encoder, PREFIXED_VALUE_IN_BYTES, offset, length);
+            .getMethod(TEST_REQ_ID, DirectBuffer.class)
+            .invoke(encoder, new UnsafeBuffer(VALUE_IN_BYTES));
+
+        assertTestReqIsValue(encoder);
+        assertEncodesTestReqIdFully(encoder);
+    }
+
+    @Test
+    public void offsetAndLengthDirectBufferSettersWriteFields() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+
+        setTestReqIdBuffer(encoder);
+
+        assertArrayEquals(PREFIXED_VALUE_IN_BYTES, getTestReqIdBytes(encoder));
+        assertTestReqIdOffset(1, encoder);
+        assertTestReqIdLength(3, encoder);
+
+        assertEncodesTestReqIdFully(encoder);
+    }
+
+    @Ignore // TODO: need to improve the AsciiSequenceView API.
+    @Test
+    public void shouldWriteAsciiSequenceViewSetters() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+
+        heartbeat
+            .getMethod(TEST_REQ_ID, AsciiSequenceView.class)
+            .invoke(encoder, new AsciiSequenceView(new UnsafeBuffer(PREFIXED_VALUE_IN_BYTES), 1, 3));
+
+        assertArrayEquals(PREFIXED_VALUE_IN_BYTES, getTestReqIdBytes(encoder));
+        assertTestReqIdOffset(1, encoder);
+        assertTestReqIdLength(3, encoder);
+
+        assertEncodesTestReqIdFully(encoder);
     }
 
     @Test
@@ -899,7 +937,6 @@ public class EncoderGeneratorTest
         assertEquals(value.length(), getField(encoder, ON_BEHALF_OF_COMP_ID_LENGTH));
     }
 
-
     private boolean hasTestReqId(final Object encoder) throws Exception
     {
         return (boolean)get(encoder, HAS_TEST_REQ_ID);
@@ -935,5 +972,21 @@ public class EncoderGeneratorTest
         setRequiredFields(encoder);
         assertThat(encoder.toString(), containsString(STRING_ONLY_TESTREQ_MESSAGE_SUFFIX));
         assertEncodesTo(encoder, ONLY_TESTREQ_ENCODED_MESSAGE);
+    }
+
+    private void setTestReqIdBytes(
+        final Object encoder) throws Exception
+    {
+        heartbeat
+            .getMethod(TEST_REQ_ID, byte[].class, int.class, int.class)
+            .invoke(encoder, PREFIXED_VALUE_IN_BYTES, 1, 3);
+    }
+
+    private void setTestReqIdBuffer(
+        final Object encoder) throws Exception
+    {
+        heartbeat
+            .getMethod(TEST_REQ_ID, DirectBuffer.class, int.class, int.class)
+            .invoke(encoder, new UnsafeBuffer(PREFIXED_VALUE_IN_BYTES), 1, 3);
     }
 }

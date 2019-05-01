@@ -18,7 +18,6 @@ package uk.co.real_logic.artio.dictionary.generation;
 import org.agrona.AsciiSequenceView;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.IntHashSet;
-import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.OutputManager;
 import uk.co.real_logic.artio.EncodingException;
 import uk.co.real_logic.artio.dictionary.CharArraySet;
@@ -124,7 +123,8 @@ public abstract class Generator
     protected void generateImports(
         final String compoundSuffix,
         final AggregateType type,
-        final Writer out) throws IOException
+        final Writer out,
+        final Class<?>... extraImports) throws IOException
     {
         out
             .append(importFor(MutableDirectBuffer.class))
@@ -138,8 +138,7 @@ public abstract class Generator
             out.append(importFor(topType(GROUP)));
         }
 
-        out
-            .append(type == MESSAGE ? String.format(COMMON_COMPOUND_IMPORTS, builderPackage, compoundSuffix) : "")
+        out .append(type == MESSAGE ? String.format(COMMON_COMPOUND_IMPORTS, builderPackage, compoundSuffix) : "")
             .append(importFor(DecimalFloat.class))
             .append(importFor(MutableAsciiBuffer.class))
             .append(importFor(AsciiBuffer.class))
@@ -150,10 +149,14 @@ public abstract class Generator
             .append(importFor(CharArraySet.class))
             .append(importFor(IntHashSet.class))
             .append(importFor(IntHashSet.IntIterator.class))
-            .append(importFor(EncodingException.class))
-            .append(importFor(MutableDirectBuffer.class))
-            .append(importFor(UnsafeBuffer.class))
-            .append(importStaticFor(StandardCharsets.class, "US_ASCII"))
+            .append(importFor(EncodingException.class));
+
+        for (final Class<?> extraImport : extraImports)
+        {
+            out.append(importFor(extraImport));
+        }
+
+        out .append(importStaticFor(StandardCharsets.class, "US_ASCII"))
             .append(importStaticFor(validationClass, CODEC_VALIDATION_ENABLED))
             .append(importStaticFor(rejectUnknownClass, CODEC_REJECT_UNKNOWN_FIELD_ENABLED));
 
