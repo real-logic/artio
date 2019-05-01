@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -52,8 +53,12 @@ public class EncoderGeneratorTest
     public static void generate() throws Exception
     {
         sources = generateSources(true);
+        if (AbstractDecoderGeneratorTest.CODEC_LOGGING)
+        {
+            System.out.println(sources);
+        }
         heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
-        if (heartbeat == null)
+        if (heartbeat == null && !AbstractDecoderGeneratorTest.CODEC_LOGGING)
         {
             System.out.println(sources);
         }
@@ -880,12 +885,17 @@ public class EncoderGeneratorTest
 
     private byte[] getTestReqIdBytes(final Object encoder) throws Exception
     {
-        return (byte[])getField(encoder, TEST_REQ_ID);
+        return getBytesField(encoder, TEST_REQ_ID);
+    }
+
+    private byte[] getBytesField(final Object encoder, final String fieldName) throws Exception
+    {
+        return ((UnsafeBuffer)getField(encoder, fieldName)).byteArray();
     }
 
     private void assertOnBehalfOfCompIDValue(final Object encoder, final String value) throws Exception
     {
-        assertArrayEquals(value.getBytes(), (byte[])getField(encoder, ON_BEHALF_OF_COMP_ID));
+        assertArrayEquals(value.getBytes(), getBytesField(encoder, ON_BEHALF_OF_COMP_ID));
         assertEquals(value.length(), getField(encoder, ON_BEHALF_OF_COMP_ID_LENGTH));
     }
 

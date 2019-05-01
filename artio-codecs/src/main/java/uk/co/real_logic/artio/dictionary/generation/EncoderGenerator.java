@@ -15,27 +15,19 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.generation.OutputManager;
+import uk.co.real_logic.artio.builder.Encoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.dictionary.ir.*;
+import uk.co.real_logic.artio.dictionary.ir.Entry.Element;
+import uk.co.real_logic.artio.dictionary.ir.Field.Type;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
+
 import java.io.IOException;
 import java.io.Writer;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.IntStream;
-
-import org.agrona.generation.OutputManager;
-
-
-import uk.co.real_logic.artio.builder.Encoder;
-import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
-import uk.co.real_logic.artio.dictionary.ir.Aggregate;
-import uk.co.real_logic.artio.dictionary.ir.Component;
-import uk.co.real_logic.artio.dictionary.ir.Dictionary;
-import uk.co.real_logic.artio.dictionary.ir.Entry;
-import uk.co.real_logic.artio.dictionary.ir.Entry.Element;
-import uk.co.real_logic.artio.dictionary.ir.Field;
-import uk.co.real_logic.artio.dictionary.ir.Field.Type;
-import uk.co.real_logic.artio.dictionary.ir.Group;
-import uk.co.real_logic.artio.dictionary.ir.Message;
-import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static java.util.Collections.emptyList;
 import static java.util.Collections.singletonList;
@@ -270,7 +262,7 @@ public class EncoderGenerator extends Generator
         }
 
         precomputedHeaders(out, aggregate.entries());
-        setters(out, className, aggregate.entries());
+        generateSetters(out, className, aggregate.entries());
         out.append(encodeMethod(aggregate.entries(), type));
         out.append(completeResetMethod(aggregate, isMessage, type));
         out.append(toString(aggregate, isMessage));
@@ -354,29 +346,29 @@ public class EncoderGenerator extends Generator
         {
             return "";
         }
-
     }
 
-    private void setters(final Writer out, final String className, final List<Entry> entries) throws IOException
+    private void generateSetters(final Writer out, final String className, final List<Entry> entries)
+        throws IOException
     {
         for (final Entry entry : entries)
         {
-            setter(className, entry, out);
+            generateSetter(className, entry, out);
         }
     }
 
-    private void setter(final String className, final Entry entry, final Writer out) throws IOException
+    private void generateSetter(final String className, final Entry entry, final Writer out) throws IOException
     {
         if (!isBodyLength(entry))
         {
             entry.forEach(
-                (field) -> out.append(fieldSetter(className, field)),
+                (field) -> out.append(generateFieldSetter(className, field)),
                 (group) -> generateGroup(className, group, out),
-                (component) -> componentField(encoderClassName(entry.name()), component, out));
+                (component) -> generateComponentField(encoderClassName(entry.name()), component, out));
         }
     }
 
-    private String fieldSetter(final String className, final Field field)
+    private String generateFieldSetter(final String className, final Field field)
     {
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
@@ -389,7 +381,7 @@ public class EncoderGenerator extends Generator
             enumSetter(className, fieldName, field.name()) : "";
 
         final Function<String, String> generateSetter =
-            (type) -> setter(name, type, fieldName, hasField, className, hasAssign, enumSetter);
+            (type) -> generateSetter(name, type, fieldName, hasField, className, hasAssign, enumSetter);
 
         switch (field.type())
         {
@@ -446,7 +438,7 @@ public class EncoderGenerator extends Generator
         generateGroupClass(group, out);
 
         final Entry numberField = group.numberField();
-        setter(className, numberField, out);
+        generateSetter(className, numberField, out);
 
         out.append(String.format(
             "\n" +
@@ -470,38 +462,34 @@ public class EncoderGenerator extends Generator
     private String generateByteArraySetter(final String className, final String fieldName, final String name)
     {
         return String.format(
-            "    private byte[] %1$s = new byte[%3$d];\n\n" +
+            "    private final MutableDirectBuffer %1$s = new UnsafeBuffer();\n\n" +
             "    private int %1$sOffset = 0;\n\n" +
             "    private int %1$sLength = 0;\n\n" +
-            "    public %2$s %1$s(final byte[] value, final int length)\n" +
-            "    {\n" +
-            "        %1$s = value;\n" +
-            "        %1$sOffset = 0;\n" +
-            "        %1$sLength = length;\n" +
-            "        return this;\n" +
-            "    }\n\n" +
             "    public %2$s %1$s(final byte[] value, final int offset, final int length)\n" +
             "    {\n" +
-            "        %1$s = value;\n" +
+            "        %1$s.wrap(value);\n" +
             "        %1$sOffset = offset;\n" +
             "        %1$sLength = length;\n" +
             "        return this;\n" +
             "    }\n\n" +
+            "    public %2$s %1$s(final byte[] value, final int length)\n" +
+            "    {\n" +
+            "        return %1$s(value, 0, length);\n" +
+            "    }\n\n" +
             "    public %2$s %1$s(final byte[] value)\n" +
             "    {\n" +
-            "        return %1$s(value, value.length);\n" +
+            "        return %1$s(value, 0, value.length);\n" +
             "    }\n\n" +
-            "    public boolean has%4$s()\n" +
+            "    public boolean has%3$s()\n" +
             "    {\n" +
             "        return %1$sLength > 0;\n" +
             "    }\n\n" +
-            "    public byte[] %1$s()\n" +
+            "    public MutableDirectBuffer %1$s()\n" +
             "    {\n" +
             "        return %1$s;\n" +
             "    }\n\n",
             fieldName,
             className,
-            initialArraySize,
             name);
     }
 
@@ -515,25 +503,22 @@ public class EncoderGenerator extends Generator
             "%2$s" +
             "    public %3$s %1$s(final CharSequence value)\n" +
             "    {\n" +
-            "        %1$s = toBytes(value, %1$s);\n" +
+            "        toBytes(value, %1$s);\n" +
             "        %1$sOffset = 0;\n" +
             "        %1$sLength = value.length();\n" +
             "        return this;\n" +
             "    }\n\n" +
             "    public %3$s %1$s(final char[] value)\n" +
             "    {\n" +
-            "        return %1$s(value, value.length);\n" +
+            "        return %1$s(value, 0, value.length);\n" +
             "    }\n\n" +
             "    public %3$s %1$s(final char[] value, final int length)\n" +
             "    {\n" +
-            "        %1$s = toBytes(value, %1$s, length);\n" +
-            "        %1$sOffset = 0;\n" +
-            "        %1$sLength = length;\n" +
-            "        return this;\n" +
+                "        return %1$s(value, 0, length);\n" +
             "    }\n\n" +
             "    public %3$s %1$s(final char[] value, final int offset, final int length)\n" +
             "    {\n" +
-            "        %1$s = toBytes(value, %1$s, offset, length);\n" +
+            "        toBytes(value, %1$s, offset, length);\n" +
             "        %1$sOffset = 0;\n" +
             "        %1$sLength = length;\n" +
             "        return this;\n" +
@@ -545,7 +530,7 @@ public class EncoderGenerator extends Generator
             enumSetter);
     }
 
-    private String setter(
+    private String generateSetter(
         final String name,
         final String type,
         final String fieldName,
@@ -785,7 +770,7 @@ public class EncoderGenerator extends Generator
             case UTCDATEONLY:
             case TZTIMEONLY:
             case TZTIMESTAMP:
-                return stringPut(fieldName, enablingSuffix, tag);
+                return encodeStringField(fieldName, enablingSuffix, tag);
 
             case DATA:
             case XMLDATA:
@@ -803,7 +788,7 @@ public class EncoderGenerator extends Generator
         }
     }
 
-    private String stringPut(final String fieldName, final String optionalSuffix, final String tag)
+    private String encodeStringField(final String fieldName, final String optionalSuffix, final String tag)
     {
         return formatEncoder(fieldName, optionalSuffix, tag,
         "        buffer.putBytes(position, %s, %2$sOffset, %2$sLength);\n" +
@@ -901,7 +886,7 @@ public class EncoderGenerator extends Generator
 
     protected String stringToString(final String fieldName)
     {
-        return String.format("new String(%s, %1$sOffset, %1$sLength, StandardCharsets.US_ASCII)", fieldName);
+        return String.format("%1$s.getStringWithoutLengthAscii(%1$sOffset, %1$sLength)", fieldName);
     }
 
     protected String componentToString(final Component component)
@@ -913,7 +898,9 @@ public class EncoderGenerator extends Generator
             formatPropertyName(name));
     }
 
-    private void componentField(final String className, final Component element, final Writer out) throws IOException
+    private void generateComponentField(
+        final String className, final Component element, final Writer out)
+        throws IOException
     {
         out.append(String.format(
             "    private final %1$s %2$s = new %1$s();\n" +

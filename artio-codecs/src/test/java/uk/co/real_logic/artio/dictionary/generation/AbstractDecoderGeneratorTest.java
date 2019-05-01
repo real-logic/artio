@@ -49,7 +49,7 @@ import static uk.co.real_logic.artio.util.Reflection.*;
 
 public abstract class AbstractDecoderGeneratorTest
 {
-    private static final boolean CODEC_LOGGING = Boolean.getBoolean("fix.codec.log");
+    public static final boolean CODEC_LOGGING = Boolean.getBoolean("fix.codec.log");
 
     private static final char[] ABC = "abc".toCharArray();
     private static final char[] AB = "ab".toCharArray();

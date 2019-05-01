@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
-import java.util.Arrays;
+import org.agrona.MutableDirectBuffer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
@@ -40,6 +40,7 @@ public final class CodecUtil
     public static final String ENUM_UNKNOWN_STRING = Character.toString(ENUM_UNKNOWN_CHAR);
 
     // NB: only valid for ASCII bytes.
+    @Deprecated // Will be removed in a future version
     public static byte[] toBytes(final CharSequence value, final byte[] oldBuffer)
     {
         final int length = value.length();
@@ -53,12 +54,14 @@ public final class CodecUtil
     }
 
     // NB: only valid for ASCII bytes.
+    @Deprecated // Will be removed in a future version
     public static byte[] toBytes(final char[] value, final byte[] oldBuffer, final int length)
     {
         return toBytes(value, oldBuffer, 0, length);
     }
 
     // NB: only valid for ASCII bytes.
+    @Deprecated // Will be removed in a future version
     public static byte[] toBytes(final char[] value, final byte[] oldBuffer, final int offset, final int length)
     {
         final byte[] buffer = (oldBuffer.length < length) ? new byte[length] : oldBuffer;
@@ -82,17 +85,38 @@ public final class CodecUtil
     }
 
     // NB: only valid for ASCII bytes.
-    public static byte[] subsequenceBytes(
-        final byte[] value, final byte[] oldBuffer, final int offset, final int length)
+    public static void toBytes(final CharSequence value, final MutableDirectBuffer buffer)
     {
-        if (oldBuffer.length >= length)
+        final int length = value.length();
+        if (buffer.capacity() < length)
         {
-            System.arraycopy(value, offset, oldBuffer, 0, length);
-            return oldBuffer;
+            buffer.wrap(new byte[length]);
         }
-        else
+
+        for (int i = 0; i < length; i++)
         {
-            return Arrays.copyOfRange(value, offset, offset + length);
+            buffer.putByte(i, (byte)value.charAt(i));
+        }
+    }
+
+    // NB: only valid for ASCII bytes.
+    public static void toBytes(final char[] value, final MutableDirectBuffer oldBuffer, final int length)
+    {
+        toBytes(value, oldBuffer, 0, length);
+    }
+
+    // NB: only valid for ASCII bytes.
+    public static void toBytes(
+        final char[] value, final MutableDirectBuffer buffer, final int offset, final int length)
+    {
+        if (buffer.capacity() < length)
+        {
+            buffer.wrap(new byte[length]);
+        }
+
+        for (int i = 0; i < length; i++)
+        {
+            buffer.putByte(i, (byte)value[i + offset]);
         }
     }
 

@@ -15,8 +15,10 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.AsciiSequenceView;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.IntHashSet;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.OutputManager;
 import uk.co.real_logic.artio.EncodingException;
 import uk.co.real_logic.artio.dictionary.CharArraySet;
@@ -27,7 +29,6 @@ import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.LocalMktDateEncoder;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.AsciiBuffer;
-import org.agrona.AsciiSequenceView;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.IOException;
@@ -150,9 +151,12 @@ public abstract class Generator
             .append(importFor(IntHashSet.class))
             .append(importFor(IntHashSet.IntIterator.class))
             .append(importFor(EncodingException.class))
+            .append(importFor(MutableDirectBuffer.class))
+            .append(importFor(UnsafeBuffer.class))
             .append(importStaticFor(StandardCharsets.class, "US_ASCII"))
             .append(importStaticFor(validationClass, CODEC_VALIDATION_ENABLED))
             .append(importStaticFor(rejectUnknownClass, CODEC_REJECT_UNKNOWN_FIELD_ENABLED));
+
         if (!builderPackage.equals(builderCommonPackage) && !builderCommonPackage.isEmpty())
         {
             out.append(importFor(builderCommonPackage + ".*"));
