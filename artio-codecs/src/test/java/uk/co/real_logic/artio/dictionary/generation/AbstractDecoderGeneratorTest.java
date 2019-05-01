@@ -18,7 +18,6 @@ package uk.co.real_logic.artio.dictionary.generation;
 import org.agrona.AsciiSequenceView;
 import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;
@@ -262,7 +261,7 @@ public abstract class AbstractDecoderGeneratorTest
     @Test
     public void decodesEnumValuesUsingAsEnumMethods() throws Exception
     {
-        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        final Decoder decoder = enumTestMessageDecoder();
         decode(ET_ALL_FIELDS, decoder);
         assertEquals('a', getRepresentation(get(decoder, CHAR_ENUM_OPT + "AsEnum")));
         assertEquals(10, getRepresentation(get(decoder, INT_ENUM_OPT + "AsEnum")));
@@ -276,7 +275,7 @@ public abstract class AbstractDecoderGeneratorTest
     @Test
     public void decodesMissingOptionalEnumValuesAsSentinelsUsingAsEnumMethods() throws Exception
     {
-        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        final Decoder decoder = enumTestMessageDecoder();
         decode(ET_ONLY_REQ_FIELDS, decoder);
         assertEquals(ENUM_MISSING_CHAR, getRepresentation(get(decoder, CHAR_ENUM_OPT + "AsEnum")));
         assertEquals(ENUM_MISSING_INT, getRepresentation(get(decoder, INT_ENUM_OPT + "AsEnum")));
@@ -287,7 +286,7 @@ public abstract class AbstractDecoderGeneratorTest
     @Test
     public void decodesBadEnumValuesAsSentinelsUsingAsEnumMethods() throws Exception
     {
-        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        final Decoder decoder = enumTestMessageDecoder();
         decode(ET_ONLY_REQ_FIELDS_WITH_BAD_VALUES, decoder);
         assertEquals(ENUM_UNKNOWN_CHAR, getRepresentation(get(decoder, CHAR_ENUM_REQ + "AsEnum")));
         assertEquals(ENUM_UNKNOWN_INT, getRepresentation(get(decoder, INT_ENUM_REQ + "AsEnum")));
@@ -298,7 +297,7 @@ public abstract class AbstractDecoderGeneratorTest
     @Test
     public void decodesMissingRequiredEnumFieldUsingAsEnumMethod() throws Exception
     {
-        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        final Decoder decoder = enumTestMessageDecoder();
         decode(ET_MISSING_REQ_FIELD, decoder);
         assertEquals(UNKNOWN_NAME, get(decoder, STRING_ENUM_REQ + "AsEnum").toString());
         assertEquals(ENUM_UNKNOWN_STRING, getRepresentation(get(decoder, STRING_ENUM_REQ + "AsEnum")));
@@ -592,15 +591,12 @@ public abstract class AbstractDecoderGeneratorTest
     @Test
     public void shouldLeaveDecoderInUsableIfUnknownFieldForRepeatingGroupReachedAndRejectingOn() throws Exception
     {
-        //Given
         final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
 
-        //When
         assertFalse("Passed validation with missing fields", decoder.validate());
-        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
         assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
+        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
 
-        //Then
         decoder.reset();
         decode(NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE, decoder);
         assertTrue("Failed validation when it should have passed", decoder.validate());
@@ -692,7 +688,11 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_WITH_FIELD_UNKNOWN_TO_MESSAGE_BUT_IN_SPEC);
 
-        assertTrue("Failed validation with missing fields", decoder.validate());
+        if (!decoder.validate())
+        {
+            fail("Failed validation with reason: " + RejectReason.decode(decoder.rejectReason()) +
+                " for tag: " + decoder.invalidTagId());
+        }
 
         Object group = get(decoder, "secondEgGroupGroup");
         assertEquals("TOM", get(group, "secondGroupFieldAsString"));
@@ -1371,8 +1371,6 @@ public abstract class AbstractDecoderGeneratorTest
         return getInt(decoder, "countryFieldLength");
     }
 
-    // TODO: validation for groups
-
     private void canIterateOverGroup(final Decoder decoder) throws Exception
     {
         final Iterator<?> iterator = getEgGroupIterator(decoder);
@@ -1691,5 +1689,10 @@ public abstract class AbstractDecoderGeneratorTest
     private interface ExceptionThrowingCommand
     {
         void execute() throws Exception;
+    }
+
+    private Decoder enumTestMessageDecoder() throws Exception
+    {
+        return (Decoder)enumTestMessage.getConstructor().newInstance();
     }
 }

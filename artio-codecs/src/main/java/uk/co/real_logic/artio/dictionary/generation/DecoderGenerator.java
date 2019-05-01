@@ -775,29 +775,14 @@ public class DecoderGenerator extends Generator
         final String fieldName = formatPropertyName(name);
         final Type type = field.type();
         final String optionalCheck = optionalCheck(entry);
-
-        final String asStringBody;
-
-        if (flyweightsEnabled)
-        {
-            asStringBody = String.format(entry.required() ?
-                "buffer.getStringWithoutLengthAscii(%1$sOffset, %1$sLength)" :
-                "has%2$s ? buffer.getStringWithoutLengthAscii(%1$sOffset, %1$sLength) : null",
-                fieldName,
-                name);
-        }
-        else
-        {
-            asStringBody = String.format(entry.required() ?
-                "new String(%1$s, 0, %1$sLength)" :
-                "has%2$s ? new String(%1$s, 0, %1$sLength) : null",
-                fieldName,
-                name);
-        }
+        final String asStringBody = generateAsStringBody(entry, name, fieldName);
 
         final String enumValueDecoder = String.format(
             type.isStringBased() ?
             "%1$s.decode(%2$s(), %2$sLength)" :
+            // Need to ensure that decode the field
+            (flyweightsEnabled && (type.isIntBased() || type.isFloatBased())) ?
+            "%1$s.decode(%2$s())" :
             "%1$s.decode(%2$s)",
             name,
             fieldName);
@@ -808,8 +793,7 @@ public class DecoderGenerator extends Generator
             "has%2$s ? %1$s : %2$s.%3$s",
             enumValueDecoder,
             name,
-            NULL_VAL_NAME
-        );
+            NULL_VAL_NAME);
 
         final String extraStringDecode = type.isStringBased() ? String.format(
             "    public String %1$sAsString()\n" +
@@ -826,7 +810,6 @@ public class DecoderGenerator extends Generator
             asStringBody) : "";
 
         // Need to keep offset and length split due to the abject fail that is the DATA type.
-
         final String lengthBasedFields = type.hasLengthField(flyweightsEnabled) ? String.format(
             "    private int %1$sLength;\n\n" +
             "    public int %1$sLength()\n" +
@@ -876,6 +859,29 @@ public class DecoderGenerator extends Generator
             offsetField,
             enumDecoder,
             flyweightsEnabled ? lazyInitialisation : "");
+    }
+
+    private String generateAsStringBody(final Entry entry, final String name, final String fieldName)
+    {
+        final String asStringBody;
+
+        if (flyweightsEnabled)
+        {
+            asStringBody = String.format(entry.required() ?
+                "buffer != null ? buffer.getStringWithoutLengthAscii(%1$sOffset, %1$sLength) : \"\"" :
+                "has%2$s ? buffer.getStringWithoutLengthAscii(%1$sOffset, %1$sLength) : null",
+                fieldName,
+                name);
+        }
+        else
+        {
+            asStringBody = String.format(entry.required() ?
+                "new String(%1$s, 0, %1$sLength)" :
+                "has%2$s ? new String(%1$s, 0, %1$sLength) : null",
+                fieldName,
+                name);
+        }
+        return asStringBody;
     }
 
     private static String lazyInstantialisation(final String fieldName, final Type type)
@@ -931,9 +937,9 @@ public class DecoderGenerator extends Generator
         }
 
         return String.format(
-            "        if (buffer != null)\n" +
+            "        if (buffer != null && %1$sLength > 0)\n" +
             "        {\n" +
-            "            %s = %s;\n" +
+            "            %1$s = %2$s;\n" +
             "        }\n",
             fieldName,
             decodeMethod);

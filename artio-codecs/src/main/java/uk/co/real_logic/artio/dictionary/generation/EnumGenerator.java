@@ -74,7 +74,7 @@ public final class EnumGenerator
             .forEach(this::generateEnum);
     }
 
-    public static boolean hasEnumGenerated(final Field field)
+    static boolean hasEnumGenerated(final Field field)
     {
         return field.isEnum() && field.type() != Type.BOOLEAN;
     }

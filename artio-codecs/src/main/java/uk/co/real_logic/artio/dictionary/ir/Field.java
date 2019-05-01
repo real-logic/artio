@@ -182,7 +182,7 @@ public final class Field implements Element
         public boolean hasLengthField(final boolean flyweightsEnabled)
         {
             return flyweightsEnabled ?
-                isStringBased() || isIntBased() || isFloatBased():
+                isStringBased() || isIntBased() || isFloatBased() :
                 isStringBased();
         }
 
