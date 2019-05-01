@@ -226,7 +226,9 @@ public final class SystemTestUtil
         final String acceptorLogs)
     {
         final EngineConfiguration configuration = new EngineConfiguration();
-        setupCommonConfig(acceptorId, initiatorId, configuration);
+        final MessageValidationStrategy validationStrategy = setupCommonConfig(acceptorId, initiatorId, configuration);
+        final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
+        configuration.authenticationStrategy(authenticationStrategy);
 
         return configuration
             .bindTo("localhost", port)
@@ -257,17 +259,16 @@ public final class SystemTestUtil
         return libraryConfiguration;
     }
 
-    static void setupCommonConfig(
+    static MessageValidationStrategy setupCommonConfig(
         final String acceptorId, final String initiatorId, final CommonConfiguration configuration)
     {
         final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(acceptorId)
             .and(MessageValidationStrategy.senderCompId(Arrays.asList(initiatorId, INITIATOR_ID2)));
 
-        final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
-
         configuration
-            .authenticationStrategy(authenticationStrategy)
             .messageValidationStrategy(validationStrategy);
+
+        return validationStrategy;
     }
 
     static SessionReplyStatus requestSession(

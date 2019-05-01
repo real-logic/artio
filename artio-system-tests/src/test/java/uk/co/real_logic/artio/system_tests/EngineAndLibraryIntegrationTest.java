@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,6 @@ import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
-import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.util.Arrays;
@@ -64,7 +63,7 @@ public class EngineAndLibraryIntegrationTest
     }
 
     @After
-    public void close() throws Exception
+    public void close()
     {
         try
         {
@@ -128,7 +127,7 @@ public class EngineAndLibraryIntegrationTest
         setupTwoLibrariesAndCloseTheFirst();
     }
 
-    private FixLibrary setupTwoLibrariesAndCloseTheFirst()
+    private void setupTwoLibrariesAndCloseTheFirst()
     {
         setupTwoLibraries();
 
@@ -139,8 +138,6 @@ public class EngineAndLibraryIntegrationTest
         assertEventuallyHasLibraries(
             FixMatchers.matchesLibrary(library2.libraryId()),
             FixMatchers.matchesLibrary(ENGINE_LIBRARY_ID));
-
-        return library2;
     }
 
     private void setupTwoLibraries()
@@ -198,13 +195,10 @@ public class EngineAndLibraryIntegrationTest
         final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(ACCEPTOR_ID)
             .and(MessageValidationStrategy.senderCompId(Arrays.asList(INITIATOR_ID, INITIATOR_ID2)));
 
-        final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
-
         final LibraryConfiguration config = new LibraryConfiguration();
         config
             .sessionAcquireHandler(sessionHandler)
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
-            .authenticationStrategy(authenticationStrategy)
             .messageValidationStrategy(validationStrategy)
             .replyTimeoutInMs(TIMEOUT_IN_MS);
 

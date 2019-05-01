@@ -21,7 +21,6 @@ import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.library.SessionHandler;
 import uk.co.real_logic.artio.session.Session;
-import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.util.Collections;
@@ -43,10 +42,7 @@ public class ExchangeAgent implements Agent
         final MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId(ACCEPTOR_COMP_ID)
             .and(MessageValidationStrategy.senderCompId(Collections.singletonList(INITIATOR_COMP_ID)));
 
-        final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
-
         final LibraryConfiguration configuration = new LibraryConfiguration();
-        configuration.authenticationStrategy(authenticationStrategy);
 
         // You register the new session handler - which is your application hook
         // that receives messages for new sessions

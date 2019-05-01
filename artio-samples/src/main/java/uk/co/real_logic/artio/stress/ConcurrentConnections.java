@@ -108,7 +108,6 @@ public final class ConcurrentConnections
             .build();
 
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
-        libraryConfiguration.authenticationStrategy(logon -> true);
         libraryConfiguration
             .sessionAcquireHandler((session, isSlow) -> testReqIdFinder)
             .libraryAeronChannels(singletonList(aeronChannel));

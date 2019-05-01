@@ -22,7 +22,6 @@ import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.session.SessionCustomisationStrategy;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.timing.HistogramHandler;
-import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.io.File;
@@ -211,7 +210,6 @@ public class CommonConfiguration
     private IdleStrategy monitoringThreadIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
     private long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
     private SessionIdStrategy sessionIdStrategy = SessionIdStrategy.senderAndTarget();
-    private AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.none();
     private MessageValidationStrategy messageValidationStrategy = MessageValidationStrategy.none();
     private SessionCustomisationStrategy sessionCustomisationStrategy = SessionCustomisationStrategy.none();
     private int monitoringBuffersLength = getInteger(
@@ -282,20 +280,6 @@ public class CommonConfiguration
     public CommonConfiguration sessionIdStrategy(final SessionIdStrategy sessionIdStrategy)
     {
         this.sessionIdStrategy = sessionIdStrategy;
-        return this;
-    }
-
-    /**
-     * Sets the authentication strategy of the FIX Library, see {@link AuthenticationStrategy} for details.
-     * <p>
-     * This only needs to be set if this FIX Library is the acceptor library.
-     *
-     * @param authenticationStrategy the authentication strategy to use.
-     * @return this
-     */
-    public CommonConfiguration authenticationStrategy(final AuthenticationStrategy authenticationStrategy)
-    {
-        this.authenticationStrategy = authenticationStrategy;
         return this;
     }
 
@@ -521,11 +505,6 @@ public class CommonConfiguration
     public SessionIdStrategy sessionIdStrategy()
     {
         return sessionIdStrategy;
-    }
-
-    public AuthenticationStrategy authenticationStrategy()
-    {
-        return authenticationStrategy;
     }
 
     public SessionCustomisationStrategy sessionCustomisationStrategy()

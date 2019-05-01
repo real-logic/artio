@@ -18,7 +18,6 @@ package uk.co.real_logic.artio.system_benchmarks;
 import io.aeron.driver.MediaDriver;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.AcquiringSessionExistsHandler;
@@ -82,7 +81,7 @@ public final class FixBenchmarkServer
 
         final EngineConfiguration configuration = new EngineConfiguration();
         configuration.printAeronStreamIdentifiers(true);
-        setupAuthentication(configuration);
+        configuration.authenticationStrategy((logon) -> !REJECT_LOGON);
 
         return configuration
             .bindTo("localhost", BenchmarkConfiguration.PORT)
@@ -97,7 +96,6 @@ public final class FixBenchmarkServer
     {
         final LibraryConfiguration configuration = new LibraryConfiguration();
         configuration.printAeronStreamIdentifiers(true);
-        setupAuthentication(configuration);
 
         return configuration
             .libraryAeronChannels(singletonList(AERON_CHANNEL))
@@ -105,8 +103,4 @@ public final class FixBenchmarkServer
             .sessionExistsHandler(new AcquiringSessionExistsHandler(true));
     }
 
-    private static void setupAuthentication(final CommonConfiguration configuration)
-    {
-        configuration.authenticationStrategy((logon) -> !REJECT_LOGON);
-    }
 }
