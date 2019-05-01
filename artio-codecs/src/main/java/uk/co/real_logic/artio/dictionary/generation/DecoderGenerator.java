@@ -1290,13 +1290,15 @@ public class DecoderGenerator extends Generator
     {
         final Group group = (Group)entry.element();
 
+        final String groupNumberField = formatPropertyName(group.numberField().name());
         final String parseGroup = String.format(
             "                if (%1$s == null)\n" +
             "                {\n" +
-            "                    %1$s = new %2$s(trailer, %4$s);\n" +
+            "                    %1$s = new %2$s(trailer, %5$s);\n" +
             "                }\n" +
             "                %2$s %1$sCurrent = %1$s;\n" +
             "                position = endOfField + 1;\n" +
+            "                final int %3$s = %4$s;\n" +
             "                for (int i = 0; i < %3$s && position < end; i++)\n" +
             "                {\n" +
             "                    if (%1$sCurrent != null)\n" +
@@ -1307,7 +1309,9 @@ public class DecoderGenerator extends Generator
             "                }\n",
             formatPropertyName(group.name()),
             decoderClassName(group),
-            formatPropertyName(group.numberField().name()),
+            groupNumberField,
+            // Have to make a call to initialise the group number at this point when flyweighting.
+            flyweightsEnabled ? groupNumberField + "()" : "this." + groupNumberField,
             MESSAGE_FIELDS);
 
         return decodeField(group.numberField(), parseGroup);
