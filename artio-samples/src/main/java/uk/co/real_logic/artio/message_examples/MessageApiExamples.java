@@ -43,7 +43,7 @@ public final class MessageApiExamples
     public static final String SENDER_COMP_ID = "senderCompId";
     public static final String AERON_CHANNEL = "ipc:9999";
 
-    public static void main(final String[] args) throws Exception
+    public static void main(final String[] args)
     {
         // Static configuration lasts the duration of a FIX-Gateway instance
         final EngineConfiguration configuration = new EngineConfiguration()
@@ -54,16 +54,15 @@ public final class MessageApiExamples
 
         final AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.of(validationStrategy);
 
-        configuration.messageValidationStrategy(validationStrategy)
-                     .authenticationStrategy(authenticationStrategy);
+        configuration.authenticationStrategy(authenticationStrategy)
+                     .messageValidationStrategy(validationStrategy);
 
         try (FixEngine ignore = FixEngine.launch(configuration))
         {
             final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
             libraryConfiguration
                 .libraryAeronChannels(singletonList(AERON_CHANNEL))
-                .messageValidationStrategy(validationStrategy)
-                .authenticationStrategy(authenticationStrategy);
+                .messageValidationStrategy(validationStrategy);
 
             try (FixLibrary library = SampleUtil.blockingConnect(libraryConfiguration))
             {

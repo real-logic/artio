@@ -20,10 +20,12 @@ import org.agrona.CloseHelper;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
 import uk.co.real_logic.artio.library.SessionConfiguration;
+import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
 
 import java.io.File;
@@ -213,6 +215,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private boolean acceptedSessionSendRedundantResendRequests = DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS;
     private boolean acceptedEnableLastMsgSeqNumProcessed = DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED;
     private boolean soleLibraryMode = false;
+    private AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.none();
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -592,6 +595,32 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    /**
+     * Sets the aeron channel that libraries will use to communicate with this FixEngine instance.
+     *
+     * @param libraryAeronChannel the aeron channel that libraries will use to communicate with this FixEngine instance.
+     * @return this
+     */
+    public EngineConfiguration libraryAeronChannel(final String libraryAeronChannel)
+    {
+        this.libraryAeronChannel = libraryAeronChannel;
+        return this;
+    }
+
+    /**
+     * Sets the authentication strategy of the FIX Library, see {@link AuthenticationStrategy} for details.
+     * <p>
+     * This only needs to be set if this FIX Library is the acceptor library.
+     *
+     * @param authenticationStrategy the authentication strategy to use.
+     * @return this
+     */
+    public CommonConfiguration authenticationStrategy(final AuthenticationStrategy authenticationStrategy)
+    {
+        this.authenticationStrategy = authenticationStrategy;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -752,16 +781,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return soleLibraryMode;
     }
 
-    /**
-     * Sets the aeron channel that libraries will use to communicate with this FixEngine instance.
-     *
-     * @param libraryAeronChannel the aeron channel that libraries will use to communicate with this FixEngine instance.
-     * @return this
-     */
-    public EngineConfiguration libraryAeronChannel(final String libraryAeronChannel)
+    public AuthenticationStrategy authenticationStrategy()
     {
-        this.libraryAeronChannel = libraryAeronChannel;
-        return this;
+        return authenticationStrategy;
     }
 
     /**
@@ -788,6 +810,51 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public EngineConfiguration replyTimeoutInMs(final long replyTimeoutInMs)
     {
         super.replyTimeoutInMs(replyTimeoutInMs);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration agentNamePrefix(final String agentNamePrefix)
+    {
+        super.agentNamePrefix(agentNamePrefix);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration printAeronStreamIdentifiers(final boolean printAeronStreamIdentifiers)
+    {
+        super.printAeronStreamIdentifiers(printAeronStreamIdentifiers);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public EngineConfiguration clock(final Clock clock)
+    {
+        super.clock(clock);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public CommonConfiguration inboundLibraryStream(final int inboundLibraryStream)
+    {
+        super.inboundLibraryStream(inboundLibraryStream);
+        return this;
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    public CommonConfiguration outboundLibraryStream(final int outboundLibraryStream)
+    {
+        super.outboundLibraryStream(outboundLibraryStream);
         return this;
     }
 
