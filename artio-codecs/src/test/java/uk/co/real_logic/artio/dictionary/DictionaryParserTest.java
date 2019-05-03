@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.dictionary;
 
 import org.hamcrest.Matcher;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.artio.dictionary.ir.*;
@@ -363,7 +362,7 @@ public class DictionaryParserTest
                 assertThat(e.getClass(), typeCompatibleWith(expectedException));
                 assertThat(e.getMessage(), is(message));
             }
-            catch (AssertionError error)
+            catch (final AssertionError error)
             {
                 e.printStackTrace();
                 throw error;

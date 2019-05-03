@@ -15,11 +15,10 @@
  */
 package uk.co.real_logic.artio.dictionary;
 
-import org.agrona.LangUtil;
 import org.agrona.Verify;
 import org.w3c.dom.*;
-import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
+import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
 import uk.co.real_logic.artio.dictionary.ir.Field.Value;
 
@@ -30,7 +29,6 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 import java.util.function.Consumer;
@@ -127,18 +125,20 @@ public final class DictionaryParser
     {
         final Map<String, Field> nameToField = aggregate
             .fieldEntries()
-            .map(entry -> (Field) entry.element())
+            .map(entry -> (Field)entry.element())
             .collect(toMap(Field::name, f -> f));
 
         for (final Entry entry : aggregate.entries())
         {
             entry.forEach(
-                field -> {
+                field ->
+                {
                     if (field.type() == DATA)
                     {
                         final String name = field.name();
-                        if (!(hasLengthField(name+"Length", nameToField)
-                            || hasLengthField(name+"Len", nameToField))) {
+                        if (!(hasLengthField(name + "Length", nameToField) ||
+                            hasLengthField(name + "Len", nameToField)))
+                        {
 
                             throw new IllegalStateException(
                                 String.format("Each DATA field must have a corresponding LENGTH field using the " +
