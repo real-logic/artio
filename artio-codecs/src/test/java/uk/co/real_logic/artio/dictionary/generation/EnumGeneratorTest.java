@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.dictionary.generation;
 
 import org.agrona.generation.CompilerUtil;
 import org.agrona.generation.StringWriterOutputManager;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -41,31 +41,34 @@ import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.PARENT
 public class EnumGeneratorTest
 {
 
-    private Map<String, CharSequence> sources;
+    private static Map<String, CharSequence> sources;
+    private static Class<?> egEnumClass;
+    private static Class<?> otherEnumClass;
+    private static Class<?> stringEnumClass;
 
     @Rule
     public ExpectedException expectedException = ExpectedException.none();
 
-    @Before
-    public void generate()
+    @BeforeClass
+    public static void generate() throws Exception
     {
         sources = generateEnums();
+        egEnumClass = compileEgEnum(sources);
+        otherEnumClass = compile(OTHER_ENUM, sources);
+        stringEnumClass = compile(STRING_ENUM, sources);
     }
 
     @Test
-    public void generatesEnumClass() throws Exception
+    public void generatesEnumClass()
     {
-        final Class<?> clazz = compileEgEnum(sources);
-
-        assertNotNull("Failed to generate a class", clazz);
-        assertTrue("Generated class isn't an enum", clazz.isEnum());
+        assertNotNull("Failed to generate a class", egEnumClass);
+        assertTrue("Generated class isn't an enum", egEnumClass.isEnum());
     }
 
     @Test
     public void generatesEnumConstants() throws Exception
     {
-        final Class<?> clazz = compileEgEnum(sources);
-        final Enum[] values = (Enum[])clazz.getEnumConstants();
+        final Enum[] values = egEnumConstants();
 
         assertThat(values, arrayWithSize(4));
 
@@ -82,10 +85,9 @@ public class EnumGeneratorTest
     @Test
     public void generatesLookupTable() throws Exception
     {
-        final Class<?> clazz = compileEgEnum(sources);
-        final Enum[] values = (Enum[])clazz.getEnumConstants();
+        final Enum[] values = egEnumConstants();
 
-        final Method decode = decode(clazz);
+        final Method decode = decode(egEnumClass);
 
         assertEquals(values[0], decode.invoke(null, 'a'));
         assertEquals(values[1], decode.invoke(null, 'b'));
@@ -105,10 +107,9 @@ public class EnumGeneratorTest
     @Test
     public void generatesIntBasedEnumField() throws Exception
     {
-        final Class<?> clazz = compile(OTHER_ENUM, sources);
-        final Enum[] values = (Enum[])clazz.getEnumConstants();
+        final Enum[] values = (Enum[])otherEnumClass.getEnumConstants();
 
-        final Method decode = decode(clazz);
+        final Method decode = decode(otherEnumClass);
 
         assertEquals(values[0], decode.invoke(null, 1));
         assertEquals(values[1], decode.invoke(null, 12));
@@ -117,23 +118,26 @@ public class EnumGeneratorTest
     @Test
     public void generatesStringBasedEnumField() throws Exception
     {
-        final Class<?> clazz = compile(STRING_ENUM, sources);
-        final Enum[] values = (Enum[])clazz.getEnumConstants();
+        final Enum[] values = getStringEnumConstants();
 
-        final Method decode = stringDecode(clazz);
+        final Method decode = stringDecode(stringEnumClass);
 
         assertEquals(values[0], decode.invoke(null, "0"));
         assertEquals(values[1], decode.invoke(null, "A"));
         assertEquals(values[2], decode.invoke(null, "AA"));
     }
 
+    private Enum[] getStringEnumConstants()
+    {
+        return (Enum[])stringEnumClass.getEnumConstants();
+    }
+
     @Test
     public void generatesCharArrayBasedDecode() throws Exception
     {
-        final Class<?> clazz = compile(STRING_ENUM, sources);
-        final Enum[] values = (Enum[])clazz.getEnumConstants();
+        final Enum[] values = getStringEnumConstants();
 
-        final Method decode = clazz.getMethod("decode", char[].class, int.class);
+        final Method decode = stringEnumClass.getMethod("decode", char[].class, int.class);
 
         assertEquals(values[0], decode.invoke(null, "0".toCharArray(), 1));
         assertEquals(values[1], decode.invoke(null, "A".toCharArray(), 1));
@@ -156,11 +160,10 @@ public class EnumGeneratorTest
     @Test
     public void shouldReturnSentinelValueWhenDecodingUnknownRepresentation() throws Exception
     {
-        final Class<?> clazz = compile(STRING_ENUM, sources);
-        final Enum[] values = (Enum[])clazz.getEnumConstants();
+        final Enum[] values = getStringEnumConstants();
 
-        final Method decodeCharArray = clazz.getMethod("decode", char[].class, int.class);
-        final Method decodeString = clazz.getMethod("decode", String.class);
+        final Method decodeCharArray = stringEnumClass.getMethod("decode", char[].class, int.class);
+        final Method decodeString = stringEnumClass.getMethod("decode", String.class);
 
         final String unknownRepresentation = "UnknownRepresentation";
         assertEquals(values[values.length - 1], decodeCharArray.invoke(null, unknownRepresentation.toCharArray(),
@@ -173,12 +176,12 @@ public class EnumGeneratorTest
         return clazz.getMethod("decode", String.class);
     }
 
-    private Class<?> compileEgEnum(final Map<String, CharSequence> sources) throws Exception
+    private static Class<?> compileEgEnum(final Map<String, CharSequence> sources) throws Exception
     {
         return compile(EG_ENUM, sources);
     }
 
-    private Class<?> compile(final String className, final Map<String, CharSequence> sources)
+    private static Class<?> compile(final String className, final Map<String, CharSequence> sources)
         throws ClassNotFoundException
     {
         return CompilerUtil.compileInMemory(className, sources);
@@ -194,11 +197,16 @@ public class EnumGeneratorTest
         assertEquals(expected, representation);
     }
 
-    private Map<String, CharSequence> generateEnums()
+    private static Map<String, CharSequence> generateEnums()
     {
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
         final EnumGenerator enumGenerator = new EnumGenerator(FIELD_EXAMPLE, PARENT_PACKAGE, outputManager);
         enumGenerator.generate();
         return outputManager.getSources();
+    }
+
+    private Enum[] egEnumConstants()
+    {
+        return (Enum[])egEnumClass.getEnumConstants();
     }
 }

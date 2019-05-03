@@ -30,6 +30,8 @@ public final class Field implements Element
     private Type type;
     private final List<Value> values;
 
+    private Field associatedLengthField;
+
     public static Field registerField(
         final Map<String, Field> nameToField,
         final int number,
@@ -52,6 +54,16 @@ public final class Field implements Element
     public Type type()
     {
         return type;
+    }
+
+    public Field associatedLengthField()
+    {
+        return associatedLengthField;
+    }
+
+    public void associatedLengthField(final Field associatedLengthField)
+    {
+        this.associatedLengthField = associatedLengthField;
     }
 
     public void type(final Type type)
@@ -128,6 +140,7 @@ public final class Field implements Element
         // NB: data doesn't have a length field because in specified
         // XML files it often comes along with a length field.
         DATA(false, false, false, false),
+        // Only used in 5.0sp1 or later.
         XMLDATA(false, false, false, false),
 
         // Boolean types
@@ -174,9 +187,14 @@ public final class Field implements Element
             return isFloatBased;
         }
 
+        public boolean isDataBased()
+        {
+            return this == DATA || this == XMLDATA;
+        }
+
         public boolean hasOffsetField(final boolean flyweightsEnabled)
         {
-            return hasLengthField(flyweightsEnabled) || (flyweightsEnabled && isDataField());
+            return hasLengthField(flyweightsEnabled) || (flyweightsEnabled && isDataBased());
         }
 
         public boolean hasLengthField(final boolean flyweightsEnabled)
@@ -184,11 +202,6 @@ public final class Field implements Element
             return flyweightsEnabled ?
                 isStringBased() || isIntBased() || isFloatBased() :
                 isStringBased();
-        }
-
-        private boolean isDataField()
-        {
-            return this == DATA || this == XMLDATA;
         }
 
         public boolean isMultiValue()

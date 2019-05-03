@@ -123,6 +123,7 @@ public final class ExampleDictionary
         "  \"IntField\": \"2\",\n" +
         "  \"FloatField\": \"1.1\",\n" +
         "  \"BooleanField\": \"true\",\n" +
+        "  \"DataFieldLength\": \"3\",\n" +
         "  \"DataField\": \"[49, 50, 51]\",\n" +
         "  \"SomeTimeField\": \"19700101-00:00:00.001\"";
 
@@ -149,7 +150,7 @@ public final class ExampleDictionary
     public static final String STRING_ENCODED_MESSAGE_EXAMPLE =
         "{\n" +
         "  \"MessageName\": \"Heartbeat\",\n" +
-        String.format(HEADER_TO_STRING, 75) +
+        String.format(HEADER_TO_STRING, 81) +
         STRING_ENCODED_MESSAGE_SUFFIX;
 
     public static final String STRING_NO_OPTIONAL_MESSAGE_SUFFIX =
@@ -191,8 +192,8 @@ public final class ExampleDictionary
         "  }";
 
     public static final String ENCODED_MESSAGE =
-        "8=FIX.4.4\0019=75\00135=0\001115=abc\001112=abc\001116=2\001117=1.1" +
-        "\001118=Y\001119=123\001127=19700101-00:00:00.001\00110=199\001";
+        "8=FIX.4.4\0019=81\00135=0\001115=abc\001112=abc\001116=2\001117=1.1" +
+        "\001118=Y\001200=3\001119=123\001127=19700101-00:00:00.001\00110=199\001";
 
     public static final String ENCODED_MESSAGE_FIXT11 =
         "8=FIXT.1.1\0019=75\00135=0\001115=abc\001112=abc\001116=2\001117=1.1" +
@@ -398,9 +399,9 @@ public final class ExampleDictionary
     public static final String RF_NO_FIELDS =
         "8=FIX.4.4\0019=0049\00135=Z\00110=209\001";
 
-    public static final String SOH_DATA_FIELD_MESSAGE =
+    public static final String SOH_IN_DATA_FIELD_MESSAGE =
         "8=FIX.4.4\0019=75\00135=0\001115=abc\001112=abc\001116=2\001117=1.1" +
-        "\001118=Y\001119=a\001c\001127=19700101-00:00:00.001\00110=199\001";
+        "\001118=Y\001200=3\001119=a\001c\001127=19700101-00:00:00.001\00110=199\001";
 
     public static final int TEST_REQ_ID_TAG = 112;
 
@@ -409,6 +410,7 @@ public final class ExampleDictionary
     public static final int OTHER_MESSAGE_TYPE_PACKED = GenerationUtil.packMessageType(OTHER_MESSAGE_TYPE);
     private static final String ENUM_TEST_MESSAGE = "EnumTestMessage";
     private static final String ENUM_TEST_MESSAGE_TYPE = "ET";
+    public static final String DATA_FIELD_LENGTH = "DataFieldLength";
 
     static
     {
@@ -439,6 +441,7 @@ public final class ExampleDictionary
 
         final Field signatureLength = registerField(messageEgFields, 93, "SignatureLength", Type.LENGTH);
         final Field signature = registerField(messageEgFields, 89, "Signature", Type.DATA);
+        signature.associatedLengthField(signatureLength);
         final Field checkSum = registerField(messageEgFields, 10, "CheckSum", Type.STRING);
 
         final Field onBehalfOfCompID = registerField(messageEgFields, 115, "OnBehalfOfCompID", Type.STRING)
@@ -506,8 +509,8 @@ public final class ExampleDictionary
         final Group groupForAdmin = Group.of(registerField(messageEgFields, 139, NO_ADMIN_EG_GROUP, INT));
         groupForAdmin.optionalEntry(registerField(messageEgFields, 140, "AdminFirstGroupField", STRING));
 
-        final Field dataFieldLength = registerField(messageEgFields, 200, "DataFieldLength", Type.LENGTH);
-
+        final Field dataFieldLength = registerField(messageEgFields, 200, DATA_FIELD_LENGTH, Type.LENGTH);
+        dataField.associatedLengthField(dataFieldLength);
 
         final Message heartbeat = new Message("Heartbeat", "0", ADMIN);
         heartbeat.requiredEntry(onBehalfOfCompID);
@@ -515,6 +518,7 @@ public final class ExampleDictionary
         heartbeat.requiredEntry(intField);
         heartbeat.requiredEntry(floatField);
         heartbeat.optionalEntry(booleanField);
+        heartbeat.optionalEntry(dataFieldLength);
         heartbeat.optionalEntry(dataField);
         heartbeat.optionalEntry(charField);
         heartbeat.optionalEntry(multiCharField);
@@ -525,7 +529,6 @@ public final class ExampleDictionary
         heartbeat.requiredEntry(someTime);
         heartbeat.optionalEntry(egGroup);
         heartbeat.requiredEntry(egComponent);
-        heartbeat.optionalEntry(dataFieldLength);
         heartbeat.optionalEntry(groupWithRequiredField);
 
         final Component header = new Component("Header");
@@ -545,7 +548,6 @@ public final class ExampleDictionary
             .optionalEntry(sendingTime)
             .optionalEntry(origSendingTime)
             .optionalEntry(lastMsgSeqNumProcessed);
-
 
         final Component trailer = new Component("Trailer");
         trailer.optionalEntry(signatureLength);

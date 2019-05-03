@@ -49,7 +49,7 @@ import static uk.co.real_logic.artio.util.Reflection.*;
 
 public abstract class AbstractDecoderGeneratorTest
 {
-    public static final boolean CODEC_LOGGING = Boolean.getBoolean("fix.codec.log");
+    static final boolean CODEC_LOGGING = Boolean.getBoolean("fix.codec.log");
 
     private static final char[] ABC = "abc".toCharArray();
     private static final char[] AB = "ab".toCharArray();
@@ -86,7 +86,7 @@ public abstract class AbstractDecoderGeneratorTest
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sourcesWithValidation);
         if (heartbeat == null || CODEC_LOGGING)
         {
-            System.out.println("sourcesWithValidation = " + sourcesWithValidation);
+            System.err.println("sourcesWithValidation = " + sourcesWithValidation);
         }
         component = heartbeat.getClassLoader().loadClass(COMPONENT_DECODER);
         fieldsMessage = heartbeat.getClassLoader().loadClass(FIELDS_MESSAGE_DECODER);
@@ -99,7 +99,7 @@ public abstract class AbstractDecoderGeneratorTest
         allReqFieldTypesMessage = compileInMemory(ALL_REQ_FIELD_TYPES_MESSAGE_DECODER, sourcesWithoutValidation);
         if (heartbeatWithoutValidation == null || CODEC_LOGGING)
         {
-            System.out.println("sourcesWithoutValidation = " + sourcesWithoutValidation);
+            System.err.println("sourcesWithoutValidation = " + sourcesWithoutValidation);
         }
     }
 
@@ -319,7 +319,7 @@ public abstract class AbstractDecoderGeneratorTest
     @Test
     public void parsesMessagesWithSeparatorInsideDataField() throws Exception
     {
-        final Decoder decoder = decodeHeartbeat(SOH_DATA_FIELD_MESSAGE);
+        final Decoder decoder = decodeHeartbeat(SOH_IN_DATA_FIELD_MESSAGE);
 
         assertTrue(hasDataField(decoder));
         assertArrayEquals(new byte[]{ 'a', '\001', 'c' }, getDataField(decoder));
@@ -327,9 +327,7 @@ public abstract class AbstractDecoderGeneratorTest
         assertValid(decoder);
     }
 
-    // TODO: validate a message type with a data field without a Len or Length field beside it.
     // TODO: update the examples to add this
-    // TODO: test the data field with soh in (use the length field to calculate the length
 
     @Test
     public void setsMissingOptionalValues() throws Exception
@@ -361,7 +359,7 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE);
 
         final Decoder header = getHeader(decoder);
-        assertEquals(75, getBodyLength(header));
+        assertEquals(81, getBodyLength(header));
 
         final Decoder trailer = getTrailer(decoder);
         assertEquals("199", getChecksum(trailer));

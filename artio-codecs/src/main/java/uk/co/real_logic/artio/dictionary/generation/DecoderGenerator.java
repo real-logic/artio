@@ -836,7 +836,7 @@ public class DecoderGenerator extends Generator
             asEnumBody
         ) : "";
 
-        final String lazyInitialisation = lazyInstantialisation(fieldName, type);
+        final String lazyInitialisation = fieldLazyInstantialisation(field, fieldName);
 
         return String.format(
             "    private %1$s %2$s%3$s;\n\n" +
@@ -884,10 +884,10 @@ public class DecoderGenerator extends Generator
         return asStringBody;
     }
 
-    private static String lazyInstantialisation(final String fieldName, final Type type)
+    private static String fieldLazyInstantialisation(final Field field, final String fieldName)
     {
         final String decodeMethod;
-        switch (type)
+        switch (field.type())
         {
             case INT:
             case LENGTH:
@@ -919,6 +919,21 @@ public class DecoderGenerator extends Generator
 
             case DATA:
             case XMLDATA:
+                // Length extracted separately from a preceeding field
+                final Field associatedLengthField = field.associatedLengthField();
+                if (associatedLengthField == null)
+                {
+                    throw new IllegalStateException("No associated length field for: " + field);
+                }
+                final String associatedFieldName = formatPropertyName(associatedLengthField.name());
+                return String.format(
+                    "        if (buffer != null && %2$s > 0)\n" +
+                    "        {\n" +
+                    "            %1$s = buffer.getBytes(%1$s, %1$sOffset, %2$s);\n" +
+                    "        }\n",
+                    fieldName,
+                    associatedFieldName);
+
             case UTCTIMESTAMP:
             case LOCALMKTDATE:
             case UTCTIMEONLY:
@@ -1107,7 +1122,7 @@ public class DecoderGenerator extends Generator
             "            tag = buffer.getInt(position, equalsPosition);\n" +
             endGroupCheck +
             "            final int valueOffset = equalsPosition + 1;\n" +
-            "            final int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
+            "            int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
             malformedMessageCheck() +
             "            final int valueLength = endOfField - valueOffset;\n" +
             "            if (" + CODEC_VALIDATION_ENABLED + ")\n" +
@@ -1339,16 +1354,15 @@ public class DecoderGenerator extends Generator
             "                break;\n",
             constantName(name),
             optionalAssign(entry),
-            decodeMethodFor(field.type(), fieldName),
+            fieldDecodeMethod(field, fieldName),
             storeOffsetForVariableLengthFields(field.type(), fieldName),
             storeLengthForVariableLengthFields(field.type(), fieldName),
             suffix);
     }
 
-    // TODO:
     private String storeLengthForVariableLengthFields(final Type type, final String fieldName)
     {
-        return type.hasOffsetField(flyweightsEnabled) ?
+        return type.hasLengthField(flyweightsEnabled) ?
             String.format("                %sLength = valueLength;\n", fieldName) :
             "";
     }
@@ -1365,11 +1379,11 @@ public class DecoderGenerator extends Generator
         return entry.required() ? "" : String.format("                has%s = true;\n", entry.name());
     }
 
-    private String decodeMethodFor(final Type type, final String fieldName)
+    private String fieldDecodeMethod(final Field field, final String fieldName)
     {
-        final String field = String.format("                %s = ", fieldName);
+        final String prefix = String.format("                %s = ", fieldName);
         final String decodeMethod;
-        switch (type)
+        switch (field.type())
         {
             case INT:
             case LENGTH:
@@ -1417,6 +1431,18 @@ public class DecoderGenerator extends Generator
                 break;
             case DATA:
             case XMLDATA:
+                // Length extracted separately from a preceeding field
+                final String associatedFieldName = formatPropertyName(field.associatedLengthField().name());
+                if (flyweightsEnabled)
+                {
+                    return String.format(
+                        "                endOfField = valueOffset + %1$s();\n", associatedFieldName);
+                }
+                return String.format(
+                    "                %1$s = buffer.getBytes(%1$s, valueOffset, %2$s);\n" +
+                    "                endOfField = valueOffset + %2$s;\n",
+                    fieldName,
+                    associatedFieldName);
             case UTCTIMESTAMP:
             case LOCALMKTDATE:
             case UTCTIMEONLY:
@@ -1432,9 +1458,9 @@ public class DecoderGenerator extends Generator
                 break;
 
             default:
-                throw new UnsupportedOperationException("Unknown type: " + type);
+                throw new UnsupportedOperationException("Unknown type: " + field.type() + " in " + fieldName);
         }
-        return field + decodeMethod + ";\n";
+        return prefix + decodeMethod + ";\n";
     }
 
     protected String stringToString(final String fieldName)

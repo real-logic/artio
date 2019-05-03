@@ -281,6 +281,7 @@ public class EncoderGeneratorTest
         setupTrailer(encoder);
 
         setOptionalFields(encoder);
+        setDataFieldLength(encoder);
         assertEncodesTo(encoder, ENCODED_MESSAGE);
     }
 
@@ -321,6 +322,8 @@ public class EncoderGeneratorTest
         setupTrailer(encoder);
 
         setOptionalFields(encoder);
+        setDataFieldLength(encoder);
+
         assertEncodesTo(encoder, ENCODED_MESSAGE);
     }
 
@@ -379,6 +382,7 @@ public class EncoderGeneratorTest
 
         setRequiredFields(encoder);
         setOptionalFields(encoder);
+        setDataFieldLength(encoder);
 
         assertThat(encoder.toString(), containsString(STRING_ENCODED_MESSAGE_SUFFIX));
     }
@@ -988,5 +992,10 @@ public class EncoderGeneratorTest
         heartbeat
             .getMethod(TEST_REQ_ID, DirectBuffer.class, int.class, int.class)
             .invoke(encoder, new UnsafeBuffer(PREFIXED_VALUE_IN_BYTES), 1, 3);
+    }
+
+    private void setDataFieldLength(final Encoder encoder) throws Exception
+    {
+        setInt(encoder, "dataFieldLength", 3);
     }
 }

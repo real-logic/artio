@@ -86,6 +86,7 @@ public final class DictionaryParser
         reconnectForwardReferences(forwardReferences, components);
         sanitizeDictionary(fields, messages);
         validateDataFields(messages);
+        validateDataFields(components.values());
 
         if (fixtDictionary != null)
         {
@@ -111,14 +112,17 @@ public final class DictionaryParser
             final Component trailer = extractComponent(
                 document, fields, findTrailer, "Trailer", components, forwardReferences);
 
+            validateDataFieldsInAggregate(header);
+            validateDataFieldsInAggregate(trailer);
+
             final String specType = getValueOrDefault(fixAttributes, "type", "FIX");
             return new Dictionary(messages, fields, components, header, trailer, specType, majorVersion, minorVersion);
         }
     }
 
-    private void validateDataFields(final List<Message> messages)
+    private void validateDataFields(final Collection<? extends Aggregate> aggregates)
     {
-        messages.forEach(this::validateDataFieldsInAggregate);
+        aggregates.forEach(this::validateDataFieldsInAggregate);
     }
 
     private void validateDataFieldsInAggregate(final Aggregate aggregate)
@@ -133,13 +137,12 @@ public final class DictionaryParser
             entry.forEach(
                 field ->
                 {
-                    if (field.type() == DATA)
+                    if (field.type().isDataBased())
                     {
                         final String name = field.name();
-                        if (!(hasLengthField(name + "Length", nameToField) ||
-                            hasLengthField(name + "Len", nameToField)))
+                        if (!(hasLengthField(field, "Length", nameToField) ||
+                            hasLengthField(field, "Len", nameToField)))
                         {
-
                             throw new IllegalStateException(
                                 String.format("Each DATA field must have a corresponding LENGTH field using the " +
                                 "suffix 'Len' or 'Length'. %1$s is missing a length field in %2$s",
@@ -153,10 +156,17 @@ public final class DictionaryParser
         }
     }
 
-    private boolean hasLengthField(final String fieldName, final Map<String, Field> nameToField)
+    private boolean hasLengthField(final Field field, final String suffix, final Map<String, Field> nameToField)
     {
-        final Field lengthField = nameToField.get(fieldName);
-        return lengthField != null && lengthField.type() == LENGTH;
+        final String fieldName = field.name() + suffix;
+        final Field associatedLengthField = nameToField.get(fieldName);
+        if (associatedLengthField != null && associatedLengthField.type() == LENGTH)
+        {
+            field.associatedLengthField(associatedLengthField);
+            return true;
+        }
+
+        return false;
     }
 
     private void correctMultiCharacterCharEnums(final Map<String, Field> fields)
