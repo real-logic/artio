@@ -50,7 +50,7 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 public class DecoderGenerator extends Generator
 {
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
-    public static final String GROUP_FIELDS = "GROUP_FIELDS";
+    private static final String GROUP_FIELDS = "GROUP_FIELDS";
 
     public static final int INVALID_TAG_NUMBER =
         RejectReason.INVALID_TAG_NUMBER.representation();
@@ -68,12 +68,12 @@ public class DecoderGenerator extends Generator
         RejectReason.TAG_APPEARS_MORE_THAN_ONCE.representation();
     public static final int TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER = 14;
 
-    public static String decoderClassName(final Aggregate aggregate)
+    static String decoderClassName(final Aggregate aggregate)
     {
         return decoderClassName(aggregate.name());
     }
 
-    public static String decoderClassName(final String name)
+    static String decoderClassName(final String name)
     {
         return name + "Decoder";
     }
@@ -137,7 +137,7 @@ public class DecoderGenerator extends Generator
         interfaces.add(Decoder.class.getSimpleName());
 
         out.append(classDeclaration(className, interfaces, false));
-        validation(out, aggregate, type);
+        generateValidation(out, aggregate, type);
         if (isMessage)
         {
             final Message message = (Message)aggregate;
@@ -282,7 +282,7 @@ public class DecoderGenerator extends Generator
             "        }\n";
     }
 
-    private void validation(final Writer out, final Aggregate aggregate, final AggregateType type)
+    private void generateValidation(final Writer out, final Aggregate aggregate, final AggregateType type)
         throws IOException
     {
         final List<Field> requiredFields = requiredFields(aggregate.entries()).collect(toList());
@@ -307,7 +307,7 @@ public class DecoderGenerator extends Generator
 
         final String groupValidation = aggregate
             .entriesWith(element -> element instanceof Group)
-            .map((entry) -> validateGroup(entry, out))
+            .map((entry) -> generateGroupValidation(entry, out))
             .collect(joining("\n"));
 
         final boolean isMessage = type == MESSAGE;
@@ -450,7 +450,7 @@ public class DecoderGenerator extends Generator
             isPrimitive ? "" : ", " + propertyName + "Length");
     }
 
-    private CharSequence validateGroup(final Entry entry, final Writer out)
+    private CharSequence generateGroupValidation(final Entry entry, final Writer out)
     {
         final Group group = (Group)entry.element();
         final String numberFieldName = group.numberField().name();

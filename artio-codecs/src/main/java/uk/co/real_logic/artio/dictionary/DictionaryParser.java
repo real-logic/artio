@@ -35,6 +35,7 @@ import java.io.InputStream;
 import java.util.*;
 import java.util.function.Consumer;
 
+import static java.util.stream.Collectors.toMap;
 import static javax.xml.xpath.XPathConstants.NODESET;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.*;
 
@@ -86,6 +87,7 @@ public final class DictionaryParser
 
         reconnectForwardReferences(forwardReferences, components);
         sanitizeDictionary(fields, messages);
+        validateDataFields(messages);
 
         if (fixtDictionary != null)
         {
@@ -114,6 +116,47 @@ public final class DictionaryParser
             final String specType = getValueOrDefault(fixAttributes, "type", "FIX");
             return new Dictionary(messages, fields, components, header, trailer, specType, majorVersion, minorVersion);
         }
+    }
+
+    private void validateDataFields(final List<Message> messages)
+    {
+        messages.forEach(this::validateDataFieldsInAggregate);
+    }
+
+    private void validateDataFieldsInAggregate(final Aggregate aggregate)
+    {
+        final Map<String, Field> nameToField = aggregate
+            .fieldEntries()
+            .map(entry -> (Field) entry.element())
+            .collect(toMap(Field::name, f -> f));
+
+        for (final Entry entry : aggregate.entries())
+        {
+            entry.forEach(
+                field -> {
+                    if (field.type() == DATA)
+                    {
+                        final String name = field.name();
+                        if (!(hasLengthField(name+"Length", nameToField)
+                            || hasLengthField(name+"Len", nameToField))) {
+
+                            throw new IllegalStateException(
+                                String.format("Each DATA field must have a corresponding LENGTH field using the " +
+                                "suffix 'Len' or 'Length'. %1$s is missing a length field in %2$s",
+                                name,
+                                aggregate.name()));
+                        }
+                    }
+                },
+                this::validateDataFieldsInAggregate,
+                this::validateDataFieldsInAggregate);
+        }
+    }
+
+    private boolean hasLengthField(final String fieldName, final Map<String, Field> nameToField)
+    {
+        final Field lengthField = nameToField.get(fieldName);
+        return lengthField != null && lengthField.type() == LENGTH;
     }
 
     private void correctMultiCharacterCharEnums(final Map<String, Field> fields)
@@ -397,40 +440,33 @@ public final class DictionaryParser
         final Deque<String> path,
         final StringBuilder errorCollector)
     {
-        try
+        for (final Entry e : aggregate.entries())
         {
-            for (final Entry e : aggregate.entries())
-            {
-                e.forEach(
-                    (field) -> addField(messageName, field, allFields, path, errorCollector),
-                    (group) ->
-                    {
-                        path.push(group.name());
-                        identifyDuplicateFieldDefinitionsForMessage(
-                            messageName,
-                            group,
-                            allFields,
-                            path,
-                            errorCollector);
-                        path.pop();
-                    },
-                    (component) ->
-                    {
-                        path.push(component.name());
-                        identifyDuplicateFieldDefinitionsForMessage(
-                            messageName,
-                            component,
-                            allFields,
-                            path,
-                            errorCollector);
-                        path.pop();
-                    }
-                );
-            }
-        }
-        catch (final IOException e)
-        {
-            LangUtil.rethrowUnchecked(e);
+            e.forEach(
+                (field) -> addField(messageName, field, allFields, path, errorCollector),
+                (group) ->
+                {
+                    path.push(group.name());
+                    identifyDuplicateFieldDefinitionsForMessage(
+                        messageName,
+                        group,
+                        allFields,
+                        path,
+                        errorCollector);
+                    path.pop();
+                },
+                (component) ->
+                {
+                    path.push(component.name());
+                    identifyDuplicateFieldDefinitionsForMessage(
+                        messageName,
+                        component,
+                        allFields,
+                        path,
+                        errorCollector);
+                    path.pop();
+                }
+            );
         }
     }
 

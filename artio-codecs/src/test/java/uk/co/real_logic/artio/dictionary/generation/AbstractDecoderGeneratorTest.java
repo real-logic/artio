@@ -317,6 +317,21 @@ public abstract class AbstractDecoderGeneratorTest
     }
 
     @Test
+    public void parsesMessagesWithSeparatorInsideDataField() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(SOH_DATA_FIELD_MESSAGE);
+
+        assertTrue(hasDataField(decoder));
+        assertArrayEquals(new byte[]{ 'a', '\001', 'c' }, getDataField(decoder));
+
+        assertValid(decoder);
+    }
+
+    // TODO: validate a message type with a data field without a Len or Length field beside it.
+    // TODO: update the examples to add this
+    // TODO: test the data field with soh in (use the length field to calculate the length
+
+    @Test
     public void setsMissingOptionalValues() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE);

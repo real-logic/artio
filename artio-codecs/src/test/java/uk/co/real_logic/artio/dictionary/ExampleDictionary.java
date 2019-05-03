@@ -398,6 +398,10 @@ public final class ExampleDictionary
     public static final String RF_NO_FIELDS =
         "8=FIX.4.4\0019=0049\00135=Z\00110=209\001";
 
+    public static final String SOH_DATA_FIELD_MESSAGE =
+        "8=FIX.4.4\0019=75\00135=0\001115=abc\001112=abc\001116=2\001117=1.1" +
+        "\001118=Y\001119=a\001c\001127=19700101-00:00:00.001\00110=199\001";
+
     public static final int TEST_REQ_ID_TAG = 112;
 
     public static final String OTHER_MESSAGE_TYPE = "AB";
