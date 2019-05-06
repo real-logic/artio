@@ -30,6 +30,7 @@ import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.artio.dictionary.generation.DecoderGenerator.decoderClassName;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.NEWLINE;
 
 public class PrinterGenerator
 {
@@ -37,8 +38,8 @@ public class PrinterGenerator
     private static final String CLASS_DECLARATION =
         importFor(Printer.class) +
         importFor(AsciiBuffer.class) +
-        "\npublic class PrinterImpl implements Printer\n" +
-        "{\n\n";
+        String.format("%npublic class PrinterImpl implements Printer%n") +
+        String.format("{%n%n");
 
     private final Dictionary dictionary;
     private final String builderPackage;
@@ -60,7 +61,7 @@ public class PrinterGenerator
                 out.append(CLASS_DECLARATION);
                 out.append(generateDecoderFields());
                 out.append(generateToString());
-                out.append("}\n");
+                out.append(String.format("}%n"));
             });
     }
 
@@ -68,13 +69,13 @@ public class PrinterGenerator
     {
         return messages()
             .map(this::generateDecoderField)
-            .collect(joining()) + "\n";
+            .collect(joining()) + NEWLINE;
     }
 
     private String generateDecoderField(final Aggregate aggregate)
     {
         return String.format(
-            "    private final %s %s = new %1$s();\n",
+            "    private final %s %s = new %1$s();%n",
             decoderClassName(aggregate),
             decoderFieldName(aggregate)
         );
@@ -88,28 +89,28 @@ public class PrinterGenerator
     private String generateToString()
     {
         final Function<Message, String> mapper = (aggregate) -> String.format(
-            "            case %s:\n" +
-            "            %s.decode(input, offset, length);\n" +
-            "            return %2$s.toString();\n\n",
+            "            case %s:%n" +
+            "            %s.decode(input, offset, length);%n" +
+            "            return %2$s.toString();%n%n",
             aggregate.packedType(),
             decoderFieldName(aggregate));
 
         final String cases = messages().map(mapper).collect(joining());
 
-        return
-            "    public String toString(\n" +
-            "        final AsciiBuffer input,\n" +
-            "        final int offset,\n" +
-            "        final int length,\n" +
-            "        final int messageType)\n" +
-            "    {\n" +
-            "        switch(messageType)\n" +
-            "        {\n" +
+        return String.format(
+            "    public String toString(%n" +
+            "        final AsciiBuffer input,%n" +
+            "        final int offset,%n" +
+            "        final int length,%n" +
+            "        final int messageType)%n" +
+            "    {%n" +
+            "        switch(messageType)%n" +
+            "        {%n" +
             cases +
-            "            default:\n" +
+            "            default:%n" +
             "            throw new IllegalArgumentException(\"Unknown Message Type: \" + messageType);" +
-            "        }\n" +
-            "    }\n\n";
+            "        }%n" +
+            "    }%n%n");
     }
 
     private Stream<Message> messages()

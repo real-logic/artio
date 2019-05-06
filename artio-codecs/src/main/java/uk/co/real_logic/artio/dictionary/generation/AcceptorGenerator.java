@@ -90,7 +90,7 @@ public class AcceptorGenerator
     private void generateAcceptorCallback(final Writer acceptorOutput, final Message message) throws IOException
     {
         acceptorOutput.append(String.format(
-            "    void on%1$s(final %2$s decoder);\n\n",
+            "    void on%1$s(final %2$s decoder);%n%n",
             message.name(),
             decoderClassName(message)
         ));
@@ -99,8 +99,8 @@ public class AcceptorGenerator
     private void generateDefaultAcceptorCallback(final Writer acceptorOutput, final Message message) throws IOException
     {
         acceptorOutput.append(String.format(
-            "    @Override\n" +
-            "    public void on%1$s(final %2$s decoder) {};\n\n",
+            "    @Override%n" +
+            "    public void on%1$s(final %2$s decoder) {};%n%n",
             message.name(),
             decoderClassName(message)
         ));
@@ -109,33 +109,31 @@ public class AcceptorGenerator
 
     private void generateAcceptorSuffix(final Writer acceptorOutput) throws IOException
     {
-        acceptorOutput.append("\n}\n");
+        acceptorOutput.append(String.format("%n}%n"));
     }
 
     private void generateDefaultAcceptorSuffix(final Writer acceptorOutput) throws IOException
     {
-        acceptorOutput.append("\n}\n");
+        acceptorOutput.append(String.format("%n}%n"));
     }
 
 
     private void generateAcceptorClass(final Writer acceptorOutput) throws IOException
     {
         acceptorOutput.append(fileHeader(packageName));
-        acceptorOutput.append(
-            "\n" +
-            "public interface " + DICTIONARY_ACCEPTOR + "\n" +
-            "{\n"
-        );
+        acceptorOutput.append(String.format(
+            "%n" +
+            "public interface " + DICTIONARY_ACCEPTOR + "%n" +
+            "{%n"));
     }
 
     private void generateDefaultAcceptorClass(final Writer acceptorOutput) throws IOException
     {
         acceptorOutput.append(fileHeader(packageName));
-        acceptorOutput.append(
-            "\n" +
-            "public class " + DEFAULT_DICTIONARY_ACCEPTOR + " implements " + DICTIONARY_ACCEPTOR + "\n" +
-            "{\n"
-        );
+        acceptorOutput.append(String.format(
+            "%n" +
+            "public class " + DEFAULT_DICTIONARY_ACCEPTOR + " implements " + DICTIONARY_ACCEPTOR + "%n" +
+            "{%n"));
     }
 
 
@@ -163,39 +161,41 @@ public class AcceptorGenerator
 
     private void generateDecoderSuffix(final Writer decoderOutput) throws IOException
     {
-        decoderOutput.append(
-            "        }\n" +
-            "    }\n\n");
+        decoderOutput.append(String.format(
+            "        }%n" +
+            "    }%n%n"
+        ));
 
-        decoderOutput.append("}\n");
+        decoderOutput.append(String.format("}%n"));
     }
 
     private void generateDecoderOnMessage(final Writer decoderOutput) throws IOException
     {
-        decoderOutput.append(
-            "\n" +
-            "    public " + DICTIONARY_DECODER + "(final " + DICTIONARY_ACCEPTOR + " acceptor)\n" +
-            "    {\n" +
-            "        this.acceptor = acceptor;\n" +
-            "    }\n\n" +
-            "    public void " + ON_MESSAGE + "(\n" +
-            "        final AsciiBuffer buffer,\n" +
-            "        final int offset,\n" +
-            "        final int length,\n" +
-            "        final int messageType)\n" +
-            "    {\n" +
-            "        switch(messageType)\n" +
-            "        {\n\n");
+        decoderOutput.append(String.format(
+            "%n" +
+            "    public " + DICTIONARY_DECODER + "(final " + DICTIONARY_ACCEPTOR + " acceptor)%n" +
+            "    {%n" +
+            "        this.acceptor = acceptor;%n" +
+            "    }%n%n" +
+            "    public void " + ON_MESSAGE + "(%n" +
+            "        final AsciiBuffer buffer,%n" +
+            "        final int offset,%n" +
+            "        final int length,%n" +
+            "        final int messageType)%n" +
+            "    {%n" +
+            "        switch(messageType)%n" +
+            "        {%n%n"
+        ));
     }
 
     private void generateDecoderCase(final Writer decoderOutput, final Message message) throws IOException
     {
         decoderOutput.append(String.format(
-            "        case %1$s.MESSAGE_TYPE:\n" +
-            "            %2$s.decode(buffer, offset, length);\n" +
-            "            acceptor.on%3$s(%2$s);\n" +
-            "            %2$s.reset();\n" +
-            "            break;\n\n",
+            "        case %1$s.MESSAGE_TYPE:%n" +
+            "            %2$s.decode(buffer, offset, length);%n" +
+            "            acceptor.on%3$s(%2$s);%n" +
+            "            %2$s.reset();%n" +
+            "            break;%n%n",
             decoderClassName(message),
             formatPropertyName(message.name()),
             message.name()
@@ -205,7 +205,7 @@ public class AcceptorGenerator
     private void generateDecoderField(final Writer decoderOutput, final Message message) throws IOException
     {
         decoderOutput.append(String.format(
-            "    private final %1$s %2$s = new %1$s();\n",
+            "    private final %1$s %2$s = new %1$s();%n",
             decoderClassName(message),
             formatPropertyName(message.name())
         ));
@@ -215,11 +215,12 @@ public class AcceptorGenerator
     {
         decoderOutput.append(fileHeader(packageName));
         decoderOutput.append(importFor(AsciiBuffer.class));
-        decoderOutput.append(
-            "\n" +
-            "public final class " + DICTIONARY_DECODER + "\n" +
-            "{\n\n" +
-            "    private final " + DICTIONARY_ACCEPTOR + " acceptor;\n\n");
+        decoderOutput.append(String.format(
+            "%n" +
+            "public final class " + DICTIONARY_DECODER + "%n" +
+            "{%n%n" +
+            "    private final " + DICTIONARY_ACCEPTOR + " acceptor;%n%n"
+        ));
     }
 
 }

@@ -36,6 +36,7 @@ import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.NULL_VA
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.rethrown;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.constantName;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.NEWLINE;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 // TODO: optimisations
@@ -153,7 +154,7 @@ public class DecoderGenerator extends Generator
         out.append(decodeMethod(aggregate.entries(), aggregate, type));
         out.append(completeResetMethod(isMessage, aggregate.entries(), resetValidation(isGroup)));
         out.append(toString(aggregate, isMessage));
-        out.append("}\n");
+        out.append(String.format("}%n"));
         currentAggregate = parentAggregate;
     }
 
@@ -174,11 +175,11 @@ public class DecoderGenerator extends Generator
         if (type == HEADER)
         {
             // Default constructor so that the header decoder can be used independently to parser headers.
-            out.append(
-                "    public HeaderDecoder()\n" +
-                "    {\n" +
-                "        this(new TrailerDecoder());\n" +
-                "    }\n\n");
+            out.append(String.format(
+                "    public HeaderDecoder()%n" +
+                "    {%n" +
+                "        this(new TrailerDecoder());%n" +
+                "    }%n%n"));
             wrapTrailerInConstructor(out, aggregate);
         }
     }
@@ -202,26 +203,26 @@ public class DecoderGenerator extends Generator
 
         final Entry numberField = group.numberField();
         return String.format(
-                "    public void %1$s()\n" +
-                "    {\n" +
-                "        for (final %2$s %6$s : %5$s.iterator())\n" +
-                "        {\n" +
-                "            %6$s.reset();\n" +
+            "    public void %1$s()%n" +
+            "    {%n" +
+            "        for (final %2$s %6$s : %5$s.iterator())%n" +
+            "        {%n" +
+            "            %6$s.reset();%n" +
 
-                "            if (%6$s.next() == null)\n" +
-                "            {\n" +
-                "                break;\n" +
-                "            }\n" +
-                "        }\n" +
-                "        %3$s = 0;\n" +
-                "        has%4$s = false;\n" +
-                "    }\n\n",
-                nameOfResetMethod(name),
-                decoderClassName(name),
-                formatPropertyName(numberField.name()),
-                numberField.name(),
-                iteratorFieldName(group),
-                formatPropertyName(decoderClassName(name)));
+            "            if (%6$s.next() == null)%n" +
+            "            {%n" +
+            "                break;%n" +
+            "            }%n" +
+            "        }%n" +
+            "        %3$s = 0;%n" +
+            "        has%4$s = false;%n" +
+            "    }%n%n",
+            nameOfResetMethod(name),
+            decoderClassName(name),
+            formatPropertyName(numberField.name()),
+            numberField.name(),
+            iteratorFieldName(group),
+            formatPropertyName(decoderClassName(name)));
     }
 
     private static String iteratorClassName(final Group group)
@@ -251,25 +252,25 @@ public class DecoderGenerator extends Generator
 
     protected String toStringGroupSuffix()
     {
-        return
-            "        if (next != null)\n" +
-            "        {\n" +
-            "            entries += \",\\n\" + next.toString();\n" +
-            "        }\n";
+        return String.format(
+            "        if (next != null)%n" +
+            "        {%n" +
+            "            entries += \",\\n\" + next.toString();%n" +
+            "        }%n");
     }
 
     private String resetValidation(final boolean isGroup)
     {
-        return
-            "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
-            "        {\n" +
-            "            invalidTagId = NO_ERROR;\n" +
-            "            rejectReason = NO_ERROR;\n" +
-            "            missingRequiredFields.clear();\n" +
+        return String.format(
+            "        if (" + CODEC_VALIDATION_ENABLED + ")%n" +
+            "        {%n" +
+            "            invalidTagId = NO_ERROR;%n" +
+            "            rejectReason = NO_ERROR;%n" +
+            "            missingRequiredFields.clear();%n" +
             (isGroup ? "" :
-                "            unknownFields.clear();\n" +
-                "            alreadyVisitedFields.clear();\n") +
-            "        }\n";
+                "            unknownFields.clear();%n" +
+                "            alreadyVisitedFields.clear();%n") +
+            "        }%n");
     }
 
     private void validation(final Writer out, final Aggregate aggregate, final AggregateType type)
@@ -293,72 +294,71 @@ public class DecoderGenerator extends Generator
             .allFieldsIncludingComponents()
             .filter((entry) -> entry.element().isEnumField())
             .map((entry) -> validateEnum(entry, out))
-            .collect(joining("\n"));
+            .collect(joining(NEWLINE));
 
         final String groupValidation = aggregate
             .entriesWith(element -> element instanceof Group)
             .map((entry) -> validateGroup(entry, out))
-            .collect(joining("\n"));
+            .collect(joining(NEWLINE));
 
         final boolean isMessage = type == MESSAGE;
         final boolean isGroup = type == GROUP;
-        final String messageValidation = isMessage ?
-            "        if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + " && unknownFieldsIterator.hasNext())\n" +
-            "        {\n" +
-            "            invalidTagId = unknownFieldsIterator.nextValue();\n" +
+        final String messageValidation = isMessage ? String.format(
+            "        if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + " && unknownFieldsIterator.hasNext())%n" +
+            "        {%n" +
+            "            invalidTagId = unknownFieldsIterator.nextValue();%n" +
             "            rejectReason = Constants.ALL_FIELDS.contains(invalidTagId) ? " +
-            TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE + " : " + INVALID_TAG_NUMBER + ";\n" +
-            "            return false;\n" +
-            "        }\n" +
-            "        if (!header.validate())\n" +
-            "        {\n" +
-            "            invalidTagId = header.invalidTagId();\n" +
-            "            rejectReason = header.rejectReason();\n" +
-            "            return false;\n" +
-            "        }\n" +
-            "        else if (!trailer.validate())\n" +
-            "        {\n" +
-            "            invalidTagId = trailer.invalidTagId();\n" +
-            "            rejectReason = trailer.rejectReason();\n" +
-            "            return false;\n" +
-            "        }\n" :
-            "";
+            TAG_NOT_DEFINED_FOR_THIS_MESSAGE_TYPE + " : " + INVALID_TAG_NUMBER + ";%n" +
+            "            return false;%n" +
+            "        }%n" +
+            "        if (!header.validate())%n" +
+            "        {%n" +
+            "            invalidTagId = header.invalidTagId();%n" +
+            "            rejectReason = header.rejectReason();%n" +
+            "            return false;%n" +
+            "        }%n" +
+            "        else if (!trailer.validate())%n" +
+            "        {%n" +
+            "            invalidTagId = trailer.invalidTagId();%n" +
+            "            rejectReason = trailer.rejectReason();%n" +
+            "            return false;%n" +
+            "        }%n") : "";
 
         out.append(String.format(
             (isGroup ? "" :
-            "    private final IntHashSet alreadyVisitedFields = new IntHashSet(%5$d);\n\n" +
-            "    private final IntHashSet unknownFields = new IntHashSet(10);\n\n") +
-            "    private final IntHashSet missingRequiredFields = new IntHashSet(%1$d);\n\n" +
-            "    private int invalidTagId = NO_ERROR;\n\n" +
-            "    public int invalidTagId()\n" +
-            "    {\n" +
-            "        return invalidTagId;\n" +
-            "    }\n\n" +
-            "    private int rejectReason = NO_ERROR;\n\n" +
-            "    public int rejectReason()\n" +
-            "    {\n" +
-            "        return rejectReason;\n" +
-            "    }\n\n" +
-            "    public boolean validate()\n" +
-            "    {\n" +
+            "    private final IntHashSet alreadyVisitedFields = new IntHashSet(%5$d);%n%n" +
+            "    private final IntHashSet unknownFields = new IntHashSet(10);%n%n") +
+            "    private final IntHashSet missingRequiredFields = new IntHashSet(%1$d);%n%n" +
+            "    private int invalidTagId = NO_ERROR;%n%n" +
+            "    public int invalidTagId()%n" +
+            "    {%n" +
+            "        return invalidTagId;%n" +
+            "    }%n%n" +
+            "    private int rejectReason = NO_ERROR;%n%n" +
+            "    public int rejectReason()%n" +
+            "    {%n" +
+            "        return rejectReason;%n" +
+            "    }%n%n" +
+            "    public boolean validate()%n" +
+            "    {%n" +
             // validation for some tags performed in the decode method
-            "        if (rejectReason != NO_ERROR)\n" +
-            "        {\n" +
-            "            return false;\n" +
-            "        }\n" +
-            "        final IntIterator missingFieldsIterator = missingRequiredFields.iterator();\n" +
-            (isMessage ? "        final IntIterator unknownFieldsIterator = unknownFields.iterator();\n" : "") +
+            "        if (rejectReason != NO_ERROR)%n" +
+            "        {%n" +
+            "            return false;%n" +
+            "        }%n" +
+            "        final IntIterator missingFieldsIterator = missingRequiredFields.iterator();%n" +
+            (isMessage ? "        final IntIterator unknownFieldsIterator = unknownFields.iterator();%n" : "") +
             "%2$s" +
-            "        if (missingFieldsIterator.hasNext())\n" +
-            "        {\n" +
-            "            invalidTagId = missingFieldsIterator.nextValue();\n" +
-            "            rejectReason = " + REQUIRED_TAG_MISSING + ";\n" +
-            "            return false;\n" +
-            "        }\n" +
+            "        if (missingFieldsIterator.hasNext())%n" +
+            "        {%n" +
+            "            invalidTagId = missingFieldsIterator.nextValue();%n" +
+            "            rejectReason = " + REQUIRED_TAG_MISSING + ";%n" +
+            "            return false;%n" +
+            "        }%n" +
             "%3$s" +
             "%4$s" +
-            "        return true;\n" +
-            "    }\n\n",
+            "        return true;%n" +
+            "    }%n%n",
             sizeHashSet(requiredFields),
             messageValidation,
             enumValidation,
@@ -378,10 +378,10 @@ public class DecoderGenerator extends Generator
         if (shouldGenerateValidationGating)
         {
             generatedFieldEntryCode =
-                "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
-                "        {\n" +
+                "        if (" + CODEC_VALIDATION_ENABLED + ")%n" +
+                "        {%n" +
                 "          %s" +
-                "        }\n";
+                "        }%n";
         }
         else
         {
@@ -390,10 +390,10 @@ public class DecoderGenerator extends Generator
 
         final int hashMapSize = sizeHashSet(fields);
         return String.format(
-            "    public final IntHashSet %2$s = new IntHashSet(%1$d);\n" +
-            "    {\n" +
+            "    public final IntHashSet %2$s = new IntHashSet(%1$d);%n" +
+            "    {%n" +
             "%3$s" +
-            "    }\n\n",
+            "    }%n%n",
             hashMapSize,
             name,
             String.format(generatedFieldEntryCode, addFields));
@@ -402,7 +402,7 @@ public class DecoderGenerator extends Generator
     public static String addField(final Field field, final String name)
     {
         return String.format(
-            "        %1$s.add(Constants.%2$s);\n",
+            "        %1$s.add(Constants.%2$s);%n",
             name,
             constantName(field.name()));
     }
@@ -426,12 +426,12 @@ public class DecoderGenerator extends Generator
 
 
         return String.format(
-            "        if (%1$s!%2$s.isValid(%3$s%5$s))\n" +
-            "        {\n" +
-            "            invalidTagId = %4$s;\n" +
-            "            rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
-            "            return false;\n" +
-            "        }\n",
+            "        if (%1$s!%2$s.isValid(%3$s%5$s))%n" +
+            "        {%n" +
+            "            invalidTagId = %4$s;%n" +
+            "            rejectReason = " + VALUE_IS_INCORRECT + ";%n" +
+            "            return false;%n" +
+            "        }%n",
             optionalCheck,
             name,
             propertyName,
@@ -444,15 +444,15 @@ public class DecoderGenerator extends Generator
         final Group group = (Group)entry.element();
         final String numberFieldName = group.numberField().name();
         final String validationCode = String.format(
-            "        for (final %1$s iterator : %2$s.iterator())\n" +
-            "        {\n" +
-            "            if (!iterator.validate())\n" +
-            "            {\n" +
-            "                invalidTagId = iterator.invalidTagId();\n" +
-            "                rejectReason = iterator.rejectReason();\n" +
-            "                return false;\n" +
-            "            }\n" +
-            "        }\n",
+            "        for (final %1$s iterator : %2$s.iterator())%n" +
+            "        {%n" +
+            "            if (!iterator.validate())%n" +
+            "            {%n" +
+            "                invalidTagId = iterator.invalidTagId();%n" +
+            "                rejectReason = iterator.rejectReason();%n" +
+            "                return false;%n" +
+            "            }%n" +
+            "        }%n",
             decoderClassName(group),
             iteratorFieldName(group));
 
@@ -463,10 +463,10 @@ public class DecoderGenerator extends Generator
         else
         {
             return String.format(
-                "        if (has%1$s)\n" +
-                "        {\n" +
+                "        if (has%1$s)%n" +
+                "        {%n" +
                 "            %2$s" +
-                "        }\n",
+                "        }%n",
                 numberFieldName,
                 validationCode
             );
@@ -520,8 +520,8 @@ public class DecoderGenerator extends Generator
 
                 generateImports("Decoder", AggregateType.COMPONENT, out);
                 out.append(String.format(
-                    "\npublic interface %1$s %2$s\n" +
-                    "{\n\n",
+                    "%npublic interface %1$s %2$s%n" +
+                    "{%n%n",
                     className,
                     interfaceExtension));
 
@@ -529,7 +529,7 @@ public class DecoderGenerator extends Generator
                 {
                     interfaceGetter(component, entry, out);
                 }
-                out.append("\n}\n");
+                out.append(String.format("%n}%n"));
             });
     }
 
@@ -547,11 +547,11 @@ public class DecoderGenerator extends Generator
         generateGroupIterator(parent, out, group);
 
         final Entry numberField = group.numberField();
-        out.append(String.format("public %1$s %2$s();\n", iteratorClassName(group), iteratorFieldName(group)));
+        out.append(String.format("public %1$s %2$s();%n", iteratorClassName(group), iteratorFieldName(group)));
         out.append(fieldInterfaceGetter(numberField, (Field)numberField.element()));
 
         out.append(String.format(
-            "    public %1$s %2$s();\n",
+            "    public %1$s %2$s();%n",
             decoderClassName(group),
             formatPropertyName(group.name())));
     }
@@ -560,11 +560,11 @@ public class DecoderGenerator extends Generator
         final Aggregate aggregate, final Writer out, final ResourceConsumer<Entry> consumer)
         throws IOException
     {
-        out.append("\n");
+        out.append(NEWLINE);
         aggregate
             .entries()
             .forEach(rethrown(consumer));
-        out.append("\n");
+        out.append(NEWLINE);
     }
 
     private String fieldInterfaceGetter(final Entry entry, final Field field)
@@ -574,19 +574,19 @@ public class DecoderGenerator extends Generator
         final Type type = field.type();
 
         final String length = type.isStringBased() ?
-            String.format("    public int %1$sLength();\n", fieldName) : "";
+            String.format("    public int %1$sLength();%n", fieldName) : "";
 
         final String stringAsciiView = type.isStringBased() ?
-            String.format("    public void %1$s(AsciiSequenceView view);\n", fieldName) : "";
+            String.format("    public void %1$s(AsciiSequenceView view);%n", fieldName) : "";
 
         final String optional = !entry.required() ?
-            String.format("    public boolean has%1$s();\n", name) : "";
+            String.format("    public boolean has%1$s();%n", name) : "";
 
         final String enumDecoder = EnumGenerator.hasEnumGenerated(field) && !field.type().isMultiValue() ?
-            String.format("    public %s %sAsEnum();\n", name, fieldName) : "";
+            String.format("    public %s %sAsEnum();%n", name, fieldName) : "";
 
         return String.format(
-            "    public %1$s %2$s();\n" +
+            "    public %1$s %2$s();%n" +
             "%3$s" +
             "%4$s" +
             "%5$s" +
@@ -614,12 +614,12 @@ public class DecoderGenerator extends Generator
             wrapTrailerAndMessageFieldsInConstructor(out, aggregate);
 
             out.append(String.format(
-                "    private %1$s next = null;\n\n" +
-                "    public %1$s next()\n" +
-                "    {\n" +
-                "        return next;\n" +
-                "    }\n\n" +
-                "    private IntHashSet seenFields = new IntHashSet(%2$d);\n\n",
+                "    private %1$s next = null;%n%n" +
+                "    public %1$s next()%n" +
+                "    {%n" +
+                "        return next;%n" +
+                "    }%n%n" +
+                "    private IntHashSet seenFields = new IntHashSet(%2$d);%n%n",
                 decoderClassName(aggregate),
                 sizeHashSet(aggregate.entries())));
         }
@@ -629,13 +629,13 @@ public class DecoderGenerator extends Generator
         throws IOException
     {
         out.append(String.format(
-            "    private final TrailerDecoder trailer;\n" +
-            "    private final IntHashSet %1$s;\n" +
-            "    public %2$s(final TrailerDecoder trailer, final IntHashSet %1$s)\n" +
-            "    {\n" +
-            "        this.trailer = trailer;\n" +
-            "        this.%1$s = %1$s;\n" +
-            "    }\n\n",
+            "    private final TrailerDecoder trailer;%n" +
+            "    private final IntHashSet %1$s;%n" +
+            "    public %2$s(final TrailerDecoder trailer, final IntHashSet %1$s)%n" +
+            "    {%n" +
+            "        this.trailer = trailer;%n" +
+            "        this.%1$s = %1$s;%n" +
+            "    }%n%n",
             MESSAGE_FIELDS,
             decoderClassName(aggregate)));
     }
@@ -643,21 +643,21 @@ public class DecoderGenerator extends Generator
     private void wrapTrailerInConstructor(final Writer out, final Aggregate aggregate) throws IOException
     {
         out.append(String.format(
-            "    private final TrailerDecoder trailer;\n" +
-            "    public %1$s(final TrailerDecoder trailer)\n" +
-            "    {\n" +
-            "        this.trailer = trailer;\n" +
-            "    }\n\n",
+            "    private final TrailerDecoder trailer;%n" +
+            "    public %1$s(final TrailerDecoder trailer)%n" +
+            "    {%n" +
+            "        this.trailer = trailer;%n" +
+            "    }%n%n",
             decoderClassName(aggregate)));
     }
 
     private String messageType(final String fullType, final int packedType)
     {
         return String.format(
-            "    public static final int MESSAGE_TYPE = %1$d;\n\n" +
-            "    public static final String MESSAGE_TYPE_AS_STRING = \"%2$s\";\n\n" +
-            "    public static final char[] MESSAGE_TYPE_CHARS = MESSAGE_TYPE_AS_STRING.toCharArray();\n\n" +
-            "    public static final byte[] MESSAGE_TYPE_BYTES = MESSAGE_TYPE_AS_STRING.getBytes(US_ASCII);\n\n",
+            "    public static final int MESSAGE_TYPE = %1$d;%n%n" +
+            "    public static final String MESSAGE_TYPE_AS_STRING = \"%2$s\";%n%n" +
+            "    public static final char[] MESSAGE_TYPE_CHARS = MESSAGE_TYPE_AS_STRING.toCharArray();%n%n" +
+            "    public static final byte[] MESSAGE_TYPE_BYTES = MESSAGE_TYPE_AS_STRING.getBytes(US_ASCII);%n%n",
             packedType,
             fullType);
     }
@@ -691,18 +691,18 @@ public class DecoderGenerator extends Generator
         final String prefix = fieldGetter(numberField, (Field)numberField.element());
 
         out.append(String.format(
-            "\n" +
-            "    private %1$s %2$s = null;\n" +
-            "    public %1$s %2$s()\n" +
-            "    {\n" +
-            "        return %2$s;\n" +
-            "    }\n\n" +
-            "%3$s\n" +
-            "    private %4$s %5$s = new %4$s(this);\n" +
-            "    public %4$s %5$s()\n" +
-            "    {\n" +
-            "        return %5$s.iterator();\n" +
-            "    }\n\n",
+            "%n" +
+            "    private %1$s %2$s = null;%n" +
+            "    public %1$s %2$s()%n" +
+            "    {%n" +
+            "        return %2$s;%n" +
+            "    }%n%n" +
+            "%3$s%n" +
+            "    private %4$s %5$s = new %4$s(this);%n" +
+            "    public %4$s %5$s()%n" +
+            "    {%n" +
+            "        return %5$s.iterator();%n" +
+            "    }%n%n",
             decoderClassName(group),
             formatPropertyName(group.name()),
             prefix,
@@ -720,37 +720,37 @@ public class DecoderGenerator extends Generator
             String.format("parent.has%1$s() ? parent.%2$s() : 0", numberFieldName, formattedNumberFieldName);
 
         out.append(String.format(
-            "    public class %1$s implements Iterable<%2$s>, java.util.Iterator<%2$s>\n" +
-            "    {\n" +
-            "        private final %3$s parent;\n" +
-            "        private int remainder;\n" +
-            "        private %2$s current;\n\n" +
-            "        public %1$s(final %3$s parent)\n" +
-            "        {\n\n" +
-            "            this.parent = parent;\n" +
-            "        }\n\n" +
-            "        public boolean hasNext()\n" +
-            "        {\n" +
-            "            return remainder > 0;\n" +
-            "        }\n" +
-            "        public %2$s next()\n" +
-            "        {\n" +
-            "            remainder--;\n" +
-            "            final %2$s value = current;\n" +
-            "            current = current.next();\n" +
-            "            return value;\n" +
-            "        }\n" +
-            "        public void reset()\n" +
-            "        {\n" +
-            "            remainder = %4$s;\n" +
-            "            current = parent.%5$s();\n" +
-            "        }\n" +
-            "        public %1$s iterator()\n" +
-            "        {\n" +
-            "            reset();\n" +
-            "            return this;\n" +
-            "        }\n" +
-            "    }\n\n",
+            "    public class %1$s implements Iterable<%2$s>, java.util.Iterator<%2$s>%n" +
+            "    {%n" +
+            "        private final %3$s parent;%n" +
+            "        private int remainder;%n" +
+            "        private %2$s current;%n%n" +
+            "        public %1$s(final %3$s parent)%n" +
+            "        {%n%n" +
+            "            this.parent = parent;%n" +
+            "        }%n%n" +
+            "        public boolean hasNext()%n" +
+            "        {%n" +
+            "            return remainder > 0;%n" +
+            "        }%n" +
+            "        public %2$s next()%n" +
+            "        {%n" +
+            "            remainder--;%n" +
+            "            final %2$s value = current;%n" +
+            "            current = current.next();%n" +
+            "            return value;%n" +
+            "        }%n" +
+            "        public void reset()%n" +
+            "        {%n" +
+            "            remainder = %4$s;%n" +
+            "            current = parent.%5$s();%n" +
+            "        }%n" +
+            "        public %1$s iterator()%n" +
+            "        {%n" +
+            "            reset();%n" +
+            "            return this;%n" +
+            "        }%n" +
+            "    }%n%n",
             iteratorClassName(group),
             decoderClassName(group),
             decoderClassName(parent),
@@ -788,47 +788,47 @@ public class DecoderGenerator extends Generator
         );
 
         final String stringDecoder = type.isStringBased() ? String.format(
-            "    private int %1$sLength;\n\n" +
-            "    private int %1$sOffset;\n\n" +
-            "    public int %1$sLength()\n" +
-            "    {\n" +
+            "    private int %1$sLength;%n%n" +
+            "    private int %1$sOffset;%n%n" +
+            "    public int %1$sLength()%n" +
+            "    {%n" +
             "%2$s" +
-            "        return %1$sLength;\n" +
-            "    }\n\n" +
-            "    public String %1$sAsString()\n" +
-            "    {\n" +
-            "        return %3$s;\n" +
-            "    }\n\n" +
-            "    public void %1$s(final AsciiSequenceView view)\n" +
-            "    {\n" +
+            "        return %1$sLength;%n" +
+            "    }%n%n" +
+            "    public String %1$sAsString()%n" +
+            "    {%n" +
+            "        return %3$s;%n" +
+            "    }%n%n" +
+            "    public void %1$s(final AsciiSequenceView view)%n" +
+            "    {%n" +
             "%2$s" +
-            "        view.wrap(buffer, %1$sOffset, %1$sLength);\n" +
-            "    }\n\n",
+            "        view.wrap(buffer, %1$sOffset, %1$sLength);%n" +
+            "    }%n%n",
             fieldName,
             optionalCheck,
             asStringBody) : "";
 
         final String enumDecoder = EnumGenerator.hasEnumGenerated(field) && !field.type().isMultiValue() ?
             String.format(
-            "    public %s %sAsEnum()\n" +
-            "    {\n" +
-            "        return %s;\n" +
-            "    }\n\n",
+            "    public %s %sAsEnum()%n" +
+            "    {%n" +
+            "        return %s;%n" +
+            "    }%n%n",
             name,
             fieldName,
             asEnumBody
         ) : "";
 
         return String.format(
-            "    private %s %s%s;\n\n" +
+            "    private %s %s%s;%n%n" +
             "%s" +
-            "    public %1$s %2$s()\n" +
-            "    {\n" +
+            "    public %1$s %2$s()%n" +
+            "    {%n" +
             "%s" +
-            "        return %2$s;\n" +
-            "    }\n\n" +
-            "%s\n" +
-            "%s\n" +
+            "        return %2$s;%n" +
+            "    }%n%n" +
+            "%s%n" +
+            "%s%n" +
             "%s",
             javaTypeOf(type),
             fieldName,
@@ -914,10 +914,10 @@ public class DecoderGenerator extends Generator
     private String optionalCheck(final Entry entry)
     {
         return entry.required() ? "" : String.format(
-            "        if (!has%s)\n" +
-            "        {\n" +
-            "            throw new IllegalArgumentException(\"No value for optional field: %1$s\");\n" +
-            "        }\n\n",
+            "        if (!has%s)%n" +
+            "        {%n" +
+            "            throw new IllegalArgumentException(\"No value for optional field: %1$s\");%n" +
+            "        }%n%n",
             entry.name());
     }
 
@@ -979,115 +979,115 @@ public class DecoderGenerator extends Generator
         final boolean isHeader = type == HEADER;
         final String endGroupCheck = endGroupCheck(aggregate, isGroup);
 
-        final String prefix =
-            "    private AsciiBuffer buffer;\n\n" +
-            "    public int decode(final AsciiBuffer buffer, final int offset, final int length)\n" +
-            "    {\n" +
-            "        // Decode " + aggregate.name() + "\n" +
-            "        int seenFieldCount = 0;\n" +
-            "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
-            "        {\n" +
-            "            missingRequiredFields.copy(" + REQUIRED_FIELDS + ");\n" +
-            (isGroup ? "" : "            alreadyVisitedFields.clear();\n") +
-            "        }\n" +
-            "        this.buffer = buffer;\n" +
-            "        final int end = offset + length;\n" +
-            "        int position = offset;\n" +
-            (hasCommonCompounds ? "        position += header.decode(buffer, position, length);\n" : "") +
-            (isGroup ? "        seenFields.clear();\n" : "") +
-            "        int tag;\n\n" +
-            "        while (position < end)\n" +
-            "        {\n" +
-            "            final int equalsPosition = buffer.scan(position, end, '=');\n" +
-            "            tag = buffer.getInt(position, equalsPosition);\n" +
+        final String prefix = String.format(
+            "    private AsciiBuffer buffer;%n%n" +
+            "    public int decode(final AsciiBuffer buffer, final int offset, final int length)%n" +
+            "    {%n" +
+            "        // Decode " + aggregate.name() + "%n" +
+            "        int seenFieldCount = 0;%n" +
+            "        if (" + CODEC_VALIDATION_ENABLED + ")%n" +
+            "        {%n" +
+            "            missingRequiredFields.copy(" + REQUIRED_FIELDS + ");%n" +
+            (isGroup ? "" : "            alreadyVisitedFields.clear();%n") +
+            "        }%n" +
+            "        this.buffer = buffer;%n" +
+            "        final int end = offset + length;%n" +
+            "        int position = offset;%n" +
+            (hasCommonCompounds ? "        position += header.decode(buffer, position, length);%n" : "") +
+            (isGroup ? "        seenFields.clear();%n" : "") +
+            "        int tag;%n%n" +
+            "        while (position < end)%n" +
+            "        {%n" +
+            "            final int equalsPosition = buffer.scan(position, end, '=');%n" +
+            "            tag = buffer.getInt(position, equalsPosition);%n" +
             endGroupCheck +
-            "            final int valueOffset = equalsPosition + 1;\n" +
-            "            final int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
+            "            final int valueOffset = equalsPosition + 1;%n" +
+            "            final int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);%n" +
             malformedMessageCheck() +
-            "            final int valueLength = endOfField - valueOffset;\n" +
-            "            if (" + CODEC_VALIDATION_ENABLED + ")\n" +
-            "            {\n" +
-            "                if (tag <= 0)\n" +
-            "                {\n" +
-            "                    invalidTagId = tag;\n" +
-            "                    rejectReason = " + INVALID_TAG_NUMBER + ";\n" +
-            "                }\n" +
-            "                else if (valueLength == 0)\n" +
-            "                {\n" +
-            "                    invalidTagId = tag;\n" +
-            "                    rejectReason = " + TAG_SPECIFIED_WITHOUT_A_VALUE + ";\n" +
-            "                }\n" +
+            "            final int valueLength = endOfField - valueOffset;%n" +
+            "            if (" + CODEC_VALIDATION_ENABLED + ")%n" +
+            "            {%n" +
+            "                if (tag <= 0)%n" +
+            "                {%n" +
+            "                    invalidTagId = tag;%n" +
+            "                    rejectReason = " + INVALID_TAG_NUMBER + ";%n" +
+            "                }%n" +
+            "                else if (valueLength == 0)%n" +
+            "                {%n" +
+            "                    invalidTagId = tag;%n" +
+            "                    rejectReason = " + TAG_SPECIFIED_WITHOUT_A_VALUE + ";%n" +
+            "                }%n" +
             headerValidation(isHeader) +
 
             (isGroup ? "" :
-            "                if (!alreadyVisitedFields.add(tag))\n" +
-            "                {\n" +
-            "                    invalidTagId = tag;\n" +
-            "                    rejectReason = " + TAG_APPEARS_MORE_THAN_ONCE + ";\n" +
-            "                }\n") +
+            "                if (!alreadyVisitedFields.add(tag))%n" +
+            "                {%n" +
+            "                    invalidTagId = tag;%n" +
+            "                    rejectReason = " + TAG_APPEARS_MORE_THAN_ONCE + ";%n" +
+            "                }%n") +
 
-            "                missingRequiredFields.remove(tag);\n" +
-            "                seenFieldCount++;\n" +
-            "            }\n" +
-            "            switch (tag)\n" +
-            "            {\n\n";
+            "                missingRequiredFields.remove(tag);%n" +
+            "                seenFieldCount++;%n" +
+            "            }%n" +
+            "            switch (tag)%n" +
+            "            {%n%n");
 
         final String body = entries.stream()
             .map(this::decodeEntry)
-            .collect(joining("\n", "", "\n"));
+            .collect(joining(NEWLINE, "", NEWLINE));
 
-        final String suffix =
-            "            default:\n" +
-            "                if (!" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + ")\n" +
-            "                {\n" +
+        final String suffix = String.format(
+            "            default:%n" +
+            "                if (!" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + ")%n" +
+            "                {%n" +
             (isGroup ?
-            "                    seenFields.remove(tag);\n" :
-            "                    alreadyVisitedFields.remove(tag);\n") +
-            "                }\n" +
+            "                    seenFields.remove(tag);%n" :
+            "                    alreadyVisitedFields.remove(tag);%n") +
+            "                }%n" +
             (isGroup ? "" :
-            "                else\n" +
-            "                {\n" +
-            "                    if (!" + unknownFieldPredicate(type) + ")\n" +
-            "                    {\n" +
-            "                        unknownFields.add(tag);\n" +
-            "                    }\n" +
-            "                }\n") +
-
+            "                else%n" +
+            "                {%n" +
+            "                    if (!" + unknownFieldPredicate(type) + ")%n" +
+            "                    {%n" +
+            "                        unknownFields.add(tag);%n" +
+            "                    }%n" +
+            "                }%n") +
 
             // Skip the thing if it's a completely unknown field and you aren't validating messages
             "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
-            " || " + unknownFieldPredicate(type) + ")\n" +
-            "                {\n" +
+            " || " + unknownFieldPredicate(type) + ")%n" +
+            "                {%n" +
             decodeTrailerOrReturn(hasCommonCompounds, 5) +
-            "                }\n" +
-            "\n" +
-            "            }\n\n" +
-            "            if (position < (endOfField + 1))\n" +
-            "            {\n" +
-            "                position = endOfField + 1;\n" +
-            "            }\n" +
-            "        }\n" +
+            "                }%n" +
+            "%n" +
+            "            }%n%n" +
+            "            if (position < (endOfField + 1))%n" +
+            "            {%n" +
+            "                position = endOfField + 1;%n" +
+            "            }%n" +
+            "        }%n" +
             decodeTrailerOrReturn(hasCommonCompounds, 2) +
-            "    }\n\n";
+            "    }%n%n");
 
         return prefix + body + suffix;
     }
 
     private String malformedMessageCheck()
     {
-        return "            if (endOfField == AsciiBuffer.UNKNOWN_INDEX || " +
-               "equalsPosition == AsciiBuffer.UNKNOWN_INDEX)\n" +
-               "            {\n" +
-               "                rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
-               "                break;\n" +
-               "            }\n";
+        return String.format(
+            "            if (endOfField == AsciiBuffer.UNKNOWN_INDEX || " +
+            "equalsPosition == AsciiBuffer.UNKNOWN_INDEX)%n" +
+            "            {%n" +
+            "                rejectReason = " + VALUE_IS_INCORRECT + ";%n" +
+            "                break;%n" +
+            "            }%n");
     }
 
     private String decodeTrailerOrReturn(final boolean hasCommonCompounds, final int indent)
     {
         return (hasCommonCompounds ?
-            indent(indent, "position += trailer.decode(buffer, position, end - position);\n") : "") +
-            indent(indent, "return position - offset;\n");
+            indent(indent, String.format("position += trailer.decode(buffer, position, end - position);%n")) : "") +
+            indent(indent, String.format("return position - offset;%n"));
     }
 
     private String unknownFieldPredicate(final AggregateType type)
@@ -1114,14 +1114,14 @@ public class DecoderGenerator extends Generator
         if (isGroup)
         {
             endGroupCheck = String.format(
-                "            if (!seenFields.add(tag))\n" +
-                "            {\n" +
-                "                if (next == null)\n" +
-                "                {\n" +
-                "                    next = new %1$s(trailer, %2$s);\n" +
-                "                }\n" +
-                "                return position - offset;\n" +
-                "            }\n",
+                "            if (!seenFields.add(tag))%n" +
+                "            {%n" +
+                "                if (next == null)%n" +
+                "                {%n" +
+                "                    next = new %1$s(trailer, %2$s);%n" +
+                "                }%n" +
+                "                return position - offset;%n" +
+                "            }%n",
                 decoderClassName(aggregate),
                 MESSAGE_FIELDS);
         }
@@ -1135,22 +1135,22 @@ public class DecoderGenerator extends Generator
 
     private String headerValidation(final boolean isHeader)
     {
-        return isHeader ?
-            "                else if (seenFieldCount == 0 && tag != 8)\n" +
-            "                {\n" +
-            "                    invalidTagId = tag;\n" +
-            "                    rejectReason = " + TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER + ";\n" +
-            "                }\n" +
-            "                else if (seenFieldCount == 1 && tag != 9)\n" +
-            "                {\n" +
-            "                    invalidTagId = tag;\n" +
-            "                    rejectReason = " + TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER + ";\n" +
-            "                }\n" +
-            "                else if (seenFieldCount == 2 && tag != 35)\n" +
-            "                {\n" +
-            "                    invalidTagId = tag;\n" +
-            "                    rejectReason = " + TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER + ";\n" +
-            "                }\n" :
+        return isHeader ? String.format(
+            "                else if (seenFieldCount == 0 && tag != 8)%n" +
+            "                {%n" +
+            "                    invalidTagId = tag;%n" +
+            "                    rejectReason = " + TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER + ";%n" +
+            "                }%n" +
+            "                else if (seenFieldCount == 1 && tag != 9)%n" +
+            "                {%n" +
+            "                    invalidTagId = tag;%n" +
+            "                    rejectReason = " + TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER + ";%n" +
+            "                }%n" +
+            "                else if (seenFieldCount == 2 && tag != 35)%n" +
+            "                {%n" +
+            "                    invalidTagId = tag;%n" +
+            "                    rejectReason = " + TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER + ";%n" +
+            "                }%n") :
             "";
     }
 
@@ -1169,7 +1169,7 @@ public class DecoderGenerator extends Generator
             .entries()
             .stream()
             .map(this::decodeEntry)
-            .collect(joining("\n", "", "\n"));
+            .collect(joining(NEWLINE, "", NEWLINE));
     }
 
     protected String componentToString(final Component component)
@@ -1178,7 +1178,7 @@ public class DecoderGenerator extends Generator
             .entries()
             .stream()
             .map(this::entryToString)
-            .collect(joining(" + \n"));
+            .collect(joining(String.format(" + %n")));
     }
 
     private String decodeGroup(final Entry entry)
@@ -1186,20 +1186,20 @@ public class DecoderGenerator extends Generator
         final Group group = (Group)entry.element();
 
         final String parseGroup = String.format(
-            "                if (%1$s == null)\n" +
-            "                {\n" +
-            "                    %1$s = new %2$s(trailer, %4$s);\n" +
-            "                }\n" +
-            "                %2$s %1$sCurrent = %1$s;\n" +
-            "                position = endOfField + 1;\n" +
-            "                for (int i = 0; i < %3$s && position < end; i++)\n" +
-            "                {\n" +
-            "                    if (%1$sCurrent != null)\n" +
-            "                    {\n" +
-            "                        position += %1$sCurrent.decode(buffer, position, end - position);\n" +
-            "                        %1$sCurrent = %1$sCurrent.next();\n" +
-            "                    }\n" +
-            "                }\n",
+            "                if (%1$s == null)%n" +
+            "                {%n" +
+            "                    %1$s = new %2$s(trailer, %4$s);%n" +
+            "                }%n" +
+            "                %2$s %1$sCurrent = %1$s;%n" +
+            "                position = endOfField + 1;%n" +
+            "                for (int i = 0; i < %3$s && position < end; i++)%n" +
+            "                {%n" +
+            "                    if (%1$sCurrent != null)%n" +
+            "                    {%n" +
+            "                        position += %1$sCurrent.decode(buffer, position, end - position);%n" +
+            "                        %1$sCurrent = %1$sCurrent.next();%n" +
+            "                    }%n" +
+            "                }%n",
             formatPropertyName(group.name()),
             decoderClassName(group),
             formatPropertyName(group.numberField().name()),
@@ -1221,13 +1221,13 @@ public class DecoderGenerator extends Generator
         final String fieldName = formatPropertyName(name);
 
         return String.format(
-            "            case Constants.%s:\n" +
+            "            case Constants.%s:%n" +
             "%s" +
-            "                %s = buffer.%s);\n" +
+            "                %s = buffer.%s);%n" +
             "%s" +
             "%s" +
             "%s" +
-            "                break;\n",
+            "                break;%n",
             constantName(name),
             optionalAssign(entry),
             fieldName,
@@ -1240,20 +1240,20 @@ public class DecoderGenerator extends Generator
     private String storeLengthForVariableLength(final Type type, final String fieldName)
     {
         return type.hasLengthField() ?
-            String.format("                %sLength = valueLength;\n", fieldName) :
+            String.format("                %sLength = valueLength;%n", fieldName) :
             "";
     }
 
     private String storeOffsetForStrings(final Type type, final String fieldName)
     {
         return type.hasOffsetField() ?
-            String.format("                %sOffset = valueOffset;\n", fieldName) :
+            String.format("                %sOffset = valueOffset;%n", fieldName) :
             "";
     }
 
     private String optionalAssign(final Entry entry)
     {
-        return entry.required() ? "" : String.format("                has%s = true;\n", entry.name());
+        return entry.required() ? "" : String.format("                has%s = true;%n", entry.name());
     }
 
     private String decodeMethodFor(final Type type, final String fieldName)
@@ -1335,11 +1335,11 @@ public class DecoderGenerator extends Generator
     protected String resetStringBasedData(final String name)
     {
         return String.format(
-            "    public void %1$s()\n" +
-                    "    {\n" +
-                    "        %2$sOffset = 0;\n" +
-                    "        %2$sLength = 0;\n" +
-                    "    }\n\n",
+            "    public void %1$s()%n" +
+                    "    {%n" +
+                    "        %2$sOffset = 0;%n" +
+                    "        %2$sLength = 0;%n" +
+                    "    }%n%n",
             nameOfResetMethod(name),
             formatPropertyName(name));
     }

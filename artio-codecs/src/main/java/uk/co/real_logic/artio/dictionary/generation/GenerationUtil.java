@@ -31,6 +31,7 @@ public final class GenerationUtil
     public static final String ENCODER_PACKAGE = PARENT_PACKAGE + ".builder";
     public static final String DECODER_PACKAGE = PARENT_PACKAGE + ".decoder";
     public static final String INDENT = "    ";
+    public static final String NEWLINE = String.format("%n");
 
     private GenerationUtil()
     {
@@ -39,8 +40,8 @@ public final class GenerationUtil
     public static String fileHeader(final String packageName)
     {
         return String.format(
-            "/* Generated Fix Gateway message codec */\n" +
-            "package %s;\n\n",
+            "/* Generated Fix Gateway message codec */%n" +
+            "package %s;%n%n",
             packageName);
     }
 
@@ -83,12 +84,12 @@ public final class GenerationUtil
 
         public String field()
         {
-            return String.format("%sprivate final %s %s;\n\n", INDENT, type, name);
+            return String.format("%sprivate final %s %s;%n%n", INDENT, type, name);
         }
 
         public String getter()
         {
-            return String.format("%spublic final %s %s() { return %3$s; }\n\n", INDENT, type, name);
+            return String.format("%spublic final %s %s() { return %3$s; }%n%n", INDENT, type, name);
         }
 
         public String declaration()
@@ -107,9 +108,9 @@ public final class GenerationUtil
 
         final String binding = Stream.of(parameters)
             .map(var -> String.format("%1$s%1$s this.%2$s = %2$s;", INDENT, var.name))
-            .collect(joining("\n"));
+            .collect(joining("%n"));
 
-        return String.format("%s%s(%s)\n%1$s{\n%s\n%1$s}\n\n", INDENT, name, paramDeclaration(parameters), binding);
+        return String.format("%s%s(%s)%n%1$s{%n%s%n%1$s}%n%n", INDENT, name, paramDeclaration(parameters), binding);
     }
 
     public static String paramDeclaration(final Var[] parameters)
@@ -121,32 +122,32 @@ public final class GenerationUtil
 
     public static String importFor(final Class<?> cls)
     {
-        return String.format("import %s;\n", cls.getCanonicalName());
+        return String.format("import %s;%n", cls.getCanonicalName());
     }
 
     public static String importFor(final String className)
     {
-        return String.format("import %s;\n", className);
+        return String.format("import %s;%n", className);
     }
 
 
     public static String importStaticFor(final Class<?> cls)
     {
-        return String.format("import static %s.*;\n", cls.getCanonicalName());
+        return String.format("import static %s.*;%n", cls.getCanonicalName());
     }
 
     public static String importStaticFor(final Class<?> cls, final String name)
     {
         Verify.notNull(name, "name");
-        return String.format("import static %s.%s;\n", cls.getCanonicalName(), name);
+        return String.format("import static %s.%s;%n", cls.getCanonicalName(), name);
     }
 
     public static String optionalStaticInit(final String containing)
     {
-        return containing.isEmpty() ? "\n" :
-            "    static\n" +
-            "    {\n" +
+        return containing.isEmpty() ? NEWLINE : String.format(
+            "    static%n" +
+            "    {%n" +
             containing +
-            "    }\n\n";
+            "    }%n%n");
     }
 }

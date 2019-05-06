@@ -44,105 +44,106 @@ import static uk.co.real_logic.artio.dictionary.generation.AggregateType.GROUP;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.HEADER;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.hasEnumGenerated;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.NEWLINE;
 import static uk.co.real_logic.artio.util.MutableAsciiBuffer.LONGEST_INT_LENGTH;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatClassName;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 public class EncoderGenerator extends Generator
 {
-    private static final String SUFFIX =
-        "        buffer.putSeparator(position);\n" +
-        "        position++;\n" +
-        "%s";
+    private static final String SUFFIX = String.format(
+        "        buffer.putSeparator(position);%n" +
+        "        position++;%n" +
+        "%%s");
 
-    private static final String TRAILER_ENCODE_PREFIX =
-        "    // |10=...|\n" +
-        "    long finishMessage(final MutableAsciiBuffer buffer, final int messageStart, final int offset)\n" +
-        "    {\n" +
-        "        int position = offset;\n" +
-        "\n" +
-        "        final int checkSum = buffer.computeChecksum(messageStart, position);\n" +
-        "        buffer.putBytes(position, checkSumHeader, 0, checkSumHeaderLength);\n" +
-        "        position += checkSumHeaderLength;\n" +
-        "        buffer.putNaturalPaddedIntAscii(position, 3, checkSum);\n" +
-        "        position += 3;\n" +
-        "        buffer.putSeparator(position);\n" +
-        "        position++;\n" +
-        "\n" +
-        "        return Encoder.result(position - messageStart, messageStart);\n" +
+    private static final String TRAILER_ENCODE_PREFIX = String.format(
+        "    // |10=...|%n" +
+        "    long finishMessage(final MutableAsciiBuffer buffer, final int messageStart, final int offset)%n" +
+        "    {%n" +
+        "        int position = offset;%n" +
+        "%n" +
+        "        final int checkSum = buffer.computeChecksum(messageStart, position);%n" +
+        "        buffer.putBytes(position, checkSumHeader, 0, checkSumHeaderLength);%n" +
+        "        position += checkSumHeaderLength;%n" +
+        "        buffer.putNaturalPaddedIntAscii(position, 3, checkSum);%n" +
+        "        position += 3;%n" +
+        "        buffer.putSeparator(position);%n" +
+        "        position++;%n" +
+        "%n" +
+        "        return Encoder.result(position - messageStart, messageStart);%n" +
         "    }" +
-        "\n" +
-        "    // Optional trailer fields\n" +
-        "    int startTrailer(final MutableAsciiBuffer buffer, final int offset)\n" +
-        "    {\n" +
-        "        final int start = offset;\n" +
-        "        int position = start;\n" +
-        "\n";
+        "%n" +
+        "    // Optional trailer fields%n" +
+        "    int startTrailer(final MutableAsciiBuffer buffer, final int offset)%n" +
+        "    {%n" +
+        "        final int start = offset;%n" +
+        "        int position = start;%n" +
+        "%n");
 
     // returns offset where message starts
-    private static final String HEADER_ENCODE_PREFIX =
-        "    // 8=...|9=...|\n" +
-        "    int finishHeader(final MutableAsciiBuffer buffer, final int bodyStart, final int bodyLength)\n" +
-        "    {\n" +
-        "        int position = bodyStart - 1;\n" +
-        "\n" +
-        "        buffer.putSeparator(position);\n" +
-        "        position = buffer.putNaturalIntAsciiFromEnd(bodyLength, position);\n" +
-        "        position -= bodyLengthHeaderLength;\n" +
-        "        buffer.putBytes(position, bodyLengthHeader, 0, bodyLengthHeaderLength);\n" +
-        "\n" +
-        "        if (beginStringLength > 0) {\n" +
-        "        position--;\n" +
-        "        buffer.putSeparator(position);\n" +
-        "        position -= beginStringLength;\n" +
-        "        buffer.putBytes(position, beginString, beginStringOffset, beginStringLength);\n" +
-        "        position -= beginStringHeaderLength;\n" +
-        "        buffer.putBytes(position, beginStringHeader, 0, beginStringHeaderLength);\n" +
-        "        } else if (" + CODEC_VALIDATION_ENABLED + ")\n" +
-        "        {\n" +
-        "            throw new EncodingException(\"Missing Field: BeginString\");\n" +
-        "        }\n" +
-        "\n" +
-        "        return position;\n" +
-        "    }\n" +
-        "\n" +
-        "    // 35=...| + other header fields\n" +
-        "    public long startMessage(final MutableAsciiBuffer buffer, final int offset)\n" +
-        "    {\n" +
-        "        final int start = offset + beginStringLength + 16;\n" +
-        "        int position = start;";
+    private static final String HEADER_ENCODE_PREFIX = String.format(
+        "    // 8=...|9=...|%n" +
+        "    int finishHeader(final MutableAsciiBuffer buffer, final int bodyStart, final int bodyLength)%n" +
+        "    {%n" +
+        "        int position = bodyStart - 1;%n" +
+        "%n" +
+        "        buffer.putSeparator(position);%n" +
+        "        position = buffer.putNaturalIntAsciiFromEnd(bodyLength, position);%n" +
+        "        position -= bodyLengthHeaderLength;%n" +
+        "        buffer.putBytes(position, bodyLengthHeader, 0, bodyLengthHeaderLength);%n" +
+        "%n" +
+        "        if (beginStringLength > 0) {%n" +
+        "        position--;%n" +
+        "        buffer.putSeparator(position);%n" +
+        "        position -= beginStringLength;%n" +
+        "        buffer.putBytes(position, beginString, beginStringOffset, beginStringLength);%n" +
+        "        position -= beginStringHeaderLength;%n" +
+        "        buffer.putBytes(position, beginStringHeader, 0, beginStringHeaderLength);%n" +
+        "        } else if (" + CODEC_VALIDATION_ENABLED + ")%n" +
+        "        {%n" +
+        "            throw new EncodingException(\"Missing Field: BeginString\");%n" +
+        "        }%n" +
+        "%n" +
+        "        return position;%n" +
+        "    }%n" +
+        "%n" +
+        "    // 35=...| + other header fields%n" +
+        "    public long startMessage(final MutableAsciiBuffer buffer, final int offset)%n" +
+        "    {%n" +
+        "        final int start = offset + beginStringLength + 16;%n" +
+        "        int position = start;");
 
-    private static final String GROUP_ENCODE_PREFIX =
-        "    public int encode(final MutableAsciiBuffer buffer, final int offset, final int remainingElements)\n" +
-        "    {\n" +
-        "        if (remainingElements == 0)\n" +
-        "        {\n" +
-        "            return 0;\n" +
-        "        }\n\n" +
-        "        int position = offset;\n\n";
+    private static final String GROUP_ENCODE_PREFIX = String.format(
+        "    public int encode(final MutableAsciiBuffer buffer, final int offset, final int remainingElements)%n" +
+        "    {%n" +
+        "        if (remainingElements == 0)%n" +
+        "        {%n" +
+        "            return 0;%n" +
+        "        }%n%n" +
+        "        int position = offset;%n%n");
 
     // returns (offset, length) as long
-    private static final String MESSAGE_ENCODE_PREFIX =
-        "    public long encode(final MutableAsciiBuffer buffer, final int offset)\n" +
-        "    {\n" +
-        "        final long startMessageResult = header.startMessage(buffer, offset);\n" +
-        "        final int bodyStart = Encoder.offset(startMessageResult);\n" +
-        "        int position = bodyStart + Encoder.length(startMessageResult);\n" +
-        "\n";
+    private static final String MESSAGE_ENCODE_PREFIX = String.format(
+        "    public long encode(final MutableAsciiBuffer buffer, final int offset)%n" +
+        "    {%n" +
+        "        final long startMessageResult = header.startMessage(buffer, offset);%n" +
+        "        final int bodyStart = Encoder.offset(startMessageResult);%n" +
+        "        int position = bodyStart + Encoder.length(startMessageResult);%n" +
+        "%n");
 
     // returns length as int
-    private static final String OTHER_ENCODE_PREFIX =
-        "    public int encode(final MutableAsciiBuffer buffer, final int offset)\n" +
-        "    {\n" +
-        "        int position = offset;\n\n";
+    private static final String OTHER_ENCODE_PREFIX = String.format(
+        "    public int encode(final MutableAsciiBuffer buffer, final int offset)%n" +
+        "    {%n" +
+        "        int position = offset;%n%n");
 
-    private static final String RESET_NEXT_GROUP =
+    private static final String RESET_NEXT_GROUP = String.format(
         "        if (next != null)" +
-        "        {\n" +
-        "            next.reset();\n" +
-        "        }\n";
+        "        {%n" +
+        "            next.reset();%n" +
+        "        }%n");
 
-    public static final String METHOD_DELIMITER = "\n\n";
+    public static final String METHOD_DELIMITER = String.format("%n%n");
 
     private static String encoderClassName(final String name)
     {
@@ -213,15 +214,15 @@ public class EncoderGenerator extends Generator
         final String name = group.name();
         final Entry numberField = group.numberField();
         return String.format(
-                "    public void %1$s()\n" +
-                "    {\n" +
-                "        if (%2$s != null)\n" +
-                "        {\n" +
-                "            %2$s.reset();\n" +
-                "        }\n" +
-                "        %3$s = 0;\n" +
-                "        has%4$s = false;\n" +
-                "    }\n\n",
+                "    public void %1$s()%n" +
+                "    {%n" +
+                "        if (%2$s != null)%n" +
+                "        {%n" +
+                "            %2$s.reset();%n" +
+                "        }%n" +
+                "        %3$s = 0;%n" +
+                "        has%4$s = false;%n" +
+                "    }%n%n",
                 nameOfResetMethod(name),
                 formatPropertyName(name),
                 formatPropertyName(numberField.name()),
@@ -263,9 +264,9 @@ public class EncoderGenerator extends Generator
         else if (type == HEADER)
         {
             out.append(
-                String.format("\n" +
+                String.format("%n" +
                 "    private static final byte[] DEFAULT_BEGIN_STRING=\"%s\".getBytes(StandardCharsets.US_ASCII);" +
-                "\n\n",
+                "%n%n",
                 beginString));
 
         }
@@ -275,7 +276,7 @@ public class EncoderGenerator extends Generator
         out.append(encodeMethod(aggregate.entries(), type));
         out.append(completeResetMethod(aggregate, isMessage, type));
         out.append(toString(aggregate, isMessage));
-        out.append("}\n");
+        out.append(String.format("}%n"));
     }
 
     private String completeResetMethod(
@@ -288,7 +289,7 @@ public class EncoderGenerator extends Generator
                 additionalReset = RESET_NEXT_GROUP;
                 break;
             case HEADER:
-                additionalReset = "        beginString(DEFAULT_BEGIN_STRING);\n";
+                additionalReset = String.format("        beginString(DEFAULT_BEGIN_STRING);%n");
                 break;
             default:
                 additionalReset = "";
@@ -305,15 +306,15 @@ public class EncoderGenerator extends Generator
     private String nextMethod(final Group group)
     {
         return String.format(
-            "    private %1$s next = null;\n\n" +
-            "    public %1$s next()\n" +
-            "    {\n" +
-            "        if (next == null)\n" +
-            "        {\n" +
-            "            next = new %1$s();\n" +
-            "        }\n" +
-            "        return next;\n" +
-            "    }\n\n",
+            "    private %1$s next = null;%n%n" +
+            "    public %1$s next()%n" +
+            "    {%n" +
+            "        if (next == null)%n" +
+            "        {%n" +
+            "            next = new %1$s();%n" +
+            "        }%n" +
+            "        return next;%n" +
+            "    }%n%n",
             encoderClassName(group.name())
         );
     }
@@ -327,17 +328,17 @@ public class EncoderGenerator extends Generator
             final int packedType = message.packedType();
             final String fullType = message.fullType();
             final String msgType = header.hasField(MSG_TYPE) ?
-                String.format("        header.msgType(\"%s\");\n", fullType) : "";
+                String.format("        header.msgType(\"%s\");%n", fullType) : "";
 
             return String.format(
-                "    public int messageType()\n" +
-                "    {\n" +
-                "        return %s;\n" +
-                "    }\n\n" +
-                "    public %sEncoder()\n" +
-                "    {\n" +
+                "    public int messageType()%n" +
+                "    {%n" +
+                "        return %s;%n" +
+                "    }%n%n" +
+                "    public %sEncoder()%n" +
+                "    {%n" +
                 "%s" +
-                "    }\n\n",
+                "    }%n%n",
                 packedType,
                 aggregate.name(),
                 msgType);
@@ -345,10 +346,10 @@ public class EncoderGenerator extends Generator
         else if (type == AggregateType.HEADER)
         {
             return String.format(
-                "    public %sEncoder()\n" +
-                "    {\n" +
-                "        beginString(DEFAULT_BEGIN_STRING);\n" +
-                "    }\n\n",
+                "    public %sEncoder()%n" +
+                "    {%n" +
+                "        beginString(DEFAULT_BEGIN_STRING);%n" +
+                "    }%n%n",
                 aggregate.name());
         }
         else
@@ -382,9 +383,9 @@ public class EncoderGenerator extends Generator
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
         final String hasField =
-            String.format("    private boolean has%1$s;\n\n", name) + hasGetter(name);
+            String.format("    private boolean has%1$s;%n%n", name) + hasGetter(name);
 
-        final String hasAssign = String.format("        has%s = true;\n", name);
+        final String hasAssign = String.format("        has%s = true;%n", name);
 
         final String enumSetter = hasEnumGenerated(field) && !field.type().isMultiValue() ?
             enumSetter(className, fieldName, field.name()) : "";
@@ -450,18 +451,18 @@ public class EncoderGenerator extends Generator
         setter(className, numberField, out);
 
         out.append(String.format(
-            "\n" +
-            "    private %1$s %2$s = null;\n\n" +
-            "    public %1$s %2$s(final int numberOfElements)\n" +
-            "    {\n" +
-            "        has%3$s = true;\n" +
-            "        %4$s = numberOfElements;\n" +
-            "        if (%2$s == null)\n" +
-            "        {\n" +
-            "            %2$s = new %1$s();\n" +
-            "        }\n" +
-            "        return %2$s;\n" +
-            "    }\n\n",
+            "%n" +
+            "    private %1$s %2$s = null;%n%n" +
+            "    public %1$s %2$s(final int numberOfElements)%n" +
+            "    {%n" +
+            "        has%3$s = true;%n" +
+            "        %4$s = numberOfElements;%n" +
+            "        if (%2$s == null)%n" +
+            "        {%n" +
+            "            %2$s = new %1$s();%n" +
+            "        }%n" +
+            "        return %2$s;%n" +
+            "    }%n%n",
             encoderClassName(group.name()),
             formatPropertyName(group.name()),
             numberField.name(),
@@ -471,35 +472,35 @@ public class EncoderGenerator extends Generator
     private String generateByteArraySetter(final String className, final String fieldName, final String name)
     {
         return String.format(
-            "    private byte[] %1$s = new byte[%3$d];\n\n" +
-            "    private int %1$sOffset = 0;\n\n" +
-            "    private int %1$sLength = 0;\n\n" +
-            "    public %2$s %1$s(final byte[] value, final int length)\n" +
-            "    {\n" +
-            "        %1$s = value;\n" +
-            "        %1$sOffset = 0;\n" +
-            "        %1$sLength = length;\n" +
-            "        return this;\n" +
-            "    }\n\n" +
-            "    public %2$s %1$s(final byte[] value, final int offset, final int length)\n" +
-            "    {\n" +
-            "        %1$s = value;\n" +
-            "        %1$sOffset = offset;\n" +
-            "        %1$sLength = length;\n" +
-            "        return this;\n" +
-            "    }\n\n" +
-            "    public %2$s %1$s(final byte[] value)\n" +
-            "    {\n" +
-            "        return %1$s(value, value.length);\n" +
-            "    }\n\n" +
-            "    public boolean has%4$s()\n" +
-            "    {\n" +
-            "        return %1$sLength > 0;\n" +
-            "    }\n\n" +
-            "    public byte[] %1$s()\n" +
-            "    {\n" +
-            "        return %1$s;\n" +
-            "    }\n\n",
+            "    private byte[] %1$s = new byte[%3$d];%n%n" +
+            "    private int %1$sOffset = 0;%n%n" +
+            "    private int %1$sLength = 0;%n%n" +
+            "    public %2$s %1$s(final byte[] value, final int length)%n" +
+            "    {%n" +
+            "        %1$s = value;%n" +
+            "        %1$sOffset = 0;%n" +
+            "        %1$sLength = length;%n" +
+            "        return this;%n" +
+            "    }%n%n" +
+            "    public %2$s %1$s(final byte[] value, final int offset, final int length)%n" +
+            "    {%n" +
+            "        %1$s = value;%n" +
+            "        %1$sOffset = offset;%n" +
+            "        %1$sLength = length;%n" +
+            "        return this;%n" +
+            "    }%n%n" +
+            "    public %2$s %1$s(final byte[] value)%n" +
+            "    {%n" +
+            "        return %1$s(value, value.length);%n" +
+            "    }%n%n" +
+            "    public boolean has%4$s()%n" +
+            "    {%n" +
+            "        return %1$sLength > 0;%n" +
+            "    }%n%n" +
+            "    public byte[] %1$s()%n" +
+            "    {%n" +
+            "        return %1$s;%n" +
+            "    }%n%n",
             fieldName,
             className,
             initialArraySize,
@@ -514,31 +515,31 @@ public class EncoderGenerator extends Generator
     {
         return String.format(
             "%2$s" +
-            "    public %3$s %1$s(final CharSequence value)\n" +
-            "    {\n" +
-            "        %1$s = toBytes(value, %1$s);\n" +
-            "        %1$sOffset = 0;\n" +
-            "        %1$sLength = value.length();\n" +
-            "        return this;\n" +
-            "    }\n\n" +
-            "    public %3$s %1$s(final char[] value)\n" +
-            "    {\n" +
-            "        return %1$s(value, value.length);\n" +
-            "    }\n\n" +
-            "    public %3$s %1$s(final char[] value, final int length)\n" +
-            "    {\n" +
-            "        %1$s = toBytes(value, %1$s, length);\n" +
-            "        %1$sOffset = 0;\n" +
-            "        %1$sLength = length;\n" +
-            "        return this;\n" +
-            "    }\n\n" +
-            "    public %3$s %1$s(final char[] value, final int offset, final int length)\n" +
-            "    {\n" +
-            "        %1$s = toBytes(value, %1$s, offset, length);\n" +
-            "        %1$sOffset = 0;\n" +
-            "        %1$sLength = length;\n" +
-            "        return this;\n" +
-            "    }\n\n" +
+            "    public %3$s %1$s(final CharSequence value)%n" +
+            "    {%n" +
+            "        %1$s = toBytes(value, %1$s);%n" +
+            "        %1$sOffset = 0;%n" +
+            "        %1$sLength = value.length();%n" +
+            "        return this;%n" +
+            "    }%n%n" +
+            "    public %3$s %1$s(final char[] value)%n" +
+            "    {%n" +
+            "        return %1$s(value, value.length);%n" +
+            "    }%n%n" +
+            "    public %3$s %1$s(final char[] value, final int length)%n" +
+            "    {%n" +
+            "        %1$s = toBytes(value, %1$s, length);%n" +
+            "        %1$sOffset = 0;%n" +
+            "        %1$sLength = length;%n" +
+            "        return this;%n" +
+            "    }%n%n" +
+            "    public %3$s %1$s(final char[] value, final int offset, final int length)%n" +
+            "    {%n" +
+            "        %1$s = toBytes(value, %1$s, offset, length);%n" +
+            "        %1$sOffset = 0;%n" +
+            "        %1$sLength = length;%n" +
+            "        return this;%n" +
+            "    }%n%n" +
             "%4$s",
             fieldName,
             generateByteArraySetter(className, fieldName, name),
@@ -556,18 +557,18 @@ public class EncoderGenerator extends Generator
         final String enumSetter)
     {
         return String.format(
-            "    %s %s %s;\n\n" +
+            "    %s %s %s;%n%n" +
             "%s" +
-            "    public %s %3$s(%2$s value)\n" +
-            "    {\n" +
-            "        %3$s = value;\n" +
+            "    public %s %3$s(%2$s value)%n" +
+            "    {%n" +
+            "        %3$s = value;%n" +
             "%s" +
-            "        return this;\n" +
-            "    }\n\n" +
-            "    public %2$s %3$s()\n" +
-            "    {\n" +
-            "        return %3$s;\n" +
-            "    }\n\n" +
+            "        return this;%n" +
+            "    }%n%n" +
+            "    public %2$s %3$s()%n" +
+            "    {%n" +
+            "        return %3$s;%n" +
+            "    }%n%n" +
             "%7$s",
             isBodyLength(name) ? "public" : "private",
             type,
@@ -586,24 +587,24 @@ public class EncoderGenerator extends Generator
         final String enumSetter)
     {
         return String.format(
-            "    private final DecimalFloat %1$s = new DecimalFloat();\n\n" +
+            "    private final DecimalFloat %1$s = new DecimalFloat();%n%n" +
             "%2$s" +
-            "    public %3$s %1$s(DecimalFloat value)\n" +
-            "    {\n" +
-            "        %1$s.set(value);\n" +
+            "    public %3$s %1$s(DecimalFloat value)%n" +
+            "    {%n" +
+            "        %1$s.set(value);%n" +
             "%4$s" +
-            "        return this;\n" +
-            "    }\n\n" +
-            "    public %3$s %1$s(long value, int scale)\n" +
-            "    {\n" +
-            "        %1$s.set(value, scale);\n" +
+            "        return this;%n" +
+            "    }%n%n" +
+            "    public %3$s %1$s(long value, int scale)%n" +
+            "    {%n" +
+            "        %1$s.set(value, scale);%n" +
             "%4$s" +
-            "        return this;\n" +
-            "    }\n\n" +
-            "    public DecimalFloat %1$s()\n" +
-            "    {\n" +
-            "        return %1$s;\n" +
-            "    }\n\n" +
+            "        return this;%n" +
+            "    }%n%n" +
+            "    public DecimalFloat %1$s()%n" +
+            "    {%n" +
+            "        return %1$s;%n" +
+            "    }%n%n" +
             "%5$s",
             fieldName,
             optionalField,
@@ -618,10 +619,10 @@ public class EncoderGenerator extends Generator
         final String enumType)
     {
         return String.format(
-            "    public %s %2$s(%3$s value)\n" +
-            "    {\n" +
-            "        return %2$s(value.representation());\n" +
-            "    }\n\n",
+            "    public %s %2$s(%3$s value)%n" +
+            "    {%n" +
+            "        return %2$s(value.representation());%n" +
+            "    }%n%n",
             className, fieldName, enumType
         );
     }
@@ -654,44 +655,44 @@ public class EncoderGenerator extends Generator
 
         final String body = entries.stream()
             .map(this::encodeEntry)
-            .collect(joining("\n"));
+            .collect(joining(NEWLINE));
 
         String suffix;
         if (aggregateType == AggregateType.MESSAGE)
         {
-            suffix =
-                "        position += trailer.startTrailer(buffer, position);\n" +
-                "\n" +
-                "        final int messageStart = header.finishHeader(buffer, bodyStart, position - bodyStart);\n" +
-                "        return trailer.finishMessage(buffer, messageStart, position);\n" +
-                "    }\n\n";
+            suffix = String.format(
+                "        position += trailer.startTrailer(buffer, position);%n" +
+                "%n" +
+                "        final int messageStart = header.finishHeader(buffer, bodyStart, position - bodyStart);%n" +
+                "        return trailer.finishMessage(buffer, messageStart, position);%n" +
+                "    }%n%n");
         }
         else if (aggregateType == AggregateType.HEADER)
         {
-            suffix =
-                "\n" +
-                "        return Encoder.result(position - start, start);\n" +
-                "    }\n\n";
+            suffix = String.format(
+                "%n" +
+                "        return Encoder.result(position - start, start);%n" +
+                "    }%n%n");
         }
         else if (aggregateType == AggregateType.TRAILER)
         {
-            suffix =
-                "        return position - start;\n" +
-                "    }\n\n";
+            suffix = String.format(
+                "        return position - start;%n" +
+                "    }%n%n");
         }
         else
         {
-            suffix =
-                "        return position - offset;\n" +
-                "    }\n\n";
+            suffix = String.format(
+                "        return position - offset;%n" +
+                "    }%n%n");
 
             if (aggregateType == GROUP)
             {
-                suffix =
-                    "        if (next != null)\n" +
-                    "        {\n" +
-                    "            position += next.encode(buffer, position, remainingElements - 1);\n" +
-                    "        }\n" + suffix;
+                suffix = String.format(
+                    "        if (next != null)%n" +
+                    "        {%n" +
+                    "            position += next.encode(buffer, position, remainingElements - 1);%n" +
+                    "        }%n") + suffix;
             }
         }
 
@@ -725,25 +726,25 @@ public class EncoderGenerator extends Generator
         final String enablingPrefix;
         if (mustCheckFlag)
         {
-            enablingPrefix = String.format("        if (has%s) {\n", name);
+            enablingPrefix = String.format("        if (has%s) {%n", name);
         }
         else if (mustCheckLength)
         {
-            enablingPrefix = String.format("        if (%sLength > 0) {\n", fieldName);
+            enablingPrefix = String.format("        if (%sLength > 0) {%n", fieldName);
         }
         else
         {
             enablingPrefix = "";
         }
-        String enablingSuffix = mustCheckFlag || mustCheckLength ? "        }\n" : "";
+        String enablingSuffix = mustCheckFlag || mustCheckLength ? String.format("        }%n") : "";
 
         if (needsMissingThrow)
         {
-            enablingSuffix = enablingSuffix +
-                "        else if (" + CODEC_VALIDATION_ENABLED + ")\n" +
-                "        {\n" +
-                "            throw new EncodingException(\"Missing Field: " + name + "\");\n" +
-                "        }\n";
+            enablingSuffix = enablingSuffix + String.format(
+                "        else if (" + CODEC_VALIDATION_ENABLED + ")%n" +
+                "        {%n" +
+                "            throw new EncodingException(\"Missing Field: " + name + "\");%n" +
+                "        }%n");
         }
 
         final String tag = formatTag(fieldName, enablingPrefix);
@@ -792,8 +793,8 @@ public class EncoderGenerator extends Generator
             case XMLDATA:
                 return String.format(
                     "%s" +
-                    "        buffer.putBytes(position, %s);\n" +
-                    "        position += %2$s.length;\n" +
+                    "        buffer.putBytes(position, %s);%n" +
+                    "        position += %2$s.length;%n" +
                     SUFFIX,
                     tag,
                     fieldName,
@@ -807,8 +808,8 @@ public class EncoderGenerator extends Generator
     private String stringPut(final String fieldName, final String optionalSuffix, final String tag)
     {
         return formatEncoder(fieldName, optionalSuffix, tag,
-        "        buffer.putBytes(position, %s, %2$sOffset, %2$sLength);\n" +
-            "        position += %2$sLength;\n");
+        "        buffer.putBytes(position, %s, %2$sOffset, %2$sLength);%n" +
+            "        position += %2$sLength;%n");
     }
 
     private String formatEncoder(
@@ -825,11 +826,11 @@ public class EncoderGenerator extends Generator
     {
         final Group group = (Group)entry.element();
         return String.format(
-            "%1$s\n" +
-            "        if (%2$s != null)\n" +
-            "        {\n" +
-            "            position += %2$s.encode(buffer, position, %3$s);\n" +
-            "        }\n",
+            "%1$s%n" +
+            "        if (%2$s != null)%n" +
+            "        {%n" +
+            "            position += %2$s.encode(buffer, position, %3$s);%n" +
+            "        }%n",
             encodeField(group.numberField()),
             formatPropertyName(group.name()),
             formatPropertyName(group.numberField().name()));
@@ -839,7 +840,7 @@ public class EncoderGenerator extends Generator
     {
         // TODO: make component return int, split encode prefix
         return String.format(
-            "            position += %1$s.encode(buffer, position);\n",
+            "            position += %1$s.encode(buffer, position);%n",
             formatPropertyName(entry.name()));
     }
 
@@ -847,8 +848,8 @@ public class EncoderGenerator extends Generator
     {
         return String.format(
             "%s" +
-            "        buffer.putBytes(position, %sHeader, 0, %2$sHeaderLength);\n" +
-            "        position += %2$sHeaderLength;\n",
+            "        buffer.putBytes(position, %sHeader, 0, %2$sHeaderLength);%n" +
+            "        position += %2$sHeaderLength;%n",
             optionalPrefix,
             fieldName);
     }
@@ -857,7 +858,7 @@ public class EncoderGenerator extends Generator
     {
         return String.format(
             "%s" +
-            "        position += buffer.put%sAscii(position, %s);\n" +
+            "        position += buffer.put%sAscii(position, %s);%n" +
             SUFFIX,
             tag,
             type,
@@ -893,8 +894,8 @@ public class EncoderGenerator extends Generator
             .collect(joining(", ", "", ", (byte) '='"));
 
         out.append(String.format(
-            "    private static final int %sHeaderLength = %d;\n" +
-            "    private static final byte[] %1$sHeader = new byte[] {%s};\n\n",
+            "    private static final int %sHeaderLength = %d;%n" +
+            "    private static final byte[] %1$sHeader = new byte[] {%s};%n%n",
             fieldName,
             length + 1,
             bytes));
@@ -917,11 +918,11 @@ public class EncoderGenerator extends Generator
     private void componentField(final String className, final Component element, final Writer out) throws IOException
     {
         out.append(String.format(
-            "    private final %1$s %2$s = new %1$s();\n" +
-            "    public %1$s %2$s()\n" +
-            "    {\n" +
-            "        return %2$s;\n" +
-            "    }\n\n",
+            "    private final %1$s %2$s = new %1$s();%n" +
+            "    public %1$s %2$s()%n" +
+            "    {%n" +
+            "        return %2$s;%n" +
+            "    }%n%n",
             className,
             formatPropertyName(element.name())));
     }
@@ -943,11 +944,11 @@ public class EncoderGenerator extends Generator
 
     protected String toStringGroupSuffix()
     {
-        return
-            "        if (remainingEntries > 1)\n" +
-            "        {\n" +
-            "            entries += \",\\n\" + next.toString(remainingEntries - 1);\n" +
-            "        }\n";
+        return String.format(
+            "        if (remainingEntries > 1)%n" +
+            "        {%n" +
+            "            entries += \",\\n\" + next.toString(remainingEntries - 1);%n" +
+            "        }%n");
     }
 
     protected boolean hasFlag(final Entry entry, final Field field)

@@ -62,25 +62,25 @@ public abstract class Generator
         final String headerParameter = headerWrapsTrailer ? "trailer" : "";
         return String.format(
             "    %3$s" +
-            "    private Trailer%1$s trailer = new Trailer%1$s();\n\n" +
-            "    public Trailer%1$s trailer()\n" +
-            "    {\n" +
-            "        return trailer;\n" +
-            "    }\n\n" +
+            "    private Trailer%1$s trailer = new Trailer%1$s();%n%n" +
+            "    public Trailer%1$s trailer()%n" +
+            "    {%n" +
+            "        return trailer;%n" +
+            "    }%n%n" +
 
-            "    private Header%1$s header = new Header%1$s(%2$s);\n\n" +
-            "    public Header%1$s header()\n" +
-            "    {\n" +
-            "        return header;\n" +
-            "    }\n\n",
+            "    private Header%1$s header = new Header%1$s(%2$s);%n%n" +
+            "    public Header%1$s header()%n" +
+            "    {%n" +
+            "        return header;%n" +
+            "    }%n%n",
             form,
             headerParameter,
             messageFieldsSet);
     }
 
     private static final String COMMON_COMPOUND_IMPORTS =
-        "import %1$s.Header%2$s;\n" +
-        "import %1$s.Trailer%2$s;\n";
+        "import %1$s.Header%2$s;%n" +
+        "import %1$s.Trailer%2$s;%n";
 
     protected final Dictionary dictionary;
     protected final String builderPackage;
@@ -164,8 +164,8 @@ public abstract class Generator
         final String interfaceList = interfaces.isEmpty() ? "" : " implements " + String.join(", ", interfaces);
 
         return String.format(
-            "\n\npublic %3$sclass %1$s%2$s\n" +
-            "{\n",
+            "%n%npublic %3$sclass %1$s%2$s%n" +
+            "{%n",
             className,
             interfaceList,
             isStatic ? "static " : "");
@@ -183,17 +183,17 @@ public abstract class Generator
         if (isMessage)
         {
             return String.format(
-                "    public void reset()\n" +
-                "    {\n" +
-                "        header.reset();\n" +
-                "        trailer.reset();\n" +
-                "        resetMessage();\n" +
+                "    public void reset()%n" +
+                "    {%n" +
+                "        header.reset();%n" +
+                "        trailer.reset();%n" +
+                "        resetMessage();%n" +
                 "%2$s" +
-                "    }\n\n" +
-                "    public void resetMessage()\n" +
-                "    {\n" +
+                "    }%n%n" +
+                "    public void resetMessage()%n" +
+                "    {%n" +
                 "%1$s" +
-                "    }\n\n" +
+                "    }%n%n" +
                 "%3$s",
                 resetEntries,
                 additionalReset,
@@ -202,11 +202,11 @@ public abstract class Generator
         else
         {
             return String.format(
-                "    public void reset()\n" +
-                "    {\n" +
+                "    public void reset()%n" +
+                "    {%n" +
                 "%s" +
                 "%s" +
-                "    }\n\n" +
+                "    }%n%n" +
                 "%s",
                 resetEntries,
                 additionalReset,
@@ -351,14 +351,14 @@ public abstract class Generator
         }
 
         return String.format(
-            "        %1$s();\n",
+            "        %1$s();%n",
             nameOfResetMethod(entry.name()));
     }
 
     protected String callComponentReset(final Entry entry)
     {
         return String.format(
-            "        %1$s.reset();\n",
+            "        %1$s.reset();%n",
             formatPropertyName(entry.name()));
     }
 
@@ -367,15 +367,15 @@ public abstract class Generator
         final String name = entry.name();
         return entry.required() ?
             "" :
-            String.format("    private boolean has%1$s;\n\n", name);
+            String.format("    private boolean has%1$s;%n%n", name);
     }
 
     protected String resetNothing(final String name)
     {
         return String.format(
-            "    public void %1$s()\n" +
-            "    {\n" +
-            "    }\n\n",
+            "    public void %1$s()%n" +
+            "    {%n" +
+            "    }%n%n",
             nameOfResetMethod(name));
     }
 
@@ -399,10 +399,10 @@ public abstract class Generator
     protected String resetLength(final String name)
     {
         return String.format(
-            "    public void %1$s()\n" +
-            "    {\n" +
-            "        %2$sLength = 0;\n" +
-            "    }\n\n",
+            "    public void %1$s()%n" +
+            "    {%n" +
+            "        %2$sLength = 0;%n" +
+            "    }%n%n",
             nameOfResetMethod(name),
             formatPropertyName(name));
     }
@@ -410,10 +410,10 @@ public abstract class Generator
     protected String resetByFlag(final String name)
     {
         return String.format(
-            "    public void %2$s()\n" +
-            "    {\n" +
-            "        has%1$s = false;\n" +
-            "    }\n\n",
+            "    public void %2$s()%n" +
+            "    {%n" +
+            "        has%1$s = false;%n" +
+            "    }%n%n",
             name,
             nameOfResetMethod(name));
     }
@@ -421,10 +421,10 @@ public abstract class Generator
     protected String resetByMethod(final String name)
     {
         return String.format(
-            "    public void %2$s()\n" +
-            "    {\n" +
-            "        %1$s.reset();\n" +
-            "    }\n\n",
+            "    public void %2$s()%n" +
+            "    {%n" +
+            "        %1$s.reset();%n" +
+            "    }%n%n",
             formatPropertyName(name),
             nameOfResetMethod(name));
     }
@@ -432,10 +432,10 @@ public abstract class Generator
     protected String resetFieldValue(final String name, final String resetValue)
     {
         return String.format(
-            "    public void %1$s()\n" +
-            "    {\n" +
-            "        %2$s = %3$s;\n" +
-            "    }\n\n",
+            "    public void %1$s()%n" +
+            "    {%n" +
+            "        %2$s = %3$s;%n" +
+            "    }%n%n",
             nameOfResetMethod(name),
             formatPropertyName(name),
             resetValue);
@@ -447,10 +447,10 @@ public abstract class Generator
             .entries()
             .stream()
             .map(this::entryToString)
-            .collect(joining(" + \n"));
+            .collect(joining(String.format(" + %n")));
 
         final String prefix = !hasCommonCompounds ?
-            "" : "\"  \\\"header\\\": \" + header" + EXPAND_INDENT + " + \"\\n\" + ";
+            "" : String.format("\"  \\\"header\\\": \" + header" + EXPAND_INDENT + " + \"\\n\" + ");
 
         final String suffix;
         final String parameters;
@@ -467,14 +467,14 @@ public abstract class Generator
         }
 
         return String.format(
-            "    public String toString(%5$s)\n" +
-            "    {\n" +
-            "        String entries = %1$s\n" +
-            "%2$s;\n\n" +
-            "        entries = \"{\\n  \\\"MessageName\\\": \\\"%4$s\\\",\\n\" + entries + \"}\";\n" +
+            "    public String toString(%5$s)%n" +
+            "    {%n" +
+            "        String entries = %1$s%n" +
+            "%2$s;%n%n" +
+            "        entries = \"{\\n  \\\"MessageName\\\": \\\"%4$s\\\",\\n\" + entries + \"}\";%n" +
             "%3$s" +
-            "        return entries;\n" +
-            "    }\n\n",
+            "        return entries;%n" +
+            "    }%n%n",
             prefix,
             entriesToString,
             suffix,
@@ -488,7 +488,7 @@ public abstract class Generator
 
     protected String entryToString(final Entry entry)
     {
-        //"  \"OnBehalfOfCompID\": \"abc\",\n" +
+        //"  \"OnBehalfOfCompID\": \"abc\",%n" +
 
         if (isBodyLength(entry))
         {
@@ -532,10 +532,10 @@ public abstract class Generator
     protected String hasGetter(final String name)
     {
         return String.format(
-            "    public boolean has%s()\n" +
-            "    {\n" +
-            "        return has%1$s;\n" +
-            "    }\n\n",
+            "    public boolean has%s()%n" +
+            "    {%n" +
+            "        return has%1$s;%n" +
+            "    }%n%n",
             name);
     }
 

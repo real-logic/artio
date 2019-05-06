@@ -32,7 +32,7 @@ public class ConstantGenerator
 {
     static final String CLASS_NAME = "Constants";
 
-    private static final String BODY = "public class " + CLASS_NAME + "\n" + "{\n\n";
+    private static final String BODY = String.format("public class " + CLASS_NAME + "%n" + "{%n%n");
     static final String VERSION = "VERSION";
 
     private final Dictionary dictionary;
@@ -59,7 +59,7 @@ public class ConstantGenerator
             out.append(generateMessageTypes());
             out.append(generateFieldTags());
             out.append(generateAllFieldsDictionary());
-            out.append("}\n");
+            out.append(String.format("}%n"));
         });
     }
 
@@ -77,11 +77,11 @@ public class ConstantGenerator
 
         final int hashMapSize = sizeHashSet(fields);
         return String.format(
-            "    public static final IntHashSet %3$s = new IntHashSet(%1$d);\n" +
-            "    static\n" +
-            "    {\n" +
+            "    public static final IntHashSet %3$s = new IntHashSet(%1$d);%n" +
+            "    static%n" +
+            "    {%n" +
             "%2$s" +
-            "    }\n\n",
+            "    }%n%n",
             hashMapSize,
             addFields,
             name);
@@ -90,8 +90,8 @@ public class ConstantGenerator
     private String generateVersion()
     {
         return String.format(
-            "    public static String VERSION = \"%s.%d.%d\";\n" +
-            "    public static char[] VERSION_CHARS = VERSION.toCharArray();\n\n",
+            "    public static String VERSION = \"%s.%d.%d\";%n" +
+            "    public static char[] VERSION_CHARS = VERSION.toCharArray();%n%n",
             dictionary.specType(),
             dictionary.majorVersion(),
             dictionary.minorVersion());
@@ -145,7 +145,7 @@ public class ConstantGenerator
         }
 
         return String.format(
-            "    public static final String %1$s = \"%2$s\";\n",
+            "    public static final String %1$s = \"%2$s\";%n",
             stringConstantName,
             new String(chars));
     }
@@ -153,7 +153,7 @@ public class ConstantGenerator
     private String generateIntConstant(final String name, final int number)
     {
         return String.format(
-            "    public static final int %1$s = %2$d;\n\n",
+            "    public static final int %1$s = %2$d;%n%n",
             name,
             number);
     }

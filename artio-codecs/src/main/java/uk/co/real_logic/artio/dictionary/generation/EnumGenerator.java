@@ -148,7 +148,7 @@ public final class EnumGenerator
             }
             finally
             {
-                out.append("}\n");
+                out.append(String.format("}%n"));
             }
         });
     }
@@ -160,7 +160,7 @@ public final class EnumGenerator
 
     private String generateEnumDeclaration(final String name, final String interfaceToImplement)
     {
-        final String format = "public enum " + name + " implements %sRepresentable\n{\n";
+        final String format = "public enum " + name + " implements %sRepresentable%n{%n";
         return String.format(format, interfaceToImplement);
     }
 
@@ -169,14 +169,14 @@ public final class EnumGenerator
         return allValues
             .stream()
             .map((value) -> format("%s%s(%s)", INDENT, value.description(), literal(value, type)))
-            .collect(joining(",\n"));
+            .collect(joining(format(",%n")));
     }
 
     private String generateEnumBody(final String name, final Type type)
     {
         final Var representation = representation(type);
 
-        return ";\n\n" +
+        return String.format(";%n%n") +
                representation.field() +
                constructor(name, representation) +
                representation.getter();
@@ -196,21 +196,21 @@ public final class EnumGenerator
 
         final String cases = allValues
             .stream()
-            .map((value) -> format("        case %s: return %s;\n", literal(value, type), value.description()))
+            .map((value) -> format("        case %s: return %s;%n", literal(value, type), value.description()))
             .collect(joining());
 
         return format(
             "%s" +
             "%s" +
-            "    public static %s decode(%s)\n" +
-            "    {\n" +
-            "        switch(representation)\n" +
-            "        {\n" +
+            "    public static %s decode(%s)%n" +
+            "    {%n" +
+            "        switch(representation)%n" +
+            "        {%n" +
             "%s" +
-            "        default:\n" +
-            "            return %s;\n" +
-            "        }\n" +
-            "    }\n",
+            "        default:%n" +
+            "            return %s;%n" +
+            "        }%n" +
+            "    }%n",
             optionalCharArrayDecode,
             enumValidation,
             name,
@@ -224,66 +224,68 @@ public final class EnumGenerator
         switch (type)
         {
             case STRING:
-                return "    public static boolean isValid(final char[] representation, final int length)\n" +
-                       "    {\n" +
-                       "        return charMap.containsKey(representation, length);\n" +
-                       "    }\n";
+                return format(
+                    "    public static boolean isValid(final char[] representation, final int length)%n" +
+                    "    {%n" +
+                    "        return charMap.containsKey(representation, length);%n" +
+                    "    }%n");
 
             case MULTIPLEVALUESTRING:
             case MULTIPLESTRINGVALUE:
-                return "    public static boolean isValid(final char[] representation, final int length)\n" +
-                       "    {\n" +
-                       "        int offset = 0;\n" +
-                       "        for (int i = 0; i < length; i++)\n" +
-                       "        {\n" +
-                       "            if (representation[i] == ' ')\n" +
-                       "            {\n" +
-                       "                if (! charMap.containsKey(representation, offset, i - offset))\n" +
-                       "                    return false;\n" +
-                       "                offset = i + 1;\n" +
-                       "            }\n" +
-                       "        }\n" +
-                       "        return charMap.containsKey(representation, offset, length - offset);\n" +
-                       "    }\n";
+                return format(
+                    "    public static boolean isValid(final char[] representation, final int length)%n" +
+                    "    {%n" +
+                    "        int offset = 0;%n" +
+                    "        for (int i = 0; i < length; i++)%n" +
+                    "        {%n" +
+                    "            if (representation[i] == ' ')%n" +
+                    "            {%n" +
+                    "                if (! charMap.containsKey(representation, offset, i - offset))%n" +
+                    "                    return false;%n" +
+                    "                offset = i + 1;%n" +
+                    "            }%n" +
+                    "        }%n" +
+                    "        return charMap.containsKey(representation, offset, length - offset);%n" +
+                    "    }%n");
 
             case MULTIPLECHARVALUE:
                 final String multiCharValues = allValues
                     .stream()
                     .map(Field.Value::representation)
-                    .map((repr) -> String.format("'%1$s'", repr))
-                    .map((repr) -> String.format("        intSet.add(%1$s);\n", repr))
+                    .map((repr) -> format("'%1$s'", repr))
+                    .map((repr) -> format("        intSet.add(%1$s);%n", repr))
                     .collect(joining());
 
                 return format(
-                    "    private static final IntHashSet intSet = new IntHashSet(%2$s);\n" +
-                    "    %1$s\n" +
-                    "\n" +
-                    "    public static boolean isValid(final char[] representation, final int length)\n" +
-                    "    {\n" +
-                    "        for (int i = 0; i < length; i+=2)\n" +
-                    "        {\n" +
-                    "            if (! intSet.contains(representation[i]))\n" +
-                    "                return false;\n" +
-                    "        }\n" +
-                    "        return true;\n" +
-                    "    }\n",
+                    "    private static final IntHashSet intSet = new IntHashSet(%2$s);%n" +
+                    "    %1$s%n" +
+                    "%n" +
+                    "    public static boolean isValid(final char[] representation, final int length)%n" +
+                    "    {%n" +
+                    "        for (int i = 0; i < length; i+=2)%n" +
+                    "        {%n" +
+                    "            if (! intSet.contains(representation[i]))%n" +
+                    "                return false;%n" +
+                    "        }%n" +
+                    "        return true;%n" +
+                    "    }%n",
                     optionalStaticInit(multiCharValues),
                     ConstantGenerator.sizeHashSet(allValues));
             default:
                 final String primitiveValues = allValues
                     .stream()
                     .map(value -> literal(value, type))
-                    .map((repr) -> String.format("        intSet.add(%1$s);\n", repr))
+                    .map((repr) -> format("        intSet.add(%1$s);%n", repr))
                     .collect(joining());
 
                 return format(
-                    "    private static final IntHashSet intSet = new IntHashSet(%2$s);\n" +
-                    "    %1$s\n" +
-                    "\n" +
-                    "    public static boolean isValid(final int representation)\n" +
-                    "    {\n" +
-                    "        return intSet.contains(representation);\n" +
-                    "    }\n",
+                    "    private static final IntHashSet intSet = new IntHashSet(%2$s);%n" +
+                    "    %1$s%n" +
+                    "%n" +
+                    "    public static boolean isValid(final int representation)%n" +
+                    "    {%n" +
+                    "        return intSet.contains(representation);%n" +
+                    "    }%n",
                     optionalStaticInit(primitiveValues),
                     ConstantGenerator.sizeHashSet(allValues));
         }
@@ -298,42 +300,42 @@ public final class EnumGenerator
             case MULTIPLESTRINGVALUE:
                 final String entries = allValues
                     .stream()
-                    .map((v) -> format("        stringMap.put(%s, %s);\n", literal(v, type), v.description()))
+                    .map((v) -> format("        stringMap.put(%s, %s);%n", literal(v, type), v.description()))
                     .collect(joining());
 
                 return format(
-                    "    private static final CharArrayMap<%1$s> charMap;\n" +
-                    "    static\n" +
-                    "    {\n" +
-                    "        final Map<String, %1$s> stringMap = new HashMap<>();\n" +
+                    "    private static final CharArrayMap<%1$s> charMap;%n" +
+                    "    static%n" +
+                    "    {%n" +
+                    "        final Map<String, %1$s> stringMap = new HashMap<>();%n" +
                     "%2$s" +
-                    "        charMap = new CharArrayMap<>(stringMap);\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public static %1$s decode(final char[] representation, final int length)\n" +
-                    "    {\n" +
-                            "        final %1$s value = charMap.get(representation, length);\n" +
-                            "        if (value == null)\n" +
-                            "        {\n" +
-                            "            return %3$s;\n" +
-                            "        }\n" +
-                            "        return value;\n" +
-                    "    }\n",
+                    "        charMap = new CharArrayMap<>(stringMap);%n" +
+                    "    }%n" +
+                    "%n" +
+                    "    public static %1$s decode(final char[] representation, final int length)%n" +
+                    "    {%n" +
+                            "        final %1$s value = charMap.get(representation, length);%n" +
+                            "        if (value == null)%n" +
+                            "        {%n" +
+                            "            return %3$s;%n" +
+                            "        }%n" +
+                            "        return value;%n" +
+                    "    }%n",
                     typeName,
                     entries,
                     UNKNOWN_NAME);
             case MULTIPLECHARVALUE:
 
                 return format(
-                    "    public static %1$s decode(String representation)\n" +
-                    "    {\n" +
-                    "        return decode(representation.charAt(0));\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public static %1$s decode(final char[] representation, final int length)\n" +
-                    "    {\n" +
-                    "        return decode(representation[0]);\n" +
-                    "    }\n",
+                    "    public static %1$s decode(String representation)%n" +
+                    "    {%n" +
+                    "        return decode(representation.charAt(0));%n" +
+                    "    }%n" +
+                    "%n" +
+                    "    public static %1$s decode(final char[] representation, final int length)%n" +
+                    "    {%n" +
+                    "        return decode(representation[0]);%n" +
+                    "    }%n",
                     typeName);
             default:
                 return "";
