@@ -105,10 +105,9 @@ public final class GenerationUtil
 
     public static String constructor(final String name, final Var... parameters)
     {
-
         final String binding = Stream.of(parameters)
             .map(var -> String.format("%1$s%1$s this.%2$s = %2$s;", INDENT, var.name))
-            .collect(joining("%n"));
+            .collect(joining(NEWLINE));
 
         return String.format("%s%s(%s)%n%1$s{%n%s%n%1$s}%n%n", INDENT, name, paramDeclaration(parameters), binding);
     }
