@@ -92,8 +92,7 @@ public class AcceptorGenerator
         acceptorOutput.append(String.format(
             "    void on%1$s(final %2$s decoder);%n%n",
             message.name(),
-            decoderClassName(message)
-        ));
+            decoderClassName(message)));
     }
 
     private void generateDefaultAcceptorCallback(final Writer acceptorOutput, final Message message) throws IOException
@@ -102,8 +101,7 @@ public class AcceptorGenerator
             "    @Override%n" +
             "    public void on%1$s(final %2$s decoder) {};%n%n",
             message.name(),
-            decoderClassName(message)
-        ));
+            decoderClassName(message)));
     }
 
 
