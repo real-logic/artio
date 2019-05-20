@@ -17,6 +17,8 @@ package uk.co.real_logic.artio.fields;
 
 import org.junit.Test;
 
+import static uk.co.real_logic.artio.fields.UtcTimestampEncoder.EpochFractionFormat.MICROSECONDS;
+
 public class UtcTimestampEncoderInvalidCasesTest
 {
     @Test(expected = IllegalArgumentException.class)
@@ -34,12 +36,12 @@ public class UtcTimestampEncoderInvalidCasesTest
     @Test(expected = IllegalArgumentException.class)
     public void cannotParseTimestampTooLowMicros()
     {
-        new UtcTimestampEncoder(false).encode(UtcTimestampEncoder.MIN_EPOCH_MICROS - 1);
+        new UtcTimestampEncoder(MICROSECONDS).encode(UtcTimestampEncoder.MIN_EPOCH_MICROS - 1);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void cannotParseTimestampTooHighMicros()
     {
-        new UtcTimestampEncoder(false).encode(UtcTimestampEncoder.MAX_EPOCH_MICROS + 1);
+        new UtcTimestampEncoder(MICROSECONDS).encode(UtcTimestampEncoder.MAX_EPOCH_MICROS + 1);
     }
 }

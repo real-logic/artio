@@ -26,6 +26,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.artio.fields.CalendricalUtil.MICROS_IN_MILLIS;
 import static uk.co.real_logic.artio.fields.UtcTimestampDecoderValidCasesTest.toEpochMillis;
+import static uk.co.real_logic.artio.fields.UtcTimestampEncoder.EpochFractionFormat.MICROSECONDS;
 import static uk.co.real_logic.artio.util.CustomMatchers.sequenceEqualsAscii;
 
 @RunWith(Parameterized.class)
@@ -79,7 +80,7 @@ public class UtcTimestampEncoderValidCasesTest
     @Test
     public void canInstanceEncodeTimestamp()
     {
-        final UtcTimestampEncoder encoder = new UtcTimestampEncoder(true);
+        final UtcTimestampEncoder encoder = new UtcTimestampEncoder();
         final int length = encoder.encode(epochMillis);
 
         assertEquals("encoded wrong length", expectedLength, length);
@@ -100,7 +101,7 @@ public class UtcTimestampEncoderValidCasesTest
     @Test
     public void canInstanceEncodeTimestampMicros()
     {
-        final UtcTimestampEncoder encoder = new UtcTimestampEncoder(false);
+        final UtcTimestampEncoder encoder = new UtcTimestampEncoder(MICROSECONDS);
         final int length = encoder.encode(epochMicros);
 
         assertEquals("encoded wrong length", expectedLengthMicros, length);

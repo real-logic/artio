@@ -26,6 +26,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.fields.CalendricalUtil.MICROS_IN_MILLIS;
 import static uk.co.real_logic.artio.fields.UtcTimestampDecoderValidCasesTest.toEpochMillis;
+import static uk.co.real_logic.artio.fields.UtcTimestampEncoder.EpochFractionFormat.MICROSECONDS;
 
 @RunWith(Parameterized.class)
 public class UtcTimestampEncoderUpdateValidCasesTest
@@ -91,7 +92,7 @@ public class UtcTimestampEncoderUpdateValidCasesTest
     @Test
     public void canUpdateTimestampMicros()
     {
-        final UtcTimestampEncoder encoder = new UtcTimestampEncoder(false);
+        final UtcTimestampEncoder encoder = new UtcTimestampEncoder(MICROSECONDS);
         encoder.initialise(otherEpochMicros);
 
         final int length = encoder.update(epochMicros);
