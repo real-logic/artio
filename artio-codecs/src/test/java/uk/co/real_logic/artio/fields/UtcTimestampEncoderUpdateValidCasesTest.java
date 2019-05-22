@@ -25,8 +25,10 @@ import java.util.stream.Collectors;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.fields.CalendricalUtil.MICROS_IN_MILLIS;
+import static uk.co.real_logic.artio.fields.CalendricalUtil.NANOS_IN_MILLIS;
 import static uk.co.real_logic.artio.fields.UtcTimestampDecoderValidCasesTest.toEpochMillis;
 import static uk.co.real_logic.artio.fields.UtcTimestampEncoder.EpochFractionFormat.MICROSECONDS;
+import static uk.co.real_logic.artio.fields.UtcTimestampEncoder.EpochFractionFormat.NANOSECONDS;
 
 @RunWith(Parameterized.class)
 public class UtcTimestampEncoderUpdateValidCasesTest
@@ -40,6 +42,11 @@ public class UtcTimestampEncoderUpdateValidCasesTest
     private final long otherEpochMicros;
     private final int expectedLength;
     private final int expectedLengthMicros;
+    private final boolean validNanoSecondTestCase;
+    private final long epochNanos;
+    private final long otherEpochNanos;
+    private final int expectedLengthNanos;
+    private final String expectedTimestampNanos;
 
     @Parameters(name = "{0}, {1}")
     public static Iterable<Object[]> data()
@@ -50,30 +57,43 @@ public class UtcTimestampEncoderUpdateValidCasesTest
             .flatMap(x -> UtcTimestampDecoderValidCasesTest
                 .data()
                 .stream()
-                .map(y -> new Object[]{x[0], toEpochMillis(y[0])}))
+                .map(y -> new Object[]{x[0], toEpochMillis(y[0].toString()), x[1], y[1]}))
             .collect(Collectors.toList());
     }
 
-    public UtcTimestampEncoderUpdateValidCasesTest(final String timestamp, final long otherEpochMillis)
+    public UtcTimestampEncoderUpdateValidCasesTest(
+        final String timestamp,
+        final long otherEpochMillis,
+        final boolean firstvalidNanoSecondTestCase,
+        final boolean secondValidNanoSecondTestCase)
     {
         this.expectedTimestamp = timestamp;
         this.otherEpochMillis = otherEpochMillis;
+        validNanoSecondTestCase = firstvalidNanoSecondTestCase && secondValidNanoSecondTestCase;
         epochMillis = toEpochMillis(expectedTimestamp);
         expectedLength = expectedTimestamp.length();
 
         if (expectedLength == UtcTimestampEncoder.LENGTH_WITHOUT_MILLISECONDS)
         {
             expectedLengthMicros = expectedLength;
+            expectedLengthNanos = expectedLength;
             expectedTimestampMicros = expectedTimestamp;
+            expectedTimestampNanos = expectedTimestamp;
             epochMicros = epochMillis * MICROS_IN_MILLIS;
+            epochNanos = epochMillis * NANOS_IN_MILLIS;
             otherEpochMicros = otherEpochMillis * MICROS_IN_MILLIS;
+            otherEpochNanos = epochMillis * NANOS_IN_MILLIS;
         }
         else
         {
             expectedLengthMicros = expectedLength + 3;
+            expectedLengthNanos = expectedLength + 6;
             expectedTimestampMicros = expectedTimestamp + "001";
+            expectedTimestampNanos = expectedTimestamp + "000001";
             epochMicros = epochMillis * MICROS_IN_MILLIS + 1;
+            epochNanos = epochMillis * NANOS_IN_MILLIS + 1;
             otherEpochMicros = otherEpochMillis * MICROS_IN_MILLIS + 1;
+            otherEpochNanos = otherEpochMillis * NANOS_IN_MILLIS + 1;
         }
     }
 
@@ -99,6 +119,21 @@ public class UtcTimestampEncoderUpdateValidCasesTest
 
         assertEquals("encoded wrong length", expectedLengthMicros, length);
         assertEquals(expectedTimestampMicros, new String(encoder.buffer(), 0, length, US_ASCII));
+    }
+
+    @Test
+    public void canUpdateTimestampNanos()
+    {
+        if (validNanoSecondTestCase)
+        {
+            final UtcTimestampEncoder encoder = new UtcTimestampEncoder(NANOSECONDS);
+            encoder.initialise(otherEpochNanos);
+
+            final int length = encoder.update(epochNanos);
+
+            assertEquals("encoded wrong length", expectedLengthNanos, length);
+            assertEquals(expectedTimestampNanos, new String(encoder.buffer(), 0, length, US_ASCII));
+        }
     }
 
 }

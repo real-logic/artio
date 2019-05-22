@@ -46,11 +46,10 @@ public final class UtcTimestampEncoder
 
     private static final int MILLISECONDS_EPOCH_FRACTION = EpochFractionFormat.MILLISECONDS.ordinal();
     private static final int MICROSECONDS_EPOCH_FRACTION = EpochFractionFormat.MICROSECONDS.ordinal();
-    private static final int NANOSECONDS_EPOCH_FRACTION = EpochFractionFormat.NANOSECONDS.ordinal();
 
     private final int epochFractionPrecision;
-    private final byte[] bytes = new byte[LENGTH_WITH_MICROSECONDS];
-    private final MutableAsciiBuffer flyweight = new MutableAsciiBuffer(bytes);
+    private final byte[] bytes;
+    private final MutableAsciiBuffer flyweight;
 
     private long startOfNextDayInFraction;
     private long beginningOfDayInFraction;
@@ -72,9 +71,8 @@ public final class UtcTimestampEncoder
      */
     public UtcTimestampEncoder(final boolean usesMillisecondsAsEpochFraction)
     {
-        epochFractionPrecision = usesMillisecondsAsEpochFraction ?
-            MILLISECONDS_EPOCH_FRACTION : MICROSECONDS_EPOCH_FRACTION;
-        flyweight.wrap(bytes);
+        this(usesMillisecondsAsEpochFraction ?
+            EpochFractionFormat.MILLISECONDS : EpochFractionFormat.MICROSECONDS);
     }
 
     /**
@@ -87,7 +85,24 @@ public final class UtcTimestampEncoder
     public UtcTimestampEncoder(final EpochFractionFormat epochFractionPrecision)
     {
         this.epochFractionPrecision = epochFractionPrecision.ordinal();
-        flyweight.wrap(bytes);
+        switch (epochFractionPrecision)
+        {
+            case NANOSECONDS:
+                bytes = new byte[LENGTH_WITH_NANOSECONDS];
+                break;
+
+            case MICROSECONDS:
+                bytes = new byte[LENGTH_WITH_MICROSECONDS];
+                break;
+
+            case MILLISECONDS:
+                bytes = new byte[LENGTH_WITH_MILLISECONDS];
+                break;
+
+            default:
+                throw new RuntimeException("Unknown precision: " + epochFractionPrecision);
+        }
+        flyweight = new MutableAsciiBuffer(bytes);
     }
 
     /**
@@ -110,7 +125,7 @@ public final class UtcTimestampEncoder
         }
         else /*(epochFractionPrecision == NANOSECONDS_EPOCH_FRACTION)*/
         {
-            return encodeMicros(epochFraction, flyweight, 0);
+            return encodeNanos(epochFraction, flyweight, 0);
         }
     }
 
@@ -244,6 +259,22 @@ public final class UtcTimestampEncoder
             MICROS_IN_SECOND,
             LENGTH_WITH_MICROSECONDS,
             MICROS_FIELD_LENGTH);
+    }
+
+    public static int encodeNanos(
+        final long epochNanos,
+        final MutableAsciiBuffer string,
+        final int offset)
+    {
+        return encodeFraction(
+            epochNanos,
+            string,
+            offset,
+            MIN_EPOCH_NANOS,
+            MAX_EPOCH_NANOS,
+            NANOS_IN_SECOND,
+            LENGTH_WITH_NANOSECONDS,
+            NANOS_FIELD_LENGTH);
     }
 
     private static int encodeFraction(

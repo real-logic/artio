@@ -30,6 +30,7 @@ final class CalendricalUtil
     static final long MILLIS_IN_SECOND = 1_000L;
     static final long MICROS_IN_MILLIS = 1_000L;
     static final long NANOS_IN_MICROS = 1_000L;
+    static final long NANOS_IN_MILLIS = NANOS_IN_MICROS * MICROS_IN_MILLIS;
     static final long MICROS_IN_SECOND = MILLIS_IN_SECOND * MICROS_IN_MILLIS;
     static final long NANOS_IN_SECOND = MICROS_IN_SECOND * NANOS_IN_MICROS;
     static final long MILLIS_IN_DAY = SECONDS_IN_DAY * MILLIS_IN_SECOND;
