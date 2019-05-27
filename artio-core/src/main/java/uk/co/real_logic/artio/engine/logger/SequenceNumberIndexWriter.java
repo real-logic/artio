@@ -22,6 +22,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
+import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.engine.ChecksumFramer;
 import uk.co.real_logic.artio.engine.MappedFile;
@@ -78,12 +79,19 @@ public class SequenceNumberIndexWriter implements Index
     private MappedFile indexFile;
     private long nextRollPosition = UNINITIALISED;
 
+    private final EpochClock clock;
+    private final long indexFileStateFlushTimeoutInMs;
+    private long lastUpdatedFileTimeInMs;
+    private boolean hasSavedRecordSinceFileUpdate = false;
+
     public SequenceNumberIndexWriter(
         final AtomicBuffer inMemoryBuffer,
         final MappedFile indexFile,
         final ErrorHandler errorHandler,
         final int streamId,
-        final RecordingIdLookup recordingIdLookup)
+        final RecordingIdLookup recordingIdLookup,
+        final long indexFileStateFlushTimeoutInMs,
+        final EpochClock clock)
     {
         this.inMemoryBuffer = inMemoryBuffer;
         this.indexFile = indexFile;
@@ -91,6 +99,8 @@ public class SequenceNumberIndexWriter implements Index
         this.streamId = streamId;
         this.fileCapacity = indexFile.buffer().capacity();
         this.recordingIdLookup = recordingIdLookup;
+        this.indexFileStateFlushTimeoutInMs = indexFileStateFlushTimeoutInMs;
+        this.clock = clock;
 
         final String indexFilePath = indexFile.file().getAbsolutePath();
         indexPath = indexFile.file();
@@ -188,6 +198,22 @@ public class SequenceNumberIndexWriter implements Index
         positions.indexedUpTo(aeronSessionId, recordingId, endPosition);
     }
 
+    @Override
+    public int doWork()
+    {
+        if (hasSavedRecordSinceFileUpdate)
+        {
+            final long requiredUpdateTimeInMs = lastUpdatedFileTimeInMs + indexFileStateFlushTimeoutInMs;
+            if (requiredUpdateTimeInMs < clock.time())
+            {
+                updateFile();
+                return 1;
+            }
+        }
+
+        return 0;
+    }
+
     void resetSequenceNumbers()
     {
         inMemoryBuffer.setMemory(0, indexedPositionsOffset, (byte)0);
@@ -215,6 +241,8 @@ public class SequenceNumberIndexWriter implements Index
         positions.updateChecksums();
         saveFile();
         flipFiles();
+        hasSavedRecordSinceFileUpdate = false;
+        lastUpdatedFileTimeInMs = clock.time();
     }
 
     private void saveFile()
@@ -312,11 +340,13 @@ public class SequenceNumberIndexWriter implements Index
                 if (lastKnownDecoder.sequenceNumber() == 0)
                 {
                     createNewRecord(newSequenceNumber, sessionId, position);
+                    hasSavedRecordSinceFileUpdate = true;
                     return;
                 }
                 else if (lastKnownDecoder.sessionId() == sessionId)
                 {
                     updateSequenceNumber(position, newSequenceNumber);
+                    hasSavedRecordSinceFileUpdate = true;
                     return;
                 }
 
@@ -326,6 +356,7 @@ public class SequenceNumberIndexWriter implements Index
         else
         {
             updateSequenceNumber(position, newSequenceNumber);
+            hasSavedRecordSinceFileUpdate = true;
         }
     }
 

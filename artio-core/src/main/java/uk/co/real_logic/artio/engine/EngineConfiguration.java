@@ -145,6 +145,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     /** Unmodifiable set of defaults, please make a copy if you wish to modify them. */
     public static final Set<String> DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES;
+    public static final long DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS = 10_000;
+
     static
     {
         final Set<String> defaultGapFillOnReplayMessageTypes = new HashSet<>();
@@ -216,6 +218,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private boolean acceptedEnableLastMsgSeqNumProcessed = DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED;
     private boolean soleLibraryMode = false;
     private AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.none();
+    private long indexFileStateFlushTimeoutInMs = DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -615,9 +618,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
      * @param authenticationStrategy the authentication strategy to use.
      * @return this
      */
-    public CommonConfiguration authenticationStrategy(final AuthenticationStrategy authenticationStrategy)
+    public EngineConfiguration authenticationStrategy(final AuthenticationStrategy authenticationStrategy)
     {
         this.authenticationStrategy = authenticationStrategy;
+        return this;
+    }
+
+    public EngineConfiguration indexFileStateFlushTimeoutInMs(final long indexFileStateFlushTimeoutInMs)
+    {
+        this.indexFileStateFlushTimeoutInMs = indexFileStateFlushTimeoutInMs;
         return this;
     }
 
@@ -786,6 +795,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return authenticationStrategy;
     }
 
+    public long indexFileStateFlushTimeoutInMs()
+    {
+        return indexFileStateFlushTimeoutInMs;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -843,7 +857,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * {@inheritDoc}
      */
-    public CommonConfiguration inboundLibraryStream(final int inboundLibraryStream)
+    public EngineConfiguration inboundLibraryStream(final int inboundLibraryStream)
     {
         super.inboundLibraryStream(inboundLibraryStream);
         return this;
@@ -852,7 +866,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /**
      * {@inheritDoc}
      */
-    public CommonConfiguration outboundLibraryStream(final int outboundLibraryStream)
+    public EngineConfiguration outboundLibraryStream(final int outboundLibraryStream)
     {
         super.outboundLibraryStream(outboundLibraryStream);
         return this;

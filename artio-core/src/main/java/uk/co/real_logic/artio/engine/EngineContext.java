@@ -22,10 +22,7 @@ import io.aeron.UnavailableImageHandler;
 import io.aeron.archive.client.AeronArchive;
 import io.aeron.logbuffer.BufferClaim;
 import org.agrona.ErrorHandler;
-import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.CompositeAgent;
-import org.agrona.concurrent.IdleStrategy;
-import org.agrona.concurrent.SystemEpochClock;
+import org.agrona.concurrent.*;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.StreamInformation;
@@ -87,18 +84,23 @@ public class EngineContext implements AutoCloseable
 
         try
         {
+            final EpochClock epochClock = new SystemEpochClock();
             sentSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.sentSequenceNumberBuffer(),
                 configuration.sentSequenceNumberIndex(),
                 errorHandler,
                 configuration.outboundLibraryStream(),
-                recordingCoordinator.outboundRecordingIdLookup());
+                recordingCoordinator.outboundRecordingIdLookup(),
+                configuration.indexFileStateFlushTimeoutInMs(),
+                epochClock);
             receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.receivedSequenceNumberBuffer(),
                 configuration.receivedSequenceNumberIndex(),
                 errorHandler,
                 configuration.inboundLibraryStream(),
-                recordingCoordinator.inboundRecordingIdLookup());
+                recordingCoordinator.inboundRecordingIdLookup(),
+                configuration.indexFileStateFlushTimeoutInMs(),
+                epochClock);
 
             newStreams();
             newArchivingAgent();
