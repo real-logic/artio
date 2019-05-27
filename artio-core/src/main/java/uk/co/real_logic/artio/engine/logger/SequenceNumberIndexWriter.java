@@ -302,7 +302,7 @@ public class SequenceNumberIndexWriter implements Index
     {
         try
         {
-            if (isOpen())
+            if (isOpen() && hasSavedRecordSinceFileUpdate)
             {
                 updateFile();
             }
