@@ -183,6 +183,8 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
         assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER, newReader);
+
+        writer.close();
     }
 
     /**
