@@ -404,9 +404,13 @@ public class Session implements AutoCloseable
     }
 
     /**
-     * Send a logout message and immediately disconnect the session.
+     * Send a logout message and immediately disconnect the session. You should normally use
+     * the <code>startLogout</code> method and not this one.
      * <p>
-     * This disconnects the session faster than <code>startLogout</code>.
+     * This disconnects the session faster than <code>startLogout</code>. This approach does not linger
+     * the Session, awaiting for the disconnect and it's possible that your counter-party misses the logout
+     * message. This should only be used when you want to rapidly disconnect the session and are willing
+     * to take the risk that the logout message is not received.
      *
      * @see Session#startLogout()
      * @return the position within the Aeron stream where the disconnect is encoded.
