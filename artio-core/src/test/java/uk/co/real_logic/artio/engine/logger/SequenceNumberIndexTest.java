@@ -32,6 +32,7 @@ import org.mockito.ArgumentCaptor;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 
 import java.io.File;
 
@@ -47,6 +48,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchJustMediaDriver;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.engine.SectorFramer.SECTOR_SIZE;
 import static uk.co.real_logic.artio.engine.logger.ErrorHandlerVerifier.verify;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
@@ -63,6 +65,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private SequenceNumberIndexWriter writer;
     private SequenceNumberIndexReader reader;
     private RecordingIdLookup recordingIdLookup = mock(RecordingIdLookup.class);
+    private FakeEpochClock clock = new FakeEpochClock();
 
     private MediaDriver mediaDriver = launchJustMediaDriver();
     private Aeron aeron;
@@ -162,6 +165,21 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         indexFixMessage();
 
         writer.close();
+
+        final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
+        assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER, newReader);
+    }
+
+    @Test
+    public void shouldFlushIndexFileOnTimeout()
+    {
+        indexFixMessage();
+
+        assertEquals(0, writer.doWork());
+
+        clock.advanceMilliSeconds(DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS + 1);
+
+        assertEquals(1, writer.doWork());
 
         final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
         assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER, newReader);
@@ -297,7 +315,8 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private SequenceNumberIndexWriter newWriter(final AtomicBuffer inMemoryBuffer)
     {
         final MappedFile indexFile = newIndexFile();
-        return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler, STREAM_ID, recordingIdLookup);
+        return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler, STREAM_ID, recordingIdLookup,
+            DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS, clock);
     }
 
     private MappedFile newIndexFile()

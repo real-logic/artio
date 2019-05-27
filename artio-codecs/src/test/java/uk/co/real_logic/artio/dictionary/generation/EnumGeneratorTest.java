@@ -26,7 +26,7 @@ import java.lang.reflect.Method;
 import java.util.Map;
 
 import static junit.framework.TestCase.assertTrue;
-import static org.hamcrest.CoreMatchers.not;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayWithSize;
 import static org.hamcrest.Matchers.hasKey;

@@ -18,8 +18,7 @@ package uk.co.real_logic.artio.fields;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import static uk.co.real_logic.artio.fields.CalendricalUtil.MICROS_IN_DAY;
-import static uk.co.real_logic.artio.fields.CalendricalUtil.MILLIS_IN_DAY;
+import static uk.co.real_logic.artio.fields.CalendricalUtil.*;
 import static uk.co.real_logic.artio.fields.UtcDateOnlyDecoder.LENGTH;
 
 /**
@@ -39,10 +38,13 @@ public final class UtcTimestampDecoder
     public static final long MAX_EPOCH_MILLIS = 253402300799999L;
     public static final long MIN_EPOCH_MICROS = -62135596800000000L;
     public static final long MAX_EPOCH_MICROS = 253402300799999999L;
+    public static final long MIN_EPOCH_NANOS = Long.MIN_VALUE;
+    public static final long MAX_EPOCH_NANOS = Long.MAX_VALUE;
 
     public static final int LENGTH_WITHOUT_MILLISECONDS = 17;
     public static final int LENGTH_WITH_MILLISECONDS = 21;
     public static final int LENGTH_WITH_MICROSECONDS = 24;
+    public static final int LENGTH_WITH_NANOSECONDS = 27;
 
     private static final int TIME_OFFSET = LENGTH + 1;
 
@@ -68,6 +70,17 @@ public final class UtcTimestampDecoder
     public long decodeMicros(final byte[] bytes)
     {
         return decodeMicros(bytes, bytes.length);
+    }
+
+    public long decodeNanos(final byte[] bytes, final int length)
+    {
+        buffer.wrap(bytes);
+        return decodeNanos(buffer, 0, length);
+    }
+
+    public long decodeNanos(final byte[] bytes)
+    {
+        return decodeNanos(bytes, bytes.length);
     }
 
     /**
@@ -96,6 +109,20 @@ public final class UtcTimestampDecoder
         final long microsOfDay = UtcTimeOnlyDecoder.decodeMicros(
             timestamp, offset + TIME_OFFSET, length - TIME_OFFSET);
         return epochDay * MICROS_IN_DAY + microsOfDay;
+    }
+
+    /**
+     * @param timestamp a buffer containing the FIX encoded value of the timestamp in ASCII
+     * @param offset the offset within the timestamp buffer where the value starts
+     * @param length the length of the FIX encoded value in bytes / ASCII characters
+     * @return the number of nanoseconds since the Unix Epoch that represents this timestamp
+     */
+    public static long decodeNanos(final AsciiBuffer timestamp, final int offset, final int length)
+    {
+        final long epochDay = UtcDateOnlyDecoder.decode(timestamp, offset);
+        final long nanosOfDay = UtcTimeOnlyDecoder.decodeNanos(
+            timestamp, offset + TIME_OFFSET, length - TIME_OFFSET);
+        return epochDay * NANOS_IN_DAY + nanosOfDay;
     }
 
 }

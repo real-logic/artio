@@ -26,9 +26,9 @@ plugins {
     id 'net.researchgate.release' version '2.8.0'
 }
 
-def aeronVersion = '1.17.0'
-def agronaVersion = '0.9.35'
-def sbeVersion = '1.12.4'
+def aeronVersion = '1.19.1'
+def agronaVersion = '1.0.1'
+def sbeVersion = '1.12.7'
 def artioJavaVersion = JavaVersion.VERSION_1_8
 def artioGroup = 'uk.co.real-logic'
 
@@ -92,15 +92,15 @@ subprojects {
     }
 
     dependencies {
-        checkstyle 'com.puppycrawl.tools:checkstyle:8.19'
+        checkstyle 'com.puppycrawl.tools:checkstyle:8.20'
 
-        testCompile 'junit:junit:4.12'
+        testCompile 'org.hamcrest:hamcrest:2.1'
         testCompile 'org.mockito:mockito-core:2.27.0'
-        testCompile 'org.hamcrest:hamcrest-library:1.3'
+        testCompile 'junit:junit:4.12'
     }
 
     checkstyle {
-        toolVersion = "8.19"
+        toolVersion = "8.20"
     }
 
     test {
@@ -314,9 +314,7 @@ project(':artio-core') {
         compile project(':artio-session-codecs')
         compile project(':artio-codecs')
 
-        compile "io.aeron:aeron-client:${aeronVersion}"
-        compile "io.aeron:aeron-archive:${aeronVersion}"
-        compile "io.aeron:aeron-driver:${aeronVersion}"
+        compile "io.aeron:aeron-all:${aeronVersion}"
         compile 'org.hdrhistogram:HdrHistogram:2.1.11'
     }
 
@@ -344,7 +342,6 @@ project(':artio-system-tests') {
         testCompile project(path: ':artio-codecs', configuration: 'tests')
 
         compile project(path: ':artio-core')
-        compile "io.aeron:aeron-client:${aeronVersion}"
 
         perfCompile project
         perfCompile 'org.openjdk.jmh:jmh-core:1.21'

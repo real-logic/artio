@@ -18,46 +18,91 @@ package uk.co.real_logic.artio.fields;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.artio.fields.CalendricalUtil.*;
-import static uk.co.real_logic.artio.fields.UtcTimeOnlyDecoder.MICROS_FIELD_LENGTH;
-import static uk.co.real_logic.artio.fields.UtcTimeOnlyDecoder.MILLIS_FIELD_LENGTH;
+import static uk.co.real_logic.artio.fields.UtcTimeOnlyDecoder.*;
 
 public final class UtcTimestampEncoder
 {
+    public enum EpochFractionFormat
+    {
+        MILLISECONDS,
+        MICROSECONDS,
+        NANOSECONDS
+    }
+
     public static final long MIN_EPOCH_MILLIS = UtcTimestampDecoder.MIN_EPOCH_MILLIS;
     public static final long MAX_EPOCH_MILLIS = UtcTimestampDecoder.MAX_EPOCH_MILLIS;
     public static final long MIN_EPOCH_MICROS = UtcTimestampDecoder.MIN_EPOCH_MICROS;
     public static final long MAX_EPOCH_MICROS = UtcTimestampDecoder.MAX_EPOCH_MICROS;
+    public static final long MIN_EPOCH_NANOS = UtcTimestampDecoder.MIN_EPOCH_NANOS;
+    public static final long MAX_EPOCH_NANOS = UtcTimestampDecoder.MAX_EPOCH_NANOS;
 
     public static final int LENGTH_WITHOUT_MILLISECONDS = UtcTimestampDecoder.LENGTH_WITHOUT_MILLISECONDS;
     public static final int LENGTH_WITH_MILLISECONDS = UtcTimestampDecoder.LENGTH_WITH_MILLISECONDS;
     public static final int LENGTH_WITH_MICROSECONDS = UtcTimestampDecoder.LENGTH_WITH_MICROSECONDS;
+    public static final int LENGTH_WITH_NANOSECONDS = UtcTimestampDecoder.LENGTH_WITH_NANOSECONDS;
 
     private static final int LENGTH_OF_DATE = 8;
     private static final int LENGTH_OF_DATE_AND_DASH = LENGTH_OF_DATE + 1;
 
-    private final boolean usesMillisecondsAsEpochFraction;
-    private final byte[] bytes = new byte[LENGTH_WITH_MICROSECONDS];
-    private final MutableAsciiBuffer flyweight = new MutableAsciiBuffer(bytes);
+    private static final int MILLISECONDS_EPOCH_FRACTION = EpochFractionFormat.MILLISECONDS.ordinal();
+    private static final int MICROSECONDS_EPOCH_FRACTION = EpochFractionFormat.MICROSECONDS.ordinal();
+
+    private final int epochFractionPrecision;
+    private final byte[] bytes;
+    private final MutableAsciiBuffer flyweight;
 
     private long startOfNextDayInFraction;
     private long beginningOfDayInFraction;
 
     public UtcTimestampEncoder()
     {
-        this(true);
+        this(EpochFractionFormat.MILLISECONDS);
     }
 
     /**
      * Create the encoder.
      *
+     * This method could be removed in 0.30 or later.
+     *
+     * @deprecated
      * @param usesMillisecondsAsEpochFraction true if you want to use milliseconds as the precision of the
      *                                        timeunit for the <code>epochFraction</code> passed to encode().
      *                                        False if you wish to use microseconds.
      */
     public UtcTimestampEncoder(final boolean usesMillisecondsAsEpochFraction)
     {
-        this.usesMillisecondsAsEpochFraction = usesMillisecondsAsEpochFraction;
-        flyweight.wrap(bytes);
+        this(usesMillisecondsAsEpochFraction ?
+            EpochFractionFormat.MILLISECONDS : EpochFractionFormat.MICROSECONDS);
+    }
+
+    /**
+     * Create the encoder.
+     *
+     * @param epochFractionPrecision true if you want to use milliseconds as the precision of the
+     *                                        timeunit for the <code>epochFraction</code> passed to encode().
+     *                                        False if you wish to use microseconds.
+     */
+    public UtcTimestampEncoder(final EpochFractionFormat epochFractionPrecision)
+    {
+        this.epochFractionPrecision = epochFractionPrecision.ordinal();
+        switch (epochFractionPrecision)
+        {
+            case NANOSECONDS:
+                bytes = new byte[LENGTH_WITH_NANOSECONDS];
+                break;
+
+            case MICROSECONDS:
+                bytes = new byte[LENGTH_WITH_MICROSECONDS];
+                break;
+
+            case MILLISECONDS:
+                bytes = new byte[LENGTH_WITH_MILLISECONDS];
+                break;
+
+            default:
+                throw new RuntimeException("Unknown precision: " + epochFractionPrecision);
+        }
+        flyweight = new MutableAsciiBuffer(bytes);
     }
 
     /**
@@ -69,13 +114,18 @@ public final class UtcTimestampEncoder
      */
     public int encode(final long epochFraction)
     {
-        if (usesMillisecondsAsEpochFraction)
+        final int epochFractionPrecision = this.epochFractionPrecision;
+        if (epochFractionPrecision == MILLISECONDS_EPOCH_FRACTION)
         {
             return encode(epochFraction, flyweight, 0);
         }
-        else
+        else if (epochFractionPrecision == MICROSECONDS_EPOCH_FRACTION)
         {
             return encodeMicros(epochFraction, flyweight, 0);
+        }
+        else /*(epochFractionPrecision == NANOSECONDS_EPOCH_FRACTION)*/
+        {
+            return encodeNanos(epochFraction, flyweight, 0);
         }
     }
 
@@ -88,7 +138,8 @@ public final class UtcTimestampEncoder
         final int fractionFieldLength;
         final int lengthWithFraction;
 
-        if (usesMillisecondsAsEpochFraction)
+        final int epochFractionPrecision = this.epochFractionPrecision;
+        if (epochFractionPrecision == MILLISECONDS_EPOCH_FRACTION)
         {
             minEpochFraction = MIN_EPOCH_MILLIS;
             maxEpochFraction = MAX_EPOCH_MILLIS;
@@ -97,7 +148,7 @@ public final class UtcTimestampEncoder
             fractionFieldLength = MILLIS_FIELD_LENGTH;
             lengthWithFraction = LENGTH_WITH_MILLISECONDS;
         }
-        else
+        else if (epochFractionPrecision == MICROSECONDS_EPOCH_FRACTION)
         {
             minEpochFraction = MIN_EPOCH_MICROS;
             maxEpochFraction = MAX_EPOCH_MICROS;
@@ -105,6 +156,15 @@ public final class UtcTimestampEncoder
             fractionInDay = MICROS_IN_DAY;
             fractionFieldLength = MICROS_FIELD_LENGTH;
             lengthWithFraction = LENGTH_WITH_MICROSECONDS;
+        }
+        else /*(epochFractionPrecision == NANOSECONDS_EPOCH_FRACTION)*/
+        {
+            minEpochFraction = MIN_EPOCH_NANOS;
+            maxEpochFraction = MAX_EPOCH_NANOS;
+            fractionInSecond = NANOS_IN_SECOND;
+            fractionInDay = NANOS_IN_DAY;
+            fractionFieldLength = NANOS_FIELD_LENGTH;
+            lengthWithFraction = LENGTH_WITH_NANOSECONDS;
         }
 
         validate(epochFraction, minEpochFraction, maxEpochFraction);
@@ -135,17 +195,24 @@ public final class UtcTimestampEncoder
         final int fractionFieldLength;
         final int lengthWithFraction;
 
-        if (usesMillisecondsAsEpochFraction)
+        final int epochFractionPrecision = this.epochFractionPrecision;
+        if (epochFractionPrecision == MILLISECONDS_EPOCH_FRACTION)
         {
             fractionInSecond = MILLIS_IN_SECOND;
             fractionFieldLength = MILLIS_FIELD_LENGTH;
             lengthWithFraction = LENGTH_WITH_MILLISECONDS;
         }
-        else
+        else if (epochFractionPrecision == MICROSECONDS_EPOCH_FRACTION)
         {
             fractionInSecond = MICROS_IN_SECOND;
             fractionFieldLength = MICROS_FIELD_LENGTH;
             lengthWithFraction = LENGTH_WITH_MICROSECONDS;
+        }
+        else /*(epochFractionPrecision == NANOSECONDS_EPOCH_FRACTION)*/
+        {
+            fractionInSecond = NANOS_IN_SECOND;
+            fractionFieldLength = NANOS_FIELD_LENGTH;
+            lengthWithFraction = LENGTH_WITH_NANOSECONDS;
         }
 
         final long localSecond = localSecond(epochFraction, fractionInSecond);
@@ -192,6 +259,22 @@ public final class UtcTimestampEncoder
             MICROS_IN_SECOND,
             LENGTH_WITH_MICROSECONDS,
             MICROS_FIELD_LENGTH);
+    }
+
+    public static int encodeNanos(
+        final long epochNanos,
+        final MutableAsciiBuffer string,
+        final int offset)
+    {
+        return encodeFraction(
+            epochNanos,
+            string,
+            offset,
+            MIN_EPOCH_NANOS,
+            MAX_EPOCH_NANOS,
+            NANOS_IN_SECOND,
+            LENGTH_WITH_NANOSECONDS,
+            NANOS_FIELD_LENGTH);
     }
 
     private static int encodeFraction(

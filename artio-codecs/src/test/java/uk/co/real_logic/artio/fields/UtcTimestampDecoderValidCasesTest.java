@@ -33,8 +33,8 @@ import static java.time.temporal.ChronoField.MILLI_OF_SECOND;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.fields.CalendricalUtil.MICROS_IN_MILLIS;
-import static uk.co.real_logic.artio.fields.UtcTimestampDecoder.LENGTH_WITH_MICROSECONDS;
-import static uk.co.real_logic.artio.fields.UtcTimestampDecoder.LENGTH_WITH_MILLISECONDS;
+import static uk.co.real_logic.artio.fields.CalendricalUtil.NANOS_IN_MILLIS;
+import static uk.co.real_logic.artio.fields.UtcTimestampDecoder.*;
 
 @RunWith(Parameterized.class)
 public class UtcTimestampDecoderValidCasesTest
@@ -49,22 +49,25 @@ public class UtcTimestampDecoderValidCasesTest
     }
 
     private final String timestamp;
+    private final boolean validNanoSecondTestCase;
 
     @Parameters(name = "{0}")
-    public static Collection<String[]> data()
+    public static Collection<Object[]> data()
     {
         return Arrays.asList(
-            new String[] {"00010101-00:00:00"},
-            new String[] {"20150225-17:51:32"},
-            new String[] {"00010101-00:00:00.001"},
-            new String[] {"20150225-17:51:32.123"},
-            new String[] {"99991231-23:59:59.999"}
+            new Object[] {"20150225-17:51:32", true},
+            new Object[] {"20150225-17:51:32.123", true},
+            new Object[] {"20600225-17:51:32.123", true},
+            new Object[] {"00010101-00:00:00", false},
+            new Object[] {"00010101-00:00:00.001", false},
+            new Object[] {"99991231-23:59:59.999", false}
         );
     }
 
-    public UtcTimestampDecoderValidCasesTest(final String timestamp)
+    public UtcTimestampDecoderValidCasesTest(final String timestamp, final boolean validNanoSecondTestCase)
     {
         this.timestamp = timestamp;
+        this.validNanoSecondTestCase = validNanoSecondTestCase;
     }
 
     @Test
@@ -81,10 +84,11 @@ public class UtcTimestampDecoderValidCasesTest
 
     private void canParseTimestamp(final int length)
     {
+        final boolean hasSubSecondPrecision = timestamp.length() == LENGTH_WITH_MILLISECONDS;
         final long expectedEpochMillis = toEpochMillis(timestamp);
 
         final byte[] bytes = timestamp.getBytes(US_ASCII);
-        final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[LENGTH_WITH_MICROSECONDS + 2]);
+        final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[LENGTH_WITH_NANOSECONDS + 2]);
         buffer.putBytes(1, bytes);
 
         final long epochMillis = UtcTimestampDecoder.decode(buffer, 1, length);
@@ -92,8 +96,7 @@ public class UtcTimestampDecoderValidCasesTest
 
         long expectedEpochMicros = expectedEpochMillis * MICROS_IN_MILLIS;
 
-        // If they've got the suffix field, then test microseconds, add 1 to the value
-        if (timestamp.length() == LENGTH_WITH_MILLISECONDS)
+        if (hasSubSecondPrecision)
         {
             expectedEpochMicros++;
             buffer.putAscii(timestamp.length() + 1, "001");
@@ -101,6 +104,21 @@ public class UtcTimestampDecoderValidCasesTest
 
         final long epochMicros = UtcTimestampDecoder.decodeMicros(buffer, 1, length + 3);
         assertEquals("Failed Micros testcase for: " + timestamp, expectedEpochMicros, epochMicros);
+
+        if (validNanoSecondTestCase)
+        {
+            long expectedEpochNanos = expectedEpochMillis * NANOS_IN_MILLIS;
+
+            // If they've got the suffix field, then test microseconds, add 1 to the value
+            if (hasSubSecondPrecision)
+            {
+                expectedEpochNanos++;
+                buffer.putAscii(timestamp.length() + 1, "000001");
+            }
+
+            final long epochNanos = UtcTimestampDecoder.decodeNanos(buffer, 1, length + 6);
+            assertEquals("Failed Nanos testcase for: " + timestamp, expectedEpochNanos, epochNanos);
+        }
     }
 
     // TODO: test leap second conversion 60

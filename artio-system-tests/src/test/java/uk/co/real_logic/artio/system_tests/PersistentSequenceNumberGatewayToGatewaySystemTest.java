@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import org.agrona.IoUtil;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -32,10 +31,9 @@ import uk.co.real_logic.artio.session.Session;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Objects;
 import java.util.function.Consumer;
 
+import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.Constants.SEQUENCE_RESET_MESSAGE_AS_STR;
@@ -215,6 +213,42 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertEquals("MsgSeqNum too low, expecting 1 but received 0", lastMessage.get(Constants.TEXT));
     }
 
+    @Test
+    public void shouldPersistSequenceNumbersWithoutARestart()
+    {
+        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, this::nothing, false);
+
+        assertSequenceIndicesAre(0);
+
+        assertTestRequestSentAndReceived(initiatingSession, testSystem, acceptingOtfAcceptor);
+        assertSequenceFromInitToAcceptAt(2, 2);
+
+        final long initiatedSessionId = initiatingSession.id();
+        final long acceptingSessionId = acceptingSession.id();
+
+        assertThat(initiatingSession.startLogout(), greaterThan(0L));
+        assertSessionsDisconnected();
+        assertInitiatingSequenceIndexIs(0);
+        assertAcceptingSessionHasSequenceIndex(0);
+
+        clearMessages();
+        initiatingSession = null;
+        acceptingSession = null;
+
+        connectPersistingSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false);
+
+        assertEquals(initiatedSessionId, initiatingSession.id());
+        assertEquals(acceptingSessionId, acceptingSession.id());
+
+        // Sequence numbers not reset, so the same sequence index
+        assertInitiatingSequenceIndexIs(0);
+        assertAcceptingSessionHasSequenceIndex(0);
+        messagesCanBeExchanged();
+
+        // 5: logon, test-req/heartbeat, logout. logon 2, test-req/heartbeat 2
+        assertSequenceFromInitToAcceptAt(5, 5);
+    }
+
     private void resetSequenceNumbers()
     {
         testSystem.awaitCompletedReplies(
@@ -387,14 +421,4 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         delete(ACCEPTOR_LOGS);
     }
 
-    private void deleteArchiveOfAcceptorLogs()
-    {
-        final File dir = new File(ACCEPTOR_LOGS);
-        if (dir.exists())
-        {
-            Arrays.stream(Objects.requireNonNull(dir.list()))
-                .filter((name) -> name.contains("archive"))
-                .forEach((name) -> IoUtil.delete(new File(dir, name), false));
-        }
-    }
 }
