@@ -370,6 +370,10 @@ public class Session implements AutoCloseable
     /**
      * Sends a logout message and puts the session into the awaiting logout state.
      *
+     * This method will eventually also disconnect the Session, but it won't disconnect the session until you
+     * receive a logout message from your counter-party. That's the difference between this and
+     * <code>logoutAndDisconnect</code> - that method just disconnects you as soon as possible.
+     *
      * @return the position of the sent message
      * @see Session#logoutAndDisconnect()
      */
