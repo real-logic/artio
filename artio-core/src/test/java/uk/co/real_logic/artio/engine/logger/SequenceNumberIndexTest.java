@@ -173,18 +173,23 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Test
     public void shouldFlushIndexFileOnTimeout()
     {
-        indexFixMessage();
+        try
+        {
+            indexFixMessage();
 
-        assertEquals(0, writer.doWork());
+            assertEquals(0, writer.doWork());
 
-        clock.advanceMilliSeconds(DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS + 1);
+            clock.advanceMilliSeconds(DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS + 1);
 
-        assertEquals(1, writer.doWork());
+            assertEquals(1, writer.doWork());
 
-        final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
-        assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER, newReader);
-
-        writer.close();
+            final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
+            assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER, newReader);
+        }
+        finally
+        {
+            writer.close();
+        }
     }
 
     /**
