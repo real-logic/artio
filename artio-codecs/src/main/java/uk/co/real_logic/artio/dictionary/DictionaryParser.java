@@ -160,10 +160,14 @@ public final class DictionaryParser
     {
         final String fieldName = field.name() + suffix;
         final Field associatedLengthField = nameToField.get(fieldName);
-        if (associatedLengthField != null && associatedLengthField.type() == LENGTH)
+        if (associatedLengthField != null)
         {
-            field.associatedLengthField(associatedLengthField);
-            return true;
+            final Type type = associatedLengthField.type();
+            if (type == LENGTH || type == INT)
+            {
+                field.associatedLengthField(associatedLengthField);
+                return true;
+            }
         }
 
         return false;
