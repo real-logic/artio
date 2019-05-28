@@ -34,6 +34,7 @@ class SessionSubscriber implements AutoCloseable
 
     private SessionHandler handler;
     private InitiateSessionReply initiateSessionReply;
+    private boolean userAbortedLastMessage = false;
 
     SessionSubscriber(
         final SessionParser parser,
@@ -67,30 +68,59 @@ class SessionSubscriber implements AutoCloseable
             switch (status)
             {
                 case OK:
-                    final Action action = parser.onMessage(buffer, offset, length, messageType, sessionId);
-                    if (action == BREAK)
+                    final boolean userAbortedLastMessage = this.userAbortedLastMessage;
+                    if (userAbortedLastMessage)
                     {
-                        return BREAK;
+                        // Don't re-run the parser / session handling logic if you're on the retry path
+                        final Action handlerAction = handler.onMessage(
+                            buffer,
+                            offset,
+                            length,
+                            libraryId,
+                            session,
+                            sequenceIndex,
+                            messageType,
+                            timestamp,
+                            position);
+
+                        if (handlerAction != ABORT)
+                        {
+                            session.updateLastMessageProcessed();
+                            this.userAbortedLastMessage = false;
+                        }
+
+                        return handlerAction;
                     }
-
-                    // Can receive messages when no longer disconnected.
-                    final Action handlerAction = handler.onMessage(
-                        buffer,
-                        offset,
-                        length,
-                        libraryId,
-                        session,
-                        sequenceIndex,
-                        messageType,
-                        timestamp,
-                        position);
-
-                    if (handlerAction == CONTINUE || handlerAction == COMMIT)
+                    else
                     {
-                        session.updateLastMessageProcessed();
-                    }
+                        final Action action = parser.onMessage(buffer, offset, length, messageType, sessionId);
+                        if (action == ABORT)
+                        {
+                            return ABORT;
+                        }
 
-                    return handlerAction;
+                        final Action handlerAction = handler.onMessage(
+                            buffer,
+                            offset,
+                            length,
+                            libraryId,
+                            session,
+                            sequenceIndex,
+                            messageType,
+                            timestamp,
+                            position);
+
+                        if (handlerAction == ABORT)
+                        {
+                            this.userAbortedLastMessage = true;
+                        }
+                        else
+                        {
+                            session.updateLastMessageProcessed();
+                        }
+
+                        return handlerAction;
+                    }
 
                 case CATCHUP_REPLAY:
                     return handler.onMessage(
