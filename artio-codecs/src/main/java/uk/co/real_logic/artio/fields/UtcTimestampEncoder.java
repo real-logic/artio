@@ -69,6 +69,7 @@ public final class UtcTimestampEncoder
      *                                        timeunit for the <code>epochFraction</code> passed to encode().
      *                                        False if you wish to use microseconds.
      */
+    @Deprecated
     public UtcTimestampEncoder(final boolean usesMillisecondsAsEpochFraction)
     {
         this(usesMillisecondsAsEpochFraction ?
