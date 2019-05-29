@@ -17,14 +17,11 @@ package uk.co.real_logic.artio.dictionary.generation;
 
 import org.agrona.LangUtil;
 import org.agrona.concurrent.Agent;
-import org.agrona.generation.ResourceConsumer;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
