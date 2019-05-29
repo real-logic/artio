@@ -31,21 +31,6 @@ import static java.util.stream.Collectors.toList;
 
 public final class Exceptions
 {
-    public static <T> Consumer<T> rethrown(final ResourceConsumer<T> consumer)
-    {
-        return
-            (t) ->
-            {
-                try
-                {
-                    consumer.accept(t);
-                }
-                catch (final IOException ex)
-                {
-                    LangUtil.rethrowUnchecked(ex);
-                }
-            };
-    }
 
     /**
      * Close all closeables in closeables. If any of them throw then throw that exception.

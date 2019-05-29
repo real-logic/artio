@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.LangUtil;
 import org.agrona.generation.OutputManager;
 import org.agrona.generation.ResourceConsumer;
 import uk.co.real_logic.artio.builder.Decoder;
@@ -33,7 +34,6 @@ import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.*;
 import static uk.co.real_logic.artio.dictionary.generation.ConstantGenerator.sizeHashSet;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.NULL_VAL_NAME;
-import static uk.co.real_logic.artio.dictionary.generation.Exceptions.rethrown;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.constantName;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
@@ -574,7 +574,17 @@ public class DecoderGenerator extends Generator
         out.append("\n");
         aggregate
             .entries()
-            .forEach(rethrown(consumer));
+            .forEach(t ->
+            {
+                try
+                {
+                    consumer.accept(t);
+                }
+                catch (final IOException ex)
+                {
+                    LangUtil.rethrowUnchecked(ex);
+                }
+            });
         out.append("\n");
     }
 
