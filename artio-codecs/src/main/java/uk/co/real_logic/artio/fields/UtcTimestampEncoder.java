@@ -109,8 +109,8 @@ public final class UtcTimestampEncoder
     /**
      * Encode the current time into the buffer as an ascii UTC String
      *
-     * @param epochFraction the current time as the number of milliseconds, microseconds or nanoseconds since the 
-     *                      start of the UNIX Epoch. The unit of this parameter should align with the constructor 
+     * @param epochFraction the current time as the number of milliseconds, microseconds or nanoseconds since the
+     *                      start of the UNIX Epoch. The unit of this parameter should align with the constructor
      *                      parameter EpochFractionFormat.
      * @return the length of the encoded data in the flyweight.
      */
@@ -189,8 +189,8 @@ public final class UtcTimestampEncoder
     /**
      * Update the current time into the buffer as an ascii UTC String
      *
-     * @param epochFraction the current time as the number of milliseconds, microseconds or nanoseconds since the 
-     *                      start of the UNIX Epoch. The unit of this parameter should align with the constructor 
+     * @param epochFraction the current time as the number of milliseconds, microseconds or nanoseconds since the
+     *                      start of the UNIX Epoch. The unit of this parameter should align with the constructor
      *                      parameter EpochFractionFormat.
      * @return the length of the encoded data in the flyweight.
      */
