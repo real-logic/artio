@@ -109,8 +109,8 @@ public final class UtcTimestampEncoder
     /**
      * Encode the current time into the buffer as an ascii UTC String
      *
-     * @param epochFraction the current time as the number of milliseconds or microseconds since the start of the
-     *                      UNIX Epoch.
+     * @param epochFraction the current time as the number of milliseconds, microseconds or nanoseconds since the start of the
+     *                      UNIX Epoch. The unit of this parameter should align with the constructor parameter EpochFractionFormat.
      * @return the length of the encoded data in the flyweight.
      */
     public int encode(final long epochFraction)
@@ -185,6 +185,13 @@ public final class UtcTimestampEncoder
         return fractionOfSecond > 0 ? lengthWithFraction : LENGTH_WITHOUT_MILLISECONDS;
     }
 
+    /**
+     * Update the current time into the buffer as an ascii UTC String
+     *
+     * @param epochFraction the current time as the number of milliseconds, microseconds or nanoseconds since the start of the
+     *                      UNIX Epoch. The unit of this parameter should align with the constructor parameter EpochFractionFormat.
+     * @return the length of the encoded data in the flyweight.
+     */
     public int update(final long epochFraction)
     {
         if (epochFraction > startOfNextDayInFraction || epochFraction < beginningOfDayInFraction)
