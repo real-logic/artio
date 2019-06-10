@@ -188,63 +188,83 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         return bigDecimal.toPlainString();
     }
 
+    public DecimalFloat negate()
+    {
+        this.value *= -1;
+        return this;
+    }
+
+    public DecimalFloat copy()
+    {
+        return new DecimalFloat(value, scale);
+    }
+
     public int compareTo(final DecimalFloat other)
     {
         final long value = this.value;
+        final int scale = this.scale;
+
         final long otherValue = other.value;
+        final int otherScale = other.scale;
 
-        final boolean isPositive = value >= 0;
-        final int negativeComparison = Boolean.compare(isPositive, otherValue >= 0);
-        if (negativeComparison != 0)
+        final long decimalPointDivisor = pow10(scale);
+        final long otherDecimalPointDivisor = pow10(otherScale);
+
+        final long valueBeforeDecimalPoint = value / decimalPointDivisor;
+        final long otherValueBeforeDecimalPoint = otherValue / otherDecimalPointDivisor;
+
+        final int beforeDecimalPointComparison = Long.compare(valueBeforeDecimalPoint, otherValueBeforeDecimalPoint);
+
+        if (beforeDecimalPointComparison != 0)
         {
-            return negativeComparison;
+            // Can be determined using just the long value before decimal point
+            return beforeDecimalPointComparison;
         }
 
-        final int digitsBeforeDecimalPoint = digitsBeforeDecimalPoint(value);
-        final int otherDigitsBeforeDecimalPoint = other.digitsBeforeDecimalPoint(otherValue);
+        // values after decimal point, but has removed scale entirely
+        long valueAfterDecimalPoint = (value % decimalPointDivisor);
+        long otherValueAfterDecimalPoint = (otherValue % otherDecimalPointDivisor);
 
-        final int digitComparison = Integer.compare(digitsBeforeDecimalPoint, otherDigitsBeforeDecimalPoint);
-        if (digitComparison == 0)
+        // re-normalise with scales by multiplying the lower scale number up
+        if (scale > otherScale)
         {
-            return Long.compare(value, otherValue);
-        }
-        else if (value == 0)
-        {
-            return -1;
-        }
-        else if (otherValue == 0)
-        {
-            return 1;
+            final int differenceInScale = scale - otherScale;
+            otherValueAfterDecimalPoint *= pow10(differenceInScale);
         }
         else
         {
-            return isPositive ? digitComparison : -1 * digitComparison;
+            final int differenceInScale = otherScale - scale;
+            valueAfterDecimalPoint *= pow10(differenceInScale);
         }
+
+        return Long.compare(valueAfterDecimalPoint, otherValueAfterDecimalPoint);
     }
 
-    private int digitsBeforeDecimalPoint(final long value)
+    private static final long[] POWERS_OF_10 = {
+        1L,
+        10L,
+        100L,
+        1000L,
+        10000L,
+        100000L,
+        1000000L,
+        10000000L,
+        100000000L,
+        1000000000L,
+        10000000000L,
+        100000000000L,
+        1000000000000L,
+        10000000000000L,
+        100000000000000L,
+        1000000000000000L,
+        10000000000000000L,
+        100000000000000000L,
+        1000000000000000000L,
+    };
+
+    private static long pow10(final int rhs)
     {
-        final long absValue = Math.abs(value);
-        final int digitsInvalue = absValue < 10 ? 1 :
-            absValue < 100L ? 2 :
-            absValue < 1000L ? 3 :
-            absValue < 10000L ? 4 :
-            absValue < 100000L ? 5 :
-            absValue < 1000000L ? 6 :
-            absValue < 10000000L ? 7 :
-            absValue < 100000000L ? 8 :
-            absValue < 1000000000L ? 9 :
-            absValue < 10000000000L ? 10 :
-            absValue < 100000000000L ? 11 :
-            absValue < 1000000000000L ? 12 :
-            absValue < 10000000000000L ? 13 :
-            absValue < 100000000000000L ? 14 :
-            absValue < 1000000000000000L ? 15 :
-            absValue < 10000000000000000L ? 16 :
-            absValue < 100000000000000000L ? 17 :
-            absValue < 1000000000000000000L ? 18 :
-            19;
-        return digitsInvalue - scale;
+        return POWERS_OF_10[rhs];
     }
 
     public double toDouble()
