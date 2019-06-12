@@ -27,7 +27,7 @@ plugins {
 }
 
 def aeronVersion = '1.19.1'
-def agronaVersion = '1.0.1'
+def agronaVersion = '1.0.2'
 def sbeVersion = '1.12.7'
 def artioJavaVersion = JavaVersion.VERSION_1_8
 def artioGroup = 'uk.co.real-logic'

@@ -16,7 +16,9 @@
 package uk.co.real_logic.artio.dictionary.generation;
 
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 
+@Ignore
 public class DecoderGeneratorFlyweightTest extends AbstractDecoderGeneratorTest
 {
     @BeforeClass
