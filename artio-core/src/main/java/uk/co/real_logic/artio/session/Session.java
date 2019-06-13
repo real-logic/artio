@@ -22,6 +22,7 @@ import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.Constants;
+import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
@@ -41,6 +42,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.Constants.NEW_SEQ_NO;
 import static uk.co.real_logic.artio.Constants.VERSION_CHARS;
+import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.artio.decoder.LogonDecoder.MESSAGE_TYPE_CHARS;
@@ -501,6 +503,8 @@ public class Session implements AutoCloseable
         if (position > 0)
         {
             lastSentMsgSeqNum(seqNum, position);
+
+            DebugLogger.log(FIX_MESSAGE, "Sent %s %n", messageBuffer, offset, length);
         }
 
         return position;

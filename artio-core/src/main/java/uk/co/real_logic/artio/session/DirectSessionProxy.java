@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.session;
 
 import org.agrona.concurrent.EpochClock;
+import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.fields.RejectReason;
@@ -30,6 +31,7 @@ import java.util.List;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
+import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.fields.RejectReason.VALUE_IS_INCORRECT;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
@@ -384,6 +386,12 @@ public class DirectSessionProxy implements SessionProxy
             buffer, offset, length,
             libraryId, messageType, sessionId, sequenceIndex, connectionId, OK, msgSeqNo);
         encoder.resetMessage();
+
+        if (position > 0)
+        {
+            DebugLogger.log(FIX_MESSAGE, "Sent %s %n", buffer, offset, length);
+        }
+
         return position;
     }
 

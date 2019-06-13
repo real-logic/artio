@@ -36,6 +36,7 @@ import java.util.Objects;
 
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
 import static uk.co.real_logic.artio.dictionary.StandardFixConstants.MIN_MESSAGE_SIZE;
 import static uk.co.real_logic.artio.dictionary.StandardFixConstants.START_OF_HEADER;
 import static uk.co.real_logic.artio.messages.DisconnectReason.NO_LOGON;
@@ -220,7 +221,7 @@ class ReceiverEndPoint
         {
             if (dataRead > 0)
             {
-                DebugLogger.log(FIX_MESSAGE, "Read     %s%n", buffer, 0, dataRead);
+                DebugLogger.log(FIX_MESSAGE_TCP, "Read     %s%n", buffer, 0, dataRead);
             }
             usedBufferData += dataRead;
         }
@@ -519,7 +520,7 @@ class ReceiverEndPoint
 
     private void invalidateMessage(final int offset)
     {
-        DebugLogger.log(FIX_MESSAGE, "%s", buffer, offset, MIN_MESSAGE_SIZE);
+        DebugLogger.log(FIX_MESSAGE, "Invalidated: %s", buffer, offset, MIN_MESSAGE_SIZE);
         saveInvalidMessage(offset);
     }
 

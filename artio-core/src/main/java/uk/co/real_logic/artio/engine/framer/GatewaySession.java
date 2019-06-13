@@ -24,7 +24,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.function.Consumer;
 
-import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_FLOW;
+import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.LogTag.GATEWAY_MESSAGE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 
@@ -196,7 +196,7 @@ class GatewaySession implements SessionInfo
     {
         if (sessionParser != null)
         {
-            DebugLogger.log(FIX_MESSAGE_FLOW, "Gateway Received %s %n", buffer, offset, length);
+            DebugLogger.log(FIX_MESSAGE, "Gateway Received %s %n", buffer, offset, length);
 
             sessionParser.onMessage(buffer, offset, length, messageType, sessionId);
         }
