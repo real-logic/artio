@@ -51,6 +51,7 @@ import static uk.co.real_logic.artio.dictionary.generation.Exceptions.closeAll;
 public class FixLibrary extends GatewayProcess
 {
     public static final int NO_MESSAGE_REPLAY = -1;
+    public static final int CURRENT_SEQUENCE = -2;
 
     private final LibraryConfiguration configuration;
     private final LibraryScheduler scheduler;
@@ -325,8 +326,9 @@ public class FixLibrary extends GatewayProcess
      *                                   If you don't care about message replay then
      *                                   use {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
      * @param resendFromSequenceIndex the index of the sequence within which the resendFromSequenceNumber
-     *                      refers. If you don't care about message replay then use
-     *                      {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
+     *                      refers. if you wish to use the curren sequence (ie all messages since the latest logon
+     *                      then you can use {@link FixLibrary#CURRENT_SEQUENCE}.If you don't care about message replay
+     *                      then use {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
      * @param timeoutInMs the timeout for this operation
      * @return the reply object representing the result of the request.
      */

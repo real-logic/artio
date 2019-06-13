@@ -78,6 +78,7 @@ import static uk.co.real_logic.artio.engine.framer.Continuation.COMPLETE;
 import static uk.co.real_logic.artio.engine.framer.GatewaySession.adjustLastSequenceNumber;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.UNKNOWN_SESSION;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
+import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
 import static uk.co.real_logic.artio.messages.ConnectionType.ACCEPTOR;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
 import static uk.co.real_logic.artio.messages.GatewayError.*;
@@ -1368,7 +1369,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long connectionId,
         final long correlationId,
         final int replayFromSequenceNumber,
-        final int replayFromSequenceIndex,
+        final int requestedReplayFromSequenceIndex,
         final GatewaySession session,
         final int lastReceivedSeqNum)
     {
@@ -1389,12 +1390,22 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 return;
             }
 
+            final int replayFromSequenceIndex;
             final int sequenceIndex = session.sequenceIndex();
-            if (replayFromSequenceIndex > sequenceIndex ||
-                (replayFromSequenceIndex == sequenceIndex && replayFromSequenceNumber > lastReceivedSeqNum))
+            if (requestedReplayFromSequenceIndex == CURRENT_SEQUENCE)
             {
-                continuations.add(() -> sequenceNumberTooHigh(libraryId, correlationId, session));
-                return;
+                replayFromSequenceIndex = sequenceIndex;
+            }
+            else
+            {
+                if (requestedReplayFromSequenceIndex > sequenceIndex ||
+                    (requestedReplayFromSequenceIndex == sequenceIndex &&
+                    replayFromSequenceNumber > lastReceivedSeqNum))
+                {
+                    continuations.add(() -> sequenceNumberTooHigh(libraryId, correlationId, session));
+                    return;
+                }
+                replayFromSequenceIndex = requestedReplayFromSequenceIndex;
             }
 
             continuations.add(new CatchupReplayer(

@@ -42,6 +42,7 @@ import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
+import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
 import static uk.co.real_logic.artio.messages.SessionState.DISABLED;
@@ -779,6 +780,30 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertEquals(4, execReport.messageSequenceNumber());
 
         clearMessages();
+
+        messagesCanBeExchanged();
+    }
+
+    @Test
+    public void shouldReplayCurrentMessages()
+    {
+        final long sessionId = acceptingHandler.awaitSessionId(testSystem::poll);
+
+        acceptingSession = acquireSession(
+            acceptingHandler,
+            acceptingLibrary,
+            sessionId,
+            testSystem,
+            CURRENT_SEQUENCE,
+            CURRENT_SEQUENCE);
+
+        assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
+        assertEquals(ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());
+        assertNotNull("unable to acquire accepting session", acceptingSession);
+
+        final List<FixMessage> replayedMessages = acceptingOtfAcceptor.messages();
+        assertThat(replayedMessages, hasSize(1));
+        assertEquals(1, replayedMessages.get(0).messageSequenceNumber());
 
         messagesCanBeExchanged();
     }
