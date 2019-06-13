@@ -1108,7 +1108,6 @@ public class DecoderGenerator extends Generator
         final boolean isGroup = type == GROUP;
         final boolean isHeader = type == HEADER;
         final String endGroupCheck = endGroupCheck(aggregate, isGroup);
-
         final String prefix =
             "    private AsciiBuffer buffer;\n\n" +
             "    public int decode(final AsciiBuffer buffer, final int offset, final int length)\n" +
@@ -1129,6 +1128,10 @@ public class DecoderGenerator extends Generator
             "        while (position < end)\n" +
             "        {\n" +
             "            final int equalsPosition = buffer.scan(position, end, '=');\n" +
+            "            if (equalsPosition == AsciiBuffer.UNKNOWN_INDEX)\n" +
+            "            {\n" +
+            "               return position;\n" +
+            "            }\n" +
             "            tag = buffer.getInt(position, equalsPosition);\n" +
             endGroupCheck +
             "            final int valueOffset = equalsPosition + 1;\n" +
@@ -1148,7 +1151,6 @@ public class DecoderGenerator extends Generator
             "                    rejectReason = " + TAG_SPECIFIED_WITHOUT_A_VALUE + ";\n" +
             "                }\n" +
             headerValidation(isHeader) +
-
             (isGroup ? "" :
             "                if (!alreadyVisitedFields.add(tag))\n" +
             "                {\n" +
@@ -1161,11 +1163,9 @@ public class DecoderGenerator extends Generator
             "            }\n" +
             "            switch (tag)\n" +
             "            {\n\n";
-
         final String body = entries.stream()
             .map(this::decodeEntry)
             .collect(joining("\n", "", "\n"));
-
         final String suffix =
             "            default:\n" +
             "                if (!" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + ")\n" +
@@ -1183,7 +1183,6 @@ public class DecoderGenerator extends Generator
             "                    }\n" +
             "                }\n") +
 
-
             // Skip the thing if it's a completely unknown field and you aren't validating messages
             "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
             " || " + unknownFieldPredicate(type) + ")\n" +
@@ -1199,7 +1198,6 @@ public class DecoderGenerator extends Generator
             "        }\n" +
             decodeTrailerOrReturn(hasCommonCompounds, 2) +
             "    }\n\n";
-
         return prefix + body + suffix;
     }
 

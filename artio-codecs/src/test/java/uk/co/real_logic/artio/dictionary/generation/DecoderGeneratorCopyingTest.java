@@ -16,9 +16,7 @@
 package uk.co.real_logic.artio.dictionary.generation;
 
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 
-@Ignore
 public class DecoderGeneratorCopyingTest extends AbstractDecoderGeneratorTest
 {
     @BeforeClass

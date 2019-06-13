@@ -1198,10 +1198,15 @@ public abstract class AbstractDecoderGeneratorTest
         assertThat(decoder3.validate(), is(false));
         assertThat(decoder4.validate(), is(false));
 
-        assertThat(RejectReason.decode(decoder1.rejectReason()), is(RejectReason.VALUE_IS_INCORRECT));
-        assertThat(RejectReason.decode(decoder2.rejectReason()), is(RejectReason.VALUE_IS_INCORRECT));
-        assertThat(RejectReason.decode(decoder3.rejectReason()), is(RejectReason.VALUE_IS_INCORRECT));
-        assertThat(RejectReason.decode(decoder4.rejectReason()), is(RejectReason.VALUE_IS_INCORRECT));
+        assertRejectReason(decoder1, RejectReason.VALUE_IS_INCORRECT);
+        assertRejectReason(decoder2, RejectReason.VALUE_IS_INCORRECT);
+        assertRejectReason(decoder3, RejectReason.VALUE_IS_INCORRECT);
+        assertRejectReason(decoder4, RejectReason.REQUIRED_TAG_MISSING);
+    }
+
+    private void assertRejectReason(final Decoder decoder, final RejectReason expectedReason)
+    {
+        assertThat(RejectReason.decode(decoder.rejectReason()), is(expectedReason));
     }
 
     private void assertRepeatingGroupAndFieldsDecoded(final Decoder decoder) throws Exception
