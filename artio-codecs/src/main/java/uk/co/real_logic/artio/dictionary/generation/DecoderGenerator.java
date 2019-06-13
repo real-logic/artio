@@ -52,6 +52,17 @@ public class DecoderGenerator extends Generator
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
     private static final String GROUP_FIELDS = "GROUP_FIELDS";
 
+    // Has to be generated everytime since HeaderDecoder and TrailerDecoder are generated.
+    private static final String MESSAGE_DECODER =
+        "import uk.co.real_logic.artio.builder.Decoder;\n" +
+        "\n" +
+        "public interface MessageDecoder extends Decoder\n" +
+        "{\n" +
+        "    HeaderDecoder header();\n" +
+        "\n" +
+        "    TrailerDecoder trailer();\n" +
+        "}";
+
     public static final int INVALID_TAG_NUMBER =
         RejectReason.INVALID_TAG_NUMBER.representation();
     public static final int REQUIRED_TAG_MISSING =
@@ -97,6 +108,24 @@ public class DecoderGenerator extends Generator
         this.initialBufferSize = initialBufferSize;
     }
 
+    public void generate()
+    {
+        generateMessageDecoderInterface();
+        super.generate();
+    }
+
+    private void generateMessageDecoderInterface()
+    {
+        outputManager.withOutput(
+            "MessageDecoder",
+            (out) ->
+            {
+                out.append(fileHeader(builderPackage));
+
+                out.append(MESSAGE_DECODER);
+            });
+    }
+
     protected void generateAggregateFile(final Aggregate aggregate, final AggregateType type)
     {
         if (type == COMPONENT)
@@ -134,7 +163,7 @@ public class DecoderGenerator extends Generator
             .map((comp) -> decoderClassName((Aggregate)comp.element()))
             .collect(toList());
 
-        interfaces.add(Decoder.class.getSimpleName());
+        interfaces.add(isMessage ? "MessageDecoder" : "Decoder");
 
         out.append(classDeclaration(className, interfaces, false));
         generateValidation(out, aggregate, type);
