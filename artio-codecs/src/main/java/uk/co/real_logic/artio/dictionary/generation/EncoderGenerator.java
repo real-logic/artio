@@ -509,6 +509,10 @@ public class EncoderGenerator extends Generator
             "    public MutableDirectBuffer %1$s()\n" +
             "    {\n" +
             "        return %1$s;\n" +
+            "    }\n\n" +
+            "    public String %1$sAsString()\n" +
+            "    {\n" +
+            "        return %1$s.getStringWithoutLengthAscii(%1$sOffset, %1$sLength);\n" +
             "    }\n\n",
             fieldName,
             className,
