@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd., Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2019 Real Logic Ltd., Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,7 +58,7 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
     public static final DecimalFloat MAX_VALUE = new DecimalFloat(VALUE_MAX_VAL, 0);
     public static final DecimalFloat ZERO = new DecimalFloat();
     public static final DecimalFloat NAN = getNaN();
-    public static final DecimalFloat MISSING_FLOAT = ZERO;
+    public static final DecimalFloat MISSING_FLOAT = NAN;
 
     private static final int HIGHEST_POWER_OF_TEN = 18;
     private static final long[] POWERS_OF_TEN = new long[]
@@ -95,9 +95,15 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         setAndNormalise(value, scale);
     }
 
+    /**
+     * Resets the encoder to the NAN value. This can checked using the {@link #isNaNValue()} method.
+     */
     public void reset()
     {
-        setAndNormalise(0, 0);
+        this.value = VALUE_NAN_VALUE;
+        this.scale = SCALE_NAN_VALUE;
+
+        // Deliberately doesn't normalise, as that validates the arithmetic range.
     }
 
     public long value()

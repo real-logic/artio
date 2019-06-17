@@ -201,7 +201,6 @@ public abstract class AbstractDecoderGeneratorTest
         decoder.reset();
         decode(RF_NO_FIELDS, decoder);
         assertEquals(DecimalFloat.MISSING_FLOAT, getMethod(decoder, DECIMAL_RF));
-        assertEquals(DecimalFloat.ZERO, getMethod(decoder, DECIMAL_RF));
     }
 
     @Test
