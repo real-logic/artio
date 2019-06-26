@@ -502,6 +502,13 @@ public class EncoderGenerator extends Generator
             "    {\n" +
             "        return %1$s(value, 0, value.length);\n" +
             "    }\n\n" +
+            "    public %2$s %1$s(final AsciiSequenceView value)\n" +
+            "    {\n" +
+            "        %1$s.wrap(value.buffer());\n" +
+            "        %1$sOffset = value.offset();\n" +
+            "        %1$sLength = value.length();\n" +
+            "        return this;\n" +
+            "    }\n\n" +
             "    public boolean has%3$s()\n" +
             "    {\n" +
             "        return %1$sLength > 0;\n" +
