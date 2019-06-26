@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +20,7 @@ import io.aeron.FragmentAssembler;
 import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
-import io.aeron.logbuffer.FragmentHandler;
-import io.aeron.logbuffer.Header;
-import org.agrona.DirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
-import uk.co.real_logic.artio.messages.FixMessageDecoder;
-import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,16 +39,9 @@ import static java.util.Comparator.comparingLong;
  */
 public class FixArchiveScanner implements AutoCloseable
 {
-    private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
-    private final FixMessageDecoder fixMessage = new FixMessageDecoder();
-    private final LogEntryHandler logEntryHandler = new LogEntryHandler();
-    private final FragmentAssembler fragmentAssembler = new FragmentAssembler(logEntryHandler);
-
     private final Aeron aeron;
     private final AeronArchive aeronArchive;
     private final IdleStrategy idleStrategy;
-
-    private FixMessageConsumer handler;
 
     public static class Context
     {
@@ -103,7 +91,8 @@ public class FixArchiveScanner implements AutoCloseable
         final boolean follow,
         final int archiveScannerStreamId)
     {
-        this.handler = handler;
+        final LogEntryHandler logEntryHandler = new LogEntryHandler(handler);
+        final FragmentAssembler fragmentAssembler = new FragmentAssembler(logEntryHandler);
 
         final List<ArchiveLocation> archiveLocations = lookupArchiveLocations(aeronChannel, queryStreamId);
 
@@ -198,24 +187,6 @@ public class FixArchiveScanner implements AutoCloseable
         archiveLocations.sort(comparingLong(ArchiveLocation::stopPosition).reversed());
 
         return archiveLocations;
-    }
-
-    class LogEntryHandler implements FragmentHandler
-    {
-        @SuppressWarnings("FinalParameters")
-        public void onFragment(
-            final DirectBuffer buffer, int offset, final int length, final Header header)
-        {
-            messageHeader.wrap(buffer, offset);
-            if (messageHeader.templateId() == FixMessageDecoder.TEMPLATE_ID)
-            {
-                offset += MessageHeaderDecoder.ENCODED_LENGTH;
-
-                fixMessage.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
-
-                handler.onMessage(fixMessage, buffer, offset, length, header);
-            }
-        }
     }
 
     class ArchiveLocation
