@@ -22,7 +22,7 @@ buildscript {
 }
 
 plugins {
-    id 'com.github.johnrengelman.shadow' version '5.0.0' apply false
+    id 'com.github.johnrengelman.shadow' version '5.1.0' apply false
     id 'net.researchgate.release' version '2.8.0'
 }
 
@@ -205,8 +205,7 @@ project(':artio-codecs') {
         compile "uk.co.real-logic:sbe-tool:${sbeVersion}"
         testCompile sourceSets.generated.output
     }
-
-    // Code Generation Configuration
+    
     compileGeneratedJava {
         dependsOn 'generateMessages'
         sourceCompatibility = artioJavaVersion
@@ -273,7 +272,6 @@ project(':artio-session-codecs') {
 }
 
 project(':artio-session-fixt-codecs') {
-
     dependencies {
         compile project(path: ':artio-codecs')
     }
@@ -308,7 +306,6 @@ project(':artio-session-fixt-codecs') {
 }
 
 project(':artio-core') {
-
     dependencies {
         testCompile project(path: ':artio-codecs', configuration: 'tests')
         compile project(':artio-session-codecs')
