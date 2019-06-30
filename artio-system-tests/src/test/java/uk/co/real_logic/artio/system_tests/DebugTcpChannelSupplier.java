@@ -16,8 +16,8 @@
 package uk.co.real_logic.artio.system_tests;
 
 import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
 import uk.co.real_logic.artio.engine.framer.TcpChannel;
-import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -27,7 +27,7 @@ import java.util.ArrayList;
 /**
  * Hook for testing interaction with different networking conditions.
  */
-public class DebugTcpChannelSupplier extends TcpChannelSupplier
+public class DebugTcpChannelSupplier extends DefaultTcpChannelSupplier
 {
     private final ArrayList<TcpChannel> channels = new ArrayList<>();
     private boolean isEnabled = true;

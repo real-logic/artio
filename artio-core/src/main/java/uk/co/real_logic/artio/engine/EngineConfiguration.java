@@ -22,6 +22,7 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.decoder.*;
+import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
@@ -201,7 +202,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         getInteger(NO_LOGON_DISCONNECT_TIMEOUT_PROP, DEFAULT_NO_LOGON_DISCONNECT_TIMEOUT);
 
     private String libraryAeronChannel = null;
-    private Function<EngineConfiguration, TcpChannelSupplier> channelSupplierFactory = TcpChannelSupplier::new;
+    private Function<EngineConfiguration, TcpChannelSupplier> channelSupplierFactory = DefaultTcpChannelSupplier::new;
     private SessionPersistenceStrategy sessionPersistenceStrategy;
     private long slowConsumerTimeoutInMs = DEFAULT_SLOW_CONSUMER_TIMEOUT_IN_MS;
     private EngineScheduler scheduler = new DefaultEngineScheduler();
