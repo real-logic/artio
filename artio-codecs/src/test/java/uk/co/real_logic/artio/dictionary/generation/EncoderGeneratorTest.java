@@ -282,6 +282,22 @@ public class EncoderGeneratorTest
     }
 
     @Test
+    public void encodeDecimalFloatWithoutAlteringSentinelValue() throws Exception
+    {
+        //Given
+        final Encoder encoder = newHeartbeat();
+        final DecimalFloat zero = DecimalFloat.ZERO;
+
+        setFloat(encoder, FLOAT_FIELD, zero);
+
+        //When
+        setFloatFieldRawValues(encoder);
+
+        //Then
+        assertThat(zero, is(new DecimalFloat()));
+    }
+
+    @Test
     public void ignoresMissingOptionalValues() throws Exception
     {
         final Encoder encoder = newHeartbeat();
