@@ -44,6 +44,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES;
+import static uk.co.real_logic.artio.messages.DisconnectReason.DUPLICATE_SESSION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
@@ -58,8 +59,10 @@ public class ReceiverEndPointTest
     private static final long POSITION = 1024L;
     private static final int BUFFER_SIZE = 16 * 1024;
     private static final int SEQUENCE_INDEX = 0;
-    private static final int BACKPRESSURED_REQUIRED_POSITION = 1024;
+    private static final int LOGON_LEN = LOGON_MESSAGE.length;
 
+    private final AcceptorLogonResult pendingAuth = createSuccessfulPendingAuth();
+    private final AcceptorLogonResult backpressuredPendingAuth = createBackpressuredPendingAuth();
     private TcpChannel mockChannel = mock(TcpChannel.class);
     private GatewayPublication publication = mock(GatewayPublication.class);
     private SessionContexts mockSessionContexts = mock(SessionContexts.class);
@@ -68,29 +71,37 @@ public class ReceiverEndPointTest
     private Framer framer = mock(Framer.class);
     private GatewaySession gatewaySession = mock(GatewaySession.class);
     private Session session = mock(Session.class);
-    private final AuthenticationResult authenticationResult = new AuthenticationResult(gatewaySession);
-    private final AuthenticationResult backpressuredAuthenticationResult = new AuthenticationResult(
-        gatewaySession, BACKPRESSURED_REQUIRED_POSITION);
     private GatewaySessions mockGatewaySessions = mock(GatewaySessions.class);
     private CompositeKey sessionKey = SessionIdStrategy
         .senderAndTarget()
         .onInitiateLogon("ACCEPTOR", "", "", "INIATOR", "", "");
+    private ReceiverEndPoint endPoint;
 
-    private ReceiverEndPoint endPoint = new ReceiverEndPoint(
-        mockChannel, BUFFER_SIZE, publication,
-        CONNECTION_ID, UNKNOWN, SEQUENCE_INDEX, mockSessionContexts,
-        messagesRead, framer, errorHandler, LIBRARY_ID,
-        mockGatewaySessions);
+    private AcceptorLogonResult createSuccessfulPendingAuth()
+    {
+        final AcceptorLogonResult pendingAcceptorLogon = mock(AcceptorLogonResult.class);
+        when(pendingAcceptorLogon.poll()).thenReturn(false, true);
+        when(pendingAcceptorLogon.isAccepted()).thenReturn(true);
+        return pendingAcceptorLogon;
+    }
+
+    private AcceptorLogonResult createBackpressuredPendingAuth()
+    {
+        final AcceptorLogonResult pendingAcceptorLogon = mock(AcceptorLogonResult.class);
+        when(pendingAcceptorLogon.poll()).thenReturn(true);
+        when(pendingAcceptorLogon.isAccepted()).thenReturn(true);
+        return pendingAcceptorLogon;
+    }
 
     @Before
     public void setUp()
     {
-        endPoint.gatewaySession(gatewaySession);
+        givenReceiverEndPoint(SESSION_ID);
         when(gatewaySession.session()).thenReturn(session);
         when(gatewaySession.sessionKey()).thenReturn(sessionKey);
         when(gatewaySession.sessionId()).thenReturn(SESSION_ID);
         when(session.state()).thenReturn(SessionState.CONNECTED);
-        givenAuthenticationResult(authenticationResult);
+        givenAnAuthenticatedReceiverEndPoint();
 
         doAnswer(
             (inv) ->
@@ -100,25 +111,66 @@ public class ReceiverEndPointTest
             }).when(framer).schedule(any(Continuation.class));
     }
 
-    private void givenAuthenticationResult(final AuthenticationResult authenticationResult)
+    private void givenLogonResult(final AcceptorLogonResult logonResult)
     {
         when(mockGatewaySessions.authenticate(
             any(),
             anyLong(),
             eq(gatewaySession)))
-            .thenReturn(authenticationResult);
+            .thenReturn(logonResult);
+    }
+
+    private void givenAnUnauthenticatedReceiverEndPoint()
+    {
+        givenReceiverEndPoint(UNKNOWN);
+    }
+
+    private void givenAnAuthenticatedReceiverEndPoint()
+    {
+        givenReceiverEndPoint(SESSION_ID);
+    }
+
+    private void givenReceiverEndPoint(final long sessionId)
+    {
+        endPoint = new ReceiverEndPoint(
+            mockChannel, BUFFER_SIZE, publication,
+            CONNECTION_ID, sessionId, SEQUENCE_INDEX, mockSessionContexts,
+            messagesRead, framer, errorHandler, LIBRARY_ID,
+            mockGatewaySessions);
+        endPoint.gatewaySession(gatewaySession);
+    }
+
+    private void theEndpointReceivesALogon()
+    {
+        theEndpointReceives(LOGON_MESSAGE, 0, LOGON_MESSAGE.length);
     }
 
     @Test
     public void shouldNotifyDuplicateSession()
     {
+        givenAnUnauthenticatedReceiverEndPoint();
         givenADuplicateSession();
+
+        theEndpointReceivesALogon();
+
+        polls(LOGON_MESSAGE.length);
+        pollWithNoData();
+
+        verifyDuplicateSession(times(1));
+    }
+
+    @Test
+    public void shouldDisconnectWhenFirstMessageIsNotALogon()
+    {
+        givenAnUnauthenticatedReceiverEndPoint();
+        givenLogonResult(pendingAuth);
 
         theEndpointReceivesACompleteMessage();
 
         polls(MSG_LEN);
+        pollWithNoData();
 
-        verifyDuplicateSession(times(1));
+        verify(publication).saveDisconnect(anyInt(), anyLong(), eq(DisconnectReason.FIRST_MESSAGE_NOT_LOGON));
     }
 
     @Test
@@ -147,20 +199,6 @@ public class ReceiverEndPointTest
         savesFramedMessages(2, OK, MSG_LEN);
 
         sessionReceivesOneMessage();
-    }
-
-    @Test
-    public void shouldIgnoreGarbledMessages()
-    {
-        final int length = GARBLED_MESSAGE.length;
-        theEndpointReceives(GARBLED_MESSAGE, 0, length);
-
-        endPoint.poll();
-
-        savesInvalidMessage(length, times(1));
-        verifyNoError();
-        verifyNotDisconnected();
-        sessionReceivesNoMessages();
     }
 
     @Test
@@ -381,22 +419,21 @@ public class ReceiverEndPointTest
     @Test
     public void shouldFrameLogonMessageWhenLoggerBehind()
     {
-        givenAuthenticationResult(backpressuredAuthenticationResult);
+        givenAnUnauthenticatedReceiverEndPoint();
+        givenLogonResult(backpressuredPendingAuth);
 
-        theEndpointReceivesACompleteMessage();
+        theEndpointReceivesALogon();
 
         // Backpressured attempt
-        polls(MSG_LEN);
+        polls(LOGON_LEN);
 
         nothingMoreSaved();
 
-        when(mockGatewaySessions.lookupSequenceNumbers(gatewaySession, BACKPRESSURED_REQUIRED_POSITION))
-            .thenReturn(true);
-
         // Successful attempt
-        polls(MSG_LEN);
+        pollWithNoData();
+        pollWithNoData();
 
-        savesFramedMessages(1, OK, MSG_LEN, LogonDecoder.MESSAGE_TYPE);
+        savesFramedMessages(1, OK, LOGON_LEN, LogonDecoder.MESSAGE_TYPE);
     }
 
     private void firstSaveAttemptIsBackPressured()
@@ -660,6 +697,11 @@ public class ReceiverEndPointTest
 
     private void givenADuplicateSession()
     {
-        givenAuthenticationResult(AuthenticationResult.DUPLICATE_SESSION);
+        final AcceptorLogonResult pendingAcceptorLogon = mock(AcceptorLogonResult.class);
+        when(pendingAcceptorLogon.poll()).thenReturn(true);
+        when(pendingAcceptorLogon.isAccepted()).thenReturn(false);
+        when(pendingAcceptorLogon.reason()).thenReturn(DUPLICATE_SESSION);
+
+        givenLogonResult(pendingAcceptorLogon);
     }
 }

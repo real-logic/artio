@@ -49,6 +49,11 @@ public abstract class Aggregate
         return entries.stream().filter((entry) -> predicate.test(entry.element()));
     }
 
+    public Stream<Entry> fieldEntries()
+    {
+        return entries().stream().filter(Entry::isField);
+    }
+
     /**
      * @return all entries including those of nested components
      */

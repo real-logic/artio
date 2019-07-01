@@ -24,6 +24,9 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 public final class EngineProtocolSubscription implements ControlledFragmentHandler
 {
+    private static final int FOLLOWER_SESSION_REQUEST_LENGTH =
+        FollowerSessionRequestEncoder.BLOCK_LENGTH + FollowerSessionRequestEncoder.headerHeaderLength();
+
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final InitiateConnectionDecoder initiateConnection = new InitiateConnectionDecoder();
     private final RequestDisconnectDecoder requestDisconnect = new RequestDisconnectDecoder();
@@ -32,6 +35,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
     private final LibraryConnectDecoder libraryConnect = new LibraryConnectDecoder();
     private final ReleaseSessionDecoder releaseSession = new ReleaseSessionDecoder();
     private final RequestSessionDecoder requestSession = new RequestSessionDecoder();
+    private final FollowerSessionRequestDecoder followerSessionRequest = new FollowerSessionRequestDecoder();
 
     private final EngineEndPointHandler handler;
 
@@ -84,6 +88,11 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             case MidConnectionDisconnectDecoder.TEMPLATE_ID:
             {
                 return onMidConnectionDisconnect(buffer, offset, blockLength, version, header);
+            }
+
+            case FollowerSessionRequestDecoder.TEMPLATE_ID:
+            {
+                return onFollowerSessionRequest(buffer, offset, blockLength, version, header);
             }
         }
 
@@ -249,5 +258,28 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         return handler.onMidConnectionDisconnect(
             libraryId,
             midConnectionDisconnect.correlationId());
+    }
+
+    private Action onFollowerSessionRequest(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final Header header)
+    {
+        followerSessionRequest.wrap(buffer, offset, blockLength, version);
+        final int libraryId = followerSessionRequest.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        if (action != null)
+        {
+            return action; // Continue processing messages, but not this message.
+        }
+        final int messageLength = followerSessionRequest.headerLength();
+        return handler.onFollowerSessionRequest(
+            libraryId,
+            followerSessionRequest.correlationId(),
+            buffer,
+            offset + FOLLOWER_SESSION_REQUEST_LENGTH,
+            messageLength);
     }
 }

@@ -25,8 +25,10 @@ import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.GatewayProcess;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.session.SessionWriter;
 import uk.co.real_logic.artio.timing.LibraryTimers;
 
 import java.io.File;
@@ -49,6 +51,7 @@ import static uk.co.real_logic.artio.dictionary.generation.Exceptions.closeAll;
 public class FixLibrary extends GatewayProcess
 {
     public static final int NO_MESSAGE_REPLAY = -1;
+    public static final int CURRENT_SEQUENCE = -2;
 
     private final LibraryConfiguration configuration;
     private final LibraryScheduler scheduler;
@@ -244,8 +247,14 @@ public class FixLibrary extends GatewayProcess
 
     private void removeParentDirectory(final String path)
     {
-        final File parentFile = new File(path).getParentFile();
-        if (parentFile.exists())
+        final File file = new File(path);
+        if (file.exists() && !file.delete())
+        {
+            errorHandler.onError(new RuntimeException("Unable to delete: " + path));
+        }
+
+        final File parentFile = file.getParentFile();
+        if (parentFile != null & parentFile.exists() && parentFile.listFiles().length == 0)
         {
             IoUtil.delete(parentFile, true);
         }
@@ -317,8 +326,9 @@ public class FixLibrary extends GatewayProcess
      *                                   If you don't care about message replay then
      *                                   use {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
      * @param resendFromSequenceIndex the index of the sequence within which the resendFromSequenceNumber
-     *                      refers. If you don't care about message replay then use
-     *                      {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
+     *                      refers. if you wish to use the curren sequence (ie all messages since the latest logon
+     *                      then you can use {@link FixLibrary#CURRENT_SEQUENCE}.If you don't care about message replay
+     *                      then use {@link FixLibrary#NO_MESSAGE_REPLAY} as the parameter.
      * @param timeoutInMs the timeout for this operation
      * @return the reply object representing the result of the request.
      */
@@ -330,6 +340,43 @@ public class FixLibrary extends GatewayProcess
     {
         CommonConfiguration.validateTimeout(timeoutInMs);
         return poller.requestSession(sessionId, resendFromSequenceNumber, resendFromSequenceIndex, timeoutInMs);
+    }
+
+    /**
+     * NB: This is an experimental API and is subject to change or potentially removal.
+     *
+     * Creates a new SessionWriter for a specified session. This can be used in a clustered system to write messages
+     * outbound for a system on its primary node. In a clustered system the <code>SessionProxy</code> would be hooked so
+     * writing messages outbound on a normal Session object won't work.
+     *
+     * @param sessionId the id of the session to use.
+     * @param connectionId the id of the connection to use.
+     * @param sequenceIndex the sequence index that the SessionWriter should start at.
+     * @return the created SessionWriter
+     */
+    public SessionWriter sessionWriter(
+        final long sessionId, final long connectionId, final int sequenceIndex)
+    {
+        return poller.followerSession(sessionId, connectionId, sequenceIndex);
+    }
+
+    /**
+     * NB: This is an experimental API and is subject to change or potentially removal.
+     *
+     * Create a SessionWriter for a Session from a different Artio instance. This SessionWriter can be used in a
+     * clustered system to fill the archive on a follower node with FIX messages that have been replicated by a
+     * leader node.
+     *
+     * @param headerEncoder the message header that contains fields that identify the Session. You could set the
+     *                      senderCompId and targetCompId on this header for example if those are the fields used to
+     *                      identify your session.
+     * @param timeoutInMs the timeout required for this operation.
+     * @return a <code>Reply</code> that will eventually contain the <code>SessionWriter</code>.
+     */
+    public Reply<SessionWriter> followerSession(
+        final HeaderEncoder headerEncoder, final long timeoutInMs)
+    {
+        return poller.followerSession(headerEncoder, timeoutInMs);
     }
 
     public String currentAeronChannel()

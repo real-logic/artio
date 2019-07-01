@@ -8,6 +8,7 @@ import org.agrona.DirectBuffer;
  * This callback is called for every message that needs to be replayed, even those that are replaced with
  * a gap fill message. The handler is invoked on the Replay Agent.
  */
+@FunctionalInterface
 public interface ReplayHandler
 {
     /**

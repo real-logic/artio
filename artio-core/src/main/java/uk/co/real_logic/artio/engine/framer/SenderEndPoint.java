@@ -30,7 +30,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.messages.DisconnectReason.EXCEPTION;
 import static uk.co.real_logic.artio.messages.DisconnectReason.SLOW_CONSUMER;
@@ -205,7 +205,7 @@ class SenderEndPoint
         ByteBufferUtil.position(buffer, offset);
 
         final int written = channel.write(buffer);
-        DebugLogger.log(FIX_MESSAGE, "Written  %s%n", buffer, written);
+        DebugLogger.log(FIX_MESSAGE_TCP, "Written  %s%n", buffer, written);
         updateSendingTimeoutTimeInMs(timeInMs, written);
 
         return written;

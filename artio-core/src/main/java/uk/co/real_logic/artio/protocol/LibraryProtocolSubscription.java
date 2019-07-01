@@ -31,12 +31,12 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private final ReleaseSessionReplyDecoder releaseSessionReply = new ReleaseSessionReplyDecoder();
     private final RequestSessionReplyDecoder requestSessionReply = new RequestSessionReplyDecoder();
     private final NewSentPositionDecoder newSentPosition = new NewSentPositionDecoder();
-    private final NotLeaderDecoder libraryConnect = new NotLeaderDecoder();
     private final ControlNotificationDecoder controlNotification = new ControlNotificationDecoder();
     private final SlowStatusNotificationDecoder slowStatusNotification = new SlowStatusNotificationDecoder();
     private final ResetLibrarySequenceNumberDecoder resetLibrarySequenceNumber =
         new ResetLibrarySequenceNumberDecoder();
     private final ManageSessionDecoder manageSession = new ManageSessionDecoder();
+    private final FollowerSessionReplyDecoder followerSessionReply = new FollowerSessionReplyDecoder();
 
     private final LibraryEndPointHandler handler;
 
@@ -86,11 +86,6 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
                 return onRequestSessionReply(buffer, offset, blockLength, version);
             }
 
-            case NotLeaderDecoder.TEMPLATE_ID:
-            {
-                return onNotLeader(buffer, offset, blockLength, version);
-            }
-
             case ControlNotificationDecoder.TEMPLATE_ID:
             {
                 return onControlNotification(buffer, offset, blockLength, version);
@@ -105,25 +100,14 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             {
                 return onResetLibrarySequenceNumber(buffer, offset, blockLength, version);
             }
+
+            case FollowerSessionReplyDecoder.TEMPLATE_ID:
+            {
+                return onFollowerSessionReply(buffer, offset, blockLength, version);
+            }
         }
 
         return CONTINUE;
-    }
-
-
-    private Action onNotLeader(
-        final DirectBuffer buffer,
-        final int offset,
-        final int blockLength,
-        final int version)
-    {
-        libraryConnect.wrap(buffer, offset, blockLength, version);
-        // Deliberately don't keepalive the heartbeat - may not be a cluster leader
-
-        return handler.onNotLeader(
-            libraryConnect.libraryId(),
-            libraryConnect.replyToId(),
-            libraryConnect.libraryChannel());
     }
 
     private Action onControlNotification(
@@ -182,6 +166,26 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         return handler.onResetLibrarySequenceNumber(
             libraryId,
             resetLibrarySequenceNumber.session());
+    }
+
+    private Action onFollowerSessionReply(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version)
+    {
+        followerSessionReply.wrap(buffer, offset, blockLength, version);
+        final int libraryId = followerSessionReply.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
+
+        return handler.onFollowerSessionReply(
+            libraryId,
+            followerSessionReply.replyToId(),
+            followerSessionReply.session());
     }
 
     private Action onApplicationHeartbeat(

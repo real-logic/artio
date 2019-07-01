@@ -161,6 +161,11 @@ public class ReplayIndex implements Index
                 .computeIfAbsent(continuedFixSessionId, newSessionIndex)
                 .onRecord(endPosition, length, continuedSequenceNumber, continuedSequenceIndex, header);
         }
+
+        final int aeronSessionId = header.sessionId();
+        final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
+        positionWriter.indexedUpTo(aeronSessionId, recordingId, endPosition);
+        positionWriter.updateChecksums();
     }
 
     public void close()
@@ -232,9 +237,6 @@ public class ReplayIndex implements Index
                 .sequenceIndex(sequenceIndex)
                 .recordingId(recordingId)
                 .length(length);
-
-            positionWriter.indexedUpTo(aeronSessionId, recordingId, endPosition);
-            positionWriter.updateChecksums();
 
             endChangeOrdered(buffer, changePosition);
         }

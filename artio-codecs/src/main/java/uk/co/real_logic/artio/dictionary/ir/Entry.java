@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.dictionary.ir;
 
+import org.agrona.LangUtil;
 import org.agrona.Verify;
 import org.agrona.generation.ResourceConsumer;
 
@@ -61,23 +62,30 @@ public final class Entry
     public void forEach(
         final ResourceConsumer<Field> withField,
         final ResourceConsumer<Group> withGroup,
-        final ResourceConsumer<Component> withComponent) throws IOException
+        final ResourceConsumer<Component> withComponent)
     {
-        if (element instanceof Field)
+        try
         {
-            withField.accept((Field)element);
+            if (element instanceof Field)
+            {
+                withField.accept((Field)element);
+            }
+            else if (element instanceof Group)
+            {
+                withGroup.accept((Group)element);
+            }
+            else if (element instanceof Component)
+            {
+                withComponent.accept((Component)element);
+            }
+            else
+            {
+                throw new IllegalStateException("Unknown element type: " + element);
+            }
         }
-        else if (element instanceof Group)
+        catch (final IOException e)
         {
-            withGroup.accept((Group)element);
-        }
-        else if (element instanceof Component)
-        {
-            withComponent.accept((Component)element);
-        }
-        else
-        {
-            throw new IllegalStateException("Unknown element type: " + element);
+            LangUtil.rethrowUnchecked(e);
         }
     }
 

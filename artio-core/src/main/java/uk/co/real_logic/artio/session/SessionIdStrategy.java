@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.session;
 
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
-import uk.co.real_logic.artio.builder.HeaderEncoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.decoder.HeaderDecoder;
 
 /**
@@ -83,7 +83,7 @@ public interface SessionIdStrategy
      * @param compositeKey the composite session key.
      * @param headerEncoder the outbound message header.
      */
-    void setupSession(CompositeKey compositeKey, HeaderEncoder headerEncoder);
+    void setupSession(CompositeKey compositeKey, SessionHeaderEncoder headerEncoder);
 
     /**
      * Saves the given composite key to a buffer.

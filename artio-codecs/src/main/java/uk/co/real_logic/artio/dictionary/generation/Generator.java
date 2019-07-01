@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.AsciiSequenceView;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.IntHashSet;
 import org.agrona.generation.OutputManager;
@@ -27,7 +28,6 @@ import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.LocalMktDateEncoder;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.AsciiBuffer;
-import org.agrona.AsciiSequenceView;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.IOException;
@@ -88,21 +88,24 @@ public abstract class Generator
     protected final OutputManager outputManager;
     protected final Class<?> validationClass;
     protected final Class<?> rejectUnknownClass;
+    protected final boolean flyweightsEnabled;
 
     protected Generator(
         final Dictionary dictionary,
-        final String builderPackage,
-        final String builderCommonPackage,
+        final String thisPackage,
+        final String commonPackage,
         final OutputManager outputManager,
         final Class<?> validationClass,
-        final Class<?> rejectUnknownClass)
+        final Class<?> rejectUnknownClass,
+        final boolean flyweightsEnabled)
     {
         this.dictionary = dictionary;
-        this.builderPackage = builderPackage;
-        this.builderCommonPackage = builderCommonPackage;
+        this.builderPackage = thisPackage;
+        this.builderCommonPackage = commonPackage;
         this.outputManager = outputManager;
         this.validationClass = validationClass;
         this.rejectUnknownClass = rejectUnknownClass;
+        this.flyweightsEnabled = flyweightsEnabled;
     }
 
     public void generate()
@@ -120,7 +123,8 @@ public abstract class Generator
     protected void generateImports(
         final String compoundSuffix,
         final AggregateType type,
-        final Writer out) throws IOException
+        final Writer out,
+        final Class<?>... extraImports) throws IOException
     {
         out
             .append(importFor(MutableDirectBuffer.class))
@@ -134,8 +138,7 @@ public abstract class Generator
             out.append(importFor(topType(GROUP)));
         }
 
-        out
-            .append(type == MESSAGE ? String.format(COMMON_COMPOUND_IMPORTS, builderPackage, compoundSuffix) : "")
+        out .append(type == MESSAGE ? String.format(COMMON_COMPOUND_IMPORTS, builderPackage, compoundSuffix) : "")
             .append(importFor(DecimalFloat.class))
             .append(importFor(MutableAsciiBuffer.class))
             .append(importFor(AsciiBuffer.class))
@@ -146,10 +149,17 @@ public abstract class Generator
             .append(importFor(CharArraySet.class))
             .append(importFor(IntHashSet.class))
             .append(importFor(IntHashSet.IntIterator.class))
-            .append(importFor(EncodingException.class))
-            .append(importStaticFor(StandardCharsets.class, "US_ASCII"))
+            .append(importFor(EncodingException.class));
+
+        for (final Class<?> extraImport : extraImports)
+        {
+            out.append(importFor(extraImport));
+        }
+
+        out .append(importStaticFor(StandardCharsets.class, "US_ASCII"))
             .append(importStaticFor(validationClass, CODEC_VALIDATION_ENABLED))
             .append(importStaticFor(rejectUnknownClass, CODEC_REJECT_UNKNOWN_FIELD_ENABLED));
+
         if (!builderPackage.equals(builderCommonPackage) && !builderCommonPackage.isEmpty())
         {
             out.append(importFor(builderCommonPackage + ".*"));
@@ -295,14 +305,14 @@ public abstract class Generator
                 return resetRequiredFloat(name);
 
             case CHAR:
-                return resetFieldValue(name, "MISSING_CHAR");
+                return resetFieldValue(field, "MISSING_CHAR");
 
             case DATA:
             case XMLDATA:
-                return resetFieldValue(name, "null");
+                return resetFieldValue(field, "null");
 
             case BOOLEAN:
-                return resetFieldValue(name, "false");
+                return resetFieldValue(field, "false");
 
             case STRING:
             case MULTIPLEVALUESTRING:
@@ -418,22 +428,16 @@ public abstract class Generator
             nameOfResetMethod(name));
     }
 
-    protected String resetByMethod(final String name)
+    protected String resetFieldValue(final Field field, final String resetValue)
     {
-        return String.format(
-            "    public void %2$s()\n" +
-            "    {\n" +
-            "        %1$s.reset();\n" +
-            "    }\n\n",
-            formatPropertyName(name),
-            nameOfResetMethod(name));
-    }
+        final String name = field.name();
+        final boolean hasLengthField = field.type().hasLengthField(flyweightsEnabled);
+        final String lengthReset = hasLengthField ? "        %2$sLength = 0;\n" : "";
 
-    protected String resetFieldValue(final String name, final String resetValue)
-    {
         return String.format(
             "    public void %1$s()\n" +
             "    {\n" +
+            lengthReset +
             "        %2$s = %3$s;\n" +
             "    }\n\n",
             nameOfResetMethod(name),
@@ -563,11 +567,23 @@ public abstract class Generator
             case TZTIMESTAMP:
                 return stringToString(fieldName);
 
+            // Call the getter for other choices in order to ensure that the flyweight version is populated
+
             case DATA:
             case XMLDATA:
-                return String.format("Arrays.toString(%s)", fieldName);
+                if (flyweightsEnabled)
+                {
+                    return String.format("Arrays.toString(%1$s())", fieldName);
+                }
+
+                return String.format("Arrays.toString(%1$s)", fieldName);
 
             default:
+                if (flyweightsEnabled)
+                {
+                    return String.format("%1$s()", fieldName);
+                }
+
                 return fieldName;
         }
     }

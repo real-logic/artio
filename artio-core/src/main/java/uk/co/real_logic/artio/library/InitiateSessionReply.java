@@ -33,7 +33,6 @@ class InitiateSessionReply extends LibraryReply<Session>
     private final SessionConfiguration configuration;
 
     private int addressIndex = 0;
-    private boolean requiresResend;
 
     InitiateSessionReply(
         final LibraryPoller libraryPoller,
@@ -48,7 +47,7 @@ class InitiateSessionReply extends LibraryReply<Session>
         }
     }
 
-    private void sendMessage()
+    protected void sendMessage()
     {
         final List<String> hosts = configuration.hosts();
         final IntArrayList ports = configuration.ports();
@@ -87,16 +86,6 @@ class InitiateSessionReply extends LibraryReply<Session>
         final int port = configuration.ports().getInt(addressIndex);
         ((InternalSession)result).address(host, port);
         super.onComplete(result);
-    }
-
-    boolean poll(final long timeInMs)
-    {
-        if (requiresResend)
-        {
-            sendMessage();
-        }
-
-        return super.poll(timeInMs);
     }
 
     protected boolean onTimeout()

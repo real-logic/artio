@@ -19,8 +19,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.artio.fields.CalendricalUtil.*;
-import static uk.co.real_logic.artio.fields.UtcTimeOnlyDecoder.MICROS_FIELD_LENGTH;
-import static uk.co.real_logic.artio.fields.UtcTimeOnlyDecoder.MILLIS_FIELD_LENGTH;
+import static uk.co.real_logic.artio.fields.UtcTimeOnlyDecoder.*;
 
 /**
  * .
@@ -30,6 +29,7 @@ public final class UtcTimeOnlyEncoder
     public static final int LENGTH_WITHOUT_MILLISECONDS = 8;
     public static final int LENGTH_WITH_MILLISECONDS = 12;
     public static final int LENGTH_WITH_MICROSECONDS = 15;
+    public static final int LENGTH_WITH_NANOSECONDS = 18;
 
     private final UnsafeBuffer buffer = new UnsafeBuffer(0, 0);
     private final MutableAsciiBuffer flyweight = new MutableAsciiBuffer(buffer);
@@ -54,35 +54,30 @@ public final class UtcTimeOnlyEncoder
     }
 
     public static int encodeMicros(
-        final long millisecondOfDay,
+        final long microsecondOfDay,
         final MutableAsciiBuffer string,
         final int offset)
     {
-        final long localSecond = Math.floorDiv(millisecondOfDay, MICROS_IN_SECOND);
-        final int fractionOfSecond = (int)(Math.floorMod(millisecondOfDay, MICROS_IN_SECOND));
+        final long localSecond = Math.floorDiv(microsecondOfDay, MICROS_IN_SECOND);
+        final int fractionOfSecond = (int)(Math.floorMod(microsecondOfDay, MICROS_IN_SECOND));
 
         encodeFraction(localSecond, fractionOfSecond, string, offset, MICROS_FIELD_LENGTH);
 
         return fractionOfSecond > 0 ? LENGTH_WITH_MICROSECONDS : LENGTH_WITHOUT_MILLISECONDS;
     }
 
-    /*static void encode(
-        final long epochSecond,
-        final int millisOfSecond,
+    public static int encodeNanos(
+        final long nanosecondOfDay,
         final MutableAsciiBuffer string,
         final int offset)
     {
-        encodeFraction(epochSecond, millisOfSecond, string, offset, MILLIS_FIELD_LENGTH);
-    }
+        final long localSecond = Math.floorDiv(nanosecondOfDay, NANOS_IN_SECOND);
+        final int fractionOfSecond = (int)(Math.floorMod(nanosecondOfDay, NANOS_IN_SECOND));
 
-    static void encodeMicros(
-        final long epochSecond,
-        final int microsOfSecond,
-        final MutableAsciiBuffer string,
-        final int offset)
-    {
-        encodeFraction(epochSecond, microsOfSecond, string, offset, MICROS_FIELD_LENGTH);
-    }*/
+        encodeFraction(localSecond, fractionOfSecond, string, offset, NANOS_FIELD_LENGTH);
+
+        return fractionOfSecond > 0 ? LENGTH_WITH_NANOSECONDS : LENGTH_WITHOUT_MILLISECONDS;
+    }
 
     static void encodeFraction(
         final long epochSecond,

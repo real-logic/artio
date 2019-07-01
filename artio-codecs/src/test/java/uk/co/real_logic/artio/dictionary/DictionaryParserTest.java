@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio.dictionary;
 
 import org.hamcrest.Matcher;
-import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
@@ -36,10 +36,10 @@ public class DictionaryParserTest
 {
     private static final String EXAMPLE_FILE = "example_dictionary.xml";
 
-    private Dictionary dictionary;
+    private static Dictionary dictionary;
 
-    @Before
-    public void setUp() throws Exception
+    @BeforeClass
+    public static void setUp() throws Exception
     {
         dictionary = parseExample();
     }
@@ -255,6 +255,15 @@ public class DictionaryParserTest
             "Message: PoorlyDefinedMessage Field : MemberSubID (104) Through Path: [NextComponent]\n");
     }
 
+    @Test
+    public void shouldNotAllowDataFieldWithoutLength()
+    {
+        shouldThrow(() -> parseDictionary("example_invalid_dictionary_3.xml"),
+            IllegalStateException.class,
+            "Each DATA field must have a corresponding LENGTH field using the suffix 'Len' or 'Length'." +
+            " RawData is missing a length field in EgGroupGroup");
+    }
+
     private Component component(final String name)
     {
         return dictionary.components().get(name);
@@ -280,12 +289,12 @@ public class DictionaryParserTest
         return dictionary.fields().get(name);
     }
 
-    private Dictionary parseExample() throws Exception
+    private static Dictionary parseExample() throws Exception
     {
         return parseDictionary(EXAMPLE_FILE);
     }
 
-    private Dictionary parseDictionary(final String name) throws Exception
+    private static Dictionary parseDictionary(final String name) throws Exception
     {
         return new DictionaryParser()
             .parse(DictionaryParserTest.class.getResourceAsStream(name), null);
@@ -348,8 +357,16 @@ public class DictionaryParserTest
         }
         catch (final Exception e)
         {
-            assertThat(e.getClass(), typeCompatibleWith(expectedException));
-            assertThat(e.getMessage(), is(message));
+            try
+            {
+                assertThat(e.getClass(), typeCompatibleWith(expectedException));
+                assertThat(e.getMessage(), is(message));
+            }
+            catch (final AssertionError error)
+            {
+                e.printStackTrace();
+                throw error;
+            }
         }
     }
 

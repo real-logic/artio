@@ -41,6 +41,7 @@ import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
@@ -361,9 +362,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         disconnectSessions();
 
-        assertThat(initiatingLibrary.sessions(), hasSize(0));
-        assertThat(acceptingLibrary.sessions(), hasSize(0));
-
         final long sessionId = acceptingSession.id();
         final int sequenceIndex = sequenceIndexSupplier.getAsInt();
 
@@ -465,20 +463,16 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertAllMessagesHaveSequenceIndex(0);
         clearMessages();
 
-        assertEventuallyTrue(
-            "Library failed to disconnect",
-            () ->
-            {
-                testSystem.poll();
-
-                return !acceptingLibrary.isConnected();
-            });
-
         testSystem.close(acceptingLibrary);
+        acceptingHandler.clearSessions();
+
+        initiatingEngineHasLibraryConnected();
 
         launchAcceptingEngine();
 
-        acceptingLibrary = testSystem.add(newAcceptingLibrary(acceptingHandler));
+        acceptingLibrary = testSystem.connect(acceptingLibraryConfig(acceptingHandler));
+
+        initiatingEngineHasLibraryConnected();
 
         assertTrue("acceptingLibrary has failed to connect", acceptingLibrary.isConnected());
         assertTrue("initiatingLibrary is no longer connected", initiatingLibrary.isConnected());
@@ -488,6 +482,14 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         messagesCanBeExchanged();
 
         assertSequenceIndicesAre(1);
+    }
+
+    private void initiatingEngineHasLibraryConnected()
+    {
+        final Reply<List<LibraryInfo>> libraries = initiatingEngine.libraries();
+        testSystem.awaitCompletedReplies(libraries);
+        final List<LibraryInfo> libraryInfos = libraries.resultIfPresent();
+        assertThat(libraryInfos, hasSize(2));
     }
 
     @Test
@@ -782,6 +784,30 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         messagesCanBeExchanged();
     }
 
+    @Test
+    public void shouldReplayCurrentMessages()
+    {
+        final long sessionId = acceptingHandler.awaitSessionId(testSystem::poll);
+
+        acceptingSession = acquireSession(
+            acceptingHandler,
+            acceptingLibrary,
+            sessionId,
+            testSystem,
+            CURRENT_SEQUENCE,
+            CURRENT_SEQUENCE);
+
+        assertEquals(INITIATOR_ID, acceptingHandler.lastInitiatorCompId());
+        assertEquals(ACCEPTOR_ID, acceptingHandler.lastAcceptorCompId());
+        assertNotNull("unable to acquire accepting session", acceptingSession);
+
+        final List<FixMessage> replayedMessages = acceptingOtfAcceptor.messages();
+        assertThat(replayedMessages, hasSize(1));
+        assertEquals(1, replayedMessages.get(0).messageSequenceNumber());
+
+        messagesCanBeExchanged();
+    }
+
     private void exchangeExecutionReport()
     {
         final ExecutionReportEncoder executionReport = new ExecutionReportEncoder();
@@ -868,21 +894,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         final List<LibraryInfo> libraries = libraries(engine);
         assertThat(libraries.get(0).sessions(), contains(hasSessionId(sessionId)));
-    }
-
-    private void disconnectSessions()
-    {
-        logoutAcceptingSession();
-
-        assertSessionsDisconnected();
-
-        acceptingSession.close();
-        initiatingSession.close();
-    }
-
-    private void logoutAcceptingSession()
-    {
-        assertThat(acceptingSession.startLogout(), greaterThan(0L));
     }
 
     private void libraryNotifiedThatGatewayOwnsSession(final FakeHandler handler, final long expectedSessionId)

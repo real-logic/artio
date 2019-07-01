@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2019 Real Logic Ltd., Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,13 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.AsciiSequenceView;
+import org.agrona.DirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.EncodingException;
 import uk.co.real_logic.artio.builder.Encoder;
@@ -52,8 +56,12 @@ public class EncoderGeneratorTest
     public static void generate() throws Exception
     {
         sources = generateSources(true);
+        if (AbstractDecoderGeneratorTest.CODEC_LOGGING)
+        {
+            System.out.println(sources);
+        }
         heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
-        if (heartbeat == null)
+        if (heartbeat == null && !AbstractDecoderGeneratorTest.CODEC_LOGGING)
         {
             System.out.println(sources);
         }
@@ -71,7 +79,7 @@ public class EncoderGeneratorTest
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final EncoderGenerator encoderGenerator =
-            new EncoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass,
+            new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass,
             rejectUnknownField);
         enumGenerator.generate();
         encoderGenerator.generate();
@@ -121,7 +129,7 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void byteArraySettersWriteToFields() throws Exception
+    public void shouldWriteByteArraySettersToFields() throws Exception
     {
         final Encoder encoder = newHeartbeat();
 
@@ -130,7 +138,6 @@ public class EncoderGeneratorTest
             .invoke(encoder, VALUE_IN_BYTES);
 
         assertTestReqIsValue(encoder);
-
         assertEncodesTestReqIdFully(encoder);
     }
 
@@ -139,7 +146,7 @@ public class EncoderGeneratorTest
     {
         final Encoder encoder = newHeartbeat();
 
-        setTestReqIdBytes(encoder, 1, 3);
+        setTestReqIdBytes(encoder);
 
         assertArrayEquals(PREFIXED_VALUE_IN_BYTES, getTestReqIdBytes(encoder));
         assertTestReqIdOffset(1, encoder);
@@ -148,12 +155,48 @@ public class EncoderGeneratorTest
         assertEncodesTestReqIdFully(encoder);
     }
 
-    private void setTestReqIdBytes(
-        final Object encoder, final int offset, final int length) throws Exception
+    @Test
+    public void shouldWriteDirectBufferSettersToFields() throws Exception
     {
+        final Encoder encoder = newHeartbeat();
+
         heartbeat
-            .getMethod(TEST_REQ_ID, byte[].class, int.class, int.class)
-            .invoke(encoder, PREFIXED_VALUE_IN_BYTES, offset, length);
+            .getMethod(TEST_REQ_ID, DirectBuffer.class)
+            .invoke(encoder, new UnsafeBuffer(VALUE_IN_BYTES));
+
+        assertTestReqIsValue(encoder);
+        assertEncodesTestReqIdFully(encoder);
+    }
+
+    @Test
+    public void offsetAndLengthDirectBufferSettersWriteFields() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+
+        setTestReqIdBuffer(encoder);
+
+        assertArrayEquals(PREFIXED_VALUE_IN_BYTES, getTestReqIdBytes(encoder));
+        assertTestReqIdOffset(1, encoder);
+        assertTestReqIdLength(3, encoder);
+
+        assertEncodesTestReqIdFully(encoder);
+    }
+
+    @Ignore // TODO: need to improve the AsciiSequenceView API.
+    @Test
+    public void shouldWriteAsciiSequenceViewSetters() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+
+        heartbeat
+            .getMethod(TEST_REQ_ID, AsciiSequenceView.class)
+            .invoke(encoder, new AsciiSequenceView(new UnsafeBuffer(PREFIXED_VALUE_IN_BYTES), 1, 3));
+
+        assertArrayEquals(PREFIXED_VALUE_IN_BYTES, getTestReqIdBytes(encoder));
+        assertTestReqIdOffset(1, encoder);
+        assertTestReqIdLength(3, encoder);
+
+        assertEncodesTestReqIdFully(encoder);
     }
 
     @Test
@@ -238,6 +281,7 @@ public class EncoderGeneratorTest
         setupTrailer(encoder);
 
         setOptionalFields(encoder);
+        setDataFieldLength(encoder);
         assertEncodesTo(encoder, ENCODED_MESSAGE);
     }
 
@@ -278,6 +322,8 @@ public class EncoderGeneratorTest
         setupTrailer(encoder);
 
         setOptionalFields(encoder);
+        setDataFieldLength(encoder);
+
         assertEncodesTo(encoder, ENCODED_MESSAGE);
     }
 
@@ -336,6 +382,7 @@ public class EncoderGeneratorTest
 
         setRequiredFields(encoder);
         setOptionalFields(encoder);
+        setDataFieldLength(encoder);
 
         assertThat(encoder.toString(), containsString(STRING_ENCODED_MESSAGE_SUFFIX));
     }
@@ -880,15 +927,19 @@ public class EncoderGeneratorTest
 
     private byte[] getTestReqIdBytes(final Object encoder) throws Exception
     {
-        return (byte[])getField(encoder, TEST_REQ_ID);
+        return getBytesField(encoder, TEST_REQ_ID);
+    }
+
+    private byte[] getBytesField(final Object encoder, final String fieldName) throws Exception
+    {
+        return ((UnsafeBuffer)getField(encoder, fieldName)).byteArray();
     }
 
     private void assertOnBehalfOfCompIDValue(final Object encoder, final String value) throws Exception
     {
-        assertArrayEquals(value.getBytes(), (byte[])getField(encoder, ON_BEHALF_OF_COMP_ID));
+        assertArrayEquals(value.getBytes(), getBytesField(encoder, ON_BEHALF_OF_COMP_ID));
         assertEquals(value.length(), getField(encoder, ON_BEHALF_OF_COMP_ID_LENGTH));
     }
-
 
     private boolean hasTestReqId(final Object encoder) throws Exception
     {
@@ -925,5 +976,26 @@ public class EncoderGeneratorTest
         setRequiredFields(encoder);
         assertThat(encoder.toString(), containsString(STRING_ONLY_TESTREQ_MESSAGE_SUFFIX));
         assertEncodesTo(encoder, ONLY_TESTREQ_ENCODED_MESSAGE);
+    }
+
+    private void setTestReqIdBytes(
+        final Object encoder) throws Exception
+    {
+        heartbeat
+            .getMethod(TEST_REQ_ID, byte[].class, int.class, int.class)
+            .invoke(encoder, PREFIXED_VALUE_IN_BYTES, 1, 3);
+    }
+
+    private void setTestReqIdBuffer(
+        final Object encoder) throws Exception
+    {
+        heartbeat
+            .getMethod(TEST_REQ_ID, DirectBuffer.class, int.class, int.class)
+            .invoke(encoder, new UnsafeBuffer(PREFIXED_VALUE_IN_BYTES), 1, 3);
+    }
+
+    private void setDataFieldLength(final Encoder encoder) throws Exception
+    {
+        setInt(encoder, "dataFieldLength", 3);
     }
 }

@@ -36,9 +36,11 @@ import java.util.Objects;
 
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
 import static uk.co.real_logic.artio.dictionary.StandardFixConstants.MIN_MESSAGE_SIZE;
 import static uk.co.real_logic.artio.dictionary.StandardFixConstants.START_OF_HEADER;
-import static uk.co.real_logic.artio.messages.DisconnectReason.*;
+import static uk.co.real_logic.artio.messages.DisconnectReason.NO_LOGON;
+import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
 import static uk.co.real_logic.artio.util.AsciiBuffer.SEPARATOR;
@@ -91,9 +93,9 @@ class ReceiverEndPoint
     private SelectionKey selectionKey;
     private boolean isPaused = false;
 
-    private AuthenticationResult backpressuredAuthenticationResult;
-    private int backpressuredAuthenticationOffset;
-    private int backpressuredAuthenticationLength;
+    private AcceptorLogonResult pendingAcceptorLogon;
+    private int pendingAcceptorLogonMsgOffset;
+    private int pendingAcceptorLogonMsgLength;
 
     ReceiverEndPoint(
         final TcpChannel channel,
@@ -141,9 +143,9 @@ class ReceiverEndPoint
             return 0;
         }
 
-        if (backpressuredAuthenticationResult != null)
+        if (pendingAcceptorLogon != null)
         {
-            return retryBackpressuredAuthenticationResult();
+            return pollPendingLogon();
         }
 
         try
@@ -168,31 +170,48 @@ class ReceiverEndPoint
         }
     }
 
-    private int retryBackpressuredAuthenticationResult()
+    private int pollPendingLogon()
     {
-        if (gatewaySessions.lookupSequenceNumbers(
-            gatewaySession, backpressuredAuthenticationResult.requiredPosition()))
+        if (pendingAcceptorLogon.poll())
         {
-            backpressuredAuthenticationResult = null;
-
-            int offset = this.backpressuredAuthenticationOffset;
-            final int length = this.backpressuredAuthenticationLength;
-
-            if (!saveMessage(offset, LogonDecoder.MESSAGE_TYPE, length))
+            if (pendingAcceptorLogon.isAccepted())
             {
-                return offset;
+                sessionId = gatewaySession.sessionId();
+                sequenceIndex = gatewaySession.sequenceIndex();
+
+                framer.onLogonMessageReceived(gatewaySession);
+
+                pendingAcceptorLogon = null;
+
+                int offset = this.pendingAcceptorLogonMsgOffset;
+                final int length = this.pendingAcceptorLogonMsgLength;
+
+                // Might be paused at this point to ensure that a library has been notified of
+                // the new session in soleLibraryMode
+                if (isPaused)
+                {
+                    moveRemainingDataToBufferStart(offset);
+                    return offset;
+                }
+
+                if (!saveMessage(offset, LogonDecoder.MESSAGE_TYPE, length))
+                {
+                    return offset;
+                }
+                else
+                {
+                    offset += length;
+                    moveRemainingDataToBufferStart(offset);
+                    return offset;
+                }
             }
             else
             {
-                offset += length;
-                moveRemainingDataToBufferStart(offset);
-                return offset;
+                completeDisconnect(pendingAcceptorLogon.reason());
             }
         }
-        else
-        {
-            return 1;
-        }
+
+        return 1;
     }
 
     private int readData() throws IOException
@@ -202,7 +221,7 @@ class ReceiverEndPoint
         {
             if (dataRead > 0)
             {
-                DebugLogger.log(FIX_MESSAGE, "Read     %s%n", buffer, 0, dataRead);
+                DebugLogger.log(FIX_MESSAGE_TCP, "Read     %s%n", buffer, 0, dataRead);
             }
             usedBufferData += dataRead;
         }
@@ -276,8 +295,9 @@ class ReceiverEndPoint
                 }
                 else
                 {
-                    if (requiresAuthentication() && !authenticate(offset, length))
+                    if (requiresAuthentication())
                     {
+                        startAuthenticationFlow(offset, length, messageType);
                         return offset;
                     }
 
@@ -390,38 +410,26 @@ class ReceiverEndPoint
         return buffer.scan(startScan + 1, usedBufferData - 1, START_OF_HEADER);
     }
 
-    private boolean authenticate(final int offset, final int length)
+    private void startAuthenticationFlow(final int offset, final int length, final int messageType)
     {
         if (sessionId != UNKNOWN)
         {
-            return false;
+            return;
         }
 
-        logon.decode(buffer, offset, length);
-
-        final AuthenticationResult authenticationResult = gatewaySessions.authenticate(
-            logon,
-            connectionId(),
-            gatewaySession);
-
-        if (!authenticationResult.isValid())
+        if (messageType == LogonDecoder.MESSAGE_TYPE)
         {
-            completeDisconnect(authenticationResult.reason());
-            return false;
+            logon.decode(buffer, offset, length);
+
+            pendingAcceptorLogonMsgOffset = offset;
+            pendingAcceptorLogonMsgLength = length;
+
+            pendingAcceptorLogon = gatewaySessions.authenticate(logon, connectionId(), gatewaySession);
         }
-
-        sessionId = gatewaySession.sessionId();
-        sequenceIndex = gatewaySession.sequenceIndex();
-
-        if (authenticationResult.isBackPressured())
+        else
         {
-            backpressuredAuthenticationResult = authenticationResult;
-            backpressuredAuthenticationOffset = offset;
-            backpressuredAuthenticationLength = length;
-            return false;
+            completeDisconnect(DisconnectReason.FIRST_MESSAGE_NOT_LOGON);
         }
-
-        return true;
     }
 
     private boolean stashIfBackPressured(final int offset, final long position)
@@ -437,7 +445,8 @@ class ReceiverEndPoint
 
     private boolean saveMessage(final int offset, final int messageType, final int length)
     {
-        final long position = publication.saveMessage(buffer,
+        final long position = publication.saveMessage(
+            buffer,
             offset,
             length,
             libraryId,
@@ -493,7 +502,7 @@ class ReceiverEndPoint
         try
         {
             return buffer.getDigit(startOfBodyTag) != tagId ||
-                   buffer.getChar(startOfBodyTag + 1) != '=';
+                buffer.getChar(startOfBodyTag + 1) != '=';
         }
         catch (final IllegalArgumentException ex)
         {
@@ -511,7 +520,7 @@ class ReceiverEndPoint
 
     private void invalidateMessage(final int offset)
     {
-        DebugLogger.log(FIX_MESSAGE, "%s", buffer, offset, MIN_MESSAGE_SIZE);
+        DebugLogger.log(FIX_MESSAGE, "Invalidated: %s", buffer, offset, MIN_MESSAGE_SIZE);
         saveInvalidMessage(offset);
     }
 
@@ -534,7 +543,8 @@ class ReceiverEndPoint
 
     private void saveInvalidMessage(final int offset)
     {
-        final long position = publication.saveMessage(buffer,
+        final long position = publication.saveMessage(
+            buffer,
             offset,
             usedBufferData,
             libraryId,
@@ -560,7 +570,8 @@ class ReceiverEndPoint
 
     private boolean saveInvalidChecksumMessage(final int offset, final int messageType, final int length)
     {
-        final long position = publication.saveMessage(buffer,
+        final long position = publication.saveMessage(
+            buffer,
             offset,
             length,
             libraryId,

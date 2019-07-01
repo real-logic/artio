@@ -15,11 +15,10 @@
  */
 package uk.co.real_logic.artio.dictionary;
 
-import org.agrona.LangUtil;
 import org.agrona.Verify;
 import org.w3c.dom.*;
-import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
+import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
 import uk.co.real_logic.artio.dictionary.ir.Field.Value;
 
@@ -30,11 +29,11 @@ import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
 import javax.xml.xpath.XPathFactory;
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
 import java.util.function.Consumer;
 
+import static java.util.stream.Collectors.toMap;
 import static javax.xml.xpath.XPathConstants.NODESET;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.*;
 
@@ -86,6 +85,8 @@ public final class DictionaryParser
 
         reconnectForwardReferences(forwardReferences, components);
         sanitizeDictionary(fields, messages);
+        validateDataFields(messages);
+        validateDataFields(components.values());
 
         if (fixtDictionary != null)
         {
@@ -111,9 +112,65 @@ public final class DictionaryParser
             final Component trailer = extractComponent(
                 document, fields, findTrailer, "Trailer", components, forwardReferences);
 
+            validateDataFieldsInAggregate(header);
+            validateDataFieldsInAggregate(trailer);
+
             final String specType = getValueOrDefault(fixAttributes, "type", "FIX");
             return new Dictionary(messages, fields, components, header, trailer, specType, majorVersion, minorVersion);
         }
+    }
+
+    private void validateDataFields(final Collection<? extends Aggregate> aggregates)
+    {
+        aggregates.forEach(this::validateDataFieldsInAggregate);
+    }
+
+    private void validateDataFieldsInAggregate(final Aggregate aggregate)
+    {
+        final Map<String, Field> nameToField = aggregate
+            .fieldEntries()
+            .map(entry -> (Field)entry.element())
+            .collect(toMap(Field::name, f -> f));
+
+        for (final Entry entry : aggregate.entries())
+        {
+            entry.forEach(
+                field ->
+                {
+                    if (field.type().isDataBased())
+                    {
+                        final String name = field.name();
+                        if (!(hasLengthField(field, "Length", nameToField) ||
+                            hasLengthField(field, "Len", nameToField)))
+                        {
+                            throw new IllegalStateException(
+                                String.format("Each DATA field must have a corresponding LENGTH field using the " +
+                                "suffix 'Len' or 'Length'. %1$s is missing a length field in %2$s",
+                                name,
+                                aggregate.name()));
+                        }
+                    }
+                },
+                this::validateDataFieldsInAggregate,
+                this::validateDataFieldsInAggregate);
+        }
+    }
+
+    private boolean hasLengthField(final Field field, final String suffix, final Map<String, Field> nameToField)
+    {
+        final String fieldName = field.name() + suffix;
+        final Field associatedLengthField = nameToField.get(fieldName);
+        if (associatedLengthField != null)
+        {
+            final Type type = associatedLengthField.type();
+            if (type == LENGTH || type == INT)
+            {
+                field.associatedLengthField(associatedLengthField);
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void correctMultiCharacterCharEnums(final Map<String, Field> fields)
@@ -397,40 +454,33 @@ public final class DictionaryParser
         final Deque<String> path,
         final StringBuilder errorCollector)
     {
-        try
+        for (final Entry e : aggregate.entries())
         {
-            for (final Entry e : aggregate.entries())
-            {
-                e.forEach(
-                    (field) -> addField(messageName, field, allFields, path, errorCollector),
-                    (group) ->
-                    {
-                        path.push(group.name());
-                        identifyDuplicateFieldDefinitionsForMessage(
-                            messageName,
-                            group,
-                            allFields,
-                            path,
-                            errorCollector);
-                        path.pop();
-                    },
-                    (component) ->
-                    {
-                        path.push(component.name());
-                        identifyDuplicateFieldDefinitionsForMessage(
-                            messageName,
-                            component,
-                            allFields,
-                            path,
-                            errorCollector);
-                        path.pop();
-                    }
-                );
-            }
-        }
-        catch (final IOException e)
-        {
-            LangUtil.rethrowUnchecked(e);
+            e.forEach(
+                (field) -> addField(messageName, field, allFields, path, errorCollector),
+                (group) ->
+                {
+                    path.push(group.name());
+                    identifyDuplicateFieldDefinitionsForMessage(
+                        messageName,
+                        group,
+                        allFields,
+                        path,
+                        errorCollector);
+                    path.pop();
+                },
+                (component) ->
+                {
+                    path.push(component.name());
+                    identifyDuplicateFieldDefinitionsForMessage(
+                        messageName,
+                        component,
+                        allFields,
+                        path,
+                        errorCollector);
+                    path.pop();
+                }
+            );
         }
     }
 

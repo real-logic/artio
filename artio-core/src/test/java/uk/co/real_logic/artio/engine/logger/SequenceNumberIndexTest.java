@@ -29,10 +29,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mockito;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 
 import java.io.File;
 
@@ -40,9 +40,15 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.agrona.IoUtil.deleteIfExists;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.reset;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchJustMediaDriver;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.engine.SectorFramer.SECTOR_SIZE;
 import static uk.co.real_logic.artio.engine.logger.ErrorHandlerVerifier.verify;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
@@ -59,6 +65,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private SequenceNumberIndexWriter writer;
     private SequenceNumberIndexReader reader;
     private RecordingIdLookup recordingIdLookup = mock(RecordingIdLookup.class);
+    private FakeEpochClock clock = new FakeEpochClock();
 
     private MediaDriver mediaDriver = launchJustMediaDriver();
     private Aeron aeron;
@@ -163,6 +170,28 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER, newReader);
     }
 
+    @Test
+    public void shouldFlushIndexFileOnTimeout()
+    {
+        try
+        {
+            indexFixMessage();
+
+            assertEquals(0, writer.doWork());
+
+            clock.advanceMilliSeconds(DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS + 1);
+
+            assertEquals(1, writer.doWork());
+
+            final SequenceNumberIndexReader newReader = newInstanceAfterRestart();
+            assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER, newReader);
+        }
+        finally
+        {
+            writer.close();
+        }
+    }
+
     /**
      * Simulate scenario that you've crashed halfway through file flip.
      */
@@ -194,7 +223,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         final ArgumentCaptor<FileSystemCorruptionException> exception =
             ArgumentCaptor.forClass(FileSystemCorruptionException.class);
-        Mockito.verify(errorHandler, times(2)).onError(exception.capture());
+        verify(errorHandler).onError(exception.capture());
         assertThat(
             exception.getValue().getMessage(),
             Matchers.containsString("The SequenceNumberIndex file is corrupted"));
@@ -212,7 +241,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
 
         newInstanceAfterRestart();
 
-        verify(errorHandler, times(3), IllegalStateException.class);
+        verify(errorHandler, times(2), IllegalStateException.class);
     }
 
     private void corruptIndexFile(final int from, final int length)
@@ -277,7 +306,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     public void verifyNoErrors()
     {
         writer.close();
-        Mockito.verify(errorHandler, never()).onError(any());
+        verify(errorHandler, never()).onError(any());
 
         CloseHelper.close(aeron);
         CloseHelper.close(mediaDriver);
@@ -293,7 +322,8 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private SequenceNumberIndexWriter newWriter(final AtomicBuffer inMemoryBuffer)
     {
         final MappedFile indexFile = newIndexFile();
-        return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler, STREAM_ID, recordingIdLookup);
+        return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler, STREAM_ID, recordingIdLookup,
+            DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS, clock);
     }
 
     private MappedFile newIndexFile()

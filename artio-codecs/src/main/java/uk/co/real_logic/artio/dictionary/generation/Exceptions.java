@@ -17,35 +17,17 @@ package uk.co.real_logic.artio.dictionary.generation;
 
 import org.agrona.LangUtil;
 import org.agrona.concurrent.Agent;
-import org.agrona.generation.ResourceConsumer;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.toList;
 
 public final class Exceptions
 {
-    public static <T> Consumer<T> rethrown(final ResourceConsumer<T> consumer)
-    {
-        return
-            (t) ->
-            {
-                try
-                {
-                    consumer.accept(t);
-                }
-                catch (final IOException ex)
-                {
-                    LangUtil.rethrowUnchecked(ex);
-                }
-            };
-    }
 
     /**
      * Close all closeables in closeables. If any of them throw then throw that exception.

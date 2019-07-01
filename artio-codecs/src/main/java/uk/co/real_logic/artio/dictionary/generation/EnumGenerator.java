@@ -18,6 +18,9 @@ package uk.co.real_logic.artio.dictionary.generation;
 import org.agrona.LangUtil;
 import org.agrona.collections.IntHashSet;
 import org.agrona.generation.OutputManager;
+import uk.co.real_logic.artio.builder.CharRepresentable;
+import uk.co.real_logic.artio.builder.IntRepresentable;
+import uk.co.real_logic.artio.builder.StringRepresentable;
 import uk.co.real_logic.artio.dictionary.CharArrayMap;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Field;
@@ -71,7 +74,7 @@ public final class EnumGenerator
             .forEach(this::generateEnum);
     }
 
-    public static boolean hasEnumGenerated(final Field field)
+    static boolean hasEnumGenerated(final Field field)
     {
         return field.isEnum() && field.type() != Type.BOOLEAN;
     }
@@ -83,20 +86,29 @@ public final class EnumGenerator
         final List<Value> values = field.values();
         final String nullValue;
         final String unknownValue;
+        final String interfaceToImplement;
+        final String interfaceToImport;
+
         if (isCharBased(type))
         {
             nullValue = NULL_VAL_CHAR_AS_STRING;
             unknownValue = UNKNOWN_CHAR_AS_STRING;
+            interfaceToImplement = "Char";
+            interfaceToImport = importFor(CharRepresentable.class);
         }
         else if (type.isIntBased())
         {
             nullValue = NULL_VAL_INT_AS_STRING;
             unknownValue = UNKNOWN_INT_AS_STRING;
+            interfaceToImplement = "Int";
+            interfaceToImport = importFor(IntRepresentable.class);
         }
         else if (type.isStringBased())
         {
             nullValue = NULL_VAL_STRING;
             unknownValue = UNKNOWN_STRING;
+            interfaceToImplement = "String";
+            interfaceToImport = importFor(StringRepresentable.class);
         }
         else
         {
@@ -117,7 +129,8 @@ public final class EnumGenerator
                 out.append(importFor(IntHashSet.class));
                 out.append(importFor(Map.class));
                 out.append(importFor(HashMap.class));
-                out.append(generateEnumDeclaration(enumName));
+                out.append(interfaceToImport);
+                out.append(generateEnumDeclaration(enumName, interfaceToImplement));
 
                 out.append(generateEnumValues(valuesWithSentinels, type));
 
@@ -145,9 +158,10 @@ public final class EnumGenerator
         return type == Type.CHAR || type == Type.MULTIPLECHARVALUE;
     }
 
-    private String generateEnumDeclaration(final String name)
+    private String generateEnumDeclaration(final String name, final String interfaceToImplement)
     {
-        return "public enum " + name + "\n{\n";
+        final String format = "public enum " + name + " implements %sRepresentable\n{\n";
+        return String.format(format, interfaceToImplement);
     }
 
     private String generateEnumValues(final List<Value> allValues, final Type type)

@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
 package uk.co.real_logic.artio;
 
 import java.util.Optional;
@@ -25,7 +26,7 @@ import static org.junit.Assert.fail;
 public final class Timing
 {
     // Long timeout, but one that doesn't cause long overflow.
-    public static final long DEFAULT_TIMEOUT_IN_MS = isDebuggerAttached() ? Integer.MAX_VALUE : 10_000;
+    public static final long DEFAULT_TIMEOUT_IN_MS = isDebuggerAttached() ? Integer.MAX_VALUE : 20_000;
 
     public static <T> T withTimeout(final String message, final Supplier<Optional<T>> supplier, final long timeoutInMs)
     {
@@ -50,16 +51,22 @@ public final class Timing
 
     public static void assertEventuallyTrue(final String message, final BooleanSupplier condition)
     {
-        assertEventuallyTrue(
-            () -> message,
-            condition,
-            DEFAULT_TIMEOUT_IN_MS,
-            () -> {});
+        assertEventuallyTrue(message, condition, DEFAULT_TIMEOUT_IN_MS);
     }
 
     public static void assertEventuallyTrue(
         final String message,
-        final Block runnable)
+        final BooleanSupplier condition,
+        final long timeoutInMs)
+    {
+        assertEventuallyTrue(
+            () -> message,
+            condition,
+            timeoutInMs,
+            () -> {});
+    }
+
+    public static void assertEventuallyTrue(final String message, final Block runnable)
     {
         assertEventuallyTrue(message, runnable, DEFAULT_TIMEOUT_IN_MS);
     }

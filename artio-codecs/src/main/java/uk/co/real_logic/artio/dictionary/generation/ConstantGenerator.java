@@ -30,10 +30,10 @@ import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.import
 
 public class ConstantGenerator
 {
-    public static final String CLASS_NAME = "Constants";
+    static final String CLASS_NAME = "Constants";
 
-    public static final String BODY = "public class " + CLASS_NAME + "\n" + "{\n\n";
-    public static final String VERSION = "VERSION";
+    private static final String BODY = "public class " + CLASS_NAME + "\n" + "{\n\n";
+    static final String VERSION = "VERSION";
 
     private final Dictionary dictionary;
     private final String builderPackage;
@@ -72,7 +72,7 @@ public class ConstantGenerator
     {
         final String addFields = fields
             .stream()
-            .map((field) -> addField(field, name))
+            .map((field) -> addField(field, name, "        "))
             .collect(joining());
 
         final int hashMapSize = sizeHashSet(fields);

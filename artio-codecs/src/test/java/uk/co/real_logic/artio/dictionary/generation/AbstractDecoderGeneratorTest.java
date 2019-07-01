@@ -15,16 +15,15 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.AsciiSequenceView;
 import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
-import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
-import org.agrona.AsciiSequenceView;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.util.Reflection;
 
@@ -48,8 +47,10 @@ import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.UNKNOWN
 import static uk.co.real_logic.artio.fields.DecimalFloat.MISSING_FLOAT;
 import static uk.co.real_logic.artio.util.Reflection.*;
 
-public class DecoderGeneratorTest
+public abstract class AbstractDecoderGeneratorTest
 {
+    static final boolean CODEC_LOGGING = Boolean.getBoolean("fix.codec.log");
+
     private static final char[] ABC = "abc".toCharArray();
     private static final char[] AB = "ab".toCharArray();
     private static final String ON_BEHALF_OF_COMP_ID = "onBehalfOfCompID";
@@ -74,16 +75,18 @@ public class DecoderGeneratorTest
 
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
-    @BeforeClass
-    public static void generate() throws Exception
+    static void generate(final boolean flyweightStringsEnabled) throws Exception
     {
-        final Map<String, CharSequence> sourcesWithValidation = generateSources(true, false);
-        final Map<String, CharSequence> sourcesWithoutValidation = generateSources(false, false);
-        final Map<String, CharSequence> sourcesRejectingUnknownFields = generateSources(true, true);
+        final Map<String, CharSequence> sourcesWithValidation = generateSources(
+            true, false, flyweightStringsEnabled);
+        final Map<String, CharSequence> sourcesWithoutValidation = generateSources(
+            false, false, flyweightStringsEnabled);
+        final Map<String, CharSequence> sourcesRejectingUnknownFields = generateSources(
+            true, true, flyweightStringsEnabled);
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sourcesWithValidation);
         if (heartbeat == null || CODEC_LOGGING)
         {
-            System.out.println("sourcesWithValidation = " + sourcesWithValidation);
+            System.err.println("sourcesWithValidation = " + sourcesWithValidation);
         }
         component = heartbeat.getClassLoader().loadClass(COMPONENT_DECODER);
         fieldsMessage = heartbeat.getClassLoader().loadClass(FIELDS_MESSAGE_DECODER);
@@ -96,12 +99,12 @@ public class DecoderGeneratorTest
         allReqFieldTypesMessage = compileInMemory(ALL_REQ_FIELD_TYPES_MESSAGE_DECODER, sourcesWithoutValidation);
         if (heartbeatWithoutValidation == null || CODEC_LOGGING)
         {
-            System.out.println("sourcesWithoutValidation = " + sourcesWithoutValidation);
+            System.err.println("sourcesWithoutValidation = " + sourcesWithoutValidation);
         }
     }
 
-    private static Map<String, CharSequence> generateSources(final boolean validation,
-        final boolean rejectingUnknownFields)
+    static Map<String, CharSequence> generateSources(
+        final boolean validation, final boolean rejectingUnknownFields, final boolean flyweightStringsEnabled)
     {
         final Class<?> validationClass = validation ? ValidationOn.class : ValidationOff.class;
         final Class<?> rejectUnknownField = rejectingUnknownFields ?
@@ -111,7 +114,8 @@ public class DecoderGeneratorTest
             MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
-            MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass, rejectUnknownField);
+            MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass, rejectUnknownField,
+            flyweightStringsEnabled);
 
         constantGenerator.generate();
         enumGenerator.generate();
@@ -120,7 +124,7 @@ public class DecoderGeneratorTest
     }
 
     @Test
-    public void generatesDecoderClass() throws Exception
+    public void generatesDecoderClass()
     {
         assertNotNull("Not generated anything", heartbeat);
         assertIsDecoder(heartbeat);
@@ -134,16 +138,6 @@ public class DecoderGeneratorTest
     public void generatesGetters() throws NoSuchMethodException
     {
         assertHasMethod(ON_BEHALF_OF_COMP_ID, char[].class, heartbeat);
-    }
-
-    @Test
-    public void stringGettersReadFromFields() throws Exception
-    {
-        final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
-        setField(decoder, ON_BEHALF_OF_COMP_ID, ABC);
-        setField(decoder, ON_BEHALF_OF_COMP_ID + "Length", 3);
-
-        assertArrayEquals(ABC, getOnBehalfOfCompId(decoder));
     }
 
     @Test
@@ -207,7 +201,6 @@ public class DecoderGeneratorTest
         decoder.reset();
         decode(RF_NO_FIELDS, decoder);
         assertEquals(DecimalFloat.MISSING_FLOAT, getMethod(decoder, DECIMAL_RF));
-        assertEquals(DecimalFloat.ZERO, getMethod(decoder, DECIMAL_RF));
     }
 
     @Test
@@ -267,7 +260,7 @@ public class DecoderGeneratorTest
     @Test
     public void decodesEnumValuesUsingAsEnumMethods() throws Exception
     {
-        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        final Decoder decoder = enumTestMessageDecoder();
         decode(ET_ALL_FIELDS, decoder);
         assertEquals('a', getRepresentation(get(decoder, CHAR_ENUM_OPT + "AsEnum")));
         assertEquals(10, getRepresentation(get(decoder, INT_ENUM_OPT + "AsEnum")));
@@ -281,7 +274,7 @@ public class DecoderGeneratorTest
     @Test
     public void decodesMissingOptionalEnumValuesAsSentinelsUsingAsEnumMethods() throws Exception
     {
-        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        final Decoder decoder = enumTestMessageDecoder();
         decode(ET_ONLY_REQ_FIELDS, decoder);
         assertEquals(ENUM_MISSING_CHAR, getRepresentation(get(decoder, CHAR_ENUM_OPT + "AsEnum")));
         assertEquals(ENUM_MISSING_INT, getRepresentation(get(decoder, INT_ENUM_OPT + "AsEnum")));
@@ -292,7 +285,7 @@ public class DecoderGeneratorTest
     @Test
     public void decodesBadEnumValuesAsSentinelsUsingAsEnumMethods() throws Exception
     {
-        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        final Decoder decoder = enumTestMessageDecoder();
         decode(ET_ONLY_REQ_FIELDS_WITH_BAD_VALUES, decoder);
         assertEquals(ENUM_UNKNOWN_CHAR, getRepresentation(get(decoder, CHAR_ENUM_REQ + "AsEnum")));
         assertEquals(ENUM_UNKNOWN_INT, getRepresentation(get(decoder, INT_ENUM_REQ + "AsEnum")));
@@ -303,7 +296,7 @@ public class DecoderGeneratorTest
     @Test
     public void decodesMissingRequiredEnumFieldUsingAsEnumMethod() throws Exception
     {
-        final Decoder decoder = (Decoder)enumTestMessage.getConstructor().newInstance();
+        final Decoder decoder = enumTestMessageDecoder();
         decode(ET_MISSING_REQ_FIELD, decoder);
         assertEquals(UNKNOWN_NAME, get(decoder, STRING_ENUM_REQ + "AsEnum").toString());
         assertEquals(ENUM_UNKNOWN_STRING, getRepresentation(get(decoder, STRING_ENUM_REQ + "AsEnum")));
@@ -321,6 +314,19 @@ public class DecoderGeneratorTest
 
         assertValid(decoder);
     }
+
+    @Test
+    public void parsesMessagesWithSeparatorInsideDataField() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(SOH_IN_DATA_FIELD_MESSAGE);
+
+        assertTrue(hasDataField(decoder));
+        assertArrayEquals(new byte[]{ 'a', '\001', 'c' }, getDataField(decoder));
+
+        assertValid(decoder);
+    }
+
+    // TODO: update the examples to add this
 
     @Test
     public void setsMissingOptionalValues() throws Exception
@@ -352,7 +358,7 @@ public class DecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE);
 
         final Decoder header = getHeader(decoder);
-        assertEquals(75, getBodyLength(header));
+        assertEquals(81, getBodyLength(header));
 
         final Decoder trailer = getTrailer(decoder);
         assertEquals("199", getChecksum(trailer));
@@ -597,15 +603,12 @@ public class DecoderGeneratorTest
     @Test
     public void shouldLeaveDecoderInUsableIfUnknownFieldForRepeatingGroupReachedAndRejectingOn() throws Exception
     {
-        //Given
         final Decoder decoder = decodeHeartbeatWithRejectingUnknownFields(REPEATING_GROUP_WITH_UNKNOWN_FIELD);
 
-        //When
         assertFalse("Passed validation with missing fields", decoder.validate());
-        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
         assertEquals("Wrong reject reason", INVALID_TAG_NUMBER, decoder.rejectReason());
+        assertEquals("Wrong tag id", 1000, decoder.invalidTagId());
 
-        //Then
         decoder.reset();
         decode(NO_MISSING_REQUIRED_FIELDS_IN_REPEATING_GROUP_MESSAGE, decoder);
         assertTrue("Failed validation when it should have passed", decoder.validate());
@@ -697,7 +700,11 @@ public class DecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_WITH_FIELD_UNKNOWN_TO_MESSAGE_BUT_IN_SPEC);
 
-        assertTrue("Failed validation with missing fields", decoder.validate());
+        if (!decoder.validate())
+        {
+            fail("Failed validation with reason: " + RejectReason.decode(decoder.rejectReason()) +
+                " for tag: " + decoder.invalidTagId());
+        }
 
         Object group = get(decoder, "secondEgGroupGroup");
         assertEquals("TOM", get(group, "secondGroupFieldAsString"));
@@ -1190,10 +1197,15 @@ public class DecoderGeneratorTest
         assertThat(decoder3.validate(), is(false));
         assertThat(decoder4.validate(), is(false));
 
-        assertThat(RejectReason.decode(decoder1.rejectReason()), is(RejectReason.VALUE_IS_INCORRECT));
-        assertThat(RejectReason.decode(decoder2.rejectReason()), is(RejectReason.VALUE_IS_INCORRECT));
-        assertThat(RejectReason.decode(decoder3.rejectReason()), is(RejectReason.VALUE_IS_INCORRECT));
-        assertThat(RejectReason.decode(decoder4.rejectReason()), is(RejectReason.VALUE_IS_INCORRECT));
+        assertRejectReason(decoder1, RejectReason.VALUE_IS_INCORRECT);
+        assertRejectReason(decoder2, RejectReason.VALUE_IS_INCORRECT);
+        assertRejectReason(decoder3, RejectReason.VALUE_IS_INCORRECT);
+        assertRejectReason(decoder4, RejectReason.REQUIRED_TAG_MISSING);
+    }
+
+    private void assertRejectReason(final Decoder decoder, final RejectReason expectedReason)
+    {
+        assertThat(RejectReason.decode(decoder.rejectReason()), is(expectedReason));
     }
 
     private void assertRepeatingGroupAndFieldsDecoded(final Decoder decoder) throws Exception
@@ -1375,8 +1387,6 @@ public class DecoderGeneratorTest
     {
         return getInt(decoder, "countryFieldLength");
     }
-
-    // TODO: validation for groups
 
     private void canIterateOverGroup(final Decoder decoder) throws Exception
     {
@@ -1696,5 +1706,10 @@ public class DecoderGeneratorTest
     private interface ExceptionThrowingCommand
     {
         void execute() throws Exception;
+    }
+
+    private Decoder enumTestMessageDecoder() throws Exception
+    {
+        return (Decoder)enumTestMessage.getConstructor().newInstance();
     }
 }

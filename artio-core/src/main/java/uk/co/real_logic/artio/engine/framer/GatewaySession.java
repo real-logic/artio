@@ -24,7 +24,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.function.Consumer;
 
-import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_FLOW;
+import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.LogTag.GATEWAY_MESSAGE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 
@@ -55,6 +55,7 @@ class GatewaySession implements SessionInfo
 
     private Consumer<GatewaySession> onGatewaySessionLogon;
     private SessionLogonListener logonListener = this::onSessionLogon;
+    private boolean initialResetSeqNum;
 
     GatewaySession(
         final long connectionId,
@@ -117,18 +118,25 @@ class GatewaySession implements SessionInfo
         senderEndPoint.libraryId(ENGINE_LIBRARY_ID, blockablePosition);
     }
 
+    // sets management to a library and also cleans up locally associated session.
     void handoverManagementTo(
         final int libraryId,
         final BlockablePosition blockablePosition)
     {
-        receiverEndPoint.libraryId(libraryId);
-        receiverEndPoint.pause();
-        senderEndPoint.libraryId(libraryId, blockablePosition);
+        setManagementTo(libraryId, blockablePosition);
+
         sessionParser = null;
         session.logonListener(null);
         context.updateAndSaveFrom(session);
         session.close();
         session = null;
+    }
+
+    void setManagementTo(final int libraryId, final BlockablePosition blockablePosition)
+    {
+        receiverEndPoint.libraryId(libraryId);
+        receiverEndPoint.pause();
+        senderEndPoint.libraryId(libraryId, blockablePosition);
     }
 
     void play()
@@ -188,7 +196,7 @@ class GatewaySession implements SessionInfo
     {
         if (sessionParser != null)
         {
-            DebugLogger.log(FIX_MESSAGE_FLOW, "Gateway Received %s %n", buffer, offset, length);
+            DebugLogger.log(FIX_MESSAGE, "Gateway Received %s %n", buffer, offset, length);
 
             sessionParser.onMessage(buffer, offset, length, messageType, sessionId);
         }
@@ -240,16 +248,16 @@ class GatewaySession implements SessionInfo
         return heartbeatIntervalInS;
     }
 
-    void acceptorSequenceNumbers(final int sentSequenceNumber, final int receivedSequenceNumber)
+    void acceptorSequenceNumbers(final int retrievedSentSequenceNumber, final int retrievedReceivedSequenceNumber)
     {
         if (session != null)
         {
-            session.lastSentMsgSeqNum(adjustLastSequenceNumber(sentSequenceNumber));
-            session.lastReceivedMsgSeqNum(adjustLastSequenceNumber(receivedSequenceNumber));
+            session.lastSentMsgSeqNum(adjustLastSequenceNumber(retrievedSentSequenceNumber));
+            session.lastReceivedMsgSeqNum(adjustLastSequenceNumber(retrievedReceivedSequenceNumber));
         }
     }
 
-    private int adjustLastSequenceNumber(final int lastSequenceNumber)
+    static int adjustLastSequenceNumber(final int lastSequenceNumber)
     {
         return (lastSequenceNumber == UNK_SESSION) ? 0 : lastSequenceNumber;
     }
@@ -257,9 +265,9 @@ class GatewaySession implements SessionInfo
     public String toString()
     {
         return "GatewaySession{" +
-               "sessionId=" + sessionId +
-               ", sessionKey=" + sessionKey +
-               '}';
+            "sessionId=" + sessionId +
+            ", sessionKey=" + sessionKey +
+            '}';
     }
 
     void disconnectAt(final long disconnectTimeout)
@@ -305,5 +313,25 @@ class GatewaySession implements SessionInfo
     public boolean enableLastMsgSeqNumProcessed()
     {
         return enableLastMsgSeqNumProcessed;
+    }
+
+    public SessionContext context()
+    {
+        return context;
+    }
+
+    boolean hasDisconnected()
+    {
+        return receiverEndPoint.hasDisconnected();
+    }
+
+    void initialResetSeqNum(final boolean resetSeqNum)
+    {
+        initialResetSeqNum = resetSeqNum;
+    }
+
+    boolean initialResetSeqNum()
+    {
+        return initialResetSeqNum;
     }
 }

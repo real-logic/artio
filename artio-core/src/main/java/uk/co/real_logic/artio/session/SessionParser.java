@@ -53,22 +53,16 @@ public class SessionParser
     private final SequenceResetDecoder sequenceReset = new SequenceResetDecoder();
     private final HeartbeatDecoder heartbeat = new HeartbeatDecoder();
 
-    // TODO: optimisation candidate to just move to copying bytes.
-    private byte[] msgTypeBuffer = new byte[2];
-
     private final Session session;
-    private final SessionIdStrategy sessionIdStrategy;
     private final MessageValidationStrategy validationStrategy;
     private ErrorHandler errorHandler;
 
     public SessionParser(
         final Session session,
-        final SessionIdStrategy sessionIdStrategy,
         final MessageValidationStrategy validationStrategy,
         final ErrorHandler errorHandler) // nullable
     {
         this.session = session;
-        this.sessionIdStrategy = sessionIdStrategy;
         this.validationStrategy = validationStrategy;
         this.errorHandler = errorHandler;
     }

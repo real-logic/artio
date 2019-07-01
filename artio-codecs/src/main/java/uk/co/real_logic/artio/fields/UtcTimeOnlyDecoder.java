@@ -21,16 +21,20 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import static uk.co.real_logic.artio.fields.CalendricalUtil.*;
 
 /**
- * "HH:mm:ss[.SSS]"
+ * "HH:mm:ss[.SSS]"         - Millisecond Format
+ * "HH:mm:ss[.SSSSSS]"      - Microsecond Format
+ * "HH:mm:ss[.SSSSSSSSS]"   - Nanosecond  Format
  */
 public final class UtcTimeOnlyDecoder
 {
     public static final int SHORT_LENGTH = 8;
     public static final int LONG_LENGTH = 12;
     public static final int LONG_LENGTH_MICROS = 15;
+    public static final int LONG_LENGTH_NANOS = 18;
 
     static final int MILLIS_FIELD_LENGTH = 3;
     static final int MICROS_FIELD_LENGTH = 6;
+    static final int NANOS_FIELD_LENGTH = 9;
 
     private final AsciiBuffer buffer = new MutableAsciiBuffer();
 
@@ -46,6 +50,12 @@ public final class UtcTimeOnlyDecoder
         return decodeMicros(buffer, 0, length);
     }
 
+    public long decodeNanos(final byte[] bytes, final int length)
+    {
+        buffer.wrap(bytes);
+        return decodeNanos(buffer, 0, length);
+    }
+
     public long decode(final byte[] bytes)
     {
         return decode(bytes, bytes.length);
@@ -56,6 +66,11 @@ public final class UtcTimeOnlyDecoder
         return decodeMicros(bytes, bytes.length);
     }
 
+    public long decodeNanos(final byte[] bytes)
+    {
+        return decodeNanos(bytes, bytes.length);
+    }
+
     public static long decode(final AsciiBuffer time, final int offset, final int length)
     {
         return decodeFraction(time, offset, length, MILLIS_FIELD_LENGTH, MILLIS_IN_SECOND);
@@ -64,6 +79,11 @@ public final class UtcTimeOnlyDecoder
     public static long decodeMicros(final AsciiBuffer time, final int offset, final int length)
     {
         return decodeFraction(time, offset, length, MICROS_FIELD_LENGTH, MICROS_IN_SECOND);
+    }
+
+    public static long decodeNanos(final AsciiBuffer time, final int offset, final int length)
+    {
+        return decodeFraction(time, offset, length, NANOS_FIELD_LENGTH, NANOS_IN_SECOND);
     }
 
     // A fraction could be a millisecond or a microsecond

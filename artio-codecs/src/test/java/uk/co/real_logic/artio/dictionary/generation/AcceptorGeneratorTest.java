@@ -32,7 +32,6 @@ import static uk.co.real_logic.artio.dictionary.generation.AcceptorGenerator.*;
 
 public class AcceptorGeneratorTest
 {
-
     private static StringWriterOutputManager outputManager = new StringWriterOutputManager();
     private static ConstantGenerator constantGenerator =
         new ConstantGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
@@ -40,7 +39,7 @@ public class AcceptorGeneratorTest
         new EnumGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static DecoderGenerator decoderGenerator =
         new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, ValidationOn.class,
-        RejectUnknownFieldOff.class);
+        RejectUnknownFieldOff.class, false);
     private static AcceptorGenerator acceptorGenerator =
         new AcceptorGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static Class<?> acceptor;

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import org.agrona.LangUtil;
 import org.agrona.generation.OutputManager;
 import org.agrona.generation.ResourceConsumer;
 import uk.co.real_logic.artio.builder.Decoder;
@@ -33,7 +34,6 @@ import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.*;
 import static uk.co.real_logic.artio.dictionary.generation.ConstantGenerator.sizeHashSet;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.NULL_VAL_NAME;
-import static uk.co.real_logic.artio.dictionary.generation.Exceptions.rethrown;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.constantName;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
@@ -49,10 +49,19 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 public class DecoderGenerator extends Generator
 {
-    public static final boolean CODEC_LOGGING = Boolean.getBoolean("fix.codec.log");
-
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
-    public static final String GROUP_FIELDS = "GROUP_FIELDS";
+    private static final String GROUP_FIELDS = "GROUP_FIELDS";
+
+    // Has to be generated everytime since HeaderDecoder and TrailerDecoder are generated.
+    private static final String MESSAGE_DECODER =
+        "import uk.co.real_logic.artio.builder.Decoder;\n" +
+        "\n" +
+        "public interface MessageDecoder extends Decoder\n" +
+        "{\n" +
+        "    HeaderDecoder header();\n" +
+        "\n" +
+        "    TrailerDecoder trailer();\n" +
+        "}";
 
     public static final int INVALID_TAG_NUMBER =
         RejectReason.INVALID_TAG_NUMBER.representation();
@@ -70,12 +79,12 @@ public class DecoderGenerator extends Generator
         RejectReason.TAG_APPEARS_MORE_THAN_ONCE.representation();
     public static final int TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER = 14;
 
-    public static String decoderClassName(final Aggregate aggregate)
+    static String decoderClassName(final Aggregate aggregate)
     {
         return decoderClassName(aggregate.name());
     }
 
-    public static String decoderClassName(final String name)
+    static String decoderClassName(final String name)
     {
         return name + "Decoder";
     }
@@ -87,14 +96,34 @@ public class DecoderGenerator extends Generator
     public DecoderGenerator(
         final Dictionary dictionary,
         final int initialBufferSize,
-        final String builderPackage,
-        final String builderCommonPackage,
+        final String thisPackage,
+        final String commonPackage,
         final OutputManager outputManager,
         final Class<?> validationClass,
-        final Class<?> rejectUnknownClass)
+        final Class<?> rejectUnknownClass,
+        final boolean flyweightsEnabled)
     {
-        super(dictionary, builderPackage, builderCommonPackage, outputManager, validationClass, rejectUnknownClass);
+        super(dictionary, thisPackage, commonPackage, outputManager, validationClass, rejectUnknownClass,
+            flyweightsEnabled);
         this.initialBufferSize = initialBufferSize;
+    }
+
+    public void generate()
+    {
+        generateMessageDecoderInterface();
+        super.generate();
+    }
+
+    private void generateMessageDecoderInterface()
+    {
+        outputManager.withOutput(
+            "MessageDecoder",
+            (out) ->
+            {
+                out.append(fileHeader(builderPackage));
+
+                out.append(MESSAGE_DECODER);
+            });
     }
 
     protected void generateAggregateFile(final Aggregate aggregate, final AggregateType type)
@@ -134,10 +163,10 @@ public class DecoderGenerator extends Generator
             .map((comp) -> decoderClassName((Aggregate)comp.element()))
             .collect(toList());
 
-        interfaces.add(Decoder.class.getSimpleName());
+        interfaces.add(isMessage ? "MessageDecoder" : "Decoder");
 
         out.append(classDeclaration(className, interfaces, false));
-        validation(out, aggregate, type);
+        generateValidation(out, aggregate, type);
         if (isMessage)
         {
             final Message message = (Message)aggregate;
@@ -151,7 +180,7 @@ public class DecoderGenerator extends Generator
         headerMethods(out, aggregate, type);
         getters(out, aggregate.entries());
         out.append(decodeMethod(aggregate.entries(), aggregate, type));
-        out.append(completeResetMethod(isMessage, aggregate.entries(), resetValidation(isGroup)));
+        out.append(completeResetMethod(isMessage, aggregate.entries(), additionalReset(isGroup)));
         out.append(toString(aggregate, isMessage));
         out.append("}\n");
         currentAggregate = parentAggregate;
@@ -236,12 +265,21 @@ public class DecoderGenerator extends Generator
 
     protected String resetRequiredFloat(final String name)
     {
-        return resetByMethod(name);
+        final String lengthReset = flyweightsEnabled ? "        %1$sLength = 0;\n" : "";
+
+        return String.format(
+            "    public void %2$s()\n" +
+            "    {\n" +
+            lengthReset +
+            "        %1$s.reset();\n" +
+            "    }\n\n",
+            formatPropertyName(name),
+            nameOfResetMethod(name));
     }
 
     protected String resetRequiredInt(final Field field)
     {
-        return resetFieldValue(field.name(), "MISSING_INT");
+        return resetFieldValue(field, "MISSING_INT");
     }
 
     protected String toStringGroupParameters()
@@ -258,9 +296,10 @@ public class DecoderGenerator extends Generator
             "        }\n";
     }
 
-    private String resetValidation(final boolean isGroup)
+    private String additionalReset(final boolean isGroup)
     {
         return
+            "        buffer = null;\n" +
             "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
             "        {\n" +
             "            invalidTagId = NO_ERROR;\n" +
@@ -272,7 +311,7 @@ public class DecoderGenerator extends Generator
             "        }\n";
     }
 
-    private void validation(final Writer out, final Aggregate aggregate, final AggregateType type)
+    private void generateValidation(final Writer out, final Aggregate aggregate, final AggregateType type)
         throws IOException
     {
         final List<Field> requiredFields = requiredFields(aggregate.entries()).collect(toList());
@@ -297,7 +336,7 @@ public class DecoderGenerator extends Generator
 
         final String groupValidation = aggregate
             .entriesWith(element -> element instanceof Group)
-            .map((entry) -> validateGroup(entry, out))
+            .map((entry) -> generateGroupValidation(entry, out))
             .collect(joining("\n"));
 
         final boolean isMessage = type == MESSAGE;
@@ -371,7 +410,7 @@ public class DecoderGenerator extends Generator
     {
         final String addFields = fields
             .stream()
-            .map((field) -> addField(field, name))
+            .map((field) -> addField(field, name, "            "))
             .collect(joining());
         final String generatedFieldEntryCode;
 
@@ -380,7 +419,7 @@ public class DecoderGenerator extends Generator
             generatedFieldEntryCode =
                 "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
                 "        {\n" +
-                "          %s" +
+                "%s" +
                 "        }\n";
         }
         else
@@ -399,10 +438,11 @@ public class DecoderGenerator extends Generator
             String.format(generatedFieldEntryCode, addFields));
     }
 
-    public static String addField(final Field field, final String name)
+    public static String addField(final Field field, final String name, final String prefix)
     {
         return String.format(
-            "        %1$s.add(Constants.%2$s);\n",
+            "%1$s%2$s.add(Constants.%3$s);\n",
+            prefix,
             name,
             constantName(field.name()));
     }
@@ -426,7 +466,7 @@ public class DecoderGenerator extends Generator
 
 
         return String.format(
-            "        if (%1$s!%2$s.isValid(%3$s%5$s))\n" +
+            "        if (%1$s!%2$s.isValid(%3$s()%5$s))\n" +
             "        {\n" +
             "            invalidTagId = %4$s;\n" +
             "            rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
@@ -439,7 +479,7 @@ public class DecoderGenerator extends Generator
             isPrimitive ? "" : ", " + propertyName + "Length");
     }
 
-    private CharSequence validateGroup(final Entry entry, final Writer out)
+    private CharSequence generateGroupValidation(final Entry entry, final Writer out)
     {
         final Group group = (Group)entry.element();
         final String numberFieldName = group.numberField().name();
@@ -563,7 +603,17 @@ public class DecoderGenerator extends Generator
         out.append("\n");
         aggregate
             .entries()
-            .forEach(rethrown(consumer));
+            .forEach(t ->
+            {
+                try
+                {
+                    consumer.accept(t);
+                }
+                catch (final IOException ex)
+                {
+                    LangUtil.rethrowUnchecked(ex);
+                }
+            });
         out.append("\n");
     }
 
@@ -764,16 +814,14 @@ public class DecoderGenerator extends Generator
         final String fieldName = formatPropertyName(name);
         final Type type = field.type();
         final String optionalCheck = optionalCheck(entry);
-
-        final String asStringBody = String.format(entry.required() ?
-            "new String(%1$s, 0, %1$sLength)" :
-            "has%2$s ? new String(%1$s, 0, %1$sLength) : null",
-            fieldName,
-            name);
+        final String asStringBody = generateAsStringBody(entry, name, fieldName);
 
         final String enumValueDecoder = String.format(
             type.isStringBased() ?
-            "%1$s.decode(%2$s, %2$sLength)" :
+            "%1$s.decode(%2$s(), %2$sLength)" :
+            // Need to ensure that decode the field
+            (flyweightsEnabled && (type.isIntBased() || type.isFloatBased())) ?
+            "%1$s.decode(%2$s())" :
             "%1$s.decode(%2$s)",
             name,
             fieldName);
@@ -784,17 +832,9 @@ public class DecoderGenerator extends Generator
             "has%2$s ? %1$s : %2$s.%3$s",
             enumValueDecoder,
             name,
-            NULL_VAL_NAME
-        );
+            NULL_VAL_NAME);
 
-        final String stringDecoder = type.isStringBased() ? String.format(
-            "    private int %1$sLength;\n\n" +
-            "    private int %1$sOffset;\n\n" +
-            "    public int %1$sLength()\n" +
-            "    {\n" +
-            "%2$s" +
-            "        return %1$sLength;\n" +
-            "    }\n\n" +
+        final String extraStringDecode = type.isStringBased() ? String.format(
             "    public String %1$sAsString()\n" +
             "    {\n" +
             "        return %3$s;\n" +
@@ -808,6 +848,22 @@ public class DecoderGenerator extends Generator
             optionalCheck,
             asStringBody) : "";
 
+        // Need to keep offset and length split due to the abject fail that is the DATA type.
+        final String lengthBasedFields = type.hasLengthField(flyweightsEnabled) ? String.format(
+            "    private int %1$sLength;\n\n" +
+            "    public int %1$sLength()\n" +
+            "    {\n" +
+            "%2$s" +
+            "        return %1$sLength;\n" +
+            "    }\n\n" +
+            "%3$s",
+            fieldName,
+            optionalCheck,
+            extraStringDecode) : "";
+
+        final String offsetField = type.hasOffsetField(flyweightsEnabled) ?
+            String.format("    private int %1$sOffset;\n\n%2$s", fieldName, lengthBasedFields) : "";
+
         final String enumDecoder = EnumGenerator.hasEnumGenerated(field) && !field.type().isMultiValue() ?
             String.format(
             "    public %s %sAsEnum()\n" +
@@ -819,25 +875,128 @@ public class DecoderGenerator extends Generator
             asEnumBody
         ) : "";
 
+        final String lazyInitialisation = fieldLazyInstantialisation(field, fieldName);
+
         return String.format(
-            "    private %s %s%s;\n\n" +
-            "%s" +
+            "    private %1$s %2$s%3$s;\n\n" +
+            "%4$s" +
             "    public %1$s %2$s()\n" +
             "    {\n" +
-            "%s" +
+            "%5$s" +
+            "%9$s" +
             "        return %2$s;\n" +
             "    }\n\n" +
-            "%s\n" +
-            "%s\n" +
-            "%s",
+            "%6$s\n" +
+            "%7$s\n" +
+            "%8$s",
             javaTypeOf(type),
             fieldName,
             fieldInitialisation(type),
             hasField(entry),
             optionalCheck,
             optionalGetter(entry),
-            stringDecoder,
-            enumDecoder);
+            offsetField,
+            enumDecoder,
+            flyweightsEnabled ? lazyInitialisation : "");
+    }
+
+    private String generateAsStringBody(final Entry entry, final String name, final String fieldName)
+    {
+        final String asStringBody;
+
+        if (flyweightsEnabled)
+        {
+            asStringBody = String.format(entry.required() ?
+                "buffer != null ? buffer.getStringWithoutLengthAscii(%1$sOffset, %1$sLength) : \"\"" :
+                "has%2$s ? buffer.getStringWithoutLengthAscii(%1$sOffset, %1$sLength) : null",
+                fieldName,
+                name);
+        }
+        else
+        {
+            asStringBody = String.format(entry.required() ?
+                "new String(%1$s, 0, %1$sLength)" :
+                "has%2$s ? new String(%1$s, 0, %1$sLength) : null",
+                fieldName,
+                name);
+        }
+        return asStringBody;
+    }
+
+    private static String fieldLazyInstantialisation(final Field field, final String fieldName)
+    {
+        final String decodeMethod;
+        switch (field.type())
+        {
+            case INT:
+            case LENGTH:
+            case SEQNUM:
+            case NUMINGROUP:
+            case DAYOFMONTH:
+                decodeMethod = String.format("buffer.parseIntAscii(%1$sOffset, %1$sLength)", fieldName);
+                break;
+
+            case FLOAT:
+            case PRICE:
+            case PRICEOFFSET:
+            case QTY:
+            case PERCENTAGE:
+            case AMT:
+                decodeMethod = String.format("buffer.getFloat(%1$s, %1$sOffset, %1$sLength)", fieldName);
+                break;
+
+            case STRING:
+            case MULTIPLEVALUESTRING:
+            case MULTIPLESTRINGVALUE:
+            case MULTIPLECHARVALUE:
+            case CURRENCY:
+            case EXCHANGE:
+            case COUNTRY:
+            case LANGUAGE:
+                decodeMethod = String.format("buffer.getChars(%1$s, %1$sOffset, %1$sLength);\n", fieldName);
+                break;
+
+            case DATA:
+            case XMLDATA:
+                // Length extracted separately from a preceeding field
+                final Field associatedLengthField = field.associatedLengthField();
+                if (associatedLengthField == null)
+                {
+                    throw new IllegalStateException("No associated length field for: " + field);
+                }
+                final String associatedFieldName = formatPropertyName(associatedLengthField.name());
+                return String.format(
+                    "        if (buffer != null && %2$s > 0)\n" +
+                    "        {\n" +
+                    "            %1$s = buffer.getBytes(%1$s, %1$sOffset, %2$s);\n" +
+                    "        }\n",
+                    fieldName,
+                    associatedFieldName);
+
+            case UTCTIMESTAMP:
+            case LOCALMKTDATE:
+            case UTCTIMEONLY:
+            case UTCDATEONLY:
+            case TZTIMEONLY:
+            case TZTIMESTAMP:
+            case MONTHYEAR:
+                decodeMethod = String.format("buffer.getBytes(%1$s, %1$sOffset, %1$sLength)", fieldName);
+                break;
+
+
+            case BOOLEAN:
+            case CHAR:
+            default:
+                return "";
+        }
+
+        return String.format(
+            "        if (buffer != null && %1$sLength > 0)\n" +
+            "        {\n" +
+            "            %1$s = %2$s;\n" +
+            "        }\n",
+            fieldName,
+            decodeMethod);
     }
 
     private String fieldInitialisation(final Type type)
@@ -978,7 +1137,6 @@ public class DecoderGenerator extends Generator
         final boolean isGroup = type == GROUP;
         final boolean isHeader = type == HEADER;
         final String endGroupCheck = endGroupCheck(aggregate, isGroup);
-
         final String prefix =
             "    private AsciiBuffer buffer;\n\n" +
             "    public int decode(final AsciiBuffer buffer, final int offset, final int length)\n" +
@@ -999,10 +1157,14 @@ public class DecoderGenerator extends Generator
             "        while (position < end)\n" +
             "        {\n" +
             "            final int equalsPosition = buffer.scan(position, end, '=');\n" +
+            "            if (equalsPosition == AsciiBuffer.UNKNOWN_INDEX)\n" +
+            "            {\n" +
+            "               return position;\n" +
+            "            }\n" +
             "            tag = buffer.getInt(position, equalsPosition);\n" +
             endGroupCheck +
             "            final int valueOffset = equalsPosition + 1;\n" +
-            "            final int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
+            "            int endOfField = buffer.scan(valueOffset, end, START_OF_HEADER);\n" +
             malformedMessageCheck() +
             "            final int valueLength = endOfField - valueOffset;\n" +
             "            if (" + CODEC_VALIDATION_ENABLED + ")\n" +
@@ -1018,7 +1180,6 @@ public class DecoderGenerator extends Generator
             "                    rejectReason = " + TAG_SPECIFIED_WITHOUT_A_VALUE + ";\n" +
             "                }\n" +
             headerValidation(isHeader) +
-
             (isGroup ? "" :
             "                if (!alreadyVisitedFields.add(tag))\n" +
             "                {\n" +
@@ -1031,11 +1192,9 @@ public class DecoderGenerator extends Generator
             "            }\n" +
             "            switch (tag)\n" +
             "            {\n\n";
-
         final String body = entries.stream()
             .map(this::decodeEntry)
             .collect(joining("\n", "", "\n"));
-
         final String suffix =
             "            default:\n" +
             "                if (!" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED + ")\n" +
@@ -1053,7 +1212,6 @@ public class DecoderGenerator extends Generator
             "                    }\n" +
             "                }\n") +
 
-
             // Skip the thing if it's a completely unknown field and you aren't validating messages
             "                if (" + CODEC_REJECT_UNKNOWN_FIELD_ENABLED +
             " || " + unknownFieldPredicate(type) + ")\n" +
@@ -1069,7 +1227,6 @@ public class DecoderGenerator extends Generator
             "        }\n" +
             decodeTrailerOrReturn(hasCommonCompounds, 2) +
             "    }\n\n";
-
         return prefix + body + suffix;
     }
 
@@ -1185,13 +1342,15 @@ public class DecoderGenerator extends Generator
     {
         final Group group = (Group)entry.element();
 
+        final String groupNumberField = formatPropertyName(group.numberField().name());
         final String parseGroup = String.format(
             "                if (%1$s == null)\n" +
             "                {\n" +
-            "                    %1$s = new %2$s(trailer, %4$s);\n" +
+            "                    %1$s = new %2$s(trailer, %5$s);\n" +
             "                }\n" +
             "                %2$s %1$sCurrent = %1$s;\n" +
             "                position = endOfField + 1;\n" +
+            "                final int %3$s = %4$s;\n" +
             "                for (int i = 0; i < %3$s && position < end; i++)\n" +
             "                {\n" +
             "                    if (%1$sCurrent != null)\n" +
@@ -1202,7 +1361,9 @@ public class DecoderGenerator extends Generator
             "                }\n",
             formatPropertyName(group.name()),
             decoderClassName(group),
-            formatPropertyName(group.numberField().name()),
+            groupNumberField,
+            // Have to make a call to initialise the group number at this point when flyweighting.
+            flyweightsEnabled ? groupNumberField + "()" : "this." + groupNumberField,
             MESSAGE_FIELDS);
 
         return decodeField(group.numberField(), parseGroup);
@@ -1223,30 +1384,29 @@ public class DecoderGenerator extends Generator
         return String.format(
             "            case Constants.%s:\n" +
             "%s" +
-            "                %s = buffer.%s);\n" +
+            "%s" +
             "%s" +
             "%s" +
             "%s" +
             "                break;\n",
             constantName(name),
             optionalAssign(entry),
-            fieldName,
-            decodeMethodFor(field.type(), fieldName),
-            storeOffsetForStrings(field.type(), fieldName),
-            storeLengthForVariableLength(field.type(), fieldName),
+            fieldDecodeMethod(field, fieldName),
+            storeOffsetForVariableLengthFields(field.type(), fieldName),
+            storeLengthForVariableLengthFields(field.type(), fieldName),
             suffix);
     }
 
-    private String storeLengthForVariableLength(final Type type, final String fieldName)
+    private String storeLengthForVariableLengthFields(final Type type, final String fieldName)
     {
-        return type.hasLengthField() ?
+        return type.hasLengthField(flyweightsEnabled) ?
             String.format("                %sLength = valueLength;\n", fieldName) :
             "";
     }
 
-    private String storeOffsetForStrings(final Type type, final String fieldName)
+    private String storeOffsetForVariableLengthFields(final Type type, final String fieldName)
     {
-        return type.hasOffsetField() ?
+        return type.hasOffsetField(flyweightsEnabled) ?
             String.format("                %sOffset = valueOffset;\n", fieldName) :
             "";
     }
@@ -1256,28 +1416,38 @@ public class DecoderGenerator extends Generator
         return entry.required() ? "" : String.format("                has%s = true;\n", entry.name());
     }
 
-    private String decodeMethodFor(final Type type, final String fieldName)
+    private String fieldDecodeMethod(final Field field, final String fieldName)
     {
-        switch (type)
+        final String prefix = String.format("                %s = ", fieldName);
+        final String decodeMethod;
+        switch (field.type())
         {
             case INT:
             case LENGTH:
             case SEQNUM:
             case NUMINGROUP:
             case DAYOFMONTH:
-                return "getInt(valueOffset, endOfField";
-
+                if (flyweightsEnabled)
+                {
+                    return "";
+                }
+                decodeMethod = "buffer.getInt(valueOffset, endOfField)";
+                break;
             case FLOAT:
             case PRICE:
             case PRICEOFFSET:
             case QTY:
             case PERCENTAGE:
             case AMT:
-                return String.format("getFloat(%s, valueOffset, valueLength", fieldName);
-
+                if (flyweightsEnabled)
+                {
+                    return "";
+                }
+                decodeMethod = String.format("buffer.getFloat(%s, valueOffset, valueLength)", fieldName);
+                break;
             case CHAR:
-                return "getChar(valueOffset";
-
+                decodeMethod = "buffer.getChar(valueOffset)";
+                break;
             case STRING:
             case MULTIPLEVALUESTRING:
             case MULTIPLESTRINGVALUE:
@@ -1286,13 +1456,30 @@ public class DecoderGenerator extends Generator
             case EXCHANGE:
             case COUNTRY:
             case LANGUAGE:
-                return String.format("getChars(%s, valueOffset, valueLength", fieldName);
+                if (flyweightsEnabled)
+                {
+                    return "";
+                }
+                decodeMethod = String.format("buffer.getChars(%s, valueOffset, valueLength)", fieldName);
+                break;
 
             case BOOLEAN:
-                return "getBoolean(valueOffset";
-
+                decodeMethod = "buffer.getBoolean(valueOffset)";
+                break;
             case DATA:
             case XMLDATA:
+                // Length extracted separately from a preceeding field
+                final String associatedFieldName = formatPropertyName(field.associatedLengthField().name());
+                if (flyweightsEnabled)
+                {
+                    return String.format(
+                        "                endOfField = valueOffset + %1$s();\n", associatedFieldName);
+                }
+                return String.format(
+                    "                %1$s = buffer.getBytes(%1$s, valueOffset, %2$s);\n" +
+                    "                endOfField = valueOffset + %2$s;\n",
+                    fieldName,
+                    associatedFieldName);
             case UTCTIMESTAMP:
             case LOCALMKTDATE:
             case UTCTIMEONLY:
@@ -1300,16 +1487,22 @@ public class DecoderGenerator extends Generator
             case TZTIMEONLY:
             case TZTIMESTAMP:
             case MONTHYEAR:
-                return String.format("getBytes(%s, valueOffset, valueLength", fieldName);
+                if (flyweightsEnabled)
+                {
+                    return "";
+                }
+                decodeMethod = String.format("buffer.getBytes(%s, valueOffset, valueLength)", fieldName);
+                break;
 
             default:
-                throw new UnsupportedOperationException("Unknown type: " + type);
+                throw new UnsupportedOperationException("Unknown type: " + field.type() + " in " + fieldName);
         }
+        return prefix + decodeMethod + ";\n";
     }
 
     protected String stringToString(final String fieldName)
     {
-        return String.format("new String(%s, 0, %1$sLength)", fieldName);
+        return String.format("%1$sAsString()", fieldName);
     }
 
     protected boolean hasFlag(final Entry entry, final Field field)

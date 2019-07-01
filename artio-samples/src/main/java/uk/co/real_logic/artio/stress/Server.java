@@ -74,7 +74,6 @@ public class Server implements Agent
 
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
         libraryConfiguration
-            .authenticationStrategy(authenticationStrategy)
             .agentNamePrefix("server-");
 
         fixLibrary = blockingConnect(libraryConfiguration
