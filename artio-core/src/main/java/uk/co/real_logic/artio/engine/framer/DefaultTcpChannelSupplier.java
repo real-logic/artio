@@ -17,7 +17,7 @@ import java.util.Set;
 import static java.net.StandardSocketOptions.*;
 import static java.nio.channels.SelectionKey.OP_CONNECT;
 
-public class DefaultTcpChannelSupplier implements TcpChannelSupplier
+public class DefaultTcpChannelSupplier extends TcpChannelSupplier
 {
     private final EngineConfiguration configuration;
     private final boolean hasBindAddress;

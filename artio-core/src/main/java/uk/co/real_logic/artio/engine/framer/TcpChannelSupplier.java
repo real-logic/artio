@@ -21,22 +21,22 @@ import java.net.InetSocketAddress;
 /**
  * Mockable class for intercepting network communications
  */
-public interface TcpChannelSupplier extends AutoCloseable
+public abstract class TcpChannelSupplier implements AutoCloseable
 {
-    void open(InetSocketAddress address, InitiatedChannelHandler channelHandler) throws IOException;
+    abstract void open(InetSocketAddress address, InitiatedChannelHandler channelHandler) throws IOException;
 
-    void stopConnecting(InetSocketAddress address) throws IOException;
+    abstract void stopConnecting(InetSocketAddress address) throws IOException;
 
-    int pollSelector(long timeInMs, NewChannelHandler handler) throws IOException;
+    abstract int pollSelector(long timeInMs, NewChannelHandler handler) throws IOException;
 
     @FunctionalInterface
-    interface InitiatedChannelHandler
+    public interface InitiatedChannelHandler
     {
         void onInitiatedChannel(TcpChannel socketChannel, IOException exception);
     }
 
     @FunctionalInterface
-    interface NewChannelHandler
+    public interface NewChannelHandler
     {
         void onNewChannel(long timeInMs, TcpChannel socketChannel) throws IOException;
     }
