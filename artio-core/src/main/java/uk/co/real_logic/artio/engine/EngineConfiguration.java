@@ -34,7 +34,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.ThreadFactory;
 import java.util.function.Function;
 
 import static java.lang.Integer.getInteger;
@@ -181,7 +180,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private MappedFile sessionIdBuffer;
     private Set<String> gapfillOnReplayMessageTypes = new HashSet<>(DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES);
     private final AeronArchive.Context archiveContext = new AeronArchive.Context();
-    private ThreadFactory threadFactory;
 
     private int outboundLibraryFragmentLimit =
         getInteger(OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP, DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT);
@@ -872,17 +870,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
-    /**
-     * Sets factory for threads such as framer, archivingRunner, etc in EngineScheduler
-     * @param threadFactory factory for custom thread creating
-     * @return this
-     */
-    public EngineConfiguration threadFactory(final ThreadFactory threadFactory)
-    {
-        this.threadFactory = threadFactory;
-        return this;
-    }
-
     public AeronArchive.Context aeronArchiveContext()
     {
         return archiveContext;
@@ -916,11 +903,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public boolean acceptedEnableLastMsgSeqNumProcessed()
     {
         return acceptedEnableLastMsgSeqNumProcessed;
-    }
-
-    public ThreadFactory threadFactory()
-    {
-        return threadFactory;
     }
 
     public EngineConfiguration conclude()
@@ -969,11 +951,6 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         if (sessionPersistenceStrategy() == null)
         {
             sessionPersistenceStrategy(alwaysUnindexed());
-        }
-
-        if (threadFactory == null)
-        {
-            threadFactory = Thread::new;
         }
 
         return this;

@@ -28,6 +28,7 @@ import java.io.File;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Stream;
 
@@ -104,6 +105,7 @@ public class CommonConfiguration
      * Property name for character to separate debug logging of FIX messages
      */
     public static final String LOGGING_SEPARATOR_PROPERTY = "fix.core.debug.separator";
+    protected ThreadFactory threadFactory;
 
     public static void validateTimeout(final long timeoutInMs)
     {
@@ -207,7 +209,7 @@ public class CommonConfiguration
     private boolean printAeronStreamIdentifiers = DEFAULT_PRINT_AERON_STREAM_IDENTIFIERS;
     private Clock clock = Clock.systemNanoTime();
     private boolean printErrorMessages = true;
-    private IdleStrategy monitoringThreadIdleStrategy = new BackoffIdleStrategy(1, 1, 1000, 1_000_000);
+    private IdleStrategy monitoringThreadIdleStrategy = backoffIdleStrategy();
     private long sendingTimeWindowInMs = DEFAULT_SENDING_TIME_WINDOW;
     private SessionIdStrategy sessionIdStrategy = SessionIdStrategy.senderAndTarget();
     private MessageValidationStrategy messageValidationStrategy = MessageValidationStrategy.none();
@@ -487,6 +489,17 @@ public class CommonConfiguration
         return this;
     }
 
+    /**
+     * Sets factory for threads such as framer, archivingRunner, etc in EngineScheduler
+     * @param threadFactory factory for custom thread creating
+     * @return this
+     */
+    public CommonConfiguration threadFactory(final ThreadFactory threadFactory)
+    {
+        this.threadFactory = threadFactory;
+        return this;
+    }
+
     public Aeron.Context aeronContext()
     {
         return aeronContext;
@@ -598,6 +611,11 @@ public class CommonConfiguration
             throw new IllegalStateException(
                 "This configuration has already been concluded, are you trying to re-use it?");
         }
+
+        if (threadFactory == null)
+        {
+            threadFactory = Thread::new;
+        }
     }
 
     /**
@@ -639,5 +657,10 @@ public class CommonConfiguration
     public int outboundLibraryStream()
     {
         return outboundLibraryStream;
+    }
+
+    public ThreadFactory threadFactory()
+    {
+        return threadFactory;
     }
 }

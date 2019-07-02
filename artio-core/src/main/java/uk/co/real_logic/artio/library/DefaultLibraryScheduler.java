@@ -24,7 +24,6 @@ import org.agrona.concurrent.CompositeAgent;
 import uk.co.real_logic.artio.engine.EngineScheduler;
 
 import static org.agrona.concurrent.AgentRunner.startOnThread;
-import static uk.co.real_logic.artio.CommonConfiguration.backoffIdleStrategy;
 
 public class DefaultLibraryScheduler implements LibraryScheduler
 {
@@ -44,11 +43,11 @@ public class DefaultLibraryScheduler implements LibraryScheduler
         if (monitoringAgent != null)
         {
             monitoringRunner = new AgentRunner(
-                backoffIdleStrategy(),
+                configuration.monitoringThreadIdleStrategy(),
                 errorHandler,
                 null,
                 new CompositeAgent(monitoringAgent, conductorAgent));
-            startOnThread(monitoringRunner);
+            startOnThread(monitoringRunner, configuration.threadFactory());
         }
     }
 
