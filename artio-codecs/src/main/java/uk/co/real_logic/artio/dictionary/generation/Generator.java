@@ -21,6 +21,7 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.generation.OutputManager;
 import uk.co.real_logic.artio.EncodingException;
 import uk.co.real_logic.artio.dictionary.CharArraySet;
+import uk.co.real_logic.artio.dictionary.CharArrayWrapper;
 import uk.co.real_logic.artio.dictionary.StandardFixConstants;
 import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Entry.Element;
@@ -149,7 +150,8 @@ public abstract class Generator
             .append(importFor(CharArraySet.class))
             .append(importFor(IntHashSet.class))
             .append(importFor(IntHashSet.IntIterator.class))
-            .append(importFor(EncodingException.class));
+            .append(importFor(EncodingException.class))
+            .append(importFor(CharArrayWrapper.class));
 
         for (final Class<?> extraImport : extraImports)
         {

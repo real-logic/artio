@@ -22,6 +22,7 @@ import uk.co.real_logic.artio.builder.CharRepresentable;
 import uk.co.real_logic.artio.builder.IntRepresentable;
 import uk.co.real_logic.artio.builder.StringRepresentable;
 import uk.co.real_logic.artio.dictionary.CharArrayMap;
+import uk.co.real_logic.artio.dictionary.CharArrayWrapper;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Field;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
@@ -126,6 +127,7 @@ public final class EnumGenerator
             {
                 out.append(fileHeader(builderPackage));
                 out.append(importFor(CharArrayMap.class));
+                out.append(importFor(CharArrayWrapper.class));
                 out.append(importFor(IntHashSet.class));
                 out.append(importFor(Map.class));
                 out.append(importFor(HashMap.class));
@@ -223,27 +225,12 @@ public final class EnumGenerator
     {
         switch (type)
         {
-            case STRING:
-                return "    public static boolean isValid(final char[] representation, final int length)\n" +
-                       "    {\n" +
-                       "        return charMap.containsKey(representation, length);\n" +
-                       "    }\n";
-
             case MULTIPLEVALUESTRING:
             case MULTIPLESTRINGVALUE:
-                return "    public static boolean isValid(final char[] representation, final int length)\n" +
+            case STRING:
+                return "    public static boolean isValid(final CharArrayWrapper key)\n" +
                        "    {\n" +
-                       "        int offset = 0;\n" +
-                       "        for (int i = 0; i < length; i++)\n" +
-                       "        {\n" +
-                       "            if (representation[i] == ' ')\n" +
-                       "            {\n" +
-                       "                if (! charMap.containsKey(representation, offset, i - offset))\n" +
-                       "                    return false;\n" +
-                       "                offset = i + 1;\n" +
-                       "            }\n" +
-                       "        }\n" +
-                       "        return charMap.containsKey(representation, offset, length - offset);\n" +
+                       "        return charMap.containsKey(key);\n" +
                        "    }\n";
 
             case MULTIPLECHARVALUE:
@@ -310,9 +297,9 @@ public final class EnumGenerator
                     "        charMap = new CharArrayMap<>(stringMap);\n" +
                     "    }\n" +
                     "\n" +
-                    "    public static %1$s decode(final char[] representation, final int length)\n" +
+                    "    public static %1$s decode(final CharArrayWrapper key)\n" +
                     "    {\n" +
-                            "        final %1$s value = charMap.get(representation, length);\n" +
+                            "        final %1$s value = charMap.get(key);\n" +
                             "        if (value == null)\n" +
                             "        {\n" +
                             "            return %3$s;\n" +
@@ -330,9 +317,9 @@ public final class EnumGenerator
                     "        return decode(representation.charAt(0));\n" +
                     "    }\n" +
                     "\n" +
-                    "    public static %1$s decode(final char[] representation, final int length)\n" +
+                    "    public static %1$s decode(final CharArrayWrapper key)\n" +
                     "    {\n" +
-                    "        return decode(representation[0]);\n" +
+                    "        return decode(key);\n" +
                     "    }\n",
                     typeName);
             default:
