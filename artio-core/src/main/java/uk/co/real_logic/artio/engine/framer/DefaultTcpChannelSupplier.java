@@ -52,7 +52,6 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
         }
     }
 
-    @Override
     public int pollSelector(final long timeInMs, final TcpChannelSupplier.NewChannelHandler handler) throws IOException
     {
         if (hasBindAddress || openingSocketChannels.size() > 0)
@@ -130,7 +129,6 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
         CloseHelper.close(selector);
     }
 
-    @Override
     public void open(final InetSocketAddress address, final TcpChannelSupplier.InitiatedChannelHandler channelHandler)
         throws IOException
     {
@@ -147,7 +145,6 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
         return new TcpChannel(channel);
     }
 
-    @Override
     public void stopConnecting(final InetSocketAddress address) throws IOException
     {
         final Iterator<SocketChannel> iterator = openingSocketChannels.iterator();

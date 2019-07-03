@@ -37,7 +37,6 @@ public class DebugTcpChannelSupplier extends DefaultTcpChannelSupplier
         super(configuration);
     }
 
-    @Override
     protected synchronized TcpChannel newTcpChannel(final SocketChannel channel) throws IOException
     {
         final TcpChannel tcpChannel = new TcpChannel(channel);
@@ -63,7 +62,6 @@ public class DebugTcpChannelSupplier extends DefaultTcpChannelSupplier
         }
     }
 
-    @Override
     public synchronized int pollSelector(final long timeInMs, final NewChannelHandler handler) throws IOException
     {
         if (isEnabled)
@@ -76,7 +74,6 @@ public class DebugTcpChannelSupplier extends DefaultTcpChannelSupplier
         }
     }
 
-    @Override
     public synchronized void open(
         final InetSocketAddress address,
         final InitiatedChannelHandler handler)
