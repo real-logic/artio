@@ -47,8 +47,11 @@ public class DynamicLibraryScheduler implements LibraryScheduler
         {
             // We shouldn't reach this default error handler because we catch exceptions in the CombinedAgent below.
             runner = new AgentRunner(
-                configuration.monitoringThreadIdleStrategy(), Throwable::printStackTrace, null, dynamicAgent);
-            AgentRunner.startOnThread(runner);
+                configuration.monitoringThreadIdleStrategy(),
+                Throwable::printStackTrace,
+                null,
+                dynamicAgent);
+            AgentRunner.startOnThread(runner, configuration.threadFactory());
 
             // Wait for it to start
             while (dynamicAgent.status() != ACTIVE)
@@ -122,7 +125,7 @@ public class DynamicLibraryScheduler implements LibraryScheduler
             this.errorHandler = errorHandler;
         }
 
-        public int doWork() throws Exception
+        public int doWork()
         {
             int count = 0;
 

@@ -24,7 +24,6 @@ import org.agrona.concurrent.AgentRunner;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 
 import static org.agrona.concurrent.AgentRunner.startOnThread;
-import static uk.co.real_logic.artio.CommonConfiguration.backoffIdleStrategy;
 
 public class LockStepFramerEngineScheduler implements EngineScheduler
 {
@@ -52,15 +51,21 @@ public class LockStepFramerEngineScheduler implements EngineScheduler
         }
 
         archivingRunner = new AgentRunner(
-            configuration.archiverIdleStrategy(), errorHandler, null, indexingAgent);
+            configuration.archiverIdleStrategy(),
+            errorHandler,
+            null,
+            indexingAgent);
 
         startOnThread(archivingRunner, configuration.threadFactory());
 
         if (monitoringAgent != null)
         {
             monitoringRunner = new AgentRunner(
-                backoffIdleStrategy(), errorHandler, null, monitoringAgent);
-            startOnThread(monitoringRunner);
+                configuration.monitoringThreadIdleStrategy(),
+                errorHandler,
+                null,
+                monitoringAgent);
+            startOnThread(monitoringRunner, configuration.threadFactory());
         }
     }
 

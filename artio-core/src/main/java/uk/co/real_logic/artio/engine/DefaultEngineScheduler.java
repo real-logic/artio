@@ -24,7 +24,6 @@ import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import java.util.concurrent.ThreadFactory;
 
 import static org.agrona.concurrent.AgentRunner.startOnThread;
-import static uk.co.real_logic.artio.CommonConfiguration.backoffIdleStrategy;
 
 /**
  * NB: Ensure that a new instance is created for each engine.
@@ -63,8 +62,11 @@ public class DefaultEngineScheduler implements EngineScheduler
         if (monitoringAgent != null)
         {
             monitoringRunner = new AgentRunner(
-                backoffIdleStrategy(), errorHandler, null, monitoringAgent);
-            startOnThread(monitoringRunner);
+                configuration.monitoringThreadIdleStrategy(),
+                errorHandler,
+                null,
+                monitoringAgent);
+            startOnThread(monitoringRunner, configuration.threadFactory());
         }
     }
 

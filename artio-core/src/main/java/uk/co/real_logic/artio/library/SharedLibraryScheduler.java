@@ -63,7 +63,12 @@ public class SharedLibraryScheduler implements LibraryScheduler
         if ((AGENTS_PER_LIBRARY * libraryCount) == agents.size())
         {
             runner = new AgentRunner(
-                configuration.monitoringThreadIdleStrategy(), errorHandler, null, new CompositeAgent(agents));
+                configuration.monitoringThreadIdleStrategy(),
+                errorHandler,
+                null,
+                new CompositeAgent(agents));
+
+            AgentRunner.startOnThread(runner, configuration.threadFactory());
         }
     }
 
