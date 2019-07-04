@@ -479,8 +479,6 @@ public class DecoderGenerator extends Generator
         {
             enumValidationMethod =
                 String.format(
-                    "        if (%3$s)\n" +
-                    "        {\n" +
                     "        int %1$sOffset = 0;\n" +
                     "        for (int i = 0; i < %1$sLength; i++)\n" +
                     "        {\n" +
@@ -492,11 +490,9 @@ public class DecoderGenerator extends Generator
                     "            }\n" +
                     "        }\n" +
                     "        %1$sWrapper.wrap(%1$s(), %1$sOffset, %1$sLength - %1$sOffset);\n" +
-                    "%2$s" +
-                    "        }",
+                    "%2$s",
                     propertyName,
-                    enumValidation,
-                    entry.required() ? "true" : "has" + entry.name()
+                    enumValidation
                 );
         }
         else if (type == Type.MULTIPLECHARVALUE)
@@ -519,19 +515,23 @@ public class DecoderGenerator extends Generator
         {
             enumValidationMethod =
                 String.format(
-                    "        if (%3$s)\n" +
-                    "        {\n" +
                     (isPrimitive ? "" : "          %1$sWrapper.wrap(%1$s(), %1$sLength);\n") +
-                    "          %2$s" +
-                    "        }\n",
+                    "          %2$s",
                     propertyName,
-                    enumValidation,
-                    entry.required() ? "true" : "has" + entry.name()
+                    enumValidation
                 );
         }
 
-
-        return enumValidationMethod;
+        return
+            entry.required() ? enumValidationMethod :
+            String.format(
+                "        if (has%1$s)\n" +
+                "        {\n" +
+                "          %2$s" +
+                "        }\n",
+                entry.name(),
+                enumValidationMethod
+            );
     }
 
     private CharSequence generateGroupValidation(final Entry entry, final Writer out)
