@@ -157,7 +157,7 @@ public final class EnumGenerator
 
     private boolean isCharBased(final Type type)
     {
-        return type == Type.CHAR || type == Type.MULTIPLECHARVALUE;
+        return type == Type.CHAR;
     }
 
     private String generateEnumDeclaration(final String name, final String interfaceToImplement)
@@ -227,35 +227,12 @@ public final class EnumGenerator
         {
             case MULTIPLEVALUESTRING:
             case MULTIPLESTRINGVALUE:
+            case MULTIPLECHARVALUE:
             case STRING:
                 return "    public static boolean isValid(final CharArrayWrapper key)\n" +
                        "    {\n" +
                        "        return charMap.containsKey(key);\n" +
                        "    }\n";
-
-            case MULTIPLECHARVALUE:
-                final String multiCharValues = allValues
-                    .stream()
-                    .map(Field.Value::representation)
-                    .map((repr) -> String.format("'%1$s'", repr))
-                    .map((repr) -> String.format("        intSet.add(%1$s);\n", repr))
-                    .collect(joining());
-
-                return format(
-                    "    private static final IntHashSet intSet = new IntHashSet(%2$s);\n" +
-                    "    %1$s\n" +
-                    "\n" +
-                    "    public static boolean isValid(final char[] representation, final int length)\n" +
-                    "    {\n" +
-                    "        for (int i = 0; i < length; i+=2)\n" +
-                    "        {\n" +
-                    "            if (! intSet.contains(representation[i]))\n" +
-                    "                return false;\n" +
-                    "        }\n" +
-                    "        return true;\n" +
-                    "    }\n",
-                    optionalStaticInit(multiCharValues),
-                    ConstantGenerator.sizeHashSet(allValues));
             default:
                 final String primitiveValues = allValues
                     .stream()
@@ -283,6 +260,8 @@ public final class EnumGenerator
             case STRING:
             case MULTIPLEVALUESTRING:
             case MULTIPLESTRINGVALUE:
+            case MULTIPLECHARVALUE:
+
                 final String entries = allValues
                     .stream()
                     .map((v) -> format("        stringMap.put(%s, %s);\n", literal(v, type), v.description()))
@@ -309,19 +288,7 @@ public final class EnumGenerator
                     typeName,
                     entries,
                     UNKNOWN_NAME);
-            case MULTIPLECHARVALUE:
 
-                return format(
-                    "    public static %1$s decode(String representation)\n" +
-                    "    {\n" +
-                    "        return decode(representation.charAt(0));\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public static %1$s decode(final CharArrayWrapper key)\n" +
-                    "    {\n" +
-                    "        return decode(key);\n" +
-                    "    }\n",
-                    typeName);
             default:
                 return "";
         }
@@ -354,6 +321,7 @@ public final class EnumGenerator
             case STRING:
             case MULTIPLEVALUESTRING:
             case MULTIPLESTRINGVALUE:
+            case MULTIPLECHARVALUE:
             case CURRENCY:
             case EXCHANGE:
             case COUNTRY:
@@ -363,7 +331,6 @@ public final class EnumGenerator
             case MONTHYEAR:
                 argTypeValue = typeValue = "String";
                 break;
-            case MULTIPLECHARVALUE:
             case CHAR:
                 typeValue = "char";
                 argTypeValue = "int";
@@ -391,6 +358,7 @@ public final class EnumGenerator
                 return representation;
 
             case STRING:
+            case MULTIPLECHARVALUE:
             case MULTIPLEVALUESTRING:
             case MULTIPLESTRINGVALUE:
             case CURRENCY:
@@ -402,7 +370,6 @@ public final class EnumGenerator
             case MONTHYEAR:
                 return '"' + representation + '"';
 
-            case MULTIPLECHARVALUE:
             case CHAR:
                 if (representation.length() > 1)
                 {

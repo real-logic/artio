@@ -475,7 +475,7 @@ public class DecoderGenerator extends Generator
             isPrimitive ? "()" : "Wrapper");
 
         final String enumValidationMethod;
-        if (type == Type.MULTIPLEVALUESTRING || type == Type.MULTIPLESTRINGVALUE)
+        if (type.isMultiValue())
         {
             enumValidationMethod =
                 String.format(
@@ -495,28 +495,12 @@ public class DecoderGenerator extends Generator
                     enumValidation
                 );
         }
-        else if (type == Type.MULTIPLECHARVALUE)
-        {
-            final String optionalCheck = entry.required() ? "" : String.format("has%s && ", name);
-            return
-                String.format(
-                    "        if (%1$s!%2$s.isValid(%3$s(), %3$sLength))\n" +
-                    "        {\n" +
-                    "            invalidTagId = %4$s;\n" +
-                    "            rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
-                    "            return false;\n" +
-                    "        }\n",
-                    optionalCheck,
-                    name,
-                    propertyName,
-                    tagNumber);
-        }
         else
         {
             enumValidationMethod =
                 String.format(
-                    (isPrimitive ? "" : "          %1$sWrapper.wrap(%1$s(), %1$sLength);\n") +
-                    "          %2$s",
+                    (isPrimitive ? "" : "        %1$sWrapper.wrap(%1$s(), %1$sLength);\n") +
+                    "%2$s",
                     propertyName,
                     enumValidation
                 );
