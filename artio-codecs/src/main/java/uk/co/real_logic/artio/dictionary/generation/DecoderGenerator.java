@@ -910,7 +910,7 @@ public class DecoderGenerator extends Generator
             enumValueDecoder,
             enumStringBasedWrapperField,
             NULL_VAL_NAME
-        ) : type.isIntBased() || type == Type.CHAR ? "" : enumStringBasedWrapperField;
+        ) : field.type().isMultiValue() ? enumStringBasedWrapperField : "";
 
         final String lazyInitialisation = fieldLazyInstantialisation(field, fieldName);
 
