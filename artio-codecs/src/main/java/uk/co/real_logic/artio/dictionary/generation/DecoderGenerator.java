@@ -479,17 +479,17 @@ public class DecoderGenerator extends Generator
         {
             enumValidationMethod =
                 String.format(
-                    "        int %1$sOffset = 0;\n" +
-                    "        for (int i = 0; i < %1$sLength; i++)\n" +
-                    "        {\n" +
+                    "          int %1$sOffset = 0;\n" +
+                    "          for (int i = 0; i < %1$sLength; i++)\n" +
+                    "          {\n" +
                     "            if (%1$s()[i] == ' ')\n" +
                     "            {\n" +
-                    "        %1$sWrapper.wrap(%1$s(), %1$sOffset, i - %1$sOffset);\n" +
+                    "              %1$sWrapper.wrap(%1$s(), %1$sOffset, i - %1$sOffset);\n" +
                     "%2$s" +
                     "                %1$sOffset = i + 1;\n" +
                     "            }\n" +
-                    "        }\n" +
-                    "        %1$sWrapper.wrap(%1$s(), %1$sOffset, %1$sLength - %1$sOffset);\n" +
+                    "          }\n" +
+                    "          %1$sWrapper.wrap(%1$s(), %1$sOffset, %1$sLength - %1$sOffset);\n" +
                     "%2$s",
                     propertyName,
                     enumValidation
@@ -511,7 +511,7 @@ public class DecoderGenerator extends Generator
             String.format(
                 "        if (has%1$s)\n" +
                 "        {\n" +
-                "          %2$s" +
+                "%2$s" +
                 "        }\n",
                 entry.name(),
                 enumValidationMethod
