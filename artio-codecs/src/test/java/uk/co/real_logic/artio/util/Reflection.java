@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.util;
 
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.builder.Encoder;
+import uk.co.real_logic.artio.dictionary.CharArrayWrapper;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 
 import org.agrona.AsciiSequenceView;
@@ -217,6 +218,7 @@ public final class Reflection
         final Optional<Method> decodeMethod = Stream.of(enumClass.getMethods())
             .filter(method -> method.getName().equals("decode"))
             .filter(method -> method.getParameterCount() == 1)
+            .filter(method -> method.getParameterTypes()[0] != CharArrayWrapper.class)
             .findFirst();
         return decodeMethod.get().invoke(null, representation);
     }

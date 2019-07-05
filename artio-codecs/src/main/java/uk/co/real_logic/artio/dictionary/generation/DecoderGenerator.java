@@ -456,27 +456,66 @@ public class DecoderGenerator extends Generator
         }
 
         final String name = entry.name();
-        final String optionalCheck = entry.required() ? "" : String.format("has%s && ", name);
         final int tagNumber = field.number();
         final Type type = field.type();
         final String propertyName = formatPropertyName(name);
 
-        final boolean isChar = type == Type.CHAR;
-        final boolean isPrimitive = type.isIntBased() || isChar;
+        final boolean isPrimitive = type.isIntBased() || type == Type.CHAR;
 
-
-        return String.format(
-            "        if (%1$s!%2$s.isValid(%3$s()%5$s))\n" +
+        final String enumValidation = String.format(
+            "        if (!%1$s.isValid(%2$s%4$s))\n" +
             "        {\n" +
-            "            invalidTagId = %4$s;\n" +
+            "            invalidTagId = %3$s;\n" +
             "            rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
             "            return false;\n" +
             "        }\n",
-            optionalCheck,
             name,
             propertyName,
             tagNumber,
-            isPrimitive ? "" : ", " + propertyName + "Length");
+            isPrimitive ? "()" : "Wrapper");
+
+        final String enumValidationMethod;
+        if (type.isMultiValue())
+        {
+            enumValidationMethod =
+                String.format(
+                    "          int %1$sOffset = 0;\n" +
+                    "          for (int i = 0; i < %1$sLength; i++)\n" +
+                    "          {\n" +
+                    "            if (%1$s()[i] == ' ')\n" +
+                    "            {\n" +
+                    "              %1$sWrapper.wrap(%1$s(), %1$sOffset, i - %1$sOffset);\n" +
+                    "%2$s" +
+                    "                %1$sOffset = i + 1;\n" +
+                    "            }\n" +
+                    "          }\n" +
+                    "          %1$sWrapper.wrap(%1$s(), %1$sOffset, %1$sLength - %1$sOffset);\n" +
+                    "%2$s",
+                    propertyName,
+                    enumValidation
+                );
+        }
+        else
+        {
+            enumValidationMethod =
+                String.format(
+                    (isPrimitive ? "" : "        %1$sWrapper.wrap(%1$s(), %1$sLength);\n") +
+                    "%2$s",
+                    propertyName,
+                    enumValidation
+                );
+        }
+
+        return
+            entry.required() ? enumValidationMethod :
+            String.format(
+                "        if (has%1$s)\n" +
+                "        {\n" +
+                "%2$s" +
+                "        }\n",
+                entry.name(),
+                enumValidationMethod
+            );
     }
 
     private CharSequence generateGroupValidation(final Entry entry, final Writer out)
@@ -816,24 +855,6 @@ public class DecoderGenerator extends Generator
         final String optionalCheck = optionalCheck(entry);
         final String asStringBody = generateAsStringBody(entry, name, fieldName);
 
-        final String enumValueDecoder = String.format(
-            type.isStringBased() ?
-            "%1$s.decode(%2$s(), %2$sLength)" :
-            // Need to ensure that decode the field
-            (flyweightsEnabled && (type.isIntBased() || type.isFloatBased())) ?
-            "%1$s.decode(%2$s())" :
-            "%1$s.decode(%2$s)",
-            name,
-            fieldName);
-
-        final String asEnumBody = String.format(
-            entry.required() ?
-            "%1$s" :
-            "has%2$s ? %1$s : %2$s.%3$s",
-            enumValueDecoder,
-            name,
-            NULL_VAL_NAME);
-
         final String extraStringDecode = type.isStringBased() ? String.format(
             "    public String %1$sAsString()\n" +
             "    {\n" +
@@ -864,16 +885,32 @@ public class DecoderGenerator extends Generator
         final String offsetField = type.hasOffsetField(flyweightsEnabled) ?
             String.format("    private int %1$sOffset;\n\n%2$s", fieldName, lengthBasedFields) : "";
 
+        final String enumValueDecoder = String.format(
+            type.isStringBased() ?
+            "%1$s.decode(%2$sWrapper)" :
+            // Need to ensure that decode the field
+            (flyweightsEnabled && (type.isIntBased() || type.isFloatBased())) ?
+            "%1$s.decode(%2$s())" :
+            "%1$s.decode(%2$s)",
+            name,
+            fieldName);
+        final String enumStringBasedWrapperField =
+            String.format("    private final CharArrayWrapper %1$sWrapper = new CharArrayWrapper();\n", fieldName);
         final String enumDecoder = EnumGenerator.hasEnumGenerated(field) && !field.type().isMultiValue() ?
             String.format(
-            "    public %s %sAsEnum()\n" +
+            "%4$s" +
+            "    public %1$s %2$sAsEnum()\n" +
             "    {\n" +
-            "        return %s;\n" +
+            (!entry.required() ? "        if (!has%1$s)\n return %1$s.%5$s;\n" : "") +
+            (type.isStringBased() ? "        %2$sWrapper.wrap(%2$s(), %2$sLength);\n" : "") +
+            "        return %3$s;\n" +
             "    }\n\n",
             name,
             fieldName,
-            asEnumBody
-        ) : "";
+            enumValueDecoder,
+            enumStringBasedWrapperField,
+            NULL_VAL_NAME
+        ) : field.type().isMultiValue() ? enumStringBasedWrapperField : "";
 
         final String lazyInitialisation = fieldLazyInstantialisation(field, fieldName);
 

@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
 
 public final class CharArrayMap<V>
 {
-    private final CharArrayWrapper wrapper = new CharArrayWrapper();
     private final Map<CharArrayWrapper, V> map;
 
     public CharArrayMap(final Map<String, V> buildFrom)
@@ -31,21 +30,13 @@ public final class CharArrayMap<V>
             .collect(Collectors.toMap((entry) -> new CharArrayWrapper(entry.getKey()), Map.Entry::getValue));
     }
 
-    public V get(final char[] value, final int length)
+    public V get(final CharArrayWrapper key)
     {
-        wrapper.wrap(value, length);
-        return map.get(wrapper);
+        return map.get(key);
     }
 
-    public boolean containsKey(final char[] value, final int length)
+    public boolean containsKey(final CharArrayWrapper key)
     {
-        wrapper.wrap(value, length);
-        return map.containsKey(wrapper);
-    }
-
-    public boolean containsKey(final char[] value, final int offset, final int length)
-    {
-        wrapper.wrap(value, offset, length);
-        return map.containsKey(wrapper);
+        return map.containsKey(key);
     }
 }

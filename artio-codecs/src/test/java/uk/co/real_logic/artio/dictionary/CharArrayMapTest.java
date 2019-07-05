@@ -36,8 +36,12 @@ public class CharArrayMapTest
         final CharArrayMap<String> charArrayMap = new CharArrayMap<>(buildFrom);
 
         //When / Then
-        assertTrue(charArrayMap.containsKey(new char[] {'0', ' ', 'A', 'A'}, 0, 1));
-        assertTrue(charArrayMap.containsKey(new char[] {'0', ' ', 'A', 'A'}, 2, 2));
+        final char[] data = {'0', ' ', 'A', 'A'};
+        final CharArrayWrapper wrapper = new CharArrayWrapper();
+        wrapper.wrap(data, 0, 1);
+        assertTrue(charArrayMap.containsKey(wrapper));
+        wrapper.wrap(data, 2, 2);
+        assertTrue(charArrayMap.containsKey(wrapper));
     }
 
     @Test
@@ -51,6 +55,9 @@ public class CharArrayMapTest
         final CharArrayMap<String> charArrayMap = new CharArrayMap<>(buildFrom);
 
         //When / Then
-        assertFalse(charArrayMap.containsKey(new char[] {'0', ' ', 'A', 'B'}, 2, 2));
+        final char[] data = {'0', ' ', 'A', 'B'};
+        final CharArrayWrapper wrapper = new CharArrayWrapper();
+        wrapper.wrap(data, 2, 2);
+        assertFalse(charArrayMap.containsKey(wrapper));
     }
 }

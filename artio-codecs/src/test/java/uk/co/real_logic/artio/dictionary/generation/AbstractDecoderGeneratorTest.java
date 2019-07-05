@@ -1081,6 +1081,23 @@ public abstract class AbstractDecoderGeneratorTest
     }
 
     @Test
+    public void multiStringValueThatFailsValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(INVALID_MULTI_STRING_VALUE_MESSAGE);
+
+        assertInvalid(decoder);
+    }
+
+
+    @Test
+    public void multiStringValueThatPassesValidation() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(VALID_MULTI_STRING_VALUE_MESSAGE);
+
+        assertValid(decoder);
+    }
+
+    @Test
     public void decodesMultiValueString() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(MULTI_VALUE_STRING_MESSAGE);

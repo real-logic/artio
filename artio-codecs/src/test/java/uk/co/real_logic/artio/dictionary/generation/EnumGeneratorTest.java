@@ -31,6 +31,10 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayWithSize;
 import static org.hamcrest.Matchers.hasKey;
 import static org.junit.Assert.*;
+
+
+import uk.co.real_logic.artio.dictionary.CharArrayWrapper;
+
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.ENUM_MISSING_CHAR;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.ENUM_UNKNOWN_CHAR;
@@ -136,25 +140,17 @@ public class EnumGeneratorTest
     public void generatesCharArrayBasedDecode() throws Exception
     {
         final Enum[] values = getStringEnumConstants();
+        final CharArrayWrapper wrapper = new CharArrayWrapper();
+        final Method decode = stringEnumClass.getMethod("decode", CharArrayWrapper.class);
 
-        final Method decode = stringEnumClass.getMethod("decode", char[].class, int.class);
+        wrapper.wrap("0".toCharArray(), 1);
+        assertEquals(values[0], decode.invoke(null, wrapper));
 
-        assertEquals(values[0], decode.invoke(null, "0".toCharArray(), 1));
-        assertEquals(values[1], decode.invoke(null, "A".toCharArray(), 1));
-        assertEquals(values[2], decode.invoke(null, "AA ".toCharArray(), 2));
-    }
+        wrapper.wrap("A".toCharArray(), 1);
+        assertEquals(values[1], decode.invoke(null, wrapper));
 
-    @Test
-    public void generateMultiStringValueValidation() throws Exception
-    {
-        final Class<?> clazz = compile(MULTI_STRING_VALUE_ENUM, sources);
-
-        final Method isValid = clazz.getMethod("isValid", char[].class, int.class);
-
-        final char[] validArr = "0 AA".toCharArray();
-        assertTrue((boolean)isValid.invoke(null, validArr, validArr.length));
-        final char[] invalidArr = "0 AA B".toCharArray();
-        assertFalse((boolean)isValid.invoke(null, invalidArr, invalidArr.length));
+        wrapper.wrap("AA ".toCharArray(), 2);
+        assertEquals(values[2], decode.invoke(null, wrapper));
     }
 
     @Test
@@ -162,12 +158,13 @@ public class EnumGeneratorTest
     {
         final Enum[] values = getStringEnumConstants();
 
-        final Method decodeCharArray = stringEnumClass.getMethod("decode", char[].class, int.class);
+        final Method decodeCharArray = stringEnumClass.getMethod("decode", CharArrayWrapper.class);
         final Method decodeString = stringEnumClass.getMethod("decode", String.class);
 
         final String unknownRepresentation = "UnknownRepresentation";
-        assertEquals(values[values.length - 1], decodeCharArray.invoke(null, unknownRepresentation.toCharArray(),
-            unknownRepresentation.length()));
+        final CharArrayWrapper wrapper = new CharArrayWrapper();
+        wrapper.wrap(unknownRepresentation.toCharArray(), unknownRepresentation.length());
+        assertEquals(values[values.length - 1], decodeCharArray.invoke(null, wrapper));
         assertEquals(values[values.length - 1], decodeString.invoke(null, unknownRepresentation));
     }
 

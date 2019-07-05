@@ -17,18 +17,18 @@ package uk.co.real_logic.artio.dictionary;
 
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 
-final class CharArrayWrapper
+public final class CharArrayWrapper
 {
     private char[] values;
     private int length;
     private int offset;
     private int hashcode;
 
-    CharArrayWrapper()
+    public CharArrayWrapper()
     {
     }
 
-    CharArrayWrapper(final CharArrayWrapper other)
+    public CharArrayWrapper(final CharArrayWrapper other)
     {
         this.values = other.values;
         this.offset = other.offset;
@@ -36,18 +36,18 @@ final class CharArrayWrapper
         this.hashcode = other.hashcode;
     }
 
-    CharArrayWrapper(final String string)
+    public CharArrayWrapper(final String string)
     {
         final char[] values = string.toCharArray();
         wrap(values, values.length);
     }
 
-    void wrap(final char[] value, final int length)
+    public void wrap(final char[] value, final int length)
     {
         wrap(value, 0, length);
     }
 
-    void wrap(final char[] value, final int offset, final int length)
+    public void wrap(final char[] value, final int offset, final int length)
     {
         this.values = value;
         this.offset = offset;
