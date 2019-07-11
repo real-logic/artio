@@ -336,8 +336,10 @@ class ReplayerSession implements ControlledFragmentHandler
         {
             // Validate that we've replayed the correct number of messages.
             // If we have missing messages for some reason then just gap fill them.
+
             if (!upToMostRecent)
             {
+                // We know precisely what number to gap fill up to.
                 final int expectedCount = endSeqNo - beginSeqNo + 1;
                 if (replayedMessages != expectedCount)
                 {

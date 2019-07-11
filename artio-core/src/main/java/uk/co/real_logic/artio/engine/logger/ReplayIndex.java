@@ -206,8 +206,7 @@ public class ReplayIndex implements Index
             else
             {
                 // Reset the positions in order to avoid wraps at the start.
-                final long resetPosition = beginChange(buffer) + RECORD_LENGTH;
-                beginChangeOrdered(buffer, resetPosition);
+                final long resetPosition = beginChange(buffer);
                 endChangeOrdered(buffer, resetPosition);
             }
         }

@@ -58,7 +58,6 @@ public class ReplayOperation
     private RecordingRange recordingRange;
     private int aeronSessionId;
     private Image image;
-    private int fragmentsToPoll = Integer.MAX_VALUE;
 
     ReplayOperation(
         final ControlledFragmentHandler handler,
@@ -79,6 +78,11 @@ public class ReplayOperation
         this.subscription = subscription;
     }
 
+    /**
+     * Attempt a replay step
+     *
+     * @return true if complete
+     */
     public boolean attemptReplay()
     {
         return attemptReplayStep();
@@ -145,7 +149,7 @@ public class ReplayOperation
         }
         else
         {
-            image.controlledPoll(assembler, fragmentsToPoll);
+            image.controlledPoll(assembler, Integer.MAX_VALUE);
 
             // Have we finished this range?
             if (messageTracker.count < recordingRange.count)
@@ -178,11 +182,6 @@ public class ReplayOperation
         }
 
         return false;
-    }
-
-    public void setFragmentsToPoll(final int fragmentsToPoll)
-    {
-        this.fragmentsToPoll = fragmentsToPoll;
     }
 
     private static class MessageTracker implements ControlledFragmentHandler
