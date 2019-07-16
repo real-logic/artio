@@ -25,6 +25,7 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.decoder.ResendRequestDecoder;
 import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.engine.ReplayHandler;
@@ -44,6 +45,7 @@ import java.util.Set;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.COMMIT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.agrona.collections.ArrayListUtil.fastUnorderedRemove;
+import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
 /**
@@ -136,8 +138,13 @@ public class Replayer implements ProtocolHandler, Agent
             resendRequest.decode(asciiBuffer, srcOffset, limit);
 
             final int beginSeqNo = resendRequest.beginSeqNo();
-
             final int endSeqNo = resendRequest.endSeqNo();
+
+            DebugLogger.log(REPLAY,
+                "Received Resend Request for range: [%d, %d]%n",
+                beginSeqNo,
+                endSeqNo);
+
             final boolean replayUpToMostRecent = endSeqNo == MOST_RECENT_MESSAGE;
             final String message = asciiBuffer.getAscii(srcOffset, limit);
             // Validate endSeqNo

@@ -45,6 +45,7 @@ import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.*;
+import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.*;
@@ -424,7 +425,13 @@ public class ReplayIndexTest extends AbstractLogTest
         final int endSequenceIndex)
     {
         final ReplayOperation operation = query.query(
-            mockHandler, sessionId, beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex);
+            mockHandler,
+            sessionId,
+            beginSequenceNumber,
+            beginSequenceIndex,
+            endSequenceNumber,
+            endSequenceIndex,
+            REPLAY);
 
         final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
         while (!operation.attemptReplay())

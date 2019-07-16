@@ -15,14 +15,15 @@
  */
 package uk.co.real_logic.artio.engine;
 
-import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.BufferClaim;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.dictionary.IntDictionary;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
@@ -39,7 +40,6 @@ import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static io.aeron.protocol.DataHeaderFlyweight.END_FLAG;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static uk.co.real_logic.artio.LogTag.CATCHUP;
 import static uk.co.real_logic.artio.engine.PossDupFinder.NO_ENTRY;
 import static uk.co.real_logic.artio.engine.framer.CatchupReplayer.FRAME_LENGTH;
 import static uk.co.real_logic.artio.util.AsciiBuffer.SEPARATOR_LENGTH;
@@ -67,6 +67,7 @@ public class PossDupEnabler
     private final ErrorHandler errorHandler;
     private final EpochClock clock;
     private final int maxPayloadLength;
+    private final LogTag logTag;
 
     private int fragmentedMessageLength;
 
@@ -77,7 +78,8 @@ public class PossDupEnabler
         final Consumer<String> onIllegalStateFunc,
         final ErrorHandler errorHandler,
         final EpochClock clock,
-        final int maxPayloadLength)
+        final int maxPayloadLength,
+        final LogTag logTag)
     {
         this.bufferClaim = bufferClaim;
         this.claimer = claimer;
@@ -86,6 +88,7 @@ public class PossDupEnabler
         this.errorHandler = errorHandler;
         this.clock = clock;
         this.maxPayloadLength = maxPayloadLength;
+        this.logTag = logTag;
     }
 
     // Only return abort if genuinely back pressured
@@ -206,8 +209,8 @@ public class PossDupEnabler
             onPreCommit.onPreCommit(fragmentedMessageBuffer, fragmentOffset);
 
             DebugLogger.log(
-                CATCHUP,
-                "Resending: %s%n",
+                logTag,
+                "Replayed: %s%n",
                 fragmentedMessageBuffer,
                 fragmentOffset + logLengthOffset,
                 fragmentedMessageLength - logLengthOffset);
@@ -252,7 +255,7 @@ public class PossDupEnabler
             final int offset = bufferClaim.offset();
 
             DebugLogger.log(
-                CATCHUP,
+                logTag,
                 "Resending: %s%n",
                 buffer,
                 offset + logLengthOffset,

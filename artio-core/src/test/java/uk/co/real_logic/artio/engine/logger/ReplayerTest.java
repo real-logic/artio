@@ -96,7 +96,7 @@ public class ReplayerTest extends AbstractLogTest
         when(publication.tryClaim(anyInt(), any())).thenReturn(1L);
         when(publication.maxPayloadLength()).thenReturn(Configuration.mtuLength() - DataHeaderFlyweight.HEADER_LENGTH);
 
-        when(replayQuery.query(handler.capture(), anyLong(), anyInt(), anyInt(), anyInt(), anyInt()))
+        when(replayQuery.query(handler.capture(), anyLong(), anyInt(), anyInt(), anyInt(), anyInt(), any()))
             .thenReturn(replayOperation);
         when(replayOperation.attemptReplay()).thenReturn(true);
 
@@ -746,7 +746,13 @@ public class ReplayerTest extends AbstractLogTest
     private void verifyQueriedService(final int endSeqNo)
     {
         verify(replayQuery).query(
-            any(), eq(SESSION_ID), eq(BEGIN_SEQ_NO), eq(SEQUENCE_INDEX), eq(endSeqNo), eq(SEQUENCE_INDEX));
+            any(),
+            eq(SESSION_ID),
+            eq(BEGIN_SEQ_NO),
+            eq(SEQUENCE_INDEX),
+            eq(endSeqNo),
+            eq(SEQUENCE_INDEX),
+            any());
     }
 
     private void assertResultBufferHasSetPossDupFlagAndSendingTimeUpdates()

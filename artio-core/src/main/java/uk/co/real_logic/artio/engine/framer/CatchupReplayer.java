@@ -15,14 +15,15 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.BufferClaim;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.builder.SequenceResetEncoder;
@@ -133,7 +134,8 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
             this::onIllegalState,
             errorHandler,
             clock,
-            inboundPublication.maxPayloadLength());
+            inboundPublication.maxPayloadLength(),
+            CATCHUP);
     }
 
     private void onPreCommit(final MutableDirectBuffer buffer, final int offset)
@@ -295,7 +297,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                     replayFromSequenceNumber,
                     replayFromSequenceIndex,
                     lastReceivedSeqNum,
-                    currentSequenceIndex);
+                    currentSequenceIndex, LogTag.REPLAY);
 
                 state = State.REPLAYING;
 

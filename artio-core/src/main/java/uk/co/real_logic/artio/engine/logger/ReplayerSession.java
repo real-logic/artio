@@ -16,8 +16,8 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.ExclusivePublication;
-import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.BufferClaim;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
@@ -40,6 +40,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
 
@@ -139,7 +140,8 @@ class ReplayerSession implements ControlledFragmentHandler
             this::onIllegalState,
             this::onException,
             clock,
-            publication.maxPayloadLength());
+            publication.maxPayloadLength(),
+            LogTag.FIX_MESSAGE);
 
         state = State.REPLAYING;
     }
@@ -171,7 +173,8 @@ class ReplayerSession implements ControlledFragmentHandler
             beginSeqNo,
             sequenceIndex,
             endSeqNo,
-            sequenceIndex);
+            sequenceIndex,
+            LogTag.CATCHUP);
     }
 
     // Callback for the ReplayQuery:
@@ -271,6 +274,8 @@ class ReplayerSession implements ControlledFragmentHandler
         }
         else
         {
+            DebugLogger.log(REPLAY, "Back pressured trying to sendGapFill");
+
             return ABORT;
         }
     }
@@ -303,6 +308,7 @@ class ReplayerSession implements ControlledFragmentHandler
         switch (state)
         {
             case REPLAYING:
+                DebugLogger.log(REPLAY, "ReplayerSession: REPLAYING step");
                 if (replayOperation.attemptReplay())
                 {
                     state = State.CHECK_REPLAY;
@@ -311,6 +317,7 @@ class ReplayerSession implements ControlledFragmentHandler
                 return false;
 
             case CHECK_REPLAY:
+                DebugLogger.log(REPLAY, "ReplayerSession: CHECK_REPLAY step");
                 if (completeReplay())
                 {
                     state = State.SEND_COMPLETE_MESSAGE;
@@ -337,6 +344,16 @@ class ReplayerSession implements ControlledFragmentHandler
             final int newSequenceNumber =
                 upToMostRecent ? newSeqNo(connectionId) : endSeqNo + 1;
             final Action action = sendGapFill(beginGapFillSeqNum, newSequenceNumber);
+
+            DebugLogger.log(
+                REPLAY,
+                "ReplayerSession: completeReplay-sendGapFill action=%s, replayedMessages=%d, " +
+                "beginGapFillSeqNum=%d, newSequenceNumber=%d%n",
+                action,
+                replayedMessages,
+                beginGapFillSeqNum,
+                newSequenceNumber);
+
             return action != ABORT;
         }
         else
@@ -348,6 +365,15 @@ class ReplayerSession implements ControlledFragmentHandler
             {
                 // We know precisely what number to gap fill up to.
                 final int expectedCount = endSeqNo - beginSeqNo + 1;
+                DebugLogger.log(
+                    REPLAY,
+                    "ReplayerSession: completeReplay-!upToMostRecent replayedMessages=%d endSeqNo=%d " +
+                    "beginSeqNo=%d expectedCount=%d%n",
+                    replayedMessages,
+                    endSeqNo,
+                    beginSeqNo,
+                    expectedCount);
+
                 if (replayedMessages != expectedCount)
                 {
                     if (replayedMessages == 0)
@@ -363,6 +389,13 @@ class ReplayerSession implements ControlledFragmentHandler
                         "[%s] Error in resend request, count(%d) < expectedCount (%d)",
                         message, replayedMessages, expectedCount);
                 }
+            }
+            else
+            {
+                DebugLogger.log(
+                    REPLAY,
+                    "ReplayerSession: completeReplay-upToMostRecent replayedMessages=%d%n",
+                    replayedMessages);
             }
         }
 

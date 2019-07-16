@@ -26,15 +26,17 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.CountersReader;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 import java.util.List;
-import java.util.function.Predicate;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 
 /**
  * A continuable replay operation that can retried.
@@ -43,13 +45,14 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
  */
 public class ReplayOperation
 {
-    private final MessageTracker messageTracker = new MessageTracker();
-    private final ControlledFragmentAssembler assembler = new ControlledFragmentAssembler(messageTracker);
+    private final MessageTracker messageTracker;
+    private final ControlledFragmentAssembler assembler;
 
     private final List<RecordingRange> ranges;
     private final AeronArchive aeronArchive;
     private final ErrorHandler errorHandler;
     private final int archiveReplayStream;
+    private final LogTag logTag;
     private final CountersReader countersReader;
     private final Subscription subscription;
 
@@ -65,16 +68,20 @@ public class ReplayOperation
         final AeronArchive aeronArchive,
         final ErrorHandler errorHandler,
         final Subscription subscription,
-        final int archiveReplayStream)
+        final int archiveReplayStream,
+        final LogTag logTag)
     {
+        messageTracker = new MessageTracker(logTag, handler);
+        assembler = new ControlledFragmentAssembler(messageTracker);
+
         this.ranges = ranges;
         this.aeronArchive = aeronArchive;
         this.errorHandler = errorHandler;
         this.archiveReplayStream = archiveReplayStream;
+        this.logTag = logTag;
 
         final Aeron aeron = aeronArchive.context().aeron();
         countersReader = aeron.countersReader();
-        messageTracker.wrap(handler);
         this.subscription = subscription;
     }
 
@@ -92,13 +99,19 @@ public class ReplayOperation
     {
         if (recordingRange == null)
         {
+            DebugLogger.log(logTag, "Acquiring Recording Range");
+
             if (ranges.isEmpty())
             {
                 return true;
             }
 
             recordingRange = ranges.get(0);
-            messageTracker.msgPredicate = recordingRange.msgPredicate;
+            DebugLogger.log(logTag,
+                "ReplayOperation : Attempting Recording Range: %s%n",
+                recordingRange);
+
+            messageTracker.sessionId = recordingRange.sessionId;
 
             final long beginPosition = recordingRange.position;
             final long length = recordingRange.length;
@@ -107,6 +120,8 @@ public class ReplayOperation
 
             if (archivingNotComplete(endPosition, recordingId))
             {
+                DebugLogger.log(logTag, "Archiving not complete");
+
                 // Retry on the next iteration
                 recordingRange = null;
                 return false;
@@ -143,22 +158,34 @@ public class ReplayOperation
 
         if (image == null)
         {
+            DebugLogger.log(logTag, "Acquiring Replay Image");
+
             image = subscription.imageBySessionId(aeronSessionId);
 
             return false;
         }
         else
         {
+            DebugLogger.log(logTag, "Polling Replay Image");
+
             image.controlledPoll(assembler, Integer.MAX_VALUE);
 
             // Have we finished this range?
-            if (messageTracker.count < recordingRange.count)
+            final int messageTrackerCount = messageTracker.count;
+            final int recordingRangeCount = recordingRange.count;
+            if (messageTrackerCount < recordingRangeCount)
             {
                 return false;
             }
             else
             {
-                replayedMessages += recordingRange.count;
+                DebugLogger.log(
+                    logTag,
+                    "Finished with range by count: [%s < %s]%n",
+                    messageTrackerCount,
+                    recordingRangeCount);
+
+                replayedMessages += recordingRangeCount;
                 recordingRange = null;
 
                 return ranges.isEmpty();
@@ -188,10 +215,17 @@ public class ReplayOperation
     {
         private final MessageHeaderDecoder messageHeaderDecoder = new MessageHeaderDecoder();
         private final FixMessageDecoder messageDecoder = new FixMessageDecoder();
+        private final LogTag logTag;
+        private final ControlledFragmentHandler messageHandler;
 
-        ControlledFragmentHandler messageHandler;
         int count;
-        Predicate<FixMessageDecoder> msgPredicate;
+        long sessionId;
+
+        MessageTracker(final LogTag logTag, final ControlledFragmentHandler messageHandler)
+        {
+            this.logTag = logTag;
+            this.messageHandler = messageHandler;
+        }
 
         @Override
         public Action onFragment(
@@ -201,7 +235,7 @@ public class ReplayOperation
 
             if (messageHeaderDecoder.templateId() == FixMessageDecoder.TEMPLATE_ID)
             {
-                if (msgPredicate != null)
+                if (sessionId != UNK_SESSION)
                 {
                     messageDecoder.wrap(
                         buffer,
@@ -209,11 +243,14 @@ public class ReplayOperation
                         messageHeaderDecoder.blockLength(),
                         messageHeaderDecoder.version()
                     );
-                    if (!msgPredicate.test(messageDecoder))
+
+                    if (messageDecoder.session() != sessionId)
                     {
                         return CONTINUE;
                     }
                 }
+
+                DebugLogger.log(logTag, "Found Replay Message [%s]%n", buffer, offset, length);
 
                 final Action action = messageHandler.onFragment(buffer, offset, length, header);
                 if (action != ABORT)
@@ -224,11 +261,6 @@ public class ReplayOperation
             }
 
             return CONTINUE;
-        }
-
-        void wrap(final ControlledFragmentHandler handler)
-        {
-            this.messageHandler = handler;
         }
 
         void reset()

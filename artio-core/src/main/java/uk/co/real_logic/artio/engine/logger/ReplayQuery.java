@@ -24,7 +24,8 @@ import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.artio.messages.FixMessageDecoder;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordDecoder;
 
@@ -33,7 +34,6 @@ import java.nio.MappedByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.LongFunction;
-import java.util.function.Predicate;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
@@ -93,6 +93,7 @@ public class ReplayQuery implements AutoCloseable
      * @param beginSequenceIndex the sequence index to begin replay at (inclusive).
      * @param endSequenceNumber sequence number to end replay at (inclusive).
      * @param endSequenceIndex the sequence index to end replay at (inclusive).
+     * @param logTag the operation to tag log entries with
      * @return number of messages replayed
      */
     public ReplayOperation query(
@@ -101,11 +102,12 @@ public class ReplayQuery implements AutoCloseable
         final int beginSequenceNumber,
         final int beginSequenceIndex,
         final int endSequenceNumber,
-        final int endSequenceIndex)
+        final int endSequenceIndex,
+        final LogTag logTag)
     {
         return fixSessionToIndex
             .computeIfAbsent(sessionId, newSessionQuery)
-            .query(handler, beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex);
+            .query(handler, beginSequenceNumber, beginSequenceIndex, endSequenceNumber, endSequenceIndex, logTag);
     }
 
     public void close()
@@ -116,16 +118,16 @@ public class ReplayQuery implements AutoCloseable
     private final class SessionQuery implements AutoCloseable
     {
         private final ByteBuffer wrappedBuffer;
+        private final long sessionId;
         private final UnsafeBuffer buffer;
         private final int capacity;
-        private final Predicate<FixMessageDecoder> msgPredicate;
 
         SessionQuery(final long sessionId)
         {
             wrappedBuffer = indexBufferFactory.map(replayIndexFile(logFileDir, sessionId, requiredStreamId));
             buffer = new UnsafeBuffer(wrappedBuffer);
             capacity = recordCapacity(buffer.capacity());
-            msgPredicate = decoder -> decoder.session() == sessionId;
+            this.sessionId = sessionId;
         }
 
         ReplayOperation query(
@@ -133,7 +135,8 @@ public class ReplayQuery implements AutoCloseable
             final int beginSequenceNumber,
             final int beginSequenceIndex,
             final int endSequenceNumber,
-            final int endSequenceIndex)
+            final int endSequenceIndex,
+            final LogTag logTag)
         {
             messageFrameHeader.wrap(buffer, 0);
 
@@ -214,7 +217,7 @@ public class ReplayQuery implements AutoCloseable
                 ranges.add(currentRange);
             }
 
-            return newReplayOperation(handler, ranges);
+            return newReplayOperation(handler, ranges, logTag);
         }
 
         private long skipToStart(final int beginSequenceNumber, final long iteratorPosition, final int sequenceNumber)
@@ -239,7 +242,7 @@ public class ReplayQuery implements AutoCloseable
         }
 
         private ReplayOperation newReplayOperation(
-            final ControlledFragmentHandler handler, final List<RecordingRange> ranges)
+            final ControlledFragmentHandler handler, final List<RecordingRange> ranges, final LogTag logTag)
         {
             if (replaySubscription == null)
             {
@@ -247,13 +250,18 @@ public class ReplayQuery implements AutoCloseable
                     IPC_CHANNEL, archiveReplayStream);
             }
 
+            DebugLogger.log(logTag,
+                "ReplayQuery : Built new replay operation with Recording Ranges: %s%n",
+                ranges);
+
             return new ReplayOperation(
                 handler,
                 ranges,
                 aeronArchive,
                 errorHandler,
                 replaySubscription,
-                archiveReplayStream);
+                archiveReplayStream,
+                logTag);
         }
 
         private RecordingRange addRange(
@@ -268,12 +276,12 @@ public class ReplayQuery implements AutoCloseable
             RecordingRange range = currentRange;
             if (range == null)
             {
-                range = new RecordingRange(recordingId, msgPredicate);
+                range = new RecordingRange(recordingId, sessionId);
             }
             else if (range.recordingId != recordingId)
             {
                 ranges.add(range);
-                range = new RecordingRange(recordingId, msgPredicate);
+                range = new RecordingRange(recordingId, sessionId);
             }
 
             range.add(

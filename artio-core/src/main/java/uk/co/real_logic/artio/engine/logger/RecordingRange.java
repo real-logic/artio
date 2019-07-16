@@ -17,24 +17,21 @@ package uk.co.real_logic.artio.engine.logger;
 
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
-import uk.co.real_logic.artio.messages.FixMessageDecoder;
-
-import java.util.function.Predicate;
 
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 
 public final class RecordingRange
 {
     final long recordingId;
-    final Predicate<FixMessageDecoder> msgPredicate;
+    final long sessionId;
     long position = MISSING_LONG;
     int length;
     int count;
 
-    RecordingRange(final long recordingId, final Predicate<FixMessageDecoder> msgPredicate)
+    RecordingRange(final long recordingId, final long sessionId)
     {
         this.recordingId = recordingId;
-        this.msgPredicate = msgPredicate;
+        this.sessionId = sessionId;
         this.count = 0;
     }
 
@@ -75,6 +72,7 @@ public final class RecordingRange
     {
         return "RecordingRange{" +
             "recordingId=" + recordingId +
+            ", sessionId=" + sessionId +
             ", position=" + position +
             ", length=" + length +
             ", count=" + count +
