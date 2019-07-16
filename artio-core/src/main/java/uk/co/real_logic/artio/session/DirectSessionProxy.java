@@ -120,7 +120,6 @@ public class DirectSessionProxy implements SessionProxy
         timestampEncoder.initialise(clock.time());
     }
 
-    @Override
     public void setupSession(final long sessionId, final CompositeKey sessionKey)
     {
         requireNonNull(sessionKey, "sessionKey");
@@ -132,7 +131,6 @@ public class DirectSessionProxy implements SessionProxy
         }
     }
 
-    @Override
     public long sendResendRequest(
         final int msgSeqNo,
         final int beginSeqNo,
@@ -148,13 +146,11 @@ public class DirectSessionProxy implements SessionProxy
         return send(result, ResendRequestDecoder.MESSAGE_TYPE, sequenceIndex, resendRequest, msgSeqNo);
     }
 
-    @Override
     public long sendRequestDisconnect(final long connectionId, final DisconnectReason reason)
     {
         return gatewayPublication.saveRequestDisconnect(libraryId, connectionId, reason);
     }
 
-    @Override
     public long sendLogon(
         final int msgSeqNo, final int heartbeatIntervalInS,
         final String username,

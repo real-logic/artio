@@ -25,6 +25,8 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.IntHashSet;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.HeaderDecoder;
@@ -96,7 +98,9 @@ class ReplayerSession implements ControlledFragmentHandler
         final int maxClaimAttempts,
         final IntHashSet gapFillMessageTypes,
         final SenderSequenceNumbers senderSequenceNumbers,
-        final ExclusivePublication publication, final EpochClock clock, final int beginSeqNo,
+        final ExclusivePublication publication,
+        final EpochClock clock,
+        final int beginSeqNo,
         final int endSeqNo,
         final boolean upToMostRecent,
         final long connectionId,
@@ -244,6 +248,7 @@ class ReplayerSession implements ControlledFragmentHandler
         {
             final int destOffset = bufferClaim.offset();
             final MutableDirectBuffer destBuffer = bufferClaim.buffer();
+            final MutableAsciiBuffer gapFillBuffer = gapFillEncoder.buffer();
 
             FIX_MESSAGE_ENCODER
                 .wrapAndApplyHeader(destBuffer, destOffset, MESSAGE_HEADER_ENCODER)
@@ -254,9 +259,11 @@ class ReplayerSession implements ControlledFragmentHandler
                 .connection(this.connectionId)
                 .timestamp(0)
                 .status(MessageStatus.OK)
-                .putBody(gapFillEncoder.buffer(), gapFillOffset, gapFillLength);
+                .putBody(gapFillBuffer, gapFillOffset, gapFillLength);
 
             bufferClaim.commit();
+
+            DebugLogger.log(LogTag.FIX_MESSAGE, "Replayed: %s", gapFillBuffer, gapFillOffset, gapFillLength);
 
             this.beginGapFillSeqNum = NONE;
 
