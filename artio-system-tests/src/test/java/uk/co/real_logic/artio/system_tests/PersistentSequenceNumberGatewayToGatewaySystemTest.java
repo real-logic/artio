@@ -137,9 +137,12 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             highInitialSequenceNumber,
             5);
 
-        final FixMessage gapFill =
+        final FixMessage gapFillMessage =
             testSystem.awaitMessageOf(acceptingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
-        final int newSeqNo = Integer.valueOf(gapFill.get(Constants.NEW_SEQ_NO));
+        final int newSeqNo = Integer.valueOf(gapFillMessage.get(Constants.NEW_SEQ_NO));
+        final String gapFillFlag = gapFillMessage.get(Constants.GAP_FILL_FLAG);
+
+        assertEquals("Y", gapFillFlag);
         assertThat(newSeqNo, greaterThan(highInitialSequenceNumber));
     }
 
@@ -315,8 +318,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     }
 
     private void connectPersistingSessions(
-        final int initialSentSequenceNumber,
-        final int initialReceivedSequenceNumber,
+        final int initiatorInitialSentSequenceNumber,
+        final int initiatorInitialReceivedSequenceNumber,
         final boolean resetSeqNum)
     {
         final SessionConfiguration config = SessionConfiguration.builder()
@@ -325,8 +328,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             .senderCompId(INITIATOR_ID)
             .targetCompId(ACCEPTOR_ID)
             .sequenceNumbersPersistent(true)
-            .initialReceivedSequenceNumber(initialReceivedSequenceNumber)
-            .initialSentSequenceNumber(initialSentSequenceNumber)
+            .initialReceivedSequenceNumber(initiatorInitialReceivedSequenceNumber)
+            .initialSentSequenceNumber(initiatorInitialSentSequenceNumber)
             .resetSeqNum(resetSeqNum)
             .build();
 

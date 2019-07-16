@@ -263,7 +263,7 @@ class ReplayerSession implements ControlledFragmentHandler
 
             bufferClaim.commit();
 
-            DebugLogger.log(LogTag.FIX_MESSAGE, "Replayed: %s", gapFillBuffer, gapFillOffset, gapFillLength);
+            DebugLogger.log(LogTag.FIX_MESSAGE, "Replayed: %s%n", gapFillBuffer, gapFillOffset, gapFillLength);
 
             this.beginGapFillSeqNum = NONE;
 
