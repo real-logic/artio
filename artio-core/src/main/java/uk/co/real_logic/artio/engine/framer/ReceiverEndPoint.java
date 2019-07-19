@@ -303,6 +303,8 @@ class ReceiverEndPoint
                 final int length = (endOfMessage + 1) - offset;
                 if (!validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
                 {
+                    DebugLogger.log(FIX_MESSAGE, "Invalidated: %s", buffer, offset, length);
+
                     if (saveInvalidChecksumMessage(offset, messageType, length))
                     {
                         return offset;
@@ -327,7 +329,7 @@ class ReceiverEndPoint
             }
             catch (final IllegalArgumentException ex)
             {
-                saveInvalidMessage(offset);
+                invalidateMessage(offset);
                 return offset;
             }
             catch (final Exception ex)
@@ -364,6 +366,7 @@ class ReceiverEndPoint
 
         if (saveInvalidMessage(offset, endOfMessage))
         {
+            DebugLogger.log(FIX_MESSAGE, "Invalidated: %s", buffer, offset, endOfMessage - offset);
             return offset;
         }
 
