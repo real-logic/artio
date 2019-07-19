@@ -219,7 +219,7 @@ public final class SystemTestUtil
         return acceptingConfig(port, acceptorId, initiatorId, ACCEPTOR_LOGS);
     }
 
-    private static EngineConfiguration acceptingConfig(
+    static EngineConfiguration acceptingConfig(
         final int port,
         final String acceptorId,
         final String initiatorId,

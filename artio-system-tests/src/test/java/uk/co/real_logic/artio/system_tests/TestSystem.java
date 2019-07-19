@@ -107,7 +107,7 @@ public class TestSystem
         for (final Reply<?> reply : replies)
         {
             awaitReply(reply);
-            assertEquals(COMPLETED, reply.state());
+            assertEquals(reply.toString(), COMPLETED, reply.state());
         }
     }
 

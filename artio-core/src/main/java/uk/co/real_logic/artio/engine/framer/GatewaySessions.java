@@ -397,19 +397,16 @@ class GatewaySessions
             }
         }
 
-        @Override
         public DisconnectReason reason()
         {
             return reason;
         }
 
-        @Override
         public void accept()
         {
             state = AuthenticationState.AUTHENTICATED;
         }
 
-        @Override
         public boolean poll()
         {
             switch (state)

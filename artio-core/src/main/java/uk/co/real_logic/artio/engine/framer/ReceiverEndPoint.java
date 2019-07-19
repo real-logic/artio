@@ -94,6 +94,7 @@ class ReceiverEndPoint
     private boolean isPaused = false;
 
     private AcceptorLogonResult pendingAcceptorLogon;
+    private boolean hasNotifiedFramerOfLogonMessageReceived;
     private int pendingAcceptorLogonMsgOffset;
     private int pendingAcceptorLogonMsgLength;
 
@@ -172,38 +173,18 @@ class ReceiverEndPoint
 
     private int pollPendingLogon()
     {
+        // Retry-able under backpressure
         if (pendingAcceptorLogon.poll())
         {
             if (pendingAcceptorLogon.isAccepted())
             {
-                sessionId = gatewaySession.sessionId();
-                sequenceIndex = gatewaySession.sequenceIndex();
-
-                framer.onLogonMessageReceived(gatewaySession);
-
-                pendingAcceptorLogon = null;
-
-                int offset = this.pendingAcceptorLogonMsgOffset;
-                final int length = this.pendingAcceptorLogonMsgLength;
-
-                // Might be paused at this point to ensure that a library has been notified of
-                // the new session in soleLibraryMode
-                if (isPaused)
+                if (!hasNotifiedFramerOfLogonMessageReceived)
                 {
-                    moveRemainingDataToBufferStart(offset);
-                    return offset;
+                    framer.onLogonMessageReceived(gatewaySession);
+                    hasNotifiedFramerOfLogonMessageReceived = true;
                 }
 
-                if (!saveMessage(offset, LogonDecoder.MESSAGE_TYPE, length))
-                {
-                    return offset;
-                }
-                else
-                {
-                    offset += length;
-                    moveRemainingDataToBufferStart(offset);
-                    return offset;
-                }
+                return sendInitialLoginMessage();
             }
             else
             {
@@ -212,6 +193,40 @@ class ReceiverEndPoint
         }
 
         return 1;
+    }
+
+    private int sendInitialLoginMessage()
+    {
+        int offset = this.pendingAcceptorLogonMsgOffset;
+        final int length = this.pendingAcceptorLogonMsgLength;
+
+        // Might be paused at this point to ensure that a library has been notified of
+        // the new session in soleLibraryMode
+        if (isPaused)
+        {
+            moveRemainingDataToBufferStart(offset);
+            return offset;
+        }
+
+        final long sessionId = gatewaySession.sessionId();
+        final int sequenceIndex = gatewaySession.sequenceIndex();
+
+        if (saveMessage(offset, LogonDecoder.MESSAGE_TYPE, length, sessionId, sequenceIndex))
+        {
+            // Authentication is only complete (ie this state set) when the actual logon message has been saved.
+            this.sessionId = sessionId;
+            this.sequenceIndex = sequenceIndex;
+            pendingAcceptorLogon = null;
+
+            // Move any data received after the logon message.
+            offset += length;
+            moveRemainingDataToBufferStart(offset);
+            return offset;
+        }
+        else
+        {
+            return offset;
+        }
     }
 
     private int readData() throws IOException
@@ -356,9 +371,9 @@ class ReceiverEndPoint
         return offset;
     }
 
-    private boolean requiresAuthentication()
+    boolean requiresAuthentication()
     {
-        return UNKNOWN == sessionId;
+        return sessionId == UNKNOWN;
     }
 
     private boolean validateChecksum(
@@ -424,6 +439,7 @@ class ReceiverEndPoint
             pendingAcceptorLogonMsgOffset = offset;
             pendingAcceptorLogonMsgLength = length;
 
+            hasNotifiedFramerOfLogonMessageReceived = false;
             pendingAcceptorLogon = gatewaySessions.authenticate(logon, connectionId(), gatewaySession);
         }
         else
@@ -444,6 +460,16 @@ class ReceiverEndPoint
     }
 
     private boolean saveMessage(final int offset, final int messageType, final int length)
+    {
+        return saveMessage(offset, messageType, length, sessionId, sequenceIndex);
+    }
+
+    private boolean saveMessage(
+        final int offset,
+        final int messageType,
+        final int length,
+        final long sessionId,
+        final int sequenceIndex)
     {
         final long position = publication.saveMessage(
             buffer,

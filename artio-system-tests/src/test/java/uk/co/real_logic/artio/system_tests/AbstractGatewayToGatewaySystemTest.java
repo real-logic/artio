@@ -229,7 +229,12 @@ public class AbstractGatewayToGatewaySystemTest
 
     void messagesCanBeExchanged()
     {
-        final long position = messagesCanBeExchanged(initiatingSession, initiatingOtfAcceptor);
+        messagesCanBeExchanged(initiatingSession);
+    }
+
+    void messagesCanBeExchanged(final Session session)
+    {
+        final long position = messagesCanBeExchanged(session, initiatingOtfAcceptor);
 
         assertEventuallyTrue("position never catches up",
             () ->

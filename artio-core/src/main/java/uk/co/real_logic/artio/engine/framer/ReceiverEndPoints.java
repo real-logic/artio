@@ -29,9 +29,24 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.ENGINE_SHUTDOWN;
 
 class ReceiverEndPoints extends TransportPoller
 {
+    // Authentication flow requires periodic polling of the receiver end points until the authentication is
+    // complete, so these endpoints are always polled, rather than using the selector.
+    private ReceiverEndPoint[] requiredPollingEndPoints = new ReceiverEndPoint[0];
     private ReceiverEndPoint[] endPoints = new ReceiverEndPoint[0];
 
     void add(final ReceiverEndPoint endPoint)
+    {
+        if (endPoint.requiresAuthentication())
+        {
+            requiredPollingEndPoints = ArrayUtil.add(requiredPollingEndPoints, endPoint);
+        }
+        else
+        {
+            addToNormalEndpoints(endPoint);
+        }
+    }
+
+    private void addToNormalEndpoints(final ReceiverEndPoint endPoint)
     {
         try
         {
@@ -47,9 +62,28 @@ class ReceiverEndPoints extends TransportPoller
     void removeConnection(final long connectionId, final DisconnectReason reason)
     {
         final ReceiverEndPoint[] endPoints = this.endPoints;
-        final int length = endPoints.length;
-        int index = UNKNOWN_INDEX;
+        int index = findAndCloseEndPoint(connectionId, reason, endPoints);
 
+        if (index != UNKNOWN_INDEX)
+        {
+            this.endPoints = ArrayUtil.remove(endPoints, index);
+        }
+        else
+        {
+            index = findAndCloseEndPoint(connectionId, reason, requiredPollingEndPoints);
+            this.requiredPollingEndPoints = ArrayUtil.remove(requiredPollingEndPoints, index);
+        }
+
+        selectNowToForceProcessing();
+    }
+
+    private int findAndCloseEndPoint(
+        final long connectionId,
+        final DisconnectReason reason,
+        final ReceiverEndPoint[] endPoints)
+    {
+        int index = UNKNOWN_INDEX;
+        final int length = endPoints.length;
         for (int i = 0; i < length; i++)
         {
             final ReceiverEndPoint endPoint = endPoints[i];
@@ -59,10 +93,7 @@ class ReceiverEndPoints extends TransportPoller
                 endPoint.close(reason);
             }
         }
-
-        this.endPoints = ArrayUtil.remove(endPoints, index);
-
-        selectNowToForceProcessing();
+        return index;
     }
 
     private void selectNowToForceProcessing()
@@ -82,9 +113,13 @@ class ReceiverEndPoints extends TransportPoller
         int bytesReceived = 0;
         try
         {
+            ReceiverEndPoint[] requiredPollingEndPoints = this.requiredPollingEndPoints;
             final ReceiverEndPoint[] endPoints = this.endPoints;
+
+            final int numRequiredPollingEndPoints = requiredPollingEndPoints.length;
             final int numEndPoints = endPoints.length;
-            if (numEndPoints <= ITERATION_THRESHOLD)
+            final int threshold = ITERATION_THRESHOLD - numRequiredPollingEndPoints;
+            if (numEndPoints <= threshold)
             {
                 for (int i = numEndPoints - 1; i >= 0; i--)
                 {
@@ -103,6 +138,18 @@ class ReceiverEndPoints extends TransportPoller
 
                 selectedKeySet.reset();
             }
+
+            for (int i = numRequiredPollingEndPoints - 1; i >= 0; i--)
+            {
+                final ReceiverEndPoint requiredPollingEndPoint = requiredPollingEndPoints[i];
+                bytesReceived += requiredPollingEndPoint.poll();
+                if (!requiredPollingEndPoint.requiresAuthentication())
+                {
+                    requiredPollingEndPoints = ArrayUtil.remove(requiredPollingEndPoints, i);
+                    addToNormalEndpoints(requiredPollingEndPoint);
+                }
+            }
+            this.requiredPollingEndPoints = requiredPollingEndPoints;
         }
         catch (final IOException ex)
         {
