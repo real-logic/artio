@@ -30,6 +30,7 @@ import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecode
 import uk.co.real_logic.artio.messages.SessionStatus;
 import uk.co.real_logic.artio.messages.SlowStatus;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
+import uk.co.real_logic.artio.session.InternalSession;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.timing.LibraryTimers;
 
@@ -358,7 +359,6 @@ public class LibraryPollerTest
             SlowStatus.NOT_SLOW,
             ACCEPTOR,
             ACTIVE,
-            false,
             HEARTBEAT_INTERVAL_IN_S,
             DEFAULT_CLOSED_RESEND_INTERVAL,
             NO_RESEND_REQUEST_CHUNK_SIZE,
@@ -366,6 +366,11 @@ public class LibraryPollerTest
             DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED,
             REPLY_TO_ID,
             SEQUENCE_INDEX,
+            InternalSession.INITIAL_AWAITING_HEARTBEAT,
+            InternalSession.INITIAL_LAST_RESENT_MSG_SEQ_NO,
+            InternalSession.INITIAL_LAST_RESEND_CHUNK_MSG_SEQ_NUM,
+            InternalSession.INITIAL_END_OF_RESEND_REQUEST_RANGE,
+            InternalSession.INITIAL_AWAITING_HEARTBEAT,
             "ABC",
             "",
             "",

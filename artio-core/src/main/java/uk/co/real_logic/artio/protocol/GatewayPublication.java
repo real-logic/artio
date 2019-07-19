@@ -225,6 +225,10 @@ public class GatewayPublication extends ClaimablePublication
         final boolean enableLastMsgSeqNumProcessed,
         final long replyToId,
         final int sequenceIndex,
+        final int lastResentMsgSeqNo,
+        final int lastResendChunkMsgSeqNum,
+        final int endOfResendRequestRange,
+        final boolean awaitingHeartbeat,
         final String localCompId,
         final String localSubId,
         final String localLocationId,
@@ -277,6 +281,10 @@ public class GatewayPublication extends ClaimablePublication
             .enableLastMsgSeqNumProcessed(toBool(enableLastMsgSeqNumProcessed))
             .replyToId(replyToId)
             .sequenceIndex(sequenceIndex)
+            .lastResentMsgSeqNo(lastResentMsgSeqNo)
+            .lastResendChunkMsgSeqNum(lastResendChunkMsgSeqNum)
+            .endOfResendRequestRange(endOfResendRequestRange)
+            .awaitingHeartbeat(toBool(awaitingHeartbeat))
             .putLocalCompId(localCompIdBytes, 0, localCompIdBytes.length)
             .putLocalSubId(localSubIdBytes, 0, localSubIdBytes.length)
             .putLocalLocationId(localLocationIdBytes, 0, localLocationIdBytes.length)

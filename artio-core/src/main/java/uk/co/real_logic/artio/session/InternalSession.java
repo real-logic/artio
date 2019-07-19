@@ -27,6 +27,13 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
  */
 public class InternalSession extends Session
 {
+    // Default initialised values used by both the Session and also the manage session handover.
+    public static final boolean INITIAL_AWAITING_RESEND = false;
+    public static final int INITIAL_LAST_RESENT_MSG_SEQ_NO = 0;
+    public static final int INITIAL_LAST_RESEND_CHUNK_MSG_SEQ_NUM = 0;
+    public static final int INITIAL_END_OF_RESEND_REQUEST_RANGE = 0;
+    public static final boolean INITIAL_AWAITING_HEARTBEAT = false;
+
     public InternalSession(
         final int heartbeatIntervalInS,
         final long connectionId,
@@ -137,6 +144,41 @@ public class InternalSession extends Session
         final int rejectReason)
     {
         return super.onInvalidMessage(refSeqNum, refTagId, refMsgType, refMsgTypeLength, rejectReason);
+    }
+
+    public void lastResentMsgSeqNo(final int lastResentMsgSeqNo)
+    {
+        super.lastResentMsgSeqNo(lastResentMsgSeqNo);
+    }
+
+    public void lastResendChunkMsgSeqNum(final int lastResendChunkMsgSeqNum)
+    {
+        super.lastResendChunkMsgSeqNum(lastResendChunkMsgSeqNum);
+    }
+
+    public void endOfResendRequestRange(final int endOfResendRequestRange)
+    {
+        super.endOfResendRequestRange(endOfResendRequestRange);
+    }
+
+    public void awaitingHeartbeat(final boolean awaitingHeartbeat)
+    {
+        super.awaitingHeartbeat(awaitingHeartbeat);
+    }
+
+    public int lastResendChunkMsgSeqNum()
+    {
+        return super.lastResendChunkMsgSeqNum();
+    }
+
+    public int endOfResendRequestRange()
+    {
+        return super.endOfResendRequestRange();
+    }
+
+    public int lastResentMsgSeqNo()
+    {
+        return super.lastResentMsgSeqNo();
     }
 
 }

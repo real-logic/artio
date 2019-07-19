@@ -54,6 +54,7 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionState.*;
 import static uk.co.real_logic.artio.session.DirectSessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
+import static uk.co.real_logic.artio.session.InternalSession.*;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound.
@@ -87,16 +88,17 @@ import static uk.co.real_logic.artio.session.DirectSessionProxy.NO_LAST_MSG_SEQ_
 public class Session implements AutoCloseable
 {
     public static final long UNKNOWN = -1;
-    private static final long NO_OPERATION = MIN_VALUE;
-    static final long LIBRARY_DISCONNECTED = NO_OPERATION + 1;
     public static final long NO_LOGON_TIME = -1;
-    private static final int INITIAL_SEQUENCE_NUMBER = 1;
 
     static final short ACTIVE_VALUE = 3;
     static final short LOGGING_OUT_VALUE = 5;
     static final short LOGGING_OUT_AND_DISCONNECTING_VALUE = 6;
     static final short AWAITING_LOGOUT_VALUE = 7;
     static final short DISCONNECTING_VALUE = 8;
+
+    private static final long NO_OPERATION = MIN_VALUE;
+    static final long LIBRARY_DISCONNECTED = NO_OPERATION + 1;
+    private static final int INITIAL_SEQUENCE_NUMBER = 1;
 
     /**
      * The proportion of the maximum heartbeat interval before you send your heartbeat
@@ -126,18 +128,18 @@ public class Session implements AutoCloseable
     private CompositeKey sessionKey;
     private SessionState state;
     // Used to trigger a disconnect if we don't receive a resend within expected timeout
-    private boolean awaitingResend;
+    private boolean awaitingResend = INITIAL_AWAITING_RESEND;
     // Equivalent of receivedMsgSeqNo for resent messages
-    private int lastResentMsgSeqNo;
+    private int lastResentMsgSeqNo = INITIAL_LAST_RESENT_MSG_SEQ_NO;
     // The last msg seq no before you send the next chunk of the resend request
-    private int lastResendChunkMsgSeqNum;
+    private int lastResendChunkMsgSeqNum = INITIAL_LAST_RESEND_CHUNK_MSG_SEQ_NUM;
     // The last msg seq no before you hit the end of the resend request
-    private int endOfResendRequestRange;
+    private int endOfResendRequestRange = INITIAL_END_OF_RESEND_REQUEST_RANGE;
 
-    private boolean awaitingHeartbeat;
+    private boolean awaitingHeartbeat = INITIAL_AWAITING_HEARTBEAT;
 
     private long id = UNKNOWN;
-    private int lastReceivedMsgSeqNum = 0;
+    private int lastReceivedMsgSeqNum;
     private int lastMsgSeqNumProcessed;
     private int lastSentMsgSeqNum;
     private int sequenceIndex;
@@ -1702,4 +1704,40 @@ public class Session implements AutoCloseable
     {
         return lastMsgSeqNumProcessed;
     }
+
+    void lastResentMsgSeqNo(final int lastResentMsgSeqNo)
+    {
+        this.lastResentMsgSeqNo = lastResentMsgSeqNo;
+    }
+
+    int lastResentMsgSeqNo()
+    {
+        return lastResentMsgSeqNo;
+    }
+
+    void lastResendChunkMsgSeqNum(final int lastResendChunkMsgSeqNum)
+    {
+        this.lastResendChunkMsgSeqNum = lastResendChunkMsgSeqNum;
+    }
+
+    int lastResendChunkMsgSeqNum()
+    {
+        return lastResendChunkMsgSeqNum;
+    }
+
+    void endOfResendRequestRange(final int endOfResendRequestRange)
+    {
+        this.endOfResendRequestRange = endOfResendRequestRange;
+    }
+
+    int endOfResendRequestRange()
+    {
+        return endOfResendRequestRange;
+    }
+
+    void awaitingHeartbeat(final boolean awaitingHeartbeat)
+    {
+        this.awaitingHeartbeat = awaitingHeartbeat;
+    }
+
 }

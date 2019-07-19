@@ -177,7 +177,7 @@ class GatewaySession implements SessionInfo
         onGatewaySessionLogon.accept(this);
     }
 
-    Session session()
+    InternalSession session()
     {
         return session;
     }

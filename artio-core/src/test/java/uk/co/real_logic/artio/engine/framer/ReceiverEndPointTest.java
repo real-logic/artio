@@ -31,7 +31,7 @@ import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.CompositeKey;
-import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.session.InternalSession;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 
 import java.io.IOException;
@@ -70,7 +70,7 @@ public class ReceiverEndPointTest
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private Framer framer = mock(Framer.class);
     private GatewaySession gatewaySession = mock(GatewaySession.class);
-    private Session session = mock(Session.class);
+    private InternalSession session = mock(InternalSession.class);
     private GatewaySessions mockGatewaySessions = mock(GatewaySessions.class);
     private CompositeKey sessionKey = SessionIdStrategy
         .senderAndTarget()

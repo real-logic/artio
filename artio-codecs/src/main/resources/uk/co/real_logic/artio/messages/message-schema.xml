@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="0"
+                   version="1"
                    semanticVersion="0.1"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -278,11 +278,18 @@
         <field name="heartbeatIntervalInS" id="11" type="int32"/>
         <field name="replyToId" id="12" type="CorrelationId"/>
         <field name="sequenceIndex" id="13" type="SequenceIndex" />
-        <field name="awaitingResend" id="21" type="AwaitingResend" />
         <field name="closedResendInterval" id="22" type="Bool" />
         <field name="resendRequestChunkSize" id="23" type="int32" />
         <field name="sendRedundantResendRequests" id="24" type="Bool" />
         <field name="enableLastMsgSeqNumProcessed" id="25" type="Bool" />
+
+        <!-- State modified by the Session itself -->
+        <field name="awaitingResend" id="21" type="AwaitingResend" />
+        <field name="lastResentMsgSeqNo" id="28" type="int32" presence="optional" sinceVersion="1" />
+        <field name="lastResendChunkMsgSeqNum" id="29" type="int32" presence="optional" sinceVersion="1" />
+        <field name="endOfResendRequestRange" id="30" type="int32" presence="optional" sinceVersion="1" />
+        <field name="awaitingHeartbeat" id="31" type="Bool" presence="optional" sinceVersion="1" />
+
         <data name="localCompId" id="14" type="Utf8String"/>
         <data name="localSubId" id="15" type="Utf8String"/>
         <data name="localLocationId" id="16" type="Utf8String"/>
@@ -292,6 +299,7 @@
         <data name="address" id="20" type="Utf8String"/>
         <data name="username" id="26" type="Utf8String"/>
         <data name="password" id="27" type="Utf8String"/>
+
     </sbe:message>
 
     <sbe:message name="Error" id="13" description="An error has occurred">

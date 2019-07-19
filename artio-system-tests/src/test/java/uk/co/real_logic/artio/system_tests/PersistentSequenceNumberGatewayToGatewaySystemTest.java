@@ -21,6 +21,7 @@ import org.junit.Test;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.TestFixtures;
+import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -35,8 +36,7 @@ import java.util.function.Consumer;
 
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
-import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
-import static uk.co.real_logic.artio.Constants.SEQUENCE_RESET_MESSAGE_AS_STR;
+import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.mediaDriverContext;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
@@ -144,6 +144,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         assertEquals("Y", gapFillFlag);
         assertThat(newSeqNo, greaterThan(highInitialSequenceNumber));
+
+        Timing.assertEventuallyTrue("", () -> testSystem.poll(), 100);
+        assertEquals(1, initiatingOtfAcceptor.hasReceivedMessage(RESEND_REQUEST_MESSAGE_AS_STR).count());
     }
 
     @Test(timeout = TEST_TIMEOUT)

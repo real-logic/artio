@@ -647,7 +647,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final SlowStatus slowStatus,
         final ConnectionType connectionType,
         final SessionState sessionState,
-        final boolean awaitingResend,
         final int heartbeatIntervalInS,
         final boolean closedResendInterval,
         final int resendRequestChunkSize,
@@ -655,6 +654,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final boolean enableLastMsgSeqNumProcessed,
         final long correlationId,
         final int sequenceIndex,
+        final boolean awaitingResend,
+        final int lastResentMsgSeqNo,
+        final int lastResendChunkMsgSeqNum,
+        final int endOfResendRequestRange,
+        final boolean awaitingHeartbeat,
         final String localCompId,
         final String localSubId,
         final String localLocationId,
@@ -730,6 +734,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     session.resendRequestChunkSize(resendRequestChunkSize);
                     session.sendRedundantResendRequests(sendRedundantResendRequests);
                     session.awaitingResend(awaitingResend);
+                    session.lastResentMsgSeqNo(lastResentMsgSeqNo);
+                    session.lastResendChunkMsgSeqNum(lastResendChunkMsgSeqNum);
+                    session.endOfResendRequestRange(endOfResendRequestRange);
+                    session.awaitingHeartbeat(awaitingHeartbeat);
 
                     createSessionSubscriber(connection, session, reply, slowStatus);
                     insertSession(session, connectionType, sessionState);

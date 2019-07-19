@@ -47,6 +47,7 @@ import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.*;
 import uk.co.real_logic.artio.session.CompositeKey;
+import uk.co.real_logic.artio.session.InternalSession;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.timing.Timer;
@@ -897,6 +898,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     enableLastMsgSeqNumProcessed,
                     correlationId,
                     sessionContext.sequenceIndex(),
+                    InternalSession.INITIAL_LAST_RESENT_MSG_SEQ_NO,
+                    InternalSession.INITIAL_LAST_RESEND_CHUNK_MSG_SEQ_NUM,
+                    InternalSession.INITIAL_END_OF_RESEND_REQUEST_RANGE,
+                    InternalSession.INITIAL_AWAITING_HEARTBEAT,
                     senderCompId,
                     senderSubId,
                     senderLocationId,
@@ -1217,7 +1222,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 libraryId, SessionReplyStatus.UNKNOWN_SESSION, correlationId));
         }
 
-        final Session session = gatewaySession.session();
+        final InternalSession session = gatewaySession.session();
         if (!session.isActive())
         {
             return Pressure.apply(inboundPublication.saveRequestSessionReply(
@@ -1306,7 +1311,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             final long connectionId = gatewaySession.connectionId();
 
-            final Session session = gatewaySession.session();
+            final InternalSession session = gatewaySession.session();
             return saveManageSession(
                 libraryId,
                 gatewaySession,
@@ -1330,7 +1335,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final SessionStatus logonstatus,
         final CompositeKey compositeKey,
         final long connectionId,
-        final Session session,
+        final InternalSession session,
         final long correlationId)
     {
         return inboundPublication.saveManageSession(
@@ -1352,6 +1357,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySession.enableLastMsgSeqNumProcessed(),
             correlationId,
             gatewaySession.sequenceIndex(),
+            session.lastResentMsgSeqNo(),
+            session.lastResendChunkMsgSeqNum(),
+            session.endOfResendRequestRange(),
+            session.awaitingHeartbeat(),
             compositeKey.localCompId(),
             compositeKey.localSubId(),
             compositeKey.localLocationId(),
@@ -1452,7 +1461,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             // Notify libraries of the existence of this logged on session.
             schedule(() ->
             {
-                final Session session = gatewaySession.session();
+                final InternalSession session = gatewaySession.session();
                 if (null == session)
                 {
                     // Another library is now handling the session, don't publish availability.
@@ -1468,7 +1477,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     SessionStatus.SESSION_HANDOVER,
                     key,
                     gatewaySession.connectionId(),
-                    session, NO_CORRELATION_ID);
+                    session,
+                    NO_CORRELATION_ID);
             });
         }
     }

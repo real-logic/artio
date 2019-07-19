@@ -41,6 +41,7 @@ import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.CompositeKey;
+import uk.co.real_logic.artio.session.InternalSession;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.timing.Timer;
@@ -106,7 +107,7 @@ public class FramerTest
     private final SessionContexts sessionContexts = mock(SessionContexts.class);
     private final GatewaySessions gatewaySessions = mock(GatewaySessions.class);
     private final GatewaySession gatewaySession = mock(GatewaySession.class);
-    private final Session session = mock(Session.class);
+    private final InternalSession session = mock(InternalSession.class);
     private final Subscription outboundLibrarySubscription = mock(Subscription.class);
     private final Subscription outboundSlowSubscription = mock(Subscription.class);
     private final Image replayImage = mock(Image.class);
@@ -526,6 +527,10 @@ public class FramerTest
             anyBoolean(),
             anyLong(),
             anyInt(),
+            anyInt(),
+            anyInt(),
+            anyInt(),
+            anyBoolean(),
             any(),
             any(),
             any(),
@@ -562,6 +567,10 @@ public class FramerTest
             anyBoolean(),
             anyLong(),
             anyInt(),
+            anyInt(),
+            anyInt(),
+            anyInt(),
+            anyBoolean(),
             any(),
             any(),
             any(),
@@ -743,6 +752,10 @@ public class FramerTest
             anyBoolean(),
             anyLong(),
             anyInt(),
+            anyInt(),
+            anyInt(),
+            anyInt(),
+            anyBoolean(),
             any(),
             any(),
             any(),
@@ -869,6 +882,10 @@ public class FramerTest
             anyBoolean(),
             anyLong(),
             anyInt(),
+            anyInt(),
+            anyInt(),
+            anyInt(),
+            anyBoolean(),
             any(),
             any(),
             any(),
@@ -900,6 +917,10 @@ public class FramerTest
             anyBoolean(),
             anyLong(),
             anyInt(),
+            anyInt(),
+            anyInt(),
+            anyInt(),
+            anyBoolean(),
             any(),
             any(),
             any(),
