@@ -26,7 +26,6 @@ import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.DynamicLibraryScheduler;
-import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;
 
@@ -127,7 +126,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     }
 
     @Test(timeout = TEST_TIMEOUT)
-    public void shouldCopeWithCatchupReplayOfMissingMessagesWithHighInitialSequenceNumberSet()
+    public void shouldCopeWithResendRequestOfMissingMessagesWithHighInitialSequenceNumberSet()
     {
         final int highInitialSequenceNumber = 1000;
 
@@ -145,6 +144,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertEquals("Y", gapFillFlag);
         assertThat(newSeqNo, greaterThan(highInitialSequenceNumber));
 
+        // Test that we don't accidentally send another resend request
+        // Reproduction of reported bug
         Timing.assertEventuallyTrue("", () -> testSystem.poll(), 100);
         assertEquals(1, initiatingOtfAcceptor.hasReceivedMessage(RESEND_REQUEST_MESSAGE_AS_STR).count());
     }
@@ -325,19 +326,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final int initiatorInitialReceivedSequenceNumber,
         final boolean resetSeqNum)
     {
-        final SessionConfiguration config = SessionConfiguration.builder()
-            .address("localhost", port)
-            .credentials("bob", "Uv1aegoh")
-            .senderCompId(INITIATOR_ID)
-            .targetCompId(ACCEPTOR_ID)
-            .sequenceNumbersPersistent(true)
-            .initialReceivedSequenceNumber(initiatorInitialReceivedSequenceNumber)
-            .initialSentSequenceNumber(initiatorInitialSentSequenceNumber)
-            .resetSeqNum(resetSeqNum)
-            .build();
-
-        final Reply<Session> reply = initiatingLibrary.initiate(config);
-        testSystem.awaitReply(reply);
+        final Reply<Session> reply = connectPersistentSessions(
+            initiatorInitialSentSequenceNumber, initiatorInitialReceivedSequenceNumber, resetSeqNum);
 
         onInitiateReply.accept(reply);
 
@@ -457,10 +447,4 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             acquireSession(sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
         }
     }
-
-    private void deleteAcceptorLogs()
-    {
-        delete(ACCEPTOR_LOGS);
-    }
-
 }

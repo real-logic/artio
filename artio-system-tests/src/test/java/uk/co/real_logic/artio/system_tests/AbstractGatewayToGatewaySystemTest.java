@@ -25,6 +25,7 @@ import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
+import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.session.Session;
@@ -377,4 +378,31 @@ public class AbstractGatewayToGatewaySystemTest
         assertNotSame(session, newSession);
         return lastReceivedMsgSeqNum;
     }
+
+    Reply<Session> connectPersistentSessions(
+        final int initiatorInitialSentSequenceNumber,
+        final int initiatorInitialReceivedSequenceNumber,
+        final boolean resetSeqNum)
+    {
+        final SessionConfiguration config = SessionConfiguration.builder()
+            .address("localhost", port)
+            .credentials("bob", "Uv1aegoh")
+            .senderCompId(INITIATOR_ID)
+            .targetCompId(ACCEPTOR_ID)
+            .sequenceNumbersPersistent(true)
+            .initialReceivedSequenceNumber(initiatorInitialReceivedSequenceNumber)
+            .initialSentSequenceNumber(initiatorInitialSentSequenceNumber)
+            .resetSeqNum(resetSeqNum)
+            .build();
+
+        final Reply<Session> reply = initiatingLibrary.initiate(config);
+        testSystem.awaitReply(reply);
+        return reply;
+    }
+
+    void deleteAcceptorLogs()
+    {
+        delete(ACCEPTOR_LOGS);
+    }
+
 }
