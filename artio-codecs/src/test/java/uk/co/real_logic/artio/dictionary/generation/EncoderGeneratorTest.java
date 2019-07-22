@@ -118,6 +118,32 @@ public class EncoderGeneratorTest
     }
 
     @Test
+    public void shouldNotWriteDataForEmptyCharSequence() throws Exception
+    {
+        final Object encoder = heartbeat.getConstructor().newInstance();
+
+        setTestReqIdTo(encoder, "");
+
+        assertArrayEquals(new byte[0], getTestReqIdBytes(encoder));
+        assertTestReqIdOffset(0, encoder);
+        assertTestReqIdLength(0, encoder);
+    }
+
+    @Test
+    public void shouldNotWriteDataForEmptyAsciiSequenceView() throws Exception
+    {
+        final Object encoder = heartbeat.getConstructor().newInstance();
+
+        heartbeat
+                .getMethod(TEST_REQ_ID, AsciiSequenceView.class)
+                .invoke(encoder, new AsciiSequenceView());
+
+        assertArrayEquals(new byte[0], getTestReqIdBytes(encoder));
+        assertTestReqIdOffset(0, encoder);
+        assertTestReqIdLength(0, encoder);
+    }
+
+    @Test
     public void stringSettersResizeByteArray() throws Exception
     {
         final Encoder encoder = newHeartbeat();
