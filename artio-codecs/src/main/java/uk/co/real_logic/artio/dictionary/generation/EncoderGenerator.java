@@ -536,9 +536,10 @@ public class EncoderGenerator extends Generator
             "    }\n\n" +
             "    public %3$s %1$s(final AsciiSequenceView value)\n" +
             "    {\n" +
-            "        if (value.length() > 0)\n" +
+            "        final DirectBuffer buffer = value.buffer();\n" +
+            "        if (buffer != null)\n" +
             "        {\n" +
-            "            %1$s.wrap(value.buffer());\n" +
+            "            %1$s.wrap(buffer);\n" +
             "            %1$sOffset = value.offset();\n" +
             "            %1$sLength = value.length();\n" +
             "        }\n" +
