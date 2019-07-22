@@ -786,6 +786,8 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeatWithoutEnumValue(TAG_SPECIFIED_WHERE_INT_VALUE_IS_INCORRECT_MESSAGE);
 
         assertTrue("Should be no validation for incorrect enum value", decoder.validate());
+        final Object intFieldEnum = get(decoder, "intFieldAsEnum");
+        assertEquals(ENUM_UNKNOWN_INT, getRepresentation(intFieldEnum));
     }
 
     @Test
@@ -794,6 +796,8 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeatWithoutEnumValue(TAG_SPECIFIED_WHERE_STRING_VALUE_IS_INCORRECT_MESSAGE);
 
         assertTrue("Should be no validation for incorrect enum value", decoder.validate());
+        final Object onBehalfEnum = get(decoder, "onBehalfOfCompIDAsEnum");
+        assertEquals(ENUM_UNKNOWN_STRING, getRepresentation(onBehalfEnum));
     }
 
     @Test
