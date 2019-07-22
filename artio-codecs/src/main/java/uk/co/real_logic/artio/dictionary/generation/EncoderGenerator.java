@@ -502,13 +502,6 @@ public class EncoderGenerator extends Generator
             "    {\n" +
             "        return %1$s(value, 0, value.length);\n" +
             "    }\n\n" +
-            "    public %2$s %1$s(final AsciiSequenceView value)\n" +
-            "    {\n" +
-            "        %1$s.wrap(value.buffer());\n" +
-            "        %1$sOffset = value.offset();\n" +
-            "        %1$sLength = value.length();\n" +
-            "        return this;\n" +
-            "    }\n\n" +
             "    public boolean has%3$s()\n" +
             "    {\n" +
             "        return %1$sLength > 0;\n" +
@@ -539,6 +532,17 @@ public class EncoderGenerator extends Generator
             "        toBytes(value, %1$s);\n" +
             "        %1$sOffset = 0;\n" +
             "        %1$sLength = value.length();\n" +
+            "        return this;\n" +
+            "    }\n\n" +
+            "    public %3$s %1$s(final AsciiSequenceView value)\n" +
+            "    {\n" +
+            "        final DirectBuffer buffer = value.buffer();\n" +
+            "        if (buffer != null)\n" +
+            "        {\n" +
+            "            %1$s.wrap(buffer);\n" +
+            "            %1$sOffset = value.offset();\n" +
+            "            %1$sLength = value.length();\n" +
+            "        }\n" +
             "        return this;\n" +
             "    }\n\n" +
             "    public %3$s %1$s(final char[] value)\n" +
