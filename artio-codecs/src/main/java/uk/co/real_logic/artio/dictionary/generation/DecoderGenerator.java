@@ -464,7 +464,7 @@ public class DecoderGenerator extends Generator
         final boolean isPrimitive = type.isIntBased() || type == Type.CHAR;
 
         final String enumValidation = String.format(
-            "        if (!%1$s.isValid(%2$s%4$s))\n" +
+            "        if (!%1$s.isValid(%2$s%4$s) && " + CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED + ")\n" +
             "        {\n" +
             "            invalidTagId = %3$s;\n" +
             "            rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
