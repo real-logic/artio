@@ -100,11 +100,12 @@ public class DecoderGenerator extends Generator
         final String commonPackage,
         final OutputManager outputManager,
         final Class<?> validationClass,
-        final Class<?> rejectUnknownClass,
+        final Class<?> rejectUnknownFieldClass,
+        final Class<?> rejectUnknownEnumValueClass,
         final boolean flyweightsEnabled)
     {
-        super(dictionary, thisPackage, commonPackage, outputManager, validationClass, rejectUnknownClass,
-            flyweightsEnabled);
+        super(dictionary, thisPackage, commonPackage, outputManager, validationClass, rejectUnknownFieldClass,
+            rejectUnknownEnumValueClass, flyweightsEnabled);
         this.initialBufferSize = initialBufferSize;
     }
 

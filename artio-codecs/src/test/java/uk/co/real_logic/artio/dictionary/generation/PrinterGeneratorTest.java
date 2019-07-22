@@ -39,7 +39,7 @@ public class PrinterGeneratorTest
 
     private static DecoderGenerator decoderGenerator =
         new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, ValidationOn.class,
-        RejectUnknownFieldOff.class, false);
+        RejectUnknownFieldOff.class, RejectUnknownEnumValueOn.class, false);
     private static PrinterGenerator printerGenerator =
         new PrinterGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static Class<?> printer;

@@ -16,6 +16,9 @@
 package uk.co.real_logic.artio.dictionary;
 
 import org.agrona.generation.PackageOutputManager;
+
+
+import uk.co.real_logic.artio.builder.RejectUnknownEnumValue;
 import uk.co.real_logic.artio.builder.RejectUnknownField;
 import uk.co.real_logic.artio.builder.Validation;
 import uk.co.real_logic.artio.dictionary.generation.*;
@@ -64,7 +67,8 @@ public final class CodecGenerationTool
             PARENT_PACKAGE,
             encoderOutput,
             Validation.class,
-            RejectUnknownField.class);
+            RejectUnknownField.class,
+            RejectUnknownEnumValue.class);
 
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
             dictionary,
@@ -74,6 +78,7 @@ public final class CodecGenerationTool
             decoderOutput,
             Validation.class,
             RejectUnknownField.class,
+            RejectUnknownEnumValue.class,
             false);
         final PrinterGenerator printerGenerator = new PrinterGenerator(dictionary, DECODER_PACKAGE, decoderOutput);
         final AcceptorGenerator acceptorGenerator = new AcceptorGenerator(dictionary, DECODER_PACKAGE, decoderOutput);
@@ -100,6 +105,7 @@ public final class CodecGenerationTool
                 flyweightDecoderOutput,
                 Validation.class,
                 RejectUnknownField.class,
+                RejectUnknownEnumValue.class,
                 true);
 
             flyweightDecoderGenerator.generate();

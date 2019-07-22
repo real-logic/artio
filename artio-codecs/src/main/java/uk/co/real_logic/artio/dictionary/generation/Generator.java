@@ -55,6 +55,7 @@ public abstract class Generator
     public static final String EXPAND_INDENT = ".toString().replace(\"\\n\", \"\\n  \")";
     public static final String CODEC_VALIDATION_ENABLED = "CODEC_VALIDATION_ENABLED";
     public static final String CODEC_REJECT_UNKNOWN_FIELD_ENABLED = "CODEC_REJECT_UNKNOWN_FIELD_ENABLED";
+    public static final String CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED = "CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED";
     public static final String MESSAGE_FIELDS = "messageFields";
 
     protected String commonCompoundImports(final String form, final boolean headerWrapsTrailer,
@@ -88,7 +89,8 @@ public abstract class Generator
     private String builderCommonPackage;
     protected final OutputManager outputManager;
     protected final Class<?> validationClass;
-    protected final Class<?> rejectUnknownClass;
+    protected final Class<?> rejectUnknownFieldClass;
+    private final Class<?> rejectUnknownEnumValueClass;
     protected final boolean flyweightsEnabled;
 
     protected Generator(
@@ -97,7 +99,8 @@ public abstract class Generator
         final String commonPackage,
         final OutputManager outputManager,
         final Class<?> validationClass,
-        final Class<?> rejectUnknownClass,
+        final Class<?> rejectUnknownFieldClass,
+        final Class<?> rejectUnknownEnumValueClass,
         final boolean flyweightsEnabled)
     {
         this.dictionary = dictionary;
@@ -105,7 +108,8 @@ public abstract class Generator
         this.builderCommonPackage = commonPackage;
         this.outputManager = outputManager;
         this.validationClass = validationClass;
-        this.rejectUnknownClass = rejectUnknownClass;
+        this.rejectUnknownFieldClass = rejectUnknownFieldClass;
+        this.rejectUnknownEnumValueClass = rejectUnknownEnumValueClass;
         this.flyweightsEnabled = flyweightsEnabled;
     }
 
@@ -160,7 +164,8 @@ public abstract class Generator
 
         out .append(importStaticFor(StandardCharsets.class, "US_ASCII"))
             .append(importStaticFor(validationClass, CODEC_VALIDATION_ENABLED))
-            .append(importStaticFor(rejectUnknownClass, CODEC_REJECT_UNKNOWN_FIELD_ENABLED));
+            .append(importStaticFor(rejectUnknownFieldClass, CODEC_REJECT_UNKNOWN_FIELD_ENABLED))
+            .append(importStaticFor(rejectUnknownEnumValueClass, CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED));
 
         if (!builderPackage.equals(builderCommonPackage) && !builderCommonPackage.isEmpty())
         {

@@ -78,11 +78,11 @@ public abstract class AbstractDecoderGeneratorTest
     static void generate(final boolean flyweightStringsEnabled) throws Exception
     {
         final Map<String, CharSequence> sourcesWithValidation = generateSources(
-            true, false, flyweightStringsEnabled);
+            true, false, true, flyweightStringsEnabled);
         final Map<String, CharSequence> sourcesWithoutValidation = generateSources(
-            false, false, flyweightStringsEnabled);
+            false, false, true, flyweightStringsEnabled);
         final Map<String, CharSequence> sourcesRejectingUnknownFields = generateSources(
-            true, true, flyweightStringsEnabled);
+            true, true, true, flyweightStringsEnabled);
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sourcesWithValidation);
         if (heartbeat == null || CODEC_LOGGING)
         {
@@ -104,18 +104,21 @@ public abstract class AbstractDecoderGeneratorTest
     }
 
     static Map<String, CharSequence> generateSources(
-        final boolean validation, final boolean rejectingUnknownFields, final boolean flyweightStringsEnabled)
+        final boolean validation, final boolean rejectingUnknownFields, final boolean rejectingUnknownEnumValue,
+        final boolean flyweightStringsEnabled)
     {
         final Class<?> validationClass = validation ? ValidationOn.class : ValidationOff.class;
         final Class<?> rejectUnknownField = rejectingUnknownFields ?
             RejectUnknownFieldOn.class : RejectUnknownFieldOff.class;
+        final Class<?> rejectUnknownEnumValue = rejectingUnknownEnumValue ?
+            RejectUnknownEnumValueOn.class : RejectUnknownEnumValueOff.class;
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
         final ConstantGenerator constantGenerator = new ConstantGenerator(
             MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
             MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass, rejectUnknownField,
-            flyweightStringsEnabled);
+            rejectUnknownEnumValue, flyweightStringsEnabled);
 
         constantGenerator.generate();
         enumGenerator.generate();
