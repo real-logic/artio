@@ -65,6 +65,7 @@ public abstract class AbstractDecoderGeneratorTest
     private static final String STRING_ENUM_REQ = "stringEnumReq";
 
     private static Class<?> heartbeatWithoutValidation;
+    private static Class<?> heartbeatWithoutEnumValueValidation;
     private static Class<?> heartbeatWithRejectingUnknownFields;
     private static Class<?> heartbeat;
     private static Class<?> component;
@@ -78,11 +79,13 @@ public abstract class AbstractDecoderGeneratorTest
     static void generate(final boolean flyweightStringsEnabled) throws Exception
     {
         final Map<String, CharSequence> sourcesWithValidation = generateSources(
-            true, false, flyweightStringsEnabled);
+            true, false, true, flyweightStringsEnabled);
+        final Map<String, CharSequence> sourcesWithNoEnumValueValidation = generateSources(
+            true, false, false, flyweightStringsEnabled);
         final Map<String, CharSequence> sourcesWithoutValidation = generateSources(
-            false, false, flyweightStringsEnabled);
+            false, false, true, flyweightStringsEnabled);
         final Map<String, CharSequence> sourcesRejectingUnknownFields = generateSources(
-            true, true, flyweightStringsEnabled);
+            true, true, true, flyweightStringsEnabled);
         heartbeat = compileInMemory(HEARTBEAT_DECODER, sourcesWithValidation);
         if (heartbeat == null || CODEC_LOGGING)
         {
@@ -95,6 +98,7 @@ public abstract class AbstractDecoderGeneratorTest
         enumTestMessage = compileInMemory(ENUM_TEST_MESSAGE_DECODER, sourcesWithValidation);
 
         heartbeatWithoutValidation = compileInMemory(HEARTBEAT_DECODER, sourcesWithoutValidation);
+        heartbeatWithoutEnumValueValidation = compileInMemory(HEARTBEAT_DECODER, sourcesWithNoEnumValueValidation);
         heartbeatWithRejectingUnknownFields = compileInMemory(HEARTBEAT_DECODER, sourcesRejectingUnknownFields);
         allReqFieldTypesMessage = compileInMemory(ALL_REQ_FIELD_TYPES_MESSAGE_DECODER, sourcesWithoutValidation);
         if (heartbeatWithoutValidation == null || CODEC_LOGGING)
@@ -104,18 +108,21 @@ public abstract class AbstractDecoderGeneratorTest
     }
 
     static Map<String, CharSequence> generateSources(
-        final boolean validation, final boolean rejectingUnknownFields, final boolean flyweightStringsEnabled)
+        final boolean validation, final boolean rejectingUnknownFields, final boolean rejectingUnknownEnumValue,
+        final boolean flyweightStringsEnabled)
     {
         final Class<?> validationClass = validation ? ValidationOn.class : ValidationOff.class;
         final Class<?> rejectUnknownField = rejectingUnknownFields ?
             RejectUnknownFieldOn.class : RejectUnknownFieldOff.class;
+        final Class<?> rejectUnknownEnumValue = rejectingUnknownEnumValue ?
+            RejectUnknownEnumValueOn.class : RejectUnknownEnumValueOff.class;
         final StringWriterOutputManager outputManager = new StringWriterOutputManager();
         final ConstantGenerator constantGenerator = new ConstantGenerator(
             MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
             MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass, rejectUnknownField,
-            flyweightStringsEnabled);
+            rejectUnknownEnumValue, flyweightStringsEnabled);
 
         constantGenerator.generate();
         enumGenerator.generate();
@@ -761,6 +768,36 @@ public abstract class AbstractDecoderGeneratorTest
         assertFalse("Passed validation with incorrect value", decoder.validate());
         assertEquals("Wrong tag id", 115, decoder.invalidTagId());
         assertEquals("Wrong reject reason", VALUE_IS_INCORRECT, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateEnumMissingValueIfEnumValidationDisabled() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutEnumValue(TAG_SPECIFIED_WITHOUT_A_VALUE_MESSAGE);
+
+        assertFalse("Passed validation with missing value", decoder.validate());
+        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", TAG_SPECIFIED_WITHOUT_A_VALUE, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldNotValidateIntBasedEnumIfDisabled() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutEnumValue(TAG_SPECIFIED_WHERE_INT_VALUE_IS_INCORRECT_MESSAGE);
+
+        assertTrue("Should be no validation for incorrect enum value", decoder.validate());
+        final Object intFieldEnum = get(decoder, "intFieldAsEnum");
+        assertEquals(ENUM_UNKNOWN_INT, getRepresentation(intFieldEnum));
+    }
+
+    @Test
+    public void shouldValidateStringBasedEnumIfDisabled() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeatWithoutEnumValue(TAG_SPECIFIED_WHERE_STRING_VALUE_IS_INCORRECT_MESSAGE);
+
+        assertTrue("Should be no validation for incorrect enum value", decoder.validate());
+        final Object onBehalfEnum = get(decoder, "onBehalfOfCompIDAsEnum");
+        assertEquals(ENUM_UNKNOWN_STRING, getRepresentation(onBehalfEnum));
     }
 
     @Test
@@ -1539,6 +1576,13 @@ public abstract class AbstractDecoderGeneratorTest
     private Decoder decodeHeartbeat(final String example) throws Exception
     {
         final Decoder decoder = (Decoder)heartbeat.getConstructor().newInstance();
+        decode(example, decoder);
+        return decoder;
+    }
+
+    private Decoder decodeHeartbeatWithoutEnumValue(final String example) throws Exception
+    {
+        final Decoder decoder = (Decoder)heartbeatWithoutEnumValueValidation.getConstructor().newInstance();
         decode(example, decoder);
         return decoder;
     }
