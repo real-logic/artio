@@ -23,7 +23,6 @@ import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.builder.SequenceResetEncoder;
@@ -90,6 +89,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private int replayFromSequenceNumber;
     private int replayFromSequenceIndex;
     private State state = State.REPLAY_QUERY;
+    private String missingMessagesReason;
 
     private SequenceResetEncoder sequenceResetEncoder;
     private UtcTimestampEncoder timestampEncoder;
@@ -284,7 +284,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
             {
                 if (notLoggingInboundMessages())
                 {
-                    return switchToMissingMessages();
+                    return switchToMissingMessages("Not logging inbound messages");
                 }
 
                 DebugLogger.log(CATCHUP,
@@ -297,7 +297,8 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                     replayFromSequenceNumber,
                     replayFromSequenceIndex,
                     lastReceivedSeqNum,
-                    currentSequenceIndex, LogTag.REPLAY);
+                    currentSequenceIndex,
+                    CATCHUP);
 
                 state = State.REPLAYING;
 
@@ -309,14 +310,14 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 // Timeout the catchup operations
                 if (System.currentTimeMillis() > catchupEndTimeInMs)
                 {
-                    return switchToMissingMessages();
+                    return switchToMissingMessages("Catchup operation timed out");
                 }
 
                 if (replayOperation.attemptReplay())
                 {
                     if (hasMissingMessages())
                     {
-                        return switchToMissingMessages();
+                        return switchToMissingMessages("Is missing messages from replay index query");
                     }
                     else
                     {
@@ -349,9 +350,10 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         }
     }
 
-    private long switchToMissingMessages()
+    private long switchToMissingMessages(final String reason)
     {
         state = State.SEND_MISSING;
+        missingMessagesReason = reason;
         return sendMissingMessages();
     }
 
@@ -396,12 +398,15 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         if (position > 0)
         {
             errorHandler.onError(new IllegalStateException(String.format(
-                "Failed to read correct number of messages for %d, finished at [%d, %d] instead of [%d, %d]",
+                "Failed to read correct number of messages for %d, finished at [%d, %d] instead of [%d, %d] - %s",
                 correlationId,
                 replayFromSequenceIndex,
                 replayFromSequenceNumber,
                 currentSequenceIndex,
-                lastReceivedSeqNum)));
+                lastReceivedSeqNum,
+                missingMessagesReason)));
+
+            missingMessagesReason = null;
 
             session.play();
         }
