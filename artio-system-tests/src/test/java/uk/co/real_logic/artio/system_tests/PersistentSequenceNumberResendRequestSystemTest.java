@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.hamcrest.Matchers;
@@ -124,8 +125,12 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
     @Test
     public void shouldReplayMessageBeforeARestart()
     {
+        mediaDriver = launchMediaDriver(mediaDriverContext(
+            TestFixtures.TERM_BUFFER_LENGTH,
+            true));
+
         // 1. setup a session
-        launch(true, AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
+        launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
 
         // 2. exchange some messages
         sendOrder();
@@ -140,10 +145,13 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
 
         assertInitiatingSequenceIndexIs(0);
         clearMessages();
-        close();
+        CloseHelper.close(initiatingLibrary);
+        CloseHelper.close(acceptingLibrary);
+        CloseHelper.close(initiatingEngine);
+        CloseHelper.close(acceptingEngine);
 
         // 4. login with low received sequence number in order to force a resend request from the server.
-        launch(false, 1);
+        launch(1);
 
         // 5. validate resent message
         final FixMessage resentExecutionReport =
@@ -153,12 +161,8 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         assertEquals("Y", resentExecutionReport.possDup());
     }
 
-    private void launch(final boolean dirsDeleteOnStart, final int initiatorInitialReceivedSequenceNumber)
+    private void launch(final int initiatorInitialReceivedSequenceNumber)
     {
-        mediaDriver = launchMediaDriver(mediaDriverContext(
-            TestFixtures.TERM_BUFFER_LENGTH,
-            dirsDeleteOnStart));
-
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
         acceptingConfig.sessionPersistenceStrategy(logon -> INDEXED);
         acceptingConfig.printErrorMessages(printErrorMessages);
