@@ -24,7 +24,6 @@ import org.junit.Test;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.builder.NewOrderSingleEncoder;
-import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.decoder.NewOrderSingleDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -125,7 +124,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
     public void shouldReplayMessageBeforeARestart()
     {
         // 1. setup a session
-        launch(true);
+        launch(true, AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
 
         // 2. exchange some messages
         sendOrder();
@@ -142,15 +141,12 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         clearMessages();
         close();
 
-        // 4. send resend request of old messages
-        launch(false);
+        // 4. login with low received sequence number in order to force a resend request from the server.
+        launch(false, 1);
 
-        final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
-        resendRequest
-            .beginSeqNo(resendSeqNum)
-            .endSeqNo(resendSeqNum);
-
-        testSystem.send(initiatingSession, resendRequest);
+        /*Timing.assertEventuallyTrue("", () -> testSystem.poll(), 200);
+        System.out.println(initiatingOtfAcceptor.messages());
+        System.out.println(acceptingOtfAcceptor.messages());*/
 
         // 5. validate resent message
         final FixMessage resentExecutionReport =
@@ -160,7 +156,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         assertEquals("Y", resentExecutionReport.possDup());
     }
 
-    private void launch(final boolean dirsDeleteOnStart)
+    private void launch(final boolean dirsDeleteOnStart, final int initiatorInitialReceivedSequenceNumber)
     {
         mediaDriver = launchMediaDriver(mediaDriverContext(
             TestFixtures.TERM_BUFFER_LENGTH,
@@ -180,7 +176,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         final Reply<Session> reply = connectPersistentSessions(
-            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false);
+            AUTOMATIC_INITIAL_SEQUENCE_NUMBER, initiatorInitialReceivedSequenceNumber, false);
         assertEquals("Repy failed: " + reply, Reply.State.COMPLETED, reply.state());
         initiatingSession = reply.resultIfPresent();
         acquireAcceptingSession();
