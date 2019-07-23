@@ -38,7 +38,8 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static uk.co.real_logic.artio.Constants.EXECUTION_REPORT_MESSAGE_AS_STR;
+import static org.junit.Assert.assertTrue;
+import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.mediaDriverContext;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
@@ -133,15 +134,17 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
 
         // 2. exchange some messages
-        sendOrder();
+        /*sendOrder();
 
         final FixMessage executionReport =
             testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
-        final int resendSeqNum = executionReport.messageSequenceNumber();
+        final int resendSeqNum = executionReport.messageSequenceNumber();*/
+
+        messagesCanBeExchanged(initiatingSession, initiatingOtfAcceptor);
 
         // 3. reconnect
-        /*initiatingSession.startLogout();
-        assertSessionsDisconnected();*/
+        initiatingSession.startLogout();
+        assertSessionsDisconnected();
 
         assertInitiatingSequenceIndexIs(0);
         CloseHelper.close(initiatingLibrary);
@@ -154,28 +157,17 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         launch(1);
 
         // 5. validate resent message
-        FixMessage resentExecutionReport =
+        final FixMessage gapfill =
+            testSystem.awaitMessageOf(initiatingOtfAcceptor, SEQUENCE_RESET_MESSAGE_AS_STR);
+
+        assertEquals("Y", gapfill.possDup());
+        assertEquals("Y", gapfill.get(GAP_FILL_FLAG));
+
+        /*FixMessage resentExecutionReport =
             testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
 
         assertEquals(resendSeqNum, resentExecutionReport.messageSequenceNumber());
-        assertEquals("Y", resentExecutionReport.possDup());
-
-        assertInitiatingSequenceIndexIs(0);
-        CloseHelper.close(initiatingLibrary);
-        CloseHelper.close(acceptingLibrary);
-        CloseHelper.close(initiatingEngine);
-        CloseHelper.close(acceptingEngine);
-        clearMessages();
-
-        // 4. login with low received sequence number in order to force a resend request from the server.
-        launch(1);
-
-        // 5. validate resent message
-        resentExecutionReport =
-            testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
-
-        assertEquals(resendSeqNum, resentExecutionReport.messageSequenceNumber());
-        assertEquals("Y", resentExecutionReport.possDup());
+        assertEquals("Y", resentExecutionReport.possDup());*/
     }
 
     private void launch(final int initiatorInitialReceivedSequenceNumber)
