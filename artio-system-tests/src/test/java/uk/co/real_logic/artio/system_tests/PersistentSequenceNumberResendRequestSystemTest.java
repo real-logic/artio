@@ -140,21 +140,38 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         final int resendSeqNum = executionReport.messageSequenceNumber();
 
         // 3. reconnect
-        initiatingSession.startLogout();
-        assertSessionsDisconnected();
+        /*initiatingSession.startLogout();
+        assertSessionsDisconnected();*/
 
         assertInitiatingSequenceIndexIs(0);
-        clearMessages();
         CloseHelper.close(initiatingLibrary);
         CloseHelper.close(acceptingLibrary);
         CloseHelper.close(initiatingEngine);
         CloseHelper.close(acceptingEngine);
+        clearMessages();
 
         // 4. login with low received sequence number in order to force a resend request from the server.
         launch(1);
 
         // 5. validate resent message
-        final FixMessage resentExecutionReport =
+        FixMessage resentExecutionReport =
+            testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
+
+        assertEquals(resendSeqNum, resentExecutionReport.messageSequenceNumber());
+        assertEquals("Y", resentExecutionReport.possDup());
+
+        assertInitiatingSequenceIndexIs(0);
+        CloseHelper.close(initiatingLibrary);
+        CloseHelper.close(acceptingLibrary);
+        CloseHelper.close(initiatingEngine);
+        CloseHelper.close(acceptingEngine);
+        clearMessages();
+
+        // 4. login with low received sequence number in order to force a resend request from the server.
+        launch(1);
+
+        // 5. validate resent message
+        resentExecutionReport =
             testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
 
         assertEquals(resendSeqNum, resentExecutionReport.messageSequenceNumber());
