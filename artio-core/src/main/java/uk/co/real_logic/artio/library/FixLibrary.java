@@ -241,8 +241,11 @@ public class FixLibrary extends GatewayProcess
 
     private void deleteFiles()
     {
-        removeParentDirectory(configuration.histogramLoggingFile());
-        removeParentDirectory(configuration.monitoringFile());
+        if (configuration.gracefulShutdown())
+        {
+            removeParentDirectory(configuration.histogramLoggingFile());
+            removeParentDirectory(configuration.monitoringFile());
+        }
     }
 
     private void removeParentDirectory(final String path)

@@ -29,6 +29,7 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
+import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -144,10 +145,6 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         // 4. login with low received sequence number in order to force a resend request from the server.
         launch(false, 1);
 
-        /*Timing.assertEventuallyTrue("", () -> testSystem.poll(), 200);
-        System.out.println(initiatingOtfAcceptor.messages());
-        System.out.println(acceptingOtfAcceptor.messages());*/
-
         // 5. validate resent message
         final FixMessage resentExecutionReport =
             testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
@@ -162,16 +159,25 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
             TestFixtures.TERM_BUFFER_LENGTH,
             dirsDeleteOnStart));
 
-        final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
-        config.sessionPersistenceStrategy(logon -> INDEXED);
-        config.printErrorMessages(printErrorMessages);
-        acceptingEngine = FixEngine.launch(config);
+        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
+        acceptingConfig.sessionPersistenceStrategy(logon -> INDEXED);
+        acceptingConfig.printErrorMessages(printErrorMessages);
+        acceptingConfig.gracefulShutdown(false);
+        acceptingEngine = FixEngine.launch(acceptingConfig);
+
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
         initiatingConfig.printErrorMessages(printErrorMessages);
+        initiatingConfig.gracefulShutdown(false);
         initiatingEngine = FixEngine.launch(initiatingConfig);
 
-        acceptingLibrary = connect(acceptingLibraryConfig(acceptingHandler));
-        initiatingLibrary = connect(initiatingLibraryConfig(libraryAeronPort, initiatingHandler));
+        final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
+        acceptingLibraryConfig.gracefulShutdown(false);
+        acceptingLibrary = connect(acceptingLibraryConfig);
+
+        final LibraryConfiguration initiatingLibraryConfig =
+            initiatingLibraryConfig(libraryAeronPort, initiatingHandler);
+        initiatingLibraryConfig.gracefulShutdown(false);
+        initiatingLibrary = connect(initiatingLibraryConfig);
 
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 

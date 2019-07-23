@@ -73,6 +73,7 @@ import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.Pressure.isBackPressured;
+import static uk.co.real_logic.artio.dictionary.generation.Exceptions.closeAll;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.framer.Continuation.COMPLETE;
@@ -1616,12 +1617,21 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     public void onClose()
     {
-        Exceptions.closeAll(
-            this::quiesce,
-            inboundMessages,
-            receiverEndPoints,
-            senderEndPoints,
-            channelSupplier);
+        if (configuration.gracefulShutdown())
+        {
+            closeAll(
+                this::quiesce,
+                inboundMessages,
+                receiverEndPoints,
+                senderEndPoints,
+                channelSupplier);
+        }
+        else
+        {
+            closeAll(
+                inboundMessages,
+                channelSupplier);
+        }
     }
 
     private void quiesce()

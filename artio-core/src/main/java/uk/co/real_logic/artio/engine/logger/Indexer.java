@@ -51,6 +51,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
     private final String agentNamePrefix;
     private final CompletionPosition completionPosition;
     private final int archiveReplayStream;
+    private final boolean gracefulShutdown;
 
     public Indexer(
         final List<Index> indices,
@@ -59,13 +60,15 @@ public class Indexer implements Agent, ControlledFragmentHandler
         final CompletionPosition completionPosition,
         final AeronArchive aeronArchive,
         final ErrorHandler errorHandler,
-        final int archiveReplayStream)
+        final int archiveReplayStream,
+        final boolean gracefulShutdown)
     {
         this.indices = indices;
         this.subscription = subscription;
         this.agentNamePrefix = agentNamePrefix;
         this.completionPosition = completionPosition;
         this.archiveReplayStream = archiveReplayStream;
+        this.gracefulShutdown = gracefulShutdown;
         catchIndexUp(aeronArchive, errorHandler);
     }
 
@@ -162,9 +165,12 @@ public class Indexer implements Agent, ControlledFragmentHandler
 
     public void onClose()
     {
-        quiesce();
+        if (gracefulShutdown)
+        {
+            quiesce();
 
-        Exceptions.closeAll(() -> Exceptions.closeAll(indices), subscription);
+            Exceptions.closeAll(() -> Exceptions.closeAll(indices), subscription);
+        }
     }
 
     private void quiesce()

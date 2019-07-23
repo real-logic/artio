@@ -251,7 +251,7 @@ public final class FixEngine extends GatewayProcess
             configuration,
             errorHandler,
             framerContext.framer(),
-            engineContext.archivingAgent(),
+            engineContext.indexingAgent(),
             monitoringAgent,
             conductorAgent(),
             recordingCoordinator);

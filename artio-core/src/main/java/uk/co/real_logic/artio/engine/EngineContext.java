@@ -57,10 +57,10 @@ public class EngineContext implements AutoCloseable
     private Streams inboundLibraryStreams;
     private Streams outboundLibraryStreams;
 
-    // Indexers are owned by the archivingAgent
+    // Indexers are owned by the indexingAgent
     private Indexer inboundIndexer;
     private Indexer outboundIndexer;
-    private Agent archivingAgent;
+    private Agent indexingAgent;
 
     EngineContext(
         final EngineConfiguration configuration,
@@ -216,7 +216,8 @@ public class EngineContext implements AutoCloseable
             inboundCompletionPosition,
             aeronArchive,
             errorHandler,
-            configuration.archiveReplayStream());
+            configuration.archiveReplayStream(),
+            configuration.gracefulShutdown());
 
         final List<Index> outboundIndices = new ArrayList<>();
         outboundIndices.add(newReplayIndex(
@@ -235,7 +236,7 @@ public class EngineContext implements AutoCloseable
             outboundLibraryCompletionPosition,
             aeronArchive,
             errorHandler,
-            configuration.archiveReplayStream());
+            configuration.archiveReplayStream(), configuration.gracefulShutdown());
     }
 
     private void newArchivingAgent()
@@ -251,7 +252,7 @@ public class EngineContext implements AutoCloseable
             agents.add(outboundIndexer);
             agents.add(replayer);
 
-            archivingAgent = new CompositeAgent(agents);
+            indexingAgent = new CompositeAgent(agents);
         }
         else
         {
@@ -262,7 +263,7 @@ public class EngineContext implements AutoCloseable
                 clock,
                 configuration.outboundMaxClaimAttempts());
 
-            archivingAgent = new GapFiller(
+            indexingAgent = new GapFiller(
                 inboundLibraryStreams.subscription("replayer"),
                 replayGatewayPublication,
                 configuration.agentNamePrefix(),
@@ -321,9 +322,9 @@ public class EngineContext implements AutoCloseable
         outboundClusterCompletionPosition.completeDuringStartup();
     }
 
-    Agent archivingAgent()
+    Agent indexingAgent()
     {
-        return archivingAgent;
+        return indexingAgent;
     }
 
     public SenderSequenceNumbers senderSequenceNumbers()
@@ -333,7 +334,10 @@ public class EngineContext implements AutoCloseable
 
     public void close()
     {
-        Exceptions.closeAll(
-            sentSequenceNumberIndex, receivedSequenceNumberIndex);
+        if (configuration.gracefulShutdown())
+        {
+            Exceptions.closeAll(
+                sentSequenceNumberIndex, receivedSequenceNumberIndex);
+        }
     }
 }

@@ -1208,7 +1208,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public void close()
     {
-        if (state != CLOSED)
+        if (state != CLOSED && configuration.gracefulShutdown())
         {
             connectionIdToSession.values().forEach(subscriber -> subscriber.session().disable());
             state = CLOSED;

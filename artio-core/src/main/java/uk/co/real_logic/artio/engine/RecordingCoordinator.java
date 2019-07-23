@@ -158,14 +158,16 @@ public class RecordingCoordinator implements AutoCloseable
     }
 
     // Must be called after the framer has shutdown, uses shutdown order
-    @Override
     public void close()
     {
-        if (!closed)
+        if (configuration.gracefulShutdown())
         {
-            awaitRecordingsCompletion();
-            shutdownArchiver();
-            closed = true;
+            if (!closed)
+            {
+                awaitRecordingsCompletion();
+                shutdownArchiver();
+                closed = true;
+            }
         }
     }
 

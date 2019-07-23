@@ -232,6 +232,7 @@ public class CommonConfiguration
     private String agentNamePrefix = DEFAULT_NAME_PREFIX;
     private int inboundLibraryStream = DEFAULT_INBOUND_LIBRARY_STREAM;
     private int outboundLibraryStream = DEFAULT_OUTBOUND_LIBRARY_STREAM;
+    private boolean gracefulShutdown = true;
 
     private final AtomicBoolean isConcluded = new AtomicBoolean(false);
 
@@ -498,6 +499,23 @@ public class CommonConfiguration
     {
         this.threadFactory = threadFactory;
         return this;
+    }
+
+    /**
+     * Set to false to enable simulation of a non-graceful shutdown. Should only be used for testing.
+     *
+     * @param gracefulShutdown false to enable simulation of a non-graceful shutdown.
+     * @return this
+     */
+    public CommonConfiguration gracefulShutdown(final boolean gracefulShutdown)
+    {
+        this.gracefulShutdown = gracefulShutdown;
+        return this;
+    }
+
+    public boolean gracefulShutdown()
+    {
+        return gracefulShutdown;
     }
 
     public Aeron.Context aeronContext()
