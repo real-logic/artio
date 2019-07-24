@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
@@ -82,6 +83,45 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         auth.verifyNoBlockingCalls();
     }
 
+    @Test
+    @Ignore
+    public void messagesCanBeSentFromInitiatorToAcceptorAfterFailedAuthenticationAttempt()
+    {
+        final Reply<Session> invalidReply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+
+        assertEventuallyTrue("failed to receive auth proxy", () ->
+        {
+            testSystem.poll();
+            return auth.hasAuthenticateBeenInvoked();
+        }, DEFAULT_TIMEOUT_IN_MS);
+
+        assertEquals(Reply.State.EXECUTING, invalidReply.state());
+
+        auth.reject();
+
+        completeFailedSession(invalidReply);
+
+        auth.reset();
+
+        final Reply<Session> validReply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+
+        assertEventuallyTrue("failed to receive auth proxy", () ->
+        {
+            testSystem.poll();
+            return auth.hasAuthenticateBeenInvoked();
+        }, DEFAULT_TIMEOUT_IN_MS);
+
+        auth.accept();
+
+        completeConnectSessions(validReply);
+
+        messagesCanBeExchanged();
+
+        assertInitiatingSequenceIndexIs(0);
+
+        auth.verifyNoBlockingCalls();
+    }
+
     private class FakeAsyncAuthenticationStrategy implements AuthenticationStrategy
     {
         volatile boolean blockingAuthenticateCalled;
@@ -117,6 +157,11 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         boolean hasAuthenticateBeenInvoked()
         {
             return authProxy != null;
+        }
+
+        void reset()
+        {
+            authProxy = null;
         }
     }
 }
