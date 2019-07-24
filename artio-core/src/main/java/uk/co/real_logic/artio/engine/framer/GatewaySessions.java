@@ -259,13 +259,10 @@ class GatewaySessions
         final long connectionId,
         final GatewaySession gatewaySession)
     {
-        final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(logon.header());
-        final SessionContext sessionContext = sessionContexts.onLogon(compositeKey);
-
-        return new PendingAcceptorLogon(sessionContext, gatewaySession, logon, connectionId, compositeKey);
+        return new PendingAcceptorLogon(sessionIdStrategy, gatewaySession, logon, connectionId, sessionContexts);
     }
 
-    public boolean lookupSequenceNumbers(final GatewaySession gatewaySession, final long requiredPosition)
+    private boolean lookupSequenceNumbers(final GatewaySession gatewaySession, final long requiredPosition)
     {
         final int aeronSessionId = outboundPublication.id();
         // At requiredPosition=0 there won't be anything indexed, so indexedPosition will be -1
@@ -294,9 +291,9 @@ class GatewaySessions
     private final class PendingAcceptorLogon implements AuthenticationProxy, AcceptorLogonResult
     {
         private static final long NO_REQUIRED_POSITION = -1;
-        private final SessionContext sessionContext;
+        private final SessionIdStrategy sessionIdStrategy;
         private final LogonDecoder logon;
-        private final CompositeKey compositeKey;
+        private final SessionContexts sessionContexts;
         private final boolean resetSeqNum;
         private volatile AuthenticationState state = AuthenticationState.PENDING;
         private GatewaySession session;
@@ -304,23 +301,16 @@ class GatewaySessions
         private long requiredPosition = NO_REQUIRED_POSITION;
 
         PendingAcceptorLogon(
-            final SessionContext sessionContext,
+            final SessionIdStrategy sessionIdStrategy,
             final GatewaySession gatewaySession,
             final LogonDecoder logon,
             final long connectionId,
-            final CompositeKey compositeKey)
+            final SessionContexts sessionContexts)
         {
-            this.sessionContext = sessionContext;
+            this.sessionIdStrategy = sessionIdStrategy;
             this.session = gatewaySession;
             this.logon = logon;
-            this.compositeKey = compositeKey;
-
-            if (sessionContext == DUPLICATE_SESSION)
-            {
-                resetSeqNum = false;
-                reject(DisconnectReason.DUPLICATE_SESSION);
-                return;
-            }
+            this.sessionContexts = sessionContexts;
 
             final PersistenceLevel persistenceLevel = getPersistenceLevel(logon, connectionId);
             final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
@@ -440,6 +430,15 @@ class GatewaySessions
         {
             final String username = SessionParser.username(logon);
             final String password = SessionParser.password(logon);
+
+            final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(logon.header());
+            final SessionContext sessionContext = sessionContexts.onLogon(compositeKey);
+
+            if (sessionContext == DUPLICATE_SESSION)
+            {
+                reject(DisconnectReason.DUPLICATE_SESSION);
+                return;
+            }
 
             sessionContext.onLogon(resetSeqNum);
             session.initialResetSeqNum(resetSeqNum);
