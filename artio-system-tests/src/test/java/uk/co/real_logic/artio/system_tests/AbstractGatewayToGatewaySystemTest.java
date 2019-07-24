@@ -181,6 +181,12 @@ public class AbstractGatewayToGatewaySystemTest
         assertConnected(initiatingSession);
     }
 
+    void completeFailedSession(final Reply<Session> reply)
+    {
+        testSystem.awaitReply(reply);
+        assertEquals(reply.toString(), State.ERRORED, reply.state());
+    }
+
     FixMessage assertMessageResent(final int sequenceNumber, final String msgType, final boolean isGapFill)
     {
         assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
