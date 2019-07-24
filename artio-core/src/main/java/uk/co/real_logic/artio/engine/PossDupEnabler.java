@@ -210,7 +210,7 @@ public class PossDupEnabler
 
             DebugLogger.log(
                 logTag,
-                "Replayed: %s%n",
+                "Resending: %s%n",
                 fragmentedMessageBuffer,
                 fragmentOffset + logLengthOffset,
                 fragmentedMessageLength - logLengthOffset);

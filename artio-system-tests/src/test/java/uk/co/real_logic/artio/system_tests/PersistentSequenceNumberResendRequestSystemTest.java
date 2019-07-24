@@ -122,6 +122,11 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         delete(CLIENT_LOGS);
     }
 
+    // TODO: parameters
+    // graceful shutdown
+    // media driver restart
+    // business vs session messages
+
     @Test
     public void shouldReplayMessageBeforeARestart()
     {
