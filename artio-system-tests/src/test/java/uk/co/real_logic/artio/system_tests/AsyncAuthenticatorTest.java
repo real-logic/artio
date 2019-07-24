@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
@@ -63,23 +64,12 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     {
         final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
 
-        assertEventuallyTrue("failed to receive auth proxy", () ->
-        {
-            testSystem.poll();
-            return auth.hasAuthenticateBeenInvoked();
-        }, DEFAULT_TIMEOUT_IN_MS);
-
-        assertEquals(Reply.State.EXECUTING, reply.state());
+        acquireAuthProxy(reply);
 
         auth.accept();
-
         completeConnectSessions(reply);
-
         messagesCanBeExchanged();
-
         assertInitiatingSequenceIndexIs(0);
-
-        auth.verifyNoBlockingCalls();
     }
 
     @Test
@@ -87,13 +77,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     {
         final Reply<Session> invalidReply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
 
-        assertEventuallyTrue("failed to receive auth proxy", () ->
-        {
-            testSystem.poll();
-            return auth.hasAuthenticateBeenInvoked();
-        }, DEFAULT_TIMEOUT_IN_MS);
-
-        assertEquals(Reply.State.EXECUTING, invalidReply.state());
+        acquireAuthProxy(invalidReply);
 
         auth.reject();
 
@@ -103,21 +87,29 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         final Reply<Session> validReply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
 
+        acquireAuthProxy(validReply);
+
+        auth.accept();
+        completeConnectSessions(validReply);
+        messagesCanBeExchanged();
+        assertInitiatingSequenceIndexIs(1);
+    }
+
+    @After
+    public void teardown()
+    {
+        auth.verifyNoBlockingCalls();
+    }
+
+    private void acquireAuthProxy(final Reply<Session> reply)
+    {
         assertEventuallyTrue("failed to receive auth proxy", () ->
         {
             testSystem.poll();
             return auth.hasAuthenticateBeenInvoked();
         }, DEFAULT_TIMEOUT_IN_MS);
 
-        auth.accept();
-
-        completeConnectSessions(validReply);
-
-        messagesCanBeExchanged();
-
-        assertInitiatingSequenceIndexIs(1);
-
-        auth.verifyNoBlockingCalls();
+        assertEquals(Reply.State.EXECUTING, reply.state());
     }
 
     private class FakeAsyncAuthenticationStrategy implements AuthenticationStrategy
