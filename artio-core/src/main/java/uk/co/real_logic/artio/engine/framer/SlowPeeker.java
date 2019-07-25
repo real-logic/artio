@@ -17,6 +17,8 @@ package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.Image;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 
 class SlowPeeker extends BlockablePosition
 {
@@ -37,17 +39,51 @@ class SlowPeeker extends BlockablePosition
     {
         blockPosition = DID_NOT_BLOCK;
         final long initialPosition = peekImage.position();
+        final long normalImagePosition = normalImage.position();
+
+        if (initialPosition > normalImagePosition)
+        {
+            DebugLogger.log(
+                LogTag.SLOW_PEEK,
+                "Initial Slow Peek Image ahead of normal Image: %d > %d",
+                initialPosition,
+                normalImagePosition);
+        }
+
         final long peekImageLimitPosition = peekImageLimitPosition(initialPosition);
-        final long limitPosition = Math.min(normalImage.position(), peekImageLimitPosition);
+        final long limitPosition = Math.min(normalImagePosition, peekImageLimitPosition);
         final long resultingPosition = peekImage.controlledPeek(
             initialPosition, handler, limitPosition);
+
+        if (resultingPosition > normalImagePosition)
+        {
+            DebugLogger.log(
+                LogTag.SLOW_PEEK,
+                "Resulting Slow Peek Image ahead of normal Image: %d > %d",
+                resultingPosition,
+                normalImagePosition);
+        }
+
         final long delta = resultingPosition - initialPosition;
         if (!peekImage.isClosed())
         {
+            final long blockPosition = this.blockPosition;
             if (blockPosition != DID_NOT_BLOCK)
             {
                 final long newLimitPosition = peekImage.position() + peekImage.termBufferLength();
-                peekImage.position(Math.min(newLimitPosition, blockPosition));
+                final long newPosition = Math.min(newLimitPosition, blockPosition);
+
+                if (newPosition > normalImagePosition)
+                {
+                    DebugLogger.log(
+                        LogTag.SLOW_PEEK,
+                        "New Slow Peek Image ahead of normal Image: %d > %d, blockPos=%d",
+                        newPosition,
+                        normalImagePosition,
+                        blockPosition);
+                }
+
+                peekImage.position(newPosition);
             }
             else
             {

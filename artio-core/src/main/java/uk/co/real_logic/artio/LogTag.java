@@ -45,4 +45,5 @@ public enum LogTag
     REPLAY,
     INDEX,
     LIBRARY_MANAGEMENT,
+    SLOW_PEEK
 }
