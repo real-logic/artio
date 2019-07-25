@@ -386,12 +386,12 @@ class SenderEndPoint
         return CONTINUE;
     }
 
-    private Action blockPosition(final long position, final int length, final StreamTracker tracker)
+    private Action blockPosition(final long messagePosition, final int messageLength, final StreamTracker tracker)
     {
-        final int alignedLength = ArchiveDescriptor.alignTerm(length);
-        final long startPosition = position - (alignedLength + DataHeaderFlyweight.HEADER_LENGTH);
-        tracker.blockablePosition.blockPosition(startPosition);
-        tracker.skipPosition = position;
+        final int alignedLength = ArchiveDescriptor.alignTerm(messageLength);
+        final long messageStartPosition = messagePosition - (alignedLength + DataHeaderFlyweight.HEADER_LENGTH);
+        tracker.blockablePosition.blockPosition(messageStartPosition);
+        tracker.skipPosition = messagePosition;
         return Action.CONTINUE;
     }
 
