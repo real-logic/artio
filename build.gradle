@@ -95,13 +95,11 @@ subprojects {
         checkstyle 'com.puppycrawl.tools:checkstyle:8.22'
 
         testCompile 'org.hamcrest:hamcrest:2.1'
-        testCompile 'org.mockito:mockito-core:2.28.2'
+        testCompile 'org.mockito:mockito-core:3.0.0'
         testCompile 'junit:junit:4.12'
     }
 
-    checkstyle {
-        toolVersion = "8.22"
-    }
+    checkstyle.toolVersion = "8.22"
 
     test {
         testLogging {
@@ -205,7 +203,7 @@ project(':artio-codecs') {
         compile "uk.co.real-logic:sbe-tool:${sbeVersion}"
         testCompile sourceSets.generated.output
     }
-    
+
     compileGeneratedJava {
         dependsOn 'generateMessages'
         sourceCompatibility = artioJavaVersion
