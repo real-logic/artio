@@ -51,17 +51,24 @@ allprojects {
     apply plugin: 'maven'
     apply plugin: 'signing'
     apply plugin: 'eclipse'
+    apply plugin: 'idea'
 
     repositories {
         mavenCentral()
         mavenLocal()
+    }
+
+    idea {
+        module {
+            downloadJavadoc = true
+            downloadSources = true
+        }
     }
 }
 
 subprojects {
     apply plugin: 'java'
     apply plugin: 'checkstyle'
-    apply plugin: 'idea'
 
     // Make sure that we use the correct JDK in Eclipse
     // There needs to be a JDK8 JVM installed in Eclipse before
@@ -178,13 +185,6 @@ subprojects {
     signing {
         required { isReleaseVersion && gradle.taskGraph.hasTask("uploadArchives") }
         sign configurations.archives
-    }
-
-    idea {
-        module {
-            downloadJavadoc = true
-            downloadSources = true
-        }
     }
 }
 
