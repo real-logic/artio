@@ -48,8 +48,7 @@ import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
 public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGatewayToGatewaySystemTest
 {
     private static final int SIZE_OF_ASCII_LONG = String.valueOf(Long.MAX_VALUE).length();
-
-    private boolean printErrorMessages = true;
+    private static final boolean PRINT_ERROR_MESSAGES = false;
 
     {
         acceptingHandler = new FakeHandler(acceptingOtfAcceptor)
@@ -164,35 +163,20 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
 
         assertEquals(resendSeqNum, resentExecutionReport.messageSequenceNumber());
         assertEquals("Y", resentExecutionReport.possDup());
-
-        assertInitiatingSequenceIndexIs(0);
-        CloseHelper.close(initiatingLibrary);
-        CloseHelper.close(acceptingLibrary);
-        CloseHelper.close(initiatingEngine);
-        CloseHelper.close(acceptingEngine);
-        clearMessages();
-
-        // 4. login with low received sequence number in order to force a resend request from the server.
-        launch(1);
-
-        // 5. validate resent message
-        resentExecutionReport =
-            testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
-
-        assertEquals(resendSeqNum, resentExecutionReport.messageSequenceNumber());
-        assertEquals("Y", resentExecutionReport.possDup());
     }
 
     private void launch(final int initiatorInitialReceivedSequenceNumber)
     {
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
         acceptingConfig.sessionPersistenceStrategy(logon -> INDEXED);
-        acceptingConfig.printErrorMessages(printErrorMessages);
+        acceptingConfig.printStartupWarnings(PRINT_ERROR_MESSAGES);
+        acceptingConfig.printErrorMessages(PRINT_ERROR_MESSAGES);
         acceptingConfig.gracefulShutdown(false);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
-        initiatingConfig.printErrorMessages(printErrorMessages);
+        initiatingConfig.printStartupWarnings(PRINT_ERROR_MESSAGES);
+        initiatingConfig.printErrorMessages(PRINT_ERROR_MESSAGES);
         initiatingConfig.gracefulShutdown(false);
         initiatingEngine = FixEngine.launch(initiatingConfig);
 
