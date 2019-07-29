@@ -54,7 +54,7 @@ import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
 public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGatewayToGatewaySystemTest
 {
     private static final int SIZE_OF_ASCII_LONG = String.valueOf(Long.MAX_VALUE).length();
-    private static final boolean PRINT_ERROR_MESSAGES = true;
+    private static final boolean PRINT_ERROR_MESSAGES = false;
 
     {
         acceptingHandler = new FakeHandler(acceptingOtfAcceptor)
