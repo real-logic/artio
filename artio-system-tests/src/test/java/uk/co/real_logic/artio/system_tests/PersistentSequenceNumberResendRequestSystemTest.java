@@ -54,7 +54,7 @@ import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
 public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGatewayToGatewaySystemTest
 {
     private static final int SIZE_OF_ASCII_LONG = String.valueOf(Long.MAX_VALUE).length();
-    private static final boolean PRINT_ERROR_MESSAGES = false;
+    private static final boolean PRINT_ERROR_MESSAGES = true;
 
     {
         acceptingHandler = new FakeHandler(acceptingOtfAcceptor)
@@ -121,7 +121,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
     private final UtcTimestampEncoder transactTime = new UtcTimestampEncoder();
     private final boolean shutdownCleanly;
 
-    @Parameterized.Parameters
+    @Parameterized.Parameters(name = "shutdownCleanly={0}")
     public static Collection<Object[]> data()
     {
         if (SystemUtil.osName().startsWith("win"))
@@ -172,8 +172,8 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         assertInitiatingSequenceIndexIs(0);
         if (shutdownCleanly)
         {
-            initiatingSession.startLogout();
-            assertSessionsDisconnected();
+            /*initiatingSession.startLogout();
+            assertSessionsDisconnected();*/
 
             close();
         }
@@ -214,22 +214,22 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         acceptingConfig.sessionPersistenceStrategy(logon -> INDEXED);
         acceptingConfig.printStartupWarnings(PRINT_ERROR_MESSAGES);
         acceptingConfig.printErrorMessages(PRINT_ERROR_MESSAGES);
-        acceptingConfig.gracefulShutdown(false);
+        acceptingConfig.gracefulShutdown(shutdownCleanly);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
         initiatingConfig.printStartupWarnings(PRINT_ERROR_MESSAGES);
         initiatingConfig.printErrorMessages(PRINT_ERROR_MESSAGES);
-        initiatingConfig.gracefulShutdown(false);
+        initiatingConfig.gracefulShutdown(shutdownCleanly);
         initiatingEngine = FixEngine.launch(initiatingConfig);
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
-        acceptingLibraryConfig.gracefulShutdown(false);
+        acceptingLibraryConfig.gracefulShutdown(shutdownCleanly);
         acceptingLibrary = connect(acceptingLibraryConfig);
 
         final LibraryConfiguration initiatingLibraryConfig =
             initiatingLibraryConfig(libraryAeronPort, initiatingHandler);
-        initiatingLibraryConfig.gracefulShutdown(false);
+        initiatingLibraryConfig.gracefulShutdown(shutdownCleanly);
         initiatingLibrary = connect(initiatingLibraryConfig);
 
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
