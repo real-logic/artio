@@ -210,7 +210,8 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
             encodeBuffer = new MutableAsciiBuffer(new byte[ENCODE_BUFFER_SIZE]);
             sequenceResetEncoder.gapFillFlag(true);
 
-            final HeaderEncoder header = sequenceResetEncoder.header();
+            final HeaderEncoder header = sequenceResetEncoder.header()
+                .possDupFlag(true);
 
             header.senderCompID(headerDecoder.senderCompID());
             if (headerDecoder.hasSenderSubID())
