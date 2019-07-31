@@ -45,7 +45,7 @@ class SlowPeeker extends BlockablePosition
         {
             DebugLogger.log(
                 LogTag.SLOW_PEEK,
-                "Initial Slow Peek Image ahead of normal Image: %d > %d",
+                "Initial Slow Peek Image ahead of normal Image: %d > %d%n",
                 initialPosition,
                 normalImagePosition);
         }
@@ -59,7 +59,7 @@ class SlowPeeker extends BlockablePosition
         {
             DebugLogger.log(
                 LogTag.SLOW_PEEK,
-                "Resulting Slow Peek Image ahead of normal Image: %d > %d, limitPos=%d",
+                "Resulting Slow Peek Image ahead of normal Image: %d > %d, limitPos=%d%n",
                 resultingPosition,
                 normalImagePosition,
                 limitPosition);
@@ -78,7 +78,7 @@ class SlowPeeker extends BlockablePosition
                 {
                     DebugLogger.log(
                         LogTag.SLOW_PEEK,
-                        "New Slow Peek Image ahead of normal Image: %d > %d, blockPos=%d",
+                        "New Slow Peek Image ahead of normal Image: %d > %d, blockPos=%d%n",
                         newPosition,
                         normalImagePosition,
                         blockPosition);
