@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.collections.ArrayUtil;
 import org.agrona.nio.TransportPoller;
@@ -29,10 +30,17 @@ import static uk.co.real_logic.artio.messages.DisconnectReason.ENGINE_SHUTDOWN;
 
 class ReceiverEndPoints extends TransportPoller
 {
+    private final ErrorHandler errorHandler;
+
     // Authentication flow requires periodic polling of the receiver end points until the authentication is
     // complete, so these endpoints are always polled, rather than using the selector.
     private ReceiverEndPoint[] requiredPollingEndPoints = new ReceiverEndPoint[0];
     private ReceiverEndPoint[] endPoints = new ReceiverEndPoint[0];
+
+    ReceiverEndPoints(final ErrorHandler errorHandler)
+    {
+        this.errorHandler = errorHandler;
+    }
 
     void add(final ReceiverEndPoint endPoint)
     {
@@ -77,10 +85,38 @@ class ReceiverEndPoints extends TransportPoller
         selectNowToForceProcessing();
     }
 
+    void receiverEndPointPollingOptional(final long connectionId)
+    {
+        final ReceiverEndPoint[] requiredPollingEndPoints = this.requiredPollingEndPoints;
+        final int index = findEndPoint(connectionId, requiredPollingEndPoints);
+        if (index != UNKNOWN_INDEX)
+        {
+            final ReceiverEndPoint endPoint = requiredPollingEndPoints[index];
+            this.requiredPollingEndPoints = ArrayUtil.remove(requiredPollingEndPoints, index);
+            addToNormalEndpoints(endPoint);
+        }
+        else
+        {
+            errorHandler.onError(new Exception(String.format(
+                "Unable to make endpoint no longer required for polling due to it not being found, connectionId=%d",
+                connectionId)));
+        }
+    }
+
     private int findAndCloseEndPoint(
         final long connectionId,
         final DisconnectReason reason,
         final ReceiverEndPoint[] endPoints)
+    {
+        final int index = findEndPoint(connectionId, endPoints);
+        if (index != UNKNOWN_INDEX)
+        {
+            endPoints[index].close(reason);
+        }
+        return index;
+    }
+
+    private int findEndPoint(final long connectionId, final ReceiverEndPoint[] endPoints)
     {
         int index = UNKNOWN_INDEX;
         final int length = endPoints.length;
@@ -90,7 +126,7 @@ class ReceiverEndPoints extends TransportPoller
             if (endPoint.connectionId() == connectionId)
             {
                 index = i;
-                endPoint.close(reason);
+                break;
             }
         }
         return index;
@@ -113,7 +149,7 @@ class ReceiverEndPoints extends TransportPoller
         int bytesReceived = 0;
         try
         {
-            ReceiverEndPoint[] requiredPollingEndPoints = this.requiredPollingEndPoints;
+            final ReceiverEndPoint[] requiredPollingEndPoints = this.requiredPollingEndPoints;
             final ReceiverEndPoint[] endPoints = this.endPoints;
 
             final int numRequiredPollingEndPoints = requiredPollingEndPoints.length;
@@ -121,10 +157,7 @@ class ReceiverEndPoints extends TransportPoller
             final int threshold = ITERATION_THRESHOLD - numRequiredPollingEndPoints;
             if (numEndPoints <= threshold)
             {
-                for (int i = numEndPoints - 1; i >= 0; i--)
-                {
-                    bytesReceived += endPoints[i].poll();
-                }
+                bytesReceived = pollArray(bytesReceived, endPoints, numEndPoints);
             }
             else
             {
@@ -139,23 +172,24 @@ class ReceiverEndPoints extends TransportPoller
                 selectedKeySet.reset();
             }
 
-            for (int i = numRequiredPollingEndPoints - 1; i >= 0; i--)
-            {
-                final ReceiverEndPoint requiredPollingEndPoint = requiredPollingEndPoints[i];
-                bytesReceived += requiredPollingEndPoint.poll();
-                if (!requiredPollingEndPoint.requiresAuthentication())
-                {
-                    requiredPollingEndPoints = ArrayUtil.remove(requiredPollingEndPoints, i);
-                    addToNormalEndpoints(requiredPollingEndPoint);
-                }
-            }
-            this.requiredPollingEndPoints = requiredPollingEndPoints;
+            bytesReceived = pollArray(bytesReceived, requiredPollingEndPoints, numRequiredPollingEndPoints);
         }
         catch (final IOException ex)
         {
             LangUtil.rethrowUnchecked(ex);
         }
 
+        return bytesReceived;
+    }
+
+    private int pollArray(
+        final int bytesAlreadyReceived, final ReceiverEndPoint[] endPoints, final int numRequiredPollingEndPoints)
+    {
+        int bytesReceived = bytesAlreadyReceived;
+        for (int i = numRequiredPollingEndPoints - 1; i >= 0; i--)
+        {
+            bytesReceived += endPoints[i].poll();
+        }
         return bytesReceived;
     }
 

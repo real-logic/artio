@@ -113,7 +113,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ControlledFragmentHandler replaySubscriber;
     private final ControlledFragmentHandler replaySlowSubscriber;
 
-    private final ReceiverEndPoints receiverEndPoints = new ReceiverEndPoints();
+    private final ReceiverEndPoints receiverEndPoints;
     private final ControlledFragmentAssembler senderEndPointAssembler;
     private final SenderEndPoints senderEndPoints;
 
@@ -210,6 +210,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.finalImagePositions = finalImagePositions;
+
+        receiverEndPoints = new ReceiverEndPoints(errorHandler);
 
         this.librarySlowPeeker = new SubscriptionSlowPeeker(slowSubscription, librarySubscription);
 
@@ -1695,5 +1697,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             toResend.put(connectionId, libraryId);
         }
+    }
+
+    void receiverEndPointPollingOptional(final long connectionId)
+    {
+        receiverEndPoints.receiverEndPointPollingOptional(connectionId);
     }
 }
