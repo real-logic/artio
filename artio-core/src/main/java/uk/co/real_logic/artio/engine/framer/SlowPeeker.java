@@ -25,14 +25,10 @@ class SlowPeeker extends BlockablePosition
     final Image normalImage;
     final Image peekImage;
 
-    private final int peekImageTermLengthMask;
-
     SlowPeeker(final Image peekImage, final Image normalImage)
     {
         this.peekImage = peekImage;
         this.normalImage = normalImage;
-
-        peekImageTermLengthMask = peekImage.termBufferLength() - 1;
     }
 
     int peek(final ControlledFragmentHandler handler)
@@ -45,25 +41,24 @@ class SlowPeeker extends BlockablePosition
         {
             DebugLogger.log(
                 LogTag.SLOW_PEEK,
-                "Initial Slow Peek Image ahead of normal Image: %d > %d",
+                "Initial Slow Peek Image ahead of normal Image: %d > %d%n",
                 initialPosition,
                 normalImagePosition);
         }
 
-        final long peekImageLimitPosition = peekImageLimitPosition(initialPosition);
-        final long limitPosition = Math.min(normalImagePosition, peekImageLimitPosition);
-        final long resultingPosition = peekImage.controlledPeek(
-            initialPosition, handler, limitPosition);
+        long resultingPosition = peekImage.controlledPeek(
+            initialPosition, handler, normalImagePosition);
 
         if (resultingPosition > normalImagePosition)
         {
             DebugLogger.log(
                 LogTag.SLOW_PEEK,
-                "Resulting Slow Peek Image ahead of normal Image: %d > %d, limitPos=%d, initialPos=%d",
+                "Resulting Slow Peek Image ahead of normal Image: %d > %d, initialPos=%d%n",
                 resultingPosition,
                 normalImagePosition,
-                limitPosition,
                 initialPosition);
+
+            resultingPosition = normalImagePosition;
         }
 
         final long delta = resultingPosition - initialPosition;
@@ -79,10 +74,11 @@ class SlowPeeker extends BlockablePosition
                 {
                     DebugLogger.log(
                         LogTag.SLOW_PEEK,
-                        "New Slow Peek Image ahead of normal Image: %d > %d, blockPos=%d",
+                        "New Slow Peek Image ahead of normal Image: %d > %d, blockPos=%d,limitPos=%d%n",
                         newPosition,
                         normalImagePosition,
-                        blockPosition);
+                        blockPosition,
+                        newLimitPosition);
                 }
 
                 peekImage.position(newPosition);
@@ -98,10 +94,5 @@ class SlowPeeker extends BlockablePosition
         {
             return 0;
         }
-    }
-
-    private long peekImageLimitPosition(final long currentPosition)
-    {
-        return (currentPosition - (currentPosition & peekImageTermLengthMask)) + peekImageTermLengthMask + 1;
     }
 }
