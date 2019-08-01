@@ -218,6 +218,8 @@ class ReceiverEndPoint
             this.sequenceIndex = sequenceIndex;
             pendingAcceptorLogon = null;
 
+            framer.receiverEndPointPollingOptional(connectionId);
+
             // Move any data received after the logon message.
             offset += length;
             moveRemainingDataToBufferStart(offset);

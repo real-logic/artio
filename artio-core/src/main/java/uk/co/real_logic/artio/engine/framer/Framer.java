@@ -113,7 +113,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ControlledFragmentHandler replaySubscriber;
     private final ControlledFragmentHandler replaySlowSubscriber;
 
-    private final ReceiverEndPoints receiverEndPoints = new ReceiverEndPoints();
+    private final ReceiverEndPoints receiverEndPoints;
     private final ControlledFragmentAssembler senderEndPointAssembler;
     private final SenderEndPoints senderEndPoints;
 
@@ -210,6 +210,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.finalImagePositions = finalImagePositions;
+
+        receiverEndPoints = new ReceiverEndPoints(errorHandler);
 
         this.librarySlowPeeker = new SubscriptionSlowPeeker(slowSubscription, librarySubscription);
 
@@ -1332,7 +1334,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final GatewaySession gatewaySession,
         final int lastSentSeqNum,
         final int lastReceivedSeqNum,
-        final SessionStatus logonstatus,
+        final SessionStatus sessionstatus,
         final CompositeKey compositeKey,
         final long connectionId,
         final InternalSession session,
@@ -1345,7 +1347,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             lastSentSeqNum,
             lastReceivedSeqNum,
             session.logonTime(),
-            logonstatus,
+            sessionstatus,
             gatewaySession.slowStatus(),
             gatewaySession.connectionType(),
             session.state(),
@@ -1695,5 +1697,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             toResend.put(connectionId, libraryId);
         }
+    }
+
+    void receiverEndPointPollingOptional(final long connectionId)
+    {
+        receiverEndPoints.receiverEndPointPollingOptional(connectionId);
     }
 }

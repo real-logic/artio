@@ -51,17 +51,24 @@ allprojects {
     apply plugin: 'maven'
     apply plugin: 'signing'
     apply plugin: 'eclipse'
+    apply plugin: 'idea'
 
     repositories {
         mavenCentral()
         mavenLocal()
+    }
+
+    idea {
+        module {
+            downloadJavadoc = true
+            downloadSources = true
+        }
     }
 }
 
 subprojects {
     apply plugin: 'java'
     apply plugin: 'checkstyle'
-    apply plugin: 'idea'
 
     // Make sure that we use the correct JDK in Eclipse
     // There needs to be a JDK8 JVM installed in Eclipse before
@@ -92,16 +99,14 @@ subprojects {
     }
 
     dependencies {
-        checkstyle 'com.puppycrawl.tools:checkstyle:8.22'
+        checkstyle 'com.puppycrawl.tools:checkstyle:8.23'
 
         testCompile 'org.hamcrest:hamcrest:2.1'
-        testCompile 'org.mockito:mockito-core:2.28.2'
+        testCompile 'org.mockito:mockito-core:3.0.0'
         testCompile 'junit:junit:4.12'
     }
 
-    checkstyle {
-        toolVersion = "8.22"
-    }
+    checkstyle.toolVersion = "8.23"
 
     test {
         testLogging {
@@ -181,13 +186,6 @@ subprojects {
         required { isReleaseVersion && gradle.taskGraph.hasTask("uploadArchives") }
         sign configurations.archives
     }
-
-    idea {
-        module {
-            downloadJavadoc = true
-            downloadSources = true
-        }
-    }
 }
 
 def validationXsdPath = project(':artio-codecs').projectDir.toString() + '/src/main/resources/fpl/sbe.xsd'
@@ -205,7 +203,7 @@ project(':artio-codecs') {
         compile "uk.co.real-logic:sbe-tool:${sbeVersion}"
         testCompile sourceSets.generated.output
     }
-    
+
     compileGeneratedJava {
         dependsOn 'generateMessages'
         sourceCompatibility = artioJavaVersion

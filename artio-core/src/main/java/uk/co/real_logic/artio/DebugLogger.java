@@ -289,7 +289,7 @@ public final class DebugLogger
         }
     }
 
-    private static boolean isEnabled(final LogTag tag)
+    public static boolean isEnabled(final LogTag tag)
     {
         return DEBUG_PRINT_MESSAGES && DEBUG_TAGS.contains(tag);
     }

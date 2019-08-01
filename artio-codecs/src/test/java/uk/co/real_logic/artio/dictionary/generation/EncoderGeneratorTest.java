@@ -21,7 +21,6 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.EncodingException;
 import uk.co.real_logic.artio.builder.Encoder;
@@ -29,7 +28,6 @@ import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.util.Reflection;
-
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -209,7 +207,6 @@ public class EncoderGeneratorTest
         assertEncodesTestReqIdFully(encoder);
     }
 
-    @Ignore // TODO: need to improve the AsciiSequenceView API.
     @Test
     public void shouldWriteAsciiSequenceViewSetters() throws Exception
     {
