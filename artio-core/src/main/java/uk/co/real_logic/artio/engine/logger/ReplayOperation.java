@@ -235,11 +235,12 @@ public class ReplayOperation
 
             if (messageHeaderDecoder.templateId() == FixMessageDecoder.TEMPLATE_ID)
             {
+                final int messageOffset = offset + MessageHeaderDecoder.ENCODED_LENGTH;
                 if (sessionId != UNK_SESSION)
                 {
                     messageDecoder.wrap(
                         buffer,
-                        offset + MessageHeaderDecoder.ENCODED_LENGTH,
+                        messageOffset,
                         messageHeaderDecoder.blockLength(),
                         messageHeaderDecoder.version()
                     );
@@ -250,7 +251,10 @@ public class ReplayOperation
                     }
                 }
 
-                DebugLogger.log(logTag, "Found Replay Message [%s]%n", buffer, offset, length);
+                if (DebugLogger.isEnabled(logTag))
+                {
+                    DebugLogger.log(logTag, "Found Replay Message [%s]%n", messageDecoder.body());
+                }
 
                 final Action action = messageHandler.onFragment(buffer, offset, length, header);
                 if (action != ABORT)
