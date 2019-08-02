@@ -121,8 +121,6 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         {
             this.authProxy = authProxy;
 
-            System.out.println(authProxy.remoteAddress());
-
             assertThat(authProxy.remoteAddress(), containsString("127.0.0.1"));
         }
 
