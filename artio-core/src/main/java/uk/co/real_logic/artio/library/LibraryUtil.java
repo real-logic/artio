@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.library;
 
+import io.aeron.exceptions.AeronException;
 import io.aeron.exceptions.TimeoutException;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.IdleStrategy;
@@ -108,7 +109,7 @@ public final class LibraryUtil
 
         if (reply.hasTimedOut())
         {
-            throw new TimeoutException();
+            throw new TimeoutException("reply timeout", AeronException.Category.ERROR);
         }
         else
         {
