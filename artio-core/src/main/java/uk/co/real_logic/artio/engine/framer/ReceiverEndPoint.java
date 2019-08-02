@@ -445,7 +445,8 @@ class ReceiverEndPoint
             pendingAcceptorLogonMsgLength = length;
 
             hasNotifiedFramerOfLogonMessageReceived = false;
-            pendingAcceptorLogon = gatewaySessions.authenticate(logon, connectionId(), gatewaySession);
+            pendingAcceptorLogon = gatewaySessions.authenticate(
+                logon, connectionId(), gatewaySession, channel.remoteAddress());
         }
         else
         {

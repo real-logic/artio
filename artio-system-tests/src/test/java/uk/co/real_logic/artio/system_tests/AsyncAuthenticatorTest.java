@@ -27,8 +27,8 @@ import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.validation.AuthenticationProxy;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -120,6 +120,10 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         public void authenticateAsync(final LogonDecoder logon, final AuthenticationProxy authProxy)
         {
             this.authProxy = authProxy;
+
+            System.out.println(authProxy.remoteAddress());
+
+            assertThat(authProxy.remoteAddress(), containsString("127.0.0.1"));
         }
 
         public boolean authenticate(final LogonDecoder logon)
@@ -155,4 +159,3 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         }
     }
 }
-
