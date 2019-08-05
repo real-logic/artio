@@ -443,7 +443,10 @@ public final class DictionaryParser
 
         if (errorMessage.length() > 0)
         {
-            throw new IllegalStateException(errorMessage.toString());
+            if (!Boolean.getBoolean(CodecGenerationTool.VALIDATION_ALLOW_DUPLICATES))
+            {
+                throw new IllegalStateException(errorMessage.toString());
+            }
         }
     }
 

@@ -31,6 +31,8 @@ import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
 
 public final class CodecGenerationTool
 {
+    public static final String VALIDATION_ALLOW_DUPLICATES = "fix.validation.allow.duplicates";
+
     public static void main(final String[] args) throws Exception
     {
         if (args.length < 2)
