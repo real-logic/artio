@@ -120,10 +120,15 @@ public final class FixEngine extends GatewayProcess
      * Stop accepting new connections.
      * logout and disconnect all currently active FIX sessions.
      * Reset all Artio state (including session ids and sequence numbers.
-     * Reset any aeron archiver state associated with Artio.
      * Optionally save this data to a location
      *
+     * Does not reset aeron archiver state associated with Artio.
+     *
      * Blocks until the operation is complete.
+     *
+     * @param backupLocation the directory that you wish to copy Artio's session state over to for later inspection.
+     *                       If this is null no backup of data will be performed. If the directory exists it will be
+     *                       re-used, if it doesn't it will be created.
      */
     public void endDayClose(final File backupLocation)
     {
@@ -131,11 +136,32 @@ public final class FixEngine extends GatewayProcess
 
         close();
 
-        // TODO: how to move the currently archived state?
-        // TODO: can I get the recording ids of everything at this point?
+        if (backupLocation != null)
+        {
+            final File backupDir = backupLocation.getAbsoluteFile();
 
-        // TODO: Reset all Artio state (including session ids and sequence numbers.
-        // TODO: save this data to a location
+            if (backupLocation.exists())
+            {
+                if (!backupLocation.isDirectory())
+                {
+                    throw new IllegalStateException(backupDir + " is not a directory, so backup cannot proceed");
+                }
+            }
+            else if (!backupLocation.mkdirs())
+            {
+                throw new IllegalStateException(backupDir + " could not be created, so backup cannot proceed");
+            }
+
+            final File logFileDir = new File(configuration.logFileDir());
+            for (final File file : logFileDir.listFiles())
+            {
+                if (!file.renameTo(new File(backupDir, file.getName())))
+                {
+                    throw new IllegalStateException(
+                        "Unable to move " + file.getAbsolutePath() + " to " + backupDir);
+                }
+            }
+        }
     }
 
     /**

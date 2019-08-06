@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.agrona.LangUtil;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.Encoder;
@@ -26,6 +27,7 @@ import uk.co.real_logic.artio.session.Session;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
@@ -159,5 +161,27 @@ public class TestSystem
                 poll();
                 return session.send(encoder) > 0;
             });
+    }
+
+    public void awaitBlocking(final Runnable operation)
+    {
+        final ExecutorService executor = Executors.newSingleThreadExecutor();
+        final Future<?> future = executor.submit(operation);
+
+        while (!future.isDone())
+        {
+            poll();
+
+            Thread.yield();
+        }
+
+        try
+        {
+            future.get();
+        }
+        catch (final InterruptedException | ExecutionException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+        }
     }
 }

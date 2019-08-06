@@ -17,8 +17,6 @@ package uk.co.real_logic.artio.engine.framer;
 
 import uk.co.real_logic.artio.Reply;
 
-import java.io.File;
-
 final class EndOfDayCommand implements AdminCommand, Reply<Void>
 {
     private volatile State state = State.EXECUTING;

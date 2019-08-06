@@ -204,9 +204,8 @@ public class FramerContext
 
     public void runEndOfDay()
     {
-        // TODO: backuplocation
         final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
-        final EndOfDayCommand command = new EndOfDayCommand(null);
+        final EndOfDayCommand command = new EndOfDayCommand();
         while (!adminCommands.offer(command))
         {
             idleStrategy.idle();
@@ -218,6 +217,11 @@ public class FramerContext
             idleStrategy.idle();
         }
         idleStrategy.reset();
+
+        if (command.hasErrored())
+        {
+            LangUtil.rethrowUnchecked(command.error());
+        }
     }
 
     public Reply<Long> lookupSessionId(

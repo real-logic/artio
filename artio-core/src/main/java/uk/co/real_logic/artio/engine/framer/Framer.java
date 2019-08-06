@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -478,6 +478,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 sentSequenceNumber,
                 receivedSequenceNumber,
                 SessionStatus.LIBRARY_NOTIFICATION));
+
+            if (atEndOfDay)
+            {
+                session.session().logoutAndDisconnect();
+            }
         }
 
         finalImagePositions.removePosition(library.aeronSessionId());
@@ -508,7 +513,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         if (atEndOfDay)
         {
-
+            channel.close();
+            return;
         }
 
         final long connectionId = newConnectionId();
@@ -1064,6 +1070,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return action;
         }
 
+        if (atEndOfDay)
+        {
+            // Do not do allow a new library to connect whilst performing end of day operations.
+            return CONTINUE;
+        }
+
         final LiveLibraryInfo existingLibrary = idToLibrary.get(libraryId);
         if (existingLibrary != null)
         {
@@ -1589,9 +1601,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         atEndOfDay = true;
 
-        // TODO: tell all FixLibraries to logout sessions.
-        // TODO: re-triable operation for:
-        gatewaySessions.logoutAllSessions();
+        schedule(new EndOfDayOperation(
+            inboundPublication,
+            new ArrayList<>(idToLibrary.values()),
+            // Take a copy to avoid library sessions being acquired causing issues
+            new ArrayList<>(gatewaySessions.sessions()),
+            receiverEndPoints,
+            endOfDayCommand));
     }
 
     void onResetSequenceNumber(final ResetSequenceNumberCommand reply)

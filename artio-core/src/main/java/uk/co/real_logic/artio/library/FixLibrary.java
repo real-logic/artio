@@ -194,6 +194,11 @@ public class FixLibrary extends GatewayProcess
         return poller.isConnected();
     }
 
+    public boolean isAtEndOfDay()
+    {
+        return poller.isAtEndOfDay();
+    }
+
     public boolean isClosed()
     {
         return poller.isClosed();

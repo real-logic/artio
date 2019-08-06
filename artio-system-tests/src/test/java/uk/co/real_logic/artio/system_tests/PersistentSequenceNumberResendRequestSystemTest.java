@@ -45,7 +45,6 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.Constants.EXECUTION_REPORT_MESSAGE_AS_STR;
-import static uk.co.real_logic.artio.TestFixtures.mediaDriverContext;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
@@ -141,8 +140,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
     @Before
     public void setUp()
     {
-        deleteAcceptorLogs();
-        delete(CLIENT_LOGS);
+        deleteLogs();
     }
 
     public PersistentSequenceNumberResendRequestSystemTest(final boolean shutdownCleanly)
@@ -157,7 +155,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
     @Test
     public void shouldReplayMessageBeforeARestart()
     {
-        launchMediaDriver();
+        launchMediaDriverWithDirs();
 
         // 1. setup a session
         launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
@@ -187,7 +185,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         clearMessages();
         if (shutdownCleanly)
         {
-            launchMediaDriver();
+            launchMediaDriverWithDirs();
         }
 
         // 4. login with low received sequence number in order to force a resend request from the server.
@@ -199,13 +197,6 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
 
         assertEquals(resendSeqNum, resentExecutionReport.messageSequenceNumber());
         assertEquals("Y", resentExecutionReport.possDup());
-    }
-
-    private void launchMediaDriver()
-    {
-        mediaDriver = TestFixtures.launchMediaDriver(mediaDriverContext(
-            TestFixtures.TERM_BUFFER_LENGTH,
-            false));
     }
 
     private void launch(final int initiatorInitialReceivedSequenceNumber)

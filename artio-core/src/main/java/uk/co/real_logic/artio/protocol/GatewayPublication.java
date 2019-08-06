@@ -75,6 +75,8 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + FollowerSessionRequestEncoder.BLOCK_LENGTH + FollowerSessionRequestEncoder.headerHeaderLength();
     private static final int FOLLOWER_SESSION_REPLY_LENGTH =
         HEADER_LENGTH + FollowerSessionReplyEncoder.BLOCK_LENGTH;
+    private static final int END_OF_DAY_LENGTH =
+        HEADER_LENGTH + EndOfDayEncoder.BLOCK_LENGTH;
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -100,6 +102,7 @@ public class GatewayPublication extends ClaimablePublication
     private final SlowStatusNotificationEncoder slowStatusNotification = new SlowStatusNotificationEncoder();
     private final FollowerSessionRequestEncoder followerSessionRequest = new FollowerSessionRequestEncoder();
     private final FollowerSessionReplyEncoder followerSessionReply = new FollowerSessionReplyEncoder();
+    private final EndOfDayEncoder endOfDay = new EndOfDayEncoder();
 
     private final Clock clock;
     private final int maxPayloadLength;
@@ -888,6 +891,28 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
+    public long saveEndOfDay(final int libraryId)
+    {
+        final long position = claim(END_OF_DAY_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        endOfDay
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, endOfDay);
+
+        return position;
+    }
+
     public int id()
     {
         return dataPublication.sessionId();
@@ -912,5 +937,4 @@ public class GatewayPublication extends ClaimablePublication
     {
         return maxPayloadLength;
     }
-
 }
