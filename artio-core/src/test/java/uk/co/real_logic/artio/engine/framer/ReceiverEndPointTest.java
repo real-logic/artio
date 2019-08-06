@@ -116,7 +116,8 @@ public class ReceiverEndPointTest
         when(mockGatewaySessions.authenticate(
             any(),
             anyLong(),
-            eq(gatewaySession)))
+            eq(gatewaySession),
+            any()))
             .thenReturn(logonResult);
     }
 

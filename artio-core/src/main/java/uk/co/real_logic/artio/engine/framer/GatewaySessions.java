@@ -257,9 +257,11 @@ class GatewaySessions
     AcceptorLogonResult authenticate(
         final LogonDecoder logon,
         final long connectionId,
-        final GatewaySession gatewaySession)
+        final GatewaySession gatewaySession,
+        final String remoteAddress)
     {
-        return new PendingAcceptorLogon(sessionIdStrategy, gatewaySession, logon, connectionId, sessionContexts);
+        return new PendingAcceptorLogon(
+            sessionIdStrategy, gatewaySession, logon, connectionId, sessionContexts, remoteAddress);
     }
 
     private boolean lookupSequenceNumbers(final GatewaySession gatewaySession, final long requiredPosition)
@@ -294,6 +296,7 @@ class GatewaySessions
         private final SessionIdStrategy sessionIdStrategy;
         private final LogonDecoder logon;
         private final SessionContexts sessionContexts;
+        private final String remoteAddress;
         private final boolean resetSeqNum;
         private volatile AuthenticationState state = AuthenticationState.PENDING;
         private GatewaySession session;
@@ -305,12 +308,14 @@ class GatewaySessions
             final GatewaySession gatewaySession,
             final LogonDecoder logon,
             final long connectionId,
-            final SessionContexts sessionContexts)
+            final SessionContexts sessionContexts,
+            final String remoteAddress)
         {
             this.sessionIdStrategy = sessionIdStrategy;
             this.session = gatewaySession;
             this.logon = logon;
             this.sessionContexts = sessionContexts;
+            this.remoteAddress = remoteAddress;
 
             final PersistenceLevel persistenceLevel = getPersistenceLevel(logon, connectionId);
             final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
@@ -466,6 +471,11 @@ class GatewaySessions
         public void reject()
         {
             reject(DisconnectReason.FAILED_AUTHENTICATION);
+        }
+
+        public String remoteAddress()
+        {
+            return remoteAddress;
         }
 
         private void reject(final DisconnectReason reason)
