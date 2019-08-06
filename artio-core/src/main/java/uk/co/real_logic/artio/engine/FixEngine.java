@@ -20,7 +20,6 @@ import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.concurrent.AgentInvoker;
-import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.GatewayProcess;
 import uk.co.real_logic.artio.Reply;
@@ -94,13 +93,11 @@ public final class FixEngine extends GatewayProcess
      *
      * @param backupLocation the location to backup the current session ids file to.
      *                       Can be null to indicate that no backup is required.
-     * @param idleStrategy the idle strategy to use when polling this blocking operation.
-     *
      * @return the reply object, or null if the request hasn't been successfully enqueued.
      */
-    public Reply<?> resetSessionIds(final File backupLocation, final IdleStrategy idleStrategy)
+    public Reply<?> resetSessionIds(final File backupLocation)
     {
-        return framerContext.resetSessionIds(backupLocation, idleStrategy);
+        return framerContext.resetSessionIds(backupLocation);
     }
 
     /**
@@ -117,6 +114,28 @@ public final class FixEngine extends GatewayProcess
     public Reply<?> resetSequenceNumber(final long sessionId)
     {
         return framerContext.resetSequenceNumber(sessionId);
+    }
+
+    /**
+     * Stop accepting new connections.
+     * logout and disconnect all currently active FIX sessions.
+     * Reset all Artio state (including session ids and sequence numbers.
+     * Reset any aeron archiver state associated with Artio.
+     * Optionally save this data to a location
+     *
+     * Blocks until the operation is complete.
+     */
+    public void endDayClose(final File backupLocation)
+    {
+        framerContext.runEndOfDay();
+
+        close();
+
+        // TODO: how to move the currently archived state?
+        // TODO: can I get the recording ids of everything at this point?
+
+        // TODO: Reset all Artio state (including session ids and sequence numbers.
+        // TODO: save this data to a location
     }
 
     /**

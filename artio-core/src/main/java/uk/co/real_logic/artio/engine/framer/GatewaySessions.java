@@ -281,6 +281,11 @@ class GatewaySessions
         return true;
     }
 
+    void logoutAllSessions()
+    {
+        // TODO: log out and disconnect all active sessions
+    }
+
     enum AuthenticationState
     {
         PENDING,

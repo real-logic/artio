@@ -158,6 +158,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
+    private boolean atEndOfDay = false;
+
     Framer(
         final EpochClock clock,
         final Timer outboundTimer,
@@ -504,6 +506,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void onNewConnection(final long timeInMs, final TcpChannel channel)
     {
+        if (atEndOfDay)
+        {
+
+        }
+
         final long connectionId = newConnectionId();
         final GatewaySession gatewaySession = setupConnection(
             channel,
@@ -1576,6 +1583,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     return COMPLETE;
                 }
             }));
+    }
+
+    void onEndOfDay(final EndOfDayCommand endOfDayCommand)
+    {
+        atEndOfDay = true;
+
+        // TODO: tell all FixLibraries to logout sessions.
+        // TODO: re-triable operation for:
+        gatewaySessions.logoutAllSessions();
     }
 
     void onResetSequenceNumber(final ResetSequenceNumberCommand reply)
