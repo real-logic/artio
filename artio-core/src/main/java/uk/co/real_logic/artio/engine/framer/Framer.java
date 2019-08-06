@@ -1601,6 +1601,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         atEndOfDay = true;
 
+        recordingCoordinator.startEndOfDay();
+
         schedule(new EndOfDayOperation(
             inboundPublication,
             new ArrayList<>(idToLibrary.values()),

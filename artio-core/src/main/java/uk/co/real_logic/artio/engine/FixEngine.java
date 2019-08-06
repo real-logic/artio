@@ -117,12 +117,15 @@ public final class FixEngine extends GatewayProcess
     }
 
     /**
-     * Stop accepting new connections.
-     * logout and disconnect all currently active FIX sessions.
-     * Reset all Artio state (including session ids and sequence numbers.
-     * Optionally save this data to a location
+     * This method is a form of close operation for the FixEngine that also performs usual end of day processing
+     * operations. These are:
      *
-     * Does not reset aeron archiver state associated with Artio.
+     * <ol>
+     *     <li>To stop accepting new connections.</li>
+     *     <li>logout and disconnect all currently active FIX sessions.</li>
+     *     <li>Reset and optionally back up all Artio state (including session ids and sequence numbers</li>
+     *     <li>Truncate any recordings associated with this engine instance.</li>
+     * </ol>
      *
      * Blocks until the operation is complete.
      *

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import io.aeron.archive.client.AeronArchive;
 import org.agrona.IoUtil;
 import org.junit.Before;
 import org.junit.Test;
@@ -27,8 +28,7 @@ import uk.co.real_logic.artio.session.Session;
 
 import java.io.File;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
@@ -64,7 +64,7 @@ public class EndOfDayTest extends AbstractGatewayToGatewaySystemTest
     private void shouldPerformEndOfDayOperation(final boolean libraryOwnsSession)
     {
         deleteLogs();
-        launchMediaDriver();
+        mediaDriver = launchMediaDriver();
         launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
         if (libraryOwnsSession)
         {
@@ -93,6 +93,7 @@ public class EndOfDayTest extends AbstractGatewayToGatewaySystemTest
         clearMessages();
         close();
 
+        launchMediaDriverWithDirs();
         launch(1, 1);
         if (libraryOwnsSession)
         {
@@ -106,8 +107,35 @@ public class EndOfDayTest extends AbstractGatewayToGatewaySystemTest
             assertSequenceFromInitToAcceptAt(2, 2);
         }
 
-        // Has been reset
         assertAcceptingSessionHasSequenceIndex(0);
+        assertRecordingsTruncated();
+    }
+
+    private void assertRecordingsTruncated()
+    {
+        try (AeronArchive archive = AeronArchive.connect())
+        {
+            archive.listRecording(0,
+                (controlSessionId,
+                correlationId,
+                recordingId,
+                startTimestamp,
+                stopTimestamp,
+                startPosition,
+                stopPosition,
+                initialTermId,
+                segmentFileLength,
+                termBufferLength,
+                mtuLength,
+                sessionId,
+                streamId,
+                strippedChannel,
+                originalChannel,
+                sourceIdentity) ->
+                {
+                    assertEquals(0, stopPosition);
+                });
+        }
     }
 
     private void launch(

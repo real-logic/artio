@@ -21,7 +21,7 @@ public class EnableLastMsgSeqNumProcessedTest extends AbstractGatewayToGatewaySy
     @Before
     public void launch()
     {
-        // deleteAcceptorLogs();
+        deleteLogs();
 
         mediaDriver = launchMediaDriver();
 
