@@ -17,8 +17,6 @@ package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.Image;
 import io.aeron.logbuffer.ControlledFragmentHandler;
-import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.LogTag;
 
 class SlowPeeker extends BlockablePosition
 {
@@ -37,27 +35,8 @@ class SlowPeeker extends BlockablePosition
         final long initialPosition = peekImage.position();
         final long normalImagePosition = normalImage.position();
 
-        if (initialPosition > normalImagePosition)
-        {
-            DebugLogger.log(
-                LogTag.SLOW_PEEK,
-                "Initial Slow Peek Image ahead of normal Image: %d > %d%n",
-                initialPosition,
-                normalImagePosition);
-        }
-
         final long resultingPosition = peekImage.controlledPeek(
             initialPosition, handler, normalImagePosition);
-
-        if (resultingPosition > normalImagePosition)
-        {
-            DebugLogger.log(
-                LogTag.SLOW_PEEK,
-                "Resulting Slow Peek Image ahead of normal Image: %d > %d, initialPos=%d%n",
-                resultingPosition,
-                normalImagePosition,
-                initialPosition);
-        }
 
         final long delta = resultingPosition - initialPosition;
         if (!peekImage.isClosed())
@@ -65,15 +44,6 @@ class SlowPeeker extends BlockablePosition
             final long blockPosition = this.blockPosition;
             if (blockPosition != DID_NOT_BLOCK)
             {
-                if (blockPosition > normalImagePosition)
-                {
-                    DebugLogger.log(
-                        LogTag.SLOW_PEEK,
-                        "Invalid block position: %d > %d",
-                        blockPosition,
-                        normalImagePosition);
-                }
-
                 peekImage.position(blockPosition);
             }
             else

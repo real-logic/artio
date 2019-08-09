@@ -44,6 +44,5 @@ public enum LogTag
     CATCHUP,
     REPLAY,
     INDEX,
-    LIBRARY_MANAGEMENT,
-    SLOW_PEEK
+    LIBRARY_MANAGEMENT
 }
