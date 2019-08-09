@@ -193,9 +193,26 @@ class ReceiverEndPoints extends TransportPoller
         return bytesReceived;
     }
 
+    int size()
+    {
+        return requiredPollingEndPoints.length + endPoints.length;
+    }
+
+    void closeRequiredPollingEndPoints()
+    {
+        closeAll(requiredPollingEndPoints);
+        requiredPollingEndPoints = new ReceiverEndPoint[0];
+    }
+
     public void close()
     {
-        Stream.of(endPoints).forEach(receiverEndPoint -> receiverEndPoint.close(ENGINE_SHUTDOWN));
+        closeRequiredPollingEndPoints();
+        closeAll(endPoints);
         super.close();
+    }
+
+    private void closeAll(final ReceiverEndPoint[] endPoints)
+    {
+        Stream.of(endPoints).forEach(receiverEndPoint -> receiverEndPoint.close(ENGINE_SHUTDOWN));
     }
 }

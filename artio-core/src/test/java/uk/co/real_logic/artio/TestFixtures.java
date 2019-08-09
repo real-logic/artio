@@ -62,6 +62,11 @@ public final class TestFixtures
         return launchMediaDriver(mediaDriverContext(termBufferLength, true));
     }
 
+    public static ArchivingMediaDriver launchMediaDriverWithDirs()
+    {
+        return launchMediaDriver(mediaDriverContext(TERM_BUFFER_LENGTH, false));
+    }
+
     public static ArchivingMediaDriver launchMediaDriver(final MediaDriver.Context context)
     {
         final Archive.Context archiveCtx = new Archive.Context().deleteArchiveOnStart(context.dirDeleteOnStart());

@@ -37,6 +37,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
         new ResetLibrarySequenceNumberDecoder();
     private final ManageSessionDecoder manageSession = new ManageSessionDecoder();
     private final FollowerSessionReplyDecoder followerSessionReply = new FollowerSessionReplyDecoder();
+    private final EndOfDayDecoder endOfDay = new EndOfDayDecoder();
 
     private final LibraryEndPointHandler handler;
 
@@ -104,6 +105,11 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             case FollowerSessionReplyDecoder.TEMPLATE_ID:
             {
                 return onFollowerSessionReply(buffer, offset, blockLength, version);
+            }
+
+            case EndOfDayDecoder.TEMPLATE_ID:
+            {
+                return onEndOfDay(buffer, offset, blockLength, version);
             }
         }
 
@@ -308,4 +314,23 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.username(),
             manageSession.password());
     }
+
+    private Action onEndOfDay(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version)
+    {
+        endOfDay.wrap(buffer, offset, blockLength, version);
+        final int libraryId = endOfDay.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+
+        if (ABORT == action)
+        {
+            return action;
+        }
+
+        return handler.onEndOfDay(libraryId);
+    }
+
 }
