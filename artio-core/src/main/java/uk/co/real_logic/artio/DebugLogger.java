@@ -85,7 +85,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            println(sbeObject.toString());
+            println(tag, sbeObject.toString());
         }
     }
 
@@ -130,7 +130,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            println(message);
+            println(tag, message);
         }
     }
 
@@ -260,12 +260,13 @@ public final class DebugLogger
         }
     }
 
-    private static void println(final String message)
+    private static void println(final LogTag tag, final String message)
     {
         final String threadName = threadName();
         if (isThreadEnabled(threadName))
         {
-            OUTPUT.println(threadName + message);
+            OUTPUT.println(System.currentTimeMillis() + ":" +
+                threadName + "[" + tag.name() + "]" + " : " + message);
         }
     }
 
