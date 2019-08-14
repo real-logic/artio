@@ -92,11 +92,6 @@ public class ReplayOperation
      */
     public boolean attemptReplay()
     {
-        return attemptReplayStep();
-    }
-
-    private boolean attemptReplayStep()
-    {
         if (recordingRange == null)
         {
             DebugLogger.log(logTag, "Acquiring Recording Range");
@@ -166,31 +161,60 @@ public class ReplayOperation
         }
         else
         {
-            DebugLogger.log(logTag, "Polling Replay Image");
+            DebugLogger.log(logTag, "Polling Replay Image pos=%d%n", image.position());
 
             image.controlledPoll(assembler, Integer.MAX_VALUE);
 
-            // Have we finished this range?
             final int messageTrackerCount = messageTracker.count;
             final int recordingRangeCount = recordingRange.count;
+
+            final boolean closed = image.isClosed();
+            final boolean endOfStream = image.isEndOfStream();
+            if (closed || endOfStream)
+            {
+                return onEndOfImage(recordingRangeCount, closed, endOfStream);
+            }
+
+            // Have we finished this range?
             if (messageTrackerCount < recordingRangeCount)
             {
                 return false;
             }
             else
             {
-                DebugLogger.log(
-                    logTag,
-                    "Finished with range by count: [%s < %s]%n",
-                    messageTrackerCount,
-                    recordingRangeCount);
-
-                replayedMessages += recordingRangeCount;
-                recordingRange = null;
-
-                return ranges.isEmpty();
+                return onReachedMessageReplayCount(messageTrackerCount, recordingRangeCount);
             }
         }
+    }
+
+    private boolean onReachedMessageReplayCount(final int messageTrackerCount, final int recordingRangeCount)
+    {
+        DebugLogger.log(
+            logTag,
+            "Finished with messageTrackerCount=%d, recordingRangeCount=%d%n",
+            messageTrackerCount,
+            recordingRangeCount);
+
+        replayedMessages += recordingRangeCount;
+        recordingRange = null;
+
+        return ranges.isEmpty();
+    }
+
+    private boolean onEndOfImage(final int recordingRangeCount, final boolean closed, final boolean endOfStream)
+    {
+        DebugLogger.log(
+            logTag,
+            "Finished with Image @ pos=%d, closed=%s, eos=%s%n",
+            image.position(),
+            Boolean.valueOf(closed),
+            Boolean.valueOf(endOfStream));
+
+        replayedMessages += recordingRangeCount;
+        recordingRange = null;
+        image = null;
+
+        return ranges.isEmpty();
     }
 
     int replayedMessages()

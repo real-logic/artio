@@ -278,7 +278,8 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     public long attempt()
     {
-        DebugLogger.log(CATCHUP, "Attempt replay for %d%n", session.sessionId());
+        DebugLogger.log(CATCHUP, "Attempt replay for sessionId=%d%n",
+            session.sessionId());
         switch (state)
         {
             case REPLAY_QUERY:
@@ -289,7 +290,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 }
 
                 DebugLogger.log(CATCHUP,
-                    "Querying for %d, currently at (%d, %d)%n",
+                    "Querying for sessionId=%d, currently at (%d, %d)%n",
                     session.sessionId(), lastReceivedSeqNum, currentSequenceIndex);
 
                 replayOperation = inboundMessages.query(
@@ -382,7 +383,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final GatewaySession session,
         final int libraryId)
     {
-        DebugLogger.log(CATCHUP, "OK for %d%n", session.sessionId());
+        DebugLogger.log(CATCHUP, "OK for sessionId=%d%n", session.sessionId());
         final long position = publication.saveRequestSessionReply(libraryId, OK, correlationId);
         if (position >= 0)
         {
@@ -394,13 +395,14 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     private long sendMissingMessages()
     {
-        DebugLogger.log(CATCHUP, "Missing Messages for %d%n", session.sessionId());
+        DebugLogger.log(CATCHUP, "Missing Messages for sessionId=%d%n", session.sessionId());
         final long position = inboundPublication.saveRequestSessionReply(libraryId, MISSING_MESSAGES, correlationId);
         if (position > 0)
         {
             errorHandler.onError(new IllegalStateException(String.format(
-                "Failed to read correct number of messages for %d, finished at [%d, %d] instead of [%d, %d] - %s",
-                correlationId,
+                "Failed to read correct number of messages for sessionId=%d," +
+                " finished at [%d, %d] instead of [%d, %d] - %s",
+                session.sessionId(),
                 replayFromSequenceIndex,
                 replayFromSequenceNumber,
                 currentSequenceIndex,
