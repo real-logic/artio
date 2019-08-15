@@ -1282,6 +1282,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         connectionId,
                         lastSentSeqNum,
                         lastRecvSeqNum);
+
                     return COMPLETE;
                 }
                 else
@@ -1357,12 +1358,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final SessionContext sessionContext = sessionContexts.newSessionContext(compositeKey);
         final long sessionId = sessionContext.sessionId();
 
-        final long position = inboundPublication.saveFollowerSessionReply(
+        retryManager.schedule(() -> inboundPublication.saveFollowerSessionReply(
             libraryId,
             correlationId,
-            sessionId);
-
-        // TODO: handle back pressure
+            sessionId));
 
         return CONTINUE;
     }

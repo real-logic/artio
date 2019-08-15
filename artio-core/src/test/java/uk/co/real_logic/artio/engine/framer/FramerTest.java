@@ -27,7 +27,6 @@ import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
@@ -76,7 +75,6 @@ import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.artio.messages.SessionState.CONNECTED;
 
-@Ignore
 public class FramerTest
 {
     private static final InetSocketAddress TEST_ADDRESS = new InetSocketAddress("localhost", 9998);
@@ -547,9 +545,11 @@ public class FramerTest
 
         sessionIsActive();
 
-        assertEquals(ABORT, onRequestSession());
-
         assertEquals(CONTINUE, onRequestSession());
+
+        doWork();
+
+        doWork();
 
         verify(inboundPublication, times(2)).saveManageSession(eq(LIBRARY_ID),
             anyLong(),
@@ -674,6 +674,8 @@ public class FramerTest
         sessionIsActive();
 
         assertEquals(CONTINUE, onRequestSession());
+
+        doWork();
 
         saveRequestSessionReply();
     }
