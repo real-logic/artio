@@ -1439,6 +1439,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }
 
             continuations.add(new CatchupReplayer(
+                receivedSequenceNumberIndex,
                 inboundMessages,
                 inboundPublication,
                 errorHandler,

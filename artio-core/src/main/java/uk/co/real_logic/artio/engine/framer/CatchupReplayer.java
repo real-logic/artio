@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
 import uk.co.real_logic.artio.engine.PossDupEnabler;
 import uk.co.real_logic.artio.engine.logger.ReplayOperation;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
+import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.FixMessageEncoder;
@@ -58,6 +59,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     private enum State
     {
+        AWAITING_INDEX,
         REPLAY_QUERY,
         REPLAYING,
         SEND_MISSING,
@@ -75,6 +77,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final BufferClaim bufferClaim = new BufferClaim();
 
     private final PossDupEnabler possDupEnabler;
+    private final SequenceNumberIndexReader receivedSequenceNumberIndex;
     private final ReplayQuery inboundMessages;
     private final GatewayPublication inboundPublication;
     private final ErrorHandler errorHandler;
@@ -85,10 +88,11 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final int currentSequenceIndex;
     private final GatewaySession session;
     private final long catchupEndTimeInMs;
+    private final long requiredPosition;
 
     private int replayFromSequenceNumber;
     private int replayFromSequenceIndex;
-    private State state = State.REPLAY_QUERY;
+    private State state = State.AWAITING_INDEX;
     private String missingMessagesReason;
 
     private SequenceResetEncoder sequenceResetEncoder;
@@ -100,6 +104,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private ReplayOperation replayOperation = null;
 
     CatchupReplayer(
+        final SequenceNumberIndexReader receivedSequenceNumberIndex,
         final ReplayQuery inboundMessages,
         final GatewayPublication inboundPublication,
         final ErrorHandler errorHandler,
@@ -114,6 +119,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final long catchupTimeout,
         final EpochClock clock)
     {
+        this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.inboundMessages = inboundMessages;
         this.inboundPublication = inboundPublication;
         this.errorHandler = errorHandler;
@@ -126,6 +132,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         this.replayFromSequenceIndex = replayFromSequenceIndex;
         this.session = session;
         this.catchupEndTimeInMs = clock.time() + catchupTimeout;
+        requiredPosition = inboundPublication.position();
 
         possDupEnabler = new PossDupEnabler(
             bufferClaim,
@@ -282,6 +289,19 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
             session.sessionId());
         switch (state)
         {
+            case AWAITING_INDEX:
+            {
+                final long indexedPosition = receivedSequenceNumberIndex.indexedPosition(inboundPublication.id());
+                DebugLogger.log(CATCHUP,
+                    "Checking index position: indexed=%d vs required=%d%n", indexedPosition, requiredPosition);
+
+                if (indexedPosition >= requiredPosition)
+                {
+                    state = State.REPLAY_QUERY;
+                }
+                return BACK_PRESSURED;
+            }
+
             case REPLAY_QUERY:
             {
                 if (notLoggingInboundMessages())
