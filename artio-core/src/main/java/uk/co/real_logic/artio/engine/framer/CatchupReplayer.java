@@ -292,12 +292,17 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
             case AWAITING_INDEX:
             {
                 final long indexedPosition = receivedSequenceNumberIndex.indexedPosition(inboundPublication.id());
-                DebugLogger.log(CATCHUP,
-                    "Checking index position: indexed=%d vs required=%d%n", indexedPosition, requiredPosition);
 
                 if (indexedPosition >= requiredPosition)
                 {
                     state = State.REPLAY_QUERY;
+                }
+                else
+                {
+                    DebugLogger.log(CATCHUP,
+                        "Awaiting index position: indexed=%d vs required=%d%n",
+                        indexedPosition,
+                        requiredPosition);
                 }
                 return BACK_PRESSURED;
             }
