@@ -41,7 +41,6 @@ public final class CodecGenerationTool
      * Option should be used for support fix specification with error only.
      * <br>
      * The duplicated fields is allowed in the following case:
-     * <p>
      * <pre>
      * message body:
      * field;
@@ -136,7 +135,8 @@ public final class CodecGenerationTool
 
     private static Dictionary parseDictionary(final File xmlFile, final Dictionary parentDictionary) throws Exception
     {
-        final DictionaryParser parser = new DictionaryParser();
+        final DictionaryParser parser = new DictionaryParser(
+            Boolean.getBoolean(CodecGenerationTool.FIX_CODECS_ALLOW_DUPLICATE_FIELDS));
         if (!xmlFile.exists())
         {
             System.err.println("xmlFile does not exist: " + xmlFile.getAbsolutePath());
