@@ -443,9 +443,12 @@ public final class DictionaryParser
 
         if (errorMessage.length() > 0)
         {
-            if (!Boolean.getBoolean(CodecGenerationTool.VALIDATION_ALLOW_DUPLICATES))
+            if (!Boolean.getBoolean(CodecGenerationTool.FIX_CODECS_ALLOW_DUPLICATE_FIELDS))
             {
-                throw new IllegalStateException(errorMessage.toString());
+                throw new IllegalStateException(String.format(
+                        "%s. Use -D%s=true to allow duplicated fields (Dangerous. May broke parser).",
+                        errorMessage,
+                        CodecGenerationTool.FIX_CODECS_ALLOW_DUPLICATE_FIELDS));
             }
         }
     }
