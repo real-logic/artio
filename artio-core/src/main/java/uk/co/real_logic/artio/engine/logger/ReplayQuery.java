@@ -113,6 +113,8 @@ public class ReplayQuery implements AutoCloseable
     public void close()
     {
         fixSessionToIndex.clear();
+
+        CloseHelper.close(replaySubscription);
     }
 
     private final class SessionQuery implements AutoCloseable
@@ -314,8 +316,6 @@ public class ReplayQuery implements AutoCloseable
             {
                 IoUtil.unmap((MappedByteBuffer)wrappedBuffer);
             }
-
-            CloseHelper.close(replaySubscription);
         }
     }
 

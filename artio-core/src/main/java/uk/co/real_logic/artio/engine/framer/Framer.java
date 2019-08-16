@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -157,6 +157,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
+
+    private boolean atEndOfDay = false;
 
     Framer(
         final EpochClock clock,
@@ -476,6 +478,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 sentSequenceNumber,
                 receivedSequenceNumber,
                 SessionStatus.LIBRARY_NOTIFICATION));
+
+            if (atEndOfDay)
+            {
+                session.session().logoutAndDisconnect();
+            }
         }
 
         finalImagePositions.removePosition(library.aeronSessionId());
@@ -504,6 +511,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void onNewConnection(final long timeInMs, final TcpChannel channel)
     {
+        if (atEndOfDay)
+        {
+            channel.close();
+            return;
+        }
+
         final long connectionId = newConnectionId();
         final GatewaySession gatewaySession = setupConnection(
             channel,
@@ -1057,6 +1070,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return action;
         }
 
+        if (atEndOfDay)
+        {
+            // Do not do allow a new library to connect whilst performing end of day operations.
+            return CONTINUE;
+        }
+
         final LiveLibraryInfo existingLibrary = idToLibrary.get(libraryId);
         if (existingLibrary != null)
         {
@@ -1241,7 +1260,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         DebugLogger.log(LIBRARY_MANAGEMENT, "Handing control for session %s to library %s%n", sessionId, libraryId);
 
 
-        final List<Continuation> continuations = new ArrayList<>();
+
 
         // Ensure that we've indexed up to this point in time.
         // If we don't do this then the indexer thread could receive a message sent from the Framer after
@@ -1249,10 +1268,58 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         // Only applies if there's a position to wait for and if the indexer is actually running on those messages.
         if (requiredPosition > 0 && configuration.logOutboundMessages())
         {
-            continuations.add(() ->
-                sentIndexedPosition(aeronSessionId, requiredPosition) ? COMPLETE : BACK_PRESSURED);
-        }
+            return retryManager.firstAttempt(correlationId, () ->
+            {
+                if (sentIndexedPosition(aeronSessionId, requiredPosition))
+                {
+                    finishSessionHandover(
+                        libraryId,
+                        correlationId,
+                        replayFromSequenceNumber,
+                        replayFromSequenceIndex,
+                        gatewaySession,
+                        session,
+                        connectionId,
+                        lastSentSeqNum,
+                        lastRecvSeqNum);
 
+                    return COMPLETE;
+                }
+                else
+                {
+                    return BACK_PRESSURED;
+                }
+            });
+        }
+        else
+        {
+            finishSessionHandover(
+                libraryId,
+                correlationId,
+                replayFromSequenceNumber,
+                replayFromSequenceIndex,
+                gatewaySession,
+                session,
+                connectionId,
+                lastSentSeqNum,
+                lastRecvSeqNum);
+
+            return CONTINUE;
+        }
+    }
+
+    private void finishSessionHandover(
+        final int libraryId,
+        final long correlationId,
+        final int replayFromSequenceNumber,
+        final int replayFromSequenceIndex,
+        final GatewaySession gatewaySession,
+        final InternalSession session,
+        final long connectionId,
+        final int lastSentSeqNum,
+        final int lastRecvSeqNum)
+    {
+        final List<Continuation> continuations = new ArrayList<>();
         continuations.add(() -> saveManageSession(
             libraryId,
             gatewaySession,
@@ -1274,7 +1341,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySession,
             lastRecvSeqNum);
 
-        return retryManager.firstAttempt(correlationId, new UnitOfWork(continuations));
+        retryManager.schedule(new UnitOfWork(continuations));
     }
 
     public Action onFollowerSessionRequest(
@@ -1291,12 +1358,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final SessionContext sessionContext = sessionContexts.newSessionContext(compositeKey);
         final long sessionId = sessionContext.sessionId();
 
-        final long position = inboundPublication.saveFollowerSessionReply(
+        retryManager.schedule(() -> inboundPublication.saveFollowerSessionReply(
             libraryId,
             correlationId,
-            sessionId);
-
-        // TODO: handle back pressure
+            sessionId));
 
         return CONTINUE;
     }
@@ -1420,6 +1485,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }
 
             continuations.add(new CatchupReplayer(
+                receivedSequenceNumberIndex,
                 inboundMessages,
                 inboundPublication,
                 errorHandler,
@@ -1576,6 +1642,21 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     return COMPLETE;
                 }
             }));
+    }
+
+    void onEndOfDay(final EndOfDayCommand endOfDayCommand)
+    {
+        atEndOfDay = true;
+
+        recordingCoordinator.startEndOfDay();
+
+        schedule(new EndOfDayOperation(
+            inboundPublication,
+            new ArrayList<>(idToLibrary.values()),
+            // Take a copy to avoid library sessions being acquired causing issues
+            new ArrayList<>(gatewaySessions.sessions()),
+            receiverEndPoints,
+            endOfDayCommand));
     }
 
     void onResetSequenceNumber(final ResetSequenceNumberCommand reply)

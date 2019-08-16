@@ -19,7 +19,7 @@ public class MultipleConnectionSystemTest extends AbstractGatewayToGatewaySystem
     @Before
     public void launch()
     {
-        delete(ACCEPTOR_LOGS);
+        deleteAcceptorLogs();
 
         mediaDriver = launchMediaDriver();
 

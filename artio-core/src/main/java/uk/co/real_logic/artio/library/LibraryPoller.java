@@ -82,6 +82,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
      */
     private static final int CLOSED = 4;
 
+    /**
+     * End of day operation has started
+     */
+    private static final int END_OF_DAY = 5;
+
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private InternalSession[] sessions = new InternalSession[0];
     private InternalSession[] pendingInitiatorSessions = new InternalSession[0];
@@ -126,8 +131,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private int state = CONNECTING;
 
-    private String errorMessage;
-
     // State changed upon connect/reconnect
     private LivenessDetector livenessDetector;
     private Subscription inboundSubscription;
@@ -139,6 +142,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     // Combined with Library Id, uniquely identifies library connection
     private long connectCorrelationId = NO_CORRELATION_ID;
     private volatile Throwable remoteThrowable;
+
+    // State changed during end of day operation
+    private int sessionLogoutIndex = 0;
 
     LibraryPoller(
         final LibraryConfiguration configuration,
@@ -174,6 +180,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return state == CLOSED;
     }
 
+    boolean isAtEndOfDay()
+    {
+        return state == END_OF_DAY;
+    }
+
     int libraryId()
     {
         return libraryId;
@@ -192,6 +203,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     Reply<Session> initiate(final SessionConfiguration configuration)
     {
         requireNonNull(configuration, "configuration");
+        validateEndOfDay();
 
         return new InitiateSessionReply(this, timeInMs() + configuration.timeoutInMs(), configuration);
     }
@@ -199,6 +211,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     Reply<SessionReplyStatus> releaseToGateway(final Session session, final long timeoutInMs)
     {
         requireNonNull(session, "session");
+        validateEndOfDay();
 
         return new ReleaseToGatewayReply(
             this, timeInMs() + timeoutInMs, (InternalSession)session);
@@ -210,6 +223,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int resendFromSequenceIndex,
         final long timeoutInMs)
     {
+        validateEndOfDay();
+
         return new RequestSessionReply(
             this,
             timeInMs() + timeoutInMs,
@@ -220,6 +235,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     SessionWriter followerSession(final long id, final long connectionId, final int sequenceIndex)
     {
+        checkState();
+
         return new SessionWriter(
             libraryId,
             id,
@@ -231,6 +248,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     Reply<SessionWriter> followerSession(final HeaderEncoder headerEncoder, final long timeoutInMs)
     {
+        validateEndOfDay();
+
         return new FollowerSessionReply(
             this, timeInMs() + timeoutInMs, headerEncoder);
     }
@@ -348,6 +367,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             case ATTEMPT_CURRENT_NODE:
                 connectToNewEngine(timeInMs);
                 state = CONNECTING;
+                return pollWithoutReconnect(timeInMs, fragmentLimit);
+
+            case END_OF_DAY:
+                attemptEndOfDayOperation();
                 return pollWithoutReconnect(timeInMs, fragmentLimit);
 
             case CLOSED:
@@ -866,7 +889,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             else
             {
                 // case of a connect error
-                this.errorMessage = message;
             }
         }
 
@@ -923,6 +945,45 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
 
         return CONTINUE;
+    }
+
+    public Action onEndOfDay(final int libraryId)
+    {
+        if (libraryId == this.libraryId)
+        {
+            state = END_OF_DAY;
+
+            attemptEndOfDayOperation();
+        }
+
+        return CONTINUE;
+    }
+
+    private void attemptEndOfDayOperation()
+    {
+        final InternalSession[] sessions = this.sessions;
+        final int length = sessions.length;
+
+        while (sessionLogoutIndex < length)
+        {
+            final long position = sessions[sessionLogoutIndex].logoutAndDisconnect();
+            if (position < 0)
+            {
+                return;
+            }
+
+            sessionLogoutIndex++;
+        }
+
+        state = CLOSED;
+    }
+
+    private void validateEndOfDay()
+    {
+        if (isAtEndOfDay())
+        {
+            throw new IllegalStateException("Cannot perform operation whilst end of day process is running");
+        }
     }
 
     public Action onNewSentPosition(final int libraryId, final long position)
@@ -1190,7 +1251,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (state != CONNECTED)
         {
-            throw new IllegalStateException("Library has been closed");
+            throw new IllegalStateException("Library has been closed or is performing end of day operation");
         }
     }
 

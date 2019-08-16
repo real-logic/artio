@@ -21,6 +21,7 @@ import org.junit.After;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Reply.State;
+import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
@@ -36,8 +37,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixMatchers.*;
-import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
-import static uk.co.real_logic.artio.TestFixtures.unusedPort;
+import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
@@ -409,6 +409,22 @@ public class AbstractGatewayToGatewaySystemTest
     void deleteAcceptorLogs()
     {
         delete(ACCEPTOR_LOGS);
+
     }
 
+    void deleteClientLogs()
+    {
+        delete(CLIENT_LOGS);
+    }
+
+    void deleteLogs()
+    {
+        deleteAcceptorLogs();
+        deleteClientLogs();
+    }
+
+    void launchMediaDriverWithDirs()
+    {
+        mediaDriver = TestFixtures.launchMediaDriverWithDirs();
+    }
 }

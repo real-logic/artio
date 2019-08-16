@@ -20,7 +20,6 @@ import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.concurrent.AgentInvoker;
-import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.GatewayProcess;
 import uk.co.real_logic.artio.Reply;
@@ -94,13 +93,11 @@ public final class FixEngine extends GatewayProcess
      *
      * @param backupLocation the location to backup the current session ids file to.
      *                       Can be null to indicate that no backup is required.
-     * @param idleStrategy the idle strategy to use when polling this blocking operation.
-     *
      * @return the reply object, or null if the request hasn't been successfully enqueued.
      */
-    public Reply<?> resetSessionIds(final File backupLocation, final IdleStrategy idleStrategy)
+    public Reply<?> resetSessionIds(final File backupLocation)
     {
-        return framerContext.resetSessionIds(backupLocation, idleStrategy);
+        return framerContext.resetSessionIds(backupLocation);
     }
 
     /**
@@ -117,6 +114,57 @@ public final class FixEngine extends GatewayProcess
     public Reply<?> resetSequenceNumber(final long sessionId)
     {
         return framerContext.resetSequenceNumber(sessionId);
+    }
+
+    /**
+     * This method is a form of close operation for the FixEngine that also performs usual end of day processing
+     * operations. These are:
+     *
+     * <ol>
+     *     <li>To stop accepting new connections.</li>
+     *     <li>logout and disconnect all currently active FIX sessions.</li>
+     *     <li>Reset and optionally back up all Artio state (including session ids and sequence numbers</li>
+     *     <li>Truncate any recordings associated with this engine instance.</li>
+     * </ol>
+     *
+     * Blocks until the operation is complete.
+     *
+     * @param backupLocation the directory that you wish to copy Artio's session state over to for later inspection.
+     *                       If this is null no backup of data will be performed. If the directory exists it will be
+     *                       re-used, if it doesn't it will be created.
+     */
+    public void endDayClose(final File backupLocation)
+    {
+        framerContext.runEndOfDay();
+
+        close();
+
+        if (backupLocation != null)
+        {
+            final File backupDir = backupLocation.getAbsoluteFile();
+
+            if (backupLocation.exists())
+            {
+                if (!backupLocation.isDirectory())
+                {
+                    throw new IllegalStateException(backupDir + " is not a directory, so backup cannot proceed");
+                }
+            }
+            else if (!backupLocation.mkdirs())
+            {
+                throw new IllegalStateException(backupDir + " could not be created, so backup cannot proceed");
+            }
+
+            final File logFileDir = new File(configuration.logFileDir());
+            for (final File file : logFileDir.listFiles())
+            {
+                if (!file.renameTo(new File(backupDir, file.getName())))
+                {
+                    throw new IllegalStateException(
+                        "Unable to move " + file.getAbsolutePath() + " to " + backupDir);
+                }
+            }
+        }
     }
 
     /**

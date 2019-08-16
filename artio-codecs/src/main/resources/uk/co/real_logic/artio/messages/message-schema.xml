@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="1"
+                   version="2"
                    semanticVersion="0.1"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -351,6 +351,10 @@
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="replyToId" id="2" type="CorrelationId"/>
         <field name="session" id="3" type="FixSessionId"/>
+    </sbe:message>
+
+    <sbe:message name="EndOfDay" id="49" description="A connection has disconnected" sinceVersion="2">
+        <field name="libraryId" id="1" type="LibraryId"/>
     </sbe:message>
 
     <!-- Messages In Either Direction -->

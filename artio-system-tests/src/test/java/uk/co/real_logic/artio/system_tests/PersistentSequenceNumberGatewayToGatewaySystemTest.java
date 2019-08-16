@@ -285,8 +285,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     private void resetSessions()
     {
         testSystem.awaitCompletedReplies(
-            acceptingEngine.resetSessionIds(backupLocation, ADMIN_IDLE_STRATEGY),
-            initiatingEngine.resetSessionIds(backupLocation, ADMIN_IDLE_STRATEGY));
+            acceptingEngine.resetSessionIds(backupLocation),
+            initiatingEngine.resetSessionIds(backupLocation));
     }
 
     private void launch(final Runnable beforeConnect)

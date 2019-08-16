@@ -71,4 +71,6 @@ public interface LibraryEndPointHandler
         String password);
 
     Action onFollowerSessionReply(int libraryId, long replyToId, long session);
+
+    Action onEndOfDay(int libraryId);
 }

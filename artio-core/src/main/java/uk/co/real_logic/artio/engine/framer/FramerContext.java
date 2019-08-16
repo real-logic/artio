@@ -19,6 +19,7 @@ import io.aeron.Image;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.*;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -175,7 +176,7 @@ public class FramerContext
         return null;
     }
 
-    public Reply<?> resetSessionIds(final File backupLocation, final IdleStrategy idleStrategy)
+    public Reply<?> resetSessionIds(final File backupLocation)
     {
         if (backupLocation != null && !backupLocation.exists())
         {
@@ -199,6 +200,28 @@ public class FramerContext
         }
 
         return null;
+    }
+
+    public void runEndOfDay()
+    {
+        final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
+        final EndOfDayCommand command = new EndOfDayCommand();
+        while (!adminCommands.offer(command))
+        {
+            idleStrategy.idle();
+        }
+        idleStrategy.reset();
+
+        while (!command.hasCompleted())
+        {
+            idleStrategy.idle();
+        }
+        idleStrategy.reset();
+
+        if (command.hasErrored())
+        {
+            LangUtil.rethrowUnchecked(command.error());
+        }
     }
 
     public Reply<Long> lookupSessionId(
