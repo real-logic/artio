@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.IoUtil;
-import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
@@ -27,8 +27,10 @@ import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
 
 import java.io.File;
+import java.util.Objects;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
@@ -40,7 +42,7 @@ public class EndOfDayTest extends AbstractGatewayToGatewaySystemTest
 
     private File backupLocation = new File("backup");
 
-    @Before
+    @After
     public void cleanup()
     {
         if (backupLocation.exists())
@@ -79,6 +81,8 @@ public class EndOfDayTest extends AbstractGatewayToGatewaySystemTest
 
         testSystem.awaitBlocking(() -> acceptingEngine.endDayClose(backupLocation));
 
+        assertRecordingsDeleted();
+
         Timing.assertEventuallyTrue("fix library never closed", () ->
         {
             testSystem.poll();
@@ -109,6 +113,14 @@ public class EndOfDayTest extends AbstractGatewayToGatewaySystemTest
 
         assertAcceptingSessionHasSequenceIndex(0);
         assertRecordingsTruncated();
+    }
+
+    private void assertRecordingsDeleted()
+    {
+        final File archiveDir = mediaDriver.archive().context().archiveDir();
+        final File[] recordings = archiveDir.listFiles(file -> file.getName().endsWith(".rec"));
+        final int numberOfRecordings = Objects.requireNonNull(recordings).length;
+        assertEquals(4, numberOfRecordings);
     }
 
     private void assertRecordingsTruncated()

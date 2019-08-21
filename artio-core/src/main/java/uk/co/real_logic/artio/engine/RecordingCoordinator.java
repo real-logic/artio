@@ -244,7 +244,8 @@ public class RecordingCoordinator implements AutoCloseable
         if (atEndOfDay)
         {
             final LongHashSet relevantRecordingIds = new LongHashSet();
-            archive.listRecording(0,
+            archive.listRecordings(0,
+                Integer.MAX_VALUE,
                 (controlSessionId,
                 correlationId,
                 recordingId,
