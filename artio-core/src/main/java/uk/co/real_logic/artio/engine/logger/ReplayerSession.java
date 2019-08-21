@@ -427,4 +427,12 @@ class ReplayerSession implements ControlledFragmentHandler
         return senderSequenceNumbers.lastSentSequenceNumber(connectionId) + 1;
     }
 
+    public void close()
+    {
+        if (replayOperation != null)
+        {
+            replayOperation.close();
+        }
+    }
+
 }

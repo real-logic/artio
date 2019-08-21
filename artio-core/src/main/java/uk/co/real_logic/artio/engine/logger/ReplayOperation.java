@@ -210,6 +210,7 @@ public class ReplayOperation
             Boolean.valueOf(closed),
             Boolean.valueOf(endOfStream));
 
+        aeronSessionId = 0;
         replayedMessages += recordingRangeCount;
         recordingRange = null;
         image = null;
@@ -294,6 +295,14 @@ public class ReplayOperation
         void reset()
         {
             count = 0;
+        }
+    }
+
+    public void close()
+    {
+        if (aeronSessionId != 0)
+        {
+            aeronArchive.stopReplay(aeronSessionId);
         }
     }
 }

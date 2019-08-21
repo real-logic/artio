@@ -218,6 +218,7 @@ public class Replayer implements ProtocolHandler, Agent
 
     public void onClose()
     {
+        replayerSessions.forEach(ReplayerSession::close);
         publication.close();
         replayQuery.close();
     }

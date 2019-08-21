@@ -29,4 +29,8 @@ interface Continuation
     {
         return Pressure.apply(attempt());
     }
+
+    default void close()
+    {
+    }
 }

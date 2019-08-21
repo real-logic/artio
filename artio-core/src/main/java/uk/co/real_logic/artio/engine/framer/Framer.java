@@ -1703,6 +1703,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             closeAll(
                 this::quiesce,
+                retryManager,
                 inboundMessages,
                 receiverEndPoints,
                 senderEndPoints,
