@@ -123,7 +123,8 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
     private void logReplayError(final long connectionId, final DirectBuffer buffer, final int offset, final int length)
     {
         errorHandler.onError(new IllegalArgumentException(String.format(
-            "Failed to replay message on conn=%1$d [%2$s]",
+            "Failed to replay message on conn=%1$d [%2$s], this probably indicates the connection has disconnected" +
+            "from Artio whilst this message was in the process of being replayed",
             connectionId,
             buffer.getStringWithoutLengthUtf8(offset, length))));
     }
