@@ -545,9 +545,11 @@ public class FramerTest
 
         sessionIsActive();
 
-        assertEquals(ABORT, onRequestSession());
-
         assertEquals(CONTINUE, onRequestSession());
+
+        doWork();
+
+        doWork();
 
         verify(inboundPublication, times(2)).saveManageSession(eq(LIBRARY_ID),
             anyLong(),
@@ -672,6 +674,8 @@ public class FramerTest
         sessionIsActive();
 
         assertEquals(CONTINUE, onRequestSession());
+
+        doWork();
 
         saveRequestSessionReply();
     }

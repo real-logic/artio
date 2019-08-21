@@ -27,6 +27,7 @@ import java.util.function.Consumer;
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_INBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_OUTBOUND_REPLAY_STREAM;
 
 /**
  * Prints out FIX messages from an Aeron Stream - designed for integration into logging tools like
@@ -47,7 +48,8 @@ public class FixMessageLogger implements Agent
             new Aeron.Context(),
             IPC_CHANNEL,
             DEFAULT_INBOUND_LIBRARY_STREAM,
-            DEFAULT_OUTBOUND_LIBRARY_STREAM);
+            DEFAULT_OUTBOUND_LIBRARY_STREAM,
+            DEFAULT_OUTBOUND_REPLAY_STREAM);
 
         final AgentRunner runner = new AgentRunner(
             CommonConfiguration.backoffIdleStrategy(),
@@ -62,6 +64,7 @@ public class FixMessageLogger implements Agent
     private final Aeron aeron;
     private final Subscription outboundSubscription;
     private final Subscription inboundSubscription;
+    private final Subscription replaySubscription;
     private final FragmentAssembler fragmentAssembler;
 
     public FixMessageLogger(
@@ -69,12 +72,13 @@ public class FixMessageLogger implements Agent
         final Aeron.Context context,
         final String libraryAeronChannel,
         final int inboundStreamId,
-        final int outboundStreamId)
+        final int outboundStreamId,
+        final int outboundReplayStreamId)
     {
-
         aeron = Aeron.connect(context);
         inboundSubscription = aeron.addSubscription(libraryAeronChannel, inboundStreamId);
         outboundSubscription = aeron.addSubscription(libraryAeronChannel, outboundStreamId);
+        replaySubscription = aeron.addSubscription(libraryAeronChannel, outboundReplayStreamId);
 
         final LogEntryHandler logEntryHandler = new LogEntryHandler((message, buffer, offset, length, header) ->
             fixMessageConsumer.accept(message.body()));
@@ -85,7 +89,8 @@ public class FixMessageLogger implements Agent
     {
         return
             inboundSubscription.poll(fragmentAssembler, 10) +
-            outboundSubscription.poll(fragmentAssembler, 10);
+            outboundSubscription.poll(fragmentAssembler, 10) +
+            replaySubscription.poll(fragmentAssembler, 10);
     }
 
     public void onClose()

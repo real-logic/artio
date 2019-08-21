@@ -27,30 +27,30 @@ import static org.agrona.collections.CollectionUtil.removeIf;
 
 class RetryManager
 {
-    private final Long2ObjectHashMap<UnitOfWork> correlationIdToTransactions = new Long2ObjectHashMap<>();
-    private final List<Continuation> polledUnitOfWorks = new ArrayList<>();
+    private final Long2ObjectHashMap<Continuation> correlationIdToTransactions = new Long2ObjectHashMap<>();
+    private final List<Continuation> continuations = new ArrayList<>();
 
     Action retry(final long correlationId)
     {
-        final UnitOfWork unitOfWork = correlationIdToTransactions.get(correlationId);
-        if (unitOfWork == null)
+        final Continuation continuation = correlationIdToTransactions.get(correlationId);
+        if (continuation == null)
         {
             return null;
         }
 
-        return attempt(correlationId, unitOfWork);
+        return attempt(correlationId, continuation);
     }
 
-    Action firstAttempt(final long correlationId, final UnitOfWork unitOfWork)
+    Action firstAttempt(final long correlationId, final Continuation continuation)
     {
-        correlationIdToTransactions.put(correlationId, unitOfWork);
+        correlationIdToTransactions.put(correlationId, continuation);
 
-        return attempt(correlationId, unitOfWork);
+        return attempt(correlationId, continuation);
     }
 
-    private Action attempt(final long correlationId, final UnitOfWork unitOfWork)
+    private Action attempt(final long correlationId, final Continuation continuation)
     {
-        final Action action = unitOfWork.attemptToAction();
+        final Action action = continuation.attemptToAction();
         if (action != ABORT)
         {
             correlationIdToTransactions.remove(correlationId);
@@ -58,13 +58,13 @@ class RetryManager
         return action;
     }
 
-    void schedule(final Continuation unitOfWork)
+    void schedule(final Continuation continuation)
     {
-        polledUnitOfWorks.add(unitOfWork);
+        continuations.add(continuation);
     }
 
     int attemptSteps()
     {
-        return removeIf(polledUnitOfWorks, step -> step.attemptToAction() == CONTINUE);
+        return removeIf(continuations, step -> step.attemptToAction() == CONTINUE);
     }
 }
