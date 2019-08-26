@@ -16,17 +16,19 @@
 package uk.co.real_logic.artio.dictionary.generation;
 
 import org.agrona.LangUtil;
+import org.agrona.MutableDirectBuffer;
 import org.agrona.generation.OutputManager;
 import org.agrona.generation.ResourceConsumer;
 import uk.co.real_logic.artio.builder.Decoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.ir.*;
+import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
 import uk.co.real_logic.artio.fields.*;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static java.util.stream.Collectors.joining;
@@ -34,8 +36,7 @@ import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.*;
 import static uk.co.real_logic.artio.dictionary.generation.ConstantGenerator.sizeHashSet;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.NULL_VAL_NAME;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.constantName;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 // TODO: optimisations
@@ -49,6 +50,14 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 public class DecoderGenerator extends Generator
 {
+    private static final Set<String> REQUIRED_SESSION_CODECS = new HashSet<>(Arrays.asList(
+        "LogonDecoder",
+        "LogoutDecoder",
+        "RejectDecoder",
+        "TestRequestDecoder",
+        "SequenceResetDecoder",
+        "HeartbeatDecoder"));
+
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
     private static final String GROUP_FIELDS = "GROUP_FIELDS";
 
@@ -143,6 +152,15 @@ public class DecoderGenerator extends Generator
             {
                 out.append(fileHeader(builderPackage));
 
+                if (REQUIRED_SESSION_CODECS.contains(className))
+                {
+                    out.append(importFor( "uk.co.real_logic.artio.decoder.Abstract" + className));
+                }
+                else if (type == HEADER)
+                {
+                    out.append(importFor(SessionHeaderDecoder.class));
+                }
+
                 generateImports("Decoder", type, out);
                 generateAggregateClass(aggregate, type, className, out);
             });
@@ -164,7 +182,19 @@ public class DecoderGenerator extends Generator
             .map((comp) -> decoderClassName((Aggregate)comp.element()))
             .collect(toList());
 
-        interfaces.add(isMessage ? "MessageDecoder" : "Decoder");
+        if (isMessage)
+        {
+            interfaces.add("MessageDecoder");
+
+            if (REQUIRED_SESSION_CODECS.contains(className))
+            {
+                interfaces.add("Abstract" + className);
+            }
+        }
+        else  if (type == HEADER)
+        {
+            interfaces.add(SessionHeaderDecoder.class.getSimpleName());
+        }
 
         out.append(classDeclaration(className, interfaces, false));
         generateValidation(out, aggregate, type);
@@ -303,8 +333,8 @@ public class DecoderGenerator extends Generator
             "        buffer = null;\n" +
             "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
             "        {\n" +
-            "            invalidTagId = NO_ERROR;\n" +
-            "            rejectReason = NO_ERROR;\n" +
+            "            invalidTagId = Decoder.NO_ERROR;\n" +
+            "            rejectReason = Decoder.NO_ERROR;\n" +
             "            missingRequiredFields.clear();\n" +
             (isGroup ? "" :
                 "            unknownFields.clear();\n" +
@@ -369,12 +399,12 @@ public class DecoderGenerator extends Generator
             "    private final IntHashSet alreadyVisitedFields = new IntHashSet(%5$d);\n\n" +
             "    private final IntHashSet unknownFields = new IntHashSet(10);\n\n") +
             "    private final IntHashSet missingRequiredFields = new IntHashSet(%1$d);\n\n" +
-            "    private int invalidTagId = NO_ERROR;\n\n" +
+            "    private int invalidTagId = Decoder.NO_ERROR;\n\n" +
             "    public int invalidTagId()\n" +
             "    {\n" +
             "        return invalidTagId;\n" +
             "    }\n\n" +
-            "    private int rejectReason = NO_ERROR;\n\n" +
+            "    private int rejectReason = Decoder.NO_ERROR;\n\n" +
             "    public int rejectReason()\n" +
             "    {\n" +
             "        return rejectReason;\n" +
@@ -382,7 +412,7 @@ public class DecoderGenerator extends Generator
             "    public boolean validate()\n" +
             "    {\n" +
             // validation for some tags performed in the decode method
-            "        if (rejectReason != NO_ERROR)\n" +
+            "        if (rejectReason != Decoder.NO_ERROR)\n" +
             "        {\n" +
             "            return false;\n" +
             "        }\n" +

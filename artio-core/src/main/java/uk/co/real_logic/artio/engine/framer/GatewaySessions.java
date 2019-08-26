@@ -23,9 +23,11 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -131,6 +133,9 @@ class GatewaySessions
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
 
+        // TODO:
+        final Class<? extends FixDictionary> fixDictionaryType = SessionConfiguration.DEFAULT_FIX_DICTIONARY;
+
         final SessionProxy proxy = new DirectSessionProxy(
             sessionBufferSize,
             outboundPublication,
@@ -138,7 +143,8 @@ class GatewaySessions
             customisationStrategy,
             clock,
             connectionId,
-            FixEngine.ENGINE_LIBRARY_ID);
+            FixEngine.ENGINE_LIBRARY_ID,
+            fixDictionaryType);
 
         final InternalSession session = new InternalSession(
             heartbeatIntervalInS,
@@ -167,7 +173,8 @@ class GatewaySessions
         final SessionParser sessionParser = new SessionParser(
             session,
             validationStrategy,
-            errorHandler);
+            errorHandler,
+            fixDictionaryType);
 
         sessions.add(gatewaySession);
         gatewaySession.manage(sessionParser, session, engineBlockablePosition);

@@ -29,6 +29,7 @@ import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.HeaderEncoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
@@ -1110,7 +1111,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
-            session, validationStrategy, null);
+            session, validationStrategy, null, SessionConfiguration.DEFAULT_FIX_DICTIONARY); // TODO
         final SessionSubscriber subscriber = new SessionSubscriber(
             parser,
             session,
@@ -1136,7 +1137,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final GatewayPublication publication = transport.outboundPublication();
 
         final MutableAsciiBuffer asciiBuffer = sessionBuffer();
-        final SessionProxy sessionProxy = sessionProxy(connectionId);
+        final SessionProxy sessionProxy = sessionProxy(connectionId, sessionConfiguration.fixDictionary());
         final int initialReceivedSequenceNumber = initiatorNewSequenceNumber(
             sessionConfiguration, SessionConfiguration::initialReceivedSequenceNumber, lastReceivedSequenceNumber);
         final int initialSentSequenceNumber = initiatorNewSequenceNumber(
@@ -1218,7 +1219,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             heartbeatIntervalInS,
             connectionId,
             clock,
-            sessionProxy(connectionId),
+            sessionProxy(connectionId, SessionConfiguration.DEFAULT_FIX_DICTIONARY),
             publication,
             sessionIdStrategy,
             sendingTimeWindow,
@@ -1235,7 +1236,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return session;
     }
 
-    private SessionProxy sessionProxy(final long connectionId)
+    private SessionProxy sessionProxy(final long connectionId, final Class<? extends FixDictionary> dictionaryType)
     {
         return configuration.sessionProxyFactory().make(
             configuration.sessionBufferSize(),
@@ -1244,7 +1245,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             configuration.sessionCustomisationStrategy(),
             new SystemEpochClock(),
             connectionId,
-            libraryId);
+            libraryId,
+            dictionaryType);
     }
 
     private void checkState()

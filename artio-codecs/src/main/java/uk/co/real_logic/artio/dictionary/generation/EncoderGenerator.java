@@ -29,7 +29,10 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -40,12 +43,21 @@ import static uk.co.real_logic.artio.dictionary.generation.AggregateType.GROUP;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.HEADER;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.hasEnumGenerated;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
 import static uk.co.real_logic.artio.util.MutableAsciiBuffer.LONGEST_INT_LENGTH;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatClassName;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 public class EncoderGenerator extends Generator
 {
+    private static final Set<String> REQUIRED_SESSION_CODECS = new HashSet<>(Arrays.asList(
+        "LogonEncoder",
+        "LogoutEncoder",
+        "HeartbeatEncoder",
+        "RejectEncoder",
+        "TestRequestEncoder",
+        "SequenceResetEncoder"));
+
     private static final String SUFFIX =
         "        buffer.putSeparator(position);\n" +
         "        position++;\n" +
@@ -165,10 +177,7 @@ public class EncoderGenerator extends Generator
         validateHasField(header, BEGIN_STRING);
         validateHasField(header, BODY_LENGTH);
 
-        beginString = String.format("%s.%d.%d",
-                                    dictionary.specType(),
-                                    dictionary.majorVersion(),
-                                    dictionary.minorVersion());
+        beginString = dictionary.beginString();
     }
 
     private void validateHasField(final Component header, final String fieldName)
@@ -188,6 +197,13 @@ public class EncoderGenerator extends Generator
             (out) ->
             {
                 out.append(fileHeader(builderPackage));
+
+
+                if (REQUIRED_SESSION_CODECS.contains(className))
+                {
+                    out.append(importFor( "uk.co.real_logic.artio.builder.Abstract" + className));
+                }
+
                 generateImports(
                     "Encoder",
                     aggregateType,
@@ -238,7 +254,11 @@ public class EncoderGenerator extends Generator
         final List<String> interfaces;
         if (isMessage)
         {
-            interfaces = singletonList(Encoder.class.getSimpleName());
+            final String parentName =
+                (REQUIRED_SESSION_CODECS.contains(className)) ?
+                "Abstract" + className :
+                Encoder.class.getSimpleName();
+            interfaces = singletonList(parentName);
         }
         else if (isHeader)
         {

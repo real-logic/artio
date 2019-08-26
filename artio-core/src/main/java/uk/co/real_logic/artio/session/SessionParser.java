@@ -20,8 +20,10 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import uk.co.real_logic.artio.FixGatewayException;
+import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.decoder.*;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.util.AsciiBuffer;
@@ -45,11 +47,11 @@ public class SessionParser
 
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final UtcTimestampDecoder timestampDecoder = new UtcTimestampDecoder();
-    private final LogonDecoder logon = new LogonDecoder();
+    private final AbstractLogonDecoder logon;
     private final LogoutDecoder logout = new LogoutDecoder();
     private final RejectDecoder reject = new RejectDecoder();
     private final TestRequestDecoder testRequest = new TestRequestDecoder();
-    private final HeaderDecoder header = new HeaderDecoder();
+    private final SessionHeaderDecoder header = new HeaderDecoder();
     private final SequenceResetDecoder sequenceReset = new SequenceResetDecoder();
     private final HeartbeatDecoder heartbeat = new HeartbeatDecoder();
 
@@ -60,19 +62,24 @@ public class SessionParser
     public SessionParser(
         final Session session,
         final MessageValidationStrategy validationStrategy,
-        final ErrorHandler errorHandler) // nullable
+        final ErrorHandler errorHandler, // nullable
+        final Class<? extends FixDictionary> fixDictionaryType)
     {
         this.session = session;
         this.validationStrategy = validationStrategy;
         this.errorHandler = errorHandler;
+
+        final FixDictionary fixDictionary = FixDictionary.of(fixDictionaryType);
+
+        logon = fixDictionary.makeLogonDecoder();
     }
 
-    public static String username(final LogonDecoder logon)
+    public static String username(final AbstractLogonDecoder logon)
     {
         return HAS_USER_NAME_AND_PASSWORD ? logon.usernameAsString() : null;
     }
 
-    public static String password(final LogonDecoder logon)
+    public static String password(final AbstractLogonDecoder logon)
     {
         return HAS_USER_NAME_AND_PASSWORD ? logon.passwordAsString() : null;
     }
@@ -136,7 +143,7 @@ public class SessionParser
 
         heartbeat.reset();
         heartbeat.decode(asciiBuffer, offset, length);
-        final HeaderDecoder header = heartbeat.header();
+        final SessionHeaderDecoder header = heartbeat.header();
         if (CODEC_VALIDATION_ENABLED && (!heartbeat.validate() || !validateHeader(header)))
         {
             return onCodecInvalidMessage(heartbeat, header, false);
@@ -165,7 +172,7 @@ public class SessionParser
         }
     }
 
-    private long sendingTime(final HeaderDecoder header)
+    private long sendingTime(final SessionHeaderDecoder header)
     {
         final byte[] sendingTime = header.sendingTime();
         return decodeTimestamp(sendingTime);
@@ -180,7 +187,7 @@ public class SessionParser
 
     private Action onAnyOtherMessage(final int offset, final int length)
     {
-        final HeaderDecoder header = this.header;
+        final SessionHeaderDecoder header = this.header;
         header.reset();
         header.decode(asciiBuffer, offset, length);
 
@@ -202,7 +209,7 @@ public class SessionParser
         return CONTINUE;
     }
 
-    private Action onMessage(final HeaderDecoder header)
+    private Action onMessage(final SessionHeaderDecoder header)
     {
         final long origSendingTime = origSendingTime(header);
         final long sendingTime = sendingTime(header);
@@ -217,7 +224,7 @@ public class SessionParser
             possDup);
     }
 
-    private long origSendingTime(final HeaderDecoder header)
+    private long origSendingTime(final SessionHeaderDecoder header)
     {
         return header.hasOrigSendingTime() ? decodeTimestamp(header.origSendingTime()) : UNKNOWN;
     }
@@ -228,7 +235,7 @@ public class SessionParser
 
         sequenceReset.reset();
         sequenceReset.decode(asciiBuffer, offset, length);
-        final HeaderDecoder header = sequenceReset.header();
+        final SessionHeaderDecoder header = sequenceReset.header();
         if (CODEC_VALIDATION_ENABLED && (!sequenceReset.validate() || !validateHeader(header)))
         {
             return onCodecInvalidMessage(sequenceReset, header, false);
@@ -252,7 +259,7 @@ public class SessionParser
 
         testRequest.reset();
         testRequest.decode(asciiBuffer, offset, length);
-        final HeaderDecoder header = testRequest.header();
+        final SessionHeaderDecoder header = testRequest.header();
         if (CODEC_VALIDATION_ENABLED && (!testRequest.validate() || !validateHeader(header)))
         {
             return onCodecInvalidMessage(testRequest, header, false);
@@ -280,7 +287,7 @@ public class SessionParser
 
         reject.reset();
         reject.decode(asciiBuffer, offset, length);
-        final HeaderDecoder header = reject.header();
+        final SessionHeaderDecoder header = reject.header();
         if (CODEC_VALIDATION_ENABLED && (!reject.validate() || !validateHeader(header)))
         {
             return onCodecInvalidMessage(reject, header, false);
@@ -305,7 +312,7 @@ public class SessionParser
 
         logout.reset();
         logout.decode(asciiBuffer, offset, length);
-        final HeaderDecoder header = logout.header();
+        final SessionHeaderDecoder header = logout.header();
         if (CODEC_VALIDATION_ENABLED && (!logout.validate() || !validateHeader(header)))
         {
             return onCodecInvalidMessage(logout, header, false);
@@ -325,12 +332,12 @@ public class SessionParser
 
     private Action onLogon(final int offset, final int length)
     {
-        final LogonDecoder logon = this.logon;
+        final AbstractLogonDecoder logon = this.logon;
         final Session session = this.session;
 
         logon.reset();
         logon.decode(asciiBuffer, offset, length);
-        final HeaderDecoder header = logon.header();
+        final SessionHeaderDecoder header = logon.header();
         final char[] beginString = header.beginString();
         final int beginStringLength = header.beginStringLength();
         if (CODEC_VALIDATION_ENABLED &&
@@ -383,12 +390,12 @@ public class SessionParser
         }
     }
 
-    private boolean resetSeqNumFlag(final LogonDecoder logon)
+    private boolean resetSeqNumFlag(final AbstractLogonDecoder logon)
     {
         return logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
     }
 
-    private boolean validateHeader(final HeaderDecoder header)
+    private boolean validateHeader(final SessionHeaderDecoder header)
     {
         if (!session.onBeginString(header.beginString(), header.beginStringLength(), false))
         {
@@ -424,7 +431,7 @@ public class SessionParser
 
     private Action onCodecInvalidMessage(
         final Decoder decoder,
-        final HeaderDecoder header,
+        final SessionHeaderDecoder header,
         final boolean requestDisconnect)
     {
         if (!isDisconnectedOrAwaitingLogout())
@@ -469,12 +476,12 @@ public class SessionParser
         return state == DISCONNECTED || state == AWAITING_LOGOUT;
     }
 
-    private boolean isPossDupOrResend(final boolean possDup, final HeaderDecoder header)
+    private boolean isPossDupOrResend(final boolean possDup, final SessionHeaderDecoder header)
     {
         return possDup || (header.hasPossResend() && header.possResend());
     }
 
-    private boolean isPossDup(final HeaderDecoder header)
+    private boolean isPossDup(final SessionHeaderDecoder header)
     {
         return header.hasPossDupFlag() && header.possDupFlag();
     }

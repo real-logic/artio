@@ -19,6 +19,7 @@ import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.*;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -77,16 +78,14 @@ public class DirectSessionProxy implements SessionProxy
     }
 
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
-    private final LogonEncoder logon = new LogonEncoder();
+    private final AbstractLogonEncoder logon;
     private final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
     private final LogoutEncoder logout = new LogoutEncoder();
     private final HeartbeatEncoder heartbeat = new HeartbeatEncoder();
     private final RejectEncoder reject = new RejectEncoder();
     private final TestRequestEncoder testRequest = new TestRequestEncoder();
     private final SequenceResetEncoder sequenceReset = new SequenceResetEncoder();
-    private final List<HeaderEncoder> headers = asList(
-        logon.header(), resendRequest.header(), logout.header(), heartbeat.header(), reject.header(),
-        testRequest.header(), sequenceReset.header());
+    private final List<SessionHeaderEncoder> headers;
 
     private final AsciiFormatter lowSequenceNumber;
     private final MutableAsciiBuffer buffer;
@@ -107,7 +106,8 @@ public class DirectSessionProxy implements SessionProxy
         final SessionCustomisationStrategy customisationStrategy,
         final EpochClock clock,
         final long connectionId,
-        final int libraryId)
+        final int libraryId,
+        final Class<? extends FixDictionary> fixDictionaryType)
     {
         this.gatewayPublication = gatewayPublication;
         this.sessionIdStrategy = sessionIdStrategy;
@@ -118,6 +118,18 @@ public class DirectSessionProxy implements SessionProxy
         this.buffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
         lowSequenceNumber = new AsciiFormatter("MsgSeqNum too low, expecting %s but received %s");
         timestampEncoder.initialise(clock.time());
+
+        final FixDictionary dictionary = FixDictionary.of(fixDictionaryType);
+        logon = dictionary.makeLogonEncoder();
+
+        headers = asList(
+            logon.header(),
+            resendRequest.header(),
+            logout.header(),
+            heartbeat.header(),
+            reject.header(),
+            testRequest.header(),
+            sequenceReset.header());
     }
 
     public void setupSession(final long sessionId, final CompositeKey sessionKey)
@@ -125,7 +137,7 @@ public class DirectSessionProxy implements SessionProxy
         requireNonNull(sessionKey, "sessionKey");
 
         this.sessionId = sessionId;
-        for (final HeaderEncoder header : headers)
+        for (final SessionHeaderEncoder header : headers)
         {
             sessionIdStrategy.setupSession(sessionKey, header);
         }
@@ -159,7 +171,7 @@ public class DirectSessionProxy implements SessionProxy
         final int sequenceIndex,
         final int lastMsgSeqNumProcessed)
     {
-        final HeaderEncoder header = logon.header();
+        final SessionHeaderEncoder header = logon.header();
         setupHeader(header, msgSeqNo, lastMsgSeqNumProcessed);
 
         logon
@@ -352,7 +364,7 @@ public class DirectSessionProxy implements SessionProxy
         return send(result, SequenceResetDecoder.MESSAGE_TYPE, sequenceIndex, sequenceReset, msgSeqNo);
     }
 
-    private void setupHeader(final HeaderEncoder header, final int msgSeqNo, final int lastMsgSeqNumProcessed)
+    private void setupHeader(final SessionHeaderEncoder header, final int msgSeqNo, final int lastMsgSeqNumProcessed)
     {
         final UtcTimestampEncoder timestampEncoder = this.timestampEncoder;
         header.sendingTime(timestampEncoder.buffer(), timestampEncoder.update(clock.time()));

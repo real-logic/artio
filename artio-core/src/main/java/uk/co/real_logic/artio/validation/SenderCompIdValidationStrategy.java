@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio.validation;
 
 import uk.co.real_logic.artio.Constants;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.CharArraySet;
 
 import java.util.Collection;
@@ -35,7 +35,7 @@ class SenderCompIdValidationStrategy implements MessageValidationStrategy
         this.validSenderIds = new CharArraySet(validSenderIds);
     }
 
-    public boolean validate(final HeaderDecoder header)
+    public boolean validate(final SessionHeaderDecoder header)
     {
         final char[] senderCompID = header.senderCompID();
         final int senderCompIDLength = header.senderCompIDLength();

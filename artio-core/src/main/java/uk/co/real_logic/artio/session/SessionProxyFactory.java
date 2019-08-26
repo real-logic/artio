@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.session;
 
 import org.agrona.concurrent.EpochClock;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 /**
@@ -32,5 +33,6 @@ public interface SessionProxyFactory
         SessionCustomisationStrategy customisationStrategy,
         EpochClock clock,
         long connectionId,
-        int libraryId);
+        int libraryId,
+        Class<? extends FixDictionary> fixDictionaryType);
 }

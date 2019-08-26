@@ -100,4 +100,12 @@ public final class Dictionary
                 ", trailer=" + trailer +
                 '}';
     }
+
+    public String beginString()
+    {
+        return String.format("%s.%d.%d",
+            specType(),
+            majorVersion(),
+            minorVersion());
+    }
 }

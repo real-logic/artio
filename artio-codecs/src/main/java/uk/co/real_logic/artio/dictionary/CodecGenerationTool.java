@@ -60,6 +60,12 @@ public final class CodecGenerationTool
         final EnumGenerator enumGenerator = new EnumGenerator(dictionary, PARENT_PACKAGE, parentOutput);
         final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, PARENT_PACKAGE, parentOutput);
 
+        final FixDictionaryGenerator fixDictionaryGenerator = new FixDictionaryGenerator(
+            dictionary,
+            parentOutput,
+            ENCODER_PACKAGE,
+            DECODER_PACKAGE,
+            PARENT_PACKAGE);
 
         final EncoderGenerator encoderGenerator = new EncoderGenerator(
             dictionary,
@@ -91,6 +97,7 @@ public final class CodecGenerationTool
         decoderGenerator.generate();
         printerGenerator.generate();
         acceptorGenerator.generate();
+        fixDictionaryGenerator.generate();
 
         if (FLYWEIGHTS_ENABLED)
         {

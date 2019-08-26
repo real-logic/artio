@@ -20,6 +20,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.fields.RejectReason;
+import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
@@ -32,12 +33,11 @@ import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT
 public class SessionParserTest
 {
     private Session mockSession = mock(Session.class);
-    private SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);
     private AuthenticationStrategy mockAuthenticationStrategy = mock(AuthenticationStrategy.class);
     private MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId("das");
 
     private SessionParser parser = new SessionParser(
-        mockSession, validationStrategy, null);
+        mockSession, validationStrategy, null, SessionConfiguration.DEFAULT_FIX_DICTIONARY);
 
     @Before
     public void setUp()

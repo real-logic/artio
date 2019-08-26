@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.validation;
 
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 
 /**
  * A dummy message validation strategy that checks nothing.
@@ -26,7 +26,7 @@ class NoMessageValidationStrategy implements MessageValidationStrategy
     {
     }
 
-    public boolean validate(final HeaderDecoder logon)
+    public boolean validate(final SessionHeaderDecoder logon)
     {
         return true;
     }
