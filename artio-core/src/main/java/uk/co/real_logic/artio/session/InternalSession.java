@@ -136,6 +136,11 @@ public class InternalSession extends Session
         super.updateLastMessageProcessed();
     }
 
+    public void initialLastReceivedMsgSeqNum(final int lastReceivedMsgSeqNum)
+    {
+        super.initialLastReceivedMsgSeqNum(lastReceivedMsgSeqNum);
+    }
+
     public ControlledFragmentHandler.Action onInvalidMessage(
         final int refSeqNum,
         final int refTagId,

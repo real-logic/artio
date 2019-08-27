@@ -15,29 +15,32 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.logbuffer.Header;
-import io.aeron.protocol.DataHeaderFlyweight;
-import org.agrona.CloseHelper;
-import org.agrona.DirectBuffer;
-import org.agrona.ErrorHandler;
-import org.agrona.collections.Long2LongHashMap;
-import org.agrona.concurrent.AtomicBuffer;
-import org.agrona.concurrent.EpochClock;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
-import uk.co.real_logic.artio.engine.ChecksumFramer;
-import uk.co.real_logic.artio.engine.MappedFile;
-import uk.co.real_logic.artio.messages.*;
-import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
-import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder;
-import uk.co.real_logic.artio.util.AsciiBuffer;
-import uk.co.real_logic.artio.util.MutableAsciiBuffer;
+    import io.aeron.logbuffer.Header;
+    import io.aeron.protocol.DataHeaderFlyweight;
+    import org.agrona.CloseHelper;
+    import org.agrona.DirectBuffer;
+    import org.agrona.ErrorHandler;
+    import org.agrona.collections.Long2LongHashMap;
+    import org.agrona.concurrent.AtomicBuffer;
+    import org.agrona.concurrent.EpochClock;
+    import uk.co.real_logic.artio.decoder.HeaderDecoder;
+    import uk.co.real_logic.artio.engine.ChecksumFramer;
+    import uk.co.real_logic.artio.engine.MappedFile;
+    import uk.co.real_logic.artio.messages.*;
+    import uk.co.real_logic.artio.session.InternalSession;
+    import uk.co.real_logic.artio.session.Session;
+    import uk.co.real_logic.artio.session.SilentSessionProxy;
+    import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
+    import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder;
+    import uk.co.real_logic.artio.util.AsciiBuffer;
+    import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import java.io.File;
+    import java.io.File;
 
-import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
-import static uk.co.real_logic.artio.engine.SectorFramer.*;
-import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
-import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
+    import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
+    import static uk.co.real_logic.artio.engine.SectorFramer.*;
+    import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
+    import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
 /**
  * Writes updates into an in-memory buffer. This buffer is then flushed down to disk. A passing place
@@ -457,5 +460,18 @@ public class SequenceNumberIndexWriter implements Index
         final int value)
     {
         inMemoryBuffer.putIntOrdered(recordOffset + SEQUENCE_NUMBER_OFFSET, value);
+    }
+
+    class SessionValidator
+    {
+        final SilentSessionProxy silentSessionProxy = new SilentSessionProxy();
+        final InternalSession session;
+
+        long recordOffset = 0;
+
+        SessionValidator()
+        {
+            session = new InternalSession();
+        }
     }
 }

@@ -115,6 +115,8 @@ public abstract class AbstractSessionTest
         verify(sessionProxy).sendLowSequenceNumberLogout(
             1, 3, 1, SEQUENCE_INDEX, NO_LAST_MSG_SEQ_NUM_PROCESSED);
         verifyDisconnect(times(1));
+
+        assertEquals(2, session().lastReceivedMsgSeqNum());
     }
 
     @Test
