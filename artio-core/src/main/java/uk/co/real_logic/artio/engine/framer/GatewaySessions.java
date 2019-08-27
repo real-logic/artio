@@ -177,7 +177,7 @@ class GatewaySessions
         if (sessionKey != null)
         {
             gatewaySession.onLogon(username, password, heartbeatIntervalInS);
-            session.lastReceivedMsgSeqNum(lastReceivedSequenceNumber);
+            session.initialLastReceivedMsgSeqNum(lastReceivedSequenceNumber);
         }
     }
 

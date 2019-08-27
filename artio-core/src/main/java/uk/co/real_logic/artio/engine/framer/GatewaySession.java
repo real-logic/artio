@@ -253,7 +253,7 @@ class GatewaySession implements SessionInfo
         if (session != null)
         {
             session.lastSentMsgSeqNum(adjustLastSequenceNumber(retrievedSentSequenceNumber));
-            session.lastReceivedMsgSeqNum(adjustLastSequenceNumber(retrievedReceivedSequenceNumber));
+            session.initialLastReceivedMsgSeqNum(adjustLastSequenceNumber(retrievedReceivedSequenceNumber));
         }
     }
 

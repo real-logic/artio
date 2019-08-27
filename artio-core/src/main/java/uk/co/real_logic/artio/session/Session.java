@@ -1700,6 +1700,12 @@ public class Session implements AutoCloseable
         }
     }
 
+    void initialLastReceivedMsgSeqNum(final int lastReceivedMsgSeqNum)
+    {
+        lastReceivedMsgSeqNum(lastReceivedMsgSeqNum);
+        updateLastMessageProcessed();
+    }
+
     int lastMsgSeqNumProcessed()
     {
         return lastMsgSeqNumProcessed;

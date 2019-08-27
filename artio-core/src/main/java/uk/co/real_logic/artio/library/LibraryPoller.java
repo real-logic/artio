@@ -738,7 +738,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                             connection, address, sessionState, heartbeatIntervalInS, sequenceIndex,
                             enableLastMsgSeqNumProcessed);
                         session.lastSentMsgSeqNum(lastSentSeqNum);
-                        session.lastReceivedMsgSeqNum(lastRecvSeqNum);
+                        session.initialLastReceivedMsgSeqNum(lastRecvSeqNum);
                     }
 
                     final CompositeKey compositeKey = sessionIdStrategy.onInitiateLogon(
@@ -1161,7 +1161,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             asciiBuffer,
             enableLastMsgSeqNumProcessed);
 
-        session.lastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
+        session.initialLastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
 
         return session;
     }
