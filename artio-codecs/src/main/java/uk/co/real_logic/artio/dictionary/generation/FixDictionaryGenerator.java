@@ -29,6 +29,85 @@ import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.import
 
 public class FixDictionaryGenerator
 {
+    private static final String TEMPLATE =
+        "public class FixDictionaryImpl implements FixDictionary\n" +
+        "{\n" +
+        "    public String beginString()\n" +
+        "    {\n" +
+        "        return \"%1$s\";\n" +
+        "    }\n" +
+        "\n" +
+        "    public AbstractLogonEncoder makeLogonEncoder()\n" +
+        "    {\n" +
+        "        return new LogonEncoder();\n" +
+        "    }\n" +
+        "\n" +
+        "    public AbstractResendRequestEncoder makeResendRequestEncoder()\n" +
+        "    {\n" +
+        "        return new ResendRequestEncoder();\n" +
+        "    }\n" +
+        "\n" +
+        "    public AbstractLogoutEncoder makeLogoutEncoder()\n" +
+        "    {\n" +
+        "        return new LogoutEncoder();\n" +
+        "    }\n" +
+        "\n" +
+        "    public AbstractHeartbeatEncoder makeHeartbeatEncoder()\n" +
+        "    {\n" +
+        "        return new HeartbeatEncoder();\n" +
+        "    }\n" +
+        "\n" +
+        "    public AbstractRejectEncoder makeRejectEncoder()\n" +
+        "    {\n" +
+        "        return new RejectEncoder();\n" +
+        "    }\n" +
+        "\n" +
+        "    public AbstractTestRequestEncoder makeTestRequestEncoder()\n" +
+        "    {\n" +
+        "        return new TestRequestEncoder();\n" +
+        "    }\n" +
+        "\n" +
+        "    public AbstractSequenceResetEncoder makeSequenceResetEncoder()\n" +
+        "    {\n" +
+        "        return new SequenceResetEncoder();\n" +
+        "    }\n" +
+        "\n" +
+        "    public AbstractLogonDecoder makeLogonDecoder()\n" +
+        "    {\n" +
+        "        return new LogonDecoder();\n" +
+        "    }\n" +
+        "\n" +
+        "    public AbstractLogoutDecoder makeLogoutDecoder()\n" +
+        "    {\n" +
+        "        return new LogoutDecoder();\n" +
+        "    }\n" +
+        "\n" +
+        "    public AbstractRejectDecoder makeRejectDecoder()\n" +
+        "    {\n" +
+        "        return new RejectDecoder();\n" +
+        "    }\n" +
+        "\n" +
+        "    public AbstractTestRequestDecoder makeTestRequestDecoder()\n" +
+        "    {\n" +
+        "        return new TestRequestDecoder();\n" +
+        "    }\n" +
+        "\n" +
+        "    public AbstractSequenceResetDecoder makeSequenceResetDecoder()\n" +
+        "    {\n" +
+        "        return new SequenceResetDecoder();\n" +
+        "    }\n" +
+        "\n" +
+        "    public AbstractHeartbeatDecoder makeHeartbeatDecoder()\n" +
+        "    {\n" +
+        "        return new HeartbeatDecoder();\n" +
+        "    }\n" +
+        "\n" +
+        "    public SessionHeaderDecoder makeHeaderDecoder()\n" +
+        "    {\n" +
+        "        return new HeaderDecoder();\n" +
+        "    }\n" +
+        "\n";
+
     private final Dictionary dictionary;
     private final OutputManager outputManager;
     private final String encoderPackage;
@@ -61,6 +140,8 @@ public class FixDictionaryGenerator
 
                 out.append(importFor(AbstractLogonEncoder.class));
                 out.append(importFor(encoderPackage + ".LogonEncoder"));
+                out.append(importFor(AbstractResendRequestEncoder.class));
+                out.append(importFor(encoderPackage + ".ResendRequestEncoder"));
                 out.append(importFor(AbstractLogoutEncoder.class));
                 out.append(importFor(encoderPackage + ".LogoutEncoder"));
                 out.append(importFor(AbstractHeartbeatEncoder.class));
@@ -87,80 +168,7 @@ public class FixDictionaryGenerator
                 out.append(importFor(SessionHeaderDecoder.class));
                 out.append(importFor(decoderPackage + ".HeaderDecoder"));
 
-                out.append(String.format(
-                    "public class FixDictionaryImpl implements FixDictionary\n" +
-                    "{\n" +
-                    "    public String beginString()\n" +
-                    "    {\n" +
-                    "        return \"%1$s\";\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public AbstractLogonEncoder makeLogonEncoder()\n" +
-                    "    {\n" +
-                    "        return new LogonEncoder();\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public AbstractLogoutEncoder makeLogoutEncoder()\n" +
-                    "    {\n" +
-                    "        return new LogoutEncoder();\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public AbstractHeartbeatEncoder makeHeartbeatEncoder()\n" +
-                    "    {\n" +
-                    "        return new HeartbeatEncoder();\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public AbstractRejectEncoder makeRejectEncoder()\n" +
-                    "    {\n" +
-                    "        return new RejectEncoder();\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public AbstractTestRequestEncoder makeTestRequestEncoder()\n" +
-                    "    {\n" +
-                    "        return new TestRequestEncoder();\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public AbstractSequenceResetEncoder makeSequenceResetEncoder()\n" +
-                    "    {\n" +
-                    "        return new SequenceResetEncoder();\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public AbstractLogonDecoder makeLogonDecoder()\n" +
-                    "    {\n" +
-                    "        return new LogonDecoder();\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public AbstractLogoutDecoder makeLogoutDecoder()\n" +
-                    "    {\n" +
-                    "        return new LogoutDecoder();\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public AbstractRejectDecoder makeRejectDecoder()\n" +
-                    "    {\n" +
-                    "        return new RejectDecoder();\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public AbstractTestRequestDecoder makeTestRequestDecoder()\n" +
-                    "    {\n" +
-                    "        return new TestRequestDecoder();\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public AbstractSequenceResetDecoder makeSequenceResetDecoder()\n" +
-                    "    {\n" +
-                    "        return new SequenceResetDecoder();\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public AbstractHeartbeatDecoder makeHeartbeatDecoder()\n" +
-                    "    {\n" +
-                    "        return new HeartbeatDecoder();\n" +
-                    "    }\n" +
-                    "\n" +
-                    "    public SessionHeaderDecoder makeHeaderDecoder()\n" +
-                    "    {\n" +
-                    "        return new HeaderDecoder();\n" +
-                    "    }\n" +
-                    "\n",
-                    dictionary.beginString()));
+                out.append(String.format(TEMPLATE, dictionary.beginString()));
             }
             catch (final IOException e)
             {

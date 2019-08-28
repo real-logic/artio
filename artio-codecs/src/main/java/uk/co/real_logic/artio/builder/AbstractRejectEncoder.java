@@ -17,4 +17,15 @@ package uk.co.real_logic.artio.builder;
 
 public interface AbstractRejectEncoder extends Encoder
 {
+    AbstractRejectEncoder refTagID(int refTagId);
+
+    AbstractRejectEncoder refMsgType(char[] refMsgType, int refMsgTypeLength);
+
+    void resetRefTagID();
+
+    AbstractRejectEncoder text(byte[] loggedOnSessionRejectReason);
+
+    AbstractRejectEncoder refSeqNum(int refSeqNum);
+
+    AbstractRejectEncoder sessionRejectReason(int rejectReason);
 }

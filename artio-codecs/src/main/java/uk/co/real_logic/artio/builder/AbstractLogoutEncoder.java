@@ -17,4 +17,5 @@ package uk.co.real_logic.artio.builder;
 
 public interface AbstractLogoutEncoder extends Encoder
 {
+    AbstractLogoutEncoder text(byte[] text, int length);
 }

@@ -23,13 +23,13 @@ public interface AbstractLogonEncoder extends Encoder
 
     AbstractLogonEncoder encryptMethod(int value);
 
-    // TODO: boolean supportsUsername();
+    boolean supportsUsername();
 
-    AbstractLogonEncoder username(final CharSequence value);
+    AbstractLogonEncoder username(CharSequence value);
 
-    // TODO: boolean supportsPassword();
+    boolean supportsPassword();
 
-    AbstractLogonEncoder password(final CharSequence value);
+    AbstractLogonEncoder password(CharSequence value);
 
     boolean resetSeqNumFlag();
 }

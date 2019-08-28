@@ -20,7 +20,6 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import uk.co.real_logic.artio.FixGatewayException;
-import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
@@ -43,17 +42,15 @@ import static uk.co.real_logic.artio.session.Session.UNKNOWN;
 
 public class SessionParser
 {
-    private static final boolean HAS_USER_NAME_AND_PASSWORD = detectUsernameAndPassword();
-
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final UtcTimestampDecoder timestampDecoder = new UtcTimestampDecoder();
     private final AbstractLogonDecoder logon;
-    private final LogoutDecoder logout = new LogoutDecoder();
-    private final RejectDecoder reject = new RejectDecoder();
-    private final TestRequestDecoder testRequest = new TestRequestDecoder();
-    private final SessionHeaderDecoder header = new HeaderDecoder();
-    private final SequenceResetDecoder sequenceReset = new SequenceResetDecoder();
-    private final HeartbeatDecoder heartbeat = new HeartbeatDecoder();
+    private final AbstractLogoutDecoder logout;
+    private final AbstractRejectDecoder reject;
+    private final AbstractTestRequestDecoder testRequest;
+    private final SessionHeaderDecoder header;
+    private final AbstractSequenceResetDecoder sequenceReset;
+    private final AbstractHeartbeatDecoder heartbeat;
 
     private final Session session;
     private final MessageValidationStrategy validationStrategy;
@@ -72,16 +69,22 @@ public class SessionParser
         final FixDictionary fixDictionary = FixDictionary.of(fixDictionaryType);
 
         logon = fixDictionary.makeLogonDecoder();
+        logout = fixDictionary.makeLogoutDecoder();
+        reject = fixDictionary.makeRejectDecoder();
+        testRequest = fixDictionary.makeTestRequestDecoder();
+        header = fixDictionary.makeHeaderDecoder();
+        sequenceReset = fixDictionary.makeSequenceResetDecoder();
+        heartbeat = fixDictionary.makeHeartbeatDecoder();
     }
 
     public static String username(final AbstractLogonDecoder logon)
     {
-        return HAS_USER_NAME_AND_PASSWORD ? logon.usernameAsString() : null;
+        return logon.supportsUsername() ? logon.usernameAsString() : null;
     }
 
     public static String password(final AbstractLogonDecoder logon)
     {
-        return HAS_USER_NAME_AND_PASSWORD ? logon.passwordAsString() : null;
+        return logon.supportsPassword() ? logon.passwordAsString() : null;
     }
 
     private static boolean detectUsernameAndPassword()
@@ -139,7 +142,7 @@ public class SessionParser
 
     private Action onHeartbeat(final int offset, final int length)
     {
-        final HeartbeatDecoder heartbeat = this.heartbeat;
+        final AbstractHeartbeatDecoder heartbeat = this.heartbeat;
 
         heartbeat.reset();
         heartbeat.decode(asciiBuffer, offset, length);
@@ -231,7 +234,7 @@ public class SessionParser
 
     private Action onSequenceReset(final int offset, final int length)
     {
-        final SequenceResetDecoder sequenceReset = this.sequenceReset;
+        final AbstractSequenceResetDecoder sequenceReset = this.sequenceReset;
 
         sequenceReset.reset();
         sequenceReset.decode(asciiBuffer, offset, length);
@@ -255,7 +258,7 @@ public class SessionParser
 
     private Action onTestRequest(final int offset, final int length)
     {
-        final TestRequestDecoder testRequest = this.testRequest;
+        final AbstractTestRequestDecoder testRequest = this.testRequest;
 
         testRequest.reset();
         testRequest.decode(asciiBuffer, offset, length);
@@ -283,7 +286,7 @@ public class SessionParser
 
     private Action onReject(final int offset, final int length)
     {
-        final RejectDecoder reject = this.reject;
+        final AbstractRejectDecoder reject = this.reject;
 
         reject.reset();
         reject.decode(asciiBuffer, offset, length);
@@ -308,7 +311,7 @@ public class SessionParser
 
     private Action onLogout(final int offset, final int length)
     {
-        final LogoutDecoder logout = this.logout;
+        final AbstractLogoutDecoder logout = this.logout;
 
         logout.reset();
         logout.decode(asciiBuffer, offset, length);

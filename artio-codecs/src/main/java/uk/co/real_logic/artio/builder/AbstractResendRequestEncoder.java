@@ -13,13 +13,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.decoder;
+package uk.co.real_logic.artio.builder;
 
-import uk.co.real_logic.artio.builder.Decoder;
-
-public interface AbstractTestRequestDecoder extends Decoder
+public interface AbstractResendRequestEncoder extends Encoder
 {
-    char[] testReqID();
+    AbstractResendRequestEncoder beginSeqNo(int beginSeqNo);
 
-    int testReqIDLength();
+    AbstractResendRequestEncoder endSeqNo(int endSeqNo);
 }

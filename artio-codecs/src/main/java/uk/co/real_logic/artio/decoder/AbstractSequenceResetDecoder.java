@@ -19,4 +19,9 @@ import uk.co.real_logic.artio.builder.Decoder;
 
 public interface AbstractSequenceResetDecoder extends Decoder
 {
+    boolean hasGapFillFlag();
+
+    boolean gapFillFlag();
+
+    int newSeqNo();
 }

@@ -79,12 +79,12 @@ public class DirectSessionProxy implements SessionProxy
 
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
     private final AbstractLogonEncoder logon;
-    private final ResendRequestEncoder resendRequest = new ResendRequestEncoder();
-    private final LogoutEncoder logout = new LogoutEncoder();
-    private final HeartbeatEncoder heartbeat = new HeartbeatEncoder();
-    private final RejectEncoder reject = new RejectEncoder();
-    private final TestRequestEncoder testRequest = new TestRequestEncoder();
-    private final SequenceResetEncoder sequenceReset = new SequenceResetEncoder();
+    private final AbstractResendRequestEncoder resendRequest;
+    private final AbstractLogoutEncoder logout;
+    private final AbstractHeartbeatEncoder heartbeat;
+    private final AbstractRejectEncoder reject;
+    private final AbstractTestRequestEncoder testRequest;
+    private final AbstractSequenceResetEncoder sequenceReset;
     private final List<SessionHeaderEncoder> headers;
 
     private final AsciiFormatter lowSequenceNumber;
@@ -121,6 +121,12 @@ public class DirectSessionProxy implements SessionProxy
 
         final FixDictionary dictionary = FixDictionary.of(fixDictionaryType);
         logon = dictionary.makeLogonEncoder();
+        resendRequest = dictionary.makeResendRequestEncoder();
+        logout = dictionary.makeLogoutEncoder();
+        heartbeat = dictionary.makeHeartbeatEncoder();
+        reject = dictionary.makeRejectEncoder();
+        testRequest = dictionary.makeTestRequestEncoder();
+        sequenceReset = dictionary.makeSequenceResetEncoder();
 
         headers = asList(
             logon.header(),
@@ -150,7 +156,7 @@ public class DirectSessionProxy implements SessionProxy
         final int sequenceIndex,
         final int lastMsgSeqNumProcessed)
     {
-        final HeaderEncoder header = resendRequest.header();
+        final SessionHeaderEncoder header = resendRequest.header();
         setupHeader(header, msgSeqNo, lastMsgSeqNumProcessed);
         resendRequest.beginSeqNo(beginSeqNo)
                      .endSeqNo(endSeqNo);
@@ -164,7 +170,8 @@ public class DirectSessionProxy implements SessionProxy
     }
 
     public long sendLogon(
-        final int msgSeqNo, final int heartbeatIntervalInS,
+        final int msgSeqNo,
+        final int heartbeatIntervalInS,
         final String username,
         final String password,
         final boolean resetSeqNumFlag,
@@ -224,7 +231,7 @@ public class DirectSessionProxy implements SessionProxy
         final int sequenceIndex,
         final int lastMsgSeqNumProcessed)
     {
-        final HeaderEncoder header = logout.header();
+        final SessionHeaderEncoder header = logout.header();
         setupHeader(header, msgSeqNo, lastMsgSeqNumProcessed);
 
         if (text != null)
@@ -292,7 +299,7 @@ public class DirectSessionProxy implements SessionProxy
         final int sequenceIndex,
         final int lastMsgSeqNumProcessed)
     {
-        final HeaderEncoder header = heartbeat.header();
+        final SessionHeaderEncoder header = heartbeat.header();
         setupHeader(header, msgSeqNo, lastMsgSeqNumProcessed);
 
         if (testReqId != null)
@@ -330,7 +337,7 @@ public class DirectSessionProxy implements SessionProxy
         reject.refMsgType(refMsgType, refMsgTypeLength);
         reject.text(LOGGED_ON_SESSION_REJECT_REASONS[rejectReason]);
 
-        final HeaderEncoder header = reject.header();
+        final SessionHeaderEncoder header = reject.header();
         setupHeader(header, msgSeqNo, lastMsgSeqNumProcessed);
 
         reject.refSeqNum(refSeqNum);
@@ -343,7 +350,7 @@ public class DirectSessionProxy implements SessionProxy
     public long sendTestRequest(
         final int msgSeqNo, final CharSequence testReqID, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
-        final HeaderEncoder header = testRequest.header();
+        final SessionHeaderEncoder header = testRequest.header();
         setupHeader(header, msgSeqNo, lastMsgSeqNumProcessed);
 
         testRequest.testReqID(testReqID);
@@ -355,7 +362,7 @@ public class DirectSessionProxy implements SessionProxy
     public long sendSequenceReset(
         final int msgSeqNo, final int newSeqNo, final int sequenceIndex, final int lastMsgSeqNumProcessed)
     {
-        final HeaderEncoder header = sequenceReset.header();
+        final SessionHeaderEncoder header = sequenceReset.header();
         setupHeader(header, msgSeqNo, lastMsgSeqNumProcessed);
 
         sequenceReset.newSeqNo(newSeqNo);

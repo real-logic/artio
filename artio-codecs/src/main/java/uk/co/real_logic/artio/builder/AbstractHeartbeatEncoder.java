@@ -17,4 +17,7 @@ package uk.co.real_logic.artio.builder;
 
 public interface AbstractHeartbeatEncoder extends Encoder
 {
+    AbstractHeartbeatEncoder testReqID(char[] testReqId, int testReqIdLength);
+
+    void resetTestReqID();
 }

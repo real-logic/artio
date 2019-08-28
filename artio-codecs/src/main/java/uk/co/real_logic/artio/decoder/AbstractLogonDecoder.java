@@ -6,7 +6,11 @@ public interface AbstractLogonDecoder extends Decoder
 {
     int heartBtInt();
 
+    boolean supportsUsername();
+
     String usernameAsString();
+
+    boolean supportsPassword();
 
     String passwordAsString();
 

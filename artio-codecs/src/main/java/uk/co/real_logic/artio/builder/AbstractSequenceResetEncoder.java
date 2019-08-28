@@ -17,4 +17,5 @@ package uk.co.real_logic.artio.builder;
 
 public interface AbstractSequenceResetEncoder extends Encoder
 {
+    AbstractSequenceResetEncoder newSeqNo(int newSeqNo);
 }

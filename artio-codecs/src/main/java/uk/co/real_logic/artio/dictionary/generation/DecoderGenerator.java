@@ -16,13 +16,12 @@
 package uk.co.real_logic.artio.dictionary.generation;
 
 import org.agrona.LangUtil;
-import org.agrona.MutableDirectBuffer;
 import org.agrona.generation.OutputManager;
 import org.agrona.generation.ResourceConsumer;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
-import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
+import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
 import uk.co.real_logic.artio.fields.*;
 
@@ -31,12 +30,14 @@ import java.io.Writer;
 import java.util.*;
 import java.util.stream.Stream;
 
+import static java.util.Collections.emptySet;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.*;
 import static uk.co.real_logic.artio.dictionary.generation.ConstantGenerator.sizeHashSet;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.NULL_VAL_NAME;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
+import static uk.co.real_logic.artio.dictionary.generation.OptionalSessionFields.DECODER_OPTIONAL_SESSION_FIELDS;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 // TODO: optimisations
@@ -154,7 +155,7 @@ public class DecoderGenerator extends Generator
 
                 if (REQUIRED_SESSION_CODECS.contains(className))
                 {
-                    out.append(importFor( "uk.co.real_logic.artio.decoder.Abstract" + className));
+                    out.append(importFor("uk.co.real_logic.artio.decoder.Abstract" + className));
                 }
                 else if (type == HEADER)
                 {
@@ -191,7 +192,7 @@ public class DecoderGenerator extends Generator
                 interfaces.add("Abstract" + className);
             }
         }
-        else  if (type == HEADER)
+        else if (type == HEADER)
         {
             interfaces.add(SessionHeaderDecoder.class.getSimpleName());
         }
@@ -209,7 +210,7 @@ public class DecoderGenerator extends Generator
         }
         groupMethods(out, aggregate);
         headerMethods(out, aggregate, type);
-        getters(out, aggregate.entries());
+        generateGetters(out, className, aggregate.entries());
         out.append(decodeMethod(aggregate.entries(), aggregate, type));
         out.append(completeResetMethod(isMessage, aggregate.entries(), additionalReset(isGroup)));
         out.append(toString(aggregate, isMessage));
@@ -719,12 +720,14 @@ public class DecoderGenerator extends Generator
             stringAsciiView);
     }
 
-    private void getter(final Entry entry, final Writer out) throws IOException
+    private void generateGetter(
+        final Entry entry, final Writer out, final Set<String> missingOptionalFields)
+        throws IOException
     {
         entry.forEach(
-            (field) -> out.append(fieldGetter(entry, field)),
-            (group) -> groupGetter(group, out),
-            (component) -> componentGetter(component, out));
+            (field) -> out.append(fieldGetter(entry, field, missingOptionalFields)),
+            (group) -> groupGetter(group, out, missingOptionalFields),
+            (component) -> componentGetter(component, out, missingOptionalFields));
     }
 
     private void groupMethods(final Writer out, final Aggregate aggregate) throws IOException
@@ -782,23 +785,50 @@ public class DecoderGenerator extends Generator
             fullType);
     }
 
-    private void getters(final Writer out, final List<Entry> entries) throws IOException
+    private void generateGetters(final Writer out, final String className, final List<Entry> entries)
+        throws IOException
     {
+        final List<String> optionalFields = DECODER_OPTIONAL_SESSION_FIELDS.get(className);
+        final Set<String> missingOptionalFields = (optionalFields == null) ? emptySet() : new HashSet<>(optionalFields);
+
         for (final Entry entry : entries)
         {
-            getter(entry, out);
+            generateGetter(entry, out, missingOptionalFields);
+        }
+
+        generateMissingOptionalSessionFields(out, className, missingOptionalFields);
+        generateOptionalSessionFieldsSupportedMethods(optionalFields, missingOptionalFields, out);
+    }
+
+    private void generateMissingOptionalSessionFields(
+        final Writer out, final String className, final Set<String> missingOptionalFields)
+        throws IOException
+    {
+        for (final String optionalField : missingOptionalFields)
+        {
+            final String propertyName = formatPropertyName(optionalField);
+
+            out.append(String.format(
+                "    public String %1$sAsString()\n" +
+                    "    {\n" +
+                    "        throw new UnsupportedOperationException();\n" +
+                    "    }\n",
+                propertyName,
+                className));
         }
     }
 
-    private void componentGetter(final Component component, final Writer out) throws IOException
+    private void componentGetter(
+        final Component component, final Writer out, final Set<String> missingOptionalFields)
+        throws IOException
     {
         final Aggregate parentAggregate = currentAggregate;
         currentAggregate = component;
-        wrappedForEachEntry(component, out, entry -> getter(entry, out));
+        wrappedForEachEntry(component, out, entry -> generateGetter(entry, out, missingOptionalFields));
         currentAggregate = parentAggregate;
     }
 
-    private void groupGetter(final Group group, final Writer out) throws IOException
+    private void groupGetter(final Group group, final Writer out, final Set<String> missingOptionalFields) throws IOException
     {
         // The component interface will generate the group class
         if (!(currentAggregate instanceof Component))
@@ -808,7 +838,7 @@ public class DecoderGenerator extends Generator
         }
 
         final Entry numberField = group.numberField();
-        final String prefix = fieldGetter(numberField, (Field)numberField.element());
+        final String prefix = fieldGetter(numberField, (Field)numberField.element(), missingOptionalFields);
 
         out.append(String.format(
             "\n" +
@@ -878,13 +908,15 @@ public class DecoderGenerator extends Generator
             formatPropertyName(group.name())));
     }
 
-    private String fieldGetter(final Entry entry, final Field field)
+    private String fieldGetter(final Entry entry, final Field field, final Set<String> missingOptionalFields)
     {
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
         final Type type = field.type();
         final String optionalCheck = optionalCheck(entry);
         final String asStringBody = generateAsStringBody(entry, name, fieldName);
+
+        missingOptionalFields.remove(name);
 
         final String extraStringDecode = type.isStringBased() ? String.format(
             "    public String %1$sAsString()\n" +

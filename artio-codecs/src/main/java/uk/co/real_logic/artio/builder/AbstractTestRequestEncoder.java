@@ -17,4 +17,5 @@ package uk.co.real_logic.artio.builder;
 
 public interface AbstractTestRequestEncoder extends Encoder
 {
+    AbstractTestRequestEncoder testReqID(CharSequence testReqID);
 }

@@ -20,30 +20,29 @@ import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.OutputManager;
+import uk.co.real_logic.artio.builder.AbstractLogonEncoder;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.ir.*;
+import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Entry.Element;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
-import static java.util.Collections.emptyList;
-import static java.util.Collections.singletonList;
+import static java.util.Collections.*;
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.GROUP;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.HEADER;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.hasEnumGenerated;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
+import static uk.co.real_logic.artio.dictionary.generation.OptionalSessionFields.ENCODER_OPTIONAL_SESSION_FIELDS;
 import static uk.co.real_logic.artio.util.MutableAsciiBuffer.LONGEST_INT_LENGTH;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatClassName;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
@@ -52,6 +51,7 @@ public class EncoderGenerator extends Generator
 {
     private static final Set<String> REQUIRED_SESSION_CODECS = new HashSet<>(Arrays.asList(
         "LogonEncoder",
+        "ResendRequestEncoder",
         "LogoutEncoder",
         "HeartbeatEncoder",
         "RejectEncoder",
@@ -198,10 +198,9 @@ public class EncoderGenerator extends Generator
             {
                 out.append(fileHeader(builderPackage));
 
-
                 if (REQUIRED_SESSION_CODECS.contains(className))
                 {
-                    out.append(importFor( "uk.co.real_logic.artio.builder.Abstract" + className));
+                    out.append(importFor("uk.co.real_logic.artio.builder.Abstract" + className));
                 }
 
                 generateImports(
@@ -379,24 +378,48 @@ public class EncoderGenerator extends Generator
     private void generateSetters(final Writer out, final String className, final List<Entry> entries)
         throws IOException
     {
+        final List<String> optionalFields = ENCODER_OPTIONAL_SESSION_FIELDS.get(className);
+        final Set<String> missingOptionalFields = (optionalFields == null) ? emptySet() : new HashSet<>(optionalFields);
+
         for (final Entry entry : entries)
         {
-            generateSetter(className, entry, out);
+            generateSetter(className, entry, out, missingOptionalFields);
+        }
+
+        generateMissingOptionalSessionFields(out, className, missingOptionalFields);
+        generateOptionalSessionFieldsSupportedMethods(optionalFields, missingOptionalFields, out);
+    }
+
+    private void generateMissingOptionalSessionFields(final Writer out, final String className, final Set<String> missingOptionalFields)
+        throws IOException
+    {
+        for (final String optionalField : missingOptionalFields)
+        {
+            final String propertyName = formatPropertyName(optionalField);
+
+            out.append(String.format(
+                "    public %2$s %1$s(CharSequence value)\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n",
+                propertyName,
+                className));
         }
     }
 
-    private void generateSetter(final String className, final Entry entry, final Writer out) throws IOException
+    private void generateSetter(
+        final String className, final Entry entry, final Writer out, final Set<String> optionalFields)
     {
         if (!isBodyLength(entry))
         {
             entry.forEach(
-                (field) -> out.append(generateFieldSetter(className, field)),
-                (group) -> generateGroup(className, group, out),
+                (field) -> out.append(generateFieldSetter(className, field, optionalFields)),
+                (group) -> generateGroup(className, group, out, optionalFields),
                 (component) -> generateComponentField(encoderClassName(entry.name()), component, out));
         }
     }
 
-    private String generateFieldSetter(final String className, final Field field)
+    private String generateFieldSetter(final String className, final Field field, final Set<String> optionalFields)
     {
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
@@ -410,6 +433,8 @@ public class EncoderGenerator extends Generator
 
         final Function<String, String> generateSetter =
             (type) -> generateSetter(name, type, fieldName, hasField, className, hasAssign, enumSetter);
+
+        optionalFields.remove(name);
 
         switch (field.type())
         {
@@ -461,12 +486,14 @@ public class EncoderGenerator extends Generator
         }
     }
 
-    private void generateGroup(final String className, final Group group, final Writer out) throws IOException
+    private void generateGroup(
+        final String className, final Group group, final Writer out, final Set<String> optionalFields)
+        throws IOException
     {
         generateGroupClass(group, out);
 
         final Entry numberField = group.numberField();
-        generateSetter(className, numberField, out);
+        generateSetter(className, numberField, out, optionalFields);
 
         out.append(String.format(
             "\n" +

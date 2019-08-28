@@ -21,13 +21,13 @@ import uk.co.real_logic.artio.decoder.*;
 
 public interface FixDictionary
 {
-    static FixDictionary of(Class<? extends FixDictionary> fixDictionaryType)
+    static FixDictionary of(final Class<? extends FixDictionary> fixDictionaryType)
     {
         try
         {
             return fixDictionaryType.newInstance();
         }
-        catch (InstantiationException | IllegalAccessException e)
+        catch (final InstantiationException | IllegalAccessException e)
         {
             LangUtil.rethrowUnchecked(e);
             throw new RuntimeException();  // Never invoked
@@ -37,6 +37,8 @@ public interface FixDictionary
     String beginString();
 
     AbstractLogonEncoder makeLogonEncoder();
+
+    AbstractResendRequestEncoder makeResendRequestEncoder();
 
     AbstractLogoutEncoder makeLogoutEncoder();
 
@@ -61,4 +63,5 @@ public interface FixDictionary
     AbstractHeartbeatDecoder makeHeartbeatDecoder();
 
     SessionHeaderDecoder makeHeaderDecoder();
+
 }

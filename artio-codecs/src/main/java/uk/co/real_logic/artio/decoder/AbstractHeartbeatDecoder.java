@@ -19,4 +19,9 @@ import uk.co.real_logic.artio.builder.Decoder;
 
 public interface AbstractHeartbeatDecoder extends Decoder
 {
+    boolean hasTestReqID();
+
+    int testReqIDLength();
+
+    char[] testReqID();
 }

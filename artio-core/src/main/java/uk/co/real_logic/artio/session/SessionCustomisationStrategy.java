@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.session;
 
 import uk.co.real_logic.artio.builder.AbstractLogonEncoder;
+import uk.co.real_logic.artio.builder.AbstractLogoutEncoder;
 import uk.co.real_logic.artio.builder.LogoutEncoder;
 
 /**
@@ -46,5 +47,5 @@ public interface SessionCustomisationStrategy
      * @param logout the logout message about to be sent
      * @param sessionId the surrogate id for the Session that is being customised
      */
-    void configureLogout(/*TODO: Abstract*/LogoutEncoder logout, long sessionId);
+    void configureLogout(AbstractLogoutEncoder logout, long sessionId);
 }
