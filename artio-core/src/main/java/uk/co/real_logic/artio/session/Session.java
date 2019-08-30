@@ -485,9 +485,7 @@ public class Session implements AutoCloseable
     {
         validateCanSendMessage();
 
-        final SessionHeaderEncoder header = encoder.header();
-
-        final int encodedSentSeqNum = encode(header);
+        final int encodedSentSeqNum = encode(encoder.header());
 
         final long result = encoder.encode(asciiBuffer, 0);
         final int length = Encoder.length(result);
