@@ -448,20 +448,14 @@ public class Session implements AutoCloseable
     }
 
     /**
-     * Send a message on this session.
+     * Encode header with session state
      *
-     * @param encoder the encoder of the message to be sent
-     * @return the position in the stream that corresponds to the end of this message or a negative
-     * number indicating an error status.
-     * @throws IndexOutOfBoundsException if the encoded message is too large, if this happens consider
-     *                                   increasing {@link CommonConfiguration#sessionBufferSize(int)}
+     * @param header the encoder header
+     * @return the encoded sent sequence number for the header
      */
-    public long send(final Encoder encoder)
+    public int encode(final SessionHeaderEncoder header)
     {
-        validateCanSendMessage();
-
         final int sentSeqNum = newSentSeqNum();
-        final SessionHeaderEncoder header = encoder.header();
         header
             .msgSeqNum(sentSeqNum)
             .sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(time()));
@@ -475,12 +469,31 @@ public class Session implements AutoCloseable
         {
             sessionIdStrategy.setupSession(sessionKey, header);
         }
+        return sentSeqNum;
+    }
+
+    /**
+     * Send a message on this session.
+     *
+     * @param encoder the encoder of the message to be sent
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     * @throws IndexOutOfBoundsException if the encoded message is too large, if this happens consider
+     *                                   increasing {@link CommonConfiguration#sessionBufferSize(int)}
+     */
+    public long send(final Encoder encoder)
+    {
+        validateCanSendMessage();
+
+        final SessionHeaderEncoder header = encoder.header();
+
+        final int encodedSentSeqNum = encode(header);
 
         final long result = encoder.encode(asciiBuffer, 0);
         final int length = Encoder.length(result);
         final int offset = Encoder.offset(result);
 
-        return send(asciiBuffer, offset, length, sentSeqNum, encoder.messageType());
+        return send(asciiBuffer, offset, length, encodedSentSeqNum, encoder.messageType());
     }
 
     /**

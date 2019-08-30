@@ -22,10 +22,11 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
-import uk.co.real_logic.artio.builder.HeaderEncoder;
-import uk.co.real_logic.artio.builder.TestRequestEncoder;
+import uk.co.real_logic.artio.builder.*;
+import uk.co.real_logic.artio.decoder.ExampleMessageDecoder;
 import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
+import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -937,6 +938,61 @@ public abstract class AbstractSessionTest
         verifySendingTimeProblem();
         verifySendingTimeAccuracyLogout();
         verifyDisconnect(times(1));
+    }
+
+    @Test
+    public void shouldEncodeAsciiBufferHeaderExternally()
+    {
+        final char[] testReqId = "MyTestReqId".toCharArray();
+        final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
+        final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[512]);
+        final ExampleMessageDecoder testDecoder = new ExampleMessageDecoder();
+        final ExampleMessageEncoder testEncoder = new ExampleMessageEncoder();
+        final Session session = session();
+
+        // set our encoder field
+        testEncoder.testReqID(testReqId);
+
+        // setup our session for the first encoding
+        long time = fakeClock.time();
+        session.lastSentMsgSeqNum(0);
+
+        // encode the header from the encoder
+        final int encodedSentSeqNum1 = session.encode(testEncoder.header());
+        assertEquals(1, encodedSentSeqNum1); // expect to be 1 more than last sent seq num
+
+        // write our encoder to our buffer (header is not encoded from session)
+        final long result = testEncoder.encode(asciiBuffer, 0);
+        final int offset = Encoder.offset(result);
+        final int length = Encoder.length(result);
+
+        // decode the ascii buffer and make sure all the fields are correctly set
+        testDecoder.decode(asciiBuffer, offset, length);
+        assertArrayEquals(testReqId, testDecoder.testReqID());
+        assertEquals(1, testDecoder.header().msgSeqNum());
+        final String timeAsString1 = new String(timestampEncoder.buffer(), 0, timestampEncoder.encode(time));
+        assertEquals(timeAsString1, testDecoder.header().sendingTimeAsString());
+
+        // update the session internal state
+        session.lastSentMsgSeqNum(1); // increase last seen sent seq number
+        fakeClock.advanceSeconds(1);
+        time = fakeClock.time();
+
+        // encode the header of the encoder again with the new session state
+        final SessionHeaderEncoder headerEncoder = testEncoder.header();
+        final int encodedSentSeqNum2 = session.encode(headerEncoder);
+        assertEquals(2, encodedSentSeqNum2);
+
+        // encode the header of the buffer with the new session state
+        headerEncoder.startMessage(asciiBuffer, 0);
+
+        // decode it to make sure all the fields are correctly set
+        testDecoder.decode(asciiBuffer, offset, length);
+        assertArrayEquals(testReqId, testDecoder.testReqID());
+        assertEquals(2, testDecoder.header().msgSeqNum());
+        final String timeAsString2 = new String(timestampEncoder.buffer(), 0, timestampEncoder.encode(time));
+        assertEquals(timeAsString2, testDecoder.header().sendingTimeAsString());
+        assertNotEquals(timeAsString1, timeAsString2); // make sure time has moved forward
     }
 
     private void verifySendingTimeAccuracyLogout()
