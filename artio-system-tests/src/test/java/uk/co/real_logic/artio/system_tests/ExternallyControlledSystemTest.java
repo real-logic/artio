@@ -20,6 +20,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.*;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.fields.DecimalFloat;
@@ -239,7 +240,8 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         final SessionCustomisationStrategy customisationStrategy,
         final EpochClock clock,
         final long connectionId,
-        final int libraryId)
+        final int libraryId,
+        final Class<? extends FixDictionary> fixDictionaryType)
     {
         sessionProxyRequests++;
         return fakeSessionProxy;

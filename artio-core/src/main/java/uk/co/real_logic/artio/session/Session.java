@@ -583,7 +583,13 @@ public class Session implements AutoCloseable
         final int heartbeatIntervalInS = (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs);
         nextSequenceIndex();
         final long position = proxy.sendLogon(
-            sentSeqNum, heartbeatIntervalInS, username(), password(), true, sequenceIndex(), lastMsgSeqNumProcessed);
+            sentSeqNum,
+            heartbeatIntervalInS,
+            username(),
+            password(),
+            true,
+            sequenceIndex(),
+            lastMsgSeqNumProcessed);
         lastSentMsgSeqNum(sentSeqNum, position);
 
         return position;

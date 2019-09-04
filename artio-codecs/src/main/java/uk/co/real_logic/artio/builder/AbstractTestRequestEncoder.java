@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2019 Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,21 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.session;
+package uk.co.real_logic.artio.builder;
 
-import uk.co.real_logic.artio.builder.AbstractLogonEncoder;
-import uk.co.real_logic.artio.builder.AbstractLogoutEncoder;
-
-/**
- * A {@link SessionCustomisationStrategy} that does no customisation.
- */
-class NoSessionCustomisationStrategy implements SessionCustomisationStrategy
+public interface AbstractTestRequestEncoder extends Encoder
 {
-    public void configureLogon(final AbstractLogonEncoder logon, final long sessionId)
-    {
-    }
-
-    public void configureLogout(final AbstractLogoutEncoder logout, final long sessionId)
-    {
-    }
+    AbstractTestRequestEncoder testReqID(CharSequence testReqID);
 }

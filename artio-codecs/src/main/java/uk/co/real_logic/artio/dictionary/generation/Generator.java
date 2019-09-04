@@ -36,6 +36,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
@@ -618,6 +619,27 @@ public abstract class Generator
     protected boolean isBodyLength(final String name)
     {
         return BODY_LENGTH.equals(name);
+    }
+
+    void generateOptionalSessionFieldsSupportedMethods(
+        final List<String> optionalFields, final Set<String> missingOptionalFields, final Writer out)
+        throws IOException
+    {
+        if (optionalFields != null)
+        {
+            for (final String optionalField : optionalFields)
+            {
+                final boolean inDictionary = !missingOptionalFields.contains(optionalField);
+
+                out.append(String.format(
+                    "    public boolean supports%1$s()\n" +
+                    "    {\n" +
+                    "        return %2$s;\n" +
+                    "    }\n",
+                    optionalField,
+                    inDictionary));
+            }
+        }
     }
 
     protected abstract String stringToString(String fieldName);
