@@ -17,7 +17,6 @@ package uk.co.real_logic.artio.library;
 
 import org.agrona.collections.IntArrayList;
 import uk.co.real_logic.artio.CommonConfiguration;
-import uk.co.real_logic.artio.FixDictionaryImpl;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.SequenceNumberType;
 
@@ -39,7 +38,6 @@ public final class SessionConfiguration
     public static final int NO_RESEND_REQUEST_CHUNK_SIZE = 0;
     public static final boolean DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS = false;
     public static final boolean DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED = false;
-    public static final Class<? extends FixDictionary> DEFAULT_FIX_DICTIONARY = FixDictionaryImpl.class;
 
     private final List<String> hosts;
     private final IntArrayList ports;
@@ -284,7 +282,7 @@ public final class SessionConfiguration
         private int resendRequestChunkSize = NO_RESEND_REQUEST_CHUNK_SIZE;
         private boolean sendRedundantResendRequests = DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS;
         private boolean enableLastMsgSeqNumProcessed;
-        private Class<? extends FixDictionary> fixDictionary = DEFAULT_FIX_DICTIONARY;
+        private Class<? extends FixDictionary> fixDictionary;
 
         private Builder()
         {
@@ -531,6 +529,11 @@ public final class SessionConfiguration
 
         public SessionConfiguration build()
         {
+            if (fixDictionary == null)
+            {
+                fixDictionary = FixDictionary.findDefault();
+            }
+
             return new SessionConfiguration(
                 hosts,
                 ports,

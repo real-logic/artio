@@ -27,7 +27,6 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
-import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -63,6 +62,7 @@ class GatewaySessions
     private final SessionPersistenceStrategy sessionPersistenceStrategy;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
+    private final Class<? extends FixDictionary> acceptorfixDictionary;
 
     private ErrorHandler errorHandler;
 
@@ -82,7 +82,8 @@ class GatewaySessions
         final SessionContexts sessionContexts,
         final SessionPersistenceStrategy sessionPersistenceStrategy,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
-        final SequenceNumberIndexReader receivedSequenceNumberIndex)
+        final SequenceNumberIndexReader receivedSequenceNumberIndex,
+        final Class<? extends FixDictionary> acceptorfixDictionary)
     {
         this.clock = clock;
         this.outboundPublication = outboundPublication;
@@ -100,6 +101,7 @@ class GatewaySessions
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
+        this.acceptorfixDictionary = acceptorfixDictionary;
     }
 
     static GatewaySession removeSessionByConnectionId(final long connectionId, final List<GatewaySession> sessions)
@@ -126,15 +128,13 @@ class GatewaySessions
         final int lastReceivedSequenceNumber,
         final String username,
         final String password,
-        final BlockablePosition engineBlockablePosition)
+        final BlockablePosition engineBlockablePosition,
+        final Class<? extends FixDictionary> fixDictionaryType)
     {
         final long connectionId = gatewaySession.connectionId();
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
-
-        // TODO:
-        final Class<? extends FixDictionary> fixDictionaryType = SessionConfiguration.DEFAULT_FIX_DICTIONARY;
 
         final SessionProxy proxy = new DirectSessionProxy(
             sessionBufferSize,
@@ -184,7 +184,7 @@ class GatewaySessions
         DebugLogger.log(FIX_CONNECTION, "Gateway Acquired Session %d%n", connectionId);
         if (sessionKey != null)
         {
-            gatewaySession.onLogon(username, password, heartbeatIntervalInS);
+            gatewaySession.onLogon(username, password, heartbeatIntervalInS, fixDictionaryType);
             session.initialLastReceivedMsgSeqNum(lastReceivedSequenceNumber);
         }
     }
@@ -461,7 +461,8 @@ class GatewaySessions
                 compositeKey,
                 username,
                 password,
-                logon.heartBtInt());
+                logon.heartBtInt(),
+                acceptorfixDictionary);
 
             // See Framer.handoverNewConnectionToLibrary for sole library mode equivalent
             if (resetSeqNum)

@@ -307,6 +307,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             configuration.enableLastMsgSeqNumProcessed(),
             configuration.username(),
             configuration.password(),
+            configuration.fixDictionary(),
             this.configuration.defaultHeartbeatIntervalInS(),
             correlationId);
     }
@@ -691,7 +692,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final String remoteLocationId,
         final String address,
         final String username,
-        final String password)
+        final String password,
+        final Class<? extends FixDictionary> fixDictionary)
     {
         if (state == CONNECTED)
         {
@@ -730,14 +732,15 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                             sessionState,
                             isReply ? reply.configuration() : null,
                             sequenceIndex,
-                            enableLastMsgSeqNumProcessed);
+                            enableLastMsgSeqNumProcessed,
+                            fixDictionary);
                     }
                     else
                     {
                         DebugLogger.log(FIX_CONNECTION, "Acct Connect: %d, %d%n", connection, libraryId);
                         session = acceptSession(
                             connection, address, sessionState, heartbeatIntervalInS, sequenceIndex,
-                            enableLastMsgSeqNumProcessed);
+                            enableLastMsgSeqNumProcessed, fixDictionary);
                         session.lastSentMsgSeqNum(lastSentSeqNum);
                         session.initialLastReceivedMsgSeqNum(lastRecvSeqNum);
                     }
@@ -763,7 +766,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     session.endOfResendRequestRange(endOfResendRequestRange);
                     session.awaitingHeartbeat(awaitingHeartbeat);
 
-                    createSessionSubscriber(connection, session, reply, slowStatus);
+                    createSessionSubscriber(connection, session, reply, slowStatus, fixDictionary);
                     insertSession(session, connectionType, sessionState);
 
                     DebugLogger.log(GATEWAY_MESSAGE,
@@ -1107,11 +1110,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long connectionId,
         final InternalSession session,
         final InitiateSessionReply reply,
-        final SlowStatus slowStatus)
+        final SlowStatus slowStatus,
+        final Class<? extends FixDictionary> fixDictionary)
     {
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
-            session, validationStrategy, null, SessionConfiguration.DEFAULT_FIX_DICTIONARY); // TODO
+            session, validationStrategy, null, fixDictionary);
         final SessionSubscriber subscriber = new SessionSubscriber(
             parser,
             session,
@@ -1131,13 +1135,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final SessionState state,
         final SessionConfiguration sessionConfiguration,
         final int sequenceIndex,
-        final boolean enableLastMsgSeqNumProcessed)
+        final boolean enableLastMsgSeqNumProcessed,
+        final Class<? extends FixDictionary> fixDictionary)
     {
         final int defaultInterval = configuration.defaultHeartbeatIntervalInS();
         final GatewayPublication publication = transport.outboundPublication();
 
         final MutableAsciiBuffer asciiBuffer = sessionBuffer();
-        final SessionProxy sessionProxy = sessionProxy(connectionId, sessionConfiguration.fixDictionary());
+        final SessionProxy sessionProxy = sessionProxy(connectionId, fixDictionary);
         final int initialReceivedSequenceNumber = initiatorNewSequenceNumber(
             sessionConfiguration, SessionConfiguration::initialReceivedSequenceNumber, lastReceivedSequenceNumber);
         final int initialSentSequenceNumber = initiatorNewSequenceNumber(
@@ -1203,7 +1208,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final SessionState state,
         final int heartbeatIntervalInS,
         final int sequenceIndex,
-        final boolean enableLastMsgSeqNumProcessed)
+        final boolean enableLastMsgSeqNumProcessed,
+        final Class<? extends FixDictionary> fixDictionary)
     {
         final GatewayPublication publication = transport.outboundPublication();
         final long sendingTimeWindow = configuration.sendingTimeWindowInMs();
@@ -1219,7 +1225,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             heartbeatIntervalInS,
             connectionId,
             clock,
-            sessionProxy(connectionId, SessionConfiguration.DEFAULT_FIX_DICTIONARY),
+            sessionProxy(connectionId, fixDictionary),
             publication,
             sessionIdStrategy,
             sendingTimeWindow,

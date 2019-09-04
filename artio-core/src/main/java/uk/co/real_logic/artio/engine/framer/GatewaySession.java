@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.SlowStatus;
@@ -56,6 +57,7 @@ class GatewaySession implements SessionInfo
     private Consumer<GatewaySession> onGatewaySessionLogon;
     private SessionLogonListener logonListener = this::onSessionLogon;
     private boolean initialResetSeqNum;
+    private Class<? extends FixDictionary> fixDictionary;
 
     GatewaySession(
         final long connectionId,
@@ -205,11 +207,13 @@ class GatewaySession implements SessionInfo
     void onLogon(
         final String username,
         final String password,
-        final int heartbeatIntervalInS)
+        final int heartbeatIntervalInS,
+        final Class<? extends FixDictionary> fixDictionary)
     {
         this.username = username;
         this.password = password;
         this.heartbeatIntervalInS = heartbeatIntervalInS;
+        this.fixDictionary = fixDictionary;
         if (session != null)
         {
             session.setupSession(sessionId, sessionKey);
@@ -225,12 +229,13 @@ class GatewaySession implements SessionInfo
         final CompositeKey sessionKey,
         final String username,
         final String password,
-        final int heartbeatIntervalInS)
+        final int heartbeatIntervalInS,
+        final Class<? extends FixDictionary> fixDictionary)
     {
         this.sessionId = sessionId;
         this.context = context;
         this.sessionKey = sessionKey;
-        onLogon(username, password, heartbeatIntervalInS);
+        onLogon(username, password, heartbeatIntervalInS, fixDictionary);
     }
 
     public String username()
@@ -333,5 +338,10 @@ class GatewaySession implements SessionInfo
     boolean initialResetSeqNum()
     {
         return initialResetSeqNum;
+    }
+
+    Class<? extends FixDictionary> fixDictionary()
+    {
+        return fixDictionary;
     }
 }

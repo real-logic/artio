@@ -23,6 +23,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.decoder.*;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
 import uk.co.real_logic.artio.library.SessionConfiguration;
@@ -218,6 +219,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private boolean soleLibraryMode = false;
     private AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.none();
     private long indexFileStateFlushTimeoutInMs = DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
+    private Class<? extends FixDictionary> acceptorfixDictionary;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -629,6 +631,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration acceptorfixDictionary(final Class<? extends FixDictionary> acceptorfixDictionary)
+    {
+        this.acceptorfixDictionary = acceptorfixDictionary;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -799,6 +807,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return indexFileStateFlushTimeoutInMs;
     }
 
+    public Class<? extends FixDictionary> acceptorfixDictionary()
+    {
+        return acceptorfixDictionary;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -952,6 +965,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         if (sessionPersistenceStrategy() == null)
         {
             sessionPersistenceStrategy(alwaysUnindexed());
+        }
+
+        if (acceptorfixDictionary() == null)
+        {
+            acceptorfixDictionary(FixDictionary.findDefault());
         }
 
         return this;

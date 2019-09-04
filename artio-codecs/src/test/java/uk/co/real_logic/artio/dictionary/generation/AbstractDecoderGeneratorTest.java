@@ -20,6 +20,7 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.Test;
 import uk.co.real_logic.artio.builder.Decoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.RejectReason;
@@ -364,10 +365,10 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE);
 
-        final Decoder header = getHeader(decoder);
+        final SessionHeaderDecoder header = getHeader(decoder);
         assertEquals(81, getBodyLength(header));
 
-        final Decoder trailer = getTrailer(decoder);
+        final Object trailer = getTrailer(decoder);
         assertEquals("199", getChecksum(trailer));
     }
 
@@ -1553,24 +1554,24 @@ public abstract class AbstractDecoderGeneratorTest
         return (int)get(group, "groupField");
     }
 
-    private int getBodyLength(final Decoder header) throws Exception
+    private int getBodyLength(final SessionHeaderDecoder header) throws Exception
     {
         return (int)get(header, ExampleDictionary.BODY_LENGTH);
     }
 
-    private Decoder getTrailer(final Decoder trailer) throws Exception
+    private Object getTrailer(final Decoder trailer) throws Exception
     {
-        return (Decoder)get(trailer, "trailer");
+        return get(trailer, "trailer");
     }
 
-    private String getChecksum(final Decoder trailer) throws Exception
+    private String getChecksum(final Object trailer) throws Exception
     {
         return (String)get(trailer, "checkSumAsString");
     }
 
-    private Decoder getHeader(final Decoder decoder) throws Exception
+    private SessionHeaderDecoder getHeader(final Decoder decoder) throws Exception
     {
-        return (Decoder)get(decoder, "header");
+        return (SessionHeaderDecoder)get(decoder, "header");
     }
 
     private Decoder decodeHeartbeat(final String example) throws Exception

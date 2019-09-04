@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.protocol;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.*;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -312,7 +313,8 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.remoteLocationId(),
             manageSession.address(),
             manageSession.username(),
-            manageSession.password());
+            manageSession.password(),
+            FixDictionary.find(manageSession.fixDictionary()));
     }
 
     private Action onEndOfDay(

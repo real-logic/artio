@@ -23,6 +23,8 @@ import java.lang.reflect.InvocationTargetException;
 
 public interface FixDictionary
 {
+    String DEFAULT_FIX_DICTIONARY_NAME = "uk.co.real_logic.artio.FixDictionaryImpl";
+
     static FixDictionary of(final Class<? extends FixDictionary> fixDictionaryType)
     {
         try
@@ -38,6 +40,24 @@ public interface FixDictionary
         {
             LangUtil.rethrowUnchecked(e);
             throw new RuntimeException();  // Never invoked
+        }
+    }
+
+    static Class<? extends FixDictionary> findDefault()
+    {
+        return find(DEFAULT_FIX_DICTIONARY_NAME);
+    }
+
+    @SuppressWarnings("unchecked")
+    static Class<? extends FixDictionary> find(final String name)
+    {
+        try
+        {
+            return (Class<? extends FixDictionary>)Class.forName(name);
+        }
+        catch (final ClassNotFoundException e)
+        {
+            throw new IllegalStateException("No FIX Dictionary specified and default found on the classpath", e);
         }
     }
 

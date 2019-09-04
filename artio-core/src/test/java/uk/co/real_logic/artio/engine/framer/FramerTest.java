@@ -31,6 +31,7 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.Timing;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.CompletionPosition;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
@@ -539,6 +540,7 @@ public class FramerTest
             any(),
             any(),
             any(),
+            any(),
             any())).thenReturn(BACK_PRESSURED, POSITION);
 
         aClientConnects();
@@ -573,6 +575,7 @@ public class FramerTest
             anyInt(),
             anyInt(),
             anyBoolean(),
+            any(),
             any(),
             any(),
             any(),
@@ -768,6 +771,7 @@ public class FramerTest
             any(),
             any(),
             any(),
+            any(),
             any())).thenReturn(BACK_PRESSURED, POSITION);
     }
 
@@ -785,6 +789,7 @@ public class FramerTest
             eq(HEARTBEAT_INTERVAL_IN_S),
             anyInt(),
             anyInt(),
+            any(),
             any(),
             any(),
             any());
@@ -844,6 +849,7 @@ public class FramerTest
             false,
             "",
             "",
+            FixDictionary.findDefault(),
             HEARTBEAT_INTERVAL_IN_S,
             CORR_ID,
             header);
@@ -898,6 +904,7 @@ public class FramerTest
             any(),
             any(),
             any(),
+            any(),
             any());
     }
 
@@ -925,6 +932,7 @@ public class FramerTest
             anyInt(),
             anyInt(),
             anyBoolean(),
+            any(),
             any(),
             any(),
             any(),

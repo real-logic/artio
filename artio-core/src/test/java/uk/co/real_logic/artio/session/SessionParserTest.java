@@ -19,8 +19,8 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.fields.RejectReason;
-import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
@@ -37,7 +37,7 @@ public class SessionParserTest
     private MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId("das");
 
     private SessionParser parser = new SessionParser(
-        mockSession, validationStrategy, null, SessionConfiguration.DEFAULT_FIX_DICTIONARY);
+        mockSession, validationStrategy, null, FixDictionary.findDefault());
 
     @Before
     public void setUp()
