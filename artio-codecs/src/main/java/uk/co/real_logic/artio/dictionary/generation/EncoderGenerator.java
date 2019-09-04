@@ -20,18 +20,19 @@ import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.OutputManager;
-import uk.co.real_logic.artio.builder.AbstractLogonEncoder;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.ir.*;
-import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Entry.Element;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.IntStream;
 
@@ -390,7 +391,8 @@ public class EncoderGenerator extends Generator
         generateOptionalSessionFieldsSupportedMethods(optionalFields, missingOptionalFields, out);
     }
 
-    private void generateMissingOptionalSessionFields(final Writer out, final String className, final Set<String> missingOptionalFields)
+    private void generateMissingOptionalSessionFields(
+        final Writer out, final String className, final Set<String> missingOptionalFields)
         throws IOException
     {
         for (final String optionalField : missingOptionalFields)

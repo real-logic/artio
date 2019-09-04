@@ -19,15 +19,22 @@ import org.agrona.LangUtil;
 import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.decoder.*;
 
+import java.lang.reflect.InvocationTargetException;
+
 public interface FixDictionary
 {
     static FixDictionary of(final Class<? extends FixDictionary> fixDictionaryType)
     {
         try
         {
-            return fixDictionaryType.newInstance();
+            return fixDictionaryType.getConstructor().newInstance();
         }
-        catch (final InstantiationException | IllegalAccessException e)
+        catch (final NoSuchMethodException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+            throw new IllegalStateException();  // Never invoked
+        }
+        catch (final InstantiationException | IllegalAccessException | InvocationTargetException e)
         {
             LangUtil.rethrowUnchecked(e);
             throw new RuntimeException();  // Never invoked

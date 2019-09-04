@@ -17,7 +17,6 @@ package uk.co.real_logic.artio.session;
 
 import uk.co.real_logic.artio.builder.AbstractLogonEncoder;
 import uk.co.real_logic.artio.builder.AbstractLogoutEncoder;
-import uk.co.real_logic.artio.builder.LogoutEncoder;
 
 /**
  * Implement this interface if you want to alter logon or logoff messages with additional

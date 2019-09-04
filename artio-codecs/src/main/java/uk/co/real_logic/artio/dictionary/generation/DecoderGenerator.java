@@ -810,9 +810,9 @@ public class DecoderGenerator extends Generator
 
             out.append(String.format(
                 "    public String %1$sAsString()\n" +
-                    "    {\n" +
-                    "        throw new UnsupportedOperationException();\n" +
-                    "    }\n",
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n",
                 propertyName,
                 className));
         }
@@ -828,7 +828,8 @@ public class DecoderGenerator extends Generator
         currentAggregate = parentAggregate;
     }
 
-    private void groupGetter(final Group group, final Writer out, final Set<String> missingOptionalFields) throws IOException
+    private void groupGetter(final Group group, final Writer out, final Set<String> missingOptionalFields)
+        throws IOException
     {
         // The component interface will generate the group class
         if (!(currentAggregate instanceof Component))
