@@ -144,7 +144,8 @@ class GatewaySessions
             clock,
             connectionId,
             FixEngine.ENGINE_LIBRARY_ID,
-            fixDictionaryType);
+            fixDictionaryType,
+            errorHandler);
 
         final InternalSession session = new InternalSession(
             heartbeatIntervalInS,

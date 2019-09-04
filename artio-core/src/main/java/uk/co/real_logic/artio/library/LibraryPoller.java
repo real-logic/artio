@@ -1246,7 +1246,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             new SystemEpochClock(),
             connectionId,
             libraryId,
-            dictionaryType);
+            dictionaryType,
+            ex -> LangUtil.rethrowUnchecked(ex));
     }
 
     private void checkState()

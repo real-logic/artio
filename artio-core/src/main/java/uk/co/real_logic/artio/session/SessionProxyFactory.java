@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.session;
 
+import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -34,5 +35,6 @@ public interface SessionProxyFactory
         EpochClock clock,
         long connectionId,
         int libraryId,
-        Class<? extends FixDictionary> fixDictionaryType);
+        Class<? extends FixDictionary> fixDictionaryType,
+        ErrorHandler errorHandler);
 }

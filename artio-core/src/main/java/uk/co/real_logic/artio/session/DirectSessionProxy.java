@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.session;
 
+import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.builder.*;
@@ -89,6 +90,8 @@ public class DirectSessionProxy implements SessionProxy
 
     private final AsciiFormatter lowSequenceNumber;
     private final MutableAsciiBuffer buffer;
+    private final Class<? extends FixDictionary> fixDictionaryType;
+    private final ErrorHandler errorHandler;
     private final GatewayPublication gatewayPublication;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionCustomisationStrategy customisationStrategy;
@@ -107,7 +110,8 @@ public class DirectSessionProxy implements SessionProxy
         final EpochClock clock,
         final long connectionId,
         final int libraryId,
-        final Class<? extends FixDictionary> fixDictionaryType)
+        final Class<? extends FixDictionary> fixDictionaryType,
+        final ErrorHandler errorHandler)
     {
         this.gatewayPublication = gatewayPublication;
         this.sessionIdStrategy = sessionIdStrategy;
@@ -116,6 +120,8 @@ public class DirectSessionProxy implements SessionProxy
         this.connectionId = connectionId;
         this.libraryId = libraryId;
         this.buffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
+        this.fixDictionaryType = fixDictionaryType;
+        this.errorHandler = errorHandler;
         lowSequenceNumber = new AsciiFormatter("MsgSeqNum too low, expecting %s but received %s");
         timestampEncoder.initialise(clock.time());
 
@@ -188,17 +194,42 @@ public class DirectSessionProxy implements SessionProxy
 
         if (notNullOrEmpty(username))
         {
-            logon.username(username);
+            if (!logon.supportsUsername())
+            {
+                onMissingFieldError("username");
+            }
+            else
+            {
+                logon.username(username);
+            }
         }
+
         if (notNullOrEmpty(password))
         {
-            logon.password(password);
+            if (!logon.supportsPassword())
+            {
+                onMissingFieldError("password");
+            }
+            else
+            {
+                logon.password(password);
+            }
         }
+
         customisationStrategy.configureLogon(logon, sessionId);
         seqNumResetRequested = logon.resetSeqNumFlag(); // get customized or argument
 
         final long result = logon.encode(buffer, 0);
         return send(result, LogonDecoder.MESSAGE_TYPE, sequenceIndex, logon, msgSeqNo);
+    }
+
+    private void onMissingFieldError(final String field)
+    {
+        errorHandler.onError(new IllegalStateException(String.format(
+            "Dictionary: %1$s does not support %2$s field but %2$s is provided",
+            fixDictionaryType.getCanonicalName(),
+            field
+        )));
     }
 
     private boolean notNullOrEmpty(final String string)

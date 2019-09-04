@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochClock;
 import org.junit.Before;
 import org.junit.Test;
@@ -241,7 +242,8 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         final EpochClock clock,
         final long connectionId,
         final int libraryId,
-        final Class<? extends FixDictionary> fixDictionaryType)
+        final Class<? extends FixDictionary> fixDictionaryType,
+        final ErrorHandler errorHandler)
     {
         sessionProxyRequests++;
         return fakeSessionProxy;
