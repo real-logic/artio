@@ -22,7 +22,7 @@ import org.agrona.generation.OutputManager;
 import uk.co.real_logic.artio.EncodingException;
 import uk.co.real_logic.artio.dictionary.CharArraySet;
 import uk.co.real_logic.artio.dictionary.CharArrayWrapper;
-import uk.co.real_logic.artio.dictionary.StandardFixConstants;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Entry.Element;
 import uk.co.real_logic.artio.fields.DecimalFloat;
@@ -136,7 +136,7 @@ public abstract class Generator
             .append(importFor(MutableDirectBuffer.class))
             .append(importFor(AsciiSequenceView.class))
             .append(importStaticFor(CodecUtil.class))
-            .append(importStaticFor(StandardFixConstants.class))
+            .append(importStaticFor(SessionConstants.class))
             .append(importFor(topType(MESSAGE)));
 
         if (topType(GROUP) != topType(MESSAGE))

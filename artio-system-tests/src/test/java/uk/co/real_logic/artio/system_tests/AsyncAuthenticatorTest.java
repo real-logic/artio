@@ -19,7 +19,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -117,14 +117,14 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         volatile boolean blockingAuthenticateCalled;
         private volatile AuthenticationProxy authProxy;
 
-        public void authenticateAsync(final LogonDecoder logon, final AuthenticationProxy authProxy)
+        public void authenticateAsync(final AbstractLogonDecoder logon, final AuthenticationProxy authProxy)
         {
             this.authProxy = authProxy;
 
             assertThat(authProxy.remoteAddress(), containsString("127.0.0.1"));
         }
 
-        public boolean authenticate(final LogonDecoder logon)
+        public boolean authenticate(final AbstractLogonDecoder logon)
         {
             blockingAuthenticateCalled = true;
 

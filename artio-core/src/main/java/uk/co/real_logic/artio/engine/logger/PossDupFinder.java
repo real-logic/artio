@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.ValidationError;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.otf.MessageControl;
 import uk.co.real_logic.artio.otf.OtfMessageAcceptor;
@@ -46,15 +46,15 @@ class PossDupFinder implements OtfMessageAcceptor
     {
         switch (tag)
         {
-            case Constants.POSS_DUP_FLAG:
+            case SessionConstants.POSS_DUP_FLAG:
                 possDupOffset = offset;
                 break;
 
-            case Constants.SENDING_TIME:
+            case SessionConstants.SENDING_TIME:
                 sendingTimeEnd = offset + length + 1;
                 break;
 
-            case Constants.BODY_LENGTH:
+            case SessionConstants.BODY_LENGTH:
                 bodyLengthOffset = offset;
                 lengthOfBodyLength = length;
                 bodyLength = buffer.getInt(offset, offset + length);

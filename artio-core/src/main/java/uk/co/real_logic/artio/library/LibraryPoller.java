@@ -28,7 +28,7 @@ import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.*;
-import uk.co.real_logic.artio.builder.HeaderEncoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.*;
@@ -48,8 +48,8 @@ import java.util.function.ToIntFunction;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.util.Objects.requireNonNull;
-import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
+import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
@@ -247,7 +247,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             sequenceIndex);
     }
 
-    Reply<SessionWriter> followerSession(final HeaderEncoder headerEncoder, final long timeoutInMs)
+    Reply<SessionWriter> followerSession(final SessionHeaderEncoder headerEncoder, final long timeoutInMs)
     {
         validateEndOfDay();
 

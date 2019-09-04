@@ -92,7 +92,8 @@ public class EngineContext implements AutoCloseable
                 configuration.outboundLibraryStream(),
                 recordingCoordinator.outboundRecordingIdLookup(),
                 configuration.indexFileStateFlushTimeoutInMs(),
-                epochClock);
+                epochClock
+            );
             receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.receivedSequenceNumberBuffer(),
                 configuration.receivedSequenceNumberIndex(),
@@ -100,7 +101,8 @@ public class EngineContext implements AutoCloseable
                 configuration.inboundLibraryStream(),
                 recordingCoordinator.inboundRecordingIdLookup(),
                 configuration.indexFileStateFlushTimeoutInMs(),
-                epochClock);
+                epochClock
+            );
 
             newStreams();
             newArchivingAgent();

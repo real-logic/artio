@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.session;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 
 /**
  * This strategy creates the composite key that uniquely identifies Session Ids. This is a strategy
@@ -56,7 +56,7 @@ public interface SessionIdStrategy
      * @param header the header of the logon message.
      * @return the composite session key.
      */
-    CompositeKey onAcceptLogon(HeaderDecoder header);
+    CompositeKey onAcceptLogon(SessionHeaderDecoder header);
 
     /**
      * Creates the composite session key when you initiate a logon.

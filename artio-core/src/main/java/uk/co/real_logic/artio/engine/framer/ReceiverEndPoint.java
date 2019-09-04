@@ -20,7 +20,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
-import uk.co.real_logic.artio.dictionary.StandardFixConstants;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -37,8 +37,8 @@ import java.util.Objects;
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
-import static uk.co.real_logic.artio.dictionary.StandardFixConstants.MIN_MESSAGE_SIZE;
-import static uk.co.real_logic.artio.dictionary.StandardFixConstants.START_OF_HEADER;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.MIN_MESSAGE_SIZE;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.START_OF_HEADER;
 import static uk.co.real_logic.artio.messages.DisconnectReason.NO_LOGON;
 import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
@@ -256,7 +256,7 @@ class ReceiverEndPoint
         int offset = 0;
         while (true)
         {
-            if (usedBufferData < offset + StandardFixConstants.MIN_MESSAGE_SIZE) // Need more data
+            if (usedBufferData < offset + SessionConstants.MIN_MESSAGE_SIZE) // Need more data
             {
                 // Need more data
                 break;

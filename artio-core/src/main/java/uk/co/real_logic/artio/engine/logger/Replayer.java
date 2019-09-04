@@ -27,6 +27,7 @@ import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.decoder.ResendRequestDecoder;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
@@ -128,7 +129,7 @@ public class Replayer implements ProtocolHandler, Agent
         final int sequenceNumber,
         final long position)
     {
-        if (messageType == ResendRequestDecoder.MESSAGE_TYPE && status == OK)
+        if (messageType == SessionConstants.RESEND_REQUEST_MESSAGE_TYPE && status == OK)
         {
             final int limit = Math.min(length, srcBuffer.capacity() - srcOffset);
 

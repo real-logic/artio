@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.dictionary;
 
-public final class StandardFixConstants
+public final class SessionConstants
 {
     public static final byte START_OF_HEADER = 0x01;
 
@@ -27,7 +27,20 @@ public final class StandardFixConstants
 
     // Message Types
 
-    public static final int HEARTBEAT = 0;
+    public static final int BODY_LENGTH = 9;
     public static final int CHECKSUM = 10;
     public static final int MESSAGE_TYPE = 35;
+    public static final int NEW_SEQ_NO = 36;
+    public static final int POSS_DUP_FLAG = 43;
+    public static final int SENDING_TIME = 52;
+
+
+    public static final int RESEND_REQUEST_MESSAGE_TYPE = 2;
+    public static final String LOGON_MESSAGE_TYPE = "A";
+    public static final char[] LOGON_MESSAGE_TYPE_CHARS = LOGON_MESSAGE_TYPE.toCharArray();
+    public static final char[] TEST_REQUEST_MESSAGE_TYPE_CHARS = "1".toCharArray();
+    public static final char[] SEQUENCE_RESET_MESSAGE_TYPE_CHARS = "4".toCharArray();
+    public static final char[] REJECT_MESSAGE_TYPE_CHARS = "3".toCharArray();
+    public static final char[] HEARTBEAT_MESSAGE_TYPE_CHARS = "0".toCharArray();
+
 }

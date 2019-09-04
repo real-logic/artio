@@ -53,8 +53,8 @@ public class SequenceNumberIndexWriter implements Index
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
-    private final ResetSequenceNumberDecoder resetSequenceNumber = new ResetSequenceNumberDecoder();
     private final HeaderDecoder fixHeader = new HeaderDecoder();
+    private final ResetSequenceNumberDecoder resetSequenceNumber = new ResetSequenceNumberDecoder();
 
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final MessageHeaderDecoder fileHeaderDecoder = new MessageHeaderDecoder();
@@ -158,7 +158,7 @@ public class SequenceNumberIndexWriter implements Index
 
         switch (messageHeader.templateId())
         {
-            case FixMessageEncoder.TEMPLATE_ID:
+            case FixMessageDecoder.TEMPLATE_ID:
             {
                 messageFrame.wrap(buffer, offset, actingBlockLength, version);
 
@@ -169,12 +169,12 @@ public class SequenceNumberIndexWriter implements Index
 
                 offset += actingBlockLength + 2;
 
+                final long sessionId = messageFrame.session();
+
                 asciiBuffer.wrap(buffer);
                 fixHeader.decode(asciiBuffer, offset, messageFrame.bodyLength());
 
                 final int msgSeqNum = fixHeader.msgSeqNum();
-                final long sessionId = messageFrame.session();
-
                 saveRecord(msgSeqNum, sessionId);
                 break;
             }

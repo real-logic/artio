@@ -24,7 +24,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static uk.co.real_logic.artio.ValidationError.INVALID_CHECKSUM;
 import static uk.co.real_logic.artio.ValidationError.PARSE_ERROR;
-import static uk.co.real_logic.artio.dictionary.StandardFixConstants.*;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.otf.MessageControl.STOP;
 import static uk.co.real_logic.artio.util.AsciiBuffer.UNKNOWN_INDEX;
 

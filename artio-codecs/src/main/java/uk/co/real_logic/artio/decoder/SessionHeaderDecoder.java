@@ -32,9 +32,25 @@ public interface SessionHeaderDecoder
 
     int targetCompIDLength();
 
+    char[] targetSubID();
+
+    int targetSubIDLength();
+
+    char[] targetLocationID();
+
+    int targetLocationIDLength();
+
     char[] senderCompID();
 
     int senderCompIDLength();
+
+    char[] senderSubID();
+
+    int senderSubIDLength();
+
+    char[] senderLocationID();
+
+    int senderLocationIDLength();
 
     void reset();
 

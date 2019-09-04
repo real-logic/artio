@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.validation;
 
-import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 
 import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
@@ -49,5 +49,5 @@ public interface SessionPersistenceStrategy
         }
     }
 
-    PersistenceLevel getPersistenceLevel(LogonDecoder logon);
+    PersistenceLevel getPersistenceLevel(AbstractLogonDecoder logon);
 }

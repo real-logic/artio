@@ -319,7 +319,7 @@ project(':artio-core') {
 
     idea {
         dependencies {
-            compile project(':artio-session-codecs').sourceSets.generated.output
+            testCompile project(':artio-session-codecs').sourceSets.generated.output
             compile project(':artio-codecs').sourceSets.generated.output
         }
     }

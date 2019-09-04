@@ -1,5 +1,8 @@
 package uk.co.real_logic.artio.builder;
 
+import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
+
 // Partial FIX header - only fields used by session layer (see session_dictionary.xml).
 // The expectation is that every realistic dictionary will have those defined with the right names.
 public interface SessionHeaderEncoder
@@ -147,5 +150,21 @@ public interface SessionHeaderEncoder
     SessionHeaderEncoder lastMsgSeqNumProcessed(int value);
 
     boolean hasLastMsgSeqNumProcessed();
+
+    long startMessage(MutableAsciiBuffer buffer, int offset);
+
+    SessionHeaderEncoder msgType(CharSequence value);
+
+    SessionHeaderEncoder msgType(DirectBuffer value);
+
+    SessionHeaderEncoder msgType(DirectBuffer value, int length);
+
+    SessionHeaderEncoder msgType(DirectBuffer value, int offset, int length);
+
+    SessionHeaderEncoder msgType(byte[] value);
+
+    SessionHeaderEncoder msgType(byte[] value, int length);
+
+    SessionHeaderEncoder msgType(byte[] value, int offset, int length);
 
 }
