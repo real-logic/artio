@@ -35,6 +35,6 @@ public interface SessionProxyFactory
         EpochClock clock,
         long connectionId,
         int libraryId,
-        Class<? extends FixDictionary> fixDictionaryType,
+        FixDictionary fixDictionaryType,
         ErrorHandler errorHandler);
 }

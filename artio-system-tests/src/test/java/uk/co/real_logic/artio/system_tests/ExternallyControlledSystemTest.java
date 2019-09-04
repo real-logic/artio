@@ -242,7 +242,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         final EpochClock clock,
         final long connectionId,
         final int libraryId,
-        final Class<? extends FixDictionary> fixDictionaryType,
+        final FixDictionary fixDictionary,
         final ErrorHandler errorHandler)
     {
         sessionProxyRequests++;

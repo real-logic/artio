@@ -41,7 +41,6 @@ import static java.lang.Integer.MIN_VALUE;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.Constants.NEW_SEQ_NO;
-import static uk.co.real_logic.artio.Constants.VERSION_CHARS;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
@@ -124,6 +123,7 @@ public class Session implements AutoCloseable
     private final AtomicCounter sentMsgSeqNo;
     private final long reasonableTransmissionTimeInMs;
     private final boolean enableLastMsgSeqNumProcessed;
+    private final String beginString;
 
     private CompositeKey sessionKey;
     private SessionState state;
@@ -180,7 +180,8 @@ public class Session implements AutoCloseable
         final int sequenceIndex,
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer,
-        final boolean enableLastMsgSeqNumProcessed)
+        final boolean enableLastMsgSeqNumProcessed,
+        final String beginString)
     {
         Verify.notNull(clock, "clock");
         Verify.notNull(state, "session state");
@@ -188,6 +189,7 @@ public class Session implements AutoCloseable
         Verify.notNull(publication, "publication");
         Verify.notNull(receivedMsgSeqNo, "received MsgSeqNo counter");
         Verify.notNull(sentMsgSeqNo, "sent MsgSeqNo counter");
+        Verify.notNull(beginString, "beginString");
 
         this.clock = clock;
         this.proxy = proxy;
@@ -202,7 +204,7 @@ public class Session implements AutoCloseable
         this.lastSentMsgSeqNum = initialSentSequenceNumber - 1;
         this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
-
+        this.beginString = beginString;
         this.asciiBuffer = asciiBuffer;
 
         state(state);
@@ -1347,7 +1349,7 @@ public class Session implements AutoCloseable
 
     boolean onBeginString(final char[] value, final int length, final boolean isLogon)
     {
-        final boolean isValid = CodecUtil.equals(value, VERSION_CHARS, length);
+        final boolean isValid = CodecUtil.equals(value, beginString, length);
         if (!isValid)
         {
             if (!isLogon)

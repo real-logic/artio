@@ -19,11 +19,11 @@ public final class StandardFixConstants
 {
     public static final byte START_OF_HEADER = 0x01;
 
-    public static final int FIX4_HEADER_LENGHT = "8=FIX.4.2 ".length();
-    public static final int FIXT_HEADER_LENGHT = "8=FIXT.1.1 ".length();
+    public static final int FIX4_HEADER_LENGTH = "8=FIX.4.2 ".length();
+    public static final int FIXT_HEADER_LENGTH = "8=FIXT.1.1 ".length();
 
     // header and message length tag
-    public static final int MIN_MESSAGE_SIZE = FIXT_HEADER_LENGHT + 6;
+    public static final int MIN_MESSAGE_SIZE = FIXT_HEADER_LENGTH + 6;
 
     // Message Types
 

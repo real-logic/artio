@@ -135,6 +135,8 @@ class GatewaySessions
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
+        final FixDictionary dictionary = FixDictionary.of(fixDictionaryType);
+        final String beginString = dictionary.beginString();
 
         final SessionProxy proxy = new DirectSessionProxy(
             sessionBufferSize,
@@ -144,7 +146,7 @@ class GatewaySessions
             clock,
             connectionId,
             FixEngine.ENGINE_LIBRARY_ID,
-            fixDictionaryType,
+            dictionary,
             errorHandler);
 
         final InternalSession session = new InternalSession(
@@ -164,7 +166,8 @@ class GatewaySessions
             0,
             reasonableTransmissionTimeInMs,
             asciiBuffer,
-            gatewaySession.enableLastMsgSeqNumProcessed());
+            gatewaySession.enableLastMsgSeqNumProcessed(),
+            beginString);
 
         session.awaitingResend(awaitingResend);
         session.closedResendInterval(gatewaySession.closedResendInterval());
@@ -175,7 +178,7 @@ class GatewaySessions
             session,
             validationStrategy,
             errorHandler,
-            fixDictionaryType);
+            dictionary);
 
         sessions.add(gatewaySession);
         gatewaySession.manage(sessionParser, session, engineBlockablePosition);

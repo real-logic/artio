@@ -148,6 +148,24 @@ public final class CodecUtil
         return equals(value, expected, 0, 0, length);
     }
 
+    public static boolean equals(final char[] value, final String expected, final int length)
+    {
+        if (value.length < length || expected.length() != length)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < length; i++)
+        {
+            if (value[i] != expected.charAt(i))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     public static int hashCode(final char[] value, final int offset, final int length)
     {
         int result = 1;

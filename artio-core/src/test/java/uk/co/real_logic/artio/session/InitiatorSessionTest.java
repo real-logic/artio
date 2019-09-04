@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.session;
 
 import org.junit.Test;
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
@@ -47,7 +48,8 @@ public class InitiatorSessionTest extends AbstractSessionTest
             false,
             DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
             new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]),
-            false);
+            false,
+            Constants.VERSION);
         session.logonListener(mockLogonListener);
     }
 

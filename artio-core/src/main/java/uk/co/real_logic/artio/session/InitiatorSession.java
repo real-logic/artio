@@ -43,7 +43,8 @@ public class InitiatorSession extends InternalSession
         final boolean resetSeqNum,
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer,
-        final boolean enableLastMsgSeqNumProcessed)
+        final boolean enableLastMsgSeqNumProcessed,
+        final String beginString)
     {
         super(
             heartbeatInterval,
@@ -61,7 +62,8 @@ public class InitiatorSession extends InternalSession
             sequenceIndex,
             reasonableTransmissionTimeInMs,
             asciiBuffer,
-            enableLastMsgSeqNumProcessed);
+            enableLastMsgSeqNumProcessed,
+            beginString);
         this.resetSeqNum = resetSeqNum;
     }
 

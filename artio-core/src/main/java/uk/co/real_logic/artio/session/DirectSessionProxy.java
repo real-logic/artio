@@ -90,7 +90,7 @@ public class DirectSessionProxy implements SessionProxy
 
     private final AsciiFormatter lowSequenceNumber;
     private final MutableAsciiBuffer buffer;
-    private final Class<? extends FixDictionary> fixDictionaryType;
+    private final FixDictionary dictionary;
     private final ErrorHandler errorHandler;
     private final GatewayPublication gatewayPublication;
     private final SessionIdStrategy sessionIdStrategy;
@@ -110,7 +110,7 @@ public class DirectSessionProxy implements SessionProxy
         final EpochClock clock,
         final long connectionId,
         final int libraryId,
-        final Class<? extends FixDictionary> fixDictionaryType,
+        final FixDictionary dictionary,
         final ErrorHandler errorHandler)
     {
         this.gatewayPublication = gatewayPublication;
@@ -120,12 +120,11 @@ public class DirectSessionProxy implements SessionProxy
         this.connectionId = connectionId;
         this.libraryId = libraryId;
         this.buffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
-        this.fixDictionaryType = fixDictionaryType;
+        this.dictionary = dictionary;
         this.errorHandler = errorHandler;
         lowSequenceNumber = new AsciiFormatter("MsgSeqNum too low, expecting %s but received %s");
         timestampEncoder.initialise(clock.time());
 
-        final FixDictionary dictionary = FixDictionary.of(fixDictionaryType);
         logon = dictionary.makeLogonEncoder();
         resendRequest = dictionary.makeResendRequestEncoder();
         logout = dictionary.makeLogoutEncoder();
@@ -227,7 +226,7 @@ public class DirectSessionProxy implements SessionProxy
     {
         errorHandler.onError(new IllegalStateException(String.format(
             "Dictionary: %1$s does not support %2$s field but %2$s is provided",
-            fixDictionaryType.getCanonicalName(),
+            dictionary.getClass().getCanonicalName(),
             field
         )));
     }

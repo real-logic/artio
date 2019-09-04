@@ -60,13 +60,11 @@ public class SessionParser
         final Session session,
         final MessageValidationStrategy validationStrategy,
         final ErrorHandler errorHandler, // nullable
-        final Class<? extends FixDictionary> fixDictionaryType)
+        final FixDictionary fixDictionary)
     {
         this.session = session;
         this.validationStrategy = validationStrategy;
         this.errorHandler = errorHandler;
-
-        final FixDictionary fixDictionary = FixDictionary.of(fixDictionaryType);
 
         logon = fixDictionary.makeLogonDecoder();
         logout = fixDictionary.makeLogoutDecoder();
