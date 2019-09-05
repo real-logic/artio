@@ -89,6 +89,8 @@ public interface FixDictionary
 
     AbstractHeartbeatDecoder makeHeartbeatDecoder();
 
+    AbstractResendRequestDecoder makeResendRequestDecoder();
+
     SessionHeaderDecoder makeHeaderDecoder();
 
 }

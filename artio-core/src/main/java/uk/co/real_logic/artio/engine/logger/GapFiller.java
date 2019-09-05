@@ -16,14 +16,13 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.Subscription;
+import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.Agent;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.Encoder;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
-import uk.co.real_logic.artio.decoder.ResendRequestDecoder;
-import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
+import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
@@ -38,11 +37,11 @@ public class GapFiller implements ProtocolHandler, Agent
     private static final int FRAGMENT_LIMIT = 10;
 
     private final AsciiBuffer decoderBuffer = new MutableAsciiBuffer();
-    private final ProtocolSubscription protocolSubscription = ProtocolSubscription.of(this);
+    private final FixSessionCodecsFactory fixSessionCodecsFactory;
+    private final ControlledFragmentHandler protocolSubscription;
 
     private final GapFillEncoder encoder = new GapFillEncoder();
 
-    private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
     private final Subscription inboundSubscription;
     private final GatewayPublication publication;
     private final String agentNamePrefix;
@@ -52,12 +51,15 @@ public class GapFiller implements ProtocolHandler, Agent
         final Subscription inboundSubscription,
         final GatewayPublication publication,
         final String agentNamePrefix,
-        final SenderSequenceNumbers senderSequenceNumbers)
+        final SenderSequenceNumbers senderSequenceNumbers,
+        final FixSessionCodecsFactory fixSessionCodecsFactory)
     {
         this.inboundSubscription = inboundSubscription;
         this.publication = publication;
         this.agentNamePrefix = agentNamePrefix;
         this.senderSequenceNumbers = senderSequenceNumbers;
+        this.fixSessionCodecsFactory = fixSessionCodecsFactory;
+        this.protocolSubscription = ProtocolSubscription.of(this, fixSessionCodecsFactory);
     }
 
     public int doWork()
@@ -87,9 +89,12 @@ public class GapFiller implements ProtocolHandler, Agent
         if (messageType == ResendRequestDecoder.MESSAGE_TYPE && status == MessageStatus.OK)
         {
             decoderBuffer.wrap(buffer);
+            final FixSessionCodecs fixSessionCodecs = fixSessionCodecsFactory.get(sessionId);
+            final AbstractResendRequestDecoder resendRequest = fixSessionCodecs.resendRequest();
+
             resendRequest.decode(decoderBuffer, offset, length);
 
-            final HeaderDecoder reqHeader = resendRequest.header();
+            final SessionHeaderDecoder reqHeader = resendRequest.header();
             final int beginSeqNo = resendRequest.beginSeqNo();
             final int endSeqNo = resendRequest.endSeqNo();
             final int lastSentSeqNo = newSeqNo(connectionId);

@@ -2,7 +2,8 @@ package uk.co.real_logic.artio.engine.logger;
 
 import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.builder.SequenceResetEncoder;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -22,7 +23,7 @@ class GapFillEncoder
 
     long encode(final int msgSeqNum, final int newSeqNo)
     {
-        final HeaderEncoder respHeader = sequenceResetEncoder.header();
+        final SessionHeaderEncoder respHeader = sequenceResetEncoder.header();
         respHeader.sendingTime(timestampEncoder.buffer(), timestampEncoder.encode(System.currentTimeMillis()));
         respHeader.msgSeqNum(msgSeqNum);
         sequenceResetEncoder.newSeqNo(newSeqNo);
@@ -30,7 +31,7 @@ class GapFillEncoder
         return sequenceResetEncoder.encode(buffer, 0);
     }
 
-    void setupMessage(final HeaderDecoder reqHeader)
+    void setupMessage(final SessionHeaderDecoder reqHeader)
     {
         final HeaderEncoder respHeader = sequenceResetEncoder.header();
         respHeader.targetCompID(reqHeader.senderCompID(), reqHeader.senderCompIDLength());

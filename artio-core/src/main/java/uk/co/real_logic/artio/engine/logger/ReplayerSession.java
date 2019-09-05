@@ -31,6 +31,7 @@ import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.engine.PossDupEnabler;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
@@ -110,7 +111,8 @@ class ReplayerSession implements ControlledFragmentHandler
         final ReplayQuery replayQuery,
         final String message,
         final ErrorHandler errorHandler,
-        final HeaderDecoder requestHeader)
+        // NB: requestHeader only used in the constructor as it's state can be reset
+        final SessionHeaderDecoder requestHeader)
     {
         this.bufferClaim = bufferClaim;
         this.idleStrategy = idleStrategy;

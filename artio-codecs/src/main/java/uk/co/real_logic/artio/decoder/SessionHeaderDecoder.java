@@ -55,4 +55,12 @@ public interface SessionHeaderDecoder
     void reset();
 
     int decode(AsciiBuffer asciiBuffer, int offset, int length);
+
+    boolean hasSenderLocationID();
+
+    boolean hasSenderSubID();
+
+    boolean hasTargetLocationID();
+
+    boolean hasTargetSubID();
 }

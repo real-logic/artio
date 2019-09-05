@@ -102,6 +102,11 @@ public class FixDictionaryGenerator
         "        return new HeartbeatDecoder();\n" +
         "    }\n" +
         "\n" +
+        "    public AbstractResendRequestDecoder makeResendRequestDecoder()\n" +
+        "    {\n" +
+        "        return new ResendRequestDecoder();\n" +
+        "    }\n" +
+        "\n" +
         "    public SessionHeaderDecoder makeHeaderDecoder()\n" +
         "    {\n" +
         "        return new HeaderDecoder();\n" +
@@ -166,6 +171,8 @@ public class FixDictionaryGenerator
                 out.append(importFor(AbstractHeartbeatDecoder.class));
                 out.append(importFor(decoderPackage + ".HeartbeatDecoder"));
                 out.append(importFor(SessionHeaderDecoder.class));
+                out.append(importFor(decoderPackage + ".ResendRequestDecoder"));
+                out.append(importFor(AbstractResendRequestDecoder.class));
                 out.append(importFor(decoderPackage + ".HeaderDecoder"));
 
                 out.append(String.format(TEMPLATE, dictionary.beginString()));

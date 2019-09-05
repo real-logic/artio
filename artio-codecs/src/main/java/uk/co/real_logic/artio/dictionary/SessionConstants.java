@@ -29,13 +29,15 @@ public final class SessionConstants
 
     public static final int BODY_LENGTH = 9;
     public static final int CHECKSUM = 10;
+    public static final int MSG_SEQ_NO = 34;
     public static final int MESSAGE_TYPE = 35;
     public static final int NEW_SEQ_NO = 36;
     public static final int POSS_DUP_FLAG = 43;
     public static final int SENDING_TIME = 52;
 
 
-    public static final int RESEND_REQUEST_MESSAGE_TYPE = 2;
+    public static final int RESEND_REQUEST_MESSAGE_TYPE = 50;
+
     public static final String LOGON_MESSAGE_TYPE = "A";
     public static final char[] LOGON_MESSAGE_TYPE_CHARS = LOGON_MESSAGE_TYPE.toCharArray();
     public static final char[] TEST_REQUEST_MESSAGE_TYPE_CHARS = "1".toCharArray();

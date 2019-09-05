@@ -15,25 +15,30 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.ManageSessionDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 import java.util.HashMap;
 import java.util.Map;
 
-public class FixSessionCodecsFactory
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static uk.co.real_logic.artio.messages.MessageHeaderDecoder.ENCODED_LENGTH;
+
+public class FixSessionCodecsFactory implements ControlledFragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final ManageSessionDecoder manageSession = new ManageSessionDecoder();
-//    private final InitiateConnectionDecoder initiateConnection = new InitiateConnectionDecoder();
 
     private final Map<String, FixSessionCodecs> fixDictionaryClassToIndex = new HashMap<>();
     private final Long2ObjectHashMap<FixSessionCodecs> sessionIdToFixDictionaryIndex = new Long2ObjectHashMap<>();
 
-    public void onFragment(
-        final DirectBuffer buffer, final int offset)
+    public Action onFragment(
+        final DirectBuffer buffer, final int offset, final int length, final Header header)
     {
         messageHeader.wrap(buffer, offset);
 
@@ -42,7 +47,7 @@ public class FixSessionCodecsFactory
 
         if (messageHeader.templateId() == ManageSessionDecoder.TEMPLATE_ID)
         {
-            manageSession.wrap(buffer, offset, blockLength, version);
+            manageSession.wrap(buffer, offset + ENCODED_LENGTH, blockLength, version);
 
             // Skip over variable length fields
             manageSession.localCompId();
@@ -55,31 +60,18 @@ public class FixSessionCodecsFactory
             manageSession.username();
             manageSession.password();
 
+
+
             onDictionary(manageSession.session(), manageSession.fixDictionary());
-
-            /*case InitiateConnectionDecoder.TEMPLATE_ID:
-            {
-                initiateConnection.wrap(buffer, offset, blockLength, version);
-
-                initiateConnection.host();
-                initiateConnection.senderCompId();
-                initiateConnection.senderSubId();
-                initiateConnection.senderLocationId();
-                initiateConnection.targetCompId();
-                initiateConnection.targetSubId();
-                initiateConnection.targetLocationId();
-                initiateConnection.username();
-                initiateConnection.password();
-
-                onDictionary(initiateConnection. initiateConnection.fixDictionary());
-            }*/
         }
+
+        return CONTINUE;
     }
 
     private void onDictionary(final long sessionId, final String fixDictionaryClassName)
     {
-        final FixSessionCodecs fixSessionCodecs =
-            fixDictionaryClassToIndex.computeIfAbsent(fixDictionaryClassName, FixSessionCodecs::new);
+        final FixSessionCodecs fixSessionCodecs = fixDictionaryClassToIndex.computeIfAbsent(fixDictionaryClassName,
+            fixDictionaryName -> new FixSessionCodecs(FixDictionary.find(fixDictionaryName)));
         final FixSessionCodecs previousIndex = sessionIdToFixDictionaryIndex.get(sessionId);
         // NB: this could potentially changes over time.
         if (previousIndex != fixSessionCodecs)
@@ -88,7 +80,7 @@ public class FixSessionCodecsFactory
         }
     }
 
-    public FixSessionCodecs get(final long sessionId)
+    FixSessionCodecs get(final long sessionId)
     {
         return sessionIdToFixDictionaryIndex.get(sessionId);
     }

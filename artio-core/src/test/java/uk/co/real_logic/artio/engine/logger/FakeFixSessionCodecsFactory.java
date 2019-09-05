@@ -15,22 +15,12 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 
-class FixSessionCodecs
+public class FakeFixSessionCodecsFactory extends FixSessionCodecsFactory
 {
-    private final AbstractResendRequestDecoder resendRequest;
-    // private final AbstractResendRequestDecoder resendRequest;
-
-    FixSessionCodecs(final Class<? extends FixDictionary> fixDictionaryType)
+    FixSessionCodecs get(final long sessionId)
     {
-        final FixDictionary dictionary = FixDictionary.of(fixDictionaryType);
-        resendRequest = dictionary.makeResendRequestDecoder();
-    }
-
-    AbstractResendRequestDecoder resendRequest()
-    {
-        return resendRequest;
+        return new FixSessionCodecs(FixDictionary.findDefault());
     }
 }

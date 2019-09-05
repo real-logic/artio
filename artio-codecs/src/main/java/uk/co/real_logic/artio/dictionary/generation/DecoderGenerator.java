@@ -57,7 +57,8 @@ public class DecoderGenerator extends Generator
         "RejectDecoder",
         "TestRequestDecoder",
         "SequenceResetDecoder",
-        "HeartbeatDecoder"));
+        "HeartbeatDecoder",
+        "ResendRequestDecoder"));
 
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
     private static final String GROUP_FIELDS = "GROUP_FIELDS";

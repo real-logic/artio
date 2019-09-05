@@ -40,7 +40,9 @@ public class GapFillerTest extends AbstractLogTest
     private GatewayPublication publication = mock(GatewayPublication.class);
     private Subscription subscription = mock(Subscription.class);
     private SenderSequenceNumbers senderSequenceNumbers = mock(SenderSequenceNumbers.class);
-    private GapFiller gapFiller = new GapFiller(subscription, publication, DEFAULT_NAME_PREFIX, senderSequenceNumbers);
+    private GapFiller gapFiller = new GapFiller(
+        subscription, publication, DEFAULT_NAME_PREFIX, senderSequenceNumbers,
+        new FakeFixSessionCodecsFactory());
 
     @Test
     public void shouldGapFillInResponseToResendRequest()
