@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.artio.validation;
 
-import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 
 import static uk.co.real_logic.artio.fields.RejectReason.COMPID_PROBLEM;
@@ -40,7 +40,7 @@ final class TargetCompIdValidationStrategy implements MessageValidationStrategy
 
     public int invalidTagId()
     {
-        return Constants.TARGET_COMP_ID;
+        return SessionConstants.TARGET_COMP_ID;
     }
 
     public int rejectReason()

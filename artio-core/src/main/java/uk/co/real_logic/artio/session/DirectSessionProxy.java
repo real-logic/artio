@@ -19,7 +19,6 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.builder.*;
-import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
@@ -34,6 +33,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.fields.RejectReason.VALUE_IS_INCORRECT;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
@@ -166,7 +166,7 @@ public class DirectSessionProxy implements SessionProxy
         resendRequest.beginSeqNo(beginSeqNo)
                      .endSeqNo(endSeqNo);
         final long result = resendRequest.encode(buffer, 0);
-        return send(result, ResendRequestDecoder.MESSAGE_TYPE, sequenceIndex, resendRequest, msgSeqNo);
+        return send(result, RESEND_REQUEST_MESSAGE_TYPE, sequenceIndex, resendRequest, msgSeqNo);
     }
 
     public long sendRequestDisconnect(final long connectionId, final DisconnectReason reason)
@@ -219,7 +219,7 @@ public class DirectSessionProxy implements SessionProxy
         seqNumResetRequested = logon.resetSeqNumFlag(); // get customized or argument
 
         final long result = logon.encode(buffer, 0);
-        return send(result, LogonDecoder.MESSAGE_TYPE, sequenceIndex, logon, msgSeqNo);
+        return send(result, LOGON_MESSAGE_TYPE, sequenceIndex, logon, msgSeqNo);
     }
 
     private void onMissingFieldError(final String field)
@@ -271,7 +271,7 @@ public class DirectSessionProxy implements SessionProxy
 
         customisationStrategy.configureLogout(logout, sessionId);
         final long result = logout.encode(buffer, 0);
-        return send(result, LogoutDecoder.MESSAGE_TYPE, sequenceIndex, logout, msgSeqNo);
+        return send(result, LOGOUT_MESSAGE_TYPE, sequenceIndex, logout, msgSeqNo);
     }
 
     public long sendLowSequenceNumberLogout(
@@ -342,7 +342,7 @@ public class DirectSessionProxy implements SessionProxy
         }
 
         final long result = heartbeat.encode(buffer, 0);
-        return send(result, HeartbeatDecoder.MESSAGE_TYPE, sequenceIndex, heartbeat, msgSeqNo);
+        return send(result, HEARTBEAT_MESSAGE_TYPE, sequenceIndex, heartbeat, msgSeqNo);
     }
 
     public long sendReject(
@@ -374,7 +374,7 @@ public class DirectSessionProxy implements SessionProxy
         reject.sessionRejectReason(rejectReason);
 
         final long result = reject.encode(buffer, 0);
-        return send(result, RejectDecoder.MESSAGE_TYPE, sequenceIndex, reject, msgSeqNo);
+        return send(result, REJECT_MESSAGE_TYPE, sequenceIndex, reject, msgSeqNo);
     }
 
     public long sendTestRequest(
@@ -386,7 +386,7 @@ public class DirectSessionProxy implements SessionProxy
         testRequest.testReqID(testReqID);
 
         final long result = testRequest.encode(buffer, 0);
-        return send(result, TestRequestDecoder.MESSAGE_TYPE, sequenceIndex, testRequest, msgSeqNo);
+        return send(result, TEST_REQUEST_MESSAGE_TYPE, sequenceIndex, testRequest, msgSeqNo);
     }
 
     public long sendSequenceReset(
@@ -398,7 +398,7 @@ public class DirectSessionProxy implements SessionProxy
         sequenceReset.newSeqNo(newSeqNo);
 
         final long result = sequenceReset.encode(buffer, 0);
-        return send(result, SequenceResetDecoder.MESSAGE_TYPE, sequenceIndex, sequenceReset, msgSeqNo);
+        return send(result, SEQUENCE_RESET_MESSAGE_TYPE, sequenceIndex, sequenceReset, msgSeqNo);
     }
 
     private void setupHeader(final SessionHeaderEncoder header, final int msgSeqNo, final int lastMsgSeqNumProcessed)

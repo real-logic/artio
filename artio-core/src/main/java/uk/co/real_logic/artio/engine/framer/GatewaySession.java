@@ -57,7 +57,7 @@ class GatewaySession implements SessionInfo
     private Consumer<GatewaySession> onGatewaySessionLogon;
     private SessionLogonListener logonListener = this::onSessionLogon;
     private boolean initialResetSeqNum;
-    private Class<? extends FixDictionary> fixDictionary;
+    private FixDictionary fixDictionary;
 
     GatewaySession(
         final long connectionId,
@@ -208,7 +208,7 @@ class GatewaySession implements SessionInfo
         final String username,
         final String password,
         final int heartbeatIntervalInS,
-        final Class<? extends FixDictionary> fixDictionary)
+        final FixDictionary fixDictionary)
     {
         this.username = username;
         this.password = password;
@@ -230,7 +230,7 @@ class GatewaySession implements SessionInfo
         final String username,
         final String password,
         final int heartbeatIntervalInS,
-        final Class<? extends FixDictionary> fixDictionary)
+        final FixDictionary fixDictionary)
     {
         this.sessionId = sessionId;
         this.context = context;
@@ -340,7 +340,7 @@ class GatewaySession implements SessionInfo
         return initialResetSeqNum;
     }
 
-    Class<? extends FixDictionary> fixDictionary()
+    FixDictionary fixDictionary()
     {
         return fixDictionary;
     }

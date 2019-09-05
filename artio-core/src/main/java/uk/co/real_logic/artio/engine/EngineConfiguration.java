@@ -22,8 +22,8 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.CommonConfiguration;
-import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
 import uk.co.real_logic.artio.library.SessionConfiguration;
@@ -151,12 +151,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     static
     {
         final Set<String> defaultGapFillOnReplayMessageTypes = new HashSet<>();
-        defaultGapFillOnReplayMessageTypes.add(LogonDecoder.MESSAGE_TYPE_AS_STRING);
-        defaultGapFillOnReplayMessageTypes.add(LogoutDecoder.MESSAGE_TYPE_AS_STRING);
-        defaultGapFillOnReplayMessageTypes.add(ResendRequestDecoder.MESSAGE_TYPE_AS_STRING);
-        defaultGapFillOnReplayMessageTypes.add(HeartbeatDecoder.MESSAGE_TYPE_AS_STRING);
-        defaultGapFillOnReplayMessageTypes.add(TestRequestDecoder.MESSAGE_TYPE_AS_STRING);
-        defaultGapFillOnReplayMessageTypes.add(SequenceResetDecoder.MESSAGE_TYPE_AS_STRING);
+        defaultGapFillOnReplayMessageTypes.add(SessionConstants.LOGON_MESSAGE_TYPE_STR);
+        defaultGapFillOnReplayMessageTypes.add(SessionConstants.LOGOUT_MESSAGE_TYPE_STR);
+        defaultGapFillOnReplayMessageTypes.add(SessionConstants.RESEND_REQUEST_MESSAGE_TYPE_STR);
+        defaultGapFillOnReplayMessageTypes.add(SessionConstants.HEARTBEAT_MESSAGE_TYPE_STR);
+        defaultGapFillOnReplayMessageTypes.add(SessionConstants.TEST_REQUEST_MESSAGE_TYPE_STR);
+        defaultGapFillOnReplayMessageTypes.add(SessionConstants.SEQUENCE_RESET_TYPE_STR);
         DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES = Collections.unmodifiableSet(defaultGapFillOnReplayMessageTypes);
     }
 
@@ -219,7 +219,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private boolean soleLibraryMode = false;
     private AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.none();
     private long indexFileStateFlushTimeoutInMs = DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
-    private Class<? extends FixDictionary> acceptorfixDictionary;
+    private FixDictionary acceptorfixDictionary;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -633,7 +633,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
     public EngineConfiguration acceptorfixDictionary(final Class<? extends FixDictionary> acceptorfixDictionary)
     {
-        this.acceptorfixDictionary = acceptorfixDictionary;
+        this.acceptorfixDictionary = FixDictionary.of(acceptorfixDictionary);
         return this;
     }
 
@@ -807,7 +807,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return indexFileStateFlushTimeoutInMs;
     }
 
-    public Class<? extends FixDictionary> acceptorfixDictionary()
+    public FixDictionary acceptorfixDictionary()
     {
         return acceptorfixDictionary;
     }

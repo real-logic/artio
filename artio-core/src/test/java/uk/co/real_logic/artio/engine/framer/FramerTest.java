@@ -56,6 +56,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
@@ -126,7 +127,9 @@ public class FramerTest
 
     private final EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
-        .replyTimeoutInMs(REPLY_TIMEOUT_IN_MS);
+        .replyTimeoutInMs(REPLY_TIMEOUT_IN_MS)
+        .libraryAeronChannel(IPC_CHANNEL)
+        .conclude();
 
     private Framer framer;
 
@@ -160,6 +163,7 @@ public class FramerTest
         when(mockReceiverEndPoint.libraryId()).thenReturn(LIBRARY_ID);
 
         when(gatewaySession.session()).thenReturn(session);
+        when(gatewaySession.fixDictionary()).thenReturn(FixDictionary.of(FixDictionary.findDefault()));
 
         when(session.logonTime()).thenReturn(-1L);
         when(session.compositeKey()).thenReturn(sessionKey);

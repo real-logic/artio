@@ -35,7 +35,6 @@ import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.decoder.*;
-import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;

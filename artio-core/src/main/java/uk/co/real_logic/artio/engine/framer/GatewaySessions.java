@@ -22,7 +22,7 @@ import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.FixGatewayException;
-import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
@@ -62,7 +62,7 @@ class GatewaySessions
     private final SessionPersistenceStrategy sessionPersistenceStrategy;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
-    private final Class<? extends FixDictionary> acceptorfixDictionary;
+    private final FixDictionary acceptorfixDictionary;
 
     private ErrorHandler errorHandler;
 
@@ -83,7 +83,7 @@ class GatewaySessions
         final SessionPersistenceStrategy sessionPersistenceStrategy,
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final SequenceNumberIndexReader receivedSequenceNumberIndex,
-        final Class<? extends FixDictionary> acceptorfixDictionary)
+        final FixDictionary acceptorfixDictionary)
     {
         this.clock = clock;
         this.outboundPublication = outboundPublication;
@@ -129,13 +129,12 @@ class GatewaySessions
         final String username,
         final String password,
         final BlockablePosition engineBlockablePosition,
-        final Class<? extends FixDictionary> fixDictionaryType)
+        final FixDictionary dictionary)
     {
         final long connectionId = gatewaySession.connectionId();
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
-        final FixDictionary dictionary = FixDictionary.of(fixDictionaryType);
         final String beginString = dictionary.beginString();
 
         final SessionProxy proxy = new DirectSessionProxy(
@@ -187,7 +186,7 @@ class GatewaySessions
         DebugLogger.log(FIX_CONNECTION, "Gateway Acquired Session %d%n", connectionId);
         if (sessionKey != null)
         {
-            gatewaySession.onLogon(username, password, heartbeatIntervalInS, fixDictionaryType);
+            gatewaySession.onLogon(username, password, heartbeatIntervalInS, dictionary);
             session.initialLastReceivedMsgSeqNum(lastReceivedSequenceNumber);
         }
     }
@@ -266,7 +265,7 @@ class GatewaySessions
     }
 
     AcceptorLogonResult authenticate(
-        final LogonDecoder logon,
+        final AbstractLogonDecoder logon,
         final long connectionId,
         final GatewaySession gatewaySession,
         final String remoteAddress)
@@ -305,7 +304,7 @@ class GatewaySessions
     {
         private static final long NO_REQUIRED_POSITION = -1;
         private final SessionIdStrategy sessionIdStrategy;
-        private final LogonDecoder logon;
+        private final AbstractLogonDecoder logon;
         private final SessionContexts sessionContexts;
         private final String remoteAddress;
         private final boolean resetSeqNum;
@@ -317,7 +316,7 @@ class GatewaySessions
         PendingAcceptorLogon(
             final SessionIdStrategy sessionIdStrategy,
             final GatewaySession gatewaySession,
-            final LogonDecoder logon,
+            final AbstractLogonDecoder logon,
             final long connectionId,
             final SessionContexts sessionContexts,
             final String remoteAddress)
@@ -346,7 +345,7 @@ class GatewaySessions
             authenticate(logon, connectionId);
         }
 
-        private PersistenceLevel getPersistenceLevel(final LogonDecoder logon, final long connectionId)
+        private PersistenceLevel getPersistenceLevel(final AbstractLogonDecoder logon, final long connectionId)
         {
             try
             {
@@ -359,7 +358,7 @@ class GatewaySessions
             }
         }
 
-        private void authenticate(final LogonDecoder logon, final long connectionId)
+        private void authenticate(final AbstractLogonDecoder logon, final long connectionId)
         {
             try
             {
@@ -378,7 +377,7 @@ class GatewaySessions
             final Throwable throwable,
             final long connectionId,
             final String theDefault,
-            final LogonDecoder logon)
+            final AbstractLogonDecoder logon)
         {
             final String message = String.format(
                 "Exception thrown by %s strategy for connectionId=%d, processing [%s], defaulted to %s",

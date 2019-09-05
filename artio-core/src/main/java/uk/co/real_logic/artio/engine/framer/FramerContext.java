@@ -22,6 +22,7 @@ import org.agrona.concurrent.*;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.EngineContext;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
@@ -68,9 +69,13 @@ public class FramerContext
         final RecordingCoordinator recordingCoordinator)
     {
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
-        this.sessionContexts = new SessionContexts(configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
+
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
         final Streams outboundLibraryStreams = engineContext.outboundLibraryStreams();
+
+        this.sessionContexts = new SessionContexts(
+            configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler,
+            this::lookupDictionary);
 
         final SystemEpochClock clock = new SystemEpochClock();
         this.inboundPublication = engineContext.inboundPublication();
@@ -139,6 +144,11 @@ public class FramerContext
             finalImagePositions,
             conductorAgentInvoker,
             recordingCoordinator);
+    }
+
+    private FixDictionary lookupDictionary(final long sessionId)
+    {
+        return gatewaySessions.sessionById(sessionId).fixDictionary();
     }
 
     public Agent framer()

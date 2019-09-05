@@ -18,7 +18,8 @@ package uk.co.real_logic.artio.engine.logger;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.CommonConfiguration;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 
 import java.util.function.Predicate;
@@ -44,8 +45,9 @@ public final class FixArchivePrinter
         int archiveScannerStreamId = DEFAULT_ARCHIVE_SCANNER_STREAM;
         FixMessagePredicate predicate = FixMessagePredicates.alwaysTrue();
         boolean follow = false;
+        Class<? extends FixDictionary> fixDictionaryType = FixDictionary.findDefault();
 
-        Predicate<HeaderDecoder> headerPredicate = null;
+        Predicate<SessionHeaderDecoder> headerPredicate = null;
 
         for (final String arg : args)
         {
@@ -123,6 +125,10 @@ public final class FixArchivePrinter
                 case "aeron-channel":
                     aeronChannel = optionValue;
                     break;
+
+                case "fix-dictionary":
+                    fixDictionaryType = FixDictionary.find(optionValue);
+                    break;
             }
         }
 
@@ -130,7 +136,7 @@ public final class FixArchivePrinter
         requiredArgument(aeronChannel, "aeron-channel");
 
         scanArchive(aeronDirectoryName, aeronChannel, queryStreamId, predicate, follow, headerPredicate,
-            archiveScannerStreamId);
+            archiveScannerStreamId, fixDictionaryType);
     }
 
     private static void requiredArgument(final int eqIndex)
@@ -149,13 +155,15 @@ public final class FixArchivePrinter
         final int queryStreamId,
         final FixMessagePredicate otherPredicate,
         final boolean follow,
-        final Predicate<HeaderDecoder> headerPredicate,
-        final int archiveScannerStreamId)
+        final Predicate<SessionHeaderDecoder> headerPredicate,
+        final int archiveScannerStreamId,
+        final Class<? extends FixDictionary> fixDictionaryType)
     {
+        final FixDictionary fixDictionary = FixDictionary.of(fixDictionaryType);
         FixMessagePredicate predicate = otherPredicate;
         if (headerPredicate != null)
         {
-            predicate = whereHeader(headerPredicate).and(predicate);
+            predicate = whereHeader(fixDictionary, headerPredicate).and(predicate);
         }
 
         final FixArchiveScanner.Context context = new FixArchiveScanner.Context()

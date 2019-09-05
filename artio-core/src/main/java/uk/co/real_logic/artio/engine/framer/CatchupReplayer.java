@@ -23,12 +23,10 @@ import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.builder.AbstractSequenceResetEncoder;
 import uk.co.real_logic.artio.builder.Encoder;
-import uk.co.real_logic.artio.builder.HeaderEncoder;
-import uk.co.real_logic.artio.builder.SequenceResetEncoder;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
-import uk.co.real_logic.artio.decoder.HeartbeatDecoder;
-import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.engine.PossDupEnabler;
 import uk.co.real_logic.artio.engine.logger.ReplayOperation;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
@@ -46,6 +44,8 @@ import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.LogTag.CATCHUP;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.HEARTBEAT_MESSAGE_TYPE;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.messages.MessageStatus.CATCHUP_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
@@ -73,7 +73,6 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final FixMessageEncoder messageEncoder = new FixMessageEncoder();
 
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
-    private final HeaderDecoder headerDecoder = new HeaderDecoder();
     private final BufferClaim bufferClaim = new BufferClaim();
 
     private final PossDupEnabler possDupEnabler;
@@ -89,13 +88,14 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final GatewaySession session;
     private final long catchupEndTimeInMs;
     private final long requiredPosition;
+    private final SessionHeaderDecoder headerDecoder;
 
     private int replayFromSequenceNumber;
     private int replayFromSequenceIndex;
     private State state = State.AWAITING_INDEX;
     private String missingMessagesReason;
 
-    private SequenceResetEncoder sequenceResetEncoder;
+    private AbstractSequenceResetEncoder sequenceResetEncoder;
     private UtcTimestampEncoder timestampEncoder;
     private MutableAsciiBuffer encodeBuffer;
 
@@ -132,7 +132,8 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         this.replayFromSequenceIndex = replayFromSequenceIndex;
         this.session = session;
         this.catchupEndTimeInMs = clock.time() + catchupTimeout;
-        requiredPosition = inboundPublication.position();
+        this.requiredPosition = inboundPublication.position();
+        this.headerDecoder = session.fixDictionary().makeHeaderDecoder();
 
         possDupEnabler = new PossDupEnabler(
             bufferClaim,
@@ -185,7 +186,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         asciiBuffer.wrap(srcBuffer, messageOffset, messageLength);
         headerDecoder.decode(asciiBuffer, 0, messageLength);
 
-        if (messageDecoder.messageType() == HeartbeatDecoder.MESSAGE_TYPE)
+        if (messageDecoder.messageType() == HEARTBEAT_MESSAGE_TYPE)
         {
             if (heartbeatRangeSequenceNumberStart == OUT_OF_RANGE)
             {
@@ -212,12 +213,12 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     {
         if (sequenceResetEncoder == null)
         {
-            sequenceResetEncoder = new SequenceResetEncoder();
+            sequenceResetEncoder = session.fixDictionary().makeSequenceResetEncoder();
             timestampEncoder = new UtcTimestampEncoder();
             encodeBuffer = new MutableAsciiBuffer(new byte[ENCODE_BUFFER_SIZE]);
             sequenceResetEncoder.gapFillFlag(true);
 
-            final HeaderEncoder header = sequenceResetEncoder.header()
+            final SessionHeaderEncoder header = sequenceResetEncoder.header()
                 .possDupFlag(true);
 
             header.senderCompID(headerDecoder.senderCompID());
@@ -253,7 +254,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final int encodedOffset = Encoder.offset(result);
         final boolean sent = inboundPublication.saveMessage(
             encodeBuffer, encodedOffset, encodedLength,
-            libraryId, SequenceResetDecoder.MESSAGE_TYPE,
+            libraryId, SEQUENCE_RESET_MESSAGE_TYPE,
             messageDecoder.session(), replayFromSequenceIndex, libraryId,
             CATCHUP_REPLAY, heartbeatRangeSequenceNumberEnd) > 0;
 

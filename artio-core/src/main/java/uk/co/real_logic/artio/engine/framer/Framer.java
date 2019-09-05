@@ -34,7 +34,7 @@ import org.agrona.concurrent.QueuedPipe;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LivenessDetector;
 import uk.co.real_logic.artio.Pressure;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.CompletionPosition;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
@@ -154,7 +154,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final RecordingCoordinator recordingCoordinator;
     private final PositionSender nonLoggingPositionSender;
 
-    private final HeaderDecoder headerDecoder = new HeaderDecoder();
+    private final SessionHeaderDecoder acceptorHeaderDecoder;
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
@@ -213,6 +213,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.finalImagePositions = finalImagePositions;
+
+        acceptorHeaderDecoder = configuration.acceptorfixDictionary().makeHeaderDecoder();
 
         receiverEndPoints = new ReceiverEndPoints(errorHandler);
 
@@ -1298,9 +1300,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int srcLength)
     {
         asciiBuffer.wrap(srcBuffer);
-        headerDecoder.decode(asciiBuffer, srcOffset, srcLength);
+        acceptorHeaderDecoder.decode(asciiBuffer, srcOffset, srcLength);
 
-        final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(headerDecoder);
+        final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(acceptorHeaderDecoder);
         final SessionContext sessionContext = sessionContexts.newSessionContext(compositeKey);
         final long sessionId = sessionContext.sessionId();
 
@@ -1383,7 +1385,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySession.address(),
             gatewaySession.username(),
             gatewaySession.password(),
-            gatewaySession.fixDictionary());
+            gatewaySession.fixDictionary().getClass());
     }
 
     private void catchupSession(
@@ -1532,7 +1534,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 gatewaySession.enableLastMsgSeqNumProcessed(),
                 gatewaySession.username(),
                 gatewaySession.password(),
-                gatewaySession.fixDictionary(),
+                gatewaySession.fixDictionary().getClass(),
                 gatewaySession.heartbeatIntervalInS(),
                 NO_CORRELATION_ID,
                 libraryInfo,

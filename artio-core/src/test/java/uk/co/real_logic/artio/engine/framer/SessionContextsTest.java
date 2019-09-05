@@ -25,6 +25,7 @@ import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.LogonEncoder;
 import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
@@ -267,7 +268,8 @@ public class SessionContextsTest
     private SessionContexts newSessionContexts(final AtomicBuffer buffer)
     {
         when(mappedFile.buffer()).thenReturn(buffer);
-        return new SessionContexts(mappedFile, idStrategy, errorHandler);
+        return new SessionContexts(mappedFile, idStrategy, errorHandler,
+            id -> FixDictionary.of(FixDictionary.findDefault()));
     }
 
     private void assertValuesEqual(

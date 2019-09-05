@@ -29,11 +29,10 @@ import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
-import java.util.stream.Stream;
-
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.artio.builder.Validation.isValidMsgType;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.messages.SessionState.AWAITING_LOGOUT;
@@ -85,13 +84,6 @@ public class SessionParser
         return logon.supportsPassword() ? logon.passwordAsString() : null;
     }
 
-    private static boolean detectUsernameAndPassword()
-    {
-        return Stream
-            .of(LogonDecoder.class.getMethods())
-            .anyMatch((method) -> "usernameAsString".equals(method.getName()));
-    }
-
     public Action onMessage(
         final DirectBuffer buffer,
         final int offset,
@@ -105,27 +97,27 @@ public class SessionParser
 
         switch (messageType)
         {
-            case LogonDecoder.MESSAGE_TYPE:
+            case LOGON_MESSAGE_TYPE:
                 action = onLogon(offset, length);
                 break;
 
-            case LogoutDecoder.MESSAGE_TYPE:
+            case LOGOUT_MESSAGE_TYPE:
                 action = onLogout(offset, length);
                 break;
 
-            case HeartbeatDecoder.MESSAGE_TYPE:
+            case HEARTBEAT_MESSAGE_TYPE:
                 action = onHeartbeat(offset, length);
                 break;
 
-            case RejectDecoder.MESSAGE_TYPE:
+            case REJECT_MESSAGE_TYPE:
                 action = onReject(offset, length);
                 break;
 
-            case TestRequestDecoder.MESSAGE_TYPE:
+            case TEST_REQUEST_MESSAGE_TYPE:
                 action = onTestRequest(offset, length);
                 break;
 
-            case SequenceResetDecoder.MESSAGE_TYPE:
+            case SEQUENCE_RESET_MESSAGE_TYPE:
                 action = onSequenceReset(offset, length);
                 break;
 

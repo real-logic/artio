@@ -306,7 +306,7 @@ project(':artio-session-fixt-codecs') {
 project(':artio-core') {
     dependencies {
         testCompile project(path: ':artio-codecs', configuration: 'tests')
-        compile project(':artio-session-codecs')
+        testCompile project(':artio-session-codecs')
         compile project(':artio-codecs')
 
         compile "io.aeron:aeron-all:${aeronVersion}"
@@ -336,6 +336,7 @@ project(':artio-system-tests') {
         testCompile project(path: ':artio-core', configuration: 'tests')
         testCompile project(path: ':artio-codecs', configuration: 'tests')
 
+        compile project(':artio-session-codecs')
         compile project(path: ':artio-core')
 
         perfCompile project
@@ -376,6 +377,7 @@ project(':artio-samples') {
 
     dependencies {
         compile project(':artio-core')
+        compile project(':artio-session-codecs')
     }
 
     shadowJar {

@@ -22,7 +22,8 @@ import org.agrona.DirectBuffer;
 import org.agrona.concurrent.Agent;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.Encoder;
-import uk.co.real_logic.artio.decoder.*;
+import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
@@ -32,6 +33,9 @@ import uk.co.real_logic.artio.protocol.ProtocolSubscription;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import static uk.co.real_logic.artio.dictionary.SessionConstants.RESEND_REQUEST_MESSAGE_TYPE;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
+
 public class GapFiller implements ProtocolHandler, Agent
 {
     private static final int FRAGMENT_LIMIT = 10;
@@ -39,8 +43,6 @@ public class GapFiller implements ProtocolHandler, Agent
     private final AsciiBuffer decoderBuffer = new MutableAsciiBuffer();
     private final FixSessionCodecsFactory fixSessionCodecsFactory;
     private final ControlledFragmentHandler protocolSubscription;
-
-    private final GapFillEncoder encoder = new GapFillEncoder();
 
     private final Subscription inboundSubscription;
     private final GatewayPublication publication;
@@ -86,11 +88,12 @@ public class GapFiller implements ProtocolHandler, Agent
         final int sequenceNumber,
         final long position)
     {
-        if (messageType == ResendRequestDecoder.MESSAGE_TYPE && status == MessageStatus.OK)
+        if (messageType == RESEND_REQUEST_MESSAGE_TYPE && status == MessageStatus.OK)
         {
             decoderBuffer.wrap(buffer);
             final FixSessionCodecs fixSessionCodecs = fixSessionCodecsFactory.get(sessionId);
             final AbstractResendRequestDecoder resendRequest = fixSessionCodecs.resendRequest();
+            final GapFillEncoder encoder = fixSessionCodecs.gapFillEncoder();
 
             resendRequest.decode(decoderBuffer, offset, length);
 
@@ -102,13 +105,14 @@ public class GapFiller implements ProtocolHandler, Agent
             // If the request was for an infinite replay then reply with the next expected sequence number
             final int newSeqNo = endSeqNo == 0 ? lastSentSeqNo : endSeqNo;
             final int gapFillMsgSeqNum = beginSeqNo;
+
             encoder.setupMessage(reqHeader);
             final long result = encoder.encode(gapFillMsgSeqNum, newSeqNo);
             final int encodedLength = Encoder.length(result);
             final int encodedOffset = Encoder.offset(result);
             final long sentPosition = publication.saveMessage(
                 encoder.buffer(), encodedOffset, encodedLength,
-                libraryId, SequenceResetDecoder.MESSAGE_TYPE, sessionId, sequenceIndex, connectionId,
+                libraryId, SEQUENCE_RESET_MESSAGE_TYPE, sessionId, sequenceIndex, connectionId,
                 MessageStatus.OK, gapFillMsgSeqNum);
 
             if (Pressure.isBackPressured(sentPosition))

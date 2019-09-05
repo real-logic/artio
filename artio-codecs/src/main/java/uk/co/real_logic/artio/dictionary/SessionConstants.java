@@ -33,16 +33,32 @@ public final class SessionConstants
     public static final int MESSAGE_TYPE = 35;
     public static final int NEW_SEQ_NO = 36;
     public static final int POSS_DUP_FLAG = 43;
+    public static final int SENDER_COMP_ID = 49;
     public static final int SENDING_TIME = 52;
+    public static final int ORIG_SENDING_TIME = 122;
+    public static final int TARGET_COMP_ID = 56;
 
 
+    public static final int LOGON_MESSAGE_TYPE = 65;
+    public static final int HEARTBEAT_MESSAGE_TYPE = 48;
+    public static final int TEST_REQUEST_MESSAGE_TYPE = 49;
     public static final int RESEND_REQUEST_MESSAGE_TYPE = 50;
+    public static final int REJECT_MESSAGE_TYPE = 51;
+    public static final int SEQUENCE_RESET_MESSAGE_TYPE = 52;
+    public static final int LOGOUT_MESSAGE_TYPE = 53;
 
-    public static final String LOGON_MESSAGE_TYPE = "A";
-    public static final char[] LOGON_MESSAGE_TYPE_CHARS = LOGON_MESSAGE_TYPE.toCharArray();
-    public static final char[] TEST_REQUEST_MESSAGE_TYPE_CHARS = "1".toCharArray();
-    public static final char[] SEQUENCE_RESET_MESSAGE_TYPE_CHARS = "4".toCharArray();
-    public static final char[] REJECT_MESSAGE_TYPE_CHARS = "3".toCharArray();
-    public static final char[] HEARTBEAT_MESSAGE_TYPE_CHARS = "0".toCharArray();
+    public static final String LOGON_MESSAGE_TYPE_STR = "A";
+    public static final String HEARTBEAT_MESSAGE_TYPE_STR = "0";
+    public static final String TEST_REQUEST_MESSAGE_TYPE_STR = "1";
+    public static final String RESEND_REQUEST_MESSAGE_TYPE_STR = "2";
+    public static final String REJECT_MESSAGE_TYPE_STR = "3";
+    public static final String SEQUENCE_RESET_TYPE_STR = "4";
+    public static final String LOGOUT_MESSAGE_TYPE_STR = "5";
+
+    public static final char[] LOGON_MESSAGE_TYPE_CHARS = LOGON_MESSAGE_TYPE_STR.toCharArray();
+    public static final char[] HEARTBEAT_MESSAGE_TYPE_CHARS = HEARTBEAT_MESSAGE_TYPE_STR.toCharArray();
+    public static final char[] TEST_REQUEST_MESSAGE_TYPE_CHARS = TEST_REQUEST_MESSAGE_TYPE_STR.toCharArray();
+    public static final char[] REJECT_MESSAGE_TYPE_CHARS = REJECT_MESSAGE_TYPE_STR.toCharArray();
+    public static final char[] SEQUENCE_RESET_MESSAGE_TYPE_CHARS = SEQUENCE_RESET_TYPE_STR.toCharArray();
 
 }

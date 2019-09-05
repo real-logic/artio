@@ -1,7 +1,6 @@
 package uk.co.real_logic.artio.engine.logger;
 
-import uk.co.real_logic.artio.builder.HeaderEncoder;
-import uk.co.real_logic.artio.builder.SequenceResetEncoder;
+import uk.co.real_logic.artio.builder.AbstractSequenceResetEncoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
@@ -11,14 +10,15 @@ class GapFillEncoder
 {
     private static final int ENCODE_BUFFER_SIZE = 1024;
 
-    private final SequenceResetEncoder sequenceResetEncoder = new SequenceResetEncoder();
+    private final AbstractSequenceResetEncoder sequenceResetEncoder;
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
     private final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[ENCODE_BUFFER_SIZE]);
 
-    GapFillEncoder()
+    GapFillEncoder(final AbstractSequenceResetEncoder sequenceResetEncoder)
     {
-        sequenceResetEncoder.header().possDupFlag(true);
-        sequenceResetEncoder.gapFillFlag(true);
+        this.sequenceResetEncoder = sequenceResetEncoder;
+        this.sequenceResetEncoder.header().possDupFlag(true);
+        this.sequenceResetEncoder.gapFillFlag(true);
     }
 
     long encode(final int msgSeqNum, final int newSeqNo)
@@ -33,7 +33,7 @@ class GapFillEncoder
 
     void setupMessage(final SessionHeaderDecoder reqHeader)
     {
-        final HeaderEncoder respHeader = sequenceResetEncoder.header();
+        final SessionHeaderEncoder respHeader = sequenceResetEncoder.header();
         respHeader.targetCompID(reqHeader.senderCompID(), reqHeader.senderCompIDLength());
         respHeader.senderCompID(reqHeader.targetCompID(), reqHeader.targetCompIDLength());
         if (reqHeader.hasSenderLocationID())

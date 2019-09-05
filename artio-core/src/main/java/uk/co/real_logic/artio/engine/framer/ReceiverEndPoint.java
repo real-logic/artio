@@ -19,7 +19,8 @@ import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
-import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
@@ -37,8 +38,7 @@ import java.util.Objects;
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
-import static uk.co.real_logic.artio.dictionary.SessionConstants.MIN_MESSAGE_SIZE;
-import static uk.co.real_logic.artio.dictionary.SessionConstants.START_OF_HEADER;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.messages.DisconnectReason.NO_LOGON;
 import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
@@ -71,7 +71,7 @@ class ReceiverEndPoint
     private static final int UNKNOWN_MESSAGE_TYPE = -1;
     private static final int BREAK = -1;
 
-    private final LogonDecoder logon = new LogonDecoder();
+    private final AbstractLogonDecoder acceptorLogon;
 
     private final TcpChannel channel;
     private final GatewayPublication publication;
@@ -110,7 +110,8 @@ class ReceiverEndPoint
         final Framer framer,
         final ErrorHandler errorHandler,
         final int libraryId,
-        final GatewaySessions gatewaySessions)
+        final GatewaySessions gatewaySessions,
+        final FixDictionary acceptorFixDictionary)
     {
         Objects.requireNonNull(publication, "publication");
         Objects.requireNonNull(sessionContexts, "sessionContexts");
@@ -127,6 +128,7 @@ class ReceiverEndPoint
         this.errorHandler = errorHandler;
         this.libraryId = libraryId;
         this.gatewaySessions = gatewaySessions;
+        this.acceptorLogon = acceptorFixDictionary.makeLogonDecoder();
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
         buffer = new MutableAsciiBuffer(byteBuffer);
@@ -211,7 +213,7 @@ class ReceiverEndPoint
         final long sessionId = gatewaySession.sessionId();
         final int sequenceIndex = gatewaySession.sequenceIndex();
 
-        if (saveMessage(offset, LogonDecoder.MESSAGE_TYPE, length, sessionId, sequenceIndex))
+        if (saveMessage(offset, LOGON_MESSAGE_TYPE, length, sessionId, sequenceIndex))
         {
             // Authentication is only complete (ie this state set) when the actual logon message has been saved.
             this.sessionId = sessionId;
@@ -437,16 +439,16 @@ class ReceiverEndPoint
             return;
         }
 
-        if (messageType == LogonDecoder.MESSAGE_TYPE)
+        if (messageType == LOGON_MESSAGE_TYPE)
         {
-            logon.decode(buffer, offset, length);
+            acceptorLogon.decode(buffer, offset, length);
 
             pendingAcceptorLogonMsgOffset = offset;
             pendingAcceptorLogonMsgLength = length;
 
             hasNotifiedFramerOfLogonMessageReceived = false;
             pendingAcceptorLogon = gatewaySessions.authenticate(
-                logon, connectionId(), gatewaySession, channel.remoteAddress());
+                acceptorLogon, connectionId(), gatewaySession, channel.remoteAddress());
         }
         else
         {

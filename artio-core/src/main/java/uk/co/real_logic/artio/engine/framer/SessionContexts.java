@@ -20,8 +20,10 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
-import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.SectorFramer;
@@ -41,6 +43,7 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.function.LongFunction;
 import java.util.zip.CRC32;
 
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
@@ -75,7 +78,6 @@ public class SessionContexts
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final SessionIdEncoder sessionIdEncoder = new SessionIdEncoder();
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
-    private final LogonDecoder logonDecoder = new LogonDecoder();
     private final int actingBlockLength = sessionIdEncoder.sbeBlockLength();
     private final int actingVersion = sessionIdEncoder.sbeSchemaVersion();
 
@@ -89,6 +91,7 @@ public class SessionContexts
     private final ByteBuffer byteBuffer;
 
     private final AtomicBuffer buffer;
+    private final LongFunction<FixDictionary> dictionaryLookup;
     private final SessionIdStrategy idStrategy;
     private final ErrorHandler errorHandler;
     private final MappedFile mappedFile;
@@ -97,10 +100,14 @@ public class SessionContexts
     private long counter = LOWEST_VALID_SESSION_ID;
 
     public SessionContexts(
-        final MappedFile mappedFile, final SessionIdStrategy idStrategy, final ErrorHandler errorHandler)
+        final MappedFile mappedFile,
+        final SessionIdStrategy idStrategy,
+        final ErrorHandler errorHandler,
+        final LongFunction<FixDictionary> dictionaryLookup)
     {
         this.mappedFile = mappedFile;
         this.buffer = mappedFile.buffer();
+        this.dictionaryLookup = dictionaryLookup;
         this.byteBuffer = this.buffer.byteBuffer();
         sectorFramer = new SectorFramer(buffer.capacity());
         this.idStrategy = idStrategy;
@@ -223,7 +230,7 @@ public class SessionContexts
         return sessionContext;
     }
 
-    public SessionContext newSessionContext(final CompositeKey compositeKey)
+    SessionContext newSessionContext(final CompositeKey compositeKey)
     {
         return compositeToContext.computeIfAbsent(compositeKey, onNewLogonFunc);
     }
@@ -338,18 +345,21 @@ public class SessionContexts
         final int offset,
         final int length)
     {
-        if (messageType == LogonDecoder.MESSAGE_TYPE && recordedSessions.add(sessionId))
+        if (messageType == SessionConstants.LOGON_MESSAGE_TYPE && recordedSessions.add(sessionId))
         {
             asciiBuffer.wrap(buffer);
+
+            final FixDictionary dictionary = dictionaryLookup.apply(sessionId);
+            final AbstractLogonDecoder logonDecoder = dictionary.makeLogonDecoder();
             logonDecoder.decode(asciiBuffer, offset, length);
 
             // We use the initiator logon variant as we are reading a sent message.
-            final HeaderDecoder header = logonDecoder.header();
+            final SessionHeaderDecoder header = logonDecoder.header();
             onSentFollowerLogon(header, sessionId, sequenceIndex);
         }
     }
 
-    void onSentFollowerLogon(final HeaderDecoder header, final long sessionId, final int sequenceIndex)
+    void onSentFollowerLogon(final SessionHeaderDecoder header, final long sessionId, final int sequenceIndex)
     {
         final CompositeKey compositeKey = idStrategy.onInitiateLogon(
             header.senderCompIDAsString(),

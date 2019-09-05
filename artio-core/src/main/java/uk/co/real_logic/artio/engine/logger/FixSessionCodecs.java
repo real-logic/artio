@@ -20,17 +20,33 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 
 class FixSessionCodecs
 {
+    private final FixDictionary dictionary;
     private final AbstractResendRequestDecoder resendRequest;
-    // private final AbstractResendRequestDecoder resendRequest;
+    private GapFillEncoder gapFillEncoder;
 
     FixSessionCodecs(final Class<? extends FixDictionary> fixDictionaryType)
     {
-        final FixDictionary dictionary = FixDictionary.of(fixDictionaryType);
+        dictionary = FixDictionary.of(fixDictionaryType);
         resendRequest = dictionary.makeResendRequestDecoder();
     }
 
     AbstractResendRequestDecoder resendRequest()
     {
         return resendRequest;
+    }
+
+    GapFillEncoder gapFillEncoder()
+    {
+        if (gapFillEncoder == null)
+        {
+            gapFillEncoder = makeGapFillEncoder();
+        }
+
+        return gapFillEncoder;
+    }
+
+    GapFillEncoder makeGapFillEncoder()
+    {
+        return new GapFillEncoder(dictionary.makeSequenceResetEncoder());
     }
 }

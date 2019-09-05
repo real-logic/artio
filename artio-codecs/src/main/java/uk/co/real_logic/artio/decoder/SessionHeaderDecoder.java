@@ -63,4 +63,16 @@ public interface SessionHeaderDecoder
     boolean hasTargetLocationID();
 
     boolean hasTargetSubID();
+
+    String senderCompIDAsString();
+
+    String senderSubIDAsString();
+
+    String senderLocationIDAsString();
+
+    String targetCompIDAsString();
+
+    String targetSubIDAsString();
+
+    String targetLocationIDAsString();
 }

@@ -165,6 +165,9 @@ public class Replayer implements ProtocolHandler, Agent
                 return CONTINUE;
             }
 
+            final GapFillEncoder encoder = sessionCodecs.makeGapFillEncoder();
+            encoder.setupMessage(resendRequest.header());
+
             final ReplayerSession replayerSession = new ReplayerSession(
                 bufferClaim,
                 idleStrategy,
@@ -183,7 +186,7 @@ public class Replayer implements ProtocolHandler, Agent
                 replayQuery,
                 message,
                 errorHandler,
-                resendRequest.header());
+                encoder);
 
             replayerSession.query();
 
