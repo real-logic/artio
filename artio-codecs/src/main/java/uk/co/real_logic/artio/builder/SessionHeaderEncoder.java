@@ -1,5 +1,7 @@
 package uk.co.real_logic.artio.builder;
 
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
+
 // Partial FIX header - only fields used by session layer (see session_dictionary.xml).
 // The expectation is that every realistic dictionary will have those defined with the right names.
 public interface SessionHeaderEncoder
@@ -147,5 +149,7 @@ public interface SessionHeaderEncoder
     SessionHeaderEncoder lastMsgSeqNumProcessed(int value);
 
     boolean hasLastMsgSeqNumProcessed();
+
+    long startMessage(MutableAsciiBuffer buffer, int offset);
 
 }
