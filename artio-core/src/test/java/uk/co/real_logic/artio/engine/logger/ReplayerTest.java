@@ -196,8 +196,6 @@ public class ReplayerTest extends AbstractLogTest
         assertHasResentWithPossDupFlag(srcLength, times(2));
     }
 
-    // TODO: queue replay requests by fix session
-
     @Test
     public void shouldGapFillAdminMessages()
     {

@@ -209,8 +209,8 @@ public class SessionContextsTest
     @Test
     public void doesNotReuseExistingSessionIdsForDistinctCompositeKeys()
     {
-        final SessionContext aContext = sessionContexts.onLogon(aSession);
-        final SessionContext bContext = sessionContexts.onLogon(bSession); // bump counter
+        sessionContexts.onLogon(aSession);
+        sessionContexts.onLogon(bSession); // bump counter
 
         logonWithSenderAndTarget(aSession.localCompId(), aSession.remoteCompId());
 
