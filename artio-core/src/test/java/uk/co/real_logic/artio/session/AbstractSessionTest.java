@@ -962,7 +962,7 @@ public abstract class AbstractSessionTest
         session.lastSentMsgSeqNum(0);
 
         // encode the header from the encoder
-        final int encodedSentSeqNum1 = session.encode(testEncoder.header());
+        final int encodedSentSeqNum1 = session.prepare(testEncoder.header());
         assertEquals(1, encodedSentSeqNum1); // expect to be 1 more than last sent seq num
 
         // write our encoder to our buffer (header is not encoded from session)
@@ -984,7 +984,7 @@ public abstract class AbstractSessionTest
 
         // encode the header of the encoder again with the new session state
         final SessionHeaderEncoder headerEncoder = testEncoder.header();
-        final int encodedSentSeqNum2 = session.encode(headerEncoder);
+        final int encodedSentSeqNum2 = session.prepare(headerEncoder);
         assertEquals(2, encodedSentSeqNum2);
 
         // encode the header of the buffer with the new session state

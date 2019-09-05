@@ -448,12 +448,12 @@ public class Session implements AutoCloseable
     }
 
     /**
-     * Encode header with session state
+     * Prepare header with session state
      *
      * @param header the encoder header
-     * @return the encoded sent sequence number for the header
+     * @return the sent sequence number for the header
      */
-    public int encode(final SessionHeaderEncoder header)
+    public int prepare(final SessionHeaderEncoder header)
     {
         final int sentSeqNum = newSentSeqNum();
         header
@@ -485,13 +485,13 @@ public class Session implements AutoCloseable
     {
         validateCanSendMessage();
 
-        final int encodedSentSeqNum = encode(encoder.header());
+        final int sentSeqNum = prepare(encoder.header());
 
         final long result = encoder.encode(asciiBuffer, 0);
         final int length = Encoder.length(result);
         final int offset = Encoder.offset(result);
 
-        return send(asciiBuffer, offset, length, encodedSentSeqNum, encoder.messageType());
+        return send(asciiBuffer, offset, length, sentSeqNum, encoder.messageType());
     }
 
     /**
