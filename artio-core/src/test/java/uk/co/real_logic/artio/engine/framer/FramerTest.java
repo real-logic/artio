@@ -795,7 +795,6 @@ public class FramerTest
             anyInt(),
             any(),
             any(),
-            any(),
             any());
     }
 

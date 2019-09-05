@@ -41,6 +41,7 @@ class GatewaySession implements SessionInfo
     private final int resendRequestChunkSize;
     private final boolean sendRedundantResendRequests;
     private final boolean enableLastMsgSeqNumProcessed;
+    private final FixDictionary fixDictionary;
 
     private ReceiverEndPoint receiverEndPoint;
     private SenderEndPoint senderEndPoint;
@@ -57,7 +58,6 @@ class GatewaySession implements SessionInfo
     private Consumer<GatewaySession> onGatewaySessionLogon;
     private SessionLogonListener logonListener = this::onSessionLogon;
     private boolean initialResetSeqNum;
-    private FixDictionary fixDictionary;
 
     GatewaySession(
         final long connectionId,
@@ -71,7 +71,8 @@ class GatewaySession implements SessionInfo
         final boolean closedResendInterval,
         final int resendRequestChunkSize,
         final boolean sendRedundantResendRequests,
-        final boolean enableLastMsgSeqNumProcessed)
+        final boolean enableLastMsgSeqNumProcessed,
+        final FixDictionary fixDictionary)
     {
         this.connectionId = connectionId;
         this.sessionId = context.sessionId();
@@ -86,6 +87,7 @@ class GatewaySession implements SessionInfo
         this.resendRequestChunkSize = resendRequestChunkSize;
         this.sendRedundantResendRequests = sendRedundantResendRequests;
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
+        this.fixDictionary = fixDictionary;
     }
 
     public long connectionId()
@@ -207,13 +209,11 @@ class GatewaySession implements SessionInfo
     void onLogon(
         final String username,
         final String password,
-        final int heartbeatIntervalInS,
-        final FixDictionary fixDictionary)
+        final int heartbeatIntervalInS)
     {
         this.username = username;
         this.password = password;
         this.heartbeatIntervalInS = heartbeatIntervalInS;
-        this.fixDictionary = fixDictionary;
         if (session != null)
         {
             session.setupSession(sessionId, sessionKey);
@@ -229,13 +229,12 @@ class GatewaySession implements SessionInfo
         final CompositeKey sessionKey,
         final String username,
         final String password,
-        final int heartbeatIntervalInS,
-        final FixDictionary fixDictionary)
+        final int heartbeatIntervalInS)
     {
         this.sessionId = sessionId;
         this.context = context;
         this.sessionKey = sessionKey;
-        onLogon(username, password, heartbeatIntervalInS, fixDictionary);
+        onLogon(username, password, heartbeatIntervalInS);
     }
 
     public String username()

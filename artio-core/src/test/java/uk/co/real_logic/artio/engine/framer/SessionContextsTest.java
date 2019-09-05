@@ -21,14 +21,9 @@ import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
-import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.LogonEncoder;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
-import uk.co.real_logic.artio.decoder.LogonDecoder;
-import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.session.CompositeKey;
-import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -212,32 +207,12 @@ public class SessionContextsTest
     }
 
     @Test
-    public void handsOutSameSessionContextAfterTakingOverAsLeader()
-    {
-        final long sessionId = 123;
-        final HeaderDecoder header = mock(HeaderDecoder.class);
-        when(header.senderCompIDAsString()).thenReturn(aSession.localCompId());
-        when(header.targetCompIDAsString()).thenReturn(aSession.remoteCompId());
-
-        sessionContexts.onSentFollowerLogon(header, sessionId, SEQUENCE_INDEX);
-
-        final SessionContext sessionContext = sessionContexts.onLogon(aSession);
-        assertValuesEqual(
-            sessionContext,
-            new SessionContext(sessionId, SEQUENCE_INDEX, Session.NO_LOGON_TIME, sessionContexts, FILE_POSITION));
-    }
-
-    @Test
     public void doesNotReuseExistingSessionIdsForDistinctCompositeKeys()
     {
         final SessionContext aContext = sessionContexts.onLogon(aSession);
         final SessionContext bContext = sessionContexts.onLogon(bSession); // bump counter
 
-        final long result = logonWithSenderAndTarget(aSession.localCompId(), aSession.remoteCompId());
-
-        sessionContexts.onSentFollowerMessage(
-            aContext.sessionId(), aContext.sequenceIndex(), LogonDecoder.MESSAGE_TYPE, asciiBuffer,
-            Encoder.offset(result), Encoder.length(result));
+        logonWithSenderAndTarget(aSession.localCompId(), aSession.remoteCompId());
 
         final SessionContext cContext = sessionContexts.onLogon(cSession);
 
@@ -268,8 +243,7 @@ public class SessionContextsTest
     private SessionContexts newSessionContexts(final AtomicBuffer buffer)
     {
         when(mappedFile.buffer()).thenReturn(buffer);
-        return new SessionContexts(mappedFile, idStrategy, errorHandler,
-            id -> FixDictionary.of(FixDictionary.findDefault()));
+        return new SessionContexts(mappedFile, idStrategy, errorHandler);
     }
 
     private void assertValuesEqual(

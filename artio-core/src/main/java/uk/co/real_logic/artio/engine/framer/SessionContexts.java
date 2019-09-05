@@ -15,15 +15,10 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
-import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
-import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.SectorFramer;
@@ -43,7 +38,6 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
-import java.util.function.LongFunction;
 import java.util.zip.CRC32;
 
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
@@ -91,7 +85,6 @@ public class SessionContexts
     private final ByteBuffer byteBuffer;
 
     private final AtomicBuffer buffer;
-    private final LongFunction<FixDictionary> dictionaryLookup;
     private final SessionIdStrategy idStrategy;
     private final ErrorHandler errorHandler;
     private final MappedFile mappedFile;
@@ -102,12 +95,10 @@ public class SessionContexts
     public SessionContexts(
         final MappedFile mappedFile,
         final SessionIdStrategy idStrategy,
-        final ErrorHandler errorHandler,
-        final LongFunction<FixDictionary> dictionaryLookup)
+        final ErrorHandler errorHandler)
     {
         this.mappedFile = mappedFile;
         this.buffer = mappedFile.buffer();
-        this.dictionaryLookup = dictionaryLookup;
         this.byteBuffer = this.buffer.byteBuffer();
         sectorFramer = new SectorFramer(buffer.capacity());
         this.idStrategy = idStrategy;
@@ -227,6 +218,8 @@ public class SessionContexts
             return DUPLICATE_SESSION;
         }
 
+        recordedSessions.add(sessionContext.sessionId());
+
         return sessionContext;
     }
 
@@ -335,42 +328,6 @@ public class SessionContexts
 
         buffer.setMemory(0, buffer.capacity(), (byte)0);
         initialiseBuffer();
-    }
-
-    void onSentFollowerMessage(
-        final long sessionId,
-        final int sequenceIndex,
-        final int messageType,
-        final DirectBuffer buffer,
-        final int offset,
-        final int length)
-    {
-        if (messageType == SessionConstants.LOGON_MESSAGE_TYPE && recordedSessions.add(sessionId))
-        {
-            asciiBuffer.wrap(buffer);
-
-            final FixDictionary dictionary = dictionaryLookup.apply(sessionId);
-            final AbstractLogonDecoder logonDecoder = dictionary.makeLogonDecoder();
-            logonDecoder.decode(asciiBuffer, offset, length);
-
-            // We use the initiator logon variant as we are reading a sent message.
-            final SessionHeaderDecoder header = logonDecoder.header();
-            onSentFollowerLogon(header, sessionId, sequenceIndex);
-        }
-    }
-
-    void onSentFollowerLogon(final SessionHeaderDecoder header, final long sessionId, final int sequenceIndex)
-    {
-        final CompositeKey compositeKey = idStrategy.onInitiateLogon(
-            header.senderCompIDAsString(),
-            header.senderSubIDAsString(),
-            header.senderLocationIDAsString(),
-            header.targetCompIDAsString(),
-            header.targetSubIDAsString(),
-            header.targetLocationIDAsString());
-
-        final SessionContext sessionContext = assignSessionId(compositeKey, sessionId, sequenceIndex);
-        compositeToContext.put(compositeKey, sessionContext);
     }
 
     void updateSavedData(final int filePosition, final int sequenceIndex, final long logonTime)

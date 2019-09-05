@@ -336,12 +336,20 @@ project(':artio-system-tests') {
         testCompile project(path: ':artio-core', configuration: 'tests')
         testCompile project(path: ':artio-codecs', configuration: 'tests')
 
+        testCompile project(path: ':artio-session-codecs', configuration: 'tests')
         compile project(':artio-session-codecs')
+
         compile project(path: ':artio-core')
 
         perfCompile project
         perfCompile 'org.openjdk.jmh:jmh-core:1.21'
         annotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess:1.21'
+
+        idea {
+            dependencies {
+                compile project(':artio-session-codecs').sourceSets.generated.output
+            }
+        }
     }
 
     idea.module {

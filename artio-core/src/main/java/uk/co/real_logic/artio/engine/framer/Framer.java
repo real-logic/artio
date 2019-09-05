@@ -473,8 +473,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 receivedSequenceNumber,
                 session.username(),
                 session.password(),
-                engineBlockablePosition,
-                session.fixDictionary());
+                engineBlockablePosition);
 
             schedule(() -> saveManageSession(
                 ENGINE_LIBRARY_ID,
@@ -532,7 +531,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             configuration.acceptedSessionClosedResendInterval(),
             configuration.acceptedSessionResendRequestChunkSize(),
             configuration.acceptedSessionSendRedundantResendRequests(),
-            configuration.acceptedEnableLastMsgSeqNumProcessed());
+            configuration.acceptedEnableLastMsgSeqNumProcessed(),
+            configuration.acceptorfixDictionary());
 
         gatewaySession.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
 
@@ -548,8 +548,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 UNK_SESSION,
                 null,
                 null,
-                engineBlockablePosition,
-                configuration.acceptorfixDictionary());
+                engineBlockablePosition);
         }
 
         final String address = channel.remoteAddress();
@@ -789,7 +788,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 closedResendInterval,
                 resendRequestChunkSize,
                 sendRedundantResendRequests,
-                enableLastMsgSeqNumProcessed);
+                enableLastMsgSeqNumProcessed,
+                FixDictionary.of(fixDictionary));
             library.addSession(gatewaySession);
 
             handoverNewConnectionToLibrary(
@@ -912,8 +912,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         final long now = outboundTimer.recordSince(timestamp);
 
-        sessionContexts.onSentFollowerMessage(sessionId, sequenceIndex, messageType, buffer, offset, length);
-
         senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length, sequenceNumber, position);
 
         if (nonLoggingPositionSender != null)
@@ -936,7 +934,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final boolean closedResendInterval,
         final int resendRequestChunkSize,
         final boolean sendRedundantResendRequests,
-        final boolean enableLastMsgSeqNumProcessed)
+        final boolean enableLastMsgSeqNumProcessed,
+        final FixDictionary fixDictionary)
     {
         final ReceiverEndPoint receiverEndPoint = endPointFactory.receiverEndPoint(
             channel,
@@ -964,7 +963,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             closedResendInterval,
             resendRequestChunkSize,
             sendRedundantResendRequests,
-            enableLastMsgSeqNumProcessed);
+            enableLastMsgSeqNumProcessed,
+            fixDictionary);
 
         receiverEndPoint.gatewaySession(gatewaySession);
 
@@ -1147,8 +1147,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 lastReceivedSequenceNumber,
                 username,
                 password,
-                engineBlockablePosition,
-                session.fixDictionary());
+                engineBlockablePosition);
 
             schedule(() -> saveManageSession(
                 ENGINE_LIBRARY_ID,
@@ -1868,8 +1867,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 sessionKey,
                 username,
                 password,
-                heartbeatIntervalInS,
-                configuration.acceptorfixDictionary());
+                heartbeatIntervalInS
+            );
 
             return COMPLETE;
         }

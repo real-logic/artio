@@ -128,13 +128,13 @@ class GatewaySessions
         final int lastReceivedSequenceNumber,
         final String username,
         final String password,
-        final BlockablePosition engineBlockablePosition,
-        final FixDictionary dictionary)
+        final BlockablePosition engineBlockablePosition)
     {
         final long connectionId = gatewaySession.connectionId();
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
+        final FixDictionary dictionary = gatewaySession.fixDictionary();
         final String beginString = dictionary.beginString();
 
         final SessionProxy proxy = new DirectSessionProxy(
@@ -186,7 +186,7 @@ class GatewaySessions
         DebugLogger.log(FIX_CONNECTION, "Gateway Acquired Session %d%n", connectionId);
         if (sessionKey != null)
         {
-            gatewaySession.onLogon(username, password, heartbeatIntervalInS, dictionary);
+            gatewaySession.onLogon(username, password, heartbeatIntervalInS);
             session.initialLastReceivedMsgSeqNum(lastReceivedSequenceNumber);
         }
     }
@@ -463,8 +463,8 @@ class GatewaySessions
                 compositeKey,
                 username,
                 password,
-                logon.heartBtInt(),
-                acceptorfixDictionary);
+                logon.heartBtInt()
+            );
 
             // See Framer.handoverNewConnectionToLibrary for sole library mode equivalent
             if (resetSeqNum)
