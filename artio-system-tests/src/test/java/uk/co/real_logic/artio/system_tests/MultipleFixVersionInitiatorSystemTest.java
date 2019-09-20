@@ -38,6 +38,8 @@ import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.unusedPort;
 import static uk.co.real_logic.artio.fixt.ApplVerID.FIX50;
@@ -51,7 +53,7 @@ public class MultipleFixVersionInitiatorSystemTest extends AbstractGatewayToGate
     private static final int FIXT_OUTBOUND_REPLAY_STREAM = 13;
     private static final int FIXT_ARCHIVE_REPLAY_STREAM = 14;
 
-    protected int fixtPort = unusedPort();
+    private int fixtPort = unusedPort();
 
     private FixEngine fixtAcceptingEngine;
     private FixLibrary fixtAcceptingLibrary;
@@ -59,6 +61,7 @@ public class MultipleFixVersionInitiatorSystemTest extends AbstractGatewayToGate
     private FakeOtfAcceptor fixtAcceptingOtfAcceptor = new FakeOtfAcceptor();
     private FakeHandler fixtAcceptingHandler = new FakeHandler(fixtAcceptingOtfAcceptor);
 
+    private Session fixtAcceptingSession;
     private Session fixtInitiatingSession;
 
     @Before
@@ -92,7 +95,7 @@ public class MultipleFixVersionInitiatorSystemTest extends AbstractGatewayToGate
     private void connectFixTAcceptingLibrary()
     {
         final LibraryConfiguration configuration = new LibraryConfiguration();
-        setupCommonConfig(ACCEPTOR_ID, INITIATOR_ID, configuration);
+        setupCommonConfig(FIXT_ACCEPTOR_ID, INITIATOR_ID, configuration);
 
         configuration
             .sessionExistsHandler(fixtAcceptingHandler)
@@ -138,17 +141,45 @@ public class MultipleFixVersionInitiatorSystemTest extends AbstractGatewayToGate
     public void messagesCanBeSentFromInitiatorToBothAcceptors()
     {
         connectSessions();
+        connectFixTSessions();
+
+        bothSessionsCanExchangeMessages();
+    }
+
+    @Test
+    public void sessionsCanBeAcquired()
+    {
+        connectSessions();
+        acquireAcceptingSession();
+
+        connectFixTSessions();
+        acquireFixTSession();
+
+        bothSessionsCanExchangeMessages();
+    }
+
+    private void bothSessionsCanExchangeMessages()
+    {
         messagesCanBeExchanged();
 
         final FixDictionaryImpl fixtDictionary = new FixDictionaryImpl();
 
-        connectFixTSession();
         final String testReqID = testReqId();
         sendTestRequest(fixtInitiatingSession, testReqID, fixtDictionary);
         assertReceivedSingleHeartbeat(testSystem, initiatingOtfAcceptor, testReqID);
     }
 
-    private void connectFixTSession()
+    private void acquireFixTSession()
+    {
+        final long sessionId = fixtAcceptingHandler.awaitSessionId(testSystem::poll);
+
+        fixtAcceptingSession = acquireSession(fixtAcceptingHandler, fixtAcceptingLibrary, sessionId, testSystem);
+        assertEquals(INITIATOR_ID, fixtAcceptingHandler.lastInitiatorCompId());
+        assertEquals(FIXT_ACCEPTOR_ID, fixtAcceptingHandler.lastAcceptorCompId());
+        assertNotNull("unable to acquire accepting session", fixtAcceptingSession);
+    }
+
+    private void connectFixTSessions()
     {
         final SessionConfiguration config = SessionConfiguration.builder()
             .address("localhost", fixtPort)
