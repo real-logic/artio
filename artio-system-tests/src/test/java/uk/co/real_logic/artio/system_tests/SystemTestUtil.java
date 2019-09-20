@@ -21,8 +21,10 @@ import org.agrona.concurrent.YieldingIdleStrategy;
 import org.hamcrest.Matcher;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.Constants;
+import uk.co.real_logic.artio.FixDictionaryImpl;
 import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.builder.TestRequestEncoder;
+import uk.co.real_logic.artio.builder.AbstractTestRequestEncoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
@@ -104,9 +106,16 @@ public final class SystemTestUtil
 
     static long sendTestRequest(final Session session, final String testReqID)
     {
+        return sendTestRequest(session, testReqID, new FixDictionaryImpl());
+    }
+
+    static long sendTestRequest(
+        final Session session, final String testReqID, final FixDictionary fixDictionary)
+    {
         assertEventuallyTrue("Session not connected", session::isConnected);
 
-        final TestRequestEncoder testRequest = new TestRequestEncoder();
+        final AbstractTestRequestEncoder testRequest = fixDictionary.makeTestRequestEncoder();
+        //final TestRequestEncoder testRequest = new TestRequestEncoder();
         testRequest.testReqID(testReqID);
 
         final long position = session.send(testRequest);

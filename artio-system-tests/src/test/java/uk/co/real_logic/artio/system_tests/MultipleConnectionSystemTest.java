@@ -45,7 +45,7 @@ public class MultipleConnectionSystemTest extends AbstractGatewayToGatewaySystem
 
         // Complete a second connection
         final Reply<Session> successfulReply = initiate(initiatingLibrary, port, INITIATOR_ID2, ACCEPTOR_ID);
-        completeConnectSessions(successfulReply);
+        completeConnectInitiatingSession(successfulReply);
 
         messagesCanBeExchanged();
     }

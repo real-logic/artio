@@ -67,7 +67,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         acquireAuthProxy(reply);
 
         auth.accept();
-        completeConnectSessions(reply);
+        completeConnectInitiatingSession(reply);
         messagesCanBeExchanged();
         assertInitiatingSequenceIndexIs(0);
     }
@@ -90,7 +90,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         acquireAuthProxy(validReply);
 
         auth.accept();
-        completeConnectSessions(validReply);
+        completeConnectInitiatingSession(validReply);
         messagesCanBeExchanged();
         assertInitiatingSequenceIndexIs(1);
     }

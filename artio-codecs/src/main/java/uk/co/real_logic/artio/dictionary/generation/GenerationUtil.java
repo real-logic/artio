@@ -27,7 +27,8 @@ public final class GenerationUtil
 {
     private static final int MESSAGE_TYPE_BITSHIFT = 8;
 
-    public static final String PARENT_PACKAGE = System.getProperty("PARENT_PACKAGE", "uk.co.real_logic.artio");
+    public static final String PARENT_PACKAGE =
+        System.getProperty("fix.codecs.parent_package", "uk.co.real_logic.artio");
     public static final boolean FLYWEIGHTS_ENABLED = Boolean.getBoolean("fix.codecs.flyweight");
 
     public static final String ENCODER_PACKAGE = PARENT_PACKAGE + ".builder";

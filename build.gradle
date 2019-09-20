@@ -290,6 +290,7 @@ project(':artio-session-fixt-codecs') {
     task generateCodecs(type: JavaExec) {
         main = 'uk.co.real_logic.artio.dictionary.CodecGenerationTool'
         classpath = sourceSets.main.runtimeClasspath
+        systemProperty("fix.codecs.parent_package", "uk.co.real_logic.artio.fixt")
         args = [generatedDir, 'src/main/resources/FIXT11.xml']
         outputs.dir generatedDir
     }
@@ -337,7 +338,10 @@ project(':artio-system-tests') {
         testCompile project(path: ':artio-codecs', configuration: 'tests')
 
         testCompile project(path: ':artio-session-codecs', configuration: 'tests')
+        testCompile project(path: ':artio-session-fixt-codecs', configuration: 'tests')
+
         compile project(':artio-session-codecs')
+        compile project(':artio-session-fixt-codecs')
 
         compile project(path: ':artio-core')
 
@@ -348,6 +352,7 @@ project(':artio-system-tests') {
         idea {
             dependencies {
                 compile project(':artio-session-codecs').sourceSets.generated.output
+                compile project(':artio-session-fixt-codecs').sourceSets.generated.output
             }
         }
     }

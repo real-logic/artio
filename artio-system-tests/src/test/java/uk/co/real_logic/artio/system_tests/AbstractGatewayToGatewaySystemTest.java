@@ -168,17 +168,24 @@ public class AbstractGatewayToGatewaySystemTest
     void connectSessions()
     {
         final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
-        completeConnectSessions(reply);
+        completeConnectInitiatingSession(reply);
     }
 
-    void completeConnectSessions(final Reply<Session> reply)
+    void completeConnectInitiatingSession(final Reply<Session> reply)
+    {
+        initiatingSession = completeConnectSessions(reply);
+    }
+
+    Session completeConnectSessions(final Reply<Session> reply)
     {
         testSystem.awaitReply(reply);
 
-        initiatingSession = reply.resultIfPresent();
+        final Session session = reply.resultIfPresent();
 
         assertEquals(reply.toString(), State.COMPLETED, reply.state());
-        assertConnected(initiatingSession);
+        assertConnected(session);
+
+        return session;
     }
 
     void completeFailedSession(final Reply<Session> reply)
