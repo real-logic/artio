@@ -3,6 +3,7 @@ package uk.co.real_logic.artio.engine.logger;
 import uk.co.real_logic.artio.builder.HeaderEncoder;
 import uk.co.real_logic.artio.builder.SequenceResetEncoder;
 import uk.co.real_logic.artio.decoder.HeaderDecoder;
+import uk.co.real_logic.artio.engine.HeaderSetup;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -30,27 +31,9 @@ class GapFillEncoder
         return sequenceResetEncoder.encode(buffer, 0);
     }
 
-    void setupMessage(final HeaderDecoder reqHeader)
+    void setupMessage(final HeaderDecoder requestHeader)
     {
-        final HeaderEncoder respHeader = sequenceResetEncoder.header();
-        respHeader.targetCompID(reqHeader.senderCompID(), reqHeader.senderCompIDLength());
-        respHeader.senderCompID(reqHeader.targetCompID(), reqHeader.targetCompIDLength());
-        if (reqHeader.hasSenderLocationID())
-        {
-            respHeader.targetLocationID(reqHeader.senderLocationID(), reqHeader.senderLocationIDLength());
-        }
-        if (reqHeader.hasSenderSubID())
-        {
-            respHeader.targetSubID(reqHeader.senderSubID(), reqHeader.senderSubIDLength());
-        }
-        if (reqHeader.hasTargetLocationID())
-        {
-            respHeader.senderLocationID(reqHeader.targetLocationID(), reqHeader.targetLocationIDLength());
-        }
-        if (reqHeader.hasTargetSubID())
-        {
-            respHeader.senderSubID(reqHeader.targetSubID(), reqHeader.targetSubIDLength());
-        }
+        HeaderSetup.setup(requestHeader, sequenceResetEncoder.header());
     }
 
     MutableAsciiBuffer buffer()

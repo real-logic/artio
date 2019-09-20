@@ -18,14 +18,20 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.FixGatewayException;
+import uk.co.real_logic.artio.builder.Encoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.HeaderSetup;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
+import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -287,21 +293,31 @@ class GatewaySessions
         AUTHENTICATED,
         INDEXER_CATCHUP,
         ACCEPTED,
+        SENDING_REJECT_MESSAGE,
         REJECTED
     }
 
     private final class PendingAcceptorLogon implements AuthenticationProxy, AcceptorLogonResult
     {
         private static final long NO_REQUIRED_POSITION = -1;
+        private static final int ENCODE_BUFFER_SIZE = 1024;
+
         private final SessionIdStrategy sessionIdStrategy;
         private final LogonDecoder logon;
         private final SessionContexts sessionContexts;
         private final String remoteAddress;
         private final boolean resetSeqNum;
+
         private volatile AuthenticationState state = AuthenticationState.PENDING;
+
         private GatewaySession session;
         private DisconnectReason reason;
         private long requiredPosition = NO_REQUIRED_POSITION;
+
+        private Encoder encoder;
+        private MutableAsciiBuffer encodeBuffer;
+        private int remainingEncodeLength;
+        private int remainingEncodeOffset;
 
         PendingAcceptorLogon(
             final SessionIdStrategy sessionIdStrategy,
@@ -414,6 +430,29 @@ class GatewaySessions
                 case REJECTED:
                     return true;
 
+                case SENDING_REJECT_MESSAGE:
+                    // Don't actually know if this user is valid, or even a legitimate user?
+                    // TODO: can we more accurately calculate the sequence number for the message?
+
+                    // encode
+                    final UtcTimestampEncoder sendingTimeEncoder = new UtcTimestampEncoder();
+                    encodeBuffer = new MutableAsciiBuffer(new byte[ENCODE_BUFFER_SIZE]);
+
+                    final SessionHeaderEncoder header = encoder.header();
+                    header.msgSeqNum(1);
+                    header.sendingTime(
+                        sendingTimeEncoder.buffer(), sendingTimeEncoder.encode(System.currentTimeMillis()));
+                    HeaderSetup.setup(logon.header(), header);
+
+                    final long result = encoder.encode(encodeBuffer, 0);
+                    remainingEncodeLength = Encoder.length(result);
+                    remainingEncodeOffset = Encoder.offset(result);
+
+                    // TODO: write to socket channel.
+
+                    state = AuthenticationState.REJECTED;
+                    return false;
+
                 case INDEXER_CATCHUP:
                     onIndexerCatchup();
                     return false;
@@ -471,6 +510,14 @@ class GatewaySessions
         public void reject()
         {
             reject(DisconnectReason.FAILED_AUTHENTICATION);
+        }
+
+        public void reject(final Encoder encoder)
+        {
+            this.encoder = encoder;
+            this.session = null;
+            this.reason = DisconnectReason.FAILED_AUTHENTICATION;
+            this.state = AuthenticationState.SENDING_REJECT_MESSAGE;
         }
 
         public String remoteAddress()

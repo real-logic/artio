@@ -18,7 +18,10 @@ package uk.co.real_logic.artio.system_tests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.builder.Encoder;
+import uk.co.real_logic.artio.builder.RejectEncoder;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -29,6 +32,8 @@ import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static uk.co.real_logic.artio.Constants.LOGON_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -73,6 +78,36 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     }
 
     @Test
+    public void logonsCanBeRejected()
+    {
+        final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+
+        acquireAuthProxy(reply);
+
+        auth.reject();
+
+        assertDisconnectRejected(reply);
+    }
+
+    @Test
+    public void logonsCanBeRejectedWithCustomMessages()
+    {
+        final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+
+        acquireAuthProxy(reply);
+
+        final RejectEncoder rejectEncoder = new RejectEncoder();
+        rejectEncoder.refMsgType(LOGON_MESSAGE_AS_STR);
+        rejectEncoder.text("Invalid Logon");
+
+        auth.reject(rejectEncoder);
+
+        assertDisconnectRejected(reply);
+
+        // TODO: assert the reject received
+    }
+
+    @Test
     public void messagesCanBeSentFromInitiatorToAcceptorAfterFailedAuthenticationAttempt()
     {
         final Reply<Session> invalidReply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
@@ -99,6 +134,13 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     public void teardown()
     {
         auth.verifyNoBlockingCalls();
+    }
+
+    private void assertDisconnectRejected(final Reply<Session> reply)
+    {
+        testSystem.awaitReply(reply);
+        assertEquals(reply.toString(), Reply.State.ERRORED, reply.state());
+        assertThat(reply.error().getMessage(), containsString("UNABLE_TO_LOGON: Disconnected before session active"));
     }
 
     private void acquireAuthProxy(final Reply<Session> reply)
@@ -144,6 +186,11 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         void reject()
         {
             authProxy.reject();
+        }
+
+        void reject(final Encoder encoder)
+        {
+            authProxy.reject(encoder);
         }
 
         boolean hasAuthenticateBeenInvoked()

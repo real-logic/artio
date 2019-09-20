@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.validation;
 
+import uk.co.real_logic.artio.builder.Encoder;
+
 /**
  * Interface to notify the gateway whether a Logon should be authenticated or not. Either invoker accept or reject.
  *
@@ -31,6 +33,13 @@ public interface AuthenticationProxy
      * Call this method to reject the authentication.
      */
     void reject();
+
+    /**
+     * Call this method to reject the authentication with a custom message.
+     *
+     * @param encoder the encoder that defines the message. This encoder should not be re-used for other rejects.
+     */
+    void reject(Encoder encoder);
 
     /**
      * Get the remote IP address and port of the system. Remote addresses would be of the format
