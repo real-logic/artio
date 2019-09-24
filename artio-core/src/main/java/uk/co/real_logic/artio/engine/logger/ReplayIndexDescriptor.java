@@ -25,7 +25,7 @@ import java.io.File;
 
 public final class ReplayIndexDescriptor
 {
-    static final int REPLAY_POSITION_BUFFER_SIZE = 128 * 1024;
+    static final int REPLAY_POSITION_BUFFER_SIZE = 4 * 1024;
 
     private static final int BEGIN_CHANGE_OFFSET = MessageHeaderEncoder.ENCODED_LENGTH;
     private static final int END_CHANGE_OFFSET = BEGIN_CHANGE_OFFSET + BitUtil.SIZE_OF_LONG;
