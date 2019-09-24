@@ -195,8 +195,9 @@ class ReceiverEndPoints extends TransportPoller
             selector.selectNow();
 
             final SelectionKey[] keys = selectedKeySet.keys();
+            final int size = selectedKeySet.size();
             int i;
-            for (i = selectedKeySet.size() - 1; i >= 0; i--)
+            for (i = 0; i < size; i++)
             {
                 final ReceiverEndPoint endPoint = (ReceiverEndPoint)keys[i].attachment();
                 final int polledBytes = endPoint.poll();
@@ -210,8 +211,8 @@ class ReceiverEndPoints extends TransportPoller
                 bytesReceived += polledBytes;
             }
 
-            // i == -1 is the empty selectedKeySet case
-            if (i != -1)
+            // check we need to reset
+            if (i != 0)
             {
                 selectedKeySet.reset(i);
             }
