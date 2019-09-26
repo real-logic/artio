@@ -27,7 +27,7 @@ plugins {
 }
 
 def aeronVersion = '1.21.2'
-def agronaVersion = '1.0.7'
+def agronaVersion = '1.0.8-SNAPSHOT'
 def sbeVersion = '1.13.2'
 def artioJavaVersion = JavaVersion.VERSION_1_8
 def artioGroup = 'uk.co.real-logic'
@@ -309,7 +309,9 @@ project(':artio-core') {
         compile project(':artio-session-codecs')
         compile project(':artio-codecs')
 
-        compile "io.aeron:aeron-all:${aeronVersion}"
+        compile "io.aeron:aeron-client:${aeronVersion}"
+        compile "io.aeron:aeron-driver:${aeronVersion}"
+        compile "io.aeron:aeron-archive:${aeronVersion}"
         compile 'org.hdrhistogram:HdrHistogram:2.1.11'
     }
 

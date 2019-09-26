@@ -40,8 +40,7 @@ import java.nio.channels.ClosedChannelException;
 import java.util.function.ToIntFunction;
 
 import static io.aeron.Publication.BACK_PRESSURED;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES;
 import static uk.co.real_logic.artio.messages.DisconnectReason.DUPLICATE_SESSION;
@@ -60,6 +59,7 @@ public class ReceiverEndPointTest
     private static final int BUFFER_SIZE = 16 * 1024;
     private static final int SEQUENCE_INDEX = 0;
     private static final int LOGON_LEN = LOGON_MESSAGE.length;
+    public static final int OUT_OF_REQUIRED_ORDER_MSG_LEN = TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES.length;
 
     private final AcceptorLogonResult pendingAuth = createSuccessfulPendingAuth();
     private final AcceptorLogonResult backpressuredPendingAuth = createBackpressuredPendingAuth();
@@ -155,7 +155,7 @@ public class ReceiverEndPointTest
         theEndpointReceivesALogon();
 
         polls(LOGON_MESSAGE.length);
-        pollWithNoData();
+        pollWithNoData(1);
 
         verifyDuplicateSession(times(1));
     }
@@ -169,7 +169,7 @@ public class ReceiverEndPointTest
         theEndpointReceivesACompleteMessage();
 
         polls(MSG_LEN);
-        pollWithNoData();
+        pollWithNoData(0);
 
         verify(publication).saveDisconnect(anyInt(), anyLong(), eq(DisconnectReason.FIRST_MESSAGE_NOT_LOGON));
     }
@@ -179,7 +179,7 @@ public class ReceiverEndPointTest
     {
         theEndpointReceivesACompleteMessage();
 
-        polls(2 * MSG_LEN);
+        polls(MSG_LEN);
 
         savesAFramedMessage();
 
@@ -187,15 +187,30 @@ public class ReceiverEndPointTest
     }
 
     @Test
-    public void shouldFrameValidFixMessageWhenBackpressured()
+    public void shouldFrameValidFixMessageWhenBackpressuredSelectionKeyCase()
     {
         firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesACompleteMessage();
-        polls(MSG_LEN);
+        polls(-MSG_LEN);
+
+        assertTrue(endPoint.frameMessages());
+
+        savesFramedMessages(2, OK, MSG_LEN);
+
+        sessionReceivesOneMessage();
+    }
+
+    @Test
+    public void shouldFrameValidFixMessageWhenBackpressuredPollingCase()
+    {
+        firstSaveAttemptIsBackPressured();
+
+        theEndpointReceivesACompleteMessage();
+        polls(-MSG_LEN);
 
         theEndpointReceivesNothing();
-        polls(MSG_LEN);
+        polls(0);
 
         savesFramedMessages(2, OK, MSG_LEN);
 
@@ -309,49 +324,62 @@ public class ReceiverEndPointTest
         endPoint.poll();
 
         // Test for bug where invalid message re-saved.
-        pollWithNoData();
+        pollWithNoData(0);
 
         savesInvalidChecksumMessage(times(1));
         nothingMoreSaved();
     }
 
     @Test
-    public void invalidChecksumMessageRecordedWhenBackpressured() throws IOException
+    public void invalidChecksumMessageRecordedWhenBackpressuredPolling()
     {
         firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesAMessageWithInvalidChecksum();
 
-        endPoint.poll();
+        assertEquals(-INVALID_CHECKSUM_LEN, endPoint.poll());
 
-        endPoint.poll();
+        pollWithNoData(0);
 
         savesInvalidChecksumMessage(times(2));
     }
 
     @Test
-    public void fieldOutOfOrderMessageRecordedOnce() throws IOException
+    public void invalidChecksumMessageRecordedWhenBackpressuredSelectionKey()
     {
-        final int length = theEndpointReceivesAnOutOfOrderMessage();
+        firstSaveAttemptIsBackPressured();
+
+        theEndpointReceivesAMessageWithInvalidChecksum();
+
+        assertEquals(-INVALID_CHECKSUM_LEN, endPoint.poll());
+
+        assertTrue(endPoint.frameMessages());
+
+        savesInvalidChecksumMessage(times(2));
+    }
+
+    @Test
+    public void fieldOutOfOrderMessageRecordedOnce()
+    {
+        theEndpointReceivesAnOutOfOrderMessage(OUT_OF_REQUIRED_ORDER_MSG_LEN);
 
         // Test for bug where invalid message re-saved.
-        pollWithNoData();
+        pollWithNoData(0);
 
-        savesInvalidMessage(length, times(1));
+        savesInvalidOutOfRequiredMessage(times(1));
         nothingMoreSaved();
         verifyNoError();
     }
 
     @Test
-    public void fieldOutOfOrderMessageRecordedWhenBackpressured() throws IOException
+    public void fieldOutOfOrderMessageRecordedWhenBackpressured()
     {
         firstSaveAttemptIsBackPressured();
+        theEndpointReceivesAnOutOfOrderMessage(-OUT_OF_REQUIRED_ORDER_MSG_LEN);
 
-        final int length = theEndpointReceivesAnOutOfOrderMessage();
+        pollWithNoData(0);
 
-        pollWithNoData();
-
-        savesInvalidMessage(length, times(2));
+        savesInvalidOutOfRequiredMessage(times(2));
         verifyNoError();
     }
 
@@ -361,12 +389,12 @@ public class ReceiverEndPointTest
         firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesAnIncompleteMessage();
-        endPoint.poll();
+        assertEquals(MSG_LEN - 8, endPoint.poll());
 
         theEndpointReceivesTheRestOfTheMessage();
-        endPoint.poll();
+        assertEquals(-8, endPoint.poll());
 
-        pollWithNoData();
+        pollWithNoData(0);
 
         savesFramedMessages(2, OK, MSG_LEN);
 
@@ -379,9 +407,9 @@ public class ReceiverEndPointTest
         firstSaveAttemptIsBackPressured();
 
         theEndpointReceivesTwoCompleteMessages();
-        endPoint.poll();
+        assertEquals(-2 * MSG_LEN, endPoint.poll());
 
-        pollWithNoData();
+        pollWithNoData(0);
 
         savesTwoFramedMessages(2);
 
@@ -396,7 +424,7 @@ public class ReceiverEndPointTest
         theEndpointReceivesACompleteAndAnIncompleteMessage();
         endPoint.poll();
 
-        pollWithNoData();
+        pollWithNoData(0);
 
         savesFramedMessages(2, OK, MSG_LEN);
     }
@@ -431,8 +459,8 @@ public class ReceiverEndPointTest
         nothingMoreSaved();
 
         // Successful attempt
-        pollWithNoData();
-        pollWithNoData();
+        pollWithNoData(LOGON_LEN);
+        pollWithNoData(0);
 
         savesFramedMessages(1, OK, LOGON_LEN, LogonDecoder.MESSAGE_TYPE);
     }
@@ -461,9 +489,9 @@ public class ReceiverEndPointTest
         assertFalse("Endpoint Disconnected", endPoint.hasDisconnected());
     }
 
-    private void savesInvalidMessage(final int length, final VerificationMode mode)
+    private void savesInvalidOutOfRequiredMessage(final VerificationMode mode)
     {
-        savesInvalidMessage(length, mode, INVALID);
+        savesInvalidMessage(TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES.length, mode, INVALID);
     }
 
     private void savesInvalidMessage(final int length, final VerificationMode mode, final MessageStatus status)
@@ -601,13 +629,11 @@ public class ReceiverEndPointTest
             });
     }
 
-    private int theEndpointReceivesAnOutOfOrderMessage()
+    private void theEndpointReceivesAnOutOfOrderMessage(final int bytesRead)
     {
-        final int length = TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES.length;
+        theEndpointReceives(TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES, 0, OUT_OF_REQUIRED_ORDER_MSG_LEN);
 
-        theEndpointReceives(TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES, 0, length);
-        endPoint.poll();
-        return length;
+        assertEquals(bytesRead, endPoint.poll());
     }
 
     private void endpointBufferUpdatedWith(final ToIntFunction<ByteBuffer> bufferUpdater)
@@ -685,10 +711,10 @@ public class ReceiverEndPointTest
             .onMessage(any(), anyInt(), anyInt(), anyInt(), anyLong());
     }
 
-    private void pollWithNoData()
+    private void pollWithNoData(final int expected)
     {
         theEndpointReceivesNothing();
-        endPoint.poll();
+        assertEquals(expected, endPoint.poll());
     }
 
     private void verifyDuplicateSession(final VerificationMode times)

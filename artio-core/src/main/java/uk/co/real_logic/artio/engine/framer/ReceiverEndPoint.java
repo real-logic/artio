@@ -71,6 +71,8 @@ class ReceiverEndPoint
     private static final int UNKNOWN_MESSAGE_TYPE = -1;
     private static final int BREAK = -1;
 
+    private static final int UNKNOWN_INDEX_BACKPRESSURED = -2;
+
     private final LogonDecoder logon = new LogonDecoder();
 
     private final TcpChannel channel;
@@ -151,7 +153,15 @@ class ReceiverEndPoint
 
         try
         {
-            return readData() + frameMessages();
+            final int bytesRead = readData();
+            if (frameMessages())
+            {
+                return bytesRead;
+            }
+            else
+            {
+                return -bytesRead;
+            }
         }
         catch (final ClosedChannelException ex)
         {
@@ -250,8 +260,10 @@ class ReceiverEndPoint
         return dataRead;
     }
 
-
-    private int frameMessages()
+    // true - no more framed messages in the buffer data to process. This could mean no more messages, or some data
+    // that is an incomplete message.
+    // false - needs to be retried, aka back-pressured
+    boolean frameMessages()
     {
         int offset = 0;
         while (true)
@@ -264,9 +276,9 @@ class ReceiverEndPoint
             try
             {
                 final int startOfBodyLength = scanForBodyLength(offset);
-                if (startOfBodyLength == UNKNOWN_INDEX)
+                if (startOfBodyLength < 0)
                 {
-                    return offset;
+                    return startOfBodyLength == UNKNOWN_INDEX;
                 }
 
                 final int endOfBodyLength = scanEndOfBodyLength(startOfBodyLength);
@@ -290,7 +302,7 @@ class ReceiverEndPoint
                     {
                         break;
                     }
-                    return endOfMessage;
+                    return true;
                 }
 
                 final int startOfChecksumValue = startOfChecksumTag + MIN_CHECKSUM_SIZE;
@@ -309,7 +321,7 @@ class ReceiverEndPoint
 
                     if (saveInvalidChecksumMessage(offset, messageType, length))
                     {
-                        return offset;
+                        return false;
                     }
                 }
                 else
@@ -317,13 +329,16 @@ class ReceiverEndPoint
                     if (requiresAuthentication())
                     {
                         startAuthenticationFlow(offset, length, messageType);
-                        return offset;
+
+                        // Actually has a logon message in it's buffer, but we return true because it's not
+                        // a back-pressure scenario.
+                        return true;
                     }
 
                     messagesRead.incrementOrdered();
                     if (!saveMessage(offset, messageType, length))
                     {
-                        return offset;
+                        return false;
                     }
                 }
 
@@ -331,8 +346,7 @@ class ReceiverEndPoint
             }
             catch (final IllegalArgumentException ex)
             {
-                invalidateMessage(offset);
-                return offset;
+                return !invalidateMessage(offset);
             }
             catch (final Exception ex)
             {
@@ -342,7 +356,7 @@ class ReceiverEndPoint
         }
 
         moveRemainingDataToBufferStart(offset);
-        return offset;
+        return true;
     }
 
     private int onInvalidBodyLength(final int offset, final int startOfChecksumTag)
@@ -401,23 +415,25 @@ class ReceiverEndPoint
     {
         if (invalidTag(offset, BEGIN_STRING_FIELD))
         {
-            invalidateMessage(offset);
-            return UNKNOWN_INDEX;
+            return invalidateMessageUnknownIndex(offset);
         }
         final int endOfCommonPrefix = scanNextField(offset + 2);
         if (endOfCommonPrefix == UNKNOWN_INDEX)
         {
             // no header end within MIN_MESSAGE_SIZE
-            invalidateMessage(offset);
-            return UNKNOWN_INDEX;
+            return invalidateMessageUnknownIndex(offset);
         }
         final int startOfBodyTag = endOfCommonPrefix + 1;
         if (invalidTag(startOfBodyTag, BODY_LENGTH_FIELD))
         {
-            invalidateMessage(offset);
-            return UNKNOWN_INDEX;
+            return invalidateMessageUnknownIndex(offset);
         }
         return startOfBodyTag + 2;
+    }
+
+    private int invalidateMessageUnknownIndex(final int offset)
+    {
+        return invalidateMessage(offset) ? UNKNOWN_INDEX_BACKPRESSURED : UNKNOWN_INDEX;
     }
 
     private int scanEndOfBodyLength(final int startOfBodyLength)
@@ -454,6 +470,7 @@ class ReceiverEndPoint
         }
     }
 
+    // returns true if back-pressured
     private boolean stashIfBackPressured(final int offset, final long position)
     {
         final boolean backPressured = Pressure.isBackPressured(position);
@@ -550,10 +567,11 @@ class ReceiverEndPoint
         ByteBufferUtil.position(byteBuffer, usedBufferData);
     }
 
-    private void invalidateMessage(final int offset)
+    // returns true if back-pressured
+    private boolean invalidateMessage(final int offset)
     {
         DebugLogger.log(FIX_MESSAGE, "Invalidated: %s%n", buffer, offset, MIN_MESSAGE_SIZE);
-        saveInvalidMessage(offset);
+        return saveInvalidMessage(offset);
     }
 
     private boolean saveInvalidMessage(final int offset, final int startOfChecksumTag)
@@ -573,7 +591,8 @@ class ReceiverEndPoint
         return stashIfBackPressured(offset, position);
     }
 
-    private void saveInvalidMessage(final int offset)
+    // returns true if back-pressured
+    private boolean saveInvalidMessage(final int offset)
     {
         final long position = publication.saveMessage(
             buffer,
@@ -593,6 +612,8 @@ class ReceiverEndPoint
         {
             clearBuffer();
         }
+
+        return backPressured;
     }
 
     private void clearBuffer()
