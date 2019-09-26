@@ -158,7 +158,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
-    private boolean atEndOfDay = false;
+    private boolean performingCloseOperation = false;
 
     Framer(
         final EpochClock clock,
@@ -411,7 +411,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         final boolean indexed = sentIndexedPosition(librarySessionId, libraryPosition);
-        if (indexed)
+        if (!configuration.logOutboundMessages() || indexed)
         {
             acquireLibrarySessions(library);
         }
@@ -425,7 +425,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private boolean retryAcquireLibrarySessions(final LiveLibraryInfo library)
     {
         final boolean indexed = sentIndexedPosition(library.aeronSessionId(), library.acquireAtPosition());
-        if (indexed)
+        if (!configuration.logOutboundMessages() || indexed)
         {
             acquireLibrarySessions(library);
         }
@@ -435,7 +435,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private boolean sentIndexedPosition(final int aeronSessionId, final long position)
     {
-        return sentSequenceNumberIndex.indexedPosition(aeronSessionId) >= position;
+        final long indexedPosition = sentSequenceNumberIndex.indexedPosition(aeronSessionId);
+        return indexedPosition >= position;
     }
 
     private void saveLibraryTimeout(final LibraryInfo library)
@@ -479,7 +480,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 receivedSequenceNumber,
                 SessionStatus.LIBRARY_NOTIFICATION));
 
-            if (atEndOfDay)
+            if (performingCloseOperation)
             {
                 session.session().logoutAndDisconnect();
             }
@@ -511,7 +512,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void onNewConnection(final long timeInMs, final TcpChannel channel)
     {
-        if (atEndOfDay)
+        if (performingCloseOperation)
         {
             channel.close();
             return;
@@ -1070,7 +1071,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return action;
         }
 
-        if (atEndOfDay)
+        if (performingCloseOperation)
         {
             // Do not do allow a new library to connect whilst performing end of day operations.
             return CONTINUE;
@@ -1644,19 +1645,17 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             }));
     }
 
-    void onEndOfDay(final EndOfDayCommand endOfDayCommand)
+    void onStartClose(final StartCloseCommand startCloseCommand)
     {
-        atEndOfDay = true;
+        performingCloseOperation = true;
 
-        recordingCoordinator.startEndOfDay();
-
-        schedule(new EndOfDayOperation(
+        schedule(new CloseOperation(
             inboundPublication,
             new ArrayList<>(idToLibrary.values()),
             // Take a copy to avoid library sessions being acquired causing issues
             new ArrayList<>(gatewaySessions.sessions()),
             receiverEndPoints,
-            endOfDayCommand));
+            startCloseCommand));
     }
 
     void onResetSequenceNumber(final ResetSequenceNumberCommand reply)

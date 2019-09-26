@@ -248,8 +248,8 @@ public class SlowConsumerTest
     @After
     public void cleanup()
     {
+        testSystem.awaitBlocking(() -> close(engine));
         close(library);
-        close(engine);
         cleanupMediaDriver(mediaDriver);
         close(socket);
     }

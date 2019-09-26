@@ -22,24 +22,24 @@ import java.util.List;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 
-class EndOfDayOperation implements Continuation
+class CloseOperation implements Continuation
 {
     private final GatewayPublication inboundPublication;
     private final List<LiveLibraryInfo> libraries;
     private final List<GatewaySession> gatewaySessions;
     private final ReceiverEndPoints receiverEndPoints;
-    private final EndOfDayCommand command;
+    private final StartCloseCommand command;
 
     private Step step = Step.CLOSING_NOT_LOGGED_ON_RECEIVER_END_POINTS;
     private int libraryIndex = 0;
     private int gatewaySessionIndex = 0;
 
-    EndOfDayOperation(
+    CloseOperation(
         final GatewayPublication inboundPublication,
         final List<LiveLibraryInfo> libraries,
         final List<GatewaySession> gatewaySessions,
         final ReceiverEndPoints receiverEndPoints,
-        final EndOfDayCommand command)
+        final StartCloseCommand command)
     {
         this.inboundPublication = inboundPublication;
         this.libraries = libraries;

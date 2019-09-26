@@ -59,6 +59,11 @@ public final class FixEngine extends GatewayProcess
     private FramerContext framerContext;
     private EngineContext engineContext;
 
+    private volatile boolean isClosed = false;
+
+    private final Object resetStateLock = new Object();
+    private volatile boolean stateHasBeenReset = false;
+
     /**
      * Launch the engine. This method starts up the engine threads and then returns.
      *
@@ -117,12 +122,10 @@ public final class FixEngine extends GatewayProcess
     }
 
     /**
-     * This method is a form of close operation for the FixEngine that also performs usual end of day processing
-     * operations. These are:
+     * This method resets the state of the of the FixEngine that also performs usual end of day processing
+     * operations. It must can only be called when the FixEngine object has been closed. These are:
      *
      * <ol>
-     *     <li>To stop accepting new connections.</li>
-     *     <li>logout and disconnect all currently active FIX sessions.</li>
      *     <li>Reset and optionally back up all Artio state (including session ids and sequence numbers</li>
      *     <li>Truncate any recordings associated with this engine instance.</li>
      * </ol>
@@ -132,37 +135,24 @@ public final class FixEngine extends GatewayProcess
      * @param backupLocation the directory that you wish to copy Artio's session state over to for later inspection.
      *                       If this is null no backup of data will be performed. If the directory exists it will be
      *                       re-used, if it doesn't it will be created.
+     *
+     * @throws IllegalStateException if this <code>FixEngine</code> hasn't been closed when this method is called.
      */
-    public void endDayClose(final File backupLocation)
+    public void resetState(final File backupLocation)
     {
-        framerContext.runEndOfDay();
-
-        close();
-
-        if (backupLocation != null)
+        if (!isClosed())
         {
-            final File backupDir = backupLocation.getAbsoluteFile();
+            throw new IllegalStateException("Engine should be closed before the state is reset");
+        }
 
-            if (backupLocation.exists())
+        synchronized (resetStateLock)
+        {
+            if (!stateHasBeenReset)
             {
-                if (!backupLocation.isDirectory())
-                {
-                    throw new IllegalStateException(backupDir + " is not a directory, so backup cannot proceed");
-                }
-            }
-            else if (!backupLocation.mkdirs())
-            {
-                throw new IllegalStateException(backupDir + " could not be created, so backup cannot proceed");
-            }
+                final ResetArchiveState resetArchiveState = new ResetArchiveState(configuration, backupLocation);
+                resetArchiveState.resetState();
 
-            final File logFileDir = new File(configuration.logFileDir());
-            for (final File file : logFileDir.listFiles())
-            {
-                if (!file.renameTo(new File(backupDir, file.getName())))
-                {
-                    throw new IllegalStateException(
-                        "Unable to move " + file.getAbsolutePath() + " to " + backupDir);
-                }
+                stateHasBeenReset = true;
             }
         }
     }
@@ -308,7 +298,14 @@ public final class FixEngine extends GatewayProcess
     }
 
     /**
-     * Close the engine down, including stopping other running threads.
+     * Close the engine down, including stopping other running threads. This also stops accepting new connections, and
+     * logs out and disconnects all currently active FIX sessions.
+     *
+     * NB: graceful shutdown of the FixEngine will wait for logouts to occur. This entails communicating with all
+     * <code>FixLibrary</code> instances currently live in order for them to gracefully close as well. Therefore if you
+     * close a <code>FixLibrary</code> before you call this method then the close operation could be delayed by up to
+     * {@link uk.co.real_logic.artio.CommonConfiguration#replyTimeoutInMs()} in order for the <code>FixEngine</code>
+     * to timeout the <code>FixLibrary</code>.
      *
      * This does not remove files associated with the engine, that are persistent
      * over multiple runs of the engine.
@@ -317,8 +314,25 @@ public final class FixEngine extends GatewayProcess
     {
         synchronized (CLOSE_MUTEX)
         {
-            closeAll(scheduler, engineContext, configuration, super::close);
+            if (!isClosed)
+            {
+                framerContext.startClose();
+
+                closeAll(scheduler, engineContext, configuration, super::close);
+
+                isClosed = true;
+            }
         }
+    }
+
+    /**
+     * Find out whether the {@link #close()} operation has been called.
+     *
+     * @return true if the {@link #close()} operation has been called, false otherwise.
+     */
+    public boolean isClosed()
+    {
+        return isClosed;
     }
 
     public EngineConfiguration configuration()

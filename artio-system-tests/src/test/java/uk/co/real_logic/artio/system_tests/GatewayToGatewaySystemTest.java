@@ -442,6 +442,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         testSystem.close(acceptingLibrary);
         acceptingEngine.close();
         assertSequenceIndicesAre(0);
+
+        testSystem.awaitMessageOf(initiatingOtfAcceptor, LOGOUT_MESSAGE_AS_STR);
+
         clearMessages();
 
         launchAcceptingEngine();
@@ -461,12 +464,13 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acceptingEngine.close();
 
         assertAllMessagesHaveSequenceIndex(0);
-        clearMessages();
 
         testSystem.close(acceptingLibrary);
         acceptingHandler.clearSessions();
 
         initiatingEngineHasLibraryConnected();
+
+        clearMessages();
 
         launchAcceptingEngine();
 
@@ -582,7 +586,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void shouldReconnectToBouncedGatewayViaIpc()
     {
-        acceptingEngine.close();
+        closeAcceptingEngine();
 
         awaitIsConnected(false, acceptingLibrary);
 
@@ -594,7 +598,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void shouldReconnectToBouncedGatewayViaUdp()
     {
-        initiatingEngine.close();
+        closeInitiatingEngine();
 
         awaitIsConnected(false, initiatingLibrary);
 
@@ -612,7 +616,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertTrue("Session not active", acceptingSession.isActive());
 
-        acceptingEngine.close();
+        closeAcceptingEngine();
 
         launchAcceptingEngine();
 
