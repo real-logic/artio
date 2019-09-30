@@ -202,10 +202,10 @@ public class FramerContext
         return null;
     }
 
-    public void runEndOfDay()
+    public void startClose()
     {
         final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
-        final EndOfDayCommand command = new EndOfDayCommand();
+        final StartCloseCommand command = new StartCloseCommand();
         while (!adminCommands.offer(command))
         {
             idleStrategy.idle();

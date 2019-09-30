@@ -144,51 +144,49 @@ public class SequenceNumberIndexWriter implements Index
             return;
         }
 
-        if ((header.flags() & BEGIN_FLAG) != BEGIN_FLAG)
+        if ((header.flags() & BEGIN_FLAG) == BEGIN_FLAG)
         {
-            return;
-        }
+            int offset = srcOffset;
+            messageHeader.wrap(buffer, offset);
 
-        int offset = srcOffset;
-        messageHeader.wrap(buffer, offset);
+            offset += messageHeader.encodedLength();
+            final int actingBlockLength = messageHeader.blockLength();
+            final int version = messageHeader.version();
 
-        offset += messageHeader.encodedLength();
-        final int actingBlockLength = messageHeader.blockLength();
-        final int version = messageHeader.version();
-
-        switch (messageHeader.templateId())
-        {
-            case FixMessageEncoder.TEMPLATE_ID:
+            switch (messageHeader.templateId())
             {
-                messageFrame.wrap(buffer, offset, actingBlockLength, version);
-
-                if (messageFrame.status() != MessageStatus.OK)
+                case FixMessageEncoder.TEMPLATE_ID:
                 {
-                    return;
+                    messageFrame.wrap(buffer, offset, actingBlockLength, version);
+
+                    if (messageFrame.status() != MessageStatus.OK)
+                    {
+                        return;
+                    }
+
+                    offset += actingBlockLength + 2;
+
+                    asciiBuffer.wrap(buffer);
+                    fixHeader.decode(asciiBuffer, offset, messageFrame.bodyLength());
+
+                    final int msgSeqNum = fixHeader.msgSeqNum();
+                    final long sessionId = messageFrame.session();
+
+                    saveRecord(msgSeqNum, sessionId);
+                    break;
                 }
 
-                offset += actingBlockLength + 2;
+                case ResetSessionIdsDecoder.TEMPLATE_ID:
+                {
+                    resetSequenceNumbers();
+                    break;
+                }
 
-                asciiBuffer.wrap(buffer);
-                fixHeader.decode(asciiBuffer, offset, messageFrame.bodyLength());
-
-                final int msgSeqNum = fixHeader.msgSeqNum();
-                final long sessionId = messageFrame.session();
-
-                saveRecord(msgSeqNum, sessionId);
-                break;
-            }
-
-            case ResetSessionIdsDecoder.TEMPLATE_ID:
-            {
-                resetSequenceNumbers();
-                break;
-            }
-
-            case ResetSequenceNumberDecoder.TEMPLATE_ID:
-            {
-                resetSequenceNumber.wrap(buffer, offset, actingBlockLength, version);
-                saveRecord(0, resetSequenceNumber.session());
+                case ResetSequenceNumberDecoder.TEMPLATE_ID:
+                {
+                    resetSequenceNumber.wrap(buffer, offset, actingBlockLength, version);
+                    saveRecord(0, resetSequenceNumber.session());
+                }
             }
         }
 

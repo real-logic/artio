@@ -66,13 +66,23 @@ public class AbstractGatewayToGatewaySystemTest
     @After
     public void close()
     {
+        closeInitiatingEngine();
+        closeAcceptingEngine();
+
         CloseHelper.close(initiatingLibrary);
         CloseHelper.close(acceptingLibrary);
 
-        CloseHelper.close(initiatingEngine);
-        CloseHelper.close(acceptingEngine);
-
         cleanupMediaDriver(mediaDriver);
+    }
+
+    void closeInitiatingEngine()
+    {
+        testSystem.awaitBlocking(() -> CloseHelper.close(initiatingEngine));
+    }
+
+    void closeAcceptingEngine()
+    {
+        testSystem.awaitBlocking(() -> CloseHelper.close(acceptingEngine));
     }
 
     void assertOriginalLibraryDoesNotReceiveMessages(final int initiatorMessageCount)

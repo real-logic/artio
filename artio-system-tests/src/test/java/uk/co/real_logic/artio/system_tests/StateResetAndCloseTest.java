@@ -20,7 +20,6 @@ import org.agrona.IoUtil;
 import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -37,7 +36,7 @@ import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INIT
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
 
-public class EndOfDayTest extends AbstractGatewayToGatewaySystemTest
+public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
 {
 
     private File backupLocation = new File("backup");
@@ -79,23 +78,23 @@ public class EndOfDayTest extends AbstractGatewayToGatewaySystemTest
             assertSequenceFromInitToAcceptAt(2, 2);
         }
 
-        testSystem.awaitBlocking(() -> acceptingEngine.endDayClose(backupLocation));
+        testSystem.awaitBlocking(() -> acceptingEngine.close());
+        assertTrue(acceptingEngine.isClosed());
 
-        assertRecordingsDeleted();
-
-        Timing.assertEventuallyTrue("fix library never closed", () ->
-        {
-            testSystem.poll();
-            return acceptingLibrary.isClosed();
-        });
         final FixMessage logout = testSystem.awaitMessageOf(initiatingOtfAcceptor, LOGOUT_MESSAGE_AS_STR);
         assertEquals(3, logout.messageSequenceNumber());
+
+        testSystem.awaitBlocking(() -> acceptingEngine.resetState(backupLocation));
+        assertRecordingsDeleted();
 
         assertTrue("backupLocation missing", backupLocation.exists());
         assertTrue("backupLocation not directory", backupLocation.isDirectory());
 
         clearMessages();
         close();
+
+        // resetState should be idempotent
+        acceptingEngine.resetState(backupLocation);
 
         launchMediaDriverWithDirs();
         launch(1, 1);

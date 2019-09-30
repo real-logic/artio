@@ -85,7 +85,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     /**
      * End of day operation has started
      */
-    private static final int END_OF_DAY = 5;
+    private static final int ENGINE_CLOSE = 5;
 
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private InternalSession[] sessions = new InternalSession[0];
@@ -182,7 +182,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     boolean isAtEndOfDay()
     {
-        return state == END_OF_DAY;
+        return state == ENGINE_CLOSE;
     }
 
     int libraryId()
@@ -369,8 +369,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 state = CONNECTING;
                 return pollWithoutReconnect(timeInMs, fragmentLimit);
 
-            case END_OF_DAY:
-                attemptEndOfDayOperation();
+            case ENGINE_CLOSE:
+                attemptEngineCloseBasedLogout();
                 return pollWithoutReconnect(timeInMs, fragmentLimit);
 
             case CLOSED:
@@ -947,19 +947,19 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    public Action onEndOfDay(final int libraryId)
+    public Action onEngineClose(final int libraryId)
     {
         if (libraryId == this.libraryId)
         {
-            state = END_OF_DAY;
+            state = ENGINE_CLOSE;
 
-            attemptEndOfDayOperation();
+            attemptEngineCloseBasedLogout();
         }
 
         return CONTINUE;
     }
 
-    private void attemptEndOfDayOperation()
+    private void attemptEngineCloseBasedLogout()
     {
         final InternalSession[] sessions = this.sessions;
         final int length = sessions.length;
@@ -975,7 +975,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             sessionLogoutIndex++;
         }
 
-        state = CLOSED;
+        // Yes, technically the engine is closing down, so we could flip to ATTEMPT_CONNECT state here.
+        // But actually we just want to follow the normal linger and timeout procedure.
+        state = CONNECTED;
     }
 
     private void validateEndOfDay()

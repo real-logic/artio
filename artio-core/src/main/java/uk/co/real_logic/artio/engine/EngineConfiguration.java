@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine;
 
+import io.aeron.Aeron;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.CloseHelper;
 import org.agrona.concurrent.AtomicBuffer;
@@ -181,6 +182,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private MappedFile sessionIdBuffer;
     private Set<String> gapfillOnReplayMessageTypes = new HashSet<>(DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES);
     private final AeronArchive.Context archiveContext = new AeronArchive.Context();
+    private AeronArchive.Context archiveContextClone;
+    private Aeron.Context aeronContextClone;
 
     private int outboundLibraryFragmentLimit =
         getInteger(OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP, DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT);
@@ -876,6 +879,16 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return archiveContext;
     }
 
+    public Aeron.Context aeronContextClone()
+    {
+        return aeronContextClone;
+    }
+
+    public AeronArchive.Context archiveContextClone()
+    {
+        return archiveContextClone;
+    }
+
     public int outboundReplayStream()
     {
         return outboundReplayStream;
@@ -954,6 +967,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
             sessionPersistenceStrategy(alwaysUnindexed());
         }
 
+        aeronContextClone = aeronContext().clone();
+        archiveContextClone = archiveContext.clone();
+
         return this;
     }
 
@@ -970,6 +986,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public TcpChannelSupplier channelSupplier()
     {
         return channelSupplierFactory.apply(this);
+    }
+
+    public boolean isRelevantStreamId(final int streamId)
+    {
+        return (streamId == outboundLibraryStream() && logOutboundMessages()) ||
+            (streamId == inboundLibraryStream() && logInboundMessages());
     }
 
     public void close()

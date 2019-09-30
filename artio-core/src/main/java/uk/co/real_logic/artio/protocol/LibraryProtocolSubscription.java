@@ -330,7 +330,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             return action;
         }
 
-        return handler.onEndOfDay(libraryId);
+        return handler.onEngineClose(libraryId);
     }
 
 }

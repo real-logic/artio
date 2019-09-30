@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.Aeron;
+import io.aeron.Image;
 import io.aeron.Publication;
 import io.aeron.Subscription;
 import io.aeron.driver.MediaDriver;
@@ -111,9 +112,11 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Test
     public void shouldStashNewSequenceNumberForLargeMessage()
     {
-        indexLargeFixMessage();
+        final long position = indexLargeFixMessage();
 
         assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER);
+
+        assertEquals(position, reader.indexedPosition(publication.sessionId()));
     }
 
     @Test
@@ -347,17 +350,17 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         indexRecord();
     }
 
-    private void indexLargeFixMessage()
+    private long indexLargeFixMessage()
     {
         buffer = new UnsafeBuffer(new byte[BIG_BUFFER_LENGTH]);
 
         final String testReqId = largeTestReqId();
         bufferContainsExampleMessage(true, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX, testReqId);
 
-        indexRecord();
+        return indexRecord();
     }
 
-    private void indexRecord()
+    private long indexRecord()
     {
         long position = 0;
         while (position < 1)
@@ -370,11 +373,22 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         /*System.out.println("position = " + position);
         System.out.println("p = " + p);*/
 
-        int read = 0;
-        while (read < 1)
+
+        Image image = null;
+        while (image == null || image.position() < position)
         {
-            read += subscription.poll(writer, 1);
+            if (image == null)
+            {
+                image = subscription.imageBySessionId(publication.sessionId());
+            }
+
+            if (image != null)
+            {
+                image.poll(writer, 1);
+            }
         }
+
+        return position;
     }
 
     private void assertLastKnownSequenceNumberIs(final long sessionId, final int expectedSequenceNumber)
