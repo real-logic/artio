@@ -462,7 +462,7 @@ class ReceiverEndPoint
 
             hasNotifiedFramerOfLogonMessageReceived = false;
             pendingAcceptorLogon = gatewaySessions.authenticate(
-                logon, connectionId(), gatewaySession, channel.remoteAddress());
+                logon, connectionId(), gatewaySession, channel);
         }
         else
         {

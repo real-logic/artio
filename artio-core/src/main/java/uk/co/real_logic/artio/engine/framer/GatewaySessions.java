@@ -18,15 +18,14 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochClock;
-import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.HeaderSetup;
 import uk.co.real_logic.artio.engine.SessionInfo;
@@ -39,6 +38,8 @@ import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.*;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -264,10 +265,10 @@ class GatewaySessions
         final LogonDecoder logon,
         final long connectionId,
         final GatewaySession gatewaySession,
-        final String remoteAddress)
+        final TcpChannel channel)
     {
         return new PendingAcceptorLogon(
-            sessionIdStrategy, gatewaySession, logon, connectionId, sessionContexts, remoteAddress);
+            sessionIdStrategy, gatewaySession, logon, connectionId, sessionContexts, channel);
     }
 
     private boolean lookupSequenceNumbers(final GatewaySession gatewaySession, final long requiredPosition)
@@ -305,7 +306,7 @@ class GatewaySessions
         private final SessionIdStrategy sessionIdStrategy;
         private final LogonDecoder logon;
         private final SessionContexts sessionContexts;
-        private final String remoteAddress;
+        private final TcpChannel channel;
         private final boolean resetSeqNum;
 
         private volatile AuthenticationState state = AuthenticationState.PENDING;
@@ -315,9 +316,7 @@ class GatewaySessions
         private long requiredPosition = NO_REQUIRED_POSITION;
 
         private Encoder encoder;
-        private MutableAsciiBuffer encodeBuffer;
-        private int remainingEncodeLength;
-        private int remainingEncodeOffset;
+        private ByteBuffer encodeBuffer;
 
         PendingAcceptorLogon(
             final SessionIdStrategy sessionIdStrategy,
@@ -325,13 +324,13 @@ class GatewaySessions
             final LogonDecoder logon,
             final long connectionId,
             final SessionContexts sessionContexts,
-            final String remoteAddress)
+            final TcpChannel channel)
         {
             this.sessionIdStrategy = sessionIdStrategy;
             this.session = gatewaySession;
             this.logon = logon;
             this.sessionContexts = sessionContexts;
-            this.remoteAddress = remoteAddress;
+            this.channel = channel;
 
             final PersistenceLevel persistenceLevel = getPersistenceLevel(logon, connectionId);
             final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
@@ -431,26 +430,17 @@ class GatewaySessions
                     return true;
 
                 case SENDING_REJECT_MESSAGE:
-                    // Don't actually know if this user is valid, or even a legitimate user?
-                    // TODO: can we more accurately calculate the sequence number for the message?
+                    if (encodeBuffer == null)
+                    {
+                        encodeRejectMessage();
+                    }
 
-                    // encode
-                    final UtcTimestampEncoder sendingTimeEncoder = new UtcTimestampEncoder();
-                    encodeBuffer = new MutableAsciiBuffer(new byte[ENCODE_BUFFER_SIZE]);
+                    if (sendRejectMessage())
+                    {
+                        state = AuthenticationState.REJECTED;
+                        return true;
+                    }
 
-                    final SessionHeaderEncoder header = encoder.header();
-                    header.msgSeqNum(1);
-                    header.sendingTime(
-                        sendingTimeEncoder.buffer(), sendingTimeEncoder.encode(System.currentTimeMillis()));
-                    HeaderSetup.setup(logon.header(), header);
-
-                    final long result = encoder.encode(encodeBuffer, 0);
-                    remainingEncodeLength = Encoder.length(result);
-                    remainingEncodeOffset = Encoder.offset(result);
-
-                    // TODO: write to socket channel.
-
-                    state = AuthenticationState.REJECTED;
                     return false;
 
                 case INDEXER_CATCHUP:
@@ -459,6 +449,41 @@ class GatewaySessions
 
                 default:
                     return false;
+            }
+        }
+
+        private void encodeRejectMessage()
+        {
+            encodeBuffer = ByteBuffer.allocateDirect(ENCODE_BUFFER_SIZE);
+
+            final UtcTimestampEncoder sendingTimeEncoder = new UtcTimestampEncoder();
+            final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(encodeBuffer);
+
+            final SessionHeaderEncoder header = encoder.header();
+            header.msgSeqNum(1);
+            header.sendingTime(
+                sendingTimeEncoder.buffer(), sendingTimeEncoder.encode(System.currentTimeMillis()));
+            HeaderSetup.setup(logon.header(), header);
+
+            final long result = encoder.encode(asciiBuffer, 0);
+            final int offset = Encoder.offset(result);
+            final int length = Encoder.length(result);
+
+            ByteBufferUtil.position(encodeBuffer, offset);
+            ByteBufferUtil.limit(encodeBuffer, offset + length);
+        }
+
+        private boolean sendRejectMessage()
+        {
+            try
+            {
+                channel.write(encodeBuffer);
+                return encodeBuffer.hasRemaining();
+            }
+            catch (final IOException e)
+            {
+                // The TCP Connection has disconnected, therefore
+                return true;
             }
         }
 
@@ -522,7 +547,7 @@ class GatewaySessions
 
         public String remoteAddress()
         {
-            return remoteAddress;
+            return channel.remoteAddress();
         }
 
         private void reject(final DisconnectReason reason)

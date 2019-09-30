@@ -18,19 +18,24 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.junit.After;
+import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Reply.State;
 import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
+import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.session.Session;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.hamcrest.Matchers.*;
@@ -39,6 +44,7 @@ import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixMatchers.*;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ARCHIVE_SCANNER_STREAM;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -436,5 +442,27 @@ public class AbstractGatewayToGatewaySystemTest
     void launchMediaDriverWithDirs()
     {
         mediaDriver = TestFixtures.launchMediaDriverWithDirs();
+    }
+
+    List<String> getMessagesFromArchive(final EngineConfiguration configuration, final int queryStreamId)
+    {
+        final List<String> messages = new ArrayList<>();
+        final FixMessageConsumer fixMessageConsumer =
+            (message, buffer, offset, length, header) -> messages.add(message.body());
+
+        final FixArchiveScanner.Context context = new FixArchiveScanner.Context()
+            .aeronDirectoryName(configuration.aeronContext().aeronDirectoryName())
+            .idleStrategy(CommonConfiguration.backoffIdleStrategy());
+
+        try (FixArchiveScanner scanner = new FixArchiveScanner(context))
+        {
+            scanner.scan(
+                configuration.libraryAeronChannel(),
+                queryStreamId,
+                fixMessageConsumer,
+                false,
+                DEFAULT_ARCHIVE_SCANNER_STREAM);
+        }
+        return messages;
     }
 }

@@ -18,7 +18,6 @@ package uk.co.real_logic.artio.system_tests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.RejectEncoder;
@@ -30,7 +29,10 @@ import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.validation.AuthenticationProxy;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 
+import java.util.List;
+
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.Constants.LOGON_MESSAGE_AS_STR;
@@ -98,14 +100,24 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         final RejectEncoder rejectEncoder = new RejectEncoder();
         rejectEncoder.refMsgType(LOGON_MESSAGE_AS_STR);
+        rejectEncoder.refSeqNum(1);
         rejectEncoder.text("Invalid Logon");
 
         auth.reject(rejectEncoder);
 
         assertDisconnectRejected(reply);
 
-        // TODO: assert the reject received
+        final EngineConfiguration config = initiatingEngine.configuration();
+        final List<String> messages = getMessagesFromArchive(config, config.inboundLibraryStream());
+        assertThat(messages, hasSize(1));
+        final String rejectMessage = messages.get(0);
+        assertThat(rejectMessage, containsString("372=A\00158=Invalid Logon"));
+        assertThat(rejectMessage, containsString("35=3\00149=acceptor\00156=initiator\00134=1"));
     }
+
+    // TODO: add the linger operation
+    // TODO: missing field doesn't stall the engine
+    // TODO: exception from async authenticator.authenticateAsync() doesn't stall the engine
 
     @Test
     public void messagesCanBeSentFromInitiatorToAcceptorAfterFailedAuthenticationAttempt()
@@ -154,7 +166,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         assertEquals(Reply.State.EXECUTING, reply.state());
     }
 
-    private class FakeAsyncAuthenticationStrategy implements AuthenticationStrategy
+    private static class FakeAsyncAuthenticationStrategy implements AuthenticationStrategy
     {
         volatile boolean blockingAuthenticateCalled;
         private volatile AuthenticationProxy authProxy;
