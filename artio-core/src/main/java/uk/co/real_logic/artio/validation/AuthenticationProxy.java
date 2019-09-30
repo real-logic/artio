@@ -38,8 +38,9 @@ public interface AuthenticationProxy
      * Call this method to reject the authentication with a custom message.
      *
      * @param encoder the encoder that defines the message. This encoder should not be re-used for other rejects.
+     * @param lingerTimeoutInMs the time to wait after encoding this message before closing the TCP connection.
      */
-    void reject(Encoder encoder);
+    void reject(Encoder encoder, long lingerTimeoutInMs);
 
     /**
      * Get the remote IP address and port of the system. Remote addresses would be of the format

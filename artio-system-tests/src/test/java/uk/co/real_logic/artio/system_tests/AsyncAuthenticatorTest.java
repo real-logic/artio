@@ -31,8 +31,7 @@ import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 
 import java.util.List;
 
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.Constants.LOGON_MESSAGE_AS_STR;
@@ -43,6 +42,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 {
     private static final int DEFAULT_TIMEOUT_IN_MS = 1_000;
+    private static final long LINGER_TIMEOUT_IN_MS = 1_000L;
     private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
     private final FakeAsyncAuthenticationStrategy auth = new FakeAsyncAuthenticationStrategy();
 
@@ -103,9 +103,13 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         rejectEncoder.refSeqNum(1);
         rejectEncoder.text("Invalid Logon");
 
-        auth.reject(rejectEncoder);
+        final long startTime = System.currentTimeMillis();
+        auth.reject(rejectEncoder, LINGER_TIMEOUT_IN_MS);
 
         assertDisconnectRejected(reply);
+        final long rejectTime = System.currentTimeMillis() - startTime;
+        assertThat(rejectTime, greaterThanOrEqualTo(LINGER_TIMEOUT_IN_MS));
+        assertThat(rejectTime, lessThan(2 * LINGER_TIMEOUT_IN_MS));
 
         final EngineConfiguration config = initiatingEngine.configuration();
         final List<String> messages = getMessagesFromArchive(config, config.inboundLibraryStream());
@@ -115,7 +119,6 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         assertThat(rejectMessage, containsString("35=3\00149=acceptor\00156=initiator\00134=1"));
     }
 
-    // TODO: add the linger operation
     // TODO: missing field doesn't stall the engine
     // TODO: exception from async authenticator.authenticateAsync() doesn't stall the engine
 
@@ -200,9 +203,9 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
             authProxy.reject();
         }
 
-        void reject(final Encoder encoder)
+        void reject(final Encoder encoder, final long lingerTimeoutInMs)
         {
-            authProxy.reject(encoder);
+            authProxy.reject(encoder, lingerTimeoutInMs);
         }
 
         boolean hasAuthenticateBeenInvoked()

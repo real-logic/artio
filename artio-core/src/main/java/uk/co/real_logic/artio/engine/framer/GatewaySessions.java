@@ -295,6 +295,7 @@ class GatewaySessions
         INDEXER_CATCHUP,
         ACCEPTED,
         SENDING_REJECT_MESSAGE,
+        LINGERING_REJECT_MESSAGE,
         REJECTED
     }
 
@@ -314,9 +315,11 @@ class GatewaySessions
         private GatewaySession session;
         private DisconnectReason reason;
         private long requiredPosition = NO_REQUIRED_POSITION;
+        private long lingerTimeoutInMs;
 
         private Encoder encoder;
         private ByteBuffer encodeBuffer;
+        private long lingerExpiryTimeInMs;
 
         PendingAcceptorLogon(
             final SessionIdStrategy sessionIdStrategy,
@@ -430,26 +433,58 @@ class GatewaySessions
                     return true;
 
                 case SENDING_REJECT_MESSAGE:
-                    if (encodeBuffer == null)
-                    {
-                        encodeRejectMessage();
-                    }
+                    return onSendingRejectMessage();
 
-                    if (sendRejectMessage())
-                    {
-                        state = AuthenticationState.REJECTED;
-                        return true;
-                    }
-
-                    return false;
+                case LINGERING_REJECT_MESSAGE:
+                    return onLingerRejectMessage();
 
                 case INDEXER_CATCHUP:
                     onIndexerCatchup();
                     return false;
 
+                case PENDING:
                 default:
                     return false;
             }
+        }
+
+        private boolean onLingerRejectMessage()
+        {
+            final long timeInMs = clock.time();
+            final boolean complete = timeInMs >= lingerExpiryTimeInMs;
+
+            if (complete)
+            {
+                state = AuthenticationState.REJECTED;
+            }
+
+            return complete;
+        }
+
+        private boolean onSendingRejectMessage()
+        {
+            if (encodeBuffer == null)
+            {
+                encodeRejectMessage();
+            }
+
+            try
+            {
+                channel.write(encodeBuffer);
+                if (!encodeBuffer.hasRemaining())
+                {
+                    lingerExpiryTimeInMs = clock.time() + lingerTimeoutInMs;
+                    state = AuthenticationState.LINGERING_REJECT_MESSAGE;
+                }
+            }
+            catch (final IOException e)
+            {
+                // The TCP Connection has disconnected, therefore we consider this complete.
+                state = AuthenticationState.REJECTED;
+                return true;
+            }
+
+            return false;
         }
 
         private void encodeRejectMessage()
@@ -471,20 +506,6 @@ class GatewaySessions
 
             ByteBufferUtil.position(encodeBuffer, offset);
             ByteBufferUtil.limit(encodeBuffer, offset + length);
-        }
-
-        private boolean sendRejectMessage()
-        {
-            try
-            {
-                channel.write(encodeBuffer);
-                return encodeBuffer.hasRemaining();
-            }
-            catch (final IOException e)
-            {
-                // The TCP Connection has disconnected, therefore
-                return true;
-            }
         }
 
         private void onIndexerCatchup()
@@ -537,11 +558,12 @@ class GatewaySessions
             reject(DisconnectReason.FAILED_AUTHENTICATION);
         }
 
-        public void reject(final Encoder encoder)
+        public void reject(final Encoder encoder, final long lingerTimeoutInMs)
         {
             this.encoder = encoder;
             this.session = null;
             this.reason = DisconnectReason.FAILED_AUTHENTICATION;
+            this.lingerTimeoutInMs = lingerTimeoutInMs;
             this.state = AuthenticationState.SENDING_REJECT_MESSAGE;
         }
 
