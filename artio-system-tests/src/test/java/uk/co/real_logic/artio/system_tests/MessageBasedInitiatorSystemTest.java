@@ -29,6 +29,7 @@ import uk.co.real_logic.artio.session.Session;
 import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.TestFixtures.*;
@@ -139,6 +140,32 @@ public class MessageBasedInitiatorSystemTest
             testSystem.poll();
 
             connection.readHeartbeat(testReqID);
+        }
+    }
+
+
+    @Test
+    public void shouldBeNotifiedOnDisconnect() throws IOException
+    {
+        try (FixConnection connection = acceptConnection())
+        {
+            sendLogonToAcceptor(connection);
+
+            assertFalse(handler.hasDisconnected());
+
+            handler.lastSession().logoutAndDisconnect();
+
+            assertEventuallyTrue("Socket is not disconnected", () ->
+            {
+                testSystem.poll();
+                return !connection.isConnected();
+            });
+
+            assertEventuallyTrue("SessionHandler.onDisconnect has not been called", () ->
+            {
+                testSystem.poll();
+                return handler.hasDisconnected();
+            });
         }
     }
 
