@@ -364,7 +364,10 @@ public class DirectSessionProxy implements SessionProxy
             reject.resetRefTagID();
         }
 
-        reject.refMsgType(refMsgType, refMsgTypeLength);
+        if (reject.supportsRefMsgType())
+        {
+            reject.refMsgType(refMsgType, refMsgTypeLength);
+        }
         reject.text(LOGGED_ON_SESSION_REJECT_REASONS[rejectReason]);
 
         final SessionHeaderEncoder header = reject.header();

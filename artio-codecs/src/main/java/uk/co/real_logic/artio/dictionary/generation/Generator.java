@@ -635,7 +635,7 @@ public abstract class Generator
                     "    public boolean supports%1$s()\n" +
                     "    {\n" +
                     "        return %2$s;\n" +
-                    "    }\n",
+                    "    }\n\n",
                     optionalField,
                     inDictionary));
             }

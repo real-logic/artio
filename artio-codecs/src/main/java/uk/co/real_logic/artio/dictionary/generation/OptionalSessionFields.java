@@ -1,9 +1,10 @@
 package uk.co.real_logic.artio.dictionary.generation;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+import static java.util.Arrays.asList;
 
 final class OptionalSessionFields
 {
@@ -12,8 +13,11 @@ final class OptionalSessionFields
 
     static
     {
-        final List<String> logonFields = Arrays.asList("Username", "Password");
+        final List<String> logonFields = asList("Username", "Password");
         ENCODER_OPTIONAL_SESSION_FIELDS.put("LogonEncoder", logonFields);
         DECODER_OPTIONAL_SESSION_FIELDS.put("LogonDecoder", logonFields);
+
+        final List<String> rejectFields = asList("RefMsgType");
+        ENCODER_OPTIONAL_SESSION_FIELDS.put("RejectEncoder", rejectFields);
     }
 }

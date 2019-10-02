@@ -19,6 +19,8 @@ public interface AbstractRejectEncoder extends Encoder
 {
     AbstractRejectEncoder refTagID(int refTagId);
 
+    boolean supportsRefMsgType();
+
     AbstractRejectEncoder refMsgType(char[] refMsgType, int refMsgTypeLength);
 
     void resetRefTagID();
