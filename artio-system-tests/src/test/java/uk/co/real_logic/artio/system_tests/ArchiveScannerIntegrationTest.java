@@ -19,6 +19,7 @@ import org.agrona.CloseHelper;
 import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Test;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 
 import java.util.List;
@@ -100,8 +101,9 @@ public class ArchiveScannerIntegrationTest extends AbstractGatewayToGatewaySyste
     @SuppressWarnings("unchecked")
     private void assertArchiveContainsMessages(final String testReqIdPrefix)
     {
-        final List<String> messages = getMessagesFromArchive(acceptingEngine.configuration(),
-            acceptingEngine.configuration().outboundLibraryStream());
+        final EngineConfiguration configuration = acceptingEngine.configuration();
+        final List<String> messages = getMessagesFromArchive(
+            configuration, configuration.outboundLibraryStream());
 
         assertThat(messages.toString(), messages, hasItems(
             Matchers.containsString("35=A\00149=acceptor\00156=initiator\00134=1"),

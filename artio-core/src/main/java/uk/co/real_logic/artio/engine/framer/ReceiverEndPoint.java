@@ -15,8 +15,10 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
@@ -82,6 +84,7 @@ class ReceiverEndPoint
     private final AtomicCounter messagesRead;
     private final Framer framer;
     private final ErrorHandler errorHandler;
+    private final PasswordCleaner passwordCleaner = new PasswordCleaner();
     private final MutableAsciiBuffer buffer;
     private final ByteBuffer byteBuffer;
     private final GatewaySessions gatewaySessions;
@@ -488,12 +491,25 @@ class ReceiverEndPoint
     }
 
     private boolean saveMessage(
-        final int offset,
+        final int messageOffset,
         final int messageType,
-        final int length,
+        final int messageLength,
         final long sessionId,
         final int sequenceIndex)
     {
+        DirectBuffer buffer = this.buffer;
+        int offset = messageOffset;
+        int length = messageLength;
+
+        if (messageType == Constants.LOGON_MESSAGE)
+        {
+            passwordCleaner.clean(buffer, offset, length);
+
+            offset = 0;
+            buffer = passwordCleaner.cleanedBuffer();
+            length = passwordCleaner.cleanedLength();
+        }
+
         final long position = publication.saveMessage(
             buffer,
             offset,

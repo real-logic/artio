@@ -15,12 +15,12 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.SlowStatus;
 import uk.co.real_logic.artio.session.*;
-import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.function.Consumer;
 
@@ -188,7 +188,7 @@ class GatewaySession implements SessionInfo
     }
 
     public void onMessage(
-        final MutableAsciiBuffer buffer,
+        final DirectBuffer buffer,
         final int offset,
         final int length,
         final int messageType,

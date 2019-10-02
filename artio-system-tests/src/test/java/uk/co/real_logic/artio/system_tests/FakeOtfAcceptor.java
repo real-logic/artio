@@ -31,6 +31,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.assertThat;
+import static uk.co.real_logic.artio.Constants.LOGON_MESSAGE;
 import static uk.co.real_logic.artio.Constants.MSG_TYPE;
 import static uk.co.real_logic.artio.LogTag.FIX_TEST;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
@@ -100,7 +101,16 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         final AsciiFieldFlyweight value)
     {
         this.error = error;
-        System.err.printf("%s for %d @ %d%n", error, messageType, tagNumber);
+        if (messageType != LOGON_MESSAGE)
+        {
+            System.err.printf("%s for %d @ %d%n", error, messageType, tagNumber);
+        }
+        else
+        {
+            isCompleted = true;
+            receivedMessages.add(message);
+            message = null;
+        }
         return false;
     }
 

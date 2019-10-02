@@ -313,7 +313,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         int total = 0;
         for (int index = offset; index < end; index++)
         {
-            total += (int)getByte(index);
+            total += getByte(index);
         }
 
         return total % 256;

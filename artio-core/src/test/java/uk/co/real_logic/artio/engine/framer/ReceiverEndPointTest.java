@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
-import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Before;
 import org.junit.Test;
@@ -59,7 +59,7 @@ public class ReceiverEndPointTest
     private static final int BUFFER_SIZE = 16 * 1024;
     private static final int SEQUENCE_INDEX = 0;
     private static final int LOGON_LEN = LOGON_MESSAGE.length;
-    public static final int OUT_OF_REQUIRED_ORDER_MSG_LEN = TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES.length;
+    private static final int OUT_OF_REQUIRED_ORDER_MSG_LEN = TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER_MESSAGE_BYTES.length;
 
     private final AcceptorLogonResult pendingAuth = createSuccessfulPendingAuth();
     private final AcceptorLogonResult backpressuredPendingAuth = createBackpressuredPendingAuth();
@@ -473,9 +473,9 @@ public class ReceiverEndPointTest
             .thenReturn(BACK_PRESSURED, POSITION);
     }
 
-    private AtomicBuffer anyBuffer()
+    private DirectBuffer anyBuffer()
     {
-        return any(AtomicBuffer.class);
+        return any(DirectBuffer.class);
     }
 
     private void polls(final int bytesReadAndSaved)

@@ -21,6 +21,7 @@ import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
@@ -47,6 +48,7 @@ import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
 import static uk.co.real_logic.artio.messages.SessionState.DISABLED;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.PASSWORD;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
@@ -811,6 +813,20 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         messagesCanBeExchanged();
     }
+
+    @Test
+    public void shouldWipePasswordsFromLogs()
+    {
+        final EngineConfiguration configuration = acceptingEngine.configuration();
+
+        final List<String> messages = getMessagesFromArchive(
+            configuration, configuration.inboundLibraryStream());
+        assertThat(messages, hasSize(1));
+        final String logonMessage = messages.get(0);
+        assertThat(logonMessage + " contains the password", logonMessage, not(containsString(PASSWORD)));
+    }
+
+    // TODO: user request password change gets delivered and wiped
 
     private void exchangeExecutionReport()
     {
