@@ -26,11 +26,17 @@ public interface AuthenticationProxy
 {
     /**
      * Call this method to accept the authentication.
+     *
+     * @throws IllegalStateException if <code>accept()</code> or <code>reject()</code> has already been
+     * successfully called.
      */
     void accept();
 
     /**
      * Call this method to reject the authentication.
+     *
+     * @throws IllegalStateException if <code>accept()</code> or <code>reject()</code> has already been
+     * successfully called.
      */
     void reject();
 
@@ -42,6 +48,8 @@ public interface AuthenticationProxy
      *
      * @throws NullPointerException if encoder is null
      * @throws IllegalArgumentException if lingerTimeoutInMs is negative
+     * @throws IllegalStateException if <code>accept()</code> or <code>reject()</code> has already been
+     * successfully called.
      */
     void reject(Encoder encoder, long lingerTimeoutInMs);
 

@@ -418,7 +418,22 @@ class GatewaySessions
 
         public void accept()
         {
+            validateState();
+
             state = AuthenticationState.AUTHENTICATED;
+        }
+
+        private void validateState()
+        {
+            // NB: simple best efforts state check to catch programming errors.
+            // Technically can race if two different threads call accept and reject at the exact same moment.
+            final AuthenticationState state = this.state;
+
+            if (state != AuthenticationState.PENDING)
+            {
+                throw new IllegalStateException(String.format(
+                    "Cannot reject and accept a pending operation at the same time (state=%s)", state));
+            }
         }
 
         public boolean poll()
@@ -565,6 +580,8 @@ class GatewaySessions
 
         public void reject()
         {
+            validateState();
+
             reject(DisconnectReason.FAILED_AUTHENTICATION);
         }
 
@@ -592,6 +609,8 @@ class GatewaySessions
 
         private void reject(final DisconnectReason reason)
         {
+            validateState();
+
             this.session = null;
             this.reason = reason;
             this.state = AuthenticationState.REJECTED;

@@ -186,6 +186,28 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         assertInitiatingSequenceIndexIs(1);
     }
 
+    @Test
+    public void shouldOnlyUseFirstMethodCall()
+    {
+        final Reply<Session> reply = acquireAuthProxy();
+
+        auth.accept();
+
+        try
+        {
+            auth.reject();
+            fail("Should not allow a reject after an accept");
+        }
+        catch (final IllegalStateException e)
+        {
+            // Deliberately blank
+        }
+
+        completeConnectSessions(reply);
+        messagesCanBeExchanged();
+        assertInitiatingSequenceIndexIs(0);
+    }
+
     @After
     public void teardown()
     {
