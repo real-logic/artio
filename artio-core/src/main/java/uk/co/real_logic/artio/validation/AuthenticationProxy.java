@@ -39,6 +39,9 @@ public interface AuthenticationProxy
      *
      * @param encoder the encoder that defines the message. This encoder should not be re-used for other rejects.
      * @param lingerTimeoutInMs the time to wait after encoding this message before closing the TCP connection.
+     *
+     * @throws NullPointerException if encoder is null
+     * @throws IllegalArgumentException if lingerTimeoutInMs is negative
      */
     void reject(Encoder encoder, long lingerTimeoutInMs);
 

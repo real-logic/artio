@@ -42,6 +42,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.DUPLICATE_SESSION;
@@ -465,7 +466,16 @@ class GatewaySessions
         {
             if (encodeBuffer == null)
             {
-                encodeRejectMessage();
+                try
+                {
+                    encodeRejectMessage();
+                }
+                catch (final Exception e)
+                {
+                    errorHandler.onError(e);
+                    state = AuthenticationState.REJECTED;
+                    return true;
+                }
             }
 
             try
@@ -560,6 +570,14 @@ class GatewaySessions
 
         public void reject(final Encoder encoder, final long lingerTimeoutInMs)
         {
+            Objects.requireNonNull(encoder, "encoder should be provided");
+
+            if (lingerTimeoutInMs < 0)
+            {
+                throw new IllegalArgumentException(String.format(
+                    "lingerTimeoutInMs should not be negative, (%d)", lingerTimeoutInMs));
+            }
+
             this.encoder = encoder;
             this.session = null;
             this.reason = DisconnectReason.FAILED_AUTHENTICATION;
