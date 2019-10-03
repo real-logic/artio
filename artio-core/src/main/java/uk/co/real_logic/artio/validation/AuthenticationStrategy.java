@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.validation;
 
 import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.decoder.UserRequestDecoder;
 
 /**
  * Implement this interface in order to add customisable checks to logon messages.
@@ -69,4 +70,21 @@ public interface AuthenticationStrategy
      * @return true to accept the new session, false to reject it.
      */
     boolean authenticate(LogonDecoder logon);
+
+    /**
+     * Hands a user request message to the authentication strategy.
+     *
+     * This is the only way to get access to the password and newPassword fields of a user request message.
+     *
+     * User request messages may include a password change, and the passwords will be cleaned before they
+     * arrive at the {@link uk.co.real_logic.artio.library.FixLibrary}. As a result we hand off UserRequest messages
+     * to the AuthenticationStrategy before the password cleaning so that your authentication system can deal with
+     * password changes.
+     *
+     * @param userRequestDecoder the user request message that has been saved.
+     */
+    default void onUserRequest(UserRequestDecoder userRequestDecoder)
+    {
+        // Deliberately blank for backwards compatibility
+    }
 }

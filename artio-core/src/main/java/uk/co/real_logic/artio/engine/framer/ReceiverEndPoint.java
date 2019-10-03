@@ -501,8 +501,14 @@ class ReceiverEndPoint
         int offset = messageOffset;
         int length = messageLength;
 
-        if (messageType == Constants.LOGON_MESSAGE)
+        final boolean isUserRequest = messageType == Constants.USER_REQUEST_MESSAGE;
+        if (messageType == Constants.LOGON_MESSAGE || isUserRequest)
         {
+            if (isUserRequest)
+            {
+                gatewaySessions.onUserRequest(buffer, offset, length);
+            }
+
             passwordCleaner.clean(buffer, offset, length);
 
             offset = 0;

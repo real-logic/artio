@@ -21,6 +21,7 @@ import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
+import uk.co.real_logic.artio.builder.UserRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
@@ -53,7 +54,10 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
+    private static final String NEW_PASSWORD = "ABCDEF";
+
     private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
+    private FakeAuthenticationStrategy auth;
 
     @Before
     public void launch()
@@ -62,7 +66,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         mediaDriver = launchMediaDriver();
 
-        launchAcceptingEngine();
+        final EngineConfiguration configuration = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
+        auth = new FakeAuthenticationStrategy(configuration.messageValidationStrategy());
+        configuration.authenticationStrategy(auth);
+        acceptingEngine = FixEngine.launch(
+            configuration);
+
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
@@ -817,16 +826,57 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void shouldWipePasswordsFromLogs()
     {
+        assertArchiveDoesNotContainPassword();
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldHandleUserRequestMessages()
+    {
+        final String id = "A";
+        final UserRequestEncoder userRequestEncoder
+            = new UserRequestEncoder()
+            .userRequestID(id)
+            .userRequestType(UserRequestType.ChangePasswordForUser)
+            .username(SystemTestUtil.USERNAME)
+            .password(PASSWORD)
+            .newPassword(NEW_PASSWORD);
+
+        while (initiatingSession.send(userRequestEncoder) < 0)
+        {
+            testSystem.poll();
+
+            Thread.yield();
+        }
+
+
+        while (!auth.receivedUserRequest())
+        {
+            testSystem.poll();
+
+            Thread.yield();
+        }
+
+        assertEquals(PASSWORD, auth.logonPassword());
+        assertEquals(PASSWORD, auth.userRequestPassword());
+        assertEquals(NEW_PASSWORD, auth.userRequestNewPassword());
+
+        assertArchiveDoesNotContainPassword();
+    }
+
+    private void assertArchiveDoesNotContainPassword()
+    {
         final EngineConfiguration configuration = acceptingEngine.configuration();
 
         final List<String> messages = getMessagesFromArchive(
             configuration, configuration.inboundLibraryStream());
-        assertThat(messages, hasSize(1));
-        final String logonMessage = messages.get(0);
-        assertThat(logonMessage + " contains the password", logonMessage, not(containsString(PASSWORD)));
+        assertThat(messages, hasSize(greaterThanOrEqualTo(1)));
+        for (final String message : messages)
+        {
+            assertThat(message + " contains the password",
+                message,
+                allOf(not(containsString(PASSWORD)), not(containsString(NEW_PASSWORD))));
+        }
     }
-
-    // TODO: user request password change gets delivered and wiped
 
     private void exchangeExecutionReport()
     {

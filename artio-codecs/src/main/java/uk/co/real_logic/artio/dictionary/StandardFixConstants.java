@@ -32,5 +32,6 @@ public final class StandardFixConstants
     public static final int MESSAGE_TYPE = 35;
 
 
+    // public static final int USER_REQUEST = 925;
     public static final int NEW_PASSWORD = 925;
 }
