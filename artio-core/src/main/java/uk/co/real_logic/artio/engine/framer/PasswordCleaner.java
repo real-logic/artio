@@ -21,6 +21,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.ValidationError;
 import uk.co.real_logic.artio.dictionary.IntDictionary;
+import uk.co.real_logic.artio.dictionary.StandardFixConstants;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.otf.MessageControl;
 import uk.co.real_logic.artio.otf.OtfMessageAcceptor;
@@ -39,6 +40,8 @@ public class PasswordCleaner
 
     private int passwordOffset;
     private int passwordLength;
+    private int newPasswordOffset;
+    private int newPasswordLength;
     private int bodyLength;
     private int bodyLengthOffset;
     private int lengthOfBodyLength;
@@ -52,29 +55,88 @@ public class PasswordCleaner
     {
         parser.onMessage(buffer, offset, length);
 
+        final int passwordOffset = this.passwordOffset;
         if (passwordOffset == NO_ENTRY)
         {
             cleanedBuffer.putBytes(0, buffer, offset, length);
             cleanedLength = length;
+            return;
+        }
+
+        final int newPasswordOffset = this.newPasswordOffset;
+
+        final int firstOffset;
+        final int firstLength;
+        final int secondOffset;
+        final int secondLength;
+
+        if (passwordOffset < newPasswordOffset || newPasswordOffset == NO_ENTRY)
+        {
+            firstOffset = passwordOffset;
+            firstLength = passwordLength;
+            secondOffset = newPasswordOffset;
+            secondLength = newPasswordLength;
         }
         else
         {
-            final int headLength = passwordOffset - offset;
-            cleanedBuffer.putBytes(0, buffer, offset, headLength);
-
-            cleanedBuffer.putBytes(headLength, REPLACEMENT, 0, REPLACEMENT_LENGTH);
-
-            final int tailOffset = passwordOffset + passwordLength;
-            final int tailLength = length - (headLength + passwordLength);
-            cleanedBuffer.putBytes(headLength + REPLACEMENT_LENGTH, buffer, tailOffset, tailLength);
-
-            cleanedLength = length - passwordLength + REPLACEMENT_LENGTH;
-
-            final int newBodyLength = bodyLength - passwordLength + REPLACEMENT_LENGTH;
-            final int relativeBodyLengthOffset = bodyLengthOffset - offset;
-            cleanedBuffer.putNaturalIntAsciiFromEnd(
-                newBodyLength, relativeBodyLengthOffset + lengthOfBodyLength);
+            firstOffset = newPasswordOffset;
+            firstLength = newPasswordLength;
+            secondOffset = passwordOffset;
+            secondLength = passwordLength;
         }
+
+        final int headLength = firstOffset - offset;
+        cleanedBuffer.putBytes(0, buffer, offset, headLength);
+
+        putReplacement(headLength);
+
+        final int nextDestOffset = headLength + REPLACEMENT_LENGTH;
+
+        final int nextSrcOffset = firstOffset + firstLength;
+        final int newPasswordLengthChange;
+
+        if (secondOffset == NO_ENTRY)
+        {
+            final int tailLength = length - (headLength + firstLength);
+            cleanedBuffer.putBytes(nextDestOffset, buffer, nextSrcOffset, tailLength);
+
+            newPasswordLengthChange = 0;
+        }
+        else
+        {
+            final int midLength = secondOffset - nextSrcOffset;
+            cleanedBuffer.putBytes(nextDestOffset, buffer, nextSrcOffset, midLength);
+
+            final int destNewPasswordOffset = nextDestOffset + midLength;
+
+            putReplacement(destNewPasswordOffset);
+
+            final int tailSrcOffset = secondOffset + secondLength;
+            final int tailLength = (length + offset) - (tailSrcOffset);
+            final int tailDestOffset = destNewPasswordOffset + REPLACEMENT_LENGTH;
+            cleanedBuffer.putBytes(tailDestOffset, buffer, tailSrcOffset, tailLength);
+
+            newPasswordLengthChange = secondLength - REPLACEMENT_LENGTH;
+        }
+
+        final int lengthChange = firstLength - REPLACEMENT_LENGTH + newPasswordLengthChange;
+
+        cleanedLength = length - lengthChange;
+
+        updateBodyLengthField(offset, lengthChange);
+    }
+
+    private void putReplacement(final int destNewPasswordOffset)
+    {
+        cleanedBuffer.putBytes(destNewPasswordOffset, REPLACEMENT, 0, REPLACEMENT_LENGTH);
+    }
+
+    private void updateBodyLengthField(final int offset, final int lengthChange)
+    {
+        final int newBodyLength = bodyLength - lengthChange;
+        final int relativeBodyLengthOffset = bodyLengthOffset - offset;
+        cleanedBuffer.putNaturalIntAsciiFromEnd(
+            newBodyLength, relativeBodyLengthOffset + lengthOfBodyLength);
     }
 
     public DirectBuffer cleanedBuffer()
@@ -92,6 +154,7 @@ public class PasswordCleaner
         public MessageControl onNext()
         {
             passwordOffset = NO_ENTRY;
+            newPasswordOffset = NO_ENTRY;
             bodyLength = NO_ENTRY;
             bodyLengthOffset = NO_ENTRY;
             lengthOfBodyLength = NO_ENTRY;
@@ -105,6 +168,11 @@ public class PasswordCleaner
                 case Constants.PASSWORD:
                     passwordOffset = offset;
                     passwordLength = length;
+                    break;
+
+                case StandardFixConstants.NEW_PASSWORD:
+                    newPasswordOffset = offset;
+                    newPasswordLength = length;
                     break;
 
                 case Constants.BODY_LENGTH:

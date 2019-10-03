@@ -30,4 +30,7 @@ public final class StandardFixConstants
     public static final int HEARTBEAT = 0;
     public static final int CHECKSUM = 10;
     public static final int MESSAGE_TYPE = 35;
+
+
+    public static final int NEW_PASSWORD = 925;
 }

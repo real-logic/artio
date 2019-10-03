@@ -43,6 +43,22 @@ public class PasswordCleanerTest
         "8=FIX.4.4\0019=78\00135=A\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
         "\00198=0\001108=10\001141=N\00110=062\001";
 
+    private static final String EXAMPLE_USER_REQUEST =
+        "8=FIX.4.4\0019=116\00135=BE\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
+        "\001923=A\001924=3\001553=initiator\001554=Uv1aegoh\001925=newPassword\00110=062\001";
+
+    private static final String CLEAN_USER_REQUEST =
+        "8=FIX.4.4\0019=103\00135=BE\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
+        "\001923=A\001924=3\001553=initiator\001554=***\001925=***\00110=062\001";
+
+    private static final String EXAMPLE_USER_REQUEST_FLIPPED_FIELD_ORDER =
+        "8=FIX.4.4\0019=116\00135=BE\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
+        "\001923=A\001924=3\001553=initiator\001925=newPassword\001554=Uv1aegoh\00110=062\001";
+
+    private static final String CLEAN_USER_REQUEST_FLIPPED_FIELD_ORDER =
+        "8=FIX.4.4\0019=103\00135=BE\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
+        "\001923=A\001924=3\001553=initiator\001925=***\001554=***\00110=062\001";
+
     private final PasswordCleaner passwordCleaner = new PasswordCleaner();
 
     private final int offset;
@@ -62,6 +78,19 @@ public class PasswordCleanerTest
     public void shouldNotChangeLogonWithoutPassword()
     {
         shouldCleanMessage(NO_PASSWORD_LOGON, NO_PASSWORD_LOGON);
+    }
+
+
+    @Test
+    public void shouldCleanPasswordsFromUserRequest()
+    {
+        shouldCleanMessage(EXAMPLE_USER_REQUEST, CLEAN_USER_REQUEST);
+    }
+
+    @Test
+    public void shouldCleanPasswordsFromUserRequestWithFieldsFlipped()
+    {
+        shouldCleanMessage(EXAMPLE_USER_REQUEST_FLIPPED_FIELD_ORDER, CLEAN_USER_REQUEST_FLIPPED_FIELD_ORDER);
     }
 
     private void shouldCleanMessage(final String inputMessage, final String expectedCleanedMessage)
