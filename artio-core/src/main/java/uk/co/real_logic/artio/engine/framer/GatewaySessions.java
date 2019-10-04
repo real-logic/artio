@@ -537,7 +537,7 @@ class GatewaySessions
             final SessionHeaderEncoder header = encoder.header();
             header.msgSeqNum(1);
             header.sendingTime(
-                sendingTimeEncoder.buffer(), sendingTimeEncoder.encode(System.currentTimeMillis()));
+                sendingTimeEncoder.buffer(), sendingTimeEncoder.encode(clock.time()));
             HeaderSetup.setup(logon.header(), header);
 
             final long result = encoder.encode(asciiBuffer, 0);
