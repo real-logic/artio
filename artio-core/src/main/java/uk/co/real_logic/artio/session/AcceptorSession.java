@@ -26,7 +26,7 @@ public class AcceptorSession extends InternalSession
     public AcceptorSession(
         final int defaultInterval,
         final long connectionId,
-        final EpochClock clock,
+        final EpochClock epochClock,
         final SessionProxy proxy,
         final GatewayPublication publication,
         final SessionIdStrategy sessionIdStrategy,
@@ -44,7 +44,7 @@ public class AcceptorSession extends InternalSession
         super(
             defaultInterval,
             connectionId,
-            clock,
+            epochClock,
             state,
             proxy,
             publication,

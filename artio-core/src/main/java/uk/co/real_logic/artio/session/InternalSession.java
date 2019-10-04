@@ -37,7 +37,7 @@ public class InternalSession extends Session
     public InternalSession(
         final int heartbeatIntervalInS,
         final long connectionId,
-        final EpochClock clock,
+        final EpochClock epochClock,
         final SessionState state,
         final SessionProxy proxy,
         final GatewayPublication publication,
@@ -55,7 +55,7 @@ public class InternalSession extends Session
         super(
             heartbeatIntervalInS,
             connectionId,
-            clock,
+            epochClock,
             state,
             proxy,
             publication,

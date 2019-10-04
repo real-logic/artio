@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
@@ -88,6 +89,7 @@ class ReceiverEndPoint
     private final MutableAsciiBuffer buffer;
     private final ByteBuffer byteBuffer;
     private final GatewaySessions gatewaySessions;
+    private final Clock clock;
 
     private int libraryId;
     private GatewaySession gatewaySession;
@@ -102,6 +104,7 @@ class ReceiverEndPoint
     private boolean hasNotifiedFramerOfLogonMessageReceived;
     private int pendingAcceptorLogonMsgOffset;
     private int pendingAcceptorLogonMsgLength;
+    private long lastReadTimestamp;
 
     ReceiverEndPoint(
         final TcpChannel channel,
@@ -115,11 +118,13 @@ class ReceiverEndPoint
         final Framer framer,
         final ErrorHandler errorHandler,
         final int libraryId,
-        final GatewaySessions gatewaySessions)
+        final GatewaySessions gatewaySessions,
+        final Clock clock)
     {
         Objects.requireNonNull(publication, "publication");
         Objects.requireNonNull(sessionContexts, "sessionContexts");
         Objects.requireNonNull(gatewaySessions, "gatewaySessions");
+        Objects.requireNonNull(clock, "clock");
 
         this.channel = channel;
         this.publication = publication;
@@ -132,6 +137,7 @@ class ReceiverEndPoint
         this.errorHandler = errorHandler;
         this.libraryId = libraryId;
         this.gatewaySessions = gatewaySessions;
+        this.clock = clock;
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
         buffer = new MutableAsciiBuffer(byteBuffer);
@@ -156,13 +162,16 @@ class ReceiverEndPoint
 
         try
         {
+            final long latestReadTimestamp = clock.time();
             final int bytesRead = readData();
-            if (frameMessages())
+            if (frameMessages(bytesRead == 0 ? lastReadTimestamp : latestReadTimestamp))
             {
+                lastReadTimestamp = latestReadTimestamp;
                 return bytesRead;
             }
             else
             {
+                lastReadTimestamp = latestReadTimestamp;
                 return -bytesRead;
             }
         }
@@ -224,7 +233,7 @@ class ReceiverEndPoint
         final long sessionId = gatewaySession.sessionId();
         final int sequenceIndex = gatewaySession.sequenceIndex();
 
-        if (saveMessage(offset, LogonDecoder.MESSAGE_TYPE, length, sessionId, sequenceIndex))
+        if (saveMessage(offset, LogonDecoder.MESSAGE_TYPE, length, sessionId, sequenceIndex, lastReadTimestamp))
         {
             // Authentication is only complete (ie this state set) when the actual logon message has been saved.
             this.sessionId = sessionId;
@@ -263,10 +272,15 @@ class ReceiverEndPoint
         return dataRead;
     }
 
+    boolean retryFrameMessages()
+    {
+        return frameMessages(lastReadTimestamp);
+    }
+
     // true - no more framed messages in the buffer data to process. This could mean no more messages, or some data
     // that is an incomplete message.
     // false - needs to be retried, aka back-pressured
-    boolean frameMessages()
+    private boolean frameMessages(final long readTimestamp)
     {
         int offset = 0;
         while (true)
@@ -278,7 +292,7 @@ class ReceiverEndPoint
             }
             try
             {
-                final int startOfBodyLength = scanForBodyLength(offset);
+                final int startOfBodyLength = scanForBodyLength(offset, readTimestamp);
                 if (startOfBodyLength < 0)
                 {
                     return startOfBodyLength == UNKNOWN_INDEX;
@@ -300,7 +314,7 @@ class ReceiverEndPoint
 
                 if (!validateBodyLength(startOfChecksumTag))
                 {
-                    final int endOfMessage = onInvalidBodyLength(offset, startOfChecksumTag);
+                    final int endOfMessage = onInvalidBodyLength(offset, startOfChecksumTag, readTimestamp);
                     if (endOfMessage == BREAK)
                     {
                         break;
@@ -322,7 +336,7 @@ class ReceiverEndPoint
                 {
                     DebugLogger.log(FIX_MESSAGE, "Invalidated: %s%n", buffer, offset, length);
 
-                    if (saveInvalidChecksumMessage(offset, messageType, length))
+                    if (saveInvalidChecksumMessage(offset, messageType, length, readTimestamp))
                     {
                         return false;
                     }
@@ -339,7 +353,7 @@ class ReceiverEndPoint
                     }
 
                     messagesRead.incrementOrdered();
-                    if (!saveMessage(offset, messageType, length))
+                    if (!saveMessage(offset, messageType, length, readTimestamp))
                     {
                         return false;
                     }
@@ -349,7 +363,7 @@ class ReceiverEndPoint
             }
             catch (final IllegalArgumentException ex)
             {
-                return !invalidateMessage(offset);
+                return !invalidateMessage(offset, readTimestamp);
             }
             catch (final Exception ex)
             {
@@ -362,7 +376,7 @@ class ReceiverEndPoint
         return true;
     }
 
-    private int onInvalidBodyLength(final int offset, final int startOfChecksumTag)
+    private int onInvalidBodyLength(final int offset, final int startOfChecksumTag, final long readTimestamp)
     {
         int checksumTagScanPoint = startOfChecksumTag + 1;
         while (!isStartOfChecksum(checksumTagScanPoint))
@@ -383,7 +397,7 @@ class ReceiverEndPoint
             return BREAK;
         }
 
-        if (saveInvalidMessage(offset, endOfMessage))
+        if (saveInvalidMessage(offset, endOfMessage, readTimestamp))
         {
             DebugLogger.log(FIX_MESSAGE, "Invalidated: %s%n", buffer, offset, endOfMessage - offset);
             return offset;
@@ -414,29 +428,29 @@ class ReceiverEndPoint
         return buffer.scan(startOfChecksumValue, usedBufferData - 1, START_OF_HEADER);
     }
 
-    private int scanForBodyLength(final int offset)
+    private int scanForBodyLength(final int offset, final long readTimestamp)
     {
         if (invalidTag(offset, BEGIN_STRING_FIELD))
         {
-            return invalidateMessageUnknownIndex(offset);
+            return invalidateMessageUnknownIndex(offset, readTimestamp);
         }
         final int endOfCommonPrefix = scanNextField(offset + 2);
         if (endOfCommonPrefix == UNKNOWN_INDEX)
         {
             // no header end within MIN_MESSAGE_SIZE
-            return invalidateMessageUnknownIndex(offset);
+            return invalidateMessageUnknownIndex(offset, readTimestamp);
         }
         final int startOfBodyTag = endOfCommonPrefix + 1;
         if (invalidTag(startOfBodyTag, BODY_LENGTH_FIELD))
         {
-            return invalidateMessageUnknownIndex(offset);
+            return invalidateMessageUnknownIndex(offset, readTimestamp);
         }
         return startOfBodyTag + 2;
     }
 
-    private int invalidateMessageUnknownIndex(final int offset)
+    private int invalidateMessageUnknownIndex(final int offset, final long readTimestamp)
     {
-        return invalidateMessage(offset) ? UNKNOWN_INDEX_BACKPRESSURED : UNKNOWN_INDEX;
+        return invalidateMessage(offset, readTimestamp) ? UNKNOWN_INDEX_BACKPRESSURED : UNKNOWN_INDEX;
     }
 
     private int scanEndOfBodyLength(final int startOfBodyLength)
@@ -485,9 +499,9 @@ class ReceiverEndPoint
         return backPressured;
     }
 
-    private boolean saveMessage(final int offset, final int messageType, final int length)
+    private boolean saveMessage(final int offset, final int messageType, final int length, final long readTimestamp)
     {
-        return saveMessage(offset, messageType, length, sessionId, sequenceIndex);
+        return saveMessage(offset, messageType, length, sessionId, sequenceIndex, readTimestamp);
     }
 
     private boolean saveMessage(
@@ -495,7 +509,8 @@ class ReceiverEndPoint
         final int messageType,
         final int messageLength,
         final long sessionId,
-        final int sequenceIndex)
+        final int sequenceIndex,
+        final long readTimestamp)
     {
         DirectBuffer buffer = this.buffer;
         int offset = messageOffset;
@@ -526,7 +541,8 @@ class ReceiverEndPoint
             sequenceIndex,
             connectionId,
             OK,
-            0);
+            0,
+            readTimestamp);
 
         if (Pressure.isBackPressured(position))
         {
@@ -590,13 +606,13 @@ class ReceiverEndPoint
     }
 
     // returns true if back-pressured
-    private boolean invalidateMessage(final int offset)
+    private boolean invalidateMessage(final int offset, final long readTimestamp)
     {
         DebugLogger.log(FIX_MESSAGE, "Invalidated: %s%n", buffer, offset, MIN_MESSAGE_SIZE);
-        return saveInvalidMessage(offset);
+        return saveInvalidMessage(offset, readTimestamp);
     }
 
-    private boolean saveInvalidMessage(final int offset, final int startOfChecksumTag)
+    private boolean saveInvalidMessage(final int offset, final int startOfChecksumTag, final long readTimestamp)
     {
         final long position = publication.saveMessage(
             buffer,
@@ -608,13 +624,14 @@ class ReceiverEndPoint
             sequenceIndex,
             connectionId,
             INVALID_BODYLENGTH,
-            0);
+            0,
+            readTimestamp);
 
         return stashIfBackPressured(offset, position);
     }
 
     // returns true if back-pressured
-    private boolean saveInvalidMessage(final int offset)
+    private boolean saveInvalidMessage(final int offset, final long readTimestamp)
     {
         final long position = publication.saveMessage(
             buffer,
@@ -626,7 +643,8 @@ class ReceiverEndPoint
             sequenceIndex,
             connectionId,
             INVALID,
-            0);
+            0,
+            readTimestamp);
 
         final boolean backPressured = stashIfBackPressured(offset, position);
 
@@ -643,7 +661,8 @@ class ReceiverEndPoint
         moveRemainingDataToBufferStart(usedBufferData);
     }
 
-    private boolean saveInvalidChecksumMessage(final int offset, final int messageType, final int length)
+    private boolean saveInvalidChecksumMessage(
+        final int offset, final int messageType, final int length, final long readTimestamp)
     {
         final long position = publication.saveMessage(
             buffer,
@@ -655,7 +674,8 @@ class ReceiverEndPoint
             sequenceIndex,
             connectionId,
             INVALID_CHECKSUM,
-            0);
+            0,
+            readTimestamp);
 
         return stashIfBackPressured(offset, position);
     }

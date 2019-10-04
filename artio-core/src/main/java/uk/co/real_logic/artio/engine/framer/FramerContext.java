@@ -72,7 +72,7 @@ public class FramerContext
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
         final Streams outboundLibraryStreams = engineContext.outboundLibraryStreams();
 
-        final SystemEpochClock clock = new SystemEpochClock();
+        final SystemEpochClock epochClock = new SystemEpochClock();
         this.inboundPublication = engineContext.inboundPublication();
         this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "outboundPublication");
 
@@ -82,7 +82,7 @@ public class FramerContext
             configuration.receivedSequenceNumberBuffer(), errorHandler);
 
         gatewaySessions = new GatewaySessions(
-            clock,
+            epochClock,
             outboundPublication,
             sessionIdStrategy,
             configuration.sessionCustomisationStrategy(),
@@ -106,12 +106,13 @@ public class FramerContext
             fixCounters,
             errorHandler,
             gatewaySessions,
-            engineContext.senderSequenceNumbers());
+            engineContext.senderSequenceNumbers()
+        );
 
         final FinalImagePositions finalImagePositions = new FinalImagePositions();
 
         framer = new Framer(
-            clock,
+            epochClock,
             timers.outboundTimer(),
             timers.sendTimer(),
             configuration,

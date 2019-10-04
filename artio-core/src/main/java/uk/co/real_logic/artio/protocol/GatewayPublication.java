@@ -133,8 +133,34 @@ public class GatewayPublication extends ClaimablePublication
         final MessageStatus status,
         final int sequenceNumber)
     {
+        return saveMessage(
+            srcBuffer,
+            srcOffset,
+            srcLength,
+            libraryId,
+            messageType,
+            sessionId,
+            sequenceIndex,
+            connectionId,
+            status,
+            sequenceNumber,
+            clock.time());
+    }
+
+    public long saveMessage(
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int srcLength,
+        final int libraryId,
+        final int messageType,
+        final long sessionId,
+        final int sequenceIndex,
+        final long connectionId,
+        final MessageStatus status,
+        final int sequenceNumber,
+        final long timestamp)
+    {
         final BufferClaim bufferClaim = this.bufferClaim;
-        final long timestamp = clock.time();
         final int framedLength = FRAMED_MESSAGE_SIZE + srcLength;
         final boolean fragmented = framedLength > maxPayloadLength;
         final int claimLength = fragmented ? maxPayloadLength : framedLength;

@@ -118,7 +118,7 @@ public class Session implements AutoCloseable
     protected final int libraryId;
     protected final SessionProxy proxy;
 
-    private final EpochClock clock;
+    private final EpochClock epochClock;
     private final long sendingTimeWindowInMs;
     private final AtomicCounter receivedMsgSeqNo;
     private final AtomicCounter sentMsgSeqNo;
@@ -167,7 +167,7 @@ public class Session implements AutoCloseable
     public Session(
         final int heartbeatIntervalInS,
         final long connectionId,
-        final EpochClock clock,
+        final EpochClock epochClock,
         final SessionState state,
         final SessionProxy proxy,
         final GatewayPublication publication,
@@ -182,14 +182,14 @@ public class Session implements AutoCloseable
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed)
     {
-        Verify.notNull(clock, "clock");
+        Verify.notNull(epochClock, "clock");
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
         Verify.notNull(publication, "publication");
         Verify.notNull(receivedMsgSeqNo, "received MsgSeqNo counter");
         Verify.notNull(sentMsgSeqNo, "sent MsgSeqNo counter");
 
-        this.clock = clock;
+        this.epochClock = epochClock;
         this.proxy = proxy;
         this.connectionId = connectionId;
         this.publication = publication;
@@ -1423,7 +1423,7 @@ public class Session implements AutoCloseable
 
     protected long time()
     {
-        return clock.time();
+        return epochClock.time();
     }
 
     // Also checks the sequence index

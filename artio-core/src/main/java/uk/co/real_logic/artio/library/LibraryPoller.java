@@ -109,7 +109,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // Uniquely identifies library session
     private final int libraryId;
-    private final EpochClock clock;
+    private final EpochClock epochClock;
     private final LibraryConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
     private final Timer sessionTimer;
@@ -152,7 +152,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final FixCounters fixCounters,
         final LibraryTransport transport,
         final FixLibrary fixLibrary,
-        final EpochClock clock)
+        final EpochClock epochClock)
     {
         this.libraryId = configuration.libraryId();
         this.fixCounters = fixCounters;
@@ -166,7 +166,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         this.sessionIdStrategy = configuration.sessionIdStrategy();
         this.sessionExistsHandler = configuration.sessionExistsHandler();
         this.sentPositionHandler = configuration.sentPositionHandler();
-        this.clock = clock;
+        this.epochClock = epochClock;
         this.enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
     }
 
@@ -620,7 +620,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private long timeInMs()
     {
-        return clock.time();
+        return epochClock.time();
     }
 
     private int checkReplies(final long timeInMs)
@@ -1147,7 +1147,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final InitiatorSession session = new InitiatorSession(
             defaultInterval,
             connectionId,
-            clock,
+            epochClock,
             sessionProxy,
             publication,
             sessionIdStrategy,
@@ -1219,7 +1219,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final InternalSession session = new AcceptorSession(
             heartbeatIntervalInS,
             connectionId,
-            clock,
+            epochClock,
             sessionProxy(connectionId),
             publication,
             sessionIdStrategy,

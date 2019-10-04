@@ -57,7 +57,7 @@ import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.reset
 class GatewaySessions
 {
     private final List<GatewaySession> sessions = new ArrayList<>();
-    private final EpochClock clock;
+    private final EpochClock epochClock;
     private final GatewayPublication outboundPublication;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionCustomisationStrategy customisationStrategy;
@@ -79,7 +79,7 @@ class GatewaySessions
     private ErrorHandler errorHandler;
 
     GatewaySessions(
-        final EpochClock clock,
+        final EpochClock epochClock,
         final GatewayPublication outboundPublication,
         final SessionIdStrategy sessionIdStrategy,
         final SessionCustomisationStrategy customisationStrategy,
@@ -96,7 +96,7 @@ class GatewaySessions
         final SequenceNumberIndexReader sentSequenceNumberIndex,
         final SequenceNumberIndexReader receivedSequenceNumberIndex)
     {
-        this.clock = clock;
+        this.epochClock = epochClock;
         this.outboundPublication = outboundPublication;
         this.sessionIdStrategy = sessionIdStrategy;
         this.customisationStrategy = customisationStrategy;
@@ -150,14 +150,14 @@ class GatewaySessions
             outboundPublication,
             sessionIdStrategy,
             customisationStrategy,
-            clock,
+            epochClock,
             connectionId,
             FixEngine.ENGINE_LIBRARY_ID);
 
         final InternalSession session = new InternalSession(
             heartbeatIntervalInS,
             connectionId,
-            clock,
+            epochClock,
             state,
             proxy,
             outboundPublication,
@@ -481,7 +481,7 @@ class GatewaySessions
 
         private boolean onLingerRejectMessage()
         {
-            final long timeInMs = clock.time();
+            final long timeInMs = epochClock.time();
             final boolean complete = timeInMs >= lingerExpiryTimeInMs;
 
             if (complete)
@@ -513,7 +513,7 @@ class GatewaySessions
                 channel.write(encodeBuffer);
                 if (!encodeBuffer.hasRemaining())
                 {
-                    lingerExpiryTimeInMs = clock.time() + lingerTimeoutInMs;
+                    lingerExpiryTimeInMs = epochClock.time() + lingerTimeoutInMs;
                     state = AuthenticationState.LINGERING_REJECT_MESSAGE;
                 }
             }
@@ -537,7 +537,7 @@ class GatewaySessions
             final SessionHeaderEncoder header = encoder.header();
             header.msgSeqNum(1);
             header.sendingTime(
-                sendingTimeEncoder.buffer(), sendingTimeEncoder.encode(clock.time()));
+                sendingTimeEncoder.buffer(), sendingTimeEncoder.encode(epochClock.time()));
             HeaderSetup.setup(logon.header(), header);
 
             final long result = encoder.encode(asciiBuffer, 0);

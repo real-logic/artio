@@ -158,7 +158,7 @@ class ReceiverEndPoints extends TransportPoller
 
             if (backpressuredEndPoint != null)
             {
-                if (backpressuredEndPoint.frameMessages())
+                if (backpressuredEndPoint.retryFrameMessages())
                 {
                     this.backpressuredEndPoint = null;
 
