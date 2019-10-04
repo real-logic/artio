@@ -28,9 +28,8 @@ import uk.co.real_logic.artio.session.Session;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -143,7 +142,6 @@ public class MessageBasedInitiatorSystemTest
         }
     }
 
-
     @Test
     public void shouldBeNotifiedOnDisconnect() throws IOException
     {
@@ -153,7 +151,8 @@ public class MessageBasedInitiatorSystemTest
 
             assertFalse(handler.hasDisconnected());
 
-            handler.lastSession().logoutAndDisconnect();
+            final Session session = handler.lastSession();
+            assertThat(session.logoutAndDisconnect(), greaterThan(0L));
 
             assertEventuallyTrue("Socket is not disconnected", () ->
             {

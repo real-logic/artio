@@ -102,9 +102,16 @@ final class FixConnection implements AutoCloseable
         this.targetCompID = targetCompID;
     }
 
+    // Can read data
     boolean isConnected()
     {
-        return socket.isConnected();
+        try
+        {
+            return socket.read(readBuffer) != -1;
+        }catch (IOException e)
+        {
+            return false;
+        }
     }
 
     void logon(final boolean resetSeqNumFlag)
