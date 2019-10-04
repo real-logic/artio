@@ -79,7 +79,13 @@ public interface AuthenticationStrategy
      * User request messages may include a password change, and the passwords will be cleaned before they
      * arrive at the {@link uk.co.real_logic.artio.library.FixLibrary}. As a result we hand off UserRequest messages
      * to the AuthenticationStrategy before the password cleaning so that your authentication system can deal with
-     * password changes.
+     * password changes. This message will still be sent to the approach {@link uk.co.real_logic.artio.session.Session}
+     * object and processed as normal (sequence number updates, validation, etc.) just without the password fields.
+     *
+     * NB: you will be handed this UserRequest message no matter whether it has passed FIX message validation or not.
+     * If you wish to validate the user request message then you should call the
+     * {@link uk.co.real_logic.artio.decoder_flyweight.UserRequestDecoder#validate()} method and implement business
+     * logic accordingly.
      *
      * @param userRequestDecoder the user request message that has been saved.
      */
