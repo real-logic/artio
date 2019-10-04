@@ -108,7 +108,8 @@ final class FixConnection implements AutoCloseable
         try
         {
             return socket.read(readBuffer) != -1;
-        }catch (IOException e)
+        }
+        catch (final IOException e)
         {
             return false;
         }

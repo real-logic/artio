@@ -32,7 +32,9 @@ import java.util.stream.Stream;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -98,18 +100,18 @@ public class ManySessionsSystemTest extends AbstractGatewayToGatewaySystemTest
     @Test
     public void shouldBeNotifiedOnSessionLogoutAndDisconnect()
     {
+        final Reply<Session> sessionReply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
 
-        final Reply<Session> sessionReply = initiate(initiatingLibrary, port, initId(0), accId(0));
+        acquireAcceptingSession();
 
         testSystem.awaitCompletedReplies(sessionReply);
-
-        final Session session = sessionReply.resultIfPresent();
+        initiatingSession = sessionReply.resultIfPresent();
 
         assertFalse(acceptingHandler.hasDisconnected());
 
-        session.logoutAndDisconnect();
+        assertThat(initiatingSession.logoutAndDisconnect(), greaterThan(0L));
 
-        assertSessionDisconnected(session);
+        assertSessionDisconnected(initiatingSession);
 
         assertEventuallyTrue("SessionHandler.onDisconnect has not been called", () ->
         {
