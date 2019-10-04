@@ -32,7 +32,9 @@ import java.util.stream.Stream;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
+import static org.junit.Assert.assertFalse;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ManySessionsSystemTest extends AbstractGatewayToGatewaySystemTest
@@ -90,6 +92,30 @@ public class ManySessionsSystemTest extends AbstractGatewayToGatewaySystemTest
             .collect(Collectors.toList());
 
         sessions.forEach(this::messagesCanBeExchanged);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void shouldBeNotifiedOnSessionLogoutAndDisconnect()
+    {
+
+        final Reply<Session> sessionReply = initiate(initiatingLibrary, port, initId(0), accId(0));
+
+        testSystem.awaitCompletedReplies(sessionReply);
+
+        final Session session = sessionReply.resultIfPresent();
+
+        assertFalse(acceptingHandler.hasDisconnected());
+
+        session.logoutAndDisconnect();
+
+        assertSessionDisconnected(session);
+
+        assertEventuallyTrue("SessionHandler.onDisconnect has not been called", () ->
+        {
+            testSystem.poll();
+            return acceptingHandler.hasDisconnected();
+        });
     }
 
     private static String accId(final int i)

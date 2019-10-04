@@ -102,6 +102,11 @@ final class FixConnection implements AutoCloseable
         this.targetCompID = targetCompID;
     }
 
+    boolean isConnected()
+    {
+        return socket.isConnected();
+    }
+
     void logon(final boolean resetSeqNumFlag)
     {
         setupHeader(logon.header(), msgSeqNum++, false);
