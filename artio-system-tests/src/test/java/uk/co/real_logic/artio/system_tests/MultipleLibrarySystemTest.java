@@ -35,7 +35,7 @@ public class MultipleLibrarySystemTest extends AbstractGatewayToGatewaySystemTes
     @Test(timeout = 20_000L)
     public void shouldEnableLibraryConnectionsOneAfterAnother()
     {
-        for (int i = 0; i < 20; i++)
+        for (int i = 0; i < 10; i++)
         {
             DebugLogger.log(LogTag.FIX_TEST, "Iteration: " + i);
 
