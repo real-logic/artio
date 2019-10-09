@@ -68,10 +68,13 @@ public class ErrorPrinter implements Agent
 
     public int doWork()
     {
-        final String errorResponse = aeronArchive.pollForErrorResponse();
-        if (errorResponse != null)
+        if (aeronArchive != null)
         {
-            System.err.println(errorResponse);
+            final String errorResponse = aeronArchive.pollForErrorResponse();
+            if (errorResponse != null)
+            {
+                System.err.println(errorResponse);
+            }
         }
 
         final long timeInMs = System.currentTimeMillis();
