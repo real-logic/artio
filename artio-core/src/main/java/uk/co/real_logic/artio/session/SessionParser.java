@@ -20,6 +20,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import uk.co.real_logic.artio.FixGatewayException;
+import uk.co.real_logic.artio.SessionRejectReason;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
@@ -93,41 +94,93 @@ public class SessionParser
     {
         asciiBuffer.wrap(buffer);
 
-        Action action = null;
+        final Action action;
 
+        try
+        {
+            switch (messageType)
+            {
+                case LogonDecoder.MESSAGE_TYPE:
+                    action = onLogon(offset, length);
+                    break;
+
+                case LogoutDecoder.MESSAGE_TYPE:
+                    action = onLogout(offset, length);
+                    break;
+
+                case HeartbeatDecoder.MESSAGE_TYPE:
+                    action = onHeartbeat(offset, length);
+                    break;
+
+                case RejectDecoder.MESSAGE_TYPE:
+                    action = onReject(offset, length);
+                    break;
+
+                case TestRequestDecoder.MESSAGE_TYPE:
+                    action = onTestRequest(offset, length);
+                    break;
+
+                case SequenceResetDecoder.MESSAGE_TYPE:
+                    action = onSequenceReset(offset, length);
+                    break;
+
+                default:
+                    action = onAnyOtherMessage(offset, length);
+                    break;
+            }
+
+            // Consider admin messages processed when they've been received by the session logic
+            session.updateLastMessageProcessed();
+
+            return action;
+        }
+        catch (final Exception e)
+        {
+            errorHandler.onError(e);
+
+            return rejectExceptionalMessage(messageType);
+        }
+    }
+
+    private Action rejectExceptionalMessage(final int messageType)
+    {
         switch (messageType)
         {
             case LogonDecoder.MESSAGE_TYPE:
-                action = onLogon(offset, length);
-                break;
+                return onExceptionalMessage(logon.header());
 
             case LogoutDecoder.MESSAGE_TYPE:
-                action = onLogout(offset, length);
-                break;
+                return onExceptionalMessage(logout.header());
 
             case HeartbeatDecoder.MESSAGE_TYPE:
-                action = onHeartbeat(offset, length);
-                break;
+                return onExceptionalMessage(heartbeat.header());
 
             case RejectDecoder.MESSAGE_TYPE:
-                action = onReject(offset, length);
-                break;
+                return onExceptionalMessage(reject.header());
 
             case TestRequestDecoder.MESSAGE_TYPE:
-                action = onTestRequest(offset, length);
-                break;
+                return onExceptionalMessage(testRequest.header());
 
             case SequenceResetDecoder.MESSAGE_TYPE:
-                action = onSequenceReset(offset, length);
-                break;
+                return onExceptionalMessage(sequenceReset.header());
 
             default:
-                return onAnyOtherMessage(offset, length);
+                return onExceptionalMessage(header);
         }
+    }
 
-        // Consider admin messages processed when they've been received by the session logic
-        session.updateLastMessageProcessed();
-        return action;
+    private Action onExceptionalMessage(final HeaderDecoder header)
+    {
+        final int msgSeqNum = header.msgSeqNum();
+
+        session.onInvalidMessage(
+            msgSeqNum,
+            MISSING_INT,
+            header.msgType(),
+            header.msgTypeLength(),
+            SessionRejectReason.INCORRECT_DATA_FORMAT_FOR_VALUE.representation());
+
+        return CONTINUE;
     }
 
     private Action onHeartbeat(final int offset, final int length)
@@ -181,6 +234,7 @@ public class SessionParser
     private Action onAnyOtherMessage(final int offset, final int length)
     {
         final HeaderDecoder header = this.header;
+
         header.reset();
         header.decode(asciiBuffer, offset, length);
 

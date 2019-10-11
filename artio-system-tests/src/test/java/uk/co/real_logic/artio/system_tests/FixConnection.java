@@ -134,6 +134,11 @@ final class FixConnection implements AutoCloseable
         return this;
     }
 
+    int acquireMsgSeqNum()
+    {
+        return this.msgSeqNum++;
+    }
+
     void logout()
     {
         setupHeader(logout.header(), msgSeqNum++, false);
@@ -141,7 +146,7 @@ final class FixConnection implements AutoCloseable
         send(logout);
     }
 
-    void setupHeader(final HeaderEncoder header, final int msgSeqNum, final boolean possDupFlag)
+    void setupHeader(final SessionHeaderEncoder header, final int msgSeqNum, final boolean possDupFlag)
     {
         final long timestamp = System.currentTimeMillis();
         final int timestampLength = sendingTimeEncoder.encode(timestamp);

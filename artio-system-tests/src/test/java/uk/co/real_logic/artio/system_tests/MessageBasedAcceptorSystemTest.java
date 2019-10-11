@@ -18,7 +18,12 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.After;
 import org.junit.Test;
+import uk.co.real_logic.artio.builder.Encoder;
+import uk.co.real_logic.artio.builder.LogonEncoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.builder.TestRequestEncoder;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.decoder.RejectDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.FixLibrary;
@@ -26,9 +31,9 @@ import uk.co.real_logic.artio.library.FixLibrary;
 import java.io.IOException;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.agrona.CloseHelper.close;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
@@ -92,6 +97,71 @@ public class MessageBasedAcceptorSystemTest
         }
     }
 
+    @Test
+    public void shouldRejectExceptionalLogonMessage() throws IOException
+    {
+        setup(true);
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            sendInvalidLogon(connection);
+
+            final RejectDecoder reject = connection.readMessage(new RejectDecoder());
+            assertEquals(1, reject.refSeqNum());
+            assertEquals(LogonDecoder.MESSAGE_TYPE_AS_STRING, reject.refMsgTypeAsString());
+
+            connection.logoutAndAwaitReply();
+        }
+    }
+
+    @Test
+    public void shouldRejectExceptionalSessionMessage() throws IOException
+    {
+        setup(true);
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+
+            sendInvalidTestRequestMessage(connection);
+
+            final RejectDecoder reject = connection.readMessage(new RejectDecoder());
+            assertEquals(2, reject.refSeqNum());
+
+            connection.logoutAndAwaitReply();
+        }
+    }
+
+    private void sendInvalidLogon(final FixConnection connection)
+    {
+        final LogonEncoder logon = new LogonEncoder()
+            .resetSeqNumFlag(true)
+            .encryptMethod(0)
+            .heartBtInt(30)
+            .maxMessageSize(9999);
+
+        sendInvalidMessage(connection, logon);
+    }
+
+    private void sendInvalidTestRequestMessage(final FixConnection connection)
+    {
+        final TestRequestEncoder testRequest = new TestRequestEncoder();
+        testRequest.testReqID("A");
+
+        sendInvalidMessage(connection, testRequest);
+    }
+
+    private void sendInvalidMessage(final FixConnection connection, final Encoder encoder)
+    {
+        final SessionHeaderEncoder header = encoder.header();
+
+        connection.setupHeader(header, connection.acquireMsgSeqNum(), false);
+
+        header.sendingTime("nonsense".getBytes(US_ASCII));
+
+        connection.send(encoder);
+    }
+
     private void setup(final boolean sequenceNumberReset)
     {
         mediaDriver = launchMediaDriver();
@@ -103,6 +173,7 @@ public class MessageBasedAcceptorSystemTest
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(ACCEPTOR_LOGS)
             .sessionPersistenceStrategy(logon -> sequenceNumberReset ? UNINDEXED : INDEXED);
+        config.printErrorMessages(false);
         engine = FixEngine.launch(config);
     }
 
