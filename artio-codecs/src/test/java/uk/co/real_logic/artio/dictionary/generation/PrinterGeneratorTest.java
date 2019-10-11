@@ -39,7 +39,8 @@ public class PrinterGeneratorTest
 
     private static DecoderGenerator decoderGenerator =
         new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, ValidationOn.class,
-        RejectUnknownFieldOff.class, RejectUnknownEnumValueOn.class, false, Generator.ENUM_VALUE_PROPERTY);
+        RejectUnknownFieldOff.class, RejectUnknownEnumValueOn.class, false,
+        Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
     private static PrinterGenerator printerGenerator =
         new PrinterGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static Class<?> printer;

@@ -56,7 +56,7 @@ public abstract class Generator
     public static final String EXPAND_INDENT = ".toString().replace(\"\\n\", \"\\n  \")";
     public static final String CODEC_VALIDATION_ENABLED = "CODEC_VALIDATION_ENABLED";
     public static final String CODEC_REJECT_UNKNOWN_FIELD_ENABLED = "CODEC_REJECT_UNKNOWN_FIELD_ENABLED";
-    public static final String ENUM_VALUE_PROPERTY = "CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED";
+    public static final String RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY = "CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED";
     final String codecRejectUnknownEnumValueEnabled;
     public static final String MESSAGE_FIELDS = "messageFields";
 
@@ -169,7 +169,7 @@ public abstract class Generator
         out .append(importStaticFor(StandardCharsets.class, "US_ASCII"))
             .append(importStaticFor(validationClass, CODEC_VALIDATION_ENABLED))
             .append(importStaticFor(rejectUnknownFieldClass, CODEC_REJECT_UNKNOWN_FIELD_ENABLED))
-            .append(importStaticFor(rejectUnknownEnumValueClass, ENUM_VALUE_PROPERTY));
+            .append(importStaticFor(rejectUnknownEnumValueClass, RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY));
 
         if (!builderPackage.equals(builderCommonPackage) && !builderCommonPackage.isEmpty())
         {

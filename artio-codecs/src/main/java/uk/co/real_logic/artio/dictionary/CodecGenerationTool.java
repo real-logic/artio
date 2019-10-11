@@ -60,18 +60,15 @@ public final class CodecGenerationTool
         final EnumGenerator enumGenerator = new EnumGenerator(dictionary, PARENT_PACKAGE, parentOutput);
         final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, PARENT_PACKAGE, parentOutput);
 
+        final String codecRejectUnknownEnumValueEnabled = HARD_CODED_REJECT_UNKNOWN_EMUM_VALUES
+            .map(String::valueOf)
+            .orElse(Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
         final FixDictionaryGenerator fixDictionaryGenerator = new FixDictionaryGenerator(
             dictionary,
             parentOutput,
             ENCODER_PACKAGE,
             DECODER_PACKAGE,
             PARENT_PACKAGE);
-
-        final boolean newMode = false;
-        final String newModeValue = "true";
-        final String codecRejectUnknownEnumValueEnabled;
-
-        codecRejectUnknownEnumValueEnabled = fetchRejectionMode(newMode, newModeValue);
 
         final EncoderGenerator encoderGenerator = new EncoderGenerator(
             dictionary,
@@ -126,20 +123,6 @@ public final class CodecGenerationTool
 
             flyweightDecoderGenerator.generate();
         }
-    }
-
-    private static String fetchRejectionMode(final boolean newMode, final String newModeValue)
-    {
-        final String codecRejectUnknownEnumValueEnabled;
-        if (newMode)
-        {
-            codecRejectUnknownEnumValueEnabled = newModeValue;
-        }
-        else
-        {
-            codecRejectUnknownEnumValueEnabled = Generator.ENUM_VALUE_PROPERTY;
-        }
-        return codecRejectUnknownEnumValueEnabled;
     }
 
     private static Dictionary parseDictionary(final File xmlFile, final Dictionary parentDictionary) throws Exception
