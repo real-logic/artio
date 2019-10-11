@@ -108,7 +108,7 @@ public abstract class AbstractDecoderGeneratorTest
         }
     }
 
-    static Map<String, CharSequence> generateSources(
+    private static Map<String, CharSequence> generateSources(
         final boolean validation, final boolean rejectingUnknownFields, final boolean rejectingUnknownEnumValue,
         final boolean flyweightStringsEnabled)
     {
