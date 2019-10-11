@@ -56,7 +56,8 @@ public abstract class Generator
     public static final String EXPAND_INDENT = ".toString().replace(\"\\n\", \"\\n  \")";
     public static final String CODEC_VALIDATION_ENABLED = "CODEC_VALIDATION_ENABLED";
     public static final String CODEC_REJECT_UNKNOWN_FIELD_ENABLED = "CODEC_REJECT_UNKNOWN_FIELD_ENABLED";
-    public static final String CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED = "CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED";
+    public static final String ENUM_VALUE_PROPERTY = "CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED";
+    final String codecRejectUnknownEnumValueEnabled;
     public static final String MESSAGE_FIELDS = "messageFields";
 
     protected String commonCompoundImports(final String form, final boolean headerWrapsTrailer,
@@ -102,7 +103,8 @@ public abstract class Generator
         final Class<?> validationClass,
         final Class<?> rejectUnknownFieldClass,
         final Class<?> rejectUnknownEnumValueClass,
-        final boolean flyweightsEnabled)
+        final boolean flyweightsEnabled,
+        final String codecRejectUnknownEnumValueEnabled)
     {
         this.dictionary = dictionary;
         this.builderPackage = thisPackage;
@@ -112,6 +114,7 @@ public abstract class Generator
         this.rejectUnknownFieldClass = rejectUnknownFieldClass;
         this.rejectUnknownEnumValueClass = rejectUnknownEnumValueClass;
         this.flyweightsEnabled = flyweightsEnabled;
+        this.codecRejectUnknownEnumValueEnabled = codecRejectUnknownEnumValueEnabled;
     }
 
     public void generate()
@@ -166,7 +169,7 @@ public abstract class Generator
         out .append(importStaticFor(StandardCharsets.class, "US_ASCII"))
             .append(importStaticFor(validationClass, CODEC_VALIDATION_ENABLED))
             .append(importStaticFor(rejectUnknownFieldClass, CODEC_REJECT_UNKNOWN_FIELD_ENABLED))
-            .append(importStaticFor(rejectUnknownEnumValueClass, CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED));
+            .append(importStaticFor(rejectUnknownEnumValueClass, ENUM_VALUE_PROPERTY));
 
         if (!builderPackage.equals(builderCommonPackage) && !builderCommonPackage.isEmpty())
         {

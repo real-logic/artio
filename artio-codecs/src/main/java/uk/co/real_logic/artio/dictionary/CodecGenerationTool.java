@@ -67,6 +67,12 @@ public final class CodecGenerationTool
             DECODER_PACKAGE,
             PARENT_PACKAGE);
 
+        final boolean newMode = false;
+        final String newModeValue = "true";
+        final String codecRejectUnknownEnumValueEnabled;
+
+        codecRejectUnknownEnumValueEnabled = fetchRejectionMode(newMode, newModeValue);
+
         final EncoderGenerator encoderGenerator = new EncoderGenerator(
             dictionary,
             ENCODER_PACKAGE,
@@ -74,7 +80,8 @@ public final class CodecGenerationTool
             encoderOutput,
             Validation.class,
             RejectUnknownField.class,
-            RejectUnknownEnumValue.class);
+            RejectUnknownEnumValue.class,
+            codecRejectUnknownEnumValueEnabled);
 
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
             dictionary,
@@ -85,7 +92,8 @@ public final class CodecGenerationTool
             Validation.class,
             RejectUnknownField.class,
             RejectUnknownEnumValue.class,
-            false);
+            false,
+            codecRejectUnknownEnumValueEnabled);
         final PrinterGenerator printerGenerator = new PrinterGenerator(dictionary, DECODER_PACKAGE, decoderOutput);
         final AcceptorGenerator acceptorGenerator = new AcceptorGenerator(dictionary, DECODER_PACKAGE, decoderOutput);
 
@@ -113,10 +121,25 @@ public final class CodecGenerationTool
                 Validation.class,
                 RejectUnknownField.class,
                 RejectUnknownEnumValue.class,
-                true);
+                true,
+                codecRejectUnknownEnumValueEnabled);
 
             flyweightDecoderGenerator.generate();
         }
+    }
+
+    private static String fetchRejectionMode(final boolean newMode, final String newModeValue)
+    {
+        final String codecRejectUnknownEnumValueEnabled;
+        if (newMode)
+        {
+            codecRejectUnknownEnumValueEnabled = newModeValue;
+        }
+        else
+        {
+            codecRejectUnknownEnumValueEnabled = Generator.ENUM_VALUE_PROPERTY;
+        }
+        return codecRejectUnknownEnumValueEnabled;
     }
 
     private static Dictionary parseDictionary(final File xmlFile, final Dictionary parentDictionary) throws Exception

@@ -123,7 +123,7 @@ public abstract class AbstractDecoderGeneratorTest
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
             MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass, rejectUnknownField,
-            rejectUnknownEnumValue, flyweightStringsEnabled);
+            rejectUnknownEnumValue, flyweightStringsEnabled, Generator.ENUM_VALUE_PROPERTY);
 
         constantGenerator.generate();
         enumGenerator.generate();
