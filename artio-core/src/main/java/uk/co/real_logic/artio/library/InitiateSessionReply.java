@@ -90,12 +90,9 @@ class InitiateSessionReply extends LibraryReply<Session>
 
     protected boolean onTimeout()
     {
-        if (libraryPoller.saveMidConnectionDisconnect(correlationId) > 0)
-        {
-            super.onTimeout();
-        }
+        libraryPoller.onMidConnectionDisconnect(correlationId);
 
-        return false;
+        return super.onTimeout();
     }
 
     SessionConfiguration configuration()

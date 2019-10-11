@@ -123,6 +123,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final LibraryTransport transport;
     private final FixLibrary fixLibrary;
     private final Runnable onDisconnectFunc = this::onDisconnect;
+    private final LongHashSet disconnectingCorrelationIds = new LongHashSet();
 
     /**
      * Correlation Id is initialised to a random number to reduce the chance of correlation id collision.
@@ -310,11 +311,19 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             correlationId);
     }
 
-    long saveMidConnectionDisconnect(final long correlationId)
+    void onMidConnectionDisconnect(final long correlationId)
     {
         checkState();
 
-        return outboundPublication.saveMidConnectionDisconnect(libraryId, correlationId);
+        if (!saveMidConnectionDisconnect(correlationId))
+        {
+            disconnectingCorrelationIds.add(correlationId);
+        }
+    }
+
+    private boolean saveMidConnectionDisconnect(final long correlationId)
+    {
+        return outboundPublication.saveMidConnectionDisconnect(libraryId, correlationId) > 0;
     }
 
     long saveRequestSession(
@@ -639,6 +648,17 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 iterator.remove();
                 count++;
+            }
+        }
+
+        final LongHashSet.LongIterator correlationIdIt = disconnectingCorrelationIds.iterator();
+        while (correlationIdIt.hasNext())
+        {
+            final long correlationId = correlationIdIt.nextValue();
+
+            if (saveMidConnectionDisconnect(correlationId))
+            {
+                correlationIdIt.remove();
             }
         }
 
