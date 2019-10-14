@@ -99,14 +99,14 @@ subprojects {
     }
 
     dependencies {
-        checkstyle 'com.puppycrawl.tools:checkstyle:8.24'
+        checkstyle 'com.puppycrawl.tools:checkstyle:8.25'
 
         testCompile 'org.hamcrest:hamcrest:2.1'
         testCompile 'org.mockito:mockito-core:3.1.0'
         testCompile 'junit:junit:4.12'
     }
 
-    checkstyle.toolVersion = "8.24"
+    checkstyle.toolVersion = "8.25"
 
     test {
         testLogging {
