@@ -40,15 +40,17 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.util.AbstractList;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.BooleanSupplier;
 import java.util.function.ToIntFunction;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.util.Objects.requireNonNull;
-import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
+import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
@@ -120,10 +122,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final FixCounters fixCounters;
 
     private final Long2ObjectHashMap<LibraryReply<?>> correlationIdToReply = new Long2ObjectHashMap<>();
+    private final List<BooleanSupplier> tasks = new ArrayList<>();
     private final LibraryTransport transport;
     private final FixLibrary fixLibrary;
     private final Runnable onDisconnectFunc = this::onDisconnect;
-    private final LongHashSet disconnectingCorrelationIds = new LongHashSet();
 
     /**
      * Correlation Id is initialised to a random number to reduce the chance of correlation id collision.
@@ -311,19 +313,38 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             correlationId);
     }
 
-    void onMidConnectionDisconnect(final long correlationId)
+    void onInitiatorSessionTimeout(final long correlationId, final long connectionId)
     {
         checkState();
 
-        if (!saveMidConnectionDisconnect(correlationId))
+        if (connectionId == NO_CONNECTION_ID)
         {
-            disconnectingCorrelationIds.add(correlationId);
+            // We've timed out when waiting for a connection to complete.
+
+            if (!saveMidConnectionDisconnect(correlationId))
+            {
+                tasks.add(() -> saveMidConnectionDisconnect(correlationId));
+            }
+        }
+        else
+        {
+            // We've timed out when the TCP connection has completed, but the logon hasn't finished.
+
+            if (!saveNoLogonRequestDisconnect(connectionId))
+            {
+                tasks.add(() -> saveNoLogonRequestDisconnect(connectionId));
+            }
         }
     }
 
     private boolean saveMidConnectionDisconnect(final long correlationId)
     {
         return outboundPublication.saveMidConnectionDisconnect(libraryId, correlationId) > 0;
+    }
+
+    private boolean saveNoLogonRequestDisconnect(final long connectionId)
+    {
+        return outboundPublication.saveRequestDisconnect(libraryId, connectionId, DisconnectReason.NO_LOGON) > 0;
     }
 
     long saveRequestSession(
@@ -634,13 +655,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private int checkReplies(final long timeInMs)
     {
-        if (correlationIdToReply.isEmpty())
-        {
-            return 0;
-        }
-
         int count = 0;
-        final Iterator<LibraryReply<?>> iterator = correlationIdToReply.values().iterator();
+        final Long2ObjectHashMap<LibraryReply<?>>.ValueIterator iterator = correlationIdToReply.values().iterator();
         while (iterator.hasNext())
         {
             final LibraryReply<?> reply = iterator.next();
@@ -651,14 +667,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             }
         }
 
-        final LongHashSet.LongIterator correlationIdIt = disconnectingCorrelationIds.iterator();
-        while (correlationIdIt.hasNext())
+        final Iterator<BooleanSupplier> tasksIt = tasks.iterator();
+        while (tasksIt.hasNext())
         {
-            final long correlationId = correlationIdIt.nextValue();
+            final BooleanSupplier task = tasksIt.next();
 
-            if (saveMidConnectionDisconnect(correlationId))
+            if (task.getAsBoolean())
             {
-                correlationIdIt.remove();
+                tasksIt.remove();
             }
         }
 
@@ -672,6 +688,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return correlationId;
     }
 
+    void deregister(final long correlationId)
+    {
+        correlationIdToReply.remove(correlationId);
+    }
+
     // -----------------------------------------------------------------------
     //                     BEGIN EVENT HANDLERS
     // -----------------------------------------------------------------------
@@ -681,7 +702,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public Action onManageSession(
         final int libraryId,
-        final long connection,
+        final long connectionId,
         final long sessionId,
         final int lastSentSeqNum,
         final int lastRecvSeqNum,
@@ -736,14 +757,16 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     // From manageConnection - ie set up the session in this library.
                     if (connectionType == INITIATOR)
                     {
-                        DebugLogger.log(FIX_CONNECTION, "Init Connect: %d, %d%n", connection, libraryId);
-                        final boolean isReply = correlationIdToReply.get(correlationId) instanceof InitiateSessionReply;
+                        DebugLogger.log(FIX_CONNECTION, "Init Connect: %d, %d%n", connectionId, libraryId);
+                        final LibraryReply<?> task = correlationIdToReply.get(correlationId);
+                        final boolean isReply = task instanceof InitiateSessionReply;
                         if (isReply)
                         {
-                            reply = (InitiateSessionReply)correlationIdToReply.remove(correlationId);
+                            reply = (InitiateSessionReply)task;
+                            reply.onTcpConnected(connectionId);
                         }
                         session = newInitiatorSession(
-                            connection,
+                            connectionId,
                             lastSentSeqNum,
                             lastRecvSeqNum,
                             sessionState,
@@ -753,9 +776,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     }
                     else
                     {
-                        DebugLogger.log(FIX_CONNECTION, "Acct Connect: %d, %d%n", connection, libraryId);
+                        DebugLogger.log(FIX_CONNECTION, "Acct Connect: %d, %d%n", connectionId, libraryId);
                         session = acceptSession(
-                            connection, address, sessionState, heartbeatIntervalInS, sequenceIndex,
+                            connectionId, address, sessionState, heartbeatIntervalInS, sequenceIndex,
                             enableLastMsgSeqNumProcessed);
                         session.lastSentMsgSeqNum(lastSentSeqNum);
                         session.initialLastReceivedMsgSeqNum(lastRecvSeqNum);
@@ -782,12 +805,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     session.endOfResendRequestRange(endOfResendRequestRange);
                     session.awaitingHeartbeat(awaitingHeartbeat);
 
-                    createSessionSubscriber(connection, session, reply, slowStatus);
+                    createSessionSubscriber(connectionId, session, reply, slowStatus);
                     insertSession(session, connectionType, sessionState);
 
                     DebugLogger.log(GATEWAY_MESSAGE,
                         "onSessionExists: conn=%d, sess=%d, sentSeqNo=%d, recvSeqNo=%d%n",
-                        connection,
+                        connectionId,
                         sessionId,
                         lastSentSeqNum,
                         lastRecvSeqNum);

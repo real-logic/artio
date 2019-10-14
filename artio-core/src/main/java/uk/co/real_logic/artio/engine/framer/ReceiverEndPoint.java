@@ -771,4 +771,9 @@ class ReceiverEndPoint
     {
         isPaused = false;
     }
+
+    public String toString()
+    {
+        return "ReceiverEndPoint: " + connectionId;
+    }
 }

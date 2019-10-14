@@ -15,87 +15,79 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.session.Session;
 
+import java.io.IOException;
 import java.net.ServerSocket;
-import java.net.Socket;
 
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_ID;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_LOGS;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.CLIENT_LOGS;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.INITIATOR_ID;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.PASSWORD;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.USERNAME;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.acceptingLibraryConfig;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.delete;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.initiatingConfig;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.newInitiatingLibrary;
 
 public class ConnectionTimeoutOnFailedAcceptorSystemTest extends AbstractGatewayToGatewaySystemTest
 {
-    private DebugTcpChannelSupplier debugTcpChannelSupplier;
+    private final ServerSocket serverSocket;
+
+    public ConnectionTimeoutOnFailedAcceptorSystemTest() throws IOException
+    {
+        serverSocket = new ServerSocket(port);
+        final Thread serverThread = new Thread(() ->
+        {
+            try
+            {
+                while (true)
+                {
+                    serverSocket.accept();
+                }
+            }
+            catch (final Exception e)
+            {
+                // Deliberately blank as closing the socket will cause an exception to be thrown.
+            }
+        });
+        serverThread.start();
+    }
 
     @Before
     public void launch()
     {
-        delete(ACCEPTOR_LOGS);
-
+        deleteLogs();
         mediaDriver = launchMediaDriver();
 
-        delete(CLIENT_LOGS);
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
-        initiatingConfig.channelSupplierFactory(config ->
-        {
-            debugTcpChannelSupplier = new DebugTcpChannelSupplier(config);
-            return debugTcpChannelSupplier;
-        });
         initiatingEngine = FixEngine.launch(initiatingConfig);
-
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
         testSystem = new TestSystem(initiatingLibrary);
     }
 
-
-    @Test(timeout = 1000)
-    public void connectTimeOutOnBadEngine() throws Exception
+    @After
+    public void stopServerThread() throws IOException
     {
-        debugTcpChannelSupplier.disable();
-
-        // First reply times out
-        final Reply<Session> firstConnectReply = completeInitiateSession();
-        testSystem.awaitReply(firstConnectReply);
-        assertEquals(Reply.State.TIMED_OUT, firstConnectReply.state());
-
-        debugTcpChannelSupplier.enable();
-        Thread t = new Thread(() -> {
-            try {
-                ServerSocket serverSocket = new ServerSocket(port);
-                while (true) {
-                    Socket s = serverSocket.accept();
-                }
-            } catch (Exception e) {
-
-            }
-        });
-        t.setDaemon(true);
-        t.start();
-        // First reply also times out
-        final Reply<Session> secondConnectReply = completeInitiateSession();
-        assertEquals(Reply.State.EXECUTING, secondConnectReply.state());
-        testSystem.awaitReply(secondConnectReply);
-        assertEquals(Reply.State.TIMED_OUT, secondConnectReply.state());
+        serverSocket.close();
     }
 
-    private Reply<Session> completeInitiateSession()
+    @Test(timeout = 1000)
+    public void shouldTimeoutWhenConnectingToUnresponsiveEngine()
+    {
+        final Reply<Session> secondConnectReply = initiateSession();
+        assertEquals(Reply.State.EXECUTING, secondConnectReply.state());
+        testSystem.awaitReply(secondConnectReply);
+        assertEquals(secondConnectReply.toString(), Reply.State.TIMED_OUT, secondConnectReply.state());
+    }
+
+    private Reply<Session> initiateSession()
     {
         final SessionConfiguration config = SessionConfiguration.builder()
             .address("localhost", port)
@@ -105,7 +97,6 @@ public class ConnectionTimeoutOnFailedAcceptorSystemTest extends AbstractGateway
             .timeoutInMs(200)
             .build();
 
-        final Reply<Session> firstConnectReply = initiatingLibrary.initiate(config);
-        return firstConnectReply;
+        return initiatingLibrary.initiate(config);
     }
 }
