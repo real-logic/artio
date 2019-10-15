@@ -105,7 +105,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final Predicate<LiveLibraryInfo> retryAcquireLibrarySessionsFunc = this::retryAcquireLibrarySessions;
 
     private final TcpChannelSupplier channelSupplier;
-    private final EpochClock clock;
+    private final EpochClock epochClock;
     private final Timer outboundTimer;
     private final Timer sendTimer;
 
@@ -161,7 +161,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private boolean performingCloseOperation = false;
 
     Framer(
-        final EpochClock clock,
+        final EpochClock epochClock,
         final Timer outboundTimer,
         final Timer sendTimer,
         final EngineConfiguration configuration,
@@ -187,7 +187,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final AgentInvoker conductorAgentInvoker,
         final RecordingCoordinator recordingCoordinator)
     {
-        this.clock = clock;
+        this.epochClock = epochClock;
         this.outboundTimer = outboundTimer;
         this.sendTimer = sendTimer;
         this.configuration = configuration;
@@ -313,7 +313,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     public int doWork() throws Exception
     {
-        final long timeInMs = clock.time();
+        final long timeInMs = epochClock.time();
         senderEndPoints.timeInMs(timeInMs);
         return retryManager.attemptSteps() +
             sendOutboundMessages() +
@@ -1080,7 +1080,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final LiveLibraryInfo existingLibrary = idToLibrary.get(libraryId);
         if (existingLibrary != null)
         {
-            existingLibrary.onHeartbeat(clock.time());
+            existingLibrary.onHeartbeat(epochClock.time());
 
             return Pressure.apply(inboundPublication.saveControlNotification(libraryId, existingLibrary.sessions()));
         }
@@ -1097,7 +1097,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             inboundPublication,
             libraryId,
             configuration.replyTimeoutInMs(),
-            clock.time());
+            epochClock.time());
 
         final List<Continuation> unitsOfWork = new ArrayList<>();
         unitsOfWork.add(() ->
@@ -1132,7 +1132,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final LiveLibraryInfo library = idToLibrary.get(libraryId);
         if (library != null)
         {
-            final long timeInMs = clock.time();
+            final long timeInMs = epochClock.time();
             DebugLogger.log(
                 APPLICATION_HEARTBEAT, "Received Heartbeat from library %d at timeInMs %d%n", libraryId, timeInMs);
             library.onHeartbeat(timeInMs);
@@ -1499,7 +1499,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 replayFromSequenceIndex,
                 session,
                 catchupTimeout(),
-                clock));
+                epochClock));
         }
         else
         {
