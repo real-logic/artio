@@ -26,7 +26,6 @@ import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
-import uk.co.real_logic.artio.decoder.UserRequestDecoder;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.HeaderSetup;
@@ -37,7 +36,6 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.*;
-import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.*;
 
@@ -73,8 +71,7 @@ class GatewaySessions
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
 
-    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
-    private final UserRequestDecoder userRequest = new UserRequestDecoder();
+    private UserRequestExtractor userRequestExtractor;
 
     private ErrorHandler errorHandler;
 
@@ -297,11 +294,28 @@ class GatewaySessions
 
     void onUserRequest(final DirectBuffer buffer, final int offset, final int length)
     {
-        asciiBuffer.wrap(buffer);
-        userRequest.reset();
-        userRequest.decode(asciiBuffer, offset, length);
+        if (userRequestExists())
+        {
+            if (userRequestExtractor == null)
+            {
+                userRequestExtractor = new UserRequestExtractor();
+            }
 
-        authenticationStrategy.onUserRequest(userRequest);
+            userRequestExtractor.onUserRequest(buffer, offset, length, authenticationStrategy);
+        }
+    }
+
+    private static boolean userRequestExists()
+    {
+        try
+        {
+            Class.forName("uk.co.real_logic.artio.decoder.UserRequestDecoder");
+            return true;
+        }
+        catch (final ClassNotFoundException e)
+        {
+            return false;
+        }
     }
 
     enum AuthenticationState
@@ -444,7 +458,7 @@ class GatewaySessions
             // Technically can race if two different threads call accept and reject at the exact same moment.
             final AuthenticationState state = this.state;
 
-            if (state != AuthenticationState.PENDING)
+            if (!(state == AuthenticationState.PENDING || state == AuthenticationState.AUTHENTICATED))
             {
                 throw new IllegalStateException(String.format(
                     "Cannot reject and accept a pending operation at the same time (state=%s)", state));

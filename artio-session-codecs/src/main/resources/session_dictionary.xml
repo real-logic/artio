@@ -106,6 +106,7 @@
             <value enum="4" description="SEQUENCE_RESET"/>
             <value enum="5" description="LOGOUT"/>
             <value enum="A" description="LOGON"/>
+            <value enum="BE" description="USER_REQUEST"/>
         </field>
         <field number="10" name="CheckSum" type="STRING"/>
         <field number="49" name="SenderCompID" type="STRING"/>

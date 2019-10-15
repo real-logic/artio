@@ -516,7 +516,7 @@ class ReceiverEndPoint
         int offset = messageOffset;
         int length = messageLength;
 
-        final boolean isUserRequest = messageType == Constants.USER_REQUEST_MESSAGE;
+        final boolean isUserRequest = messageType == StandardFixConstants.USER_REQUEST_MESSAGE;
         if (messageType == Constants.LOGON_MESSAGE || isUserRequest)
         {
             if (isUserRequest)

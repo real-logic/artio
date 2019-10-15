@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.validation;
 
 import uk.co.real_logic.artio.decoder.LogonDecoder;
-import uk.co.real_logic.artio.decoder.UserRequestDecoder;
 
 /**
  * Implement this interface in order to add customisable checks to logon messages.
@@ -82,14 +81,13 @@ public interface AuthenticationStrategy
      * password changes. This message will still be sent to the approach {@link uk.co.real_logic.artio.session.Session}
      * object and processed as normal (sequence number updates, validation, etc.) just without the password fields.
      *
-     * NB: you will be handed this UserRequest message no matter whether it has passed FIX message validation or not.
-     * If you wish to validate the user request message then you should call the
-     * {@link uk.co.real_logic.artio.decoder_flyweight.UserRequestDecoder#validate()} method and implement business
-     * logic accordingly.
-     *
-     * @param userRequestDecoder the user request message that has been saved.
+     * @param password the password field of the UserRequest decoder, if present otherwise undefined.
+     * @param passwordLength the length of the password field, or 0 if not present.
+     * @param newPasword the new password field of the UserRequest decoder, if present otherwise undefined.
+     * @param newPasswordLength the length of the new password field, or 0 if not present.
      */
-    default void onUserRequest(UserRequestDecoder userRequestDecoder)
+    default void onUserRequest(
+        final char[] password, final int passwordLength, final char[] newPasword, final int newPasswordLength)
     {
         // Deliberately blank for backwards compatibility
     }

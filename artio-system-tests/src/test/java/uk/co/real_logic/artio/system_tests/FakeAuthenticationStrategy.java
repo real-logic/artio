@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.system_tests;
 
 import uk.co.real_logic.artio.decoder.LogonDecoder;
-import uk.co.real_logic.artio.decoder.UserRequestDecoder;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
@@ -42,10 +41,14 @@ public class FakeAuthenticationStrategy implements AuthenticationStrategy
         return delegate.validate(logon.header());
     }
 
-    public void onUserRequest(final UserRequestDecoder userRequestDecoder)
+    public void onUserRequest(
+        final char[] password,
+        final int passwordLength,
+        final char[] newPasword,
+        final int newPasswordLength)
     {
-        userRequestPassword = userRequestDecoder.passwordAsString();
-        userRequestNewPassword = userRequestDecoder.newPasswordAsString();
+        userRequestPassword = new String(password, 0, passwordLength);
+        userRequestNewPassword = new String(newPasword, 0, newPasswordLength);
         receivedUserRequest = true;
     }
 

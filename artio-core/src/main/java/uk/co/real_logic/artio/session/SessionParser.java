@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.session;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import org.agrona.AsciiNumberFormatException;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
@@ -133,6 +134,20 @@ public class SessionParser
             session.updateLastMessageProcessed();
 
             return action;
+        }
+        catch (final AsciiNumberFormatException e)
+        {
+            // We should just ignore the message when the first three fields are out of order.
+            if (e.getMessage().contains("'^' is not a valid digit"))
+            {
+                return CONTINUE;
+            }
+            else
+            {
+                errorHandler.onError(e);
+
+                return rejectExceptionalMessage(messageType);
+            }
         }
         catch (final Exception e)
         {

@@ -33,7 +33,6 @@ import java.util.List;
 
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.Constants.LOGON_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -193,6 +192,8 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         auth.accept();
 
+        completeConnectSessions(reply);
+
         try
         {
             auth.reject();
@@ -203,7 +204,6 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
             // Deliberately blank
         }
 
-        completeConnectSessions(reply);
         messagesCanBeExchanged();
         assertInitiatingSequenceIndexIs(0);
     }
