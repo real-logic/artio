@@ -22,7 +22,7 @@ import org.agrona.generation.OutputManager;
 import uk.co.real_logic.artio.EncodingException;
 import uk.co.real_logic.artio.dictionary.CharArraySet;
 import uk.co.real_logic.artio.dictionary.CharArrayWrapper;
-import uk.co.real_logic.artio.dictionary.StandardFixConstants;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Entry.Element;
 import uk.co.real_logic.artio.fields.DecimalFloat;
@@ -36,6 +36,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.IntStream;
@@ -135,7 +136,7 @@ public abstract class Generator
             .append(importFor(MutableDirectBuffer.class))
             .append(importFor(AsciiSequenceView.class))
             .append(importStaticFor(CodecUtil.class))
-            .append(importStaticFor(StandardFixConstants.class))
+            .append(importStaticFor(SessionConstants.class))
             .append(importFor(topType(MESSAGE)));
 
         if (topType(GROUP) != topType(MESSAGE))
@@ -618,6 +619,27 @@ public abstract class Generator
     protected boolean isBodyLength(final String name)
     {
         return BODY_LENGTH.equals(name);
+    }
+
+    void generateOptionalSessionFieldsSupportedMethods(
+        final List<String> optionalFields, final Set<String> missingOptionalFields, final Writer out)
+        throws IOException
+    {
+        if (optionalFields != null)
+        {
+            for (final String optionalField : optionalFields)
+            {
+                final boolean inDictionary = !missingOptionalFields.contains(optionalField);
+
+                out.append(String.format(
+                    "    public boolean supports%1$s()\n" +
+                    "    {\n" +
+                    "        return %2$s;\n" +
+                    "    }\n\n",
+                    optionalField,
+                    inDictionary));
+            }
+        }
     }
 
     protected abstract String stringToString(String fieldName);

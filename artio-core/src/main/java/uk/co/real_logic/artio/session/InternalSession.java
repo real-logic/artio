@@ -50,7 +50,8 @@ public class InternalSession extends Session
         final int sequenceIndex,
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer,
-        final boolean enableLastMsgSeqNumProcessed)
+        final boolean enableLastMsgSeqNumProcessed,
+        final String beginString)
     {
         super(
             heartbeatIntervalInS,
@@ -68,7 +69,8 @@ public class InternalSession extends Session
             sequenceIndex,
             reasonableTransmissionTimeInMs,
             asciiBuffer,
-            enableLastMsgSeqNumProcessed);
+            enableLastMsgSeqNumProcessed,
+            beginString);
     }
 
     public int poll(final long time)

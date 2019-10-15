@@ -15,16 +15,16 @@
  */
 package uk.co.real_logic.artio.engine;
 
-import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.ValidationError;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.otf.MessageControl;
 import uk.co.real_logic.artio.otf.OtfMessageAcceptor;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 
-class PossDupFinder implements OtfMessageAcceptor
+public class PossDupFinder implements OtfMessageAcceptor
 {
-    static final int NO_ENTRY = -1;
+    public static final int NO_ENTRY = -1;
 
     private int possDupOffset;
     private int sendingTimeOffset;
@@ -41,6 +41,7 @@ class PossDupFinder implements OtfMessageAcceptor
         sendingTimeOffset = NO_ENTRY;
         sendingTimeLength = NO_ENTRY;
         origSendingTimeOffset = NO_ENTRY;
+        origSendingTimeLength = NO_ENTRY;
         bodyLength = NO_ENTRY;
         bodyLengthOffset = NO_ENTRY;
         lengthOfBodyLength = NO_ENTRY;
@@ -51,21 +52,21 @@ class PossDupFinder implements OtfMessageAcceptor
     {
         switch (tag)
         {
-            case Constants.POSS_DUP_FLAG:
+            case SessionConstants.POSS_DUP_FLAG:
                 possDupOffset = offset;
                 break;
 
-            case Constants.SENDING_TIME:
+            case SessionConstants.SENDING_TIME:
                 sendingTimeOffset = offset;
                 sendingTimeLength = length;
                 break;
 
-            case Constants.ORIG_SENDING_TIME:
+            case SessionConstants.ORIG_SENDING_TIME:
                 origSendingTimeOffset = offset;
                 origSendingTimeLength = length;
                 break;
 
-            case Constants.BODY_LENGTH:
+            case SessionConstants.BODY_LENGTH:
                 bodyLengthOffset = offset;
                 lengthOfBodyLength = length;
                 bodyLength = buffer.getInt(offset, offset + length);

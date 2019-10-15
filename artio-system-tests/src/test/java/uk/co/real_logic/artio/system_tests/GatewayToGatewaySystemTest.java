@@ -57,7 +57,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     private static final String NEW_PASSWORD = "ABCDEF";
 
     private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
-    private FakeAuthenticationStrategy auth;
+    private CapturingAuthenticationStrategy auth;
 
     @Before
     public void launch()
@@ -67,7 +67,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         mediaDriver = launchMediaDriver();
 
         final EngineConfiguration configuration = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
-        auth = new FakeAuthenticationStrategy(configuration.messageValidationStrategy());
+        auth = new CapturingAuthenticationStrategy(configuration.messageValidationStrategy());
         configuration.authenticationStrategy(auth);
         acceptingEngine = FixEngine.launch(
             configuration);

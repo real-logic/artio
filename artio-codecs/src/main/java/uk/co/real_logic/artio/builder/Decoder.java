@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.builder;
 
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 
 public interface Decoder
@@ -52,4 +53,6 @@ public interface Decoder
      * or {@code NO_ERROR} if there's no error.
      */
     int rejectReason();
+
+    SessionHeaderDecoder header();
 }

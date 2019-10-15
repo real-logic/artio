@@ -114,7 +114,8 @@ public class ReplayerTest extends AbstractLogTest
             clock,
             EngineConfiguration.DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES,
             replayHandler,
-            senderSequenceNumbers);
+            senderSequenceNumbers,
+            new FakeFixSessionCodecsFactory());
     }
 
     private void setReplayedMessages(final int replayedMessages)
@@ -194,8 +195,6 @@ public class ReplayerTest extends AbstractLogTest
 
         assertHasResentWithPossDupFlag(srcLength, times(2));
     }
-
-    // TODO: queue replay requests by fix session
 
     @Test
     public void shouldGapFillAdminMessages()

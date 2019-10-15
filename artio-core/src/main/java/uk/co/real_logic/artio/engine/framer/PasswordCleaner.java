@@ -18,17 +18,16 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.ValidationError;
 import uk.co.real_logic.artio.dictionary.IntDictionary;
-import uk.co.real_logic.artio.dictionary.StandardFixConstants;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.otf.MessageControl;
 import uk.co.real_logic.artio.otf.OtfMessageAcceptor;
 import uk.co.real_logic.artio.otf.OtfParser;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 
-public class PasswordCleaner
+class PasswordCleaner
 {
     private static final int NO_ENTRY = -1;
     private static final int REPLACEMENT_LENGTH = 3;
@@ -165,17 +164,17 @@ public class PasswordCleaner
         {
             switch (tag)
             {
-                case Constants.PASSWORD:
+                case SessionConstants.PASSWORD:
                     passwordOffset = offset;
                     passwordLength = length;
                     break;
 
-                case StandardFixConstants.NEW_PASSWORD:
+                case SessionConstants.NEW_PASSWORD:
                     newPasswordOffset = offset;
                     newPasswordLength = length;
                     break;
 
-                case Constants.BODY_LENGTH:
+                case SessionConstants.BODY_LENGTH:
                     bodyLengthOffset = offset;
                     lengthOfBodyLength = length;
                     bodyLength = buffer.getInt(offset, offset + length);

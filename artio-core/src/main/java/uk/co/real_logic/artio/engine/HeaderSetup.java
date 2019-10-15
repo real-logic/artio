@@ -1,11 +1,11 @@
 package uk.co.real_logic.artio.engine;
 
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 
-public class HeaderSetup
+public final class HeaderSetup
 {
-    public static void setup(final HeaderDecoder reqHeader, final SessionHeaderEncoder respHeader)
+    public static void setup(final SessionHeaderDecoder reqHeader, final SessionHeaderEncoder respHeader)
     {
         respHeader.targetCompID(reqHeader.senderCompID(), reqHeader.senderCompIDLength());
         respHeader.senderCompID(reqHeader.targetCompID(), reqHeader.targetCompIDLength());

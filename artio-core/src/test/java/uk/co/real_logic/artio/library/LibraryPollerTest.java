@@ -25,6 +25,7 @@ import org.mockito.stubbing.Answer;
 import org.mockito.stubbing.OngoingStubbing;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.FixCounters;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.artio.messages.SessionStatus;
@@ -378,7 +379,8 @@ public class LibraryPollerTest
             "",
             "", address,
             "",
-            "");
+            "",
+            FixDictionary.findDefault());
     }
 
     private SessionsDecoder hasOtherSessionId()

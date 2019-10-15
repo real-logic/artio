@@ -23,6 +23,7 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationEncoder.SessionsEncoder;
@@ -64,9 +65,9 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + SlowStatusNotificationEncoder.BLOCK_LENGTH;
     private static final byte MIDDLE_FLAG = 0;
     private static final int MANAGE_SESSION_BLOCK_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
-        ManageSessionEncoder.BLOCK_LENGTH + ManageSessionEncoder.localCompIdHeaderLength() * 9;
+        ManageSessionEncoder.BLOCK_LENGTH + ManageSessionEncoder.localCompIdHeaderLength() * 10;
     private static final int INITIATE_CONNECTION_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
-        InitiateConnectionEncoder.BLOCK_LENGTH + InitiateConnectionDecoder.hostHeaderLength() * 9;
+        InitiateConnectionEncoder.BLOCK_LENGTH + InitiateConnectionDecoder.hostHeaderLength() * 10;
     private static final int CONTROL_NOTIFICATION_LENGTH = HEADER_LENGTH + ControlNotificationEncoder.BLOCK_LENGTH +
         GroupSizeEncodingEncoder.ENCODED_LENGTH;
     private static final int MID_CONNECTION_DISCONNECT_LENGTH =
@@ -266,7 +267,8 @@ public class GatewayPublication extends ClaimablePublication
         final String remoteLocationId,
         final String address,
         final String username,
-        final String password)
+        final String password,
+        final Class<? extends FixDictionary> fixDictionary)
     {
         final byte[] localCompIdBytes = bytes(localCompId);
         final byte[] localSubIdBytes = bytes(localSubId);
@@ -277,11 +279,13 @@ public class GatewayPublication extends ClaimablePublication
         final byte[] addressBytes = bytes(address);
         final byte[] usernameBytes = bytes(username);
         final byte[] passwordBytes = bytes(password);
+        final byte[] fixDictionaryBytes = bytes(fixDictionary.getName());
 
         final long position = claim(
             MANAGE_SESSION_BLOCK_LENGTH + localCompIdBytes.length + localSubIdBytes.length +
             localLocationIdBytes.length + remoteCompIdBytes.length + remoteSubIdBytes.length +
-            remoteLocationIdBytes.length + addressBytes.length + usernameBytes.length + passwordBytes.length);
+            remoteLocationIdBytes.length + addressBytes.length + usernameBytes.length + passwordBytes.length +
+            fixDictionaryBytes.length);
 
         if (position < 0)
         {
@@ -322,7 +326,8 @@ public class GatewayPublication extends ClaimablePublication
             .putRemoteLocationId(remoteLocationIdBytes, 0, remoteLocationIdBytes.length)
             .putAddress(addressBytes, 0, addressBytes.length)
             .putUsername(usernameBytes, 0, usernameBytes.length)
-            .putPassword(passwordBytes, 0, passwordBytes.length);
+            .putPassword(passwordBytes, 0, passwordBytes.length)
+            .putFixDictionary(fixDictionaryBytes, 0, fixDictionaryBytes.length);
 
         bufferClaim.commit();
 
@@ -507,6 +512,7 @@ public class GatewayPublication extends ClaimablePublication
         final boolean enableLastMsgSeqNumProcessed,
         final String username,
         final String password,
+        final Class<? extends FixDictionary> fixDictionary,
         final int heartbeatIntervalInS,
         final long correlationId)
     {
@@ -519,11 +525,13 @@ public class GatewayPublication extends ClaimablePublication
         final byte[] targetLocationIdBytes = bytes(targetLocationId);
         final byte[] usernameBytes = bytes(username);
         final byte[] passwordBytes = bytes(password);
+        final byte[] fixDictionaryBytes = bytes(fixDictionary.getName());
 
         final long position = claim(
             INITIATE_CONNECTION_LENGTH + hostBytes.length + senderCompIdBytes.length +
             senderSubIdBytes.length + senderLocationIdBytes.length + targetCompIdBytes.length +
-            targetSubIdBytes.length + targetLocationIdBytes.length + usernameBytes.length + passwordBytes.length);
+            targetSubIdBytes.length + targetLocationIdBytes.length + usernameBytes.length + passwordBytes.length +
+            fixDictionaryBytes.length);
 
         if (position < 0)
         {
@@ -554,7 +562,8 @@ public class GatewayPublication extends ClaimablePublication
             .putTargetSubId(targetSubIdBytes, 0, targetSubIdBytes.length)
             .putTargetLocationId(targetLocationIdBytes, 0, targetLocationIdBytes.length)
             .putUsername(usernameBytes, 0, usernameBytes.length)
-            .putPassword(passwordBytes, 0, passwordBytes.length);
+            .putPassword(passwordBytes, 0, passwordBytes.length)
+            .putFixDictionary(fixDictionaryBytes, 0, fixDictionaryBytes.length);
 
         bufferClaim.commit();
 

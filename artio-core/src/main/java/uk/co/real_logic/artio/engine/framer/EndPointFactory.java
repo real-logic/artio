@@ -72,7 +72,8 @@ class EndPointFactory
             errorHandler,
             libraryId,
             gatewaySessions,
-            configuration.clock());
+            configuration.clock(),
+            configuration.acceptorfixDictionary());
     }
 
     SenderEndPoint senderEndPoint(

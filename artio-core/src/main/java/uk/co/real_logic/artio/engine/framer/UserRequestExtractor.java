@@ -16,8 +16,10 @@
 package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
 import uk.co.real_logic.artio.builder.Validation;
-import uk.co.real_logic.artio.decoder.UserRequestDecoder;
+import uk.co.real_logic.artio.decoder.AbstractUserRequestDecoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
@@ -29,14 +31,37 @@ import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 class UserRequestExtractor
 {
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
-    private final UserRequestDecoder userRequest = new UserRequestDecoder();
+    private final AbstractUserRequestDecoder userRequest;
+    private final FixDictionary dictionary;
+    private final ErrorHandler errorHandler;
+
+    UserRequestExtractor(final FixDictionary dictionary, final ErrorHandler errorHandler)
+    {
+        userRequest = dictionary.makeUserRequestDecoder();
+        this.dictionary = dictionary;
+        this.errorHandler = errorHandler;
+    }
 
     void onUserRequest(
         final DirectBuffer buffer,
         final int offset,
         final int length,
-        final AuthenticationStrategy authenticationStrategy)
+        final AuthenticationStrategy authenticationStrategy,
+        final long connectionId,
+        final long sessionId)
     {
+        if (userRequest == null)
+        {
+            errorHandler.onError(new IllegalStateException(String.format(
+                "Received User Request message despite there being no user request message type defined " +
+                "in dictionary (dict=%s, conn=%d, sess=%d)",
+                dictionary.getClass().getName(),
+                connectionId,
+                sessionId)));
+
+            return;
+        }
+
         asciiBuffer.wrap(buffer);
         userRequest.reset();
         userRequest.decode(asciiBuffer, offset, length);

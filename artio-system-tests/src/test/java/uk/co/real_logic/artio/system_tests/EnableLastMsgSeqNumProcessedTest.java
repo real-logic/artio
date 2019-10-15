@@ -40,7 +40,7 @@ public class EnableLastMsgSeqNumProcessedTest extends AbstractGatewayToGatewaySy
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
         final Reply<Session> reply = connectSession();
-        completeConnectSessions(reply);
+        completeConnectInitiatingSession(reply);
     }
 
     private Reply<Session> connectSession()

@@ -290,6 +290,7 @@ project(':artio-session-fixt-codecs') {
     task generateCodecs(type: JavaExec) {
         main = 'uk.co.real_logic.artio.dictionary.CodecGenerationTool'
         classpath = sourceSets.main.runtimeClasspath
+        systemProperty("fix.codecs.parent_package", "uk.co.real_logic.artio.fixt")
         args = [generatedDir, 'src/main/resources/FIXT11.xml']
         outputs.dir generatedDir
     }
@@ -306,7 +307,7 @@ project(':artio-session-fixt-codecs') {
 project(':artio-core') {
     dependencies {
         testCompile project(path: ':artio-codecs', configuration: 'tests')
-        compile project(':artio-session-codecs')
+        testCompile project(':artio-session-codecs')
         compile project(':artio-codecs')
 
         compile "io.aeron:aeron-client:${aeronVersion}"
@@ -321,7 +322,7 @@ project(':artio-core') {
 
     idea {
         dependencies {
-            compile project(':artio-session-codecs').sourceSets.generated.output
+            testCompile project(':artio-session-codecs').sourceSets.generated.output
             compile project(':artio-codecs').sourceSets.generated.output
         }
     }
@@ -338,11 +339,24 @@ project(':artio-system-tests') {
         testCompile project(path: ':artio-core', configuration: 'tests')
         testCompile project(path: ':artio-codecs', configuration: 'tests')
 
+        testCompile project(path: ':artio-session-codecs', configuration: 'tests')
+        testCompile project(path: ':artio-session-fixt-codecs', configuration: 'tests')
+
+        compile project(':artio-session-codecs')
+        compile project(':artio-session-fixt-codecs')
+
         compile project(path: ':artio-core')
 
         perfCompile project
         perfCompile 'org.openjdk.jmh:jmh-core:1.21'
         annotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess:1.21'
+
+        idea {
+            dependencies {
+                compile project(':artio-session-codecs').sourceSets.generated.output
+                compile project(':artio-session-fixt-codecs').sourceSets.generated.output
+            }
+        }
     }
 
     idea.module {
@@ -378,6 +392,7 @@ project(':artio-samples') {
 
     dependencies {
         compile project(':artio-core')
+        compile project(':artio-session-codecs')
     }
 
     shadowJar {

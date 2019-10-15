@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.protocol;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
 
@@ -68,7 +69,8 @@ public interface LibraryEndPointHandler
         String remoteLocationId,
         String address,
         String username,
-        String password);
+        String password,
+        Class<? extends FixDictionary> fixDictionary);
 
     Action onFollowerSessionReply(int libraryId, long replyToId, long session);
 

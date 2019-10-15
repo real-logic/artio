@@ -25,7 +25,7 @@ import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.GatewayProcess;
 import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.builder.HeaderEncoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionWriter;
@@ -382,7 +382,7 @@ public class FixLibrary extends GatewayProcess
      * @return a <code>Reply</code> that will eventually contain the <code>SessionWriter</code>.
      */
     public Reply<SessionWriter> followerSession(
-        final HeaderEncoder headerEncoder, final long timeoutInMs)
+        final SessionHeaderEncoder headerEncoder, final long timeoutInMs)
     {
         return poller.followerSession(headerEncoder, timeoutInMs);
     }

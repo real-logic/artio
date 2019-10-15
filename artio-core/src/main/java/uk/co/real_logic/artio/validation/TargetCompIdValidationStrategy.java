@@ -15,8 +15,8 @@
  */
 package uk.co.real_logic.artio.validation;
 
-import uk.co.real_logic.artio.Constants;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 
 import static uk.co.real_logic.artio.fields.RejectReason.COMPID_PROBLEM;
@@ -33,14 +33,14 @@ final class TargetCompIdValidationStrategy implements MessageValidationStrategy
         this.gatewayCompId = gatewayCompId.toCharArray();
     }
 
-    public boolean validate(final HeaderDecoder header)
+    public boolean validate(final SessionHeaderDecoder header)
     {
         return CodecUtil.equals(gatewayCompId, header.targetCompID(), header.targetCompIDLength());
     }
 
     public int invalidTagId()
     {
-        return Constants.TARGET_COMP_ID;
+        return SessionConstants.TARGET_COMP_ID;
     }
 
     public int rejectReason()

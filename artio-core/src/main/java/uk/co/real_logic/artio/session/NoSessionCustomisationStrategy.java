@@ -15,19 +15,19 @@
  */
 package uk.co.real_logic.artio.session;
 
-import uk.co.real_logic.artio.builder.LogonEncoder;
-import uk.co.real_logic.artio.builder.LogoutEncoder;
+import uk.co.real_logic.artio.builder.AbstractLogonEncoder;
+import uk.co.real_logic.artio.builder.AbstractLogoutEncoder;
 
 /**
  * A {@link SessionCustomisationStrategy} that does no customisation.
  */
 class NoSessionCustomisationStrategy implements SessionCustomisationStrategy
 {
-    public void configureLogon(final LogonEncoder logon, final long sessionId)
+    public void configureLogon(final AbstractLogonEncoder logon, final long sessionId)
     {
     }
 
-    public void configureLogout(final LogoutEncoder logout, final long sessionId)
+    public void configureLogout(final AbstractLogoutEncoder logout, final long sessionId)
     {
     }
 }

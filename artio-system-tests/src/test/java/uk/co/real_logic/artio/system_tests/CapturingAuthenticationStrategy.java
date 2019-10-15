@@ -15,11 +15,11 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
-public class FakeAuthenticationStrategy implements AuthenticationStrategy
+public class CapturingAuthenticationStrategy implements AuthenticationStrategy
 {
     private final MessageValidationStrategy delegate;
 
@@ -29,12 +29,12 @@ public class FakeAuthenticationStrategy implements AuthenticationStrategy
 
     private volatile boolean receivedUserRequest;
 
-    public FakeAuthenticationStrategy(final MessageValidationStrategy delegate)
+    public CapturingAuthenticationStrategy(final MessageValidationStrategy delegate)
     {
         this.delegate = delegate;
     }
 
-    public boolean authenticate(final LogonDecoder logon)
+    public boolean authenticate(final AbstractLogonDecoder logon)
     {
         logonPassword = logon.passwordAsString();
 

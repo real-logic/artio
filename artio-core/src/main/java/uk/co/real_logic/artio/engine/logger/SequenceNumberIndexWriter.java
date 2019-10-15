@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,19 +23,18 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.EpochClock;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.engine.ChecksumFramer;
 import uk.co.real_logic.artio.engine.MappedFile;
+import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder;
-import uk.co.real_logic.artio.util.AsciiBuffer;
-import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.File;
 
 import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
+import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
@@ -54,15 +53,14 @@ public class SequenceNumberIndexWriter implements Index
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final ResetSequenceNumberDecoder resetSequenceNumber = new ResetSequenceNumberDecoder();
-    private final HeaderDecoder fixHeader = new HeaderDecoder();
 
-    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final MessageHeaderDecoder fileHeaderDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder fileHeaderEncoder = new MessageHeaderEncoder();
     private final LastKnownSequenceNumberEncoder lastKnownEncoder = new LastKnownSequenceNumberEncoder();
     private final LastKnownSequenceNumberDecoder lastKnownDecoder = new LastKnownSequenceNumberDecoder();
     private final Long2LongHashMap recordOffsets = new Long2LongHashMap(MISSING_RECORD);
 
+    private final SequenceNumberExtractor sequenceNumberExtractor;
     private final ChecksumFramer checksumFramer;
     private final AtomicBuffer inMemoryBuffer;
     private final ErrorHandler errorHandler;
@@ -107,6 +105,7 @@ public class SequenceNumberIndexWriter implements Index
         writablePath = writablePath(indexFilePath);
         passingPlacePath = passingPath(indexFilePath);
         writableFile = MappedFile.map(writablePath, fileCapacity);
+        sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
 
         // TODO: Fsync parent directory
         indexedPositionsOffset = positionTableOffset(fileCapacity);
@@ -166,13 +165,14 @@ public class SequenceNumberIndexWriter implements Index
 
                     offset += actingBlockLength + 2;
 
-                    asciiBuffer.wrap(buffer);
-                    fixHeader.decode(asciiBuffer, offset, messageFrame.bodyLength());
-
-                    final int msgSeqNum = fixHeader.msgSeqNum();
                     final long sessionId = messageFrame.session();
 
-                    saveRecord(msgSeqNum, sessionId);
+                    final int msgSeqNum = sequenceNumberExtractor.extract(
+                        buffer, offset, messageFrame.bodyLength());
+                    if (msgSeqNum != NO_SEQUENCE_NUMBER)
+                    {
+                        saveRecord(msgSeqNum, sessionId);
+                    }
                     break;
                 }
 

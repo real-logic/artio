@@ -21,7 +21,7 @@ import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.RejectEncoder;
-import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -43,7 +43,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     private static final int DEFAULT_TIMEOUT_IN_MS = 1_000;
     private static final long LINGER_TIMEOUT_IN_MS = 1_000L;
     private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
-    private final FakeAsyncAuthenticationStrategy auth = new FakeAsyncAuthenticationStrategy();
+    private final ControllableAuthenticationStrategy auth = new ControllableAuthenticationStrategy();
 
     @Before
     public void launch()
@@ -72,7 +72,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         final Reply<Session> reply = acquireAuthProxy();
 
         auth.accept();
-        completeConnectSessions(reply);
+        completeConnectInitiatingSession(reply);
         messagesCanBeExchanged();
         assertInitiatingSequenceIndexIs(0);
     }
@@ -180,7 +180,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         final Reply<Session> validReply = acquireAuthProxy();
 
         auth.accept();
-        completeConnectSessions(validReply);
+        completeConnectInitiatingSession(validReply);
         messagesCanBeExchanged();
         assertInitiatingSequenceIndexIs(1);
     }
@@ -192,7 +192,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         auth.accept();
 
-        completeConnectSessions(reply);
+        completeConnectInitiatingSession(reply);
 
         try
         {
@@ -245,13 +245,13 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         return reply;
     }
 
-    private static class FakeAsyncAuthenticationStrategy implements AuthenticationStrategy
+    private static class ControllableAuthenticationStrategy implements AuthenticationStrategy
     {
         private volatile boolean throwWhenInvoked;
         private volatile boolean blockingAuthenticateCalled;
         private volatile AuthenticationProxy authProxy;
 
-        public void authenticateAsync(final LogonDecoder logon, final AuthenticationProxy authProxy)
+        public void authenticateAsync(final AbstractLogonDecoder logon, final AuthenticationProxy authProxy)
         {
             this.authProxy = authProxy;
 
@@ -263,7 +263,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
             }
         }
 
-        public boolean authenticate(final LogonDecoder logon)
+        public boolean authenticate(final AbstractLogonDecoder logon)
         {
             blockingAuthenticateCalled = true;
 

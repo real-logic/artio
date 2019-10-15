@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2019 Real Logic Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,9 @@
  */
 package uk.co.real_logic.artio.validation;
 
-import uk.co.real_logic.artio.Constants;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.CharArraySet;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 
 import java.util.Collection;
 
@@ -35,7 +35,7 @@ class SenderCompIdValidationStrategy implements MessageValidationStrategy
         this.validSenderIds = new CharArraySet(validSenderIds);
     }
 
-    public boolean validate(final HeaderDecoder header)
+    public boolean validate(final SessionHeaderDecoder header)
     {
         final char[] senderCompID = header.senderCompID();
         final int senderCompIDLength = header.senderCompIDLength();
@@ -45,7 +45,7 @@ class SenderCompIdValidationStrategy implements MessageValidationStrategy
 
     public int invalidTagId()
     {
-        return Constants.SENDER_COMP_ID;
+        return SessionConstants.SENDER_COMP_ID;
     }
 
     public int rejectReason()

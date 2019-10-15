@@ -68,11 +68,15 @@ public class FramerContext
         final RecordingCoordinator recordingCoordinator)
     {
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
-        this.sessionContexts = new SessionContexts(configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
+
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
         final Streams outboundLibraryStreams = engineContext.outboundLibraryStreams();
 
         final SystemEpochClock epochClock = new SystemEpochClock();
+
+        this.sessionContexts = new SessionContexts(
+            configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
+
         this.inboundPublication = engineContext.inboundPublication();
         this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "outboundPublication");
 
@@ -97,7 +101,8 @@ public class FramerContext
             sessionContexts,
             configuration.sessionPersistenceStrategy(),
             sentSequenceNumberIndex,
-            receivedSequenceNumberIndex);
+            receivedSequenceNumberIndex
+        );
 
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,

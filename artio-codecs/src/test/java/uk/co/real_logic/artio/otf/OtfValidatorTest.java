@@ -22,7 +22,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.ValidationError.*;
-import static uk.co.real_logic.artio.dictionary.StandardFixConstants.MESSAGE_TYPE;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.MESSAGE_TYPE;
 
 public class OtfValidatorTest
 {

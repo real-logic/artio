@@ -26,6 +26,7 @@ import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
@@ -144,7 +145,8 @@ public class ReceiverEndPointTest
             CONNECTION_ID, sessionId, SEQUENCE_INDEX, mockSessionContexts,
             messagesRead, framer, errorHandler, LIBRARY_ID,
             mockGatewaySessions,
-            mockClock);
+            mockClock,
+            FixDictionary.of(FixDictionary.findDefault()));
         endPoint.gatewaySession(gatewaySession);
     }
 

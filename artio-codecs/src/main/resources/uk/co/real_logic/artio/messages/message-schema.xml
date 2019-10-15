@@ -196,6 +196,7 @@
         <data name="targetLocationId" id="14" type="Utf8String"/>
         <data name="username" id="15" type="Utf8String"/>
         <data name="password" id="16" type="Utf8String"/>
+        <data name="fixDictionary" id="22" type="Utf8String"/>
     </sbe:message>
 
     <sbe:message name="RequestDisconnect" id="12" description="Request a connection be disconnected">
@@ -299,6 +300,7 @@
         <data name="address" id="20" type="Utf8String"/>
         <data name="username" id="26" type="Utf8String"/>
         <data name="password" id="27" type="Utf8String"/>
+        <data name="fixDictionary" id="32" type="Utf8String"/>
 
     </sbe:message>
 

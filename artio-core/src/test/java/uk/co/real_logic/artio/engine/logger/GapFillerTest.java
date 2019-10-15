@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2019 Real Logic Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,9 @@ public class GapFillerTest extends AbstractLogTest
     private GatewayPublication publication = mock(GatewayPublication.class);
     private Subscription subscription = mock(Subscription.class);
     private SenderSequenceNumbers senderSequenceNumbers = mock(SenderSequenceNumbers.class);
-    private GapFiller gapFiller = new GapFiller(subscription, publication, DEFAULT_NAME_PREFIX, senderSequenceNumbers);
+    private GapFiller gapFiller = new GapFiller(
+        subscription, publication, DEFAULT_NAME_PREFIX, senderSequenceNumbers,
+        new FakeFixSessionCodecsFactory());
 
     @Test
     public void shouldGapFillInResponseToResendRequest()

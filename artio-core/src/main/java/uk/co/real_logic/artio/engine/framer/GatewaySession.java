@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.SlowStatus;
@@ -40,6 +41,7 @@ class GatewaySession implements SessionInfo
     private final int resendRequestChunkSize;
     private final boolean sendRedundantResendRequests;
     private final boolean enableLastMsgSeqNumProcessed;
+    private final FixDictionary fixDictionary;
 
     private ReceiverEndPoint receiverEndPoint;
     private SenderEndPoint senderEndPoint;
@@ -69,7 +71,8 @@ class GatewaySession implements SessionInfo
         final boolean closedResendInterval,
         final int resendRequestChunkSize,
         final boolean sendRedundantResendRequests,
-        final boolean enableLastMsgSeqNumProcessed)
+        final boolean enableLastMsgSeqNumProcessed,
+        final FixDictionary fixDictionary)
     {
         this.connectionId = connectionId;
         this.sessionId = context.sessionId();
@@ -84,6 +87,7 @@ class GatewaySession implements SessionInfo
         this.resendRequestChunkSize = resendRequestChunkSize;
         this.sendRedundantResendRequests = sendRedundantResendRequests;
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
+        this.fixDictionary = fixDictionary;
     }
 
     public long connectionId()
@@ -333,5 +337,10 @@ class GatewaySession implements SessionInfo
     boolean initialResetSeqNum()
     {
         return initialResetSeqNum;
+    }
+
+    FixDictionary fixDictionary()
+    {
+        return fixDictionary;
     }
 }

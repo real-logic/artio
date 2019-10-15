@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.validation;
 
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 
 import java.util.Collection;
 
@@ -47,7 +47,7 @@ public interface MessageValidationStrategy
      * @param header the header to validate.
      * @return true if valid, false otherwise.
      */
-    boolean validate(HeaderDecoder header);
+    boolean validate(SessionHeaderDecoder header);
 
     /**
      * Returns the id of the tag that was invalid if the header didn't validate, undefined otherwise.
@@ -78,7 +78,7 @@ public interface MessageValidationStrategy
             private int invalidTagId;
             private int rejectReason;
 
-            public boolean validate(final HeaderDecoder header)
+            public boolean validate(final SessionHeaderDecoder header)
             {
                 final boolean leftValid = left.validate(header);
 

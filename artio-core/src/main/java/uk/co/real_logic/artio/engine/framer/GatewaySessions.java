@@ -25,8 +25,9 @@ import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
-import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
+import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.HeaderSetup;
 import uk.co.real_logic.artio.engine.SessionInfo;
@@ -41,9 +42,8 @@ import uk.co.real_logic.artio.validation.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
+import java.util.function.Function;
 
 import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.DUPLICATE_SESSION;
@@ -55,6 +55,8 @@ import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.reset
 class GatewaySessions
 {
     private final List<GatewaySession> sessions = new ArrayList<>();
+    private final Map<FixDictionary, UserRequestExtractor> dictionaryToUserRequestExtractor = new HashMap<>();
+
     private final EpochClock epochClock;
     private final GatewayPublication outboundPublication;
     private final SessionIdStrategy sessionIdStrategy;
@@ -71,9 +73,10 @@ class GatewaySessions
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
 
-    private UserRequestExtractor userRequestExtractor;
-
     private ErrorHandler errorHandler;
+
+    private final Function<FixDictionary, UserRequestExtractor> newUserRequestExtractor =
+        dictionary -> new UserRequestExtractor(dictionary, errorHandler);
 
     GatewaySessions(
         final EpochClock epochClock,
@@ -141,6 +144,8 @@ class GatewaySessions
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
+        final FixDictionary dictionary = gatewaySession.fixDictionary();
+        final String beginString = dictionary.beginString();
 
         final SessionProxy proxy = new DirectSessionProxy(
             sessionBufferSize,
@@ -149,7 +154,9 @@ class GatewaySessions
             customisationStrategy,
             epochClock,
             connectionId,
-            FixEngine.ENGINE_LIBRARY_ID);
+            FixEngine.ENGINE_LIBRARY_ID,
+            dictionary,
+            errorHandler);
 
         final InternalSession session = new InternalSession(
             heartbeatIntervalInS,
@@ -168,7 +175,8 @@ class GatewaySessions
             0,
             reasonableTransmissionTimeInMs,
             asciiBuffer,
-            gatewaySession.enableLastMsgSeqNumProcessed());
+            gatewaySession.enableLastMsgSeqNumProcessed(),
+            beginString);
 
         session.awaitingResend(awaitingResend);
         session.closedResendInterval(gatewaySession.closedResendInterval());
@@ -178,7 +186,8 @@ class GatewaySessions
         final SessionParser sessionParser = new SessionParser(
             session,
             validationStrategy,
-            errorHandler);
+            errorHandler,
+            dictionary);
 
         sessions.add(gatewaySession);
         gatewaySession.manage(sessionParser, session, engineBlockablePosition);
@@ -266,7 +275,7 @@ class GatewaySessions
     }
 
     AcceptorLogonResult authenticate(
-        final LogonDecoder logon,
+        final AbstractLogonDecoder logon,
         final long connectionId,
         final GatewaySession gatewaySession,
         final TcpChannel channel)
@@ -292,30 +301,18 @@ class GatewaySessions
         return true;
     }
 
-    void onUserRequest(final DirectBuffer buffer, final int offset, final int length)
+    void onUserRequest(
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final FixDictionary dictionary,
+        final long connectionId,
+        final long sessionId)
     {
-        if (userRequestExists())
-        {
-            if (userRequestExtractor == null)
-            {
-                userRequestExtractor = new UserRequestExtractor();
-            }
+        final UserRequestExtractor extractor = dictionaryToUserRequestExtractor
+            .computeIfAbsent(dictionary, newUserRequestExtractor);
 
-            userRequestExtractor.onUserRequest(buffer, offset, length, authenticationStrategy);
-        }
-    }
-
-    private static boolean userRequestExists()
-    {
-        try
-        {
-            Class.forName("uk.co.real_logic.artio.decoder.UserRequestDecoder");
-            return true;
-        }
-        catch (final ClassNotFoundException e)
-        {
-            return false;
-        }
+        extractor.onUserRequest(buffer, offset, length, authenticationStrategy, connectionId, sessionId);
     }
 
     enum AuthenticationState
@@ -335,7 +332,7 @@ class GatewaySessions
         private static final int ENCODE_BUFFER_SIZE = 1024;
 
         private final SessionIdStrategy sessionIdStrategy;
-        private final LogonDecoder logon;
+        private final AbstractLogonDecoder logon;
         private final SessionContexts sessionContexts;
         private final TcpChannel channel;
         private final boolean resetSeqNum;
@@ -354,7 +351,7 @@ class GatewaySessions
         PendingAcceptorLogon(
             final SessionIdStrategy sessionIdStrategy,
             final GatewaySession gatewaySession,
-            final LogonDecoder logon,
+            final AbstractLogonDecoder logon,
             final long connectionId,
             final SessionContexts sessionContexts,
             final TcpChannel channel)
@@ -383,7 +380,7 @@ class GatewaySessions
             authenticate(logon, connectionId);
         }
 
-        private PersistenceLevel getPersistenceLevel(final LogonDecoder logon, final long connectionId)
+        private PersistenceLevel getPersistenceLevel(final AbstractLogonDecoder logon, final long connectionId)
         {
             try
             {
@@ -396,7 +393,7 @@ class GatewaySessions
             }
         }
 
-        private void authenticate(final LogonDecoder logon, final long connectionId)
+        private void authenticate(final AbstractLogonDecoder logon, final long connectionId)
         {
             try
             {
@@ -415,7 +412,7 @@ class GatewaySessions
             final Throwable throwable,
             final long connectionId,
             final String theDefault,
-            final LogonDecoder logon)
+            final AbstractLogonDecoder logon)
         {
             final String message = String.format(
                 "Exception thrown by %s strategy for connectionId=%d, processing [%s], defaulted to %s",
@@ -592,7 +589,8 @@ class GatewaySessions
                 compositeKey,
                 username,
                 password,
-                logon.heartBtInt());
+                logon.heartBtInt()
+            );
 
             // See Framer.handoverNewConnectionToLibrary for sole library mode equivalent
             if (resetSeqNum)
