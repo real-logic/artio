@@ -97,11 +97,7 @@ public final class UtcTimeOnlyEncoder
         string.putNaturalPaddedIntAscii(offset + 3, 2, minutes);
         string.putChar(offset + 5, ':');
         string.putNaturalPaddedIntAscii(offset + 6, 2, secondOfDay);
-
-        if (fractionOfSecond > 0)
-        {
-            string.putChar(offset + 8, '.');
-            string.putNaturalPaddedIntAscii(offset + 9, fractionFieldLength, fractionOfSecond);
-        }
+        string.putChar(offset + 8, '.');
+        string.putNaturalPaddedIntAscii(offset + 9, fractionFieldLength, fractionOfSecond);
     }
 }

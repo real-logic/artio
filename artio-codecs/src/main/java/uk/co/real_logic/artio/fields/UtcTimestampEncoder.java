@@ -312,7 +312,7 @@ public final class UtcTimestampEncoder
             offset + LENGTH_OF_DATE_AND_DASH,
             fractionFieldLength);
 
-        return fractionOfSecond > 0 ? lengthWithFraction : LENGTH_WITHOUT_MILLISECONDS;
+        return lengthWithFraction;
     }
 
     private static long epochDay(final long localSecond)

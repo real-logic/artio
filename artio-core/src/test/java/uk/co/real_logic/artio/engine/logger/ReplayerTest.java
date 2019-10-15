@@ -64,7 +64,7 @@ import static uk.co.real_logic.artio.util.CustomMatchers.sequenceEqualsAscii;
 
 public class ReplayerTest extends AbstractLogTest
 {
-    private static final String DATE_TIME_STR = "19840521-15:00:00";
+    private static final String DATE_TIME_STR = "19840521-15:00:00.000";
     private static final long DATE_TIME_EPOCH_MS =
         new UtcTimestampDecoder().decode(DATE_TIME_STR.getBytes(US_ASCII));
 

@@ -928,7 +928,7 @@ public abstract class AbstractDecoderGeneratorTest
         assertEquals(0, someTimeValue);
 
         final String someTimeFieldAsString = getSomeTimeFieldAsString(decoder);
-        assertEquals("19700101-00:00:00", someTimeFieldAsString);
+        assertEquals("19700101-00:00:00.000", someTimeFieldAsString);
     }
 
     @Test

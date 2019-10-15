@@ -873,7 +873,7 @@ public abstract class AbstractSessionTest
 
         final String message = sendTestRequest(0);
 
-        assertThat(message, containsString(":00\001"));
+        assertThat(message, containsString(":00.000\001"));
     }
 
     @Test
@@ -888,7 +888,7 @@ public abstract class AbstractSessionTest
         final String secondMessage = sendTestRequest(remainderInMs);
 
         assertThat(firstMessage, containsString(":00.111\001"));
-        assertThat(secondMessage, containsString(":01\001"));
+        assertThat(secondMessage, containsString(":01.000\001"));
     }
 
     // See http://www.fixtradingcommunity.org/pg/discussions/topicpost/164720/fix-4x-sessionlevel-protocol-tests
