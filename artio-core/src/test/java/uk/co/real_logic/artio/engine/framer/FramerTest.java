@@ -29,6 +29,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
@@ -211,6 +212,8 @@ public class FramerTest
         {
             client.close();
         }
+
+        Mockito.framework().clearInlineMocks();
     }
 
     @Test

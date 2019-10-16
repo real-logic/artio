@@ -30,6 +30,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.SessionInfo;
@@ -93,6 +94,13 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         CloseHelper.quietClose(writer);
         deleteFiles();
+
+        verify(errorHandler, never()).onError(any());
+
+        CloseHelper.close(aeron);
+        CloseHelper.close(mediaDriver);
+
+        Mockito.framework().clearInlineMocks();
     }
 
     @Test
@@ -303,16 +311,6 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         writer.resetSequenceNumbers();
 
         assertUnknownSession();
-    }
-
-    @After
-    public void verifyNoErrors()
-    {
-        writer.close();
-        verify(errorHandler, never()).onError(any());
-
-        CloseHelper.close(aeron);
-        CloseHelper.close(mediaDriver);
     }
 
     private SequenceNumberIndexReader newInstanceAfterRestart()
