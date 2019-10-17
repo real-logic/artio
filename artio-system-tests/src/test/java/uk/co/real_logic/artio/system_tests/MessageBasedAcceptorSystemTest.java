@@ -132,6 +132,17 @@ public class MessageBasedAcceptorSystemTest
         }
     }
 
+    @Test
+    public void shouldShutdownWithNotLoggedInSessionsOpen() throws IOException
+    {
+        setup(true);
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            close(engine);
+        }
+    }
+
     private void sendInvalidLogon(final FixConnection connection)
     {
         final LogonEncoder logon = new LogonEncoder()

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.InternalSession;
 
@@ -115,10 +116,42 @@ class CloseOperation implements Continuation
             final InternalSession session = gatewaySession.session();
             if (session != null)
             {
-                final long position = session.logoutAndDisconnect();
-                if (position < 0)
+                final SessionState state = session.state();
+                switch (state)
                 {
-                    return position;
+                    case SENT_LOGON:
+                    case ACTIVE:
+                    case AWAITING_LOGOUT:
+                    case LOGGING_OUT_AND_DISCONNECTING:
+                    case LOGGING_OUT:
+                    {
+                        final long position = session.logoutAndDisconnect();
+                        if (position < 0)
+                        {
+                            return position;
+                        }
+
+                        break;
+                    }
+
+                    case CONNECTED:
+                    case CONNECTING:
+                    case DISCONNECTING:
+                    {
+                        final long position = session.requestDisconnect();
+                        if (position < 0)
+                        {
+                            return position;
+                        }
+
+                        break;
+                    }
+
+                    case DISCONNECTED:
+                    case DISABLED:
+                    default:
+                        // deliberately blank
+                        break;
                 }
             }
 

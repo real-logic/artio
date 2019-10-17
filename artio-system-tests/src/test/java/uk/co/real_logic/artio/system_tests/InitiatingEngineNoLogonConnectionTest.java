@@ -36,11 +36,11 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.USERNAME;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.initiatingConfig;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.newInitiatingLibrary;
 
-public class ConnectionTimeoutOnFailedAcceptorSystemTest extends AbstractGatewayToGatewaySystemTest
+public class InitiatingEngineNoLogonConnectionTest extends AbstractGatewayToGatewaySystemTest
 {
     private final ServerSocket serverSocket;
 
-    public ConnectionTimeoutOnFailedAcceptorSystemTest() throws IOException
+    public InitiatingEngineNoLogonConnectionTest() throws IOException
     {
         serverSocket = new ServerSocket(port);
         final Thread serverThread = new Thread(() ->
