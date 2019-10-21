@@ -187,12 +187,13 @@ public class ReplayIndexTest extends AbstractLogTest
     {
         indexExampleMessage();
 
+        replayIndex.close();
+
         // Fake restarting the gateway
         final File logFile = logFile(SESSION_ID);
-        IoUtil.ensureDirectoryExists(new File(DEFAULT_LOG_FILE_DIR), DEFAULT_LOG_FILE_DIR);
+        final File defaultLogFileDir = new File(DEFAULT_LOG_FILE_DIR);
+        IoUtil.ensureDirectoryExists(defaultLogFileDir, DEFAULT_LOG_FILE_DIR);
         assertTrue(logFile.createNewFile());
-
-        replayIndex.close();
 
         try
         {
@@ -203,10 +204,12 @@ public class ReplayIndexTest extends AbstractLogTest
             verifyMappedFile(SESSION_ID, 1);
             verifyMessagesRead(1);
             assertEquals(1, msgCount);
+
+            replayIndex.close();
         }
         finally
         {
-            IoUtil.delete(new File(DEFAULT_LOG_FILE_DIR), false);
+            IoUtil.delete(defaultLogFileDir, false);
         }
     }
 
