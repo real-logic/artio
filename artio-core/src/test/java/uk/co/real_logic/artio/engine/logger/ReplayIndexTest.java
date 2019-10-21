@@ -44,6 +44,7 @@ import java.nio.ByteBuffer;
 import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
@@ -189,7 +190,10 @@ public class ReplayIndexTest extends AbstractLogTest
         // Fake restarting the gateway
         final File logFile = logFile(SESSION_ID);
         IoUtil.ensureDirectoryExists(new File(DEFAULT_LOG_FILE_DIR), DEFAULT_LOG_FILE_DIR);
-        logFile.createNewFile();
+        assertTrue(logFile.createNewFile());
+
+        replayIndex.close();
+
         try
         {
             newReplayIndex();
