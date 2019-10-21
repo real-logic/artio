@@ -92,7 +92,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @After
     public void tearDown()
     {
-        CloseHelper.quietClose(writer);
+        CloseHelper.close(writer);
         deleteFiles();
 
         verify(errorHandler, never()).onError(any());

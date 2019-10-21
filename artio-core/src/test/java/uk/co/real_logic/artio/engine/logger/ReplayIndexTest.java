@@ -195,22 +195,13 @@ public class ReplayIndexTest extends AbstractLogTest
         IoUtil.ensureDirectoryExists(defaultLogFileDir, DEFAULT_LOG_FILE_DIR);
         assertTrue(logFile.createNewFile());
 
-        try
-        {
-            newReplayIndex();
+        newReplayIndex();
 
-            final int msgCount = query();
+        final int msgCount = query();
 
-            verifyMappedFile(SESSION_ID, 1);
-            verifyMessagesRead(1);
-            assertEquals(1, msgCount);
-
-            replayIndex.close();
-        }
-        finally
-        {
-            IoUtil.delete(defaultLogFileDir, false);
-        }
+        verifyMappedFile(SESSION_ID, 1);
+        verifyMessagesRead(1);
+        assertEquals(1, msgCount);
     }
 
     @Test(timeout = 20_000L)
