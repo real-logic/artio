@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.validation;
 
 
 import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
+import uk.co.real_logic.artio.decoder.AbstractUserRequestDecoder;
 
 /**
  * Implement this interface in order to add customisable checks to logon messages.
@@ -74,7 +75,9 @@ public interface AuthenticationStrategy
     /**
      * Hands a user request message to the authentication strategy.
      *
-     * This is the only way to get access to the password and newPassword fields of a user request message.
+     * This is the only way to get access to the password and newPassword fields of a user request message. You will
+     * only received user request messages that have passed validation if the
+     * {@link uk.co.real_logic.artio.builder.Validation#CODEC_VALIDATION_ENABLED} has been enabled.
      *
      * User request messages may include a password change, and the passwords will be cleaned before they
      * arrive at the {@link uk.co.real_logic.artio.library.FixLibrary}. As a result we hand off UserRequest messages
@@ -82,13 +85,10 @@ public interface AuthenticationStrategy
      * password changes. This message will still be sent to the approach {@link uk.co.real_logic.artio.session.Session}
      * object and processed as normal (sequence number updates, validation, etc.) just without the password fields.
      *
-     * @param password the password field of the UserRequest decoder, if present otherwise undefined.
-     * @param passwordLength the length of the password field, or 0 if not present.
-     * @param newPasword the new password field of the UserRequest decoder, if present otherwise undefined.
-     * @param newPasswordLength the length of the new password field, or 0 if not present.
+     * @param userRequest the user request message that has been received.
      */
     default void onUserRequest(
-        final char[] password, final int passwordLength, final char[] newPasword, final int newPasswordLength)
+        final AbstractUserRequestDecoder userRequest)
     {
         // Deliberately blank for backwards compatibility
     }

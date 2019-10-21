@@ -74,13 +74,6 @@ class UserRequestExtractor
             }
         }
 
-        if (userRequest.hasNewPassword() && userRequest.hasPassword())
-        {
-            authenticationStrategy.onUserRequest(
-                userRequest.password(),
-                userRequest.passwordLength(),
-                userRequest.newPassword(),
-                userRequest.newPasswordLength());
-        }
+        authenticationStrategy.onUserRequest(userRequest);
     }
 }
