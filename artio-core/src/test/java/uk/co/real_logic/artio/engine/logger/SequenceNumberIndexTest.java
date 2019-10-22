@@ -406,7 +406,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private void deleteFiles()
     {
         deleteIfExists(new File(INDEX_FILE_PATH));
-        deleteIfExists(writablePath(INDEX_FILE_PATH));
-        deleteIfExists(passingPath(INDEX_FILE_PATH));
+        deleteIfExists(writableFile(INDEX_FILE_PATH));
+        deleteIfExists(passingFile(INDEX_FILE_PATH));
     }
 }

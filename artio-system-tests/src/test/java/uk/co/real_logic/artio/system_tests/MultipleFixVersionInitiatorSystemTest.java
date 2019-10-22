@@ -47,7 +47,9 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class MultipleFixVersionInitiatorSystemTest extends AbstractGatewayToGatewaySystemTest
 {
+    private static final String FIXT_ACCEPTOR_LOGS = "fixt-acceptor-logs";
     private static final String FIXT_ACCEPTOR_ID = "fixt-acceptor";
+
     private static final int FIXT_INBOUND_LIBRARY_STREAM = 11;
     private static final int FIXT_OUTBOUND_LIBRARY_STREAM = 12;
     private static final int FIXT_OUTBOUND_REPLAY_STREAM = 13;
@@ -61,13 +63,13 @@ public class MultipleFixVersionInitiatorSystemTest extends AbstractGatewayToGate
     private FakeOtfAcceptor fixtAcceptingOtfAcceptor = new FakeOtfAcceptor();
     private FakeHandler fixtAcceptingHandler = new FakeHandler(fixtAcceptingOtfAcceptor);
 
-    private Session fixtAcceptingSession;
     private Session fixtInitiatingSession;
 
     @Before
     public void launch()
     {
-        delete(ACCEPTOR_LOGS);
+        deleteLogs();
+        delete(FIXT_ACCEPTOR_LOGS);
 
         mediaDriver = launchMediaDriver();
 
@@ -127,7 +129,7 @@ public class MultipleFixVersionInitiatorSystemTest extends AbstractGatewayToGate
             .outboundLibraryStream(FIXT_OUTBOUND_LIBRARY_STREAM)
             .outboundReplayStream(FIXT_OUTBOUND_REPLAY_STREAM)
             .archiveReplayStream(FIXT_ARCHIVE_REPLAY_STREAM)
-            .logFileDir(ACCEPTOR_LOGS)
+            .logFileDir(FIXT_ACCEPTOR_LOGS)
             .scheduler(new LowResourceEngineScheduler());
 
         fixtAcceptingConfiguration
@@ -173,7 +175,8 @@ public class MultipleFixVersionInitiatorSystemTest extends AbstractGatewayToGate
     {
         final long sessionId = fixtAcceptingHandler.awaitSessionId(testSystem::poll);
 
-        fixtAcceptingSession = acquireSession(fixtAcceptingHandler, fixtAcceptingLibrary, sessionId, testSystem);
+        final Session fixtAcceptingSession = acquireSession(
+            fixtAcceptingHandler, fixtAcceptingLibrary, sessionId, testSystem);
         assertEquals(INITIATOR_ID, fixtAcceptingHandler.lastInitiatorCompId());
         assertEquals(FIXT_ACCEPTOR_ID, fixtAcceptingHandler.lastAcceptorCompId());
         assertNotNull("unable to acquire accepting session", fixtAcceptingSession);

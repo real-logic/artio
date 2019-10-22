@@ -65,12 +65,12 @@ final class SequenceNumberIndexDescriptor
         return proposedCapacity;
     }
 
-    public static File passingPath(final String indexFilePath)
+    public static File passingFile(final String indexFilePath)
     {
         return new File(indexFilePath + "-passing");
     }
 
-    public static File writablePath(final String indexFilePath)
+    public static File writableFile(final String indexFilePath)
     {
         return new File(indexFilePath + "-writable");
     }
