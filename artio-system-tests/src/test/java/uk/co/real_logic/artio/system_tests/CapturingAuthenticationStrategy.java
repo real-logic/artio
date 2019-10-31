@@ -27,6 +27,7 @@ public class CapturingAuthenticationStrategy implements AuthenticationStrategy
     private String logonPassword;
     private String userRequestPassword;
     private String userRequestNewPassword;
+    private long sessionId;
 
     private volatile boolean receivedUserRequest;
 
@@ -43,11 +44,12 @@ public class CapturingAuthenticationStrategy implements AuthenticationStrategy
     }
 
     public void onUserRequest(
-        final AbstractUserRequestDecoder userRequest)
+        final AbstractUserRequestDecoder userRequest, final long sessionId)
     {
         userRequestPassword = new String(userRequest.password(), 0, userRequest.passwordLength());
         userRequestNewPassword = new String(userRequest.newPassword(), 0, userRequest.newPasswordLength());
         receivedUserRequest = true;
+        this.sessionId = sessionId;
     }
 
     public String logonPassword()
@@ -68,5 +70,10 @@ public class CapturingAuthenticationStrategy implements AuthenticationStrategy
     public boolean receivedUserRequest()
     {
         return receivedUserRequest;
+    }
+
+    public long sessionId()
+    {
+        return sessionId;
     }
 }

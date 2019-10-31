@@ -86,9 +86,10 @@ public interface AuthenticationStrategy
      * object and processed as normal (sequence number updates, validation, etc.) just without the password fields.
      *
      * @param userRequest the user request message that has been received.
+     * @param sessionId the session of the session that received the message
      */
     default void onUserRequest(
-        final AbstractUserRequestDecoder userRequest)
+        final AbstractUserRequestDecoder userRequest, final long sessionId)
     {
         // Deliberately blank for backwards compatibility
     }
