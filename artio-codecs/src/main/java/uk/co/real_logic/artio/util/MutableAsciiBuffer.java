@@ -231,6 +231,11 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
             {
                 final int digit = getDigit(index, byteValue);
                 value = value * 10 + digit;
+                if (value < 0)
+                {
+                    throw new ArithmeticException(
+                        "Out of range: when parsing " + getAscii(offset, length));
+                }
             }
         }
 

@@ -405,6 +405,11 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
             {
                 final int digit = getDigit(index, charValue);
                 value = value * 10 + digit;
+                if (value < 0)
+                {
+                    throw new ArithmeticException(
+                        "Out of range: when parsing " + string.subSequence(start, start + length));
+                }
             }
         }
 
