@@ -113,10 +113,11 @@ public class DecoderGenerator extends Generator
         final Class<?> validationClass,
         final Class<?> rejectUnknownFieldClass,
         final Class<?> rejectUnknownEnumValueClass,
-        final boolean flyweightsEnabled)
+        final boolean flyweightsEnabled,
+        final String codecRejectUnknownEnumValueEnabled)
     {
         super(dictionary, thisPackage, commonPackage, outputManager, validationClass, rejectUnknownFieldClass,
-            rejectUnknownEnumValueClass, flyweightsEnabled);
+            rejectUnknownEnumValueClass, flyweightsEnabled, codecRejectUnknownEnumValueEnabled);
         this.initialBufferSize = initialBufferSize;
     }
 
@@ -496,7 +497,7 @@ public class DecoderGenerator extends Generator
         final boolean isPrimitive = type.isIntBased() || type == Type.CHAR;
 
         final String enumValidation = String.format(
-            "        if (" + CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED + " && !%1$s.isValid(%2$s%4$s))\n" +
+            "        if (" + codecRejectUnknownEnumValueEnabled + " && !%1$s.isValid(%2$s%4$s))\n" +
             "        {\n" +
             "            invalidTagId = %3$s;\n" +
             "            rejectReason = " + VALUE_IS_INCORRECT + ";\n" +

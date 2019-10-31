@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.dictionary.generation;
 
 import org.agrona.Verify;
 
+import java.util.Optional;
 import java.util.stream.Stream;
 
 import static java.lang.Character.isUpperCase;
@@ -30,6 +31,9 @@ public final class GenerationUtil
     public static final String PARENT_PACKAGE =
         System.getProperty("fix.codecs.parent_package", "uk.co.real_logic.artio");
     public static final boolean FLYWEIGHTS_ENABLED = Boolean.getBoolean("fix.codecs.flyweight");
+    public static final Optional<Boolean> HARD_CODED_REJECT_UNKNOWN_EMUM_VALUES =
+        Optional.ofNullable(System.getProperty("reject.unknown.enum.value"))
+        .map(Boolean::parseBoolean);
 
     public static final String ENCODER_PACKAGE = PARENT_PACKAGE + ".builder";
     public static final String DECODER_PACKAGE = PARENT_PACKAGE + ".decoder";
