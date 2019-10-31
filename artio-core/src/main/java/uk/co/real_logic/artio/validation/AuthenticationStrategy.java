@@ -73,11 +73,8 @@ public interface AuthenticationStrategy
     boolean authenticate(AbstractLogonDecoder logon);
 
     /**
-     * Hands a user request message to the authentication strategy.
-     *
-     * This is the only way to get access to the password and newPassword fields of a user request message. You will
-     * only received user request messages that have passed validation if the
-     * {@link uk.co.real_logic.artio.builder.Validation#CODEC_VALIDATION_ENABLED} has been enabled.
+     * Hands a user request message to the authentication strategy. This is the only way to get access to the password
+     * and newPassword fields of a user request message.
      *
      * User request messages may include a password change, and the passwords will be cleaned before they
      * arrive at the {@link uk.co.real_logic.artio.library.FixLibrary}. As a result we hand off UserRequest messages
