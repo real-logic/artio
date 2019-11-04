@@ -15,10 +15,11 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
-import org.agrona.Verify;
-
 import java.util.Optional;
 import java.util.stream.Stream;
+
+import org.agrona.Verify;
+
 
 import static java.lang.Character.isUpperCase;
 import static java.lang.Character.toUpperCase;
@@ -32,8 +33,7 @@ public final class GenerationUtil
         System.getProperty("fix.codecs.parent_package", "uk.co.real_logic.artio");
     public static final boolean FLYWEIGHTS_ENABLED = Boolean.getBoolean("fix.codecs.flyweight");
     public static final Optional<Boolean> HARD_CODED_REJECT_UNKNOWN_EMUM_VALUES =
-        Optional.ofNullable(System.getProperty("reject.unknown.enum.value"))
-        .map(Boolean::parseBoolean);
+        Optional.ofNullable(System.getProperty("reject.unknown.enum.value")).map(Boolean::parseBoolean);
 
     public static final String ENCODER_PACKAGE = PARENT_PACKAGE + ".builder";
     public static final String DECODER_PACKAGE = PARENT_PACKAGE + ".decoder";
@@ -47,12 +47,12 @@ public final class GenerationUtil
     public static String fileHeader(final String packageName)
     {
         return String.format(
-            "/* Generated Fix Gateway message codec */\n" +
-            "package %s;\n\n",
-            packageName);
+                "/* Generated Fix Gateway message codec */\n" +
+                "package %s;\n\n",
+                packageName);
     }
 
-    public static int packMessageType(final String representation)
+    public static int packMessageType(final CharSequence representation)
     {
         int packed = (byte)representation.charAt(0);
 
@@ -65,15 +65,49 @@ public final class GenerationUtil
         return packed;
     }
 
+    public static int packMessageType2(final CharSequence representation)
+    {
+        if (representation.length() > 8)
+        {
+            throw new IllegalArgumentException("Cannot support message types of size greater than 8");
+        }
+
+        int packed = getIntValue(representation, 0);
+        for (int index = 1; index < representation.length(); index++)
+        {
+            final int second = getIntValue(representation, index);
+            packed |= (second << (6 * index));
+        }
+        return packed;
+    }
+
+    private static int getIntValue(final CharSequence representation, final int i)
+    {
+        final byte originalValue = (byte)representation.charAt(i);
+        byte valueToReturn = originalValue;
+
+        valueToReturn -= 48;
+
+        if (originalValue >= 65)
+        {
+            valueToReturn -= 7;
+        }
+        if (originalValue >= 97)
+        {
+            valueToReturn -= 6;
+        }
+        return valueToReturn;
+    }
+
     public static String constantName(final String name)
     {
         final String replacedName = name.replace("ID", "Id")
             .replace("GroupCounter", "");
         return toUpperCase(replacedName.charAt(0)) + replacedName
-            .substring(1)
-            .chars()
-            .mapToObj((codePoint) -> (isUpperCase(codePoint) ? "_" : "") + (char)toUpperCase(codePoint))
-            .collect(joining());
+             .substring(1)
+             .chars()
+             .mapToObj((codePoint) -> (isUpperCase(codePoint) ? "_" : "") + (char)toUpperCase(codePoint))
+             .collect(joining());
     }
 
     public static class Var
@@ -123,8 +157,8 @@ public final class GenerationUtil
     public static String paramDeclaration(final Var[] parameters)
     {
         return Stream.of(parameters)
-            .map(Var::declaration)
-            .collect(joining(", "));
+                     .map(Var::declaration)
+                     .collect(joining(", "));
     }
 
     public static String importFor(final Class<?> cls)
@@ -152,9 +186,9 @@ public final class GenerationUtil
     public static String optionalStaticInit(final String containing)
     {
         return containing.isEmpty() ? "\n" :
-            "    static\n" +
-            "    {\n" +
-            containing +
-            "    }\n\n";
+               "    static\n" +
+               "    {\n" +
+               containing +
+               "    }\n\n";
     }
 }

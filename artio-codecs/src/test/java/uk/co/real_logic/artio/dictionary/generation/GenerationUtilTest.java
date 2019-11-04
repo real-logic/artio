@@ -15,12 +15,18 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import java.util.BitSet;
+
+import org.junit.Assert;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+
+
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.constantName;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.packMessageType;
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.packMessageType2;
 
 public class GenerationUtilTest
 {
@@ -34,6 +40,63 @@ public class GenerationUtilTest
         assertNotEquals(packMessageType("BC"), packMessageType("BB"));
         assertNotEquals(packMessageType("BD"), packMessageType("BE"));
         assertNotEquals(packMessageType("BG"), packMessageType("BF"));
+    }
+
+    @Test
+    public void generatesUniquePackedIds()
+    {
+        final BitSet positive = new BitSet();
+        final BitSet negative = new BitSet();
+        permutations(new StringBuilder(), 5, 0, positive, negative);
+    }
+
+    private static void permutations(final StringBuilder permutation, final int maxDepth,
+        final int curDepth, final BitSet positive, final BitSet negative)
+    {
+        if (curDepth == maxDepth)
+        {
+            final int packed = packMessageType2(permutation);
+            if (packed > 0)
+            {
+                sawOrNot(permutation, positive, packed);
+            }
+            else
+            {
+                sawOrNot(permutation, negative, packed);
+            }
+
+            return;
+        }
+        for (int c = 48; c <= 122; c++)
+        {
+            switch (c)
+            {
+                case 58:
+                case 59:
+                case 60:
+                case 61:
+                case 62:
+                case 63:
+                case 64:
+                case 91:
+                case 92:
+                case 93:
+                case 94:
+                case 95:
+                case 96:
+                    continue;
+            }
+            permutation.append((char)c);
+            permutations(permutation, maxDepth, curDepth + 1, positive, negative);
+            permutation.setLength(permutation.length() - 1);
+        }
+    }
+
+    private static void sawOrNot(final StringBuilder permutation, final BitSet seen, final int packed)
+    {
+        final boolean alreadySaw = seen.get(packed);
+        Assert.assertFalse(permutation + " results in a duplicate ", alreadySaw);
+        seen.set(packed);
     }
 
     @Test
