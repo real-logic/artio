@@ -29,11 +29,14 @@ import static org.junit.Assert.*;
 public class PasswordCleanerTest
 {
     // TODO: checksums?
-    // TODO: user request
 
     private static final String EXAMPLE_LOGON =
         "8=FIX.4.4\0019=099\00135=A\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
         "\00198=0\001108=10\001141=N\001553=bob\001554=Uv1aegoh\00110=062\001";
+
+    private static final String LONG_EXAMPLE_LOGON =
+        "8=FIX.4.4\0019=102\00135=A\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
+        "\00198=0\001108=10\001141=N\001553=bob\001554=Uv1aegohABC\00110=062\001";
 
     private static final String EXPECTED_CLEANED_LOGON =
         "8=FIX.4.4\0019=094\00135=A\00149=initiator\00156=acceptor\00134=1\00152=20191002-16:54:47.446" +
@@ -72,6 +75,12 @@ public class PasswordCleanerTest
     public void shouldCleanPasswordFromLogon()
     {
         shouldCleanMessage(EXAMPLE_LOGON, EXPECTED_CLEANED_LOGON);
+    }
+
+    @Test
+    public void shouldCleanLongPasswordFromLogon()
+    {
+        shouldCleanMessage(LONG_EXAMPLE_LOGON, EXPECTED_CLEANED_LOGON);
     }
 
     @Test

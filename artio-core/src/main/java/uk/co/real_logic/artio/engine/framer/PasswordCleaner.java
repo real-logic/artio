@@ -134,8 +134,8 @@ class PasswordCleaner
     {
         final int newBodyLength = bodyLength - lengthChange;
         final int relativeBodyLengthOffset = bodyLengthOffset - offset;
-        cleanedBuffer.putNaturalIntAsciiFromEnd(
-            newBodyLength, relativeBodyLengthOffset + lengthOfBodyLength);
+        cleanedBuffer.putNaturalPaddedIntAscii(relativeBodyLengthOffset, lengthOfBodyLength,
+            newBodyLength);
     }
 
     public DirectBuffer cleanedBuffer()

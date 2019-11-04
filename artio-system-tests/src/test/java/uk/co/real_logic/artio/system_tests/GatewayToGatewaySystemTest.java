@@ -848,7 +848,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             Thread.yield();
         }
 
-
         while (!auth.receivedUserRequest())
         {
             testSystem.poll();
@@ -859,6 +858,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertEquals(PASSWORD, auth.logonPassword());
         assertEquals(PASSWORD, auth.userRequestPassword());
         assertEquals(NEW_PASSWORD, auth.userRequestNewPassword());
+        assertEquals(1, auth.sessionId());
 
         assertArchiveDoesNotContainPassword();
     }

@@ -19,7 +19,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import uk.co.real_logic.artio.util.DecimalFloatEncodingTest;
 
 import static org.junit.Assert.assertEquals;
 

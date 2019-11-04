@@ -26,9 +26,9 @@ plugins {
     id 'net.researchgate.release' version '2.8.0'
 }
 
-def aeronVersion = '1.22.1'
-def agronaVersion = '1.0.8'
-def sbeVersion = '1.13.3'
+def aeronVersion = '1.23.0'
+def agronaVersion = '1.0.9'
+def sbeVersion = '1.14.0'
 def artioJavaVersion = JavaVersion.VERSION_1_8
 def artioGroup = 'uk.co.real-logic'
 
@@ -468,6 +468,6 @@ task uploadToMavenCentral {
 }
 
 wrapper {
-    gradleVersion = '5.6.2'
+    gradleVersion = '5.6.3'
     distributionType = 'ALL'
 }

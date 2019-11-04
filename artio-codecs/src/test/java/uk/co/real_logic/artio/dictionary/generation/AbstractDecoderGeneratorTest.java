@@ -108,7 +108,7 @@ public abstract class AbstractDecoderGeneratorTest
         }
     }
 
-    static Map<String, CharSequence> generateSources(
+    private static Map<String, CharSequence> generateSources(
         final boolean validation, final boolean rejectingUnknownFields, final boolean rejectingUnknownEnumValue,
         final boolean flyweightStringsEnabled)
     {
@@ -123,7 +123,7 @@ public abstract class AbstractDecoderGeneratorTest
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
             MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass, rejectUnknownField,
-            rejectUnknownEnumValue, flyweightStringsEnabled);
+            rejectUnknownEnumValue, flyweightStringsEnabled, String.valueOf(rejectingUnknownEnumValue));
 
         constantGenerator.generate();
         enumGenerator.generate();

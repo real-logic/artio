@@ -17,7 +17,6 @@ package uk.co.real_logic.artio.engine.framer;
 
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
-import uk.co.real_logic.artio.builder.Validation;
 import uk.co.real_logic.artio.decoder.AbstractUserRequestDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.util.AsciiBuffer;
@@ -66,21 +65,6 @@ class UserRequestExtractor
         userRequest.reset();
         userRequest.decode(asciiBuffer, offset, length);
 
-        if (Validation.CODEC_VALIDATION_ENABLED)
-        {
-            if (!userRequest.validate())
-            {
-                return;
-            }
-        }
-
-        if (userRequest.hasNewPassword() && userRequest.hasPassword())
-        {
-            authenticationStrategy.onUserRequest(
-                userRequest.password(),
-                userRequest.passwordLength(),
-                userRequest.newPassword(),
-                userRequest.newPasswordLength());
-        }
+        authenticationStrategy.onUserRequest(userRequest, sessionId);
     }
 }

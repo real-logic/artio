@@ -92,7 +92,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @After
     public void tearDown()
     {
-        CloseHelper.quietClose(writer);
+        CloseHelper.close(writer);
         deleteFiles();
 
         verify(errorHandler, never()).onError(any());
@@ -406,7 +406,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private void deleteFiles()
     {
         deleteIfExists(new File(INDEX_FILE_PATH));
-        deleteIfExists(writablePath(INDEX_FILE_PATH));
-        deleteIfExists(passingPath(INDEX_FILE_PATH));
+        deleteIfExists(writableFile(INDEX_FILE_PATH));
+        deleteIfExists(passingFile(INDEX_FILE_PATH));
     }
 }
