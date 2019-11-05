@@ -42,6 +42,12 @@ public class GenerationUtilTest
     }
 
     @Test
+    public void shouldReturnSentinelValueForInvalidMsgType()
+    {
+        assertEquals(GenerationUtil.INVALID_MSG_TYPE, packMessageType("*"));
+    }
+
+    @Test
     public void generatesUniquePackedIds()
     {
         final BitSet seen = new BitSet();

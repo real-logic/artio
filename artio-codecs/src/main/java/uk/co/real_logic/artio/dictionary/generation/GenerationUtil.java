@@ -38,34 +38,9 @@ public final class GenerationUtil
     public static final String DECODER_PACKAGE = PARENT_PACKAGE + ".decoder";
     public static final String DECODER_FLYWEIGHT_PACKAGE = PARENT_PACKAGE + ".decoder_flyweight";
     public static final String INDENT = "    ";
+    public static final int INVALID_MSG_TYPE = -1;
 
-    private static final int[] PACKING_LOOK_UP_TABLE = new int[123];
-
-    static
-    {
-        int value = 0;
-        for (int c = 48; c <= 122; c++)
-        {
-            switch (c)
-            {
-                case 58:
-                case 59:
-                case 60:
-                case 61:
-                case 62:
-                case 63:
-                case 64:
-                case 91:
-                case 92:
-                case 93:
-                case 94:
-                case 95:
-                case 96:
-                    continue;
-            }
-            PACKING_LOOK_UP_TABLE[c] = value++;
-        }
-    }
+    private static final int[] PACKING_LOOK_UP_TABLE = generatePackingLookUpTable();
 
     private GenerationUtil()
     {
@@ -87,12 +62,18 @@ public final class GenerationUtil
             throw new IllegalArgumentException("Cannot support message types of size greater than 5");
         }
 
-        int packed = getIntValue(representation, 0);
-        for (int index = 1; index < representation.length(); index++)
+        int packed = 0;
+
+        for (int index = 0; index < representation.length(); index++)
         {
+            if (!Character.isLetterOrDigit(representation.charAt(index)))
+            {
+                return INVALID_MSG_TYPE;
+            }
             final int second = getIntValue(representation, index);
             packed |= (second << (6 * index));
         }
+
         return packed;
     }
 
@@ -192,5 +173,33 @@ public final class GenerationUtil
                "    {\n" +
                containing +
                "    }\n\n";
+    }
+
+    private static int[] generatePackingLookUpTable()
+    {
+        final int[] table = new int[123];
+        int value = 0;
+        for (int c = 48; c <= 122; c++)
+        {
+            switch (c)
+            {
+                case 58:
+                case 59:
+                case 60:
+                case 61:
+                case 62:
+                case 63:
+                case 64:
+                case 91:
+                case 92:
+                case 93:
+                case 94:
+                case 95:
+                case 96:
+                    continue;
+            }
+            table[c] = value++;
+        }
+        return table;
     }
 }
