@@ -38,6 +38,8 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     private static final byte[] MIN_INTEGER_VALUE = String.valueOf(Integer.MIN_VALUE).getBytes(US_ASCII);
     private static final byte[] MIN_LONG_VALUE = String.valueOf(Long.MIN_VALUE).getBytes(US_ASCII);
 
+    private final StringBuilder messageTypeBuffer = new StringBuilder();
+
     public MutableAsciiBuffer()
     {
         super(0, 0);
@@ -159,8 +161,9 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
     public int getMessageType(final int offset, final int length)
     {
-        final String messageType = this.getStringWithoutLengthAscii(offset, length);
-        return GenerationUtil.packMessageType(messageType);
+        messageTypeBuffer.setLength(0);
+        this.getStringWithoutLengthAscii(offset, length, messageTypeBuffer);
+        return GenerationUtil.packMessageType(messageTypeBuffer);
     }
 
     @SuppressWarnings("FinalParameters")
