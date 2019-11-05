@@ -27,6 +27,7 @@ import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
@@ -53,7 +54,7 @@ import static uk.co.real_logic.artio.util.TestMessages.*;
 
 public class ReceiverEndPointTest
 {
-    private static final int MESSAGE_TYPE = 'D';
+    private static final int MESSAGE_TYPE = GenerationUtil.packMessageType("D");
     private static final long CONNECTION_ID = 20L;
     private static final long SESSION_ID = 4L;
     private static final int LIBRARY_ID = FixEngine.ENGINE_LIBRARY_ID;

@@ -81,7 +81,7 @@ public final class GenerationUtil
                 packageName);
     }
 
-    public static int packMessageType(final CharSequence representation)
+    public static int packMessageType0(final CharSequence representation)
     {
         int packed = (byte)representation.charAt(0);
 
@@ -94,11 +94,11 @@ public final class GenerationUtil
         return packed;
     }
 
-    public static int packMessageType2(final CharSequence representation)
+    public static int packMessageType(final CharSequence representation)
     {
-        if (representation.length() > 8)
+        if (representation.length() > 5)
         {
-            throw new IllegalArgumentException("Cannot support message types of size greater than 8");
+            throw new IllegalArgumentException("Cannot support message types of size greater than 5");
         }
 
         int packed = getIntValue(representation, 0);

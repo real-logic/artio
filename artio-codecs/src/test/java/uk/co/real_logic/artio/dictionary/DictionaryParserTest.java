@@ -15,17 +15,37 @@
  */
 package uk.co.real_logic.artio.dictionary;
 
+import java.util.List;
+
 import org.hamcrest.Matcher;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import uk.co.real_logic.artio.dictionary.ir.*;
+
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.hasItem;
+import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.typeCompatibleWith;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+
+import uk.co.real_logic.artio.dictionary.ir.Component;
+import uk.co.real_logic.artio.dictionary.ir.Dictionary;
+import uk.co.real_logic.artio.dictionary.ir.Entry;
+import uk.co.real_logic.artio.dictionary.ir.Field;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
 import uk.co.real_logic.artio.dictionary.ir.Field.Value;
+import uk.co.real_logic.artio.dictionary.ir.Group;
+import uk.co.real_logic.artio.dictionary.ir.Message;
 
-import java.util.List;
-
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.INT;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.STRING;
@@ -154,7 +174,7 @@ public class DictionaryParserTest
         final Message heartbeat = dictionary.messages().get(0);
 
         assertEquals("Heartbeat", heartbeat.name());
-        assertEquals('0', heartbeat.packedType());
+        assertEquals(ExampleDictionary.PACKED_HEARTBEAT_TYPE, heartbeat.packedType());
         assertEquals(ADMIN, heartbeat.category());
 
         final Entry entry = heartbeat.entries().get(0);

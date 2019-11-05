@@ -357,7 +357,7 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final int messageType = (int)getStatic(heartbeat, "MESSAGE_TYPE");
 
-        assertEquals(HEARTBEAT_TYPE, messageType);
+        assertEquals(ExampleDictionary.PACKED_HEARTBEAT_TYPE, messageType);
     }
 
     @Test

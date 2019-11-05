@@ -23,6 +23,7 @@ import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.InOrder;
 import uk.co.real_logic.artio.dictionary.IntDictionary;
+import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -134,7 +135,8 @@ public class OtfParserTest
 
         parser.onMessage(buffer, offset, INVALID_CHECKSUM_LEN);
 
-        verify(mockAcceptor).onError(eq(INVALID_CHECKSUM), eq((int)'D'), eq(10), any(AsciiFieldFlyweight.class));
+        verify(mockAcceptor).onError(eq(INVALID_CHECKSUM),
+            eq(GenerationUtil.packMessageType("D")), eq(10), any(AsciiFieldFlyweight.class));
     }
 
     @Theory
@@ -144,7 +146,8 @@ public class OtfParserTest
 
         parser.onMessage(buffer, offset, INVALID_LEN);
 
-        verify(mockAcceptor).onError(eq(PARSE_ERROR), eq((int)'D'), eq(11), any(AsciiFieldFlyweight.class));
+        verify(mockAcceptor).onError(eq(PARSE_ERROR),
+            eq(GenerationUtil.packMessageType("D")), eq(11), any(AsciiFieldFlyweight.class));
     }
 
     @Theory

@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.otf;
 
 import org.junit.Test;
 import uk.co.real_logic.artio.dictionary.IntDictionary;
+import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -26,6 +27,7 @@ import static uk.co.real_logic.artio.dictionary.SessionConstants.MESSAGE_TYPE;
 
 public class OtfValidatorTest
 {
+    private static final int PACKED_HEARTBEAT = GenerationUtil.packMessageType("0");
     private OtfMessageAcceptor acceptor = mock(OtfMessageAcceptor.class);
 
     private IntDictionary requiredFields = new IntDictionary();
@@ -136,19 +138,19 @@ public class OtfValidatorTest
 
     private void testReqIdIsARequiredHeartBeatField()
     {
-        requiredFields.put('0', 112);
+        requiredFields.put(PACKED_HEARTBEAT, 112);
     }
 
     private void heartbeatsHaveATestReqId()
     {
         heartBeatsAreKnownMessages();
-        allFields.put('0', 112);
+        allFields.put(PACKED_HEARTBEAT, 112);
     }
 
     private void heartBeatsAreKnownMessages()
     {
-        requiredFields.put('0', MESSAGE_TYPE);
-        allFields.put('0', MESSAGE_TYPE);
+        requiredFields.put(PACKED_HEARTBEAT, MESSAGE_TYPE);
+        allFields.put(PACKED_HEARTBEAT, MESSAGE_TYPE);
     }
 
     private void messageIsAHeartBeat()
@@ -173,17 +175,20 @@ public class OtfValidatorTest
 
     private void verifyUnknownMessage()
     {
-        verify(acceptor).onError(eq(UNKNOWN_MESSAGE_TYPE), eq((int)'0'), anyInt(), any(AsciiFieldFlyweight.class));
+        verify(acceptor).onError(eq(UNKNOWN_MESSAGE_TYPE),
+            eq(PACKED_HEARTBEAT), anyInt(), any(AsciiFieldFlyweight.class));
     }
 
     private void verifyUnknownField()
     {
-        verify(acceptor).onError(eq(UNKNOWN_FIELD), eq((int)'0'), eq(112), any(AsciiFieldFlyweight.class));
+        verify(acceptor).onError(eq(UNKNOWN_FIELD), eq(PACKED_HEARTBEAT),
+            eq(112), any(AsciiFieldFlyweight.class));
     }
 
     private void verifyMissingRequiredField()
     {
-        verify(acceptor).onError(eq(MISSING_REQUIRED_FIELD), eq((int)'0'), eq(112), any(AsciiFieldFlyweight.class));
+        verify(acceptor).onError(eq(MISSING_REQUIRED_FIELD),
+            eq(PACKED_HEARTBEAT), eq(112), any(AsciiFieldFlyweight.class));
     }
 
     private void validateTestReqId()

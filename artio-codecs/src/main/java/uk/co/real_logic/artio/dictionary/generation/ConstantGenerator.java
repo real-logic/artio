@@ -112,7 +112,9 @@ public class ConstantGenerator
                 final int type = message.packedType();
                 final String constantName = GenerationUtil.constantName(message.name()) + "_MESSAGE";
                 final String stringConstantName = constantName + "_AS_STR";
-                return generateMessageTypeConstant(stringConstantName, type) + generateIntConstant(constantName, type);
+                final String messageTypeConstant = generateMessageTypeConstant(stringConstantName, message.fullType());
+                final String intConstant = generateIntConstant(constantName, type);
+                return messageTypeConstant + intConstant;
             })
             .collect(joining());
     }
@@ -132,22 +134,12 @@ public class ConstantGenerator
             .values();
     }
 
-    private String generateMessageTypeConstant(final String stringConstantName, final int messageType)
+    private String generateMessageTypeConstant(final String stringConstantName, final String messageType)
     {
-        final char[] chars;
-        if (messageType > Byte.MAX_VALUE)
-        {
-            chars = new char[]{ (char)(byte)messageType, (char)(byte)(messageType >>> 8) };
-        }
-        else
-        {
-            chars = new char[]{ (char)(byte)messageType };
-        }
-
         return String.format(
             "    public static final String %1$s = \"%2$s\";\n",
             stringConstantName,
-            new String(chars));
+            messageType);
     }
 
     private String generateIntConstant(final String name, final int number)

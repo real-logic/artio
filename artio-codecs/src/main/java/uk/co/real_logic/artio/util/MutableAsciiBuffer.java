@@ -17,6 +17,9 @@ package uk.co.real_logic.artio.util;
 
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
+
+
+import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.fields.*;
 
 import java.nio.ByteBuffer;
@@ -156,15 +159,8 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 
     public int getMessageType(final int offset, final int length)
     {
-        // message types can only be 1 or 2 bytes in size
-        if (length == 1)
-        {
-            return getByte(offset);
-        }
-        else
-        {
-            return getShort(offset);
-        }
+        final String messageType = this.getStringWithoutLengthAscii(offset, length);
+        return GenerationUtil.packMessageType(messageType);
     }
 
     @SuppressWarnings("FinalParameters")

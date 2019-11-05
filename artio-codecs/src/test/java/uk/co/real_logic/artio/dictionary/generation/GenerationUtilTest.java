@@ -26,7 +26,6 @@ import static org.junit.Assert.assertNotEquals;
 
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.constantName;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.packMessageType;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.packMessageType2;
 
 public class GenerationUtilTest
 {
@@ -55,7 +54,7 @@ public class GenerationUtilTest
     {
         if (curDepth == maxDepth)
         {
-            final int packed = packMessageType2(permutation);
+            final int packed = packMessageType(permutation);
             sawOrNot(permutation, seen, packed);
             return;
         }

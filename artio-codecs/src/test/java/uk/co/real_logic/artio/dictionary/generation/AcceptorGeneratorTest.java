@@ -18,6 +18,9 @@ package uk.co.real_logic.artio.dictionary.generation;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+
+import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -115,7 +118,7 @@ public class AcceptorGeneratorTest
     {
         buffer.putAscii(1, ENCODED_MESSAGE);
         decoder.getMethod(ON_MESSAGE, AsciiBuffer.class, int.class, int.class, int.class)
-               .invoke(inst, buffer, 1, ENCODED_MESSAGE.length(), '0');
+               .invoke(inst, buffer, 1, ENCODED_MESSAGE.length(), ExampleDictionary.PACKED_HEARTBEAT_TYPE);
     }
 
 }

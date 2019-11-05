@@ -19,6 +19,7 @@ import org.agrona.generation.StringWriterOutputManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.artio.builder.Printer;
+import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.lang.reflect.InvocationTargetException;
@@ -68,7 +69,8 @@ public class PrinterGeneratorTest
         final Printer printer = printer();
         buffer.putAscii(1, ENCODED_MESSAGE);
 
-        final String string = printer.toString(buffer, 1, ENCODED_MESSAGE.length(), HEARTBEAT_TYPE);
+        final int messageType = ExampleDictionary.PACKED_HEARTBEAT_TYPE;
+        final String string = printer.toString(buffer, 1, ENCODED_MESSAGE.length(), messageType);
 
         assertThat(string, containsString(STRING_ENCODED_MESSAGE_EXAMPLE));
     }

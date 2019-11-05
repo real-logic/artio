@@ -19,6 +19,9 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.BeforeClass;
 import org.junit.Test;
+
+
+import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 import uk.co.real_logic.artio.util.Reflection;
 
 import java.util.Map;
@@ -64,13 +67,13 @@ public class ConstantGeneratorTest
     @Test
     public void shouldContainNumericConstantsForMessageTypes() throws Exception
     {
-        assertEquals(HEARTBEAT_TYPE, getField(constants, "HEARTBEAT_MESSAGE"));
+        assertEquals(ExampleDictionary.PACKED_HEARTBEAT_TYPE, getField(constants, "HEARTBEAT_MESSAGE"));
     }
 
     @Test
     public void shouldContainStringConstantsForMessageTypes() throws Exception
     {
-        final String heartbeatString = String.valueOf((char)HEARTBEAT_TYPE);
+        final String heartbeatString = String.valueOf(HEARTBEAT_TYPE);
         assertEquals(heartbeatString, getField(constants, "HEARTBEAT_MESSAGE_AS_STR"));
     }
 

@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.dictionary;
 
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.packMessageType;
+
 public final class SessionConstants
 {
     public static final byte START_OF_HEADER = 0x01;
@@ -40,17 +42,6 @@ public final class SessionConstants
     public static final int PASSWORD = 554;
     public static final int NEW_PASSWORD = 925;
 
-
-    public static final int LOGON_MESSAGE_TYPE = 65;
-    public static final int HEARTBEAT_MESSAGE_TYPE = 48;
-    public static final int TEST_REQUEST_MESSAGE_TYPE = 49;
-    public static final int RESEND_REQUEST_MESSAGE_TYPE = 50;
-    public static final int REJECT_MESSAGE_TYPE = 51;
-    public static final int SEQUENCE_RESET_MESSAGE_TYPE = 52;
-    public static final int LOGOUT_MESSAGE_TYPE = 53;
-
-    public static final int USER_REQUEST_MESSAGE_TYPE = 17730;
-
     public static final String LOGON_MESSAGE_TYPE_STR = "A";
     public static final String HEARTBEAT_MESSAGE_TYPE_STR = "0";
     public static final String TEST_REQUEST_MESSAGE_TYPE_STR = "1";
@@ -58,6 +49,17 @@ public final class SessionConstants
     public static final String REJECT_MESSAGE_TYPE_STR = "3";
     public static final String SEQUENCE_RESET_TYPE_STR = "4";
     public static final String LOGOUT_MESSAGE_TYPE_STR = "5";
+    public static final String USER_REQUEST_MESSAGE_TYPE_STR = "BE";
+
+    public static final int LOGON_MESSAGE_TYPE = packMessageType(LOGON_MESSAGE_TYPE_STR);
+    public static final int HEARTBEAT_MESSAGE_TYPE = packMessageType(HEARTBEAT_MESSAGE_TYPE_STR);
+    public static final int TEST_REQUEST_MESSAGE_TYPE = packMessageType(TEST_REQUEST_MESSAGE_TYPE_STR);
+    public static final int RESEND_REQUEST_MESSAGE_TYPE = packMessageType(RESEND_REQUEST_MESSAGE_TYPE_STR);
+    public static final int REJECT_MESSAGE_TYPE = packMessageType(REJECT_MESSAGE_TYPE_STR);
+    public static final int SEQUENCE_RESET_MESSAGE_TYPE = packMessageType(SEQUENCE_RESET_TYPE_STR);
+    public static final int LOGOUT_MESSAGE_TYPE = packMessageType(LOGOUT_MESSAGE_TYPE_STR);
+
+    public static final int USER_REQUEST_MESSAGE_TYPE = packMessageType(USER_REQUEST_MESSAGE_TYPE_STR);
 
     public static final char[] LOGON_MESSAGE_TYPE_CHARS = LOGON_MESSAGE_TYPE_STR.toCharArray();
     public static final char[] HEARTBEAT_MESSAGE_TYPE_CHARS = HEARTBEAT_MESSAGE_TYPE_STR.toCharArray();

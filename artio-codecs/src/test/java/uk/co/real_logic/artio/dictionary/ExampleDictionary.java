@@ -104,7 +104,8 @@ public final class ExampleDictionary
     public static final String MSG_TYPE = "msgType";
     public static final String BODY_LENGTH = "bodyLength";
 
-    public static final int HEARTBEAT_TYPE = '0';
+    public static final char HEARTBEAT_TYPE = '0';
+    public static final int PACKED_HEARTBEAT_TYPE = GenerationUtil.packMessageType(String.valueOf(HEARTBEAT_TYPE));
 
     public static final Dictionary FIELD_EXAMPLE;
 

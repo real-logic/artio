@@ -15,14 +15,22 @@
  */
 package uk.co.real_logic.artio.session;
 
-import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.AsciiNumberFormatException;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
+
+
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.builder.Decoder;
-import uk.co.real_logic.artio.decoder.*;
+import uk.co.real_logic.artio.decoder.AbstractHeartbeatDecoder;
+import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
+import uk.co.real_logic.artio.decoder.AbstractLogoutDecoder;
+import uk.co.real_logic.artio.decoder.AbstractRejectDecoder;
+import uk.co.real_logic.artio.decoder.AbstractSequenceResetDecoder;
+import uk.co.real_logic.artio.decoder.AbstractTestRequestDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
@@ -34,7 +42,12 @@ import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
 import static uk.co.real_logic.artio.builder.Validation.isValidMsgType;
-import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.HEARTBEAT_MESSAGE_TYPE;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.LOGON_MESSAGE_TYPE;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.LOGOUT_MESSAGE_TYPE;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.REJECT_MESSAGE_TYPE;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.TEST_REQUEST_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.messages.SessionState.AWAITING_LOGOUT;
@@ -99,35 +112,33 @@ public class SessionParser
 
         try
         {
-            switch (messageType)
+            if (messageType == LOGON_MESSAGE_TYPE)
             {
-                case LOGON_MESSAGE_TYPE:
-                    action = onLogon(offset, length);
-                    break;
-
-                case LOGOUT_MESSAGE_TYPE:
-                    action = onLogout(offset, length);
-                    break;
-
-                case HEARTBEAT_MESSAGE_TYPE:
-                    action = onHeartbeat(offset, length);
-                    break;
-
-                case REJECT_MESSAGE_TYPE:
-                    action = onReject(offset, length);
-                    break;
-
-                case TEST_REQUEST_MESSAGE_TYPE:
-                    action = onTestRequest(offset, length);
-                    break;
-
-                case SEQUENCE_RESET_MESSAGE_TYPE:
-                    action = onSequenceReset(offset, length);
-                    break;
-
-                default:
-                    action = onAnyOtherMessage(offset, length);
-                    break;
+                action = onLogon(offset, length);
+            }
+            else if (messageType == LOGOUT_MESSAGE_TYPE)
+            {
+                action = onLogout(offset, length);
+            }
+            else if (messageType == HEARTBEAT_MESSAGE_TYPE)
+            {
+                action = onHeartbeat(offset, length);
+            }
+            else if (messageType == REJECT_MESSAGE_TYPE)
+            {
+                action = onReject(offset, length);
+            }
+            else if (messageType == TEST_REQUEST_MESSAGE_TYPE)
+            {
+                action = onTestRequest(offset, length);
+            }
+            else if (messageType == SEQUENCE_RESET_MESSAGE_TYPE)
+            {
+                action = onSequenceReset(offset, length);
+            }
+            else
+            {
+                action = onAnyOtherMessage(offset, length);
             }
 
             // Consider admin messages processed when they've been received by the session logic
@@ -159,29 +170,31 @@ public class SessionParser
 
     private Action rejectExceptionalMessage(final int messageType)
     {
-        switch (messageType)
+        if (messageType == LOGON_MESSAGE_TYPE)
         {
-            case LOGON_MESSAGE_TYPE:
-                return onExceptionalMessage(logon.header());
-
-            case LOGOUT_MESSAGE_TYPE:
-                return onExceptionalMessage(logout.header());
-
-            case HEARTBEAT_MESSAGE_TYPE:
-                return onExceptionalMessage(heartbeat.header());
-
-            case REJECT_MESSAGE_TYPE:
-                return onExceptionalMessage(reject.header());
-
-            case TEST_REQUEST_MESSAGE_TYPE:
-                return onExceptionalMessage(testRequest.header());
-
-            case SEQUENCE_RESET_MESSAGE_TYPE:
-                return onExceptionalMessage(sequenceReset.header());
-
-            default:
-                return onExceptionalMessage(header);
+            return onExceptionalMessage(logon.header());
         }
+        else if (messageType == LOGOUT_MESSAGE_TYPE)
+        {
+            return onExceptionalMessage(logout.header());
+        }
+        else if (messageType == HEARTBEAT_MESSAGE_TYPE)
+        {
+            return onExceptionalMessage(heartbeat.header());
+        }
+        else if (messageType == REJECT_MESSAGE_TYPE)
+        {
+            return onExceptionalMessage(reject.header());
+        }
+        else if (messageType == TEST_REQUEST_MESSAGE_TYPE)
+        {
+            return onExceptionalMessage(testRequest.header());
+        }
+        else if (messageType == SEQUENCE_RESET_MESSAGE_TYPE)
+        {
+            return onExceptionalMessage(sequenceReset.header());
+        }
+        return onExceptionalMessage(header);
     }
 
     private Action onExceptionalMessage(final SessionHeaderDecoder header)

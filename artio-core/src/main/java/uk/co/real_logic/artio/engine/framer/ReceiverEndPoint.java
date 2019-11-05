@@ -15,9 +15,18 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
+import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
+import java.util.Objects;
+
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.status.AtomicCounter;
+
+
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
@@ -30,20 +39,19 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.util.Objects;
-
 import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
-import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.LOGON_MESSAGE_TYPE;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.MIN_MESSAGE_SIZE;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.START_OF_HEADER;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.USER_REQUEST_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.messages.DisconnectReason.NO_LOGON;
 import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
-import static uk.co.real_logic.artio.messages.MessageStatus.*;
+import static uk.co.real_logic.artio.messages.MessageStatus.INVALID;
+import static uk.co.real_logic.artio.messages.MessageStatus.INVALID_BODYLENGTH;
+import static uk.co.real_logic.artio.messages.MessageStatus.INVALID_CHECKSUM;
+import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN;
 import static uk.co.real_logic.artio.util.AsciiBuffer.SEPARATOR;
 import static uk.co.real_logic.artio.util.AsciiBuffer.UNKNOWN_INDEX;
@@ -573,12 +581,10 @@ class ReceiverEndPoint
 
     private int getMessageType(final int endOfBodyLength, final int indexOfLastByteOfMessage)
     {
-        final int start = buffer.scan(endOfBodyLength, indexOfLastByteOfMessage, '=');
-        if (buffer.getByte(start + 2) == START_OF_HEADER)
-        {
-            return buffer.getByte(start + 1);
-        }
-        return buffer.getMessageType(start + 1, 2);
+        final int start = buffer.scan(endOfBodyLength, indexOfLastByteOfMessage, '=') + 1;
+        final int end = buffer.scan(start, indexOfLastByteOfMessage, START_OF_HEADER);
+        final int length = end - start;
+        return buffer.getMessageType(start, length);
     }
 
     private int getBodyLength(final int startOfBodyLength, final int endOfBodyLength)

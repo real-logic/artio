@@ -21,6 +21,10 @@ import org.junit.Test;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+
+
+import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
+
 import static uk.co.real_logic.artio.util.AsciiBuffer.UNKNOWN_INDEX;
 
 public class AsciiBufferTest
@@ -93,7 +97,7 @@ public class AsciiBufferTest
 
         value = buffer.getMessageType(0, 1);
 
-        assertEquals('0', value);
+        assertEquals(GenerationUtil.packMessageType("0"), value);
     }
 
     @Test
@@ -103,7 +107,7 @@ public class AsciiBufferTest
 
         value = buffer.getMessageType(0, 1);
 
-        assertEquals('D', value);
+        assertEquals(GenerationUtil.packMessageType("D"), value);
     }
 
     @Test
@@ -113,7 +117,7 @@ public class AsciiBufferTest
 
         value = buffer.getMessageType(0, 2);
 
-        assertEquals(20289, value);
+        assertEquals(GenerationUtil.packMessageType("AO"), value);
     }
 
     @Test

@@ -15,21 +15,24 @@
  */
 package uk.co.real_logic.artio.dictionary;
 
+import java.util.Arrays;
+import java.util.List;
+
 import org.agrona.collections.IntHashSet;
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.artio.dictionary.ir.Dictionary;
-import uk.co.real_logic.artio.dictionary.ir.Field;
-import uk.co.real_logic.artio.dictionary.ir.Field.Type;
-import uk.co.real_logic.artio.dictionary.ir.Message;
-
-import java.util.Arrays;
-import java.util.List;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
+
+
+import uk.co.real_logic.artio.dictionary.ir.Dictionary;
+import uk.co.real_logic.artio.dictionary.ir.Field;
+import uk.co.real_logic.artio.dictionary.ir.Field.Type;
+import uk.co.real_logic.artio.dictionary.ir.Message;
+
 import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
 
 public class IntDictionaryTest
@@ -51,24 +54,26 @@ public class IntDictionaryTest
     public void buildsValidationDictionaryForRequiredFields()
     {
         final IntDictionary intDictionary = IntDictionary.requiredFields(data);
-        final IntHashSet heartbeat = intDictionary.values('0');
+        final int heartBeatRepresentation = ExampleDictionary.PACKED_HEARTBEAT_TYPE;
+        final IntHashSet heartbeat = intDictionary.values(heartBeatRepresentation);
 
         assertThat(heartbeat, hasItem(115));
         assertThat(heartbeat, hasSize(1));
-        assertTrue(intDictionary.contains('0', 115));
+        assertTrue(intDictionary.contains(heartBeatRepresentation, 115));
     }
 
     @Test
     public void buildsValidationDictionaryForAllFields()
     {
         final IntDictionary intDictionary = IntDictionary.allFields(data);
-        final IntHashSet heartbeat = intDictionary.values('0');
+        final int heartBeatRepresentation = ExampleDictionary.PACKED_HEARTBEAT_TYPE;
+        final IntHashSet heartbeat = intDictionary.values(heartBeatRepresentation);
 
         assertThat(heartbeat, hasItem(115));
         assertThat(heartbeat, hasItem(112));
         assertThat(heartbeat, hasSize(2));
 
-        assertTrue(intDictionary.contains('0', 115));
-        assertTrue(intDictionary.contains('0', 112));
+        assertTrue(intDictionary.contains(heartBeatRepresentation, 115));
+        assertTrue(intDictionary.contains(heartBeatRepresentation, 112));
     }
 }
