@@ -15,14 +15,34 @@
  */
 package uk.co.real_logic.artio.dictionary.generation;
 
+import java.io.IOException;
+import java.io.Writer;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 import org.agrona.LangUtil;
 import org.agrona.generation.OutputManager;
-import uk.co.real_logic.artio.builder.*;
-import uk.co.real_logic.artio.decoder.*;
-import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 
-import java.io.IOException;
+
+import uk.co.real_logic.artio.builder.AbstractHeartbeatEncoder;
+import uk.co.real_logic.artio.builder.AbstractLogonEncoder;
+import uk.co.real_logic.artio.builder.AbstractLogoutEncoder;
+import uk.co.real_logic.artio.builder.AbstractRejectEncoder;
+import uk.co.real_logic.artio.builder.AbstractResendRequestEncoder;
+import uk.co.real_logic.artio.builder.AbstractSequenceResetEncoder;
+import uk.co.real_logic.artio.builder.AbstractTestRequestEncoder;
+import uk.co.real_logic.artio.decoder.AbstractHeartbeatDecoder;
+import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
+import uk.co.real_logic.artio.decoder.AbstractLogoutDecoder;
+import uk.co.real_logic.artio.decoder.AbstractRejectDecoder;
+import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
+import uk.co.real_logic.artio.decoder.AbstractSequenceResetDecoder;
+import uk.co.real_logic.artio.decoder.AbstractTestRequestDecoder;
+import uk.co.real_logic.artio.decoder.AbstractUserRequestDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.dictionary.ir.Aggregate;
+import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
@@ -37,87 +57,20 @@ public class FixDictionaryGenerator
         "        return \"%1$s\";\n" +
         "    }\n" +
         "\n" +
-        "    public AbstractLogonEncoder makeLogonEncoder()\n" +
-        "    {\n" +
-        "        return new LogonEncoder();\n" +
-        "    }\n" +
-        "\n" +
-        "    public AbstractResendRequestEncoder makeResendRequestEncoder()\n" +
-        "    {\n" +
-        "        return new ResendRequestEncoder();\n" +
-        "    }\n" +
-        "\n" +
-        "    public AbstractLogoutEncoder makeLogoutEncoder()\n" +
-        "    {\n" +
-        "        return new LogoutEncoder();\n" +
-        "    }\n" +
-        "\n" +
-        "    public AbstractHeartbeatEncoder makeHeartbeatEncoder()\n" +
-        "    {\n" +
-        "        return new HeartbeatEncoder();\n" +
-        "    }\n" +
-        "\n" +
-        "    public AbstractRejectEncoder makeRejectEncoder()\n" +
-        "    {\n" +
-        "        return new RejectEncoder();\n" +
-        "    }\n" +
-        "\n" +
-        "    public AbstractTestRequestEncoder makeTestRequestEncoder()\n" +
-        "    {\n" +
-        "        return new TestRequestEncoder();\n" +
-        "    }\n" +
-        "\n" +
-        "    public AbstractSequenceResetEncoder makeSequenceResetEncoder()\n" +
-        "    {\n" +
-        "        return new SequenceResetEncoder();\n" +
-        "    }\n" +
-        "\n" +
-        "    public AbstractLogonDecoder makeLogonDecoder()\n" +
-        "    {\n" +
-        "        return new LogonDecoder();\n" +
-        "    }\n" +
-        "\n" +
-        "    public AbstractLogoutDecoder makeLogoutDecoder()\n" +
-        "    {\n" +
-        "        return new LogoutDecoder();\n" +
-        "    }\n" +
-        "\n" +
-        "    public AbstractRejectDecoder makeRejectDecoder()\n" +
-        "    {\n" +
-        "        return new RejectDecoder();\n" +
-        "    }\n" +
-        "\n" +
-        "    public AbstractTestRequestDecoder makeTestRequestDecoder()\n" +
-        "    {\n" +
-        "        return new TestRequestDecoder();\n" +
-        "    }\n" +
-        "\n" +
-        "    public AbstractSequenceResetDecoder makeSequenceResetDecoder()\n" +
-        "    {\n" +
-        "        return new SequenceResetDecoder();\n" +
-        "    }\n" +
-        "\n" +
-        "    public AbstractHeartbeatDecoder makeHeartbeatDecoder()\n" +
-        "    {\n" +
-        "        return new HeartbeatDecoder();\n" +
-        "    }\n" +
-        "\n" +
-        "    public AbstractResendRequestDecoder makeResendRequestDecoder()\n" +
-        "    {\n" +
-        "        return new ResendRequestDecoder();\n" +
-        "    }\n" +
-        "\n" +
-        "    public AbstractUserRequestDecoder makeUserRequestDecoder()\n" +
-        "    {\n" +
-        "        return %2$s;\n" +
-        "    }\n" +
-        "\n" +
         "    public SessionHeaderDecoder makeHeaderDecoder()\n" +
         "    {\n" +
         "        return new HeaderDecoder();\n" +
         "    }\n" +
         "\n";
 
+    private static final String MAKE_TEMPLATE = "" +
+        "    public Abstract%1$s make%1$s()\n" +
+        "    {\n" +
+        "        return %2$s;\n" +
+        "    }\n" +
+        "\n";
+
+    private static final String NULL = "null";
     private final Dictionary dictionary;
     private final OutputManager outputManager;
     private final String encoderPackage;
@@ -140,61 +93,55 @@ public class FixDictionaryGenerator
 
     public void generate()
     {
-        final boolean hasUserRequest = dictionary
-            .messages()
-            .stream()
-            .anyMatch(message -> message.name().equals("UserRequest"));
+        final Set<String> allMessageNames = dictionary.messages()
+            .stream().map(Aggregate::name).collect(Collectors.toSet());
 
         outputManager.withOutput("FixDictionaryImpl", (out) ->
         {
             try
             {
+                final StringBuilder sb = new StringBuilder(String.format(TEMPLATE, dictionary.beginString()));
                 out.append(fileHeader(parentPackage));
 
                 out.append(importFor(FixDictionary.class));
 
                 out.append(importFor(AbstractLogonEncoder.class));
-                out.append(importFor(encoderPackage + ".LogonEncoder"));
+                addEncoderImport(out, encoderPackage, "Logon", allMessageNames, sb);
                 out.append(importFor(AbstractResendRequestEncoder.class));
-                out.append(importFor(encoderPackage + ".ResendRequestEncoder"));
+                addEncoderImport(out, encoderPackage, "ResendRequest", allMessageNames, sb);
                 out.append(importFor(AbstractLogoutEncoder.class));
-                out.append(importFor(encoderPackage + ".LogoutEncoder"));
+                addEncoderImport(out, encoderPackage, "Logout", allMessageNames, sb);
                 out.append(importFor(AbstractHeartbeatEncoder.class));
-                out.append(importFor(encoderPackage + ".HeartbeatEncoder"));
+                addEncoderImport(out, encoderPackage, "Heartbeat", allMessageNames, sb);
                 out.append(importFor(AbstractRejectEncoder.class));
-                out.append(importFor(encoderPackage + ".RejectEncoder"));
+                addEncoderImport(out, encoderPackage, "Reject", allMessageNames, sb);
                 out.append(importFor(AbstractTestRequestEncoder.class));
-                out.append(importFor(encoderPackage + ".TestRequestEncoder"));
+                addEncoderImport(out, encoderPackage, "TestRequest", allMessageNames, sb);
                 out.append(importFor(AbstractSequenceResetEncoder.class));
-                out.append(importFor(encoderPackage + ".SequenceResetEncoder"));
+                addEncoderImport(out, encoderPackage, "SequenceReset", allMessageNames, sb);
 
                 out.append(importFor(AbstractLogonDecoder.class));
-                out.append(importFor(decoderPackage + ".LogonDecoder"));
+                addDecoderImport(out, decoderPackage, "Logon", allMessageNames, sb);
                 out.append(importFor(AbstractLogoutDecoder.class));
-                out.append(importFor(decoderPackage + ".LogoutDecoder"));
+                addDecoderImport(out, decoderPackage, "Logout", allMessageNames, sb);
                 out.append(importFor(AbstractRejectDecoder.class));
-                out.append(importFor(decoderPackage + ".RejectDecoder"));
+                addDecoderImport(out, decoderPackage, "Reject", allMessageNames, sb);
                 out.append(importFor(AbstractTestRequestDecoder.class));
-                out.append(importFor(decoderPackage + ".TestRequestDecoder"));
+                addDecoderImport(out, decoderPackage, "TestRequest", allMessageNames, sb);
                 out.append(importFor(AbstractSequenceResetDecoder.class));
-                out.append(importFor(decoderPackage + ".SequenceResetDecoder"));
+                addDecoderImport(out, decoderPackage, "SequenceReset", allMessageNames, sb);
                 out.append(importFor(AbstractHeartbeatDecoder.class));
-                out.append(importFor(decoderPackage + ".HeartbeatDecoder"));
+                addDecoderImport(out, decoderPackage, "Heartbeat", allMessageNames, sb);
                 out.append(importFor(AbstractResendRequestDecoder.class));
-                out.append(importFor(decoderPackage + ".ResendRequestDecoder"));
+                addDecoderImport(out, decoderPackage, "ResendRequest", allMessageNames, sb);
 
                 out.append(importFor(AbstractUserRequestDecoder.class));
-                if (hasUserRequest)
-                {
-                    out.append(importFor(decoderPackage + ".UserRequestDecoder"));
-                }
+                addDecoderImport(out, decoderPackage, "UserRequest", allMessageNames, sb);
 
                 out.append(importFor(SessionHeaderDecoder.class));
                 out.append(importFor(decoderPackage + ".HeaderDecoder"));
 
-                final String userRequestConstructor = hasUserRequest ? "new UserRequestDecoder()" : "null";
-
-                out.append(String.format(TEMPLATE, dictionary.beginString(), userRequestConstructor));
+                out.append(sb.toString());
             }
             catch (final IOException e)
             {
@@ -205,5 +152,47 @@ public class FixDictionaryGenerator
                 out.append("}\n");
             }
         });
+    }
+
+    private static void addEncoderImport(
+        final Writer out,
+        final String encoderPackage,
+        final String messageName,
+        final Set<String> allMessageNames,
+        final StringBuilder sb) throws IOException
+    {
+        addImport(out, encoderPackage, messageName, allMessageNames, sb, "Encoder");
+    }
+
+    private static void addDecoderImport(
+        final Writer out,
+        final String decoderPackage,
+        final String messageName,
+        final Set<String> allMessageNames, final StringBuilder sb) throws IOException
+    {
+        addImport(out, decoderPackage, messageName, allMessageNames, sb, "Decoder");
+    }
+
+    private static void addImport(
+        final Writer out,
+        final String classPackage,
+        final String messageName,
+        final Set<String> allMessageNames,
+        final StringBuilder sb,
+        final String encoderOrDecoder) throws IOException
+    {
+        final String encoderClass = messageName + encoderOrDecoder;
+        final String constructor;
+        if (allMessageNames.contains(messageName))
+        {
+            constructor = String.format("new %s()", encoderClass);
+            out.append(importFor(classPackage + "." + encoderClass));
+        }
+        else
+        {
+            constructor = NULL;
+        }
+
+        sb.append(String.format(MAKE_TEMPLATE, encoderClass, constructor));
     }
 }
