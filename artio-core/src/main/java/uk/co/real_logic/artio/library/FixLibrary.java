@@ -248,17 +248,28 @@ public class FixLibrary extends GatewayProcess
     {
         if (configuration.gracefulShutdown())
         {
-            removeParentDirectory(configuration.histogramLoggingFile());
-            removeParentDirectory(configuration.monitoringFile());
+            final boolean deletedHistogramFile = removeParentDirectory(configuration.histogramLoggingFile());
+            final boolean deletedMonitoringFile = removeParentDirectory(configuration.monitoringFile());
+
+            checkFileDeletion(deletedHistogramFile, configuration.histogramLoggingFile());
+            checkFileDeletion(deletedMonitoringFile, configuration.monitoringFile());
         }
     }
 
-    private void removeParentDirectory(final String path)
+    private void checkFileDeletion(final boolean deletedFile, final String path)
+    {
+        if (!deletedFile)
+        {
+            throw new FixGatewayException("Unable to delete: " + path);
+        }
+    }
+
+    private boolean removeParentDirectory(final String path)
     {
         final File file = new File(path);
         if (file.exists() && !file.delete())
         {
-            errorHandler.onError(new RuntimeException("Unable to delete: " + path));
+            return false;
         }
 
         final File parentFile = file.getParentFile();
@@ -266,6 +277,8 @@ public class FixLibrary extends GatewayProcess
         {
             IoUtil.delete(parentFile, true);
         }
+
+        return true;
     }
 
     /**
