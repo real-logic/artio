@@ -48,6 +48,34 @@ public class GenerationUtilTest
         permutations(new StringBuilder(), 5, 0, seen);
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void failsToGeneratePackedIfFor6Characters()
+    {
+        packMessageType("AAAAAA");
+    }
+
+    private static void sawOrNot(final StringBuilder permutation, final BitSet seen, final int packed)
+    {
+        final boolean alreadySaw = seen.get(packed);
+        if (alreadySaw)
+        {
+            Assert.assertFalse(permutation.toString(), alreadySaw);
+        }
+        seen.set(packed);
+    }
+
+    @Test
+    public void shouldReplaceIDWithIdInConstantName()
+    {
+        assertEquals("DEFAULT_APPL_VER_ID", constantName("DefaultApplVerID"));
+    }
+
+    @Test
+    public void shouldDropGroupCounterForNumberOfElementsInReaptingGroupConstant()
+    {
+        assertEquals("NO_MSG_TYPES", constantName("NoMsgTypesGroupCounter"));
+    }
+
     private static void permutations(
         final StringBuilder permutation, final int maxDepth,
         final int curDepth, final BitSet seen)
@@ -81,27 +109,5 @@ public class GenerationUtilTest
             permutations(permutation, maxDepth, curDepth + 1, seen);
             permutation.setLength(permutation.length() - 1);
         }
-    }
-
-    private static void sawOrNot(final StringBuilder permutation, final BitSet seen, final int packed)
-    {
-        final boolean alreadySaw = seen.get(packed);
-        if (alreadySaw)
-        {
-            Assert.assertFalse(permutation.toString(), alreadySaw);
-        }
-        seen.set(packed);
-    }
-
-    @Test
-    public void shouldReplaceIDWithIdInConstantName()
-    {
-        assertEquals("DEFAULT_APPL_VER_ID", constantName("DefaultApplVerID"));
-    }
-
-    @Test
-    public void shouldDropGroupCounterForNumberOfElementsInReaptingGroupConstant()
-    {
-        assertEquals("NO_MSG_TYPES", constantName("NoMsgTypesGroupCounter"));
     }
 }
