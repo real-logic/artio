@@ -114,7 +114,8 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         }
         else
         {
-            logReplayError(connectionId, buffer, offset, length);
+            // We don't log the replay error at this point, as it will likely be a message that has already been
+            // attempted. This cannot be a slow endpoint anymore - it's a disconnected endpoint.
 
             return CONTINUE;
         }
