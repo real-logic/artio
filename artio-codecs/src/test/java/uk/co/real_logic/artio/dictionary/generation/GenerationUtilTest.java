@@ -45,26 +45,18 @@ public class GenerationUtilTest
     @Test
     public void generatesUniquePackedIds()
     {
-        final BitSet positive = new BitSet();
-        final BitSet negative = new BitSet();
-        permutations(new StringBuilder(), 5, 0, positive, negative);
+        final BitSet seen = new BitSet();
+        permutations(new StringBuilder(), 5, 0, seen);
     }
 
-    private static void permutations(final StringBuilder permutation, final int maxDepth,
-        final int curDepth, final BitSet positive, final BitSet negative)
+    private static void permutations(
+        final StringBuilder permutation, final int maxDepth,
+        final int curDepth, final BitSet seen)
     {
         if (curDepth == maxDepth)
         {
             final int packed = packMessageType2(permutation);
-            if (packed > 0)
-            {
-                sawOrNot(permutation, positive, packed);
-            }
-            else
-            {
-                sawOrNot(permutation, negative, packed);
-            }
-
+            sawOrNot(permutation, seen, packed);
             return;
         }
         for (int c = 48; c <= 122; c++)
@@ -87,7 +79,7 @@ public class GenerationUtilTest
                     continue;
             }
             permutation.append((char)c);
-            permutations(permutation, maxDepth, curDepth + 1, positive, negative);
+            permutations(permutation, maxDepth, curDepth + 1, seen);
             permutation.setLength(permutation.length() - 1);
         }
     }
