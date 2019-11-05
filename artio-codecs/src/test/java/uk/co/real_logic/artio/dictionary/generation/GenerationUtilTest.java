@@ -95,7 +95,10 @@ public class GenerationUtilTest
     private static void sawOrNot(final StringBuilder permutation, final BitSet seen, final int packed)
     {
         final boolean alreadySaw = seen.get(packed);
-        Assert.assertFalse(permutation + " results in a duplicate ", alreadySaw);
+        if (alreadySaw)
+        {
+            Assert.assertFalse(permutation.toString(), alreadySaw);
+        }
         seen.set(packed);
     }
 
