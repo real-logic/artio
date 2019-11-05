@@ -40,8 +40,37 @@ public final class GenerationUtil
     public static final String DECODER_FLYWEIGHT_PACKAGE = PARENT_PACKAGE + ".decoder_flyweight";
     public static final String INDENT = "    ";
 
+    private static final int[] PACKING_LOOK_UP_TABLE = new int[123];
+
+    static
+    {
+        int value = 0;
+        for (int c = 48; c <= 122; c++)
+        {
+            switch (c)
+            {
+                case 58:
+                case 59:
+                case 60:
+                case 61:
+                case 62:
+                case 63:
+                case 64:
+                case 91:
+                case 92:
+                case 93:
+                case 94:
+                case 95:
+                case 96:
+                    continue;
+            }
+            PACKING_LOOK_UP_TABLE[c] = value++;
+        }
+    }
+
     private GenerationUtil()
     {
+
     }
 
     public static String fileHeader(final String packageName)
@@ -81,22 +110,9 @@ public final class GenerationUtil
         return packed;
     }
 
-    private static int getIntValue(final CharSequence representation, final int i)
+    private static int getIntValue(final CharSequence representation, final int index)
     {
-        final byte originalValue = (byte)representation.charAt(i);
-        byte valueToReturn = originalValue;
-
-        valueToReturn -= 48;
-
-        if (originalValue >= 65)
-        {
-            valueToReturn -= 7;
-        }
-        if (originalValue >= 97)
-        {
-            valueToReturn -= 6;
-        }
-        return valueToReturn;
+        return PACKING_LOOK_UP_TABLE[representation.charAt(index)];
     }
 
     public static String constantName(final String name)
