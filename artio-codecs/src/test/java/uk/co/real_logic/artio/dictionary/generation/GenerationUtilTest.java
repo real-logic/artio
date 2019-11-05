@@ -54,16 +54,6 @@ public class GenerationUtilTest
         packMessageType("AAAAAA");
     }
 
-    private static void sawOrNot(final StringBuilder permutation, final BitSet seen, final int packed)
-    {
-        final boolean alreadySaw = seen.get(packed);
-        if (alreadySaw)
-        {
-            Assert.assertFalse(permutation.toString(), alreadySaw);
-        }
-        seen.set(packed);
-    }
-
     @Test
     public void shouldReplaceIDWithIdInConstantName()
     {
@@ -109,5 +99,15 @@ public class GenerationUtilTest
             permutations(permutation, maxDepth, curDepth + 1, seen);
             permutation.setLength(permutation.length() - 1);
         }
+    }
+
+    private static void sawOrNot(final StringBuilder permutation, final BitSet seen, final int packed)
+    {
+        final boolean alreadySaw = seen.get(packed);
+        if (alreadySaw)
+        {
+            Assert.assertFalse(permutation.toString(), alreadySaw);
+        }
+        seen.set(packed);
     }
 }
