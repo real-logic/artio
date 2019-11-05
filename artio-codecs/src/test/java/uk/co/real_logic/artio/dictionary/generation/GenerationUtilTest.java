@@ -76,10 +76,14 @@ public class GenerationUtilTest
         final StringBuilder permutation, final int maxDepth,
         final int curDepth, final BitSet seen)
     {
-        if (curDepth == maxDepth)
+        if (permutation.length() > 0)
         {
             final int packed = packMessageType(permutation);
             sawOrNot(permutation, seen, packed);
+        }
+
+        if (curDepth == maxDepth)
+        {
             return;
         }
         for (int c = 48; c <= 122; c++)
@@ -102,6 +106,7 @@ public class GenerationUtilTest
                     continue;
             }
             permutation.append((char)c);
+
             permutations(permutation, maxDepth, curDepth + 1, seen);
             permutation.setLength(permutation.length() - 1);
         }

@@ -178,7 +178,7 @@ public final class GenerationUtil
     private static int[] generatePackingLookUpTable()
     {
         final int[] table = new int[123];
-        int value = 0;
+        int value = 1; //0 fails for message type '00'
         for (int c = 48; c <= 122; c++)
         {
             switch (c)
