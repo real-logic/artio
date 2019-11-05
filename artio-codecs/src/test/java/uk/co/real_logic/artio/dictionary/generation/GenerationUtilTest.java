@@ -55,7 +55,7 @@ public class GenerationUtilTest
     }
 
     @Test(expected = IllegalArgumentException.class)
-    public void failsToGeneratePackedIfFor6Characters()
+    public void failsToPackMessageTypeFor6Characters()
     {
         packMessageType("AAAAAA");
     }
