@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.util;
+package uk.co.real_logic.artio.fields;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import uk.co.real_logic.artio.fields.DecimalFloat;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.Arrays;
 

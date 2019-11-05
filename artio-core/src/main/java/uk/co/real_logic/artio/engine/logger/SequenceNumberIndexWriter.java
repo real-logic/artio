@@ -31,6 +31,10 @@ import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
@@ -64,9 +68,9 @@ public class SequenceNumberIndexWriter implements Index
     private final ChecksumFramer checksumFramer;
     private final AtomicBuffer inMemoryBuffer;
     private final ErrorHandler errorHandler;
-    private final File indexPath;
-    private final File writablePath;
-    private final File passingPlacePath;
+    private final Path indexPath;
+    private final Path writablePath;
+    private final Path passingPlacePath;
     private final int fileCapacity;
     private final RecordingIdLookup recordingIdLookup;
     private final int streamId;
@@ -101,10 +105,11 @@ public class SequenceNumberIndexWriter implements Index
         this.clock = clock;
 
         final String indexFilePath = indexFile.file().getAbsolutePath();
-        indexPath = indexFile.file();
-        writablePath = writablePath(indexFilePath);
-        passingPlacePath = passingPath(indexFilePath);
-        writableFile = MappedFile.map(writablePath, fileCapacity);
+        indexPath = indexFile.file().toPath();
+        final File writeableFile = writableFile(indexFilePath);
+        writablePath = writeableFile.toPath();
+        passingPlacePath = passingFile(indexFilePath).toPath();
+        writableFile = MappedFile.map(writeableFile, fileCapacity);
         sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
 
         // TODO: Fsync parent directory
@@ -275,18 +280,21 @@ public class SequenceNumberIndexWriter implements Index
         }
     }
 
-    private boolean rename(final File src, final File dest)
+    private boolean rename(final Path src, final Path dest)
     {
-        if (src.renameTo(dest))
+        try
         {
+            Files.move(src, dest, StandardCopyOption.ATOMIC_MOVE);
             return true;
         }
-
-        errorHandler.onError(new IllegalStateException("unable to rename " + src + " to " + dest));
-        return false;
+        catch (final IOException e)
+        {
+            errorHandler.onError(e);
+            return false;
+        }
     }
 
-    public File passingPlace()
+    public Path passingPlace()
     {
         return passingPlacePath;
     }
@@ -378,9 +386,9 @@ public class SequenceNumberIndexWriter implements Index
         {
             readFile(fileBuffer);
         }
-        else if (passingPlacePath.exists())
+        else if (Files.exists(passingPlacePath))
         {
-            if (passingPlacePath.renameTo(indexPath))
+            if (rename(passingPlacePath, indexPath))
             {
                 // TODO: fsync parent directory
                 indexFile.remap();

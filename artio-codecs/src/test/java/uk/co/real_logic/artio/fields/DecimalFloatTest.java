@@ -16,7 +16,10 @@
 package uk.co.real_logic.artio.fields;
 
 import org.junit.Test;
+import uk.co.real_logic.artio.util.AsciiBuffer;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.assertThat;
 
@@ -94,6 +97,38 @@ public class DecimalFloatTest
         assertThat(new DecimalFloat(5000, 0), equalTo(new DecimalFloat(500000, 2)));
         assertThat(new DecimalFloat(5000, 0), equalTo(new DecimalFloat(50, -2)));
         assertThat(new DecimalFloat(1234, 2), equalTo(new DecimalFloat(123400, 4)));
+    }
+
+    @Test(expected = ArithmeticException.class)
+    public void shouldNotParseValueOutOfRange()
+    {
+        new DecimalFloat().fromString("10000000000000000000000");
+    }
+
+    // Bug reproduction testcase
+    @Test(expected = ArithmeticException.class)
+    public void shouldNotParseOverflowingValue()
+    {
+        new DecimalFloat().fromString("99999999999999990000000");
+    }
+
+    // Bug reproduction testcase
+    @Test(expected = ArithmeticException.class)
+    public void shouldNotDecodeOverflowingValue()
+    {
+        parseNumberFromBuffer("99999999999999990000000");
+    }
+
+    @Test(expected = ArithmeticException.class)
+    public void shouldNotDecodeValueOutOfRange()
+    {
+        parseNumberFromBuffer("10000000000000000000000");
+    }
+
+    private void parseNumberFromBuffer(final String number)
+    {
+        final AsciiBuffer buffer = new MutableAsciiBuffer(number.getBytes(US_ASCII));
+        buffer.getFloat(new DecimalFloat(), 0, buffer.capacity());
     }
 
     private void assertOrderWithNegatives(final DecimalFloat lesser, final DecimalFloat greater)

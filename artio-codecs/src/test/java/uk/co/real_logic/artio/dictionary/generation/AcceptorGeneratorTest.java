@@ -39,7 +39,8 @@ public class AcceptorGeneratorTest
         new EnumGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static DecoderGenerator decoderGenerator =
         new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, ValidationOn.class,
-        RejectUnknownFieldOff.class, RejectUnknownEnumValueOn.class, false);
+        RejectUnknownFieldOff.class, RejectUnknownEnumValueOn.class, false,
+        Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
     private static AcceptorGenerator acceptorGenerator =
         new AcceptorGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static Class<?> acceptor;
