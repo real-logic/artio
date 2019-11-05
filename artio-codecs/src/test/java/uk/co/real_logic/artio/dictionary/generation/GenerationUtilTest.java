@@ -21,7 +21,6 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
 
 
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.constantName;
@@ -29,17 +28,6 @@ import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.packMe
 
 public class GenerationUtilTest
 {
-
-    @Test
-    public void shouldGenerateDifferentMessageTypeIdentifiers()
-    {
-        assertNotEquals(packMessageType("AL"), packMessageType("AM"));
-        assertNotEquals(packMessageType("AL"), packMessageType("AN"));
-        assertNotEquals(packMessageType("AR"), packMessageType("AQ"));
-        assertNotEquals(packMessageType("BC"), packMessageType("BB"));
-        assertNotEquals(packMessageType("BD"), packMessageType("BE"));
-        assertNotEquals(packMessageType("BG"), packMessageType("BF"));
-    }
 
     @Test
     public void shouldReturnSentinelValueForInvalidMsgType()
@@ -76,7 +64,7 @@ public class GenerationUtilTest
         final StringBuilder permutation, final int maxDepth,
         final int curDepth, final BitSet seen)
     {
-        if (permutation.length() > 0)
+        if (curDepth > 0)
         {
             final int packed = packMessageType(permutation);
             sawOrNot(permutation, seen, packed);
