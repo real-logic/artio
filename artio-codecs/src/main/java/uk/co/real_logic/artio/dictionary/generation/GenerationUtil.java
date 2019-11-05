@@ -27,7 +27,6 @@ import static java.util.stream.Collectors.joining;
 
 public final class GenerationUtil
 {
-    private static final int MESSAGE_TYPE_BITSHIFT = 8;
 
     public static final String PARENT_PACKAGE =
         System.getProperty("fix.codecs.parent_package", "uk.co.real_logic.artio");
@@ -79,19 +78,6 @@ public final class GenerationUtil
                 "/* Generated Fix Gateway message codec */\n" +
                 "package %s;\n\n",
                 packageName);
-    }
-
-    public static int packMessageType0(final CharSequence representation)
-    {
-        int packed = (byte)representation.charAt(0);
-
-        if (representation.length() == 2)
-        {
-            final int second = (int)representation.charAt(1);
-            packed |= second << MESSAGE_TYPE_BITSHIFT;
-        }
-
-        return packed;
     }
 
     public static int packMessageType(final CharSequence representation)
