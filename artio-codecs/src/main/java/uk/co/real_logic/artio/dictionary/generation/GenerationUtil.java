@@ -55,23 +55,23 @@ public final class GenerationUtil
                 packageName);
     }
 
-    public static int packMessageType(final CharSequence representation)
+    public static int packMessageType(final CharSequence messageType)
     {
-        if (representation.length() > 5)
+        if (messageType.length() > 5)
         {
             throw new IllegalArgumentException("Cannot support message types of size greater than 5");
         }
 
         int packed = 0;
 
-        for (int index = 0; index < representation.length(); index++)
+        for (int index = 0; index < messageType.length(); index++)
         {
-            if (!Character.isLetterOrDigit(representation.charAt(index)))
+            if (!Character.isLetterOrDigit(messageType.charAt(index)))
             {
                 return INVALID_MSG_TYPE;
             }
-            final int second = getIntValue(representation, index);
-            packed |= (second << (6 * index));
+            final int intRepresentationOfChar = getIntValue(messageType, index);
+            packed |= (intRepresentationOfChar << (6 * index));
         }
 
         return packed;
