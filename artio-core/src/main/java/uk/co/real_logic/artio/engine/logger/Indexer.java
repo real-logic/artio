@@ -95,7 +95,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
                     {
                         DebugLogger.log(
                             LogTag.INDEX,
-                            "Catchup [%s]: recordingId = %d, recordingStopped @ %d, indexStopped @ %d",
+                            "Catchup [%s]: recordingId = %d, recordingStopped @ %d, indexStopped @ %d%n",
                             index.getName(),
                             recordingId,
                             recordingStoppedPosition,
