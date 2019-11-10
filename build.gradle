@@ -22,7 +22,7 @@ buildscript {
 }
 
 plugins {
-    id 'com.github.johnrengelman.shadow' version '5.1.0' apply false
+    id 'com.github.johnrengelman.shadow' version '5.2.0' apply false
     id 'net.researchgate.release' version '2.8.0'
 }
 
@@ -99,16 +99,20 @@ subprojects {
     }
 
     dependencies {
-        checkstyle 'com.puppycrawl.tools:checkstyle:8.25'
+        checkstyle 'com.puppycrawl.tools:checkstyle:8.26'
 
-        testCompile 'org.hamcrest:hamcrest:2.1'
+        testCompile 'org.hamcrest:hamcrest:2.2'
         testCompile 'org.mockito:mockito-core:3.1.0'
         testCompile 'junit:junit:4.12'
     }
 
-    checkstyle.toolVersion = "8.25"
+    checkstyle.toolVersion = "8.26"
 
     test {
+        if (JavaVersion.current().ordinal() >= JavaVersion.VERSION_1_9.ordinal()) {
+            jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED')
+        }
+
         testLogging {
             events 'skipped', 'failed'
             showStandardStreams = true
@@ -348,8 +352,8 @@ project(':artio-system-tests') {
         compile project(path: ':artio-core')
 
         perfCompile project
-        perfCompile 'org.openjdk.jmh:jmh-core:1.21'
-        annotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess:1.21'
+        perfCompile 'org.openjdk.jmh:jmh-core:1.22'
+        annotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess:1.22'
 
         idea {
             dependencies {
