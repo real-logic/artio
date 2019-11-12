@@ -668,7 +668,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertReceivedSingleHeartbeat(testSystem, acceptingOtfAcceptor, testReqID);
     }
 
-    @Ignore
     @Test
     public void shouldExchangeLargeMessagesReproduction()
     {
