@@ -17,6 +17,8 @@ package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.Image;
 import io.aeron.logbuffer.ControlledFragmentHandler;
+import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.LogTag;
 
 class SlowPeeker extends BlockablePosition
 {
@@ -29,6 +31,8 @@ class SlowPeeker extends BlockablePosition
         this.normalImage = normalImage;
     }
 
+    private int peekCounter = 0;
+
     int peek(final ControlledFragmentHandler handler)
     {
         blockPosition = DID_NOT_BLOCK;
@@ -39,9 +43,19 @@ class SlowPeeker extends BlockablePosition
             initialPosition, handler, normalImagePosition);
 
         final long delta = resultingPosition - initialPosition;
+        final long blockPosition = this.blockPosition;
+
+        if ((peekCounter++ % 1000) == 0)
+        {
+            DebugLogger.log(LogTag.POSITION, "init=%d, norm=%d, res=%d, block=%d%n",
+                initialPosition,
+                normalImagePosition,
+                resultingPosition,
+                blockPosition);
+        }
+
         if (!peekImage.isClosed())
         {
-            final long blockPosition = this.blockPosition;
             if (blockPosition != DID_NOT_BLOCK)
             {
                 peekImage.position(blockPosition);

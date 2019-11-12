@@ -145,13 +145,4 @@ public final class LivenessDetector
 
         return false;
     }
-
-    public void onReconnect(final long timeInMs)
-    {
-        onHeartbeat(timeInMs);
-        if (!heartbeat(timeInMs))
-        {
-            nextSendTimeInMs = 0;
-        }
-    }
 }
