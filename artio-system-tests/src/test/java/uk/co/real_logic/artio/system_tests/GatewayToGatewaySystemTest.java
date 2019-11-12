@@ -16,12 +16,11 @@
 package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
-import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
-import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
-import uk.co.real_logic.artio.builder.ResendRequestEncoder;
-import uk.co.real_logic.artio.builder.UserRequestEncoder;
+import uk.co.real_logic.artio.builder.*;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
@@ -67,6 +66,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         mediaDriver = launchMediaDriver();
 
         final EngineConfiguration configuration = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
+        configuration.replyTimeoutInMs(100_000);
         auth = new CapturingAuthenticationStrategy(configuration.messageValidationStrategy());
         configuration.authenticationStrategy(auth);
         acceptingEngine = FixEngine.launch(
@@ -76,6 +76,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
         acceptingLibraryConfig.libraryConnectHandler(fakeConnectHandler);
+        acceptingLibraryConfig.sessionBufferSize(TestFixtures.MESSAGE_BUFFER_SIZE_IN_BYTES);
+        acceptingLibraryConfig.replyTimeoutInMs(100_000);
+
         acceptingLibrary = connect(acceptingLibraryConfig);
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
@@ -663,6 +666,41 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         sendTestRequest(acceptingSession, testReqID);
 
         assertReceivedSingleHeartbeat(testSystem, acceptingOtfAcceptor, testReqID);
+    }
+
+    @Ignore
+    @Test
+    public void shouldExchangeLargeMessagesReproduction()
+    {
+        acquireAcceptingSession();
+
+        final String testReqID = largeTestReqId();
+
+        for (int i = 0; i < 256 * 1000; i++)
+        {
+            sendTestRequestWithRetries(acceptingSession, testReqID, new FixDictionaryImpl());
+
+            assertReceivedSingleHeartbeat(testSystem, acceptingOtfAcceptor, testReqID);
+        }
+    }
+
+    private void sendTestRequestWithRetries(
+        final Session session, final String testReqID, final FixDictionary fixDictionary)
+    {
+        assertEventuallyTrue("Session not connected", session::isConnected);
+
+        final AbstractTestRequestEncoder testRequest = fixDictionary.makeTestRequestEncoder();
+        testRequest.testReqID(testReqID);
+
+        long position = 0;
+        while (position <= 0)
+        {
+            position = session.send(testRequest);
+
+            testSystem.poll();
+
+            Thread.yield();
+        }
     }
 
     @Test
