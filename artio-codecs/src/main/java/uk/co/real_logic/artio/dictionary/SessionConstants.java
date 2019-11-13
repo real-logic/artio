@@ -41,13 +41,13 @@ public final class SessionConstants
     public static final int NEW_PASSWORD = 925;
 
 
-    public static final long LOGON_MESSAGE_TYPE = 65;
-    public static final long HEARTBEAT_MESSAGE_TYPE = 48;
-    public static final long TEST_REQUEST_MESSAGE_TYPE = 49;
-    public static final long RESEND_REQUEST_MESSAGE_TYPE = 50;
-    public static final long REJECT_MESSAGE_TYPE = 51;
-    public static final long SEQUENCE_RESET_MESSAGE_TYPE = 52;
-    public static final long LOGOUT_MESSAGE_TYPE = 53;
+    public static final long LOGON_MESSAGE_TYPE = 65L;
+    public static final long HEARTBEAT_MESSAGE_TYPE = 48L;
+    public static final long TEST_REQUEST_MESSAGE_TYPE = 49L;
+    public static final long RESEND_REQUEST_MESSAGE_TYPE = 50L;
+    public static final long REJECT_MESSAGE_TYPE = 51L;
+    public static final long SEQUENCE_RESET_MESSAGE_TYPE = 52L;
+    public static final long LOGOUT_MESSAGE_TYPE = 53L;
 
     public static final int USER_REQUEST_MESSAGE_TYPE = 17730;
 
