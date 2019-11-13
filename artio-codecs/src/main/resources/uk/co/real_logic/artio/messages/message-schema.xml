@@ -2,8 +2,8 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="2"
-                   semanticVersion="0.1"
+                   version="3"
+                   semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
     <types>
@@ -33,6 +33,7 @@
         <type name="ConnectionId" primitiveType="int64"/>
         <type name="CorrelationId" primitiveType="int64"/>
         <type name="TermId" primitiveType="int32"/>
+        <type deprecated="3" name="DeprecatedMessageType" primitiveType="int32"/>
         <type name="MessageType" primitiveType="int64"/>
         <type name="Timestamp" primitiveType="int64"/>
         <enum name="ConnectionType" encodingType="uint8">
@@ -361,7 +362,8 @@
 
     <!-- Messages In Either Direction -->
     <sbe:message name="FixMessage" id="1" description="A framed FIX message">
-        <field name="messageType" id="1" type="MessageType"/>
+        <field deprecated="3" name="deprecatedMessageType" id="1" type="DeprecatedMessageType"/>
+        <field name="messageType" id="11" type="MessageType" presence="optional" sinceVersion="3"/>
         <field name="session" id="2" type="FixSessionId"/>
         <field name="connection" id="3" type="ConnectionId"/>
         <field name="timestamp" id="4" type="Timestamp"/>

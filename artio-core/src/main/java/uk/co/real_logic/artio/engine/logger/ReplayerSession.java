@@ -203,7 +203,8 @@ class ReplayerSession implements ControlledFragmentHandler
         final int messageLength = srcLength - MESSAGE_FRAME_BLOCK_LENGTH;
 
         final int msgSeqNum = sequenceNumberExtractor.extract(srcBuffer, messageOffset, messageLength);
-        final long messageType = FIX_MESSAGE.messageType();
+        final long messageType = FIX_MESSAGE.sbeSchemaVersion() > 2 ?
+            FIX_MESSAGE.messageType() : FIX_MESSAGE.deprecatedMessageType();
 
         ASCII_BUFFER.wrap(srcBuffer);
         replayHandler.onReplayedMessage(

@@ -115,6 +115,8 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
     {
         messageFrame.wrap(buffer, offset, blockLength, version);
         final int messageLength = messageFrame.bodyLength();
+        final long messageType = messageFrame.sbeSchemaVersion() > 2 ?
+            messageFrame.messageType() : messageFrame.deprecatedMessageType();
         return protocolHandler.onMessage(
             buffer,
             offset + FRAME_SIZE,
@@ -123,7 +125,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
             messageFrame.connection(),
             messageFrame.session(),
             messageFrame.sequenceIndex(),
-            messageFrame.messageType(),
+            messageType,
             messageFrame.timestamp(),
             messageFrame.status(),
             messageFrame.sequenceNumber(),

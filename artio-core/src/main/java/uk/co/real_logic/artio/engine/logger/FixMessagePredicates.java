@@ -140,7 +140,12 @@ public final class FixMessagePredicates
 
     private static FixMessagePredicate messageTypeOf(final LongHashSet hashSet)
     {
-        return (message) -> hashSet.contains(message.messageType());
+        return (message) ->
+        {
+            final long messageType = message.sbeSchemaVersion() > 2 ?
+                message.messageType() : message.deprecatedMessageType();
+            return hashSet.contains(messageType);
+        };
     }
 
     /**
