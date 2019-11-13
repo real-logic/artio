@@ -52,14 +52,18 @@ public final class GenerationUtil
             packageName);
     }
 
-    public static int packMessageType(final String representation)
+    public static long packMessageType(final String messageType)
     {
-        int packed = (byte)representation.charAt(0);
-
-        if (representation.length() == 2)
+        if (messageType.length() > 8)
         {
-            final int second = (int)representation.charAt(1);
-            packed |= second << MESSAGE_TYPE_BITSHIFT;
+            throw new IllegalArgumentException("Message types longer than 8 are not supported yet");
+        }
+
+        long packed = 0;
+        for (int index = 0; index < messageType.length(); index++)
+        {
+            final int asciiValue = (byte)messageType.charAt(index);
+            packed |= asciiValue << (MESSAGE_TYPE_BITSHIFT * index);
         }
 
         return packed;

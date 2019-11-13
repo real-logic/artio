@@ -22,7 +22,7 @@ import org.junit.experimental.theories.Theory;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.InOrder;
-import uk.co.real_logic.artio.dictionary.IntDictionary;
+import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -45,7 +45,7 @@ public class OtfParserTest
 
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[LENGTH]);
     private OtfMessageAcceptor mockAcceptor = mock(OtfMessageAcceptor.class);
-    private IntDictionary groupToField = new IntDictionary();
+    private LongDictionary groupToField = new LongDictionary();
     private OtfParser parser = new OtfParser(mockAcceptor, groupToField);
 
     private InOrder inOrder = inOrder(mockAcceptor);

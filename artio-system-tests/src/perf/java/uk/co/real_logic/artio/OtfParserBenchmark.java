@@ -18,7 +18,7 @@ package uk.co.real_logic.artio;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.openjdk.jmh.annotations.*;
 import org.openjdk.jmh.infra.Blackhole;
-import uk.co.real_logic.artio.dictionary.IntDictionary;
+import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.otf.OtfParser;
 
 import java.util.concurrent.TimeUnit;
@@ -41,9 +41,9 @@ public class OtfParserBenchmark
     @Setup
     public void setup(final Blackhole bh)
     {
-        blackholeParser = new OtfParser(new OtfBlackHoleAcceptor(bh), new IntDictionary());
-        noBlackholeParser = new OtfParser(new OtfNoBlackHoleAcceptor(), new IntDictionary());
-        inlinableParser = new OtfParser(new OtfInlineableAcceptor(), new IntDictionary());
+        blackholeParser = new OtfParser(new OtfBlackHoleAcceptor(bh), new LongDictionary());
+        noBlackholeParser = new OtfParser(new OtfNoBlackHoleAcceptor(), new LongDictionary());
+        inlinableParser = new OtfParser(new OtfInlineableAcceptor(), new LongDictionary());
     }
 
     @Benchmark

@@ -152,9 +152,10 @@ public class AcceptorGenerator
 
             generateDecoderOnMessage(decoderOutput);
 
-            for (final Message message : dictionary.messages())
+            for (int index = 0; index < dictionary.messages().size(); index++)
             {
-                generateDecoderCase(decoderOutput, message);
+
+                generateDecoderCase(decoderOutput, dictionary.messages().get(index), index);
             }
 
             generateDecoderSuffix(decoderOutput);
@@ -164,7 +165,6 @@ public class AcceptorGenerator
     private void generateDecoderSuffix(final Writer decoderOutput) throws IOException
     {
         decoderOutput.append(
-            "        }\n" +
             "    }\n\n");
 
         decoderOutput.append("}\n");
@@ -183,19 +183,22 @@ public class AcceptorGenerator
             "        final int offset,\n" +
             "        final int length,\n" +
             "        final int messageType)\n" +
-            "    {\n" +
-            "        switch(messageType)\n" +
-            "        {\n\n");
+            "    {\n");
     }
 
-    private void generateDecoderCase(final Writer decoderOutput, final Message message) throws IOException
+    private void generateDecoderCase(
+        final Writer decoderOutput,
+        final Message message,
+        final int index) throws IOException
     {
         decoderOutput.append(String.format(
-            "        case %1$s.MESSAGE_TYPE:\n" +
-            "            %2$s.decode(buffer, offset, length);\n" +
-            "            acceptor.on%3$s(%2$s);\n" +
-            "            %2$s.reset();\n" +
-            "            break;\n\n",
+            "        %1$sif (messageType == %2$s.MESSAGE_TYPE)\n" +
+            "        {" +
+            "            %3$s.decode(buffer, offset, length);\n" +
+            "            acceptor.on%4$s(%3$s);\n" +
+            "            %3$s.reset();\n" +
+            "        }\n\n",
+            index == 0 ? "" : "else ",
             decoderClassName(message),
             formatPropertyName(message.name()),
             message.name()

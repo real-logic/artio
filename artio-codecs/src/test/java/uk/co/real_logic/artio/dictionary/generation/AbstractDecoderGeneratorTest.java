@@ -355,7 +355,7 @@ public abstract class AbstractDecoderGeneratorTest
     @Test
     public void hasMessageTypeFlag() throws Exception
     {
-        final int messageType = (int)getStatic(heartbeat, "MESSAGE_TYPE");
+        final long messageType = (long)getStatic(heartbeat, "MESSAGE_TYPE");
 
         assertEquals(HEARTBEAT_TYPE, messageType);
     }
@@ -867,7 +867,7 @@ public abstract class AbstractDecoderGeneratorTest
     public void shouldProduceCorrectMessageTypeForTwoCharTypes() throws Exception
     {
         final byte[] messageTypeBytes = (byte[])getStatic(otherMessage, "MESSAGE_TYPE_BYTES");
-        final int messageTypePacked = (int)getStatic(otherMessage, "MESSAGE_TYPE");
+        final long messageTypePacked = (long)getStatic(otherMessage, "MESSAGE_TYPE");
 
         assertEquals(OTHER_MESSAGE_TYPE_PACKED, messageTypePacked);
         assertArrayEquals(OTHER_MESSAGE_TYPE_BYTES, messageTypeBytes);

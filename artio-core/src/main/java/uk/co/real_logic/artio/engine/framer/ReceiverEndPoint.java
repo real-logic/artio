@@ -507,7 +507,7 @@ class ReceiverEndPoint
 
     private boolean saveMessage(
         final int messageOffset,
-        final int messageType,
+        final long messageType,
         final int messageLength,
         final long sessionId,
         final int sequenceIndex,

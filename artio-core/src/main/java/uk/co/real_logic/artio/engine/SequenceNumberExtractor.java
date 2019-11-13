@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.engine;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import uk.co.real_logic.artio.ValidationError;
-import uk.co.real_logic.artio.dictionary.IntDictionary;
+import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.otf.MessageControl;
@@ -101,5 +101,5 @@ public class SequenceNumberExtractor
         }
     };
 
-    private final OtfParser parser = new OtfParser(extractor, new IntDictionary());
+    private final OtfParser parser = new OtfParser(extractor, new LongDictionary());
 }

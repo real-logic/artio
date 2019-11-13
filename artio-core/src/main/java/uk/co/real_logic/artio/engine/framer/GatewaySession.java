@@ -195,7 +195,7 @@ class GatewaySession implements SessionInfo
         final DirectBuffer buffer,
         final int offset,
         final int length,
-        final int messageType,
+        final long messageType,
         final long sessionId)
     {
         if (sessionParser != null)

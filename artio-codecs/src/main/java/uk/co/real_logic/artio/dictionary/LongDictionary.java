@@ -15,44 +15,46 @@
  */
 package uk.co.real_logic.artio.dictionary;
 
-import org.agrona.collections.Int2ObjectHashMap;
+import java.util.function.Predicate;
+
 import org.agrona.collections.IntHashSet;
+import org.agrona.collections.Long2ObjectHashMap;
+
+
 import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.Entry;
 import uk.co.real_logic.artio.dictionary.ir.Field;
 
-import java.util.function.Predicate;
-
 /**
  * Dictionary for runtime validation by the generic parser.
  *
- * Essentially a map from ints to a set of ints.
+ * Essentially a map from longs to a set of ints.
  */
-public final class IntDictionary
+public final class LongDictionary
 {
     private static final int MISSING_FIELD = -1;
     private static final int CAPACITY = 1024;
 
-    private final Int2ObjectHashMap<IntHashSet> map;
+    private final Long2ObjectHashMap<IntHashSet> map;
 
-    public static IntDictionary requiredFields(final Dictionary dictionary)
+    public static LongDictionary requiredFields(final Dictionary dictionary)
     {
         return fields(dictionary, Entry::required);
     }
 
-    public static IntDictionary allFields(final Dictionary dictionary)
+    public static LongDictionary allFields(final Dictionary dictionary)
     {
         return fields(dictionary, (entry) -> true);
     }
 
-    private static IntDictionary fields(final Dictionary dictionary, final Predicate<Entry> entryPredicate)
+    private static LongDictionary fields(final Dictionary dictionary, final Predicate<Entry> entryPredicate)
     {
-        final IntDictionary fields = new IntDictionary();
+        final LongDictionary fields = new LongDictionary();
 
         dictionary.messages().forEach(
             (message) ->
             {
-                final int type = message.packedType();
+                final long type = message.packedType();
                 message.entries()
                     .stream()
                     .filter(entryPredicate)
@@ -64,17 +66,17 @@ public final class IntDictionary
         return fields;
     }
 
-    public IntDictionary()
+    public LongDictionary()
     {
-        map = new Int2ObjectHashMap<>();
+        map = new Long2ObjectHashMap<>();
     }
 
-    public void put(final int key, final int value)
+    public void put(final long key, final int value)
     {
         valuesOrDefault(key).add(value);
     }
 
-    public void putAll(final int key, final int... valuesToAdd)
+    public void putAll(final long key, final int... valuesToAdd)
     {
         final IntHashSet values = valuesOrDefault(key);
         for (final int value : valuesToAdd)
@@ -83,17 +85,17 @@ public final class IntDictionary
         }
     }
 
-    private IntHashSet valuesOrDefault(final int key)
+    private IntHashSet valuesOrDefault(final long key)
     {
         return map.computeIfAbsent(key, ignore -> new IntHashSet(CAPACITY));
     }
 
-    public IntHashSet values(final int key)
+    public IntHashSet values(final long key)
     {
         return map.get(key);
     }
 
-    public boolean contains(final int key, final int value)
+    public boolean contains(final long key, final int value)
     {
         final IntHashSet fields = values(key);
         return fields != null && fields.contains(value);

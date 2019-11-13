@@ -56,7 +56,7 @@ class SessionSubscriber implements AutoCloseable
         final int libraryId,
         final long sessionId,
         final int sequenceIndex,
-        final int messageType,
+        final long messageType,
         final long timestamp,
         final MessageStatus status,
         final long position)

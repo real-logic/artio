@@ -109,9 +109,9 @@ public class OrderSingleEncoder implements Encoder
         return this;
     }
 
-    public int messageType()
+    public long messageType()
     {
-        return 0;
+        return 0L;
     }
 
     public SessionHeaderEncoder header()

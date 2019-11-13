@@ -33,7 +33,7 @@
         <type name="ConnectionId" primitiveType="int64"/>
         <type name="CorrelationId" primitiveType="int64"/>
         <type name="TermId" primitiveType="int32"/>
-        <type name="MessageType" primitiveType="int32"/>
+        <type name="MessageType" primitiveType="int64"/>
         <type name="Timestamp" primitiveType="int64"/>
         <enum name="ConnectionType" encodingType="uint8">
             <validValue name="ACCEPTOR">0</validValue>
