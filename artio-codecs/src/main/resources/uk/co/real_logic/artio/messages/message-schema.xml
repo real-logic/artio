@@ -363,7 +363,6 @@
     <!-- Messages In Either Direction -->
     <sbe:message name="FixMessage" id="1" description="A framed FIX message">
         <field deprecated="3" name="deprecatedMessageType" id="1" type="DeprecatedMessageType"/>
-        <field name="messageType" id="11" type="MessageType" presence="optional" sinceVersion="3"/>
         <field name="session" id="2" type="FixSessionId"/>
         <field name="connection" id="3" type="ConnectionId"/>
         <field name="timestamp" id="4" type="Timestamp"/>
@@ -373,6 +372,7 @@
         <field name="sequenceIndex" id="8" type="SequenceIndex" />
         <!-- only visible outbound -->
         <field name="sequenceNumber" id="9" type="int32" />
+        <field name="messageType" id="11" type="MessageType" presence="optional" sinceVersion="3"/>
         <data name="body" id="10" type="AsciiString"/>
     </sbe:message>
 
