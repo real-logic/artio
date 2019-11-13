@@ -153,7 +153,7 @@ public class ConstantGenerator
     private String generateLongConstant(final String name, final long number)
     {
         return String.format(
-                "    public static final long %1$s = %2$d;\n\n",
+                "    public static final long %1$s = %2$dL;\n\n",
                 name,
                 number);
     }
