@@ -49,7 +49,7 @@ public final class OtfParser
 
     private int checksum;
     private int checksumOffset;
-    private int messageType;
+    private long messageType;
     private int tag;
 
     public OtfParser(final OtfMessageAcceptor acceptor, final LongDictionary groupToField)
@@ -259,12 +259,12 @@ public final class OtfParser
         return acceptor.onGroupEnd(tag, numberOfElements, index);
     }
 
-    private boolean parseError(final int messageType, final int tag)
+    private boolean parseError(final long messageType, final int tag)
     {
         return acceptor.onError(PARSE_ERROR, messageType, tag, stringField);
     }
 
-    private boolean invalidChecksum(final int messageType)
+    private boolean invalidChecksum(final long messageType)
     {
         return acceptor.onError(INVALID_CHECKSUM, messageType, CHECKSUM, stringField);
     }

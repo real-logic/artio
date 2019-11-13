@@ -40,7 +40,7 @@ public final class OtfValidator implements OtfMessageAcceptor
 
     private int groupLevel = 0;
 
-    private int messageType;
+    private long messageType;
     private IntHashSet allFieldsForMessageType;
 
     public OtfValidator(
@@ -126,7 +126,7 @@ public final class OtfValidator implements OtfMessageAcceptor
     }
 
     public boolean onError(
-        final ValidationError error, final int messageType, final int tagNumber, final AsciiFieldFlyweight value)
+        final ValidationError error, final long messageType, final int tagNumber, final AsciiFieldFlyweight value)
     {
         return delegate.onError(error, messageType, tagNumber, value);
     }

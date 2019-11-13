@@ -93,7 +93,7 @@ public class SequenceNumberExtractor
 
         public boolean onError(
             final ValidationError error,
-            final int messageType,
+            final long messageType,
             final int tagNumber,
             final AsciiFieldFlyweight value)
         {

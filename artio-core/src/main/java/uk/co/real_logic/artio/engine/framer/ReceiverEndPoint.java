@@ -331,7 +331,7 @@ class ReceiverEndPoint
                     break;
                 }
 
-                final int messageType = getMessageType(endOfBodyLength, endOfMessage);
+                final long messageType = getMessageType(endOfBodyLength, endOfMessage);
                 final int length = (endOfMessage + 1) - offset;
                 if (!validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
                 {
@@ -464,7 +464,7 @@ class ReceiverEndPoint
         return buffer.scan(startScan + 1, usedBufferData - 1, START_OF_HEADER);
     }
 
-    private void startAuthenticationFlow(final int offset, final int length, final int messageType)
+    private void startAuthenticationFlow(final int offset, final int length, final long messageType)
     {
         if (sessionId != UNKNOWN)
         {
@@ -500,7 +500,7 @@ class ReceiverEndPoint
         return backPressured;
     }
 
-    private boolean saveMessage(final int offset, final int messageType, final int length, final long readTimestamp)
+    private boolean saveMessage(final int offset, final long messageType, final int length, final long readTimestamp)
     {
         return saveMessage(offset, messageType, length, sessionId, sequenceIndex, readTimestamp);
     }
@@ -664,7 +664,7 @@ class ReceiverEndPoint
     }
 
     private boolean saveInvalidChecksumMessage(
-        final int offset, final int messageType, final int length, final long readTimestamp)
+        final int offset, final long messageType, final int length, final long readTimestamp)
     {
         final long position = publication.saveMessage(
             buffer,

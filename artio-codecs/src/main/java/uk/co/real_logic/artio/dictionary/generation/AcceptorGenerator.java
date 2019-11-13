@@ -182,7 +182,7 @@ public class AcceptorGenerator
             "        final AsciiBuffer buffer,\n" +
             "        final int offset,\n" +
             "        final int length,\n" +
-            "        final int messageType)\n" +
+            "        final long messageType)\n" +
             "    {\n");
     }
 
