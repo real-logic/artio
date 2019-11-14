@@ -23,7 +23,7 @@ import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
 
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.artio.messages.SessionReplyStatus.*;
+import static uk.co.real_logic.artio.messages.SessionReplyStatus.INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
@@ -33,18 +33,17 @@ public class NoLoggingGatewayToGatewaySystemTest extends AbstractGatewayToGatewa
     @Before
     public void launch()
     {
-        delete(ACCEPTOR_LOGS);
-        delete(CLIENT_LOGS);
-
         mediaDriver = launchMediaDriver();
 
         acceptingEngine = FixEngine.launch(acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
             .logInboundMessages(false)
-            .logOutboundMessages(false));
+            .logOutboundMessages(false)
+            .deleteLogFileDirOnStart(true));
 
         initiatingEngine = FixEngine.launch(initiatingConfig(libraryAeronPort)
             .logInboundMessages(false)
-            .logOutboundMessages(false));
+            .logOutboundMessages(false)
+            .deleteLogFileDirOnStart(true));
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
         acceptingLibraryConfig.libraryConnectHandler(fakeConnectHandler);

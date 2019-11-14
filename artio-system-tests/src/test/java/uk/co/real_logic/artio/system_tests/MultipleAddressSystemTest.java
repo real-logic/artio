@@ -41,10 +41,10 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
         final MediaDriver.Context context = mediaDriverContext(TestFixtures.TERM_BUFFER_LENGTH, true);
         mediaDriver = launchMediaDriver(context);
 
-        delete(ACCEPTOR_LOGS);
         acceptingEngine = FixEngine.launch(
             acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
-                .scheduler(new LowResourceEngineScheduler()));
+                .scheduler(new LowResourceEngineScheduler())
+                .deleteLogFileDirOnStart(true));
 
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 

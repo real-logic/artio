@@ -37,8 +37,6 @@ public class MediaDriverRestartTest extends AbstractGatewayToGatewaySystemTest
     @Before
     public void launch()
     {
-        delete(ACCEPTOR_LOGS);
-
         start(true);
     }
 
@@ -71,6 +69,7 @@ public class MediaDriverRestartTest extends AbstractGatewayToGatewaySystemTest
 
         final EngineConfiguration acceptingConfig = acceptingConfig(
             port, ACCEPTOR_ID, INITIATOR_ID);
+        acceptingConfig.deleteLogFileDirOnStart(true);
         acceptingConfig.aeronContext().driverTimeoutMs(DRIVER_TIMEOUT_MS);
 
         acceptingEngine = FixEngine.launch(acceptingConfig);

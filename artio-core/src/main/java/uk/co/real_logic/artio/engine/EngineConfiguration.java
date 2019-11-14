@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.engine;
 import io.aeron.Aeron;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.CloseHelper;
+import org.agrona.IoUtil;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
@@ -223,6 +224,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.none();
     private long indexFileStateFlushTimeoutInMs = DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
     private FixDictionary acceptorfixDictionary;
+    private boolean deleteLogFileDirOnStart = false;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -640,6 +642,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration deleteLogFileDirOnStart(final boolean deleteLogFileDirOnStart)
+    {
+        this.deleteLogFileDirOnStart = deleteLogFileDirOnStart;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -815,6 +823,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return acceptorfixDictionary;
     }
 
+    public boolean deleteLogFileDirOnStart()
+    {
+        return deleteLogFileDirOnStart;
+    }
+
     /**
      * {@inheritDoc}
      */
@@ -948,6 +961,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
                     "this would allow you to encode messages that are larger than you can read.",
                 receiverBufferSize(),
                 sessionBufferSize()));
+        }
+
+        if (deleteLogFileDirOnStart())
+        {
+            final File logFileDir = new File(logFileDir());
+            if (logFileDir.exists())
+            {
+                IoUtil.delete(logFileDir, false);
+            }
         }
 
         if (sentSequenceNumberIndex() == null)

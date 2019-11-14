@@ -48,11 +48,10 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     @Before
     public void launch()
     {
-        delete(ACCEPTOR_LOGS);
-
         mediaDriver = launchMediaDriver();
 
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
+        acceptingConfig.deleteLogFileDirOnStart(true);
         acceptingConfig.printErrorMessages(false);
         acceptingConfig.authenticationStrategy(auth);
 

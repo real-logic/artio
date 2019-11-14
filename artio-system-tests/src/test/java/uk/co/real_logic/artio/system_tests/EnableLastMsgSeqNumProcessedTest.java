@@ -22,11 +22,10 @@ public class EnableLastMsgSeqNumProcessedTest extends AbstractGatewayToGatewaySy
     @Before
     public void launch()
     {
-        deleteLogs();
-
         mediaDriver = launchMediaDriver();
 
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
+        acceptingConfig.deleteLogFileDirOnStart(true);
         acceptingConfig.acceptedEnableLastMsgSeqNumProcessed(true);
         acceptingConfig.sessionPersistenceStrategy(alwaysIndexed());
 

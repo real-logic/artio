@@ -189,13 +189,18 @@ public final class SystemTestUtil
 
     static FixEngine launchInitiatingEngine(final int libraryAeronPort)
     {
-        delete(CLIENT_LOGS);
-        return launchInitiatingEngineWithSameLogs(libraryAeronPort);
+        return launchInitiatingEngine(libraryAeronPort, true);
     }
 
     static FixEngine launchInitiatingEngineWithSameLogs(final int libraryAeronPort)
     {
+        return launchInitiatingEngine(libraryAeronPort, false);
+    }
+
+    static FixEngine launchInitiatingEngine(final int libraryAeronPort, final boolean deleteDirOnStart)
+    {
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
+        initiatingConfig.deleteLogFileDirOnStart(deleteDirOnStart);
         return FixEngine.launch(initiatingConfig);
     }
 

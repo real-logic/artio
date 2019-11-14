@@ -77,8 +77,8 @@ public class EngineAndLibraryIntegrationTest
 
     private void launchEngine(final int replyTimeoutInMs)
     {
-        delete(ACCEPTOR_LOGS);
         final EngineConfiguration config = acceptingConfig(unusedPort(), ACCEPTOR_ID, INITIATOR_ID);
+        config.deleteLogFileDirOnStart(true);
         config.replyTimeoutInMs(replyTimeoutInMs);
         engine = FixEngine.launch(config);
     }

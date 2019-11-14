@@ -257,9 +257,9 @@ public class SlowConsumerTest
     private void setup(final int senderMaxBytesInBuffer) throws IOException
     {
         mediaDriver = launchMediaDriver(8 * 1024 * 1024);
-        delete(ACCEPTOR_LOGS);
         final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
             .scheduler(scheduler);
+        config.deleteLogFileDirOnStart(true);
         config.senderMaxBytesInBuffer(senderMaxBytesInBuffer);
         engine = FixEngine.launch(config);
         testSystem = new TestSystem(scheduler);

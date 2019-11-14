@@ -29,12 +29,7 @@ import java.net.ServerSocket;
 
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_ID;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.INITIATOR_ID;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.PASSWORD;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.USERNAME;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.initiatingConfig;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.newInitiatingLibrary;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class InitiatingEngineNoLogonConnectionTest extends AbstractGatewayToGatewaySystemTest
 {

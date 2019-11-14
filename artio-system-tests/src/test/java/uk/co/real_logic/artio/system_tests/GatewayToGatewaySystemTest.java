@@ -62,15 +62,13 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Before
     public void launch()
     {
-        delete(ACCEPTOR_LOGS);
-
         mediaDriver = launchMediaDriver();
 
-        final EngineConfiguration configuration = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
-        auth = new CapturingAuthenticationStrategy(configuration.messageValidationStrategy());
-        configuration.authenticationStrategy(auth);
-        acceptingEngine = FixEngine.launch(
-            configuration);
+        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
+            .deleteLogFileDirOnStart(true);
+        auth = new CapturingAuthenticationStrategy(acceptingConfig.messageValidationStrategy());
+        acceptingConfig.authenticationStrategy(auth);
+        acceptingEngine = FixEngine.launch(acceptingConfig);
 
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 
