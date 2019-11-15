@@ -25,6 +25,7 @@ import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.SenderSequenceNumber;
 import uk.co.real_logic.artio.engine.logger.ArchiveDescriptor;
 import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -38,6 +39,8 @@ import static uk.co.real_logic.artio.protocol.GatewayPublication.FRAME_SIZE;
 
 class SenderEndPoint
 {
+    private static final int HEADER_LENGTH = MessageHeaderDecoder.ENCODED_LENGTH;
+
     private final long connectionId;
     private final TcpChannel channel;
     private final AtomicCounter bytesInBuffer;
@@ -388,8 +391,9 @@ class SenderEndPoint
 
     private Action blockPosition(final long messagePosition, final int messageLength, final StreamTracker tracker)
     {
-        final int alignedLength = ArchiveDescriptor.alignTerm(messageLength);
-        final long messageStartPosition = messagePosition - (alignedLength + DataHeaderFlyweight.HEADER_LENGTH);
+        final int frameLength = DataHeaderFlyweight.HEADER_LENGTH + messageLength + HEADER_LENGTH;
+        final int alignedLength = ArchiveDescriptor.alignTerm(frameLength);
+        final long messageStartPosition = messagePosition - alignedLength;
         tracker.blockablePosition.blockPosition(messageStartPosition);
         tracker.skipPosition = messagePosition;
         return Action.CONTINUE;
