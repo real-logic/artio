@@ -99,6 +99,12 @@ public class DecimalFloatTest
         assertThat(new DecimalFloat(1234, 2), equalTo(new DecimalFloat(123400, 4)));
     }
 
+    @Test(expected = NumberFormatException.class)
+    public void shouldNotConvertInvalidStringIntoANumber()
+    {
+        new DecimalFloat().fromString("ABC");
+    }
+
     @Test(expected = ArithmeticException.class)
     public void shouldNotParseValueOutOfRange()
     {

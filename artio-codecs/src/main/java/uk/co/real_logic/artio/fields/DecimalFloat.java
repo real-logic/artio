@@ -420,12 +420,12 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
 
     private int getDigit(final int index, final char charValue)
     {
-        final int numericValue = Character.getNumericValue(charValue);
-        if (numericValue == -1)
+        if (charValue < '0' || charValue > '9')
         {
             throw new NumberFormatException("'" + charValue + "' isn't a valid digit @ " + index);
         }
-        return numericValue;
+
+        return charValue - '0';
     }
 
     private boolean isSpace(final CharSequence input, final int index)
