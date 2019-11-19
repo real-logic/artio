@@ -127,7 +127,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_LOGGER_CACHE_NUM_SETS = 8;
     public static final int DEFAULT_LOGGER_CACHE_SET_SIZE = 4;
 
-    public static final int DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT = 100;
+    public static final int DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT = 20;
     public static final int DEFAULT_REPLAY_FRAGMENT_LIMIT = 5;
     public static final int DEFAULT_INBOUND_BYTES_RECEIVED_LIMIT = 8 * 1024;
     public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 16 * 1024;
