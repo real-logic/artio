@@ -19,6 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
 import uk.co.real_logic.artio.messages.DisconnectDecoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
@@ -115,8 +116,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
     {
         messageFrame.wrap(buffer, offset, blockLength, version);
         final int messageLength = messageFrame.bodyLength();
-        final long messageType = messageFrame.sbeSchemaVersion() > 2 ?
-            messageFrame.messageType() : messageFrame.deprecatedMessageType();
+        final long messageType = MessageTypeExtractor.getMessageType(messageFrame);
         return protocolHandler.onMessage(
             buffer,
             offset + FRAME_SIZE,

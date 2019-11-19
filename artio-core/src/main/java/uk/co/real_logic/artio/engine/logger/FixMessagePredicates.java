@@ -30,6 +30,7 @@ import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
+import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.BufferAsciiSequence;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -142,8 +143,7 @@ public final class FixMessagePredicates
     {
         return (message) ->
         {
-            final long messageType = message.sbeSchemaVersion() > 2 ?
-                message.messageType() : message.deprecatedMessageType();
+            final long messageType = MessageTypeExtractor.getMessageType(message);
             return hashSet.contains(messageType);
         };
     }

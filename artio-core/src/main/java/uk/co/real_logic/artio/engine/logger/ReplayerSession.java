@@ -35,6 +35,7 @@ import uk.co.real_logic.artio.engine.PossDupEnabler;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
+import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.FixMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
@@ -203,8 +204,7 @@ class ReplayerSession implements ControlledFragmentHandler
         final int messageLength = srcLength - MESSAGE_FRAME_BLOCK_LENGTH;
 
         final int msgSeqNum = sequenceNumberExtractor.extract(srcBuffer, messageOffset, messageLength);
-        final long messageType = FIX_MESSAGE.sbeSchemaVersion() > 2 ?
-            FIX_MESSAGE.messageType() : FIX_MESSAGE.deprecatedMessageType();
+        final long messageType = MessageTypeExtractor.getMessageType(FIX_MESSAGE);
 
         ASCII_BUFFER.wrap(srcBuffer);
         replayHandler.onReplayedMessage(
