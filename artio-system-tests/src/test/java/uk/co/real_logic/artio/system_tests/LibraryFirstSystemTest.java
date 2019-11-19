@@ -17,7 +17,6 @@ package uk.co.real_logic.artio.system_tests;
 
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.library.FixLibrary;
 
 import java.util.concurrent.ExecutionException;
@@ -76,7 +75,7 @@ public class LibraryFirstSystemTest extends AbstractGatewayToGatewaySystemTest
 
     private void waitLessThanReplyTimeout() throws InterruptedException
     {
-        Thread.sleep(CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS / 4);
+        Thread.sleep(TEST_REPLY_TIMEOUT_IN_MS / 4);
     }
 
     private Future<FixLibrary> newInitiatingLibrary()

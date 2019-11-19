@@ -70,9 +70,11 @@ public final class SystemTestUtil
     static final long AWAIT_TIMEOUT = 50 * TIMEOUT_IN_MS;
     static final int LIBRARY_LIMIT = 2;
 
-    private static final String HI_ID = "hi";
     static final String USERNAME = "bob";
     static final String PASSWORD = "Uv1aegoh";
+
+    private static final String HI_ID = "hi";
+    public static final long TEST_REPLY_TIMEOUT_IN_MS = 3_000;
 
     static
     {
@@ -156,6 +158,7 @@ public final class SystemTestUtil
             .credentials(USERNAME, PASSWORD)
             .senderCompId(senderCompId)
             .targetCompId(targetCompId)
+            .timeoutInMs(TEST_REPLY_TIMEOUT_IN_MS)
             .build();
 
         return library.initiate(config);
@@ -210,7 +213,8 @@ public final class SystemTestUtil
             .libraryAeronChannel("aeron:udp?endpoint=localhost:" + libraryAeronPort)
             .monitoringFile(optimalTmpDirName() + File.separator + "fix-client" + File.separator + "engineCounters")
             .logFileDir(CLIENT_LOGS)
-            .scheduler(new LowResourceEngineScheduler());
+            .scheduler(new LowResourceEngineScheduler())
+            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
         configuration.agentNamePrefix("init-");
 
         return configuration;
@@ -249,7 +253,8 @@ public final class SystemTestUtil
             .libraryAeronChannel(IPC_CHANNEL)
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(acceptorLogs)
-            .scheduler(new LowResourceEngineScheduler());
+            .scheduler(new LowResourceEngineScheduler())
+            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
     }
 
     static String acceptorMonitoringFile(final String countersSuffix)
@@ -268,7 +273,8 @@ public final class SystemTestUtil
             .sessionAcquireHandler(sessionHandler)
             .sentPositionHandler(sessionHandler)
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
-            .libraryName("accepting");
+            .libraryName("accepting")
+            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
 
         return libraryConfiguration;
     }
@@ -335,7 +341,8 @@ public final class SystemTestUtil
             .sentPositionHandler(sessionHandler)
             .sessionExistsHandler(sessionHandler)
             .libraryAeronChannels(singletonList("aeron:udp?endpoint=localhost:" + libraryAeronPort))
-            .libraryName("initiating");
+            .libraryName("initiating")
+            .replyTimeoutInMs(TEST_REPLY_TIMEOUT_IN_MS);
     }
 
     public static FixLibrary connect(final LibraryConfiguration configuration)
