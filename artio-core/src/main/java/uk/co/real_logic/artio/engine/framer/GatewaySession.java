@@ -58,6 +58,7 @@ class GatewaySession implements SessionInfo
     private Consumer<GatewaySession> onGatewaySessionLogon;
     private SessionLogonListener logonListener = this::onSessionLogon;
     private boolean initialResetSeqNum;
+    private boolean hasStartedAuthentication = false;
 
     GatewaySession(
         final long connectionId,
@@ -160,7 +161,7 @@ class GatewaySession implements SessionInfo
             return 0;
         }
 
-        if (sessionKey != null)
+        if (hasStartedAuthentication)
         {
             disconnectTimeout = NO_TIMEOUT;
             return 1;
@@ -173,6 +174,11 @@ class GatewaySession implements SessionInfo
         }
 
         return 0;
+    }
+
+    void startAuthentication()
+    {
+        hasStartedAuthentication = true;
     }
 
     private void onSessionLogon(final Session session)

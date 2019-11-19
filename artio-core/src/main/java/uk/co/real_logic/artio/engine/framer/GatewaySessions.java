@@ -280,6 +280,8 @@ class GatewaySessions
         final GatewaySession gatewaySession,
         final TcpChannel channel)
     {
+        gatewaySession.startAuthentication();
+
         return new PendingAcceptorLogon(
             sessionIdStrategy, gatewaySession, logon, connectionId, sessionContexts, channel);
     }
