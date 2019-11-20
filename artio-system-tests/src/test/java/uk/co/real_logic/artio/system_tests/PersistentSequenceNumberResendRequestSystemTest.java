@@ -73,7 +73,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
                 final int libraryId,
                 final Session session,
                 final int sequenceIndex,
-                final int messageType,
+                final long messageType,
                 final long timestampInNs,
                 final long position)
             {

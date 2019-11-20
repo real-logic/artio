@@ -82,7 +82,7 @@ public class GapFiller implements ProtocolHandler, Agent
         final long connectionId,
         final long sessionId,
         final int sequenceIndex,
-        final int messageType,
+        final long messageType,
         final long timestamp,
         final MessageStatus status,
         final int sequenceNumber,

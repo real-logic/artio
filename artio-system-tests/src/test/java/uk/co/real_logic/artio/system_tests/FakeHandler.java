@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.Timing;
-import uk.co.real_logic.artio.dictionary.IntDictionary;
+import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.library.*;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.otf.OtfParser;
@@ -47,7 +47,7 @@ public class FakeHandler
     public FakeHandler(final FakeOtfAcceptor acceptor)
     {
         this.acceptor = acceptor;
-        parser = new OtfParser(acceptor, new IntDictionary());
+        parser = new OtfParser(acceptor, new LongDictionary());
     }
 
     // ----------- EVENTS -----------
@@ -59,7 +59,7 @@ public class FakeHandler
         final int libraryId,
         final Session session,
         final int sequenceIndex,
-        final int messageType,
+        final long messageType,
         final long timestampInNs,
         final long position)
     {

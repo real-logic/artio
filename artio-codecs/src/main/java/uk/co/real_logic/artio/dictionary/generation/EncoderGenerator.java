@@ -344,15 +344,15 @@ public class EncoderGenerator extends Generator
         {
             final Component header = dictionary.header();
             final Message message = (Message)aggregate;
-            final int packedType = message.packedType();
+            final long packedType = message.packedType();
             final String fullType = message.fullType();
             final String msgType = header.hasField(MSG_TYPE) ?
                 String.format("        header.msgType(\"%s\");\n", fullType) : "";
 
             return String.format(
-                "    public int messageType()\n" +
+                "    public long messageType()\n" +
                 "    {\n" +
-                "        return %s;\n" +
+                "        return %sL;\n" +
                 "    }\n\n" +
                 "    public %sEncoder()\n" +
                 "    {\n" +

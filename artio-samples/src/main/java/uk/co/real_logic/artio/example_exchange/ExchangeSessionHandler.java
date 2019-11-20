@@ -56,25 +56,23 @@ public class ExchangeSessionHandler implements SessionHandler
         final int libraryId,
         final Session session,
         final int sequenceIndex,
-        final int messageType,
+        final long messageType,
         final long timestampInNs,
         final long position)
     {
         asciiBuffer.wrap(buffer, offset, length);
 
-        switch (messageType)
+        if (messageType == NewOrderSingleDecoder.MESSAGE_TYPE)
         {
-            case NewOrderSingleDecoder.MESSAGE_TYPE:
+
+            newOrderSingle.decode(asciiBuffer, 0, length);
+
+            if (!validOrder())
             {
-                newOrderSingle.decode(asciiBuffer, 0, length);
-
-                if (!validOrder())
-                {
-                    return cancelOrder(session);
-                }
-
-                return fillOrder(session);
+                return cancelOrder(session);
             }
+
+            return fillOrder(session);
         }
 
         return CONTINUE;

@@ -19,7 +19,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.ValidationError;
-import uk.co.real_logic.artio.dictionary.IntDictionary;
+import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.otf.MessageControl;
@@ -46,7 +46,7 @@ class PasswordCleaner
     private int lengthOfBodyLength;
 
     private final FieldScanner fieldScanner = new FieldScanner();
-    private final OtfParser parser = new OtfParser(fieldScanner, new IntDictionary());
+    private final OtfParser parser = new OtfParser(fieldScanner, new LongDictionary());
     private final ExpandableArrayBuffer cleanedBuffer = new ExpandableArrayBuffer();
     private int cleanedLength;
 
@@ -205,7 +205,7 @@ class PasswordCleaner
 
         public boolean onError(
             final ValidationError error,
-            final int messageType,
+            final long messageType,
             final int tagNumber,
             final AsciiFieldFlyweight value)
         {

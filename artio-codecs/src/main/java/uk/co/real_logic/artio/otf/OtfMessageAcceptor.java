@@ -56,5 +56,5 @@ public interface OtfMessageAcceptor
      */
     MessageControl onGroupEnd(int tag, int numInGroup, int index);
 
-    boolean onError(ValidationError error, int messageType, int tagNumber, AsciiFieldFlyweight value);
+    boolean onError(ValidationError error, long messageType, int tagNumber, AsciiFieldFlyweight value);
 }

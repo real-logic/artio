@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.otf;
 
 import org.agrona.DirectBuffer;
 import org.agrona.collections.IntHashSet;
-import uk.co.real_logic.artio.dictionary.IntDictionary;
+import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -45,14 +45,14 @@ public final class OtfParser
     private final AsciiFieldFlyweight stringField = new AsciiFieldFlyweight();
 
     private final OtfMessageAcceptor acceptor;
-    private final IntDictionary groupToField;
+    private final LongDictionary groupToField;
 
     private int checksum;
     private int checksumOffset;
-    private int messageType;
+    private long messageType;
     private int tag;
 
-    public OtfParser(final OtfMessageAcceptor acceptor, final IntDictionary groupToField)
+    public OtfParser(final OtfMessageAcceptor acceptor, final LongDictionary groupToField)
     {
         this.acceptor = acceptor;
         this.groupToField = groupToField;
@@ -259,12 +259,12 @@ public final class OtfParser
         return acceptor.onGroupEnd(tag, numberOfElements, index);
     }
 
-    private boolean parseError(final int messageType, final int tag)
+    private boolean parseError(final long messageType, final int tag)
     {
         return acceptor.onError(PARSE_ERROR, messageType, tag, stringField);
     }
 
-    private boolean invalidChecksum(final int messageType)
+    private boolean invalidChecksum(final long messageType)
     {
         return acceptor.onError(INVALID_CHECKSUM, messageType, CHECKSUM, stringField);
     }

@@ -16,7 +16,7 @@
 package uk.co.real_logic.artio.otf;
 
 import org.junit.Test;
-import uk.co.real_logic.artio.dictionary.IntDictionary;
+import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -28,8 +28,8 @@ public class OtfValidatorTest
 {
     private OtfMessageAcceptor acceptor = mock(OtfMessageAcceptor.class);
 
-    private IntDictionary requiredFields = new IntDictionary();
-    private IntDictionary allFields = new IntDictionary();
+    private LongDictionary requiredFields = new LongDictionary();
+    private LongDictionary allFields = new LongDictionary();
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[16 * 1024]);
 
     private OtfValidator validator = new OtfValidator(acceptor, allFields, requiredFields);
@@ -173,17 +173,17 @@ public class OtfValidatorTest
 
     private void verifyUnknownMessage()
     {
-        verify(acceptor).onError(eq(UNKNOWN_MESSAGE_TYPE), eq((int)'0'), anyInt(), any(AsciiFieldFlyweight.class));
+        verify(acceptor).onError(eq(UNKNOWN_MESSAGE_TYPE), eq((long)'0'), anyInt(), any(AsciiFieldFlyweight.class));
     }
 
     private void verifyUnknownField()
     {
-        verify(acceptor).onError(eq(UNKNOWN_FIELD), eq((int)'0'), eq(112), any(AsciiFieldFlyweight.class));
+        verify(acceptor).onError(eq(UNKNOWN_FIELD), eq((long)'0'), eq(112), any(AsciiFieldFlyweight.class));
     }
 
     private void verifyMissingRequiredField()
     {
-        verify(acceptor).onError(eq(MISSING_REQUIRED_FIELD), eq((int)'0'), eq(112), any(AsciiFieldFlyweight.class));
+        verify(acceptor).onError(eq(MISSING_REQUIRED_FIELD), eq((long)'0'), eq(112), any(AsciiFieldFlyweight.class));
     }
 
     private void validateTestReqId()

@@ -63,7 +63,7 @@ public final class OtfNoBlackHoleAcceptor implements OtfMessageAcceptor
     @CompilerControl(DONT_INLINE)
     public boolean onError(
         final ValidationError error,
-        final int messageType,
+        final long messageType,
         final int tagNumber,
         final AsciiFieldFlyweight value)
     {

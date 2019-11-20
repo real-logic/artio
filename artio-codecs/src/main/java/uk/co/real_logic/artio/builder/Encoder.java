@@ -53,7 +53,7 @@ public interface Encoder
      */
     void reset();
 
-    int messageType();
+    long messageType();
 
     SessionHeaderEncoder header();
 
