@@ -370,10 +370,16 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
      * @param offset the position at which to start putting ascii encoded float.
      * @param value the value of the float to encode - see {@link DecimalFloat} for details.
      * @param scale the scale of the float to encode - see {@link DecimalFloat} for details.
+     * @throws IllegalArgumentException if you try to encode NaN.
      * @return the length of the encoded value
      */
     public int putFloatAscii(final int offset, final long value, final int scale)
     {
+        if (DecimalFloat.isNaNValue(value, scale))
+        {
+            throw new IllegalArgumentException("You cannot encode NaN into a buffer - it's not a number");
+        }
+
         if (value == 0)
         {
             return handleZero(offset, scale);

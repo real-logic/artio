@@ -131,6 +131,13 @@ public class DecimalFloatTest
         parseNumberFromBuffer("10000000000000000000000");
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void shouldNotEncodeAnInvalidValue()
+    {
+        final MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[1000]);
+        buffer.putFloatAscii(0, DecimalFloat.NAN);
+    }
+
     private void parseNumberFromBuffer(final String number)
     {
         final AsciiBuffer buffer = new MutableAsciiBuffer(number.getBytes(US_ASCII));
