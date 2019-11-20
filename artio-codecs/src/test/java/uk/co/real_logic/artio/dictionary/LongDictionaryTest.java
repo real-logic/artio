@@ -32,7 +32,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
 
-public class IntDictionaryTest
+public class LongDictionaryTest
 {
     private Dictionary data;
 
@@ -50,25 +50,25 @@ public class IntDictionaryTest
     @Test
     public void buildsValidationDictionaryForRequiredFields()
     {
-        final IntDictionary intDictionary = IntDictionary.requiredFields(data);
-        final IntHashSet heartbeat = intDictionary.values('0');
+        final LongDictionary longDictionary = LongDictionary.requiredFields(data);
+        final IntHashSet heartbeat = longDictionary.values('0');
 
         assertThat(heartbeat, hasItem(115));
         assertThat(heartbeat, hasSize(1));
-        assertTrue(intDictionary.contains('0', 115));
+        assertTrue(longDictionary.contains('0', 115));
     }
 
     @Test
     public void buildsValidationDictionaryForAllFields()
     {
-        final IntDictionary intDictionary = IntDictionary.allFields(data);
-        final IntHashSet heartbeat = intDictionary.values('0');
+        final LongDictionary longDictionary = LongDictionary.allFields(data);
+        final IntHashSet heartbeat = longDictionary.values('0');
 
         assertThat(heartbeat, hasItem(115));
         assertThat(heartbeat, hasItem(112));
         assertThat(heartbeat, hasSize(2));
 
-        assertTrue(intDictionary.contains('0', 115));
-        assertTrue(intDictionary.contains('0', 112));
+        assertTrue(longDictionary.contains('0', 115));
+        assertTrue(longDictionary.contains('0', 112));
     }
 }

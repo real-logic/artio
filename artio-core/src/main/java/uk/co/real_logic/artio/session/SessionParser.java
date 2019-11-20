@@ -90,7 +90,7 @@ public class SessionParser
         final DirectBuffer buffer,
         final int offset,
         final int length,
-        final int messageType,
+        final long messageType,
         final long sessionId)
     {
         asciiBuffer.wrap(buffer);
@@ -99,35 +99,33 @@ public class SessionParser
 
         try
         {
-            switch (messageType)
+            if (messageType == LOGON_MESSAGE_TYPE)
             {
-                case LOGON_MESSAGE_TYPE:
-                    action = onLogon(offset, length);
-                    break;
-
-                case LOGOUT_MESSAGE_TYPE:
-                    action = onLogout(offset, length);
-                    break;
-
-                case HEARTBEAT_MESSAGE_TYPE:
-                    action = onHeartbeat(offset, length);
-                    break;
-
-                case REJECT_MESSAGE_TYPE:
-                    action = onReject(offset, length);
-                    break;
-
-                case TEST_REQUEST_MESSAGE_TYPE:
-                    action = onTestRequest(offset, length);
-                    break;
-
-                case SEQUENCE_RESET_MESSAGE_TYPE:
-                    action = onSequenceReset(offset, length);
-                    break;
-
-                default:
-                    action = onAnyOtherMessage(offset, length);
-                    break;
+                action = onLogon(offset, length);
+            }
+            else if (messageType == LOGOUT_MESSAGE_TYPE)
+            {
+                action = onLogout(offset, length);
+            }
+            else if (messageType == HEARTBEAT_MESSAGE_TYPE)
+            {
+                action = onHeartbeat(offset, length);
+            }
+            else if (messageType == REJECT_MESSAGE_TYPE)
+            {
+                action = onReject(offset, length);
+            }
+            else if (messageType == TEST_REQUEST_MESSAGE_TYPE)
+            {
+                action = onTestRequest(offset, length);
+            }
+            else if (messageType == SEQUENCE_RESET_MESSAGE_TYPE)
+            {
+                action = onSequenceReset(offset, length);
+            }
+            else
+            {
+                action = onAnyOtherMessage(offset, length);
             }
 
             // Consider admin messages processed when they've been received by the session logic
@@ -157,31 +155,33 @@ public class SessionParser
         }
     }
 
-    private Action rejectExceptionalMessage(final int messageType)
+    private Action rejectExceptionalMessage(final long messageType)
     {
-        switch (messageType)
+        if (messageType == LOGON_MESSAGE_TYPE)
         {
-            case LOGON_MESSAGE_TYPE:
-                return onExceptionalMessage(logon.header());
-
-            case LOGOUT_MESSAGE_TYPE:
-                return onExceptionalMessage(logout.header());
-
-            case HEARTBEAT_MESSAGE_TYPE:
-                return onExceptionalMessage(heartbeat.header());
-
-            case REJECT_MESSAGE_TYPE:
-                return onExceptionalMessage(reject.header());
-
-            case TEST_REQUEST_MESSAGE_TYPE:
-                return onExceptionalMessage(testRequest.header());
-
-            case SEQUENCE_RESET_MESSAGE_TYPE:
-                return onExceptionalMessage(sequenceReset.header());
-
-            default:
-                return onExceptionalMessage(header);
+            return onExceptionalMessage(logon.header());
         }
+        else if (messageType == LOGOUT_MESSAGE_TYPE)
+        {
+            return onExceptionalMessage(logout.header());
+        }
+        else if (messageType == HEARTBEAT_MESSAGE_TYPE)
+        {
+            return onExceptionalMessage(heartbeat.header());
+        }
+        else if (messageType == REJECT_MESSAGE_TYPE)
+        {
+            return onExceptionalMessage(reject.header());
+        }
+        else if (messageType == TEST_REQUEST_MESSAGE_TYPE)
+        {
+            return onExceptionalMessage(testRequest.header());
+        }
+        else if (messageType == SEQUENCE_RESET_MESSAGE_TYPE)
+        {
+            return onExceptionalMessage(sequenceReset.header());
+        }
+        return onExceptionalMessage(header);
     }
 
     private Action onExceptionalMessage(final SessionHeaderDecoder header)

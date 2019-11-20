@@ -15,17 +15,24 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import java.util.ArrayList;
+import java.util.Set;
+
+import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
+import org.agrona.collections.LongHashSet;
+import org.agrona.concurrent.Agent;
+import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.IdleStrategy;
+
+import static org.agrona.collections.ArrayListUtil.fastUnorderedRemove;
+
+
 import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
-import org.agrona.DirectBuffer;
-import org.agrona.ErrorHandler;
-import org.agrona.collections.IntHashSet;
-import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.EpochClock;
-import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
@@ -41,12 +48,8 @@ import uk.co.real_logic.artio.protocol.ProtocolSubscription;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import java.util.ArrayList;
-import java.util.Set;
-
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.COMMIT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static org.agrona.collections.ArrayListUtil.fastUnorderedRemove;
 import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
@@ -79,7 +82,7 @@ public class Replayer implements ProtocolHandler, Agent
     private final int maxClaimAttempts;
     private final Subscription inboundSubscription;
     private final String agentNamePrefix;
-    private final IntHashSet gapFillMessageTypes;
+    private final LongHashSet gapFillMessageTypes;
     private final EpochClock clock;
     private final ReplayHandler replayHandler;
     private final SenderSequenceNumbers senderSequenceNumbers;
@@ -112,7 +115,7 @@ public class Replayer implements ProtocolHandler, Agent
         this.senderSequenceNumbers = senderSequenceNumbers;
         this.fixSessionCodecsFactory = fixSessionCodecsFactory;
 
-        gapFillMessageTypes = new IntHashSet();
+        gapFillMessageTypes = new LongHashSet();
         gapfillOnReplayMessageTypes.forEach(messageTypeAsString ->
             gapFillMessageTypes.add(GenerationUtil.packMessageType(messageTypeAsString)));
 
@@ -127,7 +130,7 @@ public class Replayer implements ProtocolHandler, Agent
         final long connectionId,
         final long sessionId,
         final int sequenceIndex,
-        final int messageType,
+        final long messageType,
         final long timestamp,
         final MessageStatus status,
         final int sequenceNumber,

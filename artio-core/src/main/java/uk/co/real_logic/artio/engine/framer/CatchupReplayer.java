@@ -186,7 +186,9 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         asciiBuffer.wrap(srcBuffer, messageOffset, messageLength);
         headerDecoder.decode(asciiBuffer, 0, messageLength);
 
-        if (messageDecoder.messageType() == HEARTBEAT_MESSAGE_TYPE)
+        final long messageType = MessageTypeExtractor.getMessageType(messageDecoder);
+
+        if (messageType == HEARTBEAT_MESSAGE_TYPE)
         {
             if (heartbeatRangeSequenceNumberStart == OUT_OF_RANGE)
             {

@@ -53,7 +53,7 @@ import static uk.co.real_logic.artio.util.TestMessages.*;
 
 public class ReceiverEndPointTest
 {
-    private static final int MESSAGE_TYPE = 'D';
+    private static final long MESSAGE_TYPE = 'D';
     private static final long CONNECTION_ID = 20L;
     private static final long SESSION_ID = 4L;
     private static final int LIBRARY_ID = FixEngine.ENGINE_LIBRARY_ID;
@@ -481,7 +481,7 @@ public class ReceiverEndPointTest
                 anyInt(),
                 anyInt(),
                 anyInt(),
-                anyInt(),
+                anyLong(),
                 anyLong(),
                 anyInt(),
                 anyLong(),
@@ -517,7 +517,7 @@ public class ReceiverEndPointTest
     {
         verify(publication, mode).saveMessage(
             anyBuffer(), eq(0), eq(length), eq(LIBRARY_ID),
-            anyInt(), anyLong(), anyInt(), eq(CONNECTION_ID),
+            anyLong(), anyLong(), anyInt(), eq(CONNECTION_ID),
             eq(status), eq(0), eq(timestamp));
     }
 
@@ -555,7 +555,7 @@ public class ReceiverEndPointTest
     }
 
     private long savesFramedMessages(
-        final int numberOfMessages, final MessageStatus status, final int msgLen, final int messageType)
+        final int numberOfMessages, final MessageStatus status, final int msgLen, final long messageType)
     {
         return verify(publication, times(numberOfMessages)).saveMessage(
             anyBuffer(), eq(0), eq(msgLen), eq(LIBRARY_ID),
@@ -718,7 +718,7 @@ public class ReceiverEndPointTest
     private void sessionReceivedCountIs(final int numberOfMessages)
     {
         verify(gatewaySession, times(numberOfMessages))
-            .onMessage(any(), anyInt(), anyInt(), anyInt(), anyLong());
+            .onMessage(any(), anyInt(), anyInt(), anyLong(), anyLong());
     }
 
     private void sessionReceivesMessageAt(final int offset, final int length, final VerificationMode mode)
@@ -730,7 +730,7 @@ public class ReceiverEndPointTest
     private void sessionReceivesNoMessages()
     {
         verify(gatewaySession, never())
-            .onMessage(any(), anyInt(), anyInt(), anyInt(), anyLong());
+            .onMessage(any(), anyInt(), anyInt(), anyLong(), anyLong());
     }
 
     private void pollWithNoData(final int expected)

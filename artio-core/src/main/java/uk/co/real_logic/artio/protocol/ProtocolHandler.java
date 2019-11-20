@@ -30,7 +30,7 @@ public interface ProtocolHandler
         long connectionId,
         long sessionId,
         int sequenceIndex,
-        int messageType,
+        long messageType,
         long timestamp,
         MessageStatus status,
         int sequenceNumber,

@@ -22,7 +22,7 @@ import org.junit.experimental.theories.Theory;
 import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.InOrder;
-import uk.co.real_logic.artio.dictionary.IntDictionary;
+import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -45,7 +45,7 @@ public class OtfParserTest
 
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[LENGTH]);
     private OtfMessageAcceptor mockAcceptor = mock(OtfMessageAcceptor.class);
-    private IntDictionary groupToField = new IntDictionary();
+    private LongDictionary groupToField = new LongDictionary();
     private OtfParser parser = new OtfParser(mockAcceptor, groupToField);
 
     private InOrder inOrder = inOrder(mockAcceptor);
@@ -134,7 +134,7 @@ public class OtfParserTest
 
         parser.onMessage(buffer, offset, INVALID_CHECKSUM_LEN);
 
-        verify(mockAcceptor).onError(eq(INVALID_CHECKSUM), eq((int)'D'), eq(10), any(AsciiFieldFlyweight.class));
+        verify(mockAcceptor).onError(eq(INVALID_CHECKSUM), eq((long)'D'), eq(10), any(AsciiFieldFlyweight.class));
     }
 
     @Theory
@@ -144,7 +144,7 @@ public class OtfParserTest
 
         parser.onMessage(buffer, offset, INVALID_LEN);
 
-        verify(mockAcceptor).onError(eq(PARSE_ERROR), eq((int)'D'), eq(11), any(AsciiFieldFlyweight.class));
+        verify(mockAcceptor).onError(eq(PARSE_ERROR), eq((long)'D'), eq(11), any(AsciiFieldFlyweight.class));
     }
 
     @Theory

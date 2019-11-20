@@ -44,7 +44,7 @@ public class SampleSessionHandler implements SessionHandler
         final int libraryId,
         final Session session,
         final int sequenceIndex,
-        final int messageType,
+        final long messageType,
         final long timestampInNs,
         final long position)
     {
