@@ -17,6 +17,13 @@ package uk.co.real_logic.artio.fields;
 
 import java.math.BigDecimal;
 
+
+import uk.co.real_logic.artio.util.PowerOf10;
+
+import static uk.co.real_logic.artio.util.PowerOf10.HIGHEST_POWER_OF_TEN;
+import static uk.co.real_logic.artio.util.PowerOf10.POWERS_OF_TEN;
+import static uk.co.real_logic.artio.util.PowerOf10.pow10;
+
 /**
  * Fix float data type. Floats are used for a variety of things, including price.
  * <p>
@@ -60,13 +67,9 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
     public static final DecimalFloat NAN = getNaN();
     public static final DecimalFloat MISSING_FLOAT = NAN;
 
-    private static final int HIGHEST_POWER_OF_TEN = 18;
-    private static final long[] POWERS_OF_TEN = new long[]
-        {1L, 10L, 100L, 1_000L, 10_000L, 100_000L, 1_000_000L, 10_000_000L,
-        100_000_000L, 1_000_000_000L, 10_000_000_000L, 100_000_000_000L,
-        1_000_000_000_000L, 10_000_000_000_000L, 100_000_000_000_000L,
-        1_000_000_000_000_000L, 10_000_000_000_000_000L, 100_000_000_000_000_000L,
-        1_000_000_000_000_000_000L, Long.MAX_VALUE};
+    private static final char LOWER_CASE_E = 'e';
+    private static final char PLUS = '+';
+    private static final char MINUS = '-';
 
     // FRACTION_LOWER_THRESHOLD and FRACTION_UPPER_THRESHOLD are used when converting
     // the fractional part of a double to ensure that discretisation errors are corrected.
@@ -213,8 +216,8 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         final long otherValue = other.value;
         final int otherScale = other.scale;
 
-        final long decimalPointDivisor = pow10(scale);
-        final long otherDecimalPointDivisor = pow10(otherScale);
+        final long decimalPointDivisor = PowerOf10.pow10(scale);
+        final long otherDecimalPointDivisor = PowerOf10.pow10(otherScale);
 
         final long valueBeforeDecimalPoint = value / decimalPointDivisor;
         final long otherValueBeforeDecimalPoint = otherValue / otherDecimalPointDivisor;
@@ -235,42 +238,15 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         if (scale > otherScale)
         {
             final int differenceInScale = scale - otherScale;
-            otherValueAfterDecimalPoint *= pow10(differenceInScale);
+            otherValueAfterDecimalPoint *= PowerOf10.pow10(differenceInScale);
         }
         else
         {
             final int differenceInScale = otherScale - scale;
-            valueAfterDecimalPoint *= pow10(differenceInScale);
+            valueAfterDecimalPoint *= PowerOf10.pow10(differenceInScale);
         }
 
         return Long.compare(valueAfterDecimalPoint, otherValueAfterDecimalPoint);
-    }
-
-    private static final long[] POWERS_OF_10 = {
-        1L,
-        10L,
-        100L,
-        1000L,
-        10000L,
-        100000L,
-        1000000L,
-        10000000L,
-        100000000L,
-        1000000000L,
-        10000000000L,
-        100000000000L,
-        1000000000000L,
-        10000000000000L,
-        100000000000000L,
-        1000000000000000L,
-        10000000000000000L,
-        100000000000000000L,
-        1000000000000000000L,
-    };
-
-    private static long pow10(final int rhs)
-    {
-        return POWERS_OF_10[rhs];
     }
 
     public double toDouble()
@@ -357,17 +333,7 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
             endDiff++;
         }
 
-        boolean isFloatingPoint = false;
-        for (int index = end - endDiff - 1; index > offset; index--)
-        {
-            if (string.charAt(index) == '.')
-            {
-                isFloatingPoint = true;
-                break;
-            }
-        }
-
-        if (isFloatingPoint)
+        if (isFloatingPoint(string, offset, end, endDiff))
         {
             end -= endDiff;
         }
@@ -391,31 +357,74 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
             offset++;
         }
 
-        int scale = 0;
+        int workingScale = 0;
         long value = 0;
+        int base10exponent = 0;
+        boolean isScientificNotation = false;
+        short scaleDecrementValue = 0;
+        short scientificExponentMultiplier = -1;
         for (int index = offset; index < end; index++)
         {
             final char charValue = string.charAt(index);
             if (charValue == '.')
             {
                 // number of digits after the dot
-                scale = end - (index + 1);
+                workingScale = end - (index + 1);
+                scaleDecrementValue = 1;
+            }
+            else if (charValue == LOWER_CASE_E)
+            {
+                isScientificNotation = true;
+
+                workingScale -= scaleDecrementValue;
+            }
+            else if (isScientificNotation && charValue == PLUS)
+            {
+                workingScale -= scaleDecrementValue;
+            }
+            else if (isScientificNotation && charValue == MINUS)
+            {
+                workingScale -= scaleDecrementValue;
+                scientificExponentMultiplier = 1;
             }
             else
             {
                 final int digit = getDigit(index, charValue);
-                value = value * 10 + digit;
-                if (value < 0)
+                if (isScientificNotation)
                 {
-                    throw new ArithmeticException(
-                        "Out of range: when parsing " + string.subSequence(start, start + length));
+                    base10exponent = base10exponent * 10 + digit;
+                    workingScale -= scaleDecrementValue;
+                }
+                else
+                {
+                    value = value * 10 + digit;
+                    if (value < 0)
+                    {
+                        throw new ArithmeticException(
+                                "Out of range: when parsing " + string.subSequence(start, start + length));
+                    }
                 }
             }
         }
 
-        set(negative ? -1 * value : value, scale);
+        final int scale = workingScale + (scientificExponentMultiplier * base10exponent);
+        final long signedValue = negative ? -1 * value : value;
+        return this.set(
+                (scale >= 0) ? signedValue : signedValue * pow10(-scale),
+                Math.max(scale, 0)
+        );
+    }
 
-        return this;
+    private boolean isFloatingPoint(final CharSequence string, final int offset, final int end, final int endDiff)
+    {
+        for (int index = end - endDiff - 1; index > offset; index--)
+        {
+            if (string.charAt(index) == '.')
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private int getDigit(final int index, final char charValue)

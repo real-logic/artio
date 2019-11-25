@@ -22,12 +22,16 @@ import uk.co.real_logic.artio.fields.*;
 import java.nio.ByteBuffer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static uk.co.real_logic.artio.util.PowerOf10.pow10;
 
 public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffer
 {
     private static final byte ZERO = '0';
     private static final byte DOT = (byte)'.';
     private static final byte SPACE = ' ';
+    private static final byte LOWER_CASE_E = 'e';
+    private static final byte PLUS = '+';
+    private static final byte MINUS = '-';
 
     private static final byte Y = (byte)'Y';
     private static final byte N = (byte)'N';
@@ -183,17 +187,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
             endDiff++;
         }
 
-        boolean isFloatingPoint = false;
-        for (int index = end - endDiff - 1; index > offset; index--)
-        {
-            if (getByte(index) == DOT)
-            {
-                isFloatingPoint = true;
-                break;
-            }
-        }
-
-        if (isFloatingPoint)
+        if (isFloatingPoint(offset, end, endDiff))
         {
             end -= endDiff;
         }
@@ -217,30 +211,76 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
             offset++;
         }
 
-        int scale = 0;
+        int workingScale = 0;
         long value = 0;
+        int base10exponent = 0;
+        boolean isScientificNotation = false;
+        short scaleDecrementValue = 0;
+        short scientificExponentMultiplier = -1;
         for (int index = offset; index < end; index++)
         {
             final byte byteValue = getByte(index);
             if (byteValue == DOT)
             {
                 // number of digits after the dot
-                scale = end - (index + 1);
+                workingScale = end - (index + 1);
+                scaleDecrementValue = 1;
+            }
+            else if (byteValue == LOWER_CASE_E)
+            {
+                isScientificNotation = true;
+
+                workingScale -= scaleDecrementValue;
+            }
+            else if (isScientificNotation && byteValue == PLUS)
+            {
+                workingScale -= scaleDecrementValue;
+            }
+            else if (isScientificNotation && byteValue == MINUS)
+            {
+                workingScale -= scaleDecrementValue;
+                scientificExponentMultiplier = 1;
             }
             else
             {
                 final int digit = getDigit(index, byteValue);
-                value = value * 10 + digit;
-                if (value < 0)
+                if (isScientificNotation)
                 {
-                    throw new ArithmeticException(
-                        "Out of range: when parsing " + getAscii(offset, length));
+                    base10exponent = base10exponent * 10 + digit;
+                    workingScale -= scaleDecrementValue;
+                }
+                else
+                {
+                    value = value * 10 + digit;
+                    if (value < 0)
+                    {
+                        throw new ArithmeticException(
+                                "Out of range: when parsing " + getAscii(offset, length));
+                    }
                 }
             }
         }
 
-        number.set(negative ? -1 * value : value, scale);
-        return number;
+        final int scale = workingScale + (scientificExponentMultiplier * base10exponent);
+        final long signedValue = negative ? -1 * value : value;
+        return number.set(
+                (scale >= 0) ? signedValue : signedValue * pow10(-scale),
+                Math.max(scale, 0)
+        );
+    }
+
+    private boolean isFloatingPoint(final int offset, final int end, final int endDiff)
+    {
+        boolean isFloatingPoint = false;
+        for (int index = end - endDiff - 1; index > offset; index--)
+        {
+            if (getByte(index) == DOT)
+            {
+                isFloatingPoint = true;
+                break;
+            }
+        }
+        return isFloatingPoint;
     }
 
     private boolean isSpace(final int index)
