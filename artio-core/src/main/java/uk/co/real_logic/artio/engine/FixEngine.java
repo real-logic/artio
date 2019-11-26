@@ -94,6 +94,33 @@ public final class FixEngine extends GatewayProcess
     }
 
     /**
+     * Unbinds the acceptor socket. This does not disconnect any currently connected TCP connections.
+     *
+     * If the reply is <code>null</code> then the query hasn't been enqueued and the operation
+     * should be retried on a duty cycle.
+     *
+     * @return the reply object, or null if the request hasn't been successfully enqueued.
+     */
+    public Reply<?> unbind()
+    {
+        return framerContext.bind(false);
+    }
+
+    /**
+     * Binds the acceptor socket to the configured address. This only needs to be called if you had called
+     * {@link this#unbind()} previously - {@link FixEngine#launch()} will bind the socket by default.
+     *
+     * If the reply is <code>null</code> then the query hasn't been enqueued and the operation
+     * should be retried on a duty cycle.
+     *
+     * @return the reply object, or null if the request hasn't been successfully enqueued.
+     */
+    public Reply<?> bind()
+    {
+        return framerContext.bind(true);
+    }
+
+    /**
      * Resets the set of session ids.
      *
      * @param backupLocation the location to backup the current session ids file to.

@@ -164,6 +164,13 @@ public final class SystemTestUtil
         return library.initiate(config);
     }
 
+    public static void awaitReply(final Reply<?> reply)
+    {
+        assertEventuallyTrue(
+            "No reply from: " + reply,
+            () -> !reply.isExecuting());
+    }
+
     static void awaitLibraryReply(final FixLibrary library, final Reply<?> reply)
     {
         awaitLibraryReply(library, null, reply);

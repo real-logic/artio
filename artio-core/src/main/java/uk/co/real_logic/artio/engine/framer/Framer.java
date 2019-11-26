@@ -1734,6 +1734,26 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         receiverEndPoints.receiverEndPointPollingOptional(connectionId);
     }
 
+    void onBind(final BindCommand bindCommand)
+    {
+        try
+        {
+            if (bindCommand.bind())
+            {
+                channelSupplier.bind();
+            }
+            else
+            {
+                channelSupplier.unbind();
+            }
+            bindCommand.success();
+        }
+        catch (final Exception e)
+        {
+            bindCommand.onError(e);
+        }
+    }
+
     class HandoverNewConnectionToLibrary extends UnitOfWork
     {
         private final GatewaySession gatewaySession;
