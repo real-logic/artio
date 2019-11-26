@@ -18,11 +18,12 @@ package uk.co.real_logic.artio.fields;
 import java.math.BigDecimal;
 
 
+import uk.co.real_logic.artio.util.float_parsing.CharSequenceCharReader;
+import uk.co.real_logic.artio.util.float_parsing.DecimalFloatParser;
 import uk.co.real_logic.artio.util.PowerOf10;
 
 import static uk.co.real_logic.artio.util.PowerOf10.HIGHEST_POWER_OF_TEN;
 import static uk.co.real_logic.artio.util.PowerOf10.POWERS_OF_TEN;
-import static uk.co.real_logic.artio.util.PowerOf10.pow10;
 
 /**
  * Fix float data type. Floats are used for a variety of things, including price.
@@ -66,10 +67,6 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
     public static final DecimalFloat ZERO = new DecimalFloat();
     public static final DecimalFloat NAN = getNaN();
     public static final DecimalFloat MISSING_FLOAT = NAN;
-
-    private static final char LOWER_CASE_E = 'e';
-    private static final char PLUS = '+';
-    private static final char MINUS = '-';
 
     // FRACTION_LOWER_THRESHOLD and FRACTION_UPPER_THRESHOLD are used when converting
     // the fractional part of a double to ensure that discretisation errors are corrected.
@@ -319,132 +316,7 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
 
     public DecimalFloat fromString(final CharSequence string, final int start, final int length)
     {
-        // Throw away trailing spaces or zeros
-        int offset = start;
-        int end = offset + length;
-        for (int index = end - 1; isSpace(string, index) && index > offset; index--)
-        {
-            end--;
-        }
-
-        int endDiff = 0;
-        for (int index = end - 1; isZero(string, index) && index > offset; index--)
-        {
-            endDiff++;
-        }
-
-        if (isFloatingPoint(string, offset, end, endDiff))
-        {
-            end -= endDiff;
-        }
-
-        // Throw away leading spaces
-        for (int index = offset; isSpace(string, index) && index < end; index++)
-        {
-            offset++;
-        }
-
-        // Is it negative?
-        final boolean negative = string.charAt(offset) == '-';
-        if (negative)
-        {
-            offset++;
-        }
-
-        // Throw away leading zeros
-        for (int index = offset; isZero(string, index) && index < end; index++)
-        {
-            offset++;
-        }
-
-        int workingScale = 0;
-        long value = 0;
-        int base10exponent = 0;
-        boolean isScientificNotation = false;
-        short scaleDecrementValue = 0;
-        short scientificExponentMultiplier = -1;
-        for (int index = offset; index < end; index++)
-        {
-            final char charValue = string.charAt(index);
-            if (charValue == '.')
-            {
-                // number of digits after the dot
-                workingScale = end - (index + 1);
-                scaleDecrementValue = 1;
-            }
-            else if (charValue == LOWER_CASE_E)
-            {
-                isScientificNotation = true;
-
-                workingScale -= scaleDecrementValue;
-            }
-            else if (isScientificNotation && charValue == PLUS)
-            {
-                workingScale -= scaleDecrementValue;
-            }
-            else if (isScientificNotation && charValue == MINUS)
-            {
-                workingScale -= scaleDecrementValue;
-                scientificExponentMultiplier = 1;
-            }
-            else
-            {
-                final int digit = getDigit(index, charValue);
-                if (isScientificNotation)
-                {
-                    base10exponent = base10exponent * 10 + digit;
-                    workingScale -= scaleDecrementValue;
-                }
-                else
-                {
-                    value = value * 10 + digit;
-                    if (value < 0)
-                    {
-                        throw new ArithmeticException(
-                                "Out of range: when parsing " + string.subSequence(start, start + length));
-                    }
-                }
-            }
-        }
-
-        final int scale = workingScale + (scientificExponentMultiplier * base10exponent);
-        final long signedValue = negative ? -1 * value : value;
-        return this.set(
-                (scale >= 0) ? signedValue : signedValue * pow10(-scale),
-                Math.max(scale, 0)
-        );
-    }
-
-    private boolean isFloatingPoint(final CharSequence string, final int offset, final int end, final int endDiff)
-    {
-        for (int index = end - endDiff - 1; index > offset; index--)
-        {
-            if (string.charAt(index) == '.')
-            {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    private int getDigit(final int index, final char charValue)
-    {
-        if (charValue < '0' || charValue > '9')
-        {
-            throw new NumberFormatException("'" + charValue + "' isn't a valid digit @ " + index);
-        }
-
-        return charValue - '0';
-    }
-
-    private boolean isSpace(final CharSequence input, final int index)
-    {
-        return Character.isSpaceChar(input.charAt(index));
-    }
-
-    private boolean isZero(final CharSequence input, final int index)
-    {
-        return input.charAt(index) == '0';
+        return DecimalFloatParser.extract(this, CharSequenceCharReader.INSTANCE, string, start, length);
     }
 
     public boolean isNaNValue()

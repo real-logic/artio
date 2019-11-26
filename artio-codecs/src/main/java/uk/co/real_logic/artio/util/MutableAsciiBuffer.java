@@ -18,26 +18,21 @@ package uk.co.real_logic.artio.util;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.fields.*;
+import uk.co.real_logic.artio.util.float_parsing.AsciiBufferCharReader;
+import uk.co.real_logic.artio.util.float_parsing.DecimalFloatParser;
+
 
 import java.nio.ByteBuffer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
-import static uk.co.real_logic.artio.util.PowerOf10.pow10;
 
 public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffer
 {
     private static final byte ZERO = '0';
     private static final byte DOT = (byte)'.';
-    private static final byte SPACE = ' ';
-    private static final byte LOWER_CASE_E = 'e';
-    private static final byte PLUS = '+';
-    private static final byte MINUS = '-';
 
     private static final byte Y = (byte)'Y';
     private static final byte N = (byte)'N';
-
-    private static final byte[] MIN_INTEGER_VALUE = String.valueOf(Integer.MIN_VALUE).getBytes(US_ASCII);
-    private static final byte[] MIN_LONG_VALUE = String.valueOf(Long.MIN_VALUE).getBytes(US_ASCII);
 
     public MutableAsciiBuffer()
     {
@@ -174,123 +169,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     @SuppressWarnings("FinalParameters")
     public DecimalFloat getFloat(final DecimalFloat number, int offset, int length)
     {
-        // Throw away trailing spaces or zeros
-        int end = offset + length;
-        for (int index = end - 1; isSpace(index) && index > offset; index--)
-        {
-            end--;
-        }
-
-        int endDiff = 0;
-        for (int index = end - 1; isZero(index) && index > offset; index--)
-        {
-            endDiff++;
-        }
-
-        if (isFloatingPoint(offset, end, endDiff))
-        {
-            end -= endDiff;
-        }
-
-        // Throw away leading spaces
-        for (int index = offset; isSpace(index) && index < end; index++)
-        {
-            offset++;
-        }
-
-        // Is it negative?
-        final boolean negative = getByte(offset) == '-';
-        if (negative)
-        {
-            offset++;
-        }
-
-        // Throw away leading zeros
-        for (int index = offset; isZero(index) && index < end; index++)
-        {
-            offset++;
-        }
-
-        int workingScale = 0;
-        long value = 0;
-        int base10exponent = 0;
-        boolean isScientificNotation = false;
-        short scaleDecrementValue = 0;
-        short scientificExponentMultiplier = -1;
-        for (int index = offset; index < end; index++)
-        {
-            final byte byteValue = getByte(index);
-            if (byteValue == DOT)
-            {
-                // number of digits after the dot
-                workingScale = end - (index + 1);
-                scaleDecrementValue = 1;
-            }
-            else if (byteValue == LOWER_CASE_E)
-            {
-                isScientificNotation = true;
-
-                workingScale -= scaleDecrementValue;
-            }
-            else if (isScientificNotation && byteValue == PLUS)
-            {
-                workingScale -= scaleDecrementValue;
-            }
-            else if (isScientificNotation && byteValue == MINUS)
-            {
-                workingScale -= scaleDecrementValue;
-                scientificExponentMultiplier = 1;
-            }
-            else
-            {
-                final int digit = getDigit(index, byteValue);
-                if (isScientificNotation)
-                {
-                    base10exponent = base10exponent * 10 + digit;
-                    workingScale -= scaleDecrementValue;
-                }
-                else
-                {
-                    value = value * 10 + digit;
-                    if (value < 0)
-                    {
-                        throw new ArithmeticException(
-                                "Out of range: when parsing " + getAscii(offset, length));
-                    }
-                }
-            }
-        }
-
-        final int scale = workingScale + (scientificExponentMultiplier * base10exponent);
-        final long signedValue = negative ? -1 * value : value;
-        return number.set(
-                (scale >= 0) ? signedValue : signedValue * pow10(-scale),
-                Math.max(scale, 0)
-        );
-    }
-
-    private boolean isFloatingPoint(final int offset, final int end, final int endDiff)
-    {
-        boolean isFloatingPoint = false;
-        for (int index = end - endDiff - 1; index > offset; index--)
-        {
-            if (getByte(index) == DOT)
-            {
-                isFloatingPoint = true;
-                break;
-            }
-        }
-        return isFloatingPoint;
-    }
-
-    private boolean isSpace(final int index)
-    {
-        return getByte(index) == SPACE;
-    }
-
-    private boolean isZero(final int index)
-    {
-        return getByte(index) == ZERO;
+        return DecimalFloatParser.extract(number, AsciiBufferCharReader.INSTANCE, this, offset, length);
     }
 
     public int getLocalMktDate(final int offset, final int length)
