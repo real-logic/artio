@@ -15,9 +15,34 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThan;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
+import static uk.co.real_logic.artio.Constants.LOGON_MESSAGE_AS_STR;
+import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_ID;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.INITIATOR_ID;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.acceptingConfig;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.acceptingLibraryConfig;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.connect;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.initiate;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.launchInitiatingEngine;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.newInitiatingLibrary;
+
+import java.util.List;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.RejectEncoder;
@@ -29,19 +54,11 @@ import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.validation.AuthenticationProxy;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 
-import java.util.List;
-
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.*;
-import static uk.co.real_logic.artio.Constants.LOGON_MESSAGE_AS_STR;
-import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
-
 public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 {
     private static final int DEFAULT_TIMEOUT_IN_MS = 1_000;
     private static final long LINGER_TIMEOUT_IN_MS = 1_000L;
+    private static final long AUTHENTICATION_TIMEOUT_IN_MS = 1_000L;
     private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
     private final ControllableAuthenticationStrategy auth = new ControllableAuthenticationStrategy();
 
@@ -54,6 +71,7 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         acceptingConfig.deleteLogFileDirOnStart(true);
         acceptingConfig.printErrorMessages(false);
         acceptingConfig.authenticationStrategy(auth);
+        acceptingConfig.authenticationTimeoutInMs(AUTHENTICATION_TIMEOUT_IN_MS);
 
         acceptingEngine = FixEngine.launch(acceptingConfig);
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
@@ -205,6 +223,17 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         messagesCanBeExchanged();
         assertInitiatingSequenceIndexIs(0);
+    }
+
+    @Test
+    public void shouldDisconnectPendingAuthenticationAfterTimeout()
+    {
+        final long start = System.currentTimeMillis();
+        final Reply<Session> reply = acquireAuthProxy();
+        assertDisconnectRejected(reply);
+        final long duration = System.currentTimeMillis() - start;
+        assertThat(duration, is(greaterThanOrEqualTo(AUTHENTICATION_TIMEOUT_IN_MS)));
+        assertThat(duration, is(lessThan(TEST_REPLY_TIMEOUT_IN_MS)));
     }
 
     @After

@@ -149,6 +149,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /** Unmodifiable set of defaults, please make a copy if you wish to modify them. */
     public static final Set<String> DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES;
     public static final long DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS = 10_000;
+    public static final long DEFAULT_AUTHENTICATION_TIMEOUT_IN_MS = 60_000;
 
     static
     {
@@ -225,6 +226,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private long indexFileStateFlushTimeoutInMs = DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
     private FixDictionary acceptorfixDictionary;
     private boolean deleteLogFileDirOnStart = false;
+    private long authenticationTimeoutInMs = DEFAULT_AUTHENTICATION_TIMEOUT_IN_MS;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -648,6 +650,12 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration authenticationTimeoutInMs(final long authenticationTimeoutInMs)
+    {
+        this.authenticationTimeoutInMs = authenticationTimeoutInMs;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -826,6 +834,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public boolean deleteLogFileDirOnStart()
     {
         return deleteLogFileDirOnStart;
+    }
+
+    public long authenticationTimeoutInMs()
+    {
+        return authenticationTimeoutInMs;
     }
 
     /**

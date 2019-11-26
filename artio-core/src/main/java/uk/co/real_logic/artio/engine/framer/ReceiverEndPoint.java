@@ -41,6 +41,7 @@ import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
+import static uk.co.real_logic.artio.messages.DisconnectReason.AUTHENTICATION_TIMEOUT;
 import static uk.co.real_logic.artio.messages.DisconnectReason.NO_LOGON;
 import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
@@ -718,6 +719,11 @@ class ReceiverEndPoint
     void onNoLogonDisconnect()
     {
         completeDisconnect(NO_LOGON);
+    }
+
+    void onAuthenticationTimeoutDisconnect()
+    {
+        completeDisconnect(AUTHENTICATION_TIMEOUT);
     }
 
     private void completeDisconnect(final DisconnectReason reason)

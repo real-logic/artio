@@ -108,7 +108,9 @@
             <validValue name="INVALID_FIX_MESSAGE"
                         description="We disconnected due to codec validation failing">17</validValue>
             <validValue name="INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES"
-                        description="Persistence Strategy specified INDEXED but EngineConfiguration has disabled required logging of messsages">18</validValue>
+                        description="Persistence Strategy specified INDEXED but EngineConfiguration has disabled required logging of messages">18</validValue>
+            <validValue name="AUTHENTICATION_TIMEOUT"
+                        description="We disconnected due to the authentication strategy not responding within the timeout">19</validValue>
         </enum>
         <enum name="SessionState" encodingType="uint8">
             <validValue name="CONNECTING"

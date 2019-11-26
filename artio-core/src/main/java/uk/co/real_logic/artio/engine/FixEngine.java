@@ -108,7 +108,7 @@ public final class FixEngine extends GatewayProcess
 
     /**
      * Binds the acceptor socket to the configured address. This only needs to be called if you had called
-     * {@link this#unbind()} previously - {@link FixEngine#launch()} will bind the socket by default.
+     * {@link #unbind()} previously - {@link FixEngine#launch()} will bind the socket by default.
      *
      * If the reply is <code>null</code> then the query hasn't been enqueued and the operation
      * should be retried on a duty cycle.

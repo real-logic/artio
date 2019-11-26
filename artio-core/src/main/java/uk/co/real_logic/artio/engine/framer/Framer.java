@@ -965,7 +965,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             resendRequestChunkSize,
             sendRedundantResendRequests,
             enableLastMsgSeqNumProcessed,
-            fixDictionary);
+            fixDictionary,
+            configuration.authenticationTimeoutInMs());
 
         receiverEndPoint.gatewaySession(gatewaySession);
 
