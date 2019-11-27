@@ -39,7 +39,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.artio.LogTag.REPLAY;
+import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
@@ -175,7 +175,7 @@ class ReplayerSession implements ControlledFragmentHandler
             sequenceIndex,
             endSeqNo,
             sequenceIndex,
-            LogTag.CATCHUP);
+            CATCHUP);
     }
 
     // Callback for the ReplayQuery:
@@ -307,7 +307,7 @@ class ReplayerSession implements ControlledFragmentHandler
         switch (state)
         {
             case REPLAYING:
-                DebugLogger.log(REPLAY, "ReplayerSession: REPLAYING step");
+                DebugLogger.log(REPLAY_ATTEMPT, "ReplayerSession: REPLAYING step");
                 if (replayOperation.attemptReplay())
                 {
                     state = State.CHECK_REPLAY;
@@ -316,7 +316,7 @@ class ReplayerSession implements ControlledFragmentHandler
                 return false;
 
             case CHECK_REPLAY:
-                DebugLogger.log(REPLAY, "ReplayerSession: CHECK_REPLAY step");
+                DebugLogger.log(REPLAY_ATTEMPT, "ReplayerSession: CHECK_REPLAY step");
                 if (completeReplay())
                 {
                     state = State.SEND_COMPLETE_MESSAGE;

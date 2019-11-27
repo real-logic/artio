@@ -43,6 +43,7 @@ public enum LogTag
     POSITION,
     CATCHUP,
     REPLAY,
+    REPLAY_ATTEMPT,
     INDEX,
     LIBRARY_MANAGEMENT
 }
