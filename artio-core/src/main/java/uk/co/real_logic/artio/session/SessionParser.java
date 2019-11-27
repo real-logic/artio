@@ -142,17 +142,25 @@ public class SessionParser
             }
             else
             {
-                errorHandler.onError(e);
-
-                return rejectExceptionalMessage(messageType);
+                return rejectAndHandleExceptionalMessage(e, messageType);
             }
         }
         catch (final Exception e)
         {
-            errorHandler.onError(e);
-
-            return rejectExceptionalMessage(messageType);
+            return rejectAndHandleExceptionalMessage(e, messageType);
         }
+    }
+
+    private Action rejectAndHandleExceptionalMessage(final Exception e, final long messageType)
+    {
+        final Action action = rejectExceptionalMessage(messageType);
+
+        if (action == CONTINUE)
+        {
+            onError(e);
+        }
+
+        return action;
     }
 
     private Action rejectExceptionalMessage(final long messageType)
@@ -188,14 +196,12 @@ public class SessionParser
     {
         final int msgSeqNum = header.msgSeqNum();
 
-        session.onInvalidMessage(
+        return session.onInvalidMessage(
             msgSeqNum,
             MISSING_INT,
             header.msgType(),
             header.msgTypeLength(),
             SessionConstants.INCORRECT_DATA_FORMAT_FOR_VALUE);
-
-        return CONTINUE;
     }
 
     private Action onHeartbeat(final int offset, final int length)
