@@ -248,7 +248,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 final long connectionId,
                 final long sessionId,
                 final int sequenceIndex,
-                final int messageType,
+                final long messageType,
                 final long timestamp,
                 final MessageStatus status,
                 final int sequenceNumber,
@@ -277,7 +277,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 final long connectionId,
                 final long sessionId,
                 final int sequenceIndex,
-                final int messageType,
+                final long messageType,
                 final long timestamp,
                 final MessageStatus status,
                 final int sequenceNumber,
@@ -905,7 +905,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long connectionId,
         final long sessionId,
         final int sequenceIndex,
-        final int messageType,
+        final long messageType,
         final long timestamp,
         final MessageStatus status,
         final int sequenceNumber,
@@ -965,7 +965,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             resendRequestChunkSize,
             sendRedundantResendRequests,
             enableLastMsgSeqNumProcessed,
-            fixDictionary);
+            fixDictionary,
+            configuration.authenticationTimeoutInMs());
 
         receiverEndPoint.gatewaySession(gatewaySession);
 
@@ -1732,6 +1733,26 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     void receiverEndPointPollingOptional(final long connectionId)
     {
         receiverEndPoints.receiverEndPointPollingOptional(connectionId);
+    }
+
+    void onBind(final BindCommand bindCommand)
+    {
+        try
+        {
+            if (bindCommand.bind())
+            {
+                channelSupplier.bind();
+            }
+            else
+            {
+                channelSupplier.unbind();
+            }
+            bindCommand.success();
+        }
+        catch (final Exception e)
+        {
+            bindCommand.onError(e);
+        }
     }
 
     class HandoverNewConnectionToLibrary extends UnitOfWork

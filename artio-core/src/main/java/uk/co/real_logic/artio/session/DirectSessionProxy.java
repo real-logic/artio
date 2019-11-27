@@ -418,7 +418,7 @@ public class DirectSessionProxy implements SessionProxy
 
     private long send(
         final long result,
-        final int messageType,
+        final long messageType,
         final int sequenceIndex,
         final Encoder encoder,
         final int msgSeqNo)

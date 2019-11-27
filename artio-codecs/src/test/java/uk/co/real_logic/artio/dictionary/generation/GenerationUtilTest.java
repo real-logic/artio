@@ -36,6 +36,18 @@ public class GenerationUtilTest
         assertNotEquals(packMessageType("BG"), packMessageType("BF"));
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void willFailToGeneratePackedMessageTypeWithMoreThan8Characters()
+    {
+        packMessageType("ABCDEFGHI");
+    }
+
+    @Test
+    public void supportsPackingMessageTypesOfLength7()
+    {
+        assertNotEquals(packMessageType("ABCDEFGH"), packMessageType("ABCDEFG"));
+    }
+
     @Test
     public void shouldReplaceIDWithIdInConstantName()
     {

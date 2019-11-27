@@ -29,6 +29,10 @@ public abstract class TcpChannelSupplier implements AutoCloseable
 
     abstract int pollSelector(long timeInMs, NewChannelHandler handler) throws IOException;
 
+    abstract void unbind() throws IOException;
+
+    abstract void bind() throws IOException;
+
     @FunctionalInterface
     public interface InitiatedChannelHandler
     {

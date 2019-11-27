@@ -104,7 +104,7 @@ public final class ExampleDictionary
     public static final String MSG_TYPE = "msgType";
     public static final String BODY_LENGTH = "bodyLength";
 
-    public static final int HEARTBEAT_TYPE = '0';
+    public static final long HEARTBEAT_TYPE = '0';
 
     public static final Dictionary FIELD_EXAMPLE;
 
@@ -415,7 +415,7 @@ public final class ExampleDictionary
 
     public static final String OTHER_MESSAGE_TYPE = "AB";
     public static final byte[] OTHER_MESSAGE_TYPE_BYTES = OTHER_MESSAGE_TYPE.getBytes(US_ASCII);
-    public static final int OTHER_MESSAGE_TYPE_PACKED = GenerationUtil.packMessageType(OTHER_MESSAGE_TYPE);
+    public static final long OTHER_MESSAGE_TYPE_PACKED = GenerationUtil.packMessageType(OTHER_MESSAGE_TYPE);
     private static final String ENUM_TEST_MESSAGE = "EnumTestMessage";
     private static final String ENUM_TEST_MESSAGE_TYPE = "ET";
     public static final String DATA_FIELD_LENGTH = "DataFieldLength";

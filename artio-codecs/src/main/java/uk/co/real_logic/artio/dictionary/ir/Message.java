@@ -20,7 +20,7 @@ import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.packMe
 public final class Message extends Aggregate
 {
     private final String fullType;
-    private final int packedType;
+    private final long packedType;
     private final Category category;
 
     public Message(final String name, final String fullType, final Category category)
@@ -31,7 +31,7 @@ public final class Message extends Aggregate
         this.category = category;
     }
 
-    public int packedType()
+    public long packedType()
     {
         return packedType;
     }

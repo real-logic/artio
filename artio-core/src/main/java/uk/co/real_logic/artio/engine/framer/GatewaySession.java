@@ -42,6 +42,7 @@ class GatewaySession implements SessionInfo
     private final boolean sendRedundantResendRequests;
     private final boolean enableLastMsgSeqNumProcessed;
     private final FixDictionary fixDictionary;
+    private final long authenticationTimeoutInMs;
 
     private ReceiverEndPoint receiverEndPoint;
     private SenderEndPoint senderEndPoint;
@@ -53,11 +54,12 @@ class GatewaySession implements SessionInfo
     private String username;
     private String password;
     private int heartbeatIntervalInS;
-    private long disconnectTimeout = NO_TIMEOUT;
+    private long disconnectTimeInMs = NO_TIMEOUT;
 
     private Consumer<GatewaySession> onGatewaySessionLogon;
     private SessionLogonListener logonListener = this::onSessionLogon;
     private boolean initialResetSeqNum;
+    private boolean hasStartedAuthentication = false;
 
     GatewaySession(
         final long connectionId,
@@ -72,7 +74,8 @@ class GatewaySession implements SessionInfo
         final int resendRequestChunkSize,
         final boolean sendRedundantResendRequests,
         final boolean enableLastMsgSeqNumProcessed,
-        final FixDictionary fixDictionary)
+        final FixDictionary fixDictionary,
+        final long authenticationTimeoutInMs)
     {
         this.connectionId = connectionId;
         this.sessionId = context.sessionId();
@@ -88,6 +91,7 @@ class GatewaySession implements SessionInfo
         this.sendRedundantResendRequests = sendRedundantResendRequests;
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
         this.fixDictionary = fixDictionary;
+        this.authenticationTimeoutInMs = authenticationTimeoutInMs;
     }
 
     public long connectionId()
@@ -148,31 +152,43 @@ class GatewaySession implements SessionInfo
         receiverEndPoint.play();
     }
 
-    int poll(final long time)
+    int poll(final long timeInMs)
     {
-        return session.poll(time) + checkNoLogonDisconnect(time);
+        return session.poll(timeInMs) + checkNoLogonDisconnect(timeInMs);
     }
 
-    private int checkNoLogonDisconnect(final long time)
+    private int checkNoLogonDisconnect(final long timeInMs)
     {
-        if (disconnectTimeout == NO_TIMEOUT)
+        if (disconnectTimeInMs == NO_TIMEOUT)
         {
             return 0;
         }
 
-        if (sessionKey != null)
+        if (disconnectTimeInMs <= timeInMs && !receiverEndPoint.hasDisconnected())
         {
-            disconnectTimeout = NO_TIMEOUT;
-            return 1;
-        }
-
-        if (disconnectTimeout <= time && !receiverEndPoint.hasDisconnected())
-        {
-            receiverEndPoint.onNoLogonDisconnect();
+            if (hasStartedAuthentication)
+            {
+                receiverEndPoint.onAuthenticationTimeoutDisconnect();
+            }
+            else
+            {
+                receiverEndPoint.onNoLogonDisconnect();
+            }
             return 1;
         }
 
         return 0;
+    }
+
+    void startAuthentication(final long timeInMs)
+    {
+        hasStartedAuthentication = true;
+        disconnectTimeInMs = timeInMs + authenticationTimeoutInMs;
+    }
+
+    void onAuthenticationResult()
+    {
+        disconnectTimeInMs = NO_TIMEOUT;
     }
 
     private void onSessionLogon(final Session session)
@@ -195,7 +211,7 @@ class GatewaySession implements SessionInfo
         final DirectBuffer buffer,
         final int offset,
         final int length,
-        final int messageType,
+        final long messageType,
         final long sessionId)
     {
         if (sessionParser != null)
@@ -276,7 +292,7 @@ class GatewaySession implements SessionInfo
 
     void disconnectAt(final long disconnectTimeout)
     {
-        this.disconnectTimeout = disconnectTimeout;
+        this.disconnectTimeInMs = disconnectTimeout;
     }
 
     public long bytesInBuffer()

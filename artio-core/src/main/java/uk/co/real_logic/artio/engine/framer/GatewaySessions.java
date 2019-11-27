@@ -280,6 +280,8 @@ class GatewaySessions
         final GatewaySession gatewaySession,
         final TcpChannel channel)
     {
+        gatewaySession.startAuthentication(epochClock.time());
+
         return new PendingAcceptorLogon(
             sessionIdStrategy, gatewaySession, logon, connectionId, sessionContexts, channel);
     }
@@ -467,14 +469,24 @@ class GatewaySessions
             switch (state)
             {
                 case AUTHENTICATED:
+                    session.onAuthenticationResult();
                     onAuthenticated();
                     return false;
 
                 case ACCEPTED:
+                    return true;
+
                 case REJECTED:
+                    session.onAuthenticationResult();
+                    session = null;
                     return true;
 
                 case SENDING_REJECT_MESSAGE:
+                    if (session != null)
+                    {
+                        session.onAuthenticationResult();
+                        session = null;
+                    }
                     return onSendingRejectMessage();
 
                 case LINGERING_REJECT_MESSAGE:
@@ -623,7 +635,6 @@ class GatewaySessions
             }
 
             this.encoder = encoder;
-            this.session = null;
             this.reason = DisconnectReason.FAILED_AUTHENTICATION;
             this.lingerTimeoutInMs = lingerTimeoutInMs;
             this.state = AuthenticationState.SENDING_REJECT_MESSAGE;
@@ -638,7 +649,6 @@ class GatewaySessions
         {
             validateState();
 
-            this.session = null;
             this.reason = reason;
             this.state = AuthenticationState.REJECTED;
         }

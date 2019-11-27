@@ -85,7 +85,7 @@ public class SampleOtfAcceptor implements OtfMessageAcceptor
     }
 
     public boolean onError(
-        final ValidationError error, final int messageType, final int tagNumber, final AsciiFieldFlyweight value)
+        final ValidationError error, final long messageType, final int tagNumber, final AsciiFieldFlyweight value)
     {
         return false;
     }

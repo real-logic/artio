@@ -41,6 +41,7 @@ import static java.nio.channels.SelectionKey.OP_READ;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE_TCP;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
+import static uk.co.real_logic.artio.messages.DisconnectReason.AUTHENTICATION_TIMEOUT;
 import static uk.co.real_logic.artio.messages.DisconnectReason.NO_LOGON;
 import static uk.co.real_logic.artio.messages.DisconnectReason.REMOTE_DISCONNECT;
 import static uk.co.real_logic.artio.messages.MessageStatus.*;
@@ -331,7 +332,7 @@ class ReceiverEndPoint
                     break;
                 }
 
-                final int messageType = getMessageType(endOfBodyLength, endOfMessage);
+                final long messageType = getMessageType(endOfBodyLength, endOfMessage);
                 final int length = (endOfMessage + 1) - offset;
                 if (!validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
                 {
@@ -464,7 +465,7 @@ class ReceiverEndPoint
         return buffer.scan(startScan + 1, usedBufferData - 1, START_OF_HEADER);
     }
 
-    private void startAuthenticationFlow(final int offset, final int length, final int messageType)
+    private void startAuthenticationFlow(final int offset, final int length, final long messageType)
     {
         if (sessionId != UNKNOWN)
         {
@@ -500,14 +501,14 @@ class ReceiverEndPoint
         return backPressured;
     }
 
-    private boolean saveMessage(final int offset, final int messageType, final int length, final long readTimestamp)
+    private boolean saveMessage(final int offset, final long messageType, final int length, final long readTimestamp)
     {
         return saveMessage(offset, messageType, length, sessionId, sequenceIndex, readTimestamp);
     }
 
     private boolean saveMessage(
         final int messageOffset,
-        final int messageType,
+        final long messageType,
         final int messageLength,
         final long sessionId,
         final int sequenceIndex,
@@ -664,7 +665,7 @@ class ReceiverEndPoint
     }
 
     private boolean saveInvalidChecksumMessage(
-        final int offset, final int messageType, final int length, final long readTimestamp)
+        final int offset, final long messageType, final int length, final long readTimestamp)
     {
         final long position = publication.saveMessage(
             buffer,
@@ -718,6 +719,11 @@ class ReceiverEndPoint
     void onNoLogonDisconnect()
     {
         completeDisconnect(NO_LOGON);
+    }
+
+    void onAuthenticationTimeoutDisconnect()
+    {
+        completeDisconnect(AUTHENTICATION_TIMEOUT);
     }
 
     private void completeDisconnect(final DisconnectReason reason)

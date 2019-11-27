@@ -33,18 +33,7 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
         try
         {
             selector = Selector.open();
-
-            if (hasBindAddress)
-            {
-
-                listeningChannel = ServerSocketChannel.open();
-                listeningChannel.bind(configuration.bindAddress()).configureBlocking(false);
-                listeningChannel.register(selector, SelectionKey.OP_ACCEPT);
-            }
-            else
-            {
-                listeningChannel = null;
-            }
+            bind();
         }
         catch (final IOException ex)
         {
@@ -108,6 +97,26 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
         }
 
         return 0;
+    }
+
+    void unbind() throws IOException
+    {
+        if (listeningChannel != null)
+        {
+            listeningChannel.close();
+            selector.selectNow();
+            listeningChannel = null;
+        }
+    }
+
+    void bind() throws IOException
+    {
+        if (hasBindAddress && listeningChannel == null)
+        {
+            listeningChannel = ServerSocketChannel.open();
+            listeningChannel.bind(configuration.bindAddress()).configureBlocking(false);
+            listeningChannel.register(selector, SelectionKey.OP_ACCEPT);
+        }
     }
 
     private void configure(final SocketChannel channel) throws IOException

@@ -500,12 +500,12 @@ public class Session implements AutoCloseable
      * @param offset the offset within the messageBuffer where the message starts
      * @param length the length of the message within the messageBuffer
      * @param seqNum the sequence number of the sent message
-     * @param messageType the int encoded message type.
+     * @param messageType the long encoded message type.
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
      */
     public long send(
-        final DirectBuffer messageBuffer, final int offset, final int length, final int seqNum, final int messageType)
+        final DirectBuffer messageBuffer, final int offset, final int length, final int seqNum, final long messageType)
     {
         validateCanSendMessage();
 

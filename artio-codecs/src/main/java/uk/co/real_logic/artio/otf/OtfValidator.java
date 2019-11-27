@@ -17,7 +17,7 @@ package uk.co.real_logic.artio.otf;
 
 import org.agrona.collections.IntHashSet;
 import uk.co.real_logic.artio.ValidationError;
-import uk.co.real_logic.artio.dictionary.IntDictionary;
+import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 
@@ -35,18 +35,18 @@ public final class OtfValidator implements OtfMessageAcceptor
     private final AsciiFieldFlyweight stringField = new AsciiFieldFlyweight();
 
     private final OtfMessageAcceptor delegate;
-    private final IntDictionary allFields;
-    private final IntDictionary requiredFields;
+    private final LongDictionary allFields;
+    private final LongDictionary requiredFields;
 
     private int groupLevel = 0;
 
-    private int messageType;
+    private long messageType;
     private IntHashSet allFieldsForMessageType;
 
     public OtfValidator(
         final OtfMessageAcceptor delegate,
-        final IntDictionary allFields,
-        final IntDictionary requiredFields)
+        final LongDictionary allFields,
+        final LongDictionary requiredFields)
     {
         this.delegate = delegate;
         this.allFields = allFields;
@@ -126,7 +126,7 @@ public final class OtfValidator implements OtfMessageAcceptor
     }
 
     public boolean onError(
-        final ValidationError error, final int messageType, final int tagNumber, final AsciiFieldFlyweight value)
+        final ValidationError error, final long messageType, final int tagNumber, final AsciiFieldFlyweight value)
     {
         return delegate.onError(error, messageType, tagNumber, value);
     }

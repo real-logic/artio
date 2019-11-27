@@ -15,16 +15,18 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
+import org.agrona.MutableDirectBuffer;
+import org.agrona.collections.LongHashSet;
+import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.IdleStrategy;
+
+
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
-import org.agrona.DirectBuffer;
-import org.agrona.ErrorHandler;
-import org.agrona.MutableDirectBuffer;
-import org.agrona.collections.IntHashSet;
-import org.agrona.concurrent.EpochClock;
-import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Pressure;
@@ -33,7 +35,13 @@ import uk.co.real_logic.artio.engine.PossDupEnabler;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
-import uk.co.real_logic.artio.messages.*;
+import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
+import uk.co.real_logic.artio.messages.FixMessageDecoder;
+import uk.co.real_logic.artio.messages.FixMessageEncoder;
+import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
+import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
+import uk.co.real_logic.artio.messages.MessageStatus;
+import uk.co.real_logic.artio.messages.ReplayCompleteEncoder;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -71,7 +79,7 @@ class ReplayerSession implements ControlledFragmentHandler
     private final IdleStrategy idleStrategy;
     private final ReplayHandler replayHandler;
     private final int maxClaimAttempts;
-    private final IntHashSet gapFillMessageTypes;
+    private final LongHashSet gapFillMessageTypes;
     private final SenderSequenceNumbers senderSequenceNumbers;
     private final ExclusivePublication publication;
     private final ReplayQuery replayQuery;
@@ -97,7 +105,7 @@ class ReplayerSession implements ControlledFragmentHandler
         final IdleStrategy idleStrategy,
         final ReplayHandler replayHandler,
         final int maxClaimAttempts,
-        final IntHashSet gapFillMessageTypes,
+        final LongHashSet gapFillMessageTypes,
         final SenderSequenceNumbers senderSequenceNumbers,
         final ExclusivePublication publication,
         final EpochClock clock,
@@ -196,7 +204,7 @@ class ReplayerSession implements ControlledFragmentHandler
         final int messageLength = srcLength - MESSAGE_FRAME_BLOCK_LENGTH;
 
         final int msgSeqNum = sequenceNumberExtractor.extract(srcBuffer, messageOffset, messageLength);
-        final int messageType = FIX_MESSAGE.messageType();
+        final long messageType = MessageTypeExtractor.getMessageType(FIX_MESSAGE);
 
         ASCII_BUFFER.wrap(srcBuffer);
         replayHandler.onReplayedMessage(

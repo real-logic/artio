@@ -47,7 +47,7 @@ public interface SessionHandler
         int libraryId,
         Session session,
         int sequenceIndex,
-        int messageType,
+        long messageType,
         long timestampInNs,
         long position);
 

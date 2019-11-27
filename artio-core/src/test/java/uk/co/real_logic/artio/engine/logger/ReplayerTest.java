@@ -771,13 +771,13 @@ public class ReplayerTest extends AbstractLogTest
         onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
     }
 
-    private void onMessage(final int messageType, final long result, final Action expectedAction)
+    private void onMessage(final long messageType, final long result, final Action expectedAction)
     {
         onMessageWithSession(messageType, result, expectedAction, SESSION_ID, CONNECTION_ID);
     }
 
     private void onMessageWithSession(
-        final int messageType,
+        final long messageType,
         final long result,
         final Action expectedAction,
         final long sessionId,

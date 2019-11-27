@@ -49,6 +49,7 @@ public class FramerContext
 
     private final Framer framer;
 
+    private final EngineConfiguration configuration;
     private final GatewaySessions gatewaySessions;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
@@ -67,6 +68,8 @@ public class FramerContext
         final AgentInvoker conductorAgentInvoker,
         final RecordingCoordinator recordingCoordinator)
     {
+        this.configuration = configuration;
+
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
 
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
@@ -245,6 +248,24 @@ public class FramerContext
             remoteSubId,
             localLocationId,
             remoteLocationId);
+
+        if (adminCommands.offer(command))
+        {
+            return command;
+        }
+
+        return null;
+    }
+
+    public Reply<?> bind(final boolean bind)
+    {
+        final BindCommand command = new BindCommand(bind);
+
+        if (bind && !configuration.hasBindAddress())
+        {
+            command.onError(new IllegalStateException("Missing address: EngineConfiguration.bindTo()"));
+            return command;
+        }
 
         if (adminCommands.offer(command))
         {

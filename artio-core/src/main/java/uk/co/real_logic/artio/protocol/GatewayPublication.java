@@ -28,7 +28,6 @@ import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationEncoder.SessionsEncoder;
 
-import java.lang.reflect.Field;
 import java.util.List;
 
 import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
@@ -37,7 +36,6 @@ import static io.aeron.protocol.DataHeaderFlyweight.END_FLAG;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.agrona.BitUtil.align;
-import static org.agrona.UnsafeAccess.UNSAFE;
 import static uk.co.real_logic.artio.DebugLogger.logSbeMessage;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.messages.ErrorDecoder.messageHeaderLength;
@@ -82,21 +80,6 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + FollowerSessionReplyEncoder.BLOCK_LENGTH;
     private static final int END_OF_DAY_LENGTH =
         HEADER_LENGTH + EndOfDayEncoder.BLOCK_LENGTH;
-
-
-    private static final long TERM_OFFSET_OFFSET;
-    static
-    {
-        try
-        {
-            final Field termOffsetField = ExclusivePublication.class.getDeclaredField("termOffset");
-            TERM_OFFSET_OFFSET = UNSAFE.objectFieldOffset(termOffsetField);
-        }
-        catch (final NoSuchFieldException e)
-        {
-            throw new Error(e);
-        }
-    }
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -146,7 +129,7 @@ public class GatewayPublication extends ClaimablePublication
         final int srcOffset,
         final int srcLength,
         final int libraryId,
-        final int messageType,
+        final long messageType,
         final long sessionId,
         final int sequenceIndex,
         final long connectionId,
@@ -172,7 +155,7 @@ public class GatewayPublication extends ClaimablePublication
         final int srcOffset,
         final int srcLength,
         final int libraryId,
-        final int messageType,
+        final long messageType,
         final long sessionId,
         final int sequenceIndex,
         final long connectionId,
@@ -197,7 +180,7 @@ public class GatewayPublication extends ClaimablePublication
                 align(remainingPayload + HEADER_LENGTH, FRAME_ALIGNMENT) : 0;
             final int requiredLength = (numMaxPayloads * (maxPayloadLength + HEADER_LENGTH)) + lastFrameLength;
             final int termLength = dataPublication.termBufferLength();
-            final int termOffset = UNSAFE.getInt(dataPublication, TERM_OFFSET_OFFSET);
+            final int termOffset = dataPublication.termOffset();
             final int resultingOffset = termOffset + requiredLength;
 
             if (resultingOffset > termLength)

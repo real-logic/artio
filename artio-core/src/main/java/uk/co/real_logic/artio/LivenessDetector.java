@@ -18,6 +18,8 @@ package uk.co.real_logic.artio;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.NotConnectedException;
 
+import static uk.co.real_logic.artio.LogTag.LIBRARY_CONNECT;
+
 /**
  * Bidirection application level liveness detector.
  *
@@ -140,6 +142,11 @@ public final class LivenessDetector
         }
         catch (final NotConnectedException ex)
         {
+            DebugLogger.log(
+                LIBRARY_CONNECT,
+                "%d: Disconnect triggered by a NotConnectedException (Stream CLOSED or MAX_POSITION_EXCEEDED)%n",
+                libraryId);
+
             disconnect();
         }
 

@@ -440,6 +440,11 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
 
     public boolean isNaNValue()
     {
+        return isNaNValue(value, scale);
+    }
+
+    public static boolean isNaNValue(final long value, final int scale)
+    {
         return value == VALUE_NAN_VALUE && scale == SCALE_NAN_VALUE;
     }
 

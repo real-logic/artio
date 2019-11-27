@@ -17,7 +17,11 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.After;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+
+import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.LogonEncoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
@@ -29,6 +33,7 @@ import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.FixLibrary;
 
 import java.io.IOException;
+import java.net.ConnectException;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -41,6 +46,9 @@ import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
 
 public class MessageBasedAcceptorSystemTest
 {
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
+
     private int port = unusedPort();
 
     private ArchivingMediaDriver mediaDriver;
@@ -68,7 +76,7 @@ public class MessageBasedAcceptorSystemTest
     private void shouldComplyWithLogonBasedSequenceNumberReset(final boolean sequenceNumberReset)
         throws IOException
     {
-        setup(sequenceNumberReset);
+        setup(sequenceNumberReset, true);
 
         logonThenLogout();
 
@@ -78,7 +86,7 @@ public class MessageBasedAcceptorSystemTest
     @Test
     public void shouldNotNotifyLibraryOfSessionUntilLoggedOn() throws IOException
     {
-        setup(true);
+        setup(true, true);
 
         final FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
         final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
@@ -100,7 +108,7 @@ public class MessageBasedAcceptorSystemTest
     @Test
     public void shouldRejectExceptionalLogonMessage() throws IOException
     {
-        setup(true);
+        setup(true, true);
 
         try (FixConnection connection = FixConnection.initiate(port))
         {
@@ -117,7 +125,7 @@ public class MessageBasedAcceptorSystemTest
     @Test
     public void shouldRejectExceptionalSessionMessage() throws IOException
     {
-        setup(true);
+        setup(true, true);
 
         try (FixConnection connection = FixConnection.initiate(port))
         {
@@ -135,12 +143,116 @@ public class MessageBasedAcceptorSystemTest
     @Test
     public void shouldShutdownWithNotLoggedInSessionsOpen() throws IOException
     {
-        setup(true);
+        setup(true, true);
 
         try (FixConnection connection = FixConnection.initiate(port))
         {
             close(engine);
         }
+    }
+
+    @Test
+    public void shouldUnbindTcpPortWhenRequested() throws IOException
+    {
+        setup(true, true);
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+        }
+
+        completeUnbind();
+
+        cannotConnect();
+    }
+
+    @Test
+    public void shouldRebindTcpPortWhenRequested() throws IOException
+    {
+        setup(true, true);
+
+        completeUnbind();
+
+        completeBind();
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+        }
+    }
+
+    @Test
+    public void shouldHaveIdempotentBind() throws IOException
+    {
+        setup(true, true);
+
+        completeBind();
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+        }
+
+        completeUnbind();
+        completeBind();
+        completeBind();
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+        }
+    }
+
+    @Test
+    public void shouldHaveIdempotentUnbind() throws IOException
+    {
+        setup(true, true);
+
+        completeUnbind();
+        completeUnbind();
+
+        cannotConnect();
+    }
+
+    @Test
+    public void shouldReturnErrorWhenBindingWithoutAddress()
+    {
+        setup(true, false);
+
+        final Reply<?> reply = engine.bind();
+        SystemTestUtil.awaitReply(reply);
+        assertEquals(reply.toString(), Reply.State.ERRORED, reply.state());
+
+        assertEquals("Missing address: EngineConfiguration.bindTo()", reply.error().getMessage());
+    }
+
+    @Test
+    public void shouldNotDisconnectWhenUnbinding() throws IOException
+    {
+        setup(true, true);
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+            completeUnbind();
+            connection.logoutAndAwaitReply();
+        }
+    }
+
+    private void completeBind()
+    {
+        final Reply<?> bindReply = engine.bind();
+        SystemTestUtil.awaitReply(bindReply);
+        assertEquals(bindReply.toString(), Reply.State.COMPLETED, bindReply.state());
+    }
+
+    private void completeUnbind()
+    {
+        final Reply<?> unbindReply = engine.unbind();
+        SystemTestUtil.awaitReply(unbindReply);
+        assertEquals(unbindReply.toString(), Reply.State.COMPLETED, unbindReply.state());
+    }
+
+    private void cannotConnect() throws IOException
+    {
+        thrown.expect(ConnectException.class);
+        FixConnection.initiate(port);
     }
 
     private void sendInvalidLogon(final FixConnection connection)
@@ -173,17 +285,20 @@ public class MessageBasedAcceptorSystemTest
         connection.send(encoder);
     }
 
-    private void setup(final boolean sequenceNumberReset)
+    private void setup(final boolean sequenceNumberReset, final boolean shouldBind)
     {
         mediaDriver = launchMediaDriver();
 
         delete(ACCEPTOR_LOGS);
         final EngineConfiguration config = new EngineConfiguration()
-            .bindTo("localhost", port)
             .libraryAeronChannel(IPC_CHANNEL)
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(ACCEPTOR_LOGS)
             .sessionPersistenceStrategy(logon -> sequenceNumberReset ? UNINDEXED : INDEXED);
+        if (shouldBind)
+        {
+            config.bindTo("localhost", port);
+        }
         config.printErrorMessages(false);
         engine = FixEngine.launch(config);
     }

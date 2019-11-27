@@ -15,22 +15,25 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import org.agrona.ExpandableArrayBuffer;
-import org.agrona.collections.IntHashSet;
-import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
-import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
-import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
-import uk.co.real_logic.artio.util.AsciiBuffer;
-import uk.co.real_logic.artio.util.BufferAsciiSequence;
-import uk.co.real_logic.artio.util.MutableAsciiBuffer;
-
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 import java.util.regex.Pattern;
-import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
+
+import org.agrona.ExpandableArrayBuffer;
+import org.agrona.collections.LongHashSet;
+
+
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
+import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
+import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
+import uk.co.real_logic.artio.util.AsciiBuffer;
+import uk.co.real_logic.artio.util.BufferAsciiSequence;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 /**
  * Filters to be used in conjunction with {@link FixArchiveScanner}.
@@ -115,9 +118,9 @@ public final class FixMessagePredicates
      */
     public static FixMessagePredicate messageTypeOf(final String... messageTypes)
     {
-        final IntHashSet hashSet = new IntHashSet();
+        final LongHashSet hashSet = new LongHashSet();
         Stream.of(messageTypes)
-            .mapToInt(GenerationUtil::packMessageType)
+            .mapToLong(GenerationUtil::packMessageType)
             .forEach(hashSet::add);
         return messageTypeOf(hashSet);
     }
@@ -125,20 +128,24 @@ public final class FixMessagePredicates
     /**
      * Filter messages by the message type of their fix message.
      *
-     * @param messageTypes the fix message types encoded as packed ints.
+     * @param messageTypes the fix message types encoded as packed longs.
      * @return the resulting predicate.
      */
-    public static FixMessagePredicate messageTypeOf(final int... messageTypes)
+    public static FixMessagePredicate messageTypeOf(final long... messageTypes)
     {
-        final IntHashSet hashSet = new IntHashSet();
-        IntStream.of(messageTypes)
-            .forEach(hashSet::add);
+        final LongHashSet hashSet = new LongHashSet();
+        LongStream.of(messageTypes)
+                  .forEach(hashSet::add);
         return messageTypeOf(hashSet);
     }
 
-    private static FixMessagePredicate messageTypeOf(final IntHashSet hashSet)
+    private static FixMessagePredicate messageTypeOf(final LongHashSet hashSet)
     {
-        return (message) -> hashSet.contains(message.messageType());
+        return (message) ->
+        {
+            final long messageType = MessageTypeExtractor.getMessageType(message);
+            return hashSet.contains(messageType);
+        };
     }
 
     /**

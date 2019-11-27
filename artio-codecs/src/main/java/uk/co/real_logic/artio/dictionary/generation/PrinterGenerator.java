@@ -88,9 +88,11 @@ public class PrinterGenerator
     private String generateToString()
     {
         final Function<Message, String> mapper = (aggregate) -> String.format(
-            "            case %s:\n" +
-            "            %s.decode(input, offset, length);\n" +
-            "            return %2$s.toString();\n\n",
+            "            if (messageType == %sL)\n" +
+            "            {\n" +
+            "                %s.decode(input, offset, length);\n" +
+            "                return %2$s.toString();\n" +
+            "            }\n\n",
             aggregate.packedType(),
             decoderFieldName(aggregate));
 
@@ -101,14 +103,13 @@ public class PrinterGenerator
             "        final AsciiBuffer input,\n" +
             "        final int offset,\n" +
             "        final int length,\n" +
-            "        final int messageType)\n" +
+            "        final long messageType)\n" +
             "    {\n" +
-            "        switch(messageType)\n" +
-            "        {\n" +
             cases +
-            "            default:\n" +
-            "            throw new IllegalArgumentException(\"Unknown Message Type: \" + messageType);" +
-            "        }\n" +
+            "            else\n" +
+            "            {\n" +
+            "                throw new IllegalArgumentException(\"Unknown Message Type: \" + messageType);\n" +
+            "            }\n" +
             "    }\n\n";
     }
 
