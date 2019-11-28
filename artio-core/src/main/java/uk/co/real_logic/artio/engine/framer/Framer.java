@@ -36,10 +36,7 @@ import uk.co.real_logic.artio.LivenessDetector;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.CompletionPosition;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.PositionSender;
-import uk.co.real_logic.artio.engine.RecordingCoordinator;
+import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
@@ -75,6 +72,7 @@ import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.Pressure.isBackPressured;
 import static uk.co.real_logic.artio.dictionary.generation.Exceptions.closeAll;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
+import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.framer.Continuation.COMPLETE;
 import static uk.co.real_logic.artio.engine.framer.GatewaySession.adjustLastSequenceNumber;
@@ -156,6 +154,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private final SessionHeaderDecoder acceptorHeaderDecoder;
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
+    private final boolean soleLibraryMode;
 
     private long nextConnectionId = (long)(Math.random() * Long.MAX_VALUE);
 
@@ -213,6 +212,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.sentSequenceNumberIndex = sentSequenceNumberIndex;
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.finalImagePositions = finalImagePositions;
+        this.soleLibraryMode = configuration.initialAcceptedSessionOwner() == SOLE_LIBRARY;
 
         acceptorHeaderDecoder = configuration.acceptorfixDictionary().makeHeaderDecoder();
 
@@ -538,7 +538,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         gatewaySession.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
 
         // In sole library mode we forward all connections to the sole library
-        if (!configuration.soleLibraryMode())
+        if (!soleLibraryMode)
         {
             gatewaySessions.acquire(
                 gatewaySession,
@@ -828,7 +828,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     }
 
     // Used when handing over a new connection that has never been gateway managed.
-    // Eg: accepted sessions in soleLibraryMode and also initiated sessions
+    // Eg: accepted sessions in initialAcceptedSessionOwner=SOLE_LIBRARY and also initiated sessions
     private void handoverNewConnectionToLibrary(
         final int libraryId,
         final String senderCompId,
@@ -1031,6 +1031,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             existingLibrary.onHeartbeat(epochClock.time());
 
             return Pressure.apply(inboundPublication.saveControlNotification(libraryId, existingLibrary.sessions()));
+        }
+
+        if (soleLibraryMode && idToLibrary.size() >= 1)
+        {
+            logSoleLibraryError();
         }
 
         // Send an empty control notification if you've never seen this library before
@@ -1474,7 +1479,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private void onSessionLogon(final GatewaySession gatewaySession)
     {
-        if (!configuration.soleLibraryMode())
+        if (!soleLibraryMode)
         {
             // Notify libraries of the existence of this logged on session.
             schedule(() ->
@@ -1503,13 +1508,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     void onLogonMessageReceived(final GatewaySession gatewaySession)
     {
-        if (configuration.soleLibraryMode() && gatewaySession.connectionType() == ACCEPTOR)
+        // Hand over management of this new session to the sole library
+        if (soleLibraryMode && gatewaySession.connectionType() == ACCEPTOR)
         {
-            // Hand over management of this new session to the sole library
             if (idToLibrary.size() != 1)
             {
-                // TODO: error case
-                System.err.println("Error, invalid numbers of libraryies: " + idToLibrary.size());
+                logSoleLibraryError();
             }
 
             final LiveLibraryInfo libraryInfo = idToLibrary.values().iterator().next();
@@ -1549,6 +1553,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 gatewaySession.address(),
                 ACCEPTOR);
         }
+    }
+
+    private void logSoleLibraryError()
+    {
+        errorHandler.onError(new IllegalStateException(
+            "Error, invalid numbers of libraryies: " + idToLibrary.size() + " whilst in sole library mode"));
     }
 
     void onQueryLibraries(final QueryLibrariesCommand command)
@@ -1865,8 +1875,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
                 lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
 
-                // Accptors are adjusted here - symmetrically with the non soleLibraryMode case, whilst
-                // Initiator configuration is always adjusted on the library side.
+                // Accptors are adjusted here - symmetrically with the non initialAcceptedSessionOwner=SOLE_LIBRARY
+                // case, whilst Initiator configuration is always adjusted on the library side.
                 if (connectionType == ACCEPTOR)
                 {
                     lastSentSequenceNumber = adjustLastSequenceNumber(lastSentSequenceNumber);

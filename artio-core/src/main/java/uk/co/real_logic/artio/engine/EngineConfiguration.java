@@ -221,7 +221,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int acceptedSessionResendRequestChunkSize = NO_RESEND_REQUEST_CHUNK_SIZE;
     private boolean acceptedSessionSendRedundantResendRequests = DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS;
     private boolean acceptedEnableLastMsgSeqNumProcessed = DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED;
-    private boolean soleLibraryMode = false;
+    private InitialAcceptedSessionOwner initialAcceptedSessionOwner = InitialAcceptedSessionOwner.ENGINE;
     private AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.none();
     private long indexFileStateFlushTimeoutInMs = DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
     private FixDictionary acceptorfixDictionary;
@@ -595,14 +595,20 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * NB: This is an experimental API and is subject to change or potentially removal.
+     * Set whether accepted sessions are initially owned by the Engine or a Library - the default is
+     * the Engine. When a FIX initiator initially connects to an Artio acceptor then by default this session is owned
+     * by the Engine and Libraries can request ownership of the Session from the Engine. If <code>SOLE_LIBRARY</code>
+     * mode is chosen then only a single library instance must connect.
      *
-     * @param singleLibraryMode true to switch singleLibraryMode on or false (the default) to switch it off.
+     * NB: This is an experimental API and is subject to change.
+     *
+     * @param initialAcceptedSessionOwner whether accepted sessions are initially owned by the Engine or a Library
      * @return this
      */
-    public EngineConfiguration soleLibraryMode(final boolean singleLibraryMode)
+    public EngineConfiguration initialAcceptedSessionOwner(
+        final InitialAcceptedSessionOwner initialAcceptedSessionOwner)
     {
-        this.soleLibraryMode = singleLibraryMode;
+        this.initialAcceptedSessionOwner = initialAcceptedSessionOwner;
         return this;
     }
 
@@ -811,9 +817,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return replayHandler;
     }
 
-    public boolean soleLibraryMode()
+    public InitialAcceptedSessionOwner initialAcceptedSessionOwner()
     {
-        return soleLibraryMode;
+        return initialAcceptedSessionOwner;
     }
 
     public AuthenticationStrategy authenticationStrategy()

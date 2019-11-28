@@ -225,7 +225,7 @@ class ReceiverEndPoint
         final int length = this.pendingAcceptorLogonMsgLength;
 
         // Might be paused at this point to ensure that a library has been notified of
-        // the new session in soleLibraryMode
+        // the new session in initialAcceptedSessionOwner=SOLE_LIBRARY
         if (isPaused)
         {
             moveRemainingDataToBufferStart(offset);
