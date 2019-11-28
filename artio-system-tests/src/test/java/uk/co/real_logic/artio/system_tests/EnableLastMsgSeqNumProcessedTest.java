@@ -13,7 +13,7 @@ import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysIndexed;
+import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
 
 public class EnableLastMsgSeqNumProcessedTest extends AbstractGatewayToGatewaySystemTest
 {
@@ -27,7 +27,7 @@ public class EnableLastMsgSeqNumProcessedTest extends AbstractGatewayToGatewaySy
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
         acceptingConfig.deleteLogFileDirOnStart(true);
         acceptingConfig.acceptedEnableLastMsgSeqNumProcessed(true);
-        acceptingConfig.sessionPersistenceStrategy(alwaysIndexed());
+        acceptingConfig.sessionPersistenceStrategy(alwaysPersistent());
 
         acceptingEngine = FixEngine.launch(acceptingConfig);
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);

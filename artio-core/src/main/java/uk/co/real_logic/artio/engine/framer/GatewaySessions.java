@@ -25,9 +25,9 @@ import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
-import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.HeaderSetup;
 import uk.co.real_logic.artio.engine.SessionInfo;
@@ -367,9 +367,10 @@ class GatewaySessions
             final PersistenceLevel persistenceLevel = getPersistenceLevel(logon, connectionId);
             final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
 
-            resetSeqNum = resetSequenceNumbersUponLogon(persistenceLevel) || resetSeqNumFlag;
+            final boolean resetSequenceNumbersUponLogon = resetSequenceNumbersUponLogon(persistenceLevel);
+            resetSeqNum = resetSequenceNumbersUponLogon || resetSeqNumFlag;
 
-            if (persistenceLevel == PersistenceLevel.INDEXED && !logAllMessages)
+            if (!resetSequenceNumbersUponLogon && !logAllMessages)
             {
                 onError(new IllegalStateException(
                     "Persistence Strategy specified INDEXED but " +
@@ -390,8 +391,9 @@ class GatewaySessions
             }
             catch (final Throwable throwable)
             {
-                onStrategyError("persistence", throwable, connectionId, "UNINDEXED", logon);
-                return PersistenceLevel.UNINDEXED;
+                onStrategyError(
+                    "persistence", throwable, connectionId, "TRANSIENT_SEQUENCE_NUMBERS", logon);
+                return PersistenceLevel.TRANSIENT_SEQUENCE_NUMBERS;
             }
         }
 

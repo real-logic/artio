@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2019 Real Logic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +18,28 @@ package uk.co.real_logic.artio.validation;
 public enum PersistenceLevel
 {
     /**
-     * Locally archive messages to disk, but does not index them, automatically resets
-     * sequence numbers upon connect
+     *  Persists sequence numbers over reconnects.
      */
+    PERSISTENT_SEQUENCE_NUMBERS,
+
+    /**
+     * Automatically resets sequence numbers upon connect
+     */
+    TRANSIENT_SEQUENCE_NUMBERS,
+
+    /**
+     * Automatically resets sequence numbers upon connect
+     *
+     *  Deprecated and will be removed in future. Renamed to {@link #TRANSIENT_SEQUENCE_NUMBERS}.
+     */
+    @Deprecated
     UNINDEXED,
 
     /**
-     *  Indexes archived messages and persists sequence numbers over reconnects
+     *  Persists sequence numbers over reconnects.
+     *
+     *  Deprecated and will be removed in future. Renamed to {@link #PERSISTENT_SEQUENCE_NUMBERS}.
      */
+    @Deprecated
     INDEXED
 }

@@ -20,7 +20,6 @@ import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.LogonEncoder;
@@ -41,8 +40,8 @@ import static org.agrona.CloseHelper.close;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.PERSISTENT_SEQUENCE_NUMBERS;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.TRANSIENT_SEQUENCE_NUMBERS;
 
 public class MessageBasedAcceptorSystemTest
 {
@@ -294,7 +293,8 @@ public class MessageBasedAcceptorSystemTest
             .libraryAeronChannel(IPC_CHANNEL)
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(ACCEPTOR_LOGS)
-            .sessionPersistenceStrategy(logon -> sequenceNumberReset ? UNINDEXED : INDEXED);
+            .sessionPersistenceStrategy(logon ->
+            sequenceNumberReset ? TRANSIENT_SEQUENCE_NUMBERS : PERSISTENT_SEQUENCE_NUMBERS);
         if (shouldBind)
         {
             config.bindTo("localhost", port);

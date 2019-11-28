@@ -33,7 +33,7 @@ import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 
 import static java.util.Collections.singletonList;
 import static uk.co.real_logic.artio.SampleUtil.blockingConnect;
-import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysIndexed;
+import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
 
 public class Server implements Agent
 {
@@ -51,7 +51,7 @@ public class Server implements Agent
             .bindTo("localhost", StressConfiguration.PORT)
             .logFileDir("stress-server-logs")
             .libraryAeronChannel(aeronChannel)
-            .sessionPersistenceStrategy(alwaysIndexed());
+            .sessionPersistenceStrategy(alwaysPersistent());
 
         configuration
             .authenticationStrategy(authenticationStrategy)

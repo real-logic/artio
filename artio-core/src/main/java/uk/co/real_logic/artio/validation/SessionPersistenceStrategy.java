@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +17,8 @@ package uk.co.real_logic.artio.validation;
 
 import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 
-import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.PERSISTENT_SEQUENCE_NUMBERS;
+import static uk.co.real_logic.artio.validation.PersistenceLevel.TRANSIENT_SEQUENCE_NUMBERS;
 
 /**
  * Determines whether a session should be replicated or not.
@@ -26,24 +26,50 @@ import static uk.co.real_logic.artio.validation.PersistenceLevel.UNINDEXED;
 @FunctionalInterface
 public interface SessionPersistenceStrategy
 {
+    /**
+     * Deprecated and will be removed in future. Renamed to {@link #alwaysPersistent}.
+     *
+     * @return {@link #alwaysPersistent}
+     */
+    @Deprecated
     static SessionPersistenceStrategy alwaysIndexed()
     {
-        return (logon) -> INDEXED;
+        return alwaysPersistent();
     }
 
+    /**
+     * Deprecated and will be removed in future. Renamed to {@link #alwaysTransient}.
+     *
+     * @return {@link #alwaysPersistent}
+     */
+    @Deprecated
     static SessionPersistenceStrategy alwaysUnindexed()
     {
-        return (logon) -> UNINDEXED;
+        return alwaysTransient();
+    }
+
+    static SessionPersistenceStrategy alwaysPersistent()
+    {
+        return (logon) -> PERSISTENT_SEQUENCE_NUMBERS;
+    }
+
+    static SessionPersistenceStrategy alwaysTransient()
+    {
+        return (logon) -> TRANSIENT_SEQUENCE_NUMBERS;
     }
 
     static boolean resetSequenceNumbersUponLogon(final PersistenceLevel persistenceLevel)
     {
         switch (persistenceLevel)
         {
+            case PERSISTENT_SEQUENCE_NUMBERS:
             case INDEXED:
                 return false;
+
+            case TRANSIENT_SEQUENCE_NUMBERS:
             case UNINDEXED:
                 return true;
+
             default:
                 throw new IllegalArgumentException("persistenceLevel=" + persistenceLevel);
         }

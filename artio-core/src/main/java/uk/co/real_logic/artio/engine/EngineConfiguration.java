@@ -45,7 +45,7 @@ import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
 import static uk.co.real_logic.artio.library.SessionConfiguration.*;
-import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysUnindexed;
+import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysTransient;
 
 /**
  * Configuration that exists for the entire duration of a fix gateway. Some options are configurable via
@@ -1018,7 +1018,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
         if (sessionPersistenceStrategy() == null)
         {
-            sessionPersistenceStrategy(alwaysUnindexed());
+            sessionPersistenceStrategy(alwaysTransient());
         }
 
         if (acceptorfixDictionary() == null)

@@ -47,7 +47,7 @@ import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.Constants.EXECUTION_REPORT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
+import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
 
 @RunWith(Parameterized.class)
 public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGatewayToGatewaySystemTest
@@ -202,7 +202,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
     private void launch(final int initiatorInitialReceivedSequenceNumber)
     {
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
-        acceptingConfig.sessionPersistenceStrategy(logon -> INDEXED);
+        acceptingConfig.sessionPersistenceStrategy(alwaysPersistent());
         acceptingConfig.printStartupWarnings(PRINT_ERROR_MESSAGES);
         acceptingConfig.printErrorMessages(PRINT_ERROR_MESSAGES);
         acceptingConfig.gracefulShutdown(shutdownCleanly);

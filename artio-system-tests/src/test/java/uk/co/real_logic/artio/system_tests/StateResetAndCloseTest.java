@@ -34,7 +34,7 @@ import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
+import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
 
 public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
 {
@@ -154,7 +154,7 @@ public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
         final int initialReceivedSequenceNumber)
     {
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
-        acceptingConfig.sessionPersistenceStrategy(logon -> INDEXED);
+        acceptingConfig.sessionPersistenceStrategy(alwaysPersistent());
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
