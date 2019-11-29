@@ -1073,8 +1073,17 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         for (final GatewaySession gatewaySession : gatewaySessions.sessions())
         {
             unitsOfWork.add(
-                // TODO(Nick): UNK_SESSION is the wrong constant to use?
-                () -> saveManageSession(libraryId, gatewaySession, UNK_SESSION, UNK_SESSION, LIBRARY_NOTIFICATION));
+                () ->
+                {
+                    final InternalSession session = gatewaySession.session();
+
+                    return saveManageSession(
+                        libraryId,
+                        gatewaySession,
+                        session.lastSentMsgSeqNum(),
+                        session.lastReceivedMsgSeqNum(),
+                        LIBRARY_NOTIFICATION);
+                });
         }
 
         return retryManager.firstAttempt(correlationId, new UnitOfWork(unitsOfWork));
