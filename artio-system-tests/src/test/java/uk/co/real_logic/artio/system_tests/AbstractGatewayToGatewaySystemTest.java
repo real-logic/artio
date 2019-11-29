@@ -452,6 +452,12 @@ public class AbstractGatewayToGatewaySystemTest
         mediaDriver = TestFixtures.launchMediaDriverWithDirs();
     }
 
+    void assertLastLogonEquals(final int lastLogonReceivedSequenceNumber, final int lastLogonSequenceIndex)
+    {
+        assertEquals(lastLogonReceivedSequenceNumber, acceptingHandler.lastLogonReceivedSequenceNumber());
+        assertEquals(lastLogonSequenceIndex, acceptingHandler.lastLogonSequenceIndex());
+    }
+
     List<String> getMessagesFromArchive(final EngineConfiguration configuration, final int queryStreamId)
     {
         final List<String> messages = new ArrayList<>();

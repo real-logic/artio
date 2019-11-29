@@ -51,7 +51,9 @@ public final class LibraryConfiguration extends CommonConfiguration
         senderLocationId,
         targetCompId,
         remoteSubId,
-        remoteLocationId) -> {};
+        remoteLocationId,
+        logonReceivedSequence,
+        logonSequenceIndex) -> {};
     public static final LibraryConnectHandler DEFAULT_LIBRARY_CONNECT_HANDLER = new LibraryConnectHandler()
     {
         public void onConnect(final FixLibrary library)

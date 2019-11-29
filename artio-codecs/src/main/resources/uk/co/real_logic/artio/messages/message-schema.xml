@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="3"
+                   version="4"
                    semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -286,6 +286,8 @@
         <field name="resendRequestChunkSize" id="23" type="int32" />
         <field name="sendRedundantResendRequests" id="24" type="Bool" />
         <field name="enableLastMsgSeqNumProcessed" id="25" type="Bool" />
+        <field name="logonReceivedSequenceNumber" id="33" type="int32" sinceVersion="4"/>
+        <field name="logonSequenceIndex" id="34" type="SequenceIndex" sinceVersion="4"/>
 
         <!-- State modified by the Session itself -->
         <field name="awaitingResend" id="21" type="AwaitingResend" />

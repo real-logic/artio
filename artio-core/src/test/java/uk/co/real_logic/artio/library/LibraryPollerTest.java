@@ -372,7 +372,7 @@ public class LibraryPollerTest
             InternalSession.INITIAL_LAST_RESEND_CHUNK_MSG_SEQ_NUM,
             InternalSession.INITIAL_END_OF_RESEND_REQUEST_RANGE,
             InternalSession.INITIAL_AWAITING_HEARTBEAT,
-            "ABC",
+            LAST_RECEIVED_SEQUENCE_NUMBER, SEQUENCE_INDEX, "ABC",
             "",
             "",
             "DEF",
@@ -380,7 +380,8 @@ public class LibraryPollerTest
             "", address,
             "",
             "",
-            FixDictionary.findDefault());
+            FixDictionary.findDefault()
+        );
     }
 
     private SessionsDecoder hasOtherSessionId()

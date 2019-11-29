@@ -284,6 +284,8 @@ public class GatewayPublication extends ClaimablePublication
         final int lastResendChunkMsgSeqNum,
         final int endOfResendRequestRange,
         final boolean awaitingHeartbeat,
+        final int logonReceivedSequenceNumber,
+        final int logonSequenceIndex,
         final String localCompId,
         final String localSubId,
         final String localLocationId,
@@ -343,6 +345,8 @@ public class GatewayPublication extends ClaimablePublication
             .lastResendChunkMsgSeqNum(lastResendChunkMsgSeqNum)
             .endOfResendRequestRange(endOfResendRequestRange)
             .awaitingHeartbeat(toBool(awaitingHeartbeat))
+            .logonReceivedSequenceNumber(logonReceivedSequenceNumber)
+            .logonSequenceIndex(logonSequenceIndex)
             .putLocalCompId(localCompIdBytes, 0, localCompIdBytes.length)
             .putLocalSubId(localSubIdBytes, 0, localSubIdBytes.length)
             .putLocalLocationId(localLocationIdBytes, 0, localLocationIdBytes.length)

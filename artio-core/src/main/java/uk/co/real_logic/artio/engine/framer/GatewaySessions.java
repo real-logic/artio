@@ -26,6 +26,7 @@ import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -586,7 +587,8 @@ class GatewaySessions
             final String username = SessionParser.username(logon);
             final String password = SessionParser.password(logon);
 
-            final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(logon.header());
+            final SessionHeaderDecoder header = logon.header();
+            final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(header);
             final SessionContext sessionContext = sessionContexts.onLogon(compositeKey);
 
             if (sessionContext == DUPLICATE_SESSION)
@@ -603,8 +605,8 @@ class GatewaySessions
                 compositeKey,
                 username,
                 password,
-                logon.heartBtInt()
-            );
+                logon.heartBtInt(),
+                header.msgSeqNum());
 
             // See Framer.handoverNewConnectionToLibrary for sole library mode equivalent
             if (resetSeqNum)

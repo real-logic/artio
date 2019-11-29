@@ -1391,6 +1391,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             session.lastResendChunkMsgSeqNum(),
             session.endOfResendRequestRange(),
             session.awaitingHeartbeat(),
+            gatewaySession.logonReceivedSequenceNumber(),
+            gatewaySession.logonSequenceIndex(),
             compositeKey.localCompId(),
             compositeKey.localSubId(),
             compositeKey.localLocationId(),
@@ -1906,8 +1908,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 sessionKey,
                 username,
                 password,
-                heartbeatIntervalInS
-            );
+                heartbeatIntervalInS,
+                lastReceivedSequenceNumber);
 
             return COMPLETE;
         }
@@ -1937,6 +1939,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 InternalSession.INITIAL_LAST_RESEND_CHUNK_MSG_SEQ_NUM,
                 InternalSession.INITIAL_END_OF_RESEND_REQUEST_RANGE,
                 InternalSession.INITIAL_AWAITING_HEARTBEAT,
+                gatewaySession.logonReceivedSequenceNumber(),
+                gatewaySession.logonSequenceIndex(),
                 senderCompId,
                 senderSubId,
                 senderLocationId,

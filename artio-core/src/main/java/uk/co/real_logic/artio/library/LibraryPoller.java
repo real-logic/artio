@@ -725,6 +725,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int lastResendChunkMsgSeqNum,
         final int endOfResendRequestRange,
         final boolean awaitingHeartbeat,
+        final int logonReceivedSequenceNumber,
+        final int logonSequenceIndex,
         final String localCompId,
         final String localSubId,
         final String localLocationId,
@@ -750,43 +752,61 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                     localLocationId,
                     remoteCompId,
                     remoteSubId,
-                    remoteLocationId);
+                    remoteLocationId,
+                    logonReceivedSequenceNumber,
+                    logonSequenceIndex);
             }
             else if (libraryId == this.libraryId)
             {
-                onHandoverSession(
-                    libraryId,
-                    connectionId,
-                    sessionId,
-                    lastSentSeqNum,
-                    lastRecvSeqNum,
-                    logonTime,
-                    sessionStatus,
-                    slowStatus,
-                    connectionType,
-                    sessionState,
-                    heartbeatIntervalInS,
-                    closedResendInterval,
-                    resendRequestChunkSize,
-                    sendRedundantResendRequests,
-                    enableLastMsgSeqNumProcessed,
-                    correlationId,
-                    sequenceIndex,
-                    awaitingResend,
-                    lastResentMsgSeqNo,
-                    lastResendChunkMsgSeqNum,
-                    endOfResendRequestRange,
-                    awaitingHeartbeat,
-                    localCompId,
-                    localSubId,
-                    localLocationId,
-                    remoteCompId,
-                    remoteSubId,
-                    remoteLocationId,
-                    address,
-                    username,
-                    password,
-                    fixDictionary);
+                if (sessionStatus == SessionStatus.SESSION_HANDOVER)
+                {
+                    onHandoverSession(
+                        libraryId,
+                        connectionId,
+                        sessionId,
+                        lastSentSeqNum,
+                        lastRecvSeqNum,
+                        logonTime,
+                        slowStatus,
+                        connectionType,
+                        sessionState,
+                        heartbeatIntervalInS,
+                        closedResendInterval,
+                        resendRequestChunkSize,
+                        sendRedundantResendRequests,
+                        enableLastMsgSeqNumProcessed,
+                        correlationId,
+                        sequenceIndex,
+                        awaitingResend,
+                        lastResentMsgSeqNo,
+                        lastResendChunkMsgSeqNum,
+                        endOfResendRequestRange,
+                        awaitingHeartbeat,
+                        localCompId,
+                        localSubId,
+                        localLocationId,
+                        remoteCompId,
+                        remoteSubId,
+                        remoteLocationId,
+                        address,
+                        username,
+                        password,
+                        fixDictionary);
+                }
+                else
+                {
+                    sessionExistsHandler.onSessionExists(
+                        fixLibrary,
+                        sessionId,
+                        localCompId,
+                        localSubId,
+                        localLocationId,
+                        remoteCompId,
+                        remoteSubId,
+                        remoteLocationId,
+                        logonReceivedSequenceNumber,
+                        logonSequenceIndex);
+                }
             }
         }
 
@@ -800,7 +820,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int lastSentSeqNum,
         final int lastRecvSeqNum,
         final long logonTime,
-        final SessionStatus sessionStatus,
         final SlowStatus slowStatus,
         final ConnectionType connectionType,
         final SessionState sessionState,
@@ -829,82 +848,68 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         final InternalSession session;
         InitiateSessionReply reply = null;
-        if (sessionStatus == SessionStatus.SESSION_HANDOVER)
+
+        // From manageConnection - ie set up the session in this library.
+        if (connectionType == INITIATOR)
         {
-            // From manageConnection - ie set up the session in this library.
-            if (connectionType == INITIATOR)
+            DebugLogger.log(FIX_CONNECTION, "Init Connect: %d, %d%n", connection, libraryId);
+            final LibraryReply<?> task = correlationIdToReply.get(correlationId);
+            final boolean isReply = task instanceof InitiateSessionReply;
+            if (isReply)
             {
-                DebugLogger.log(FIX_CONNECTION, "Init Connect: %d, %d%n", connection, libraryId);
-                final LibraryReply<?> task = correlationIdToReply.get(correlationId);
-                final boolean isReply = task instanceof InitiateSessionReply;
-                if (isReply)
-                {
-                    reply = (InitiateSessionReply)task;
-                    reply.onTcpConnected(connection);
-                }
-                session = newInitiatorSession(
-                    connection,
-                    lastSentSeqNum,
-                    lastRecvSeqNum,
-                    sessionState,
-                    isReply ? reply.configuration() : null,
-                    sequenceIndex,
-                    enableLastMsgSeqNumProcessed,
-                    fixDictionary);
+                reply = (InitiateSessionReply)task;
+                reply.onTcpConnected(connection);
             }
-            else
-            {
-                DebugLogger.log(FIX_CONNECTION, "Acct Connect: %d, %d%n", connection, libraryId);
-                session = acceptSession(
-                    connection, address, sessionState, heartbeatIntervalInS, sequenceIndex,
-                    enableLastMsgSeqNumProcessed, fixDictionary);
-                session.lastSentMsgSeqNum(lastSentSeqNum);
-                session.initialLastReceivedMsgSeqNum(lastRecvSeqNum);
-            }
-
-            final CompositeKey compositeKey = sessionIdStrategy.onInitiateLogon(
-                localCompId,
-                localSubId,
-                localLocationId,
-                remoteCompId,
-                remoteSubId,
-                remoteLocationId);
-
-            session.username(username);
-            session.password(password);
-            session.setupSession(sessionId, compositeKey);
-            session.logonTime(logonTime);
-            session.closedResendInterval(closedResendInterval);
-            session.resendRequestChunkSize(resendRequestChunkSize);
-            session.sendRedundantResendRequests(sendRedundantResendRequests);
-            session.awaitingResend(awaitingResend);
-            session.lastResentMsgSeqNo(lastResentMsgSeqNo);
-            session.lastResendChunkMsgSeqNum(lastResendChunkMsgSeqNum);
-            session.endOfResendRequestRange(endOfResendRequestRange);
-            session.awaitingHeartbeat(awaitingHeartbeat);
-
-            createSessionSubscriber(connection, session, reply, slowStatus, fixDictionary);
-            insertSession(session, connectionType, sessionState);
-
-            DebugLogger.log(GATEWAY_MESSAGE,
-                "onSessionExists: conn=%d, sess=%d, sentSeqNo=%d, recvSeqNo=%d%n",
+            session = newInitiatorSession(
                 connection,
-                sessionId,
                 lastSentSeqNum,
-                lastRecvSeqNum);
+                lastRecvSeqNum,
+                sessionState,
+                isReply ? reply.configuration() : null,
+                sequenceIndex,
+                enableLastMsgSeqNumProcessed,
+                fixDictionary);
         }
         else
         {
-            sessionExistsHandler.onSessionExists(
-                fixLibrary,
-                sessionId,
-                localCompId,
-                localSubId,
-                localLocationId,
-                remoteCompId,
-                remoteSubId,
-                remoteLocationId);
+            DebugLogger.log(FIX_CONNECTION, "Acct Connect: %d, %d%n", connection, libraryId);
+            session = acceptSession(
+                connection, address, sessionState, heartbeatIntervalInS, sequenceIndex,
+                enableLastMsgSeqNumProcessed, fixDictionary);
+            session.lastSentMsgSeqNum(lastSentSeqNum);
+            session.initialLastReceivedMsgSeqNum(lastRecvSeqNum);
         }
+
+        final CompositeKey compositeKey = sessionIdStrategy.onInitiateLogon(
+            localCompId,
+            localSubId,
+            localLocationId,
+            remoteCompId,
+            remoteSubId,
+            remoteLocationId);
+
+        session.username(username);
+        session.password(password);
+        session.setupSession(sessionId, compositeKey);
+        session.logonTime(logonTime);
+        session.closedResendInterval(closedResendInterval);
+        session.resendRequestChunkSize(resendRequestChunkSize);
+        session.sendRedundantResendRequests(sendRedundantResendRequests);
+        session.awaitingResend(awaitingResend);
+        session.lastResentMsgSeqNo(lastResentMsgSeqNo);
+        session.lastResendChunkMsgSeqNum(lastResendChunkMsgSeqNum);
+        session.endOfResendRequestRange(endOfResendRequestRange);
+        session.awaitingHeartbeat(awaitingHeartbeat);
+
+        createSessionSubscriber(connection, session, reply, slowStatus, fixDictionary);
+        insertSession(session, connectionType, sessionState);
+
+        DebugLogger.log(GATEWAY_MESSAGE,
+            "onSessionExists: conn=%d, sess=%d, sentSeqNo=%d, recvSeqNo=%d%n",
+            connection,
+            sessionId,
+            lastSentSeqNum,
+            lastRecvSeqNum);
     }
 
     private void insertSession(

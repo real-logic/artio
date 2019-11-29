@@ -61,7 +61,7 @@ public interface LibraryEndPointHandler
         int lastResendChunkMsgSeqNum,
         int endOfResendRequestRange,
         boolean awaitingHeartbeat,
-        String localCompId,
+        int logonReceivedSequenceNumber, int logonSequenceIndex, String localCompId,
         String localSubId,
         String localLocationId,
         String remoteCompId,

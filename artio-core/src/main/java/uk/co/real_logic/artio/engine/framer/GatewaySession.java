@@ -60,6 +60,8 @@ class GatewaySession implements SessionInfo
     private SessionLogonListener logonListener = this::onSessionLogon;
     private boolean initialResetSeqNum;
     private boolean hasStartedAuthentication = false;
+    private int logonReceivedSequenceNumber;
+    private int logonSequenceIndex;
 
     GatewaySession(
         final long connectionId,
@@ -245,11 +247,15 @@ class GatewaySession implements SessionInfo
         final CompositeKey sessionKey,
         final String username,
         final String password,
-        final int heartbeatIntervalInS)
+        final int heartbeatIntervalInS,
+        final int logonReceivedSequenceNumber)
     {
         this.sessionId = sessionId;
         this.context = context;
         this.sessionKey = sessionKey;
+        this.logonReceivedSequenceNumber = logonReceivedSequenceNumber;
+        this.logonSequenceIndex = context.sequenceIndex();
+
         onLogon(username, password, heartbeatIntervalInS);
     }
 
@@ -358,5 +364,15 @@ class GatewaySession implements SessionInfo
     FixDictionary fixDictionary()
     {
         return fixDictionary;
+    }
+
+    public int logonReceivedSequenceNumber()
+    {
+        return logonReceivedSequenceNumber;
+    }
+
+    public int logonSequenceIndex()
+    {
+        return logonSequenceIndex;
     }
 }

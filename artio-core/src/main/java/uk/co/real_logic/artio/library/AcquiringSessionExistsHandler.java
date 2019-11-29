@@ -58,7 +58,7 @@ public class AcquiringSessionExistsHandler implements SessionExistsHandler
         final String localLocationId,
         final String remoteCompId,
         final String remoteSubId,
-        final String remoteLocationId)
+        final String remoteLocationId, final int logonReceivedSequenceNumber, final int logonSequenceIndex)
     {
         final Reply<SessionReplyStatus> reply = library.requestSession(
             surrogateSessionId,

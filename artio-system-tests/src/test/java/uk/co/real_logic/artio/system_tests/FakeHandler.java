@@ -37,7 +37,7 @@ public class FakeHandler
 
     private final List<Session> sessions = new ArrayList<>();
     private final Set<Session> slowSessions = new HashSet<>();
-    private final Deque<CompleteSessionId> completeSessionIds = new ArrayDeque<>();
+    private final Deque<SessionExistsInfo> sessionExistsInfos = new ArrayDeque<>();
 
     private Session lastSession;
     private boolean hasDisconnected = false;
@@ -119,9 +119,13 @@ public class FakeHandler
         final String localLocationId,
         final String remoteCompId,
         final String remoteSubId,
-        final String remoteLocationId)
+        final String remoteLocationId,
+        final int logonReceivedSequenceNumber,
+        final int logonSequenceIndex)
     {
-        completeSessionIds.add(new CompleteSessionId(localCompId, remoteCompId, surrogateSessionId));
+        sessionExistsInfos.add(
+            new SessionExistsInfo(
+            localCompId, remoteCompId, surrogateSessionId, logonReceivedSequenceNumber, logonSequenceIndex));
     }
 
     // ----------- END EVENTS -----------
@@ -146,7 +150,7 @@ public class FakeHandler
         return awaitCompleteSessionId(poller).surrogateId();
     }
 
-    public CompleteSessionId awaitCompleteSessionId(final Runnable poller)
+    public SessionExistsInfo awaitCompleteSessionId(final Runnable poller)
     {
         Timing.assertEventuallyTrue(
             "Couldn't find session Id",
@@ -156,17 +160,17 @@ public class FakeHandler
                 return hasSeenSession();
             });
 
-        return lastSessionId();
+        return lastSessionExistsInfo();
     }
 
     public boolean hasSeenSession()
     {
-        return !completeSessionIds.isEmpty();
+        return !sessionExistsInfos.isEmpty();
     }
 
-    public void clearSessions()
+    public void clearSessionExistsInfos()
     {
-        completeSessionIds.clear();
+        sessionExistsInfos.clear();
     }
 
     public long sentPosition()
@@ -186,7 +190,7 @@ public class FakeHandler
             {
                 poller.run();
 
-                return completeSessionIds
+                return sessionExistsInfos
                     .stream()
                     .filter((sid) ->
                         sid.remoteCompId().equals(initiatorId) && sid.localCompId().equals(acceptorId))
@@ -197,12 +201,22 @@ public class FakeHandler
 
     public String lastAcceptorCompId()
     {
-        return lastSessionId().localCompId();
+        return lastSessionExistsInfo().localCompId();
     }
 
     public String lastInitiatorCompId()
     {
-        return lastSessionId().remoteCompId();
+        return lastSessionExistsInfo().remoteCompId();
+    }
+
+    public int lastLogonReceivedSequenceNumber()
+    {
+        return lastSessionExistsInfo().logonReceivedSequenceNumber();
+    }
+
+    public int lastLogonSequenceIndex()
+    {
+        return lastSessionExistsInfo().logonSequenceIndex();
     }
 
     public Session lastSession()
@@ -210,9 +224,9 @@ public class FakeHandler
         return lastSession;
     }
 
-    private CompleteSessionId lastSessionId()
+    private SessionExistsInfo lastSessionExistsInfo()
     {
-        return completeSessionIds.peekFirst();
+        return sessionExistsInfos.peekLast();
     }
 
     public boolean isSlow(final Session session)

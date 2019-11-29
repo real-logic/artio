@@ -84,6 +84,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void messagesCanBeSentFromInitiatorToAcceptor()
     {
+        assertLastLogonEquals(1, 0);
+
         messagesCanBeExchanged();
 
         assertInitiatingSequenceIndexIs(0);
@@ -93,6 +95,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     public void messagesCanBeSentFromInitiatorToAcceptingLibrary()
     {
         acquireAcceptingSession();
+        assertLastLogonEquals(1, 0);
 
         messagesCanBeExchanged();
 
@@ -227,7 +230,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final FakeHandler initiatingSessionHandler2 = new FakeHandler(initiatingOtfAcceptor2);
         try (FixLibrary library2 = testSystem.add(newInitiatingLibrary(libraryAeronPort, initiatingSessionHandler2)))
         {
-            acceptingHandler.clearSessions();
+            acceptingHandler.clearSessionExistsInfos();
             final Reply<Session> reply = testSystem.awaitReply(initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID));
 
             final Session session2 = reply.resultIfPresent();
@@ -334,7 +337,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acquireAcceptingSession();
 
         final long sessionId = acceptingSession.id();
-        acceptingHandler.clearSessions();
+        acceptingHandler.clearSessionExistsInfos();
 
         releaseToGateway(acceptingLibrary, acceptingSession, testSystem);
 
@@ -475,7 +478,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertAllMessagesHaveSequenceIndex(0);
 
         testSystem.close(acceptingLibrary);
-        acceptingHandler.clearSessions();
+        acceptingHandler.clearSessionExistsInfos();
 
         initiatingEngineHasLibraryConnected();
 
@@ -553,7 +556,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         try (LibraryDriver library2 = LibraryDriver.accepting(testSystem))
         {
-            final CompleteSessionId sessionId = library2.awaitCompleteSessionId();
+            final SessionExistsInfo sessionId = library2.awaitCompleteSessionId();
             assertSameSession(sessionId, acceptingSession);
         }
     }
@@ -565,17 +568,17 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         try (LibraryDriver library2 = LibraryDriver.initiating(libraryAeronPort, testSystem))
         {
-            final CompleteSessionId sessionId = library2.awaitCompleteSessionId();
+            final SessionExistsInfo sessionId = library2.awaitCompleteSessionId();
             assertSameSession(sessionId, initiatingSession);
 
             try (LibraryDriver library3 = LibraryDriver.initiating(libraryAeronPort, testSystem))
             {
-                final CompleteSessionId sessionId3 = library3.awaitCompleteSessionId();
+                final SessionExistsInfo sessionId3 = library3.awaitCompleteSessionId();
                 assertSameSession(sessionId3, initiatingSession);
 
                 try (LibraryDriver library4 = LibraryDriver.initiating(libraryAeronPort, testSystem))
                 {
-                    final CompleteSessionId sessionId4 = library4.awaitCompleteSessionId();
+                    final SessionExistsInfo sessionId4 = library4.awaitCompleteSessionId();
                     assertSameSession(sessionId4, initiatingSession);
                 }
             }
@@ -1000,12 +1003,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             assertEquals(ENGINE_LIBRARY_ID, engineLibraryInfo.libraryId());
             assertThat(engineLibraryInfo.sessions(), contains(hasConnectionId(session.connectionId())));
 
-            final CompleteSessionId sessionId = library2.awaitCompleteSessionId();
+            final SessionExistsInfo sessionId = library2.awaitCompleteSessionId();
             assertSameSession(sessionId, session);
         }
     }
 
-    private void assertSameSession(final CompleteSessionId sessionId, final Session session)
+    private void assertSameSession(final SessionExistsInfo sessionId, final Session session)
     {
         final CompositeKey compositeKey = session.compositeKey();
 

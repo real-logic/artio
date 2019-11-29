@@ -38,6 +38,10 @@ public interface SessionExistsHandler
      * @param remoteCompId the compId for the local party in the logon message (eg senderCompId if acceptor).
      * @param remoteSubId the subId for the local party in the logon message (eg senderSubId if acceptor).
      * @param remoteLocationId the locationId for the local party in the logon message (eg senderLocationId if acceptor)
+     * @param logonReceivedSequenceNumber the message sequence number of the latest connection's logon message for this
+     *                                    session.
+     * @param logonSequenceIndex the sequence index at the time of the latest connection's logon message for this
+     *                           session.
      */
     void onSessionExists(
         FixLibrary library,
@@ -47,5 +51,7 @@ public interface SessionExistsHandler
         String localLocationId,
         String remoteCompId,
         String remoteSubId,
-        String remoteLocationId);
+        String remoteLocationId,
+        int logonReceivedSequenceNumber,
+        int logonSequenceIndex);
 }

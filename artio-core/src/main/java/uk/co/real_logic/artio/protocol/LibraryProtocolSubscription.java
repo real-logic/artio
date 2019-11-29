@@ -305,6 +305,8 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.lastResendChunkMsgSeqNum(),
             manageSession.endOfResendRequestRange(),
             manageSession.awaitingHeartbeat() == Bool.TRUE,
+            manageSession.logonReceivedSequenceNumber(),
+            manageSession.logonSequenceIndex(),
             manageSession.localCompId(),
             manageSession.localSubId(),
             manageSession.localLocationId(),
