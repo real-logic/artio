@@ -17,6 +17,14 @@ package uk.co.real_logic.artio.fields;
 
 import java.math.BigDecimal;
 
+
+import uk.co.real_logic.artio.util.float_parsing.CharSequenceCharReader;
+import uk.co.real_logic.artio.util.float_parsing.DecimalFloatParser;
+import uk.co.real_logic.artio.util.PowerOf10;
+
+import static uk.co.real_logic.artio.util.PowerOf10.HIGHEST_POWER_OF_TEN;
+import static uk.co.real_logic.artio.util.PowerOf10.POWERS_OF_TEN;
+
 /**
  * Fix float data type. Floats are used for a variety of things, including price.
  * <p>
@@ -59,14 +67,6 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
     public static final DecimalFloat ZERO = new DecimalFloat();
     public static final DecimalFloat NAN = getNaN();
     public static final DecimalFloat MISSING_FLOAT = NAN;
-
-    private static final int HIGHEST_POWER_OF_TEN = 18;
-    private static final long[] POWERS_OF_TEN = new long[]
-        {1L, 10L, 100L, 1_000L, 10_000L, 100_000L, 1_000_000L, 10_000_000L,
-        100_000_000L, 1_000_000_000L, 10_000_000_000L, 100_000_000_000L,
-        1_000_000_000_000L, 10_000_000_000_000L, 100_000_000_000_000L,
-        1_000_000_000_000_000L, 10_000_000_000_000_000L, 100_000_000_000_000_000L,
-        1_000_000_000_000_000_000L, Long.MAX_VALUE};
 
     // FRACTION_LOWER_THRESHOLD and FRACTION_UPPER_THRESHOLD are used when converting
     // the fractional part of a double to ensure that discretisation errors are corrected.
@@ -213,8 +213,8 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         final long otherValue = other.value;
         final int otherScale = other.scale;
 
-        final long decimalPointDivisor = pow10(scale);
-        final long otherDecimalPointDivisor = pow10(otherScale);
+        final long decimalPointDivisor = PowerOf10.pow10(scale);
+        final long otherDecimalPointDivisor = PowerOf10.pow10(otherScale);
 
         final long valueBeforeDecimalPoint = value / decimalPointDivisor;
         final long otherValueBeforeDecimalPoint = otherValue / otherDecimalPointDivisor;
@@ -235,42 +235,15 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
         if (scale > otherScale)
         {
             final int differenceInScale = scale - otherScale;
-            otherValueAfterDecimalPoint *= pow10(differenceInScale);
+            otherValueAfterDecimalPoint *= PowerOf10.pow10(differenceInScale);
         }
         else
         {
             final int differenceInScale = otherScale - scale;
-            valueAfterDecimalPoint *= pow10(differenceInScale);
+            valueAfterDecimalPoint *= PowerOf10.pow10(differenceInScale);
         }
 
         return Long.compare(valueAfterDecimalPoint, otherValueAfterDecimalPoint);
-    }
-
-    private static final long[] POWERS_OF_10 = {
-        1L,
-        10L,
-        100L,
-        1000L,
-        10000L,
-        100000L,
-        1000000L,
-        10000000L,
-        100000000L,
-        1000000000L,
-        10000000000L,
-        100000000000L,
-        1000000000000L,
-        10000000000000L,
-        100000000000000L,
-        1000000000000000L,
-        10000000000000000L,
-        100000000000000000L,
-        1000000000000000000L,
-    };
-
-    private static long pow10(final int rhs)
-    {
-        return POWERS_OF_10[rhs];
     }
 
     public double toDouble()
@@ -343,99 +316,7 @@ public final class DecimalFloat implements Comparable<DecimalFloat>
 
     public DecimalFloat fromString(final CharSequence string, final int start, final int length)
     {
-        // Throw away trailing spaces or zeros
-        int offset = start;
-        int end = offset + length;
-        for (int index = end - 1; isSpace(string, index) && index > offset; index--)
-        {
-            end--;
-        }
-
-        int endDiff = 0;
-        for (int index = end - 1; isZero(string, index) && index > offset; index--)
-        {
-            endDiff++;
-        }
-
-        boolean isFloatingPoint = false;
-        for (int index = end - endDiff - 1; index > offset; index--)
-        {
-            if (string.charAt(index) == '.')
-            {
-                isFloatingPoint = true;
-                break;
-            }
-        }
-
-        if (isFloatingPoint)
-        {
-            end -= endDiff;
-        }
-
-        // Throw away leading spaces
-        for (int index = offset; isSpace(string, index) && index < end; index++)
-        {
-            offset++;
-        }
-
-        // Is it negative?
-        final boolean negative = string.charAt(offset) == '-';
-        if (negative)
-        {
-            offset++;
-        }
-
-        // Throw away leading zeros
-        for (int index = offset; isZero(string, index) && index < end; index++)
-        {
-            offset++;
-        }
-
-        int scale = 0;
-        long value = 0;
-        for (int index = offset; index < end; index++)
-        {
-            final char charValue = string.charAt(index);
-            if (charValue == '.')
-            {
-                // number of digits after the dot
-                scale = end - (index + 1);
-            }
-            else
-            {
-                final int digit = getDigit(index, charValue);
-                value = value * 10 + digit;
-                if (value < 0)
-                {
-                    throw new ArithmeticException(
-                        "Out of range: when parsing " + string.subSequence(start, start + length));
-                }
-            }
-        }
-
-        set(negative ? -1 * value : value, scale);
-
-        return this;
-    }
-
-    private int getDigit(final int index, final char charValue)
-    {
-        if (charValue < '0' || charValue > '9')
-        {
-            throw new NumberFormatException("'" + charValue + "' isn't a valid digit @ " + index);
-        }
-
-        return charValue - '0';
-    }
-
-    private boolean isSpace(final CharSequence input, final int index)
-    {
-        return Character.isSpaceChar(input.charAt(index));
-    }
-
-    private boolean isZero(final CharSequence input, final int index)
-    {
-        return input.charAt(index) == '0';
+        return DecimalFloatParser.extract(this, CharSequenceCharReader.INSTANCE, string, start, length);
     }
 
     public boolean isNaNValue()
