@@ -212,7 +212,7 @@ public class MessageBasedAcceptorSystemTest
     @Test
     public void shouldReturnErrorWhenBindingWithoutAddress()
     {
-        setup(true, false);
+        setup(true, false, false);
 
         final Reply<?> reply = engine.bind();
         SystemTestUtil.awaitReply(reply);
@@ -293,6 +293,11 @@ public class MessageBasedAcceptorSystemTest
 
     private void setup(final boolean sequenceNumberReset, final boolean shouldBind)
     {
+        setup(sequenceNumberReset, shouldBind, true);
+    }
+
+    private void setup(final boolean sequenceNumberReset, final boolean shouldBind, final boolean provideBindingAddress)
+    {
         mediaDriver = launchMediaDriver();
 
         delete(ACCEPTOR_LOGS);
@@ -302,8 +307,12 @@ public class MessageBasedAcceptorSystemTest
             .logFileDir(ACCEPTOR_LOGS)
             .sessionPersistenceStrategy(logon ->
             sequenceNumberReset ? TRANSIENT_SEQUENCE_NUMBERS : PERSISTENT_SEQUENCE_NUMBERS)
-            .bindTo("localhost", port)
-            .bindAtStartup(!shouldBind);
+            .bindAtStartup(shouldBind);
+
+        if (provideBindingAddress)
+        {
+            config.bindTo("localhost", port);
+        }
 
         config.printErrorMessages(false);
         engine = FixEngine.launch(config);
