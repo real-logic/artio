@@ -234,6 +234,13 @@ public class MessageBasedAcceptorSystemTest
         }
     }
 
+    @Test
+    public void bindingCanBeDeferred() throws IOException
+    {
+        setup(true, false);
+        cannotConnect();
+    }
+
     private void completeBind()
     {
         final Reply<?> bindReply = engine.bind();
@@ -294,11 +301,10 @@ public class MessageBasedAcceptorSystemTest
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(ACCEPTOR_LOGS)
             .sessionPersistenceStrategy(logon ->
-            sequenceNumberReset ? TRANSIENT_SEQUENCE_NUMBERS : PERSISTENT_SEQUENCE_NUMBERS);
-        if (shouldBind)
-        {
-            config.bindTo("localhost", port);
-        }
+            sequenceNumberReset ? TRANSIENT_SEQUENCE_NUMBERS : PERSISTENT_SEQUENCE_NUMBERS)
+            .bindTo("localhost", port)
+            .deferBinding(!shouldBind);
+
         config.printErrorMessages(false);
         engine = FixEngine.launch(config);
     }

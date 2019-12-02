@@ -227,6 +227,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private FixDictionary acceptorfixDictionary;
     private boolean deleteLogFileDirOnStart = false;
     private long authenticationTimeoutInMs = DEFAULT_AUTHENTICATION_TIMEOUT_IN_MS;
+    private boolean deferBinding;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -242,6 +243,18 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         Objects.requireNonNull(host, "host");
         this.host = host;
         this.port = port;
+        return this;
+    }
+
+    /**
+     * Defers binding to the local address provided to {@link #bindTo(String, int)} until {@link FixEngine#bind()} is invoked.
+     *
+     * @param deferBinding true to defer binding.
+     * @return this
+     */
+    public EngineConfiguration deferBinding(final boolean deferBinding)
+    {
+        this.deferBinding = deferBinding;
         return this;
     }
 
@@ -687,6 +700,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return new InetSocketAddress(host, port);
     }
 
+    public boolean deferBinding()
+    {
+        return this.deferBinding;
+    }
+
     public String logFileDir()
     {
         return logFileDir;
@@ -1059,4 +1077,5 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         CloseHelper.close(receivedSequenceNumberIndex);
         CloseHelper.close(sessionIdBuffer);
     }
+
 }
