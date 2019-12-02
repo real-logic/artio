@@ -26,8 +26,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.artio.fields.CalendricalUtil.*;
 import static uk.co.real_logic.artio.fields.UtcTimestampDecoderValidCasesTest.toEpochMillis;
-import static uk.co.real_logic.artio.fields.UtcTimestampEncoder.EpochFractionFormat.MICROSECONDS;
-import static uk.co.real_logic.artio.fields.UtcTimestampEncoder.EpochFractionFormat.NANOSECONDS;
+import static uk.co.real_logic.artio.fields.UtcTimestampEncoder.EpochFractionFormat.*;
 import static uk.co.real_logic.artio.util.CustomMatchers.sequenceEqualsAscii;
 
 @RunWith(Parameterized.class)
@@ -55,21 +54,10 @@ public class UtcTimestampEncoderValidCasesTest
     {
         this.validNanoSecondTestCase = validNanoSecondTestCase;
         epochMillis = toEpochMillis(timestamp);
-        expectedLength = UtcTimestampEncoder.LENGTH_WITH_MILLISECONDS; // expectedTimestamp.length();
-
-        if (timestamp.length() == UtcTimestampEncoder.LENGTH_WITHOUT_MILLISECONDS)
-        {
-            expectedTimestamp = timestamp + ".000";
-            expectedTimestampMicros = timestamp + ".000001";
-            expectedTimestampNanos = timestamp + ".000000001";
-        }
-        else
-        {
-            expectedTimestamp = timestamp;
-            expectedTimestampMicros = timestamp + "001";
-            expectedTimestampNanos = timestamp + "000001";
-        }
-
+        expectedLength = UtcTimestampEncoder.LENGTH_WITH_MILLISECONDS;
+        expectedTimestamp = timestamp;
+        expectedTimestampMicros = timestamp + "001";
+        expectedTimestampNanos = timestamp + "000001";
         expectedLengthMicros = expectedLength + 3;
         expectedLengthNanos = expectedLength + 6;
         epochMicros = epochMillis * MICROS_IN_MILLIS + 1;
@@ -121,12 +109,7 @@ public class UtcTimestampEncoderValidCasesTest
     static void assertInstanceEncodesTimestampMillisWithOffset(
         final long epochMillis, final String expectedTimestamp, final int expectedLength)
     {
-        final MutableAsciiBuffer string = new MutableAsciiBuffer(new byte[expectedLength + 2]);
-
-        final int length = UtcTimestampEncoder.encode(epochMillis, string, 1);
-
-        assertThat(string, sequenceEqualsAscii(expectedTimestamp, 1, length));
-        assertEquals("encoded wrong length", expectedLength, length);
+        assertInstanceEncodesTimestamp(epochMillis, expectedTimestamp, expectedLength, MILLISECONDS);
     }
 
     static void assertInstanceEncodesTimestampMillis(
@@ -153,11 +136,7 @@ public class UtcTimestampEncoderValidCasesTest
     static void assertInstanceEncodesTimestampMicros(
         final long epochMicros, final String expectedTimestampMicros, final int expectedLength)
     {
-        final UtcTimestampEncoder encoder = new UtcTimestampEncoder(MICROSECONDS);
-        final int length = encoder.encode(epochMicros);
-
-        assertEquals(expectedTimestampMicros, new String(encoder.buffer(), 0, length, US_ASCII));
-        assertEquals("encoded wrong length", expectedLength, length);
+        assertInstanceEncodesTimestamp(epochMicros, expectedTimestampMicros, expectedLength, MICROSECONDS);
     }
 
     static void assertInstanceEncodesTimestampNanosWithOffset(
@@ -174,10 +153,19 @@ public class UtcTimestampEncoderValidCasesTest
     static void assertInstanceEncodesTimestampNanos(
         final long epochNanos, final String expectedTimestampNanos, final int expectedLength)
     {
-        final UtcTimestampEncoder encoder = new UtcTimestampEncoder(NANOSECONDS);
-        final int length = encoder.encode(epochNanos);
+        assertInstanceEncodesTimestamp(epochNanos, expectedTimestampNanos, expectedLength, NANOSECONDS);
+    }
 
-        assertEquals(expectedTimestampNanos, new String(encoder.buffer(), 0, length, US_ASCII));
+    private static void assertInstanceEncodesTimestamp(
+        final long epochFraction,
+        final String expectedTimestamp,
+        final int expectedLength,
+        final UtcTimestampEncoder.EpochFractionFormat epochFractionFormat)
+    {
+        final UtcTimestampEncoder encoder = new UtcTimestampEncoder(epochFractionFormat);
+        final int length = encoder.encode(epochFraction);
+
+        assertEquals(expectedTimestamp, new String(encoder.buffer(), 0, length, US_ASCII));
         assertEquals("encoded wrong length", expectedLength, length);
     }
 

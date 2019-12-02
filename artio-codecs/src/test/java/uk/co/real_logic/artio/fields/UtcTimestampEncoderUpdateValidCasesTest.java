@@ -72,29 +72,14 @@ public class UtcTimestampEncoderUpdateValidCasesTest
         validNanoSecondTestCase = firstvalidNanoSecondTestCase && secondValidNanoSecondTestCase;
         epochMillis = toEpochMillis(expectedTimestamp);
         expectedLength = expectedTimestamp.length();
-
-        if (expectedLength == UtcTimestampEncoder.LENGTH_WITHOUT_MILLISECONDS)
-        {
-            expectedLengthMicros = expectedLength;
-            expectedLengthNanos = expectedLength;
-            expectedTimestampMicros = expectedTimestamp;
-            expectedTimestampNanos = expectedTimestamp;
-            epochMicros = epochMillis * MICROS_IN_MILLIS;
-            epochNanos = epochMillis * NANOS_IN_MILLIS;
-            otherEpochMicros = otherEpochMillis * MICROS_IN_MILLIS;
-            otherEpochNanos = epochMillis * NANOS_IN_MILLIS;
-        }
-        else
-        {
-            expectedLengthMicros = expectedLength + 3;
-            expectedLengthNanos = expectedLength + 6;
-            expectedTimestampMicros = expectedTimestamp + "001";
-            expectedTimestampNanos = expectedTimestamp + "000001";
-            epochMicros = epochMillis * MICROS_IN_MILLIS + 1;
-            epochNanos = epochMillis * NANOS_IN_MILLIS + 1;
-            otherEpochMicros = otherEpochMillis * MICROS_IN_MILLIS + 1;
-            otherEpochNanos = otherEpochMillis * NANOS_IN_MILLIS + 1;
-        }
+        expectedLengthMicros = expectedLength + 3;
+        expectedLengthNanos = expectedLength + 6;
+        expectedTimestampMicros = expectedTimestamp + "001";
+        expectedTimestampNanos = expectedTimestamp + "000001";
+        epochMicros = epochMillis * MICROS_IN_MILLIS + 1;
+        epochNanos = epochMillis * NANOS_IN_MILLIS + 1;
+        otherEpochMicros = otherEpochMillis * MICROS_IN_MILLIS + 1;
+        otherEpochNanos = otherEpochMillis * NANOS_IN_MILLIS + 1;
     }
 
     @Test

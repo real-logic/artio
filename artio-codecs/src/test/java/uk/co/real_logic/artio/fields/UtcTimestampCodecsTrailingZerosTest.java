@@ -22,13 +22,14 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.TimeUnit;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.time.temporal.ChronoField.NANO_OF_SECOND;
-import static java.util.concurrent.TimeUnit.NANOSECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.fields.UtcTimestampDecoder.*;
+import static uk.co.real_logic.artio.fields.UtcTimestampEncoder.EpochFractionFormat.*;
 import static uk.co.real_logic.artio.fields.UtcTimestampEncoderValidCasesTest.*;
 
 public class UtcTimestampCodecsTrailingZerosTest
@@ -42,8 +43,8 @@ public class UtcTimestampCodecsTrailingZerosTest
     private static final String NANOS_TIMESTAMP = MICROS_TIMESTAMP + "000";
 
     private static final long EPOCH_NANOS = toEpochNanos(NANOS_TIMESTAMP);
-    private static final long EPOCH_MICROS = NANOSECONDS.toMicros(EPOCH_NANOS);
-    private static final long EPOCH_MILLIS = NANOSECONDS.toMillis(EPOCH_NANOS);
+    private static final long EPOCH_MICROS = TimeUnit.NANOSECONDS.toMicros(EPOCH_NANOS);
+    private static final long EPOCH_MILLIS = TimeUnit.NANOSECONDS.toMillis(EPOCH_NANOS);
 
     private static long toEpochNanos(final String timestamp)
     {
@@ -101,4 +102,73 @@ public class UtcTimestampCodecsTrailingZerosTest
     {
         assertInstanceEncodesTimestampMillisWithOffset(EPOCH_MILLIS, MILLIS_TIMESTAMP, LENGTH_WITH_MILLISECONDS);
     }
+
+    //  Encoder.initialise
+
+    @Test
+    public void shouldInitialiseMillisTrailingZeros()
+    {
+        assertInitialiseTimestampNanos(EPOCH_MILLIS, MILLIS_TIMESTAMP, LENGTH_WITH_MILLISECONDS, MILLISECONDS);
+    }
+
+    @Test
+    public void shouldInitialiseMicrosTrailingZeros()
+    {
+        assertInitialiseTimestampNanos(EPOCH_MICROS, MICROS_TIMESTAMP, LENGTH_WITH_MICROSECONDS, MICROSECONDS);
+    }
+
+    @Test
+    public void shouldInitialiseNanosTrailingZeros()
+    {
+        assertInitialiseTimestampNanos(EPOCH_NANOS, NANOS_TIMESTAMP, LENGTH_WITH_NANOSECONDS, NANOSECONDS);
+    }
+
+    private static void assertInitialiseTimestampNanos(
+        final long epochFraction,
+        final String expectedTimestampFraction,
+        final int expectedLength,
+        final UtcTimestampEncoder.EpochFractionFormat format)
+    {
+        final UtcTimestampEncoder encoder = new UtcTimestampEncoder(format);
+        final int length = encoder.initialise(epochFraction);
+
+        assertEquals(expectedTimestampFraction, new String(encoder.buffer(), 0, length, US_ASCII));
+        assertEquals("encoded wrong length", expectedLength, length);
+    }
+
+    //  Encoder.update
+
+    @Test
+    public void shouldUpdateMillisTrailingZeros()
+    {
+        assertUpdateTimestampNanos(EPOCH_MILLIS, MILLIS_TIMESTAMP, LENGTH_WITH_MILLISECONDS, MILLISECONDS);
+    }
+
+    @Test
+    public void shouldUpdateMicrosTrailingZeros()
+    {
+        assertUpdateTimestampNanos(EPOCH_MICROS, MICROS_TIMESTAMP, LENGTH_WITH_MICROSECONDS, MICROSECONDS);
+    }
+
+    @Test
+    public void shouldUpdateNanosTrailingZeros()
+    {
+        assertUpdateTimestampNanos(EPOCH_NANOS, NANOS_TIMESTAMP, LENGTH_WITH_NANOSECONDS, NANOSECONDS);
+    }
+
+    private static void assertUpdateTimestampNanos(
+        final long epochFraction,
+        final String expectedTimestampFraction,
+        final int expectedLength,
+        final UtcTimestampEncoder.EpochFractionFormat format)
+    {
+        final UtcTimestampEncoder encoder = new UtcTimestampEncoder(format);
+        encoder.initialise(epochFraction - 1);
+
+        final int length = encoder.update(epochFraction);
+
+        assertEquals(expectedTimestampFraction, new String(encoder.buffer(), 0, length, US_ASCII));
+        assertEquals("encoded wrong length", expectedLength, length);
+    }
+
 }

@@ -183,7 +183,7 @@ public final class UtcTimestampEncoder
         UtcTimeOnlyEncoder.encodeFraction(
             localSecond, fractionOfSecond, flyweight, LENGTH_OF_DATE_AND_DASH, fractionFieldLength);
 
-        return fractionOfSecond > 0 ? lengthWithFraction : LENGTH_WITHOUT_MILLISECONDS;
+        return lengthWithFraction;
     }
 
     /**
@@ -231,7 +231,7 @@ public final class UtcTimestampEncoder
         UtcTimeOnlyEncoder.encodeFraction(
             localSecond, fractionOfSecond, flyweight, LENGTH_OF_DATE_AND_DASH, fractionFieldLength);
 
-        return fractionOfSecond > 0 ? lengthWithFraction : LENGTH_WITHOUT_MILLISECONDS;
+        return lengthWithFraction;
     }
 
     public byte[] buffer()
