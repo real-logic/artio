@@ -303,7 +303,7 @@ public class MessageBasedAcceptorSystemTest
             .sessionPersistenceStrategy(logon ->
             sequenceNumberReset ? TRANSIENT_SEQUENCE_NUMBERS : PERSISTENT_SEQUENCE_NUMBERS)
             .bindTo("localhost", port)
-            .deferBinding(!shouldBind);
+            .bindAtStartup(!shouldBind);
 
         config.printErrorMessages(false);
         engine = FixEngine.launch(config);
