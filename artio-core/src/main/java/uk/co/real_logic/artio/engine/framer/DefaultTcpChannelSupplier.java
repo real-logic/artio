@@ -33,7 +33,10 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
         try
         {
             selector = Selector.open();
-            bind();
+            if (configuration.bindAtStartup())
+            {
+                bind();
+            }
         }
         catch (final IOException ex)
         {
