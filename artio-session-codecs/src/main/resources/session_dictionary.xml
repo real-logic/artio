@@ -105,7 +105,9 @@
             <value enum="3" description="REJECT"/>
             <value enum="4" description="SEQUENCE_RESET"/>
             <value enum="5" description="LOGOUT"/>
+            <value enum="8" description="EXECUTION_REPORT"/>
             <value enum="A" description="LOGON"/>
+            <value enum="D" description="ORDER_SINGLE"/>
             <value enum="BE" description="USER_REQUEST"/>
         </field>
         <field number="10" name="CheckSum" type="STRING"/>

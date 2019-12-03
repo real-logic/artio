@@ -17,12 +17,14 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
+import org.agrona.ExpandableArrayBuffer;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.library.*;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.otf.OtfParser;
 import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.*;
 
@@ -44,10 +46,31 @@ public class FakeHandler
     private long sentPosition;
     private boolean lastSessionWasSlow;
 
+    private final ExpandableArrayBuffer lastMessageBuffer = new ExpandableArrayBuffer();
+    private final MutableAsciiBuffer lastMessage = new MutableAsciiBuffer(lastMessageBuffer);
+    private int lastMessageLength = 0;
+
     public FakeHandler(final FakeOtfAcceptor acceptor)
     {
         this.acceptor = acceptor;
         parser = new OtfParser(acceptor, new LongDictionary());
+    }
+
+    private boolean copyMessages = false;
+
+    public void copyMessages(final boolean copyMessages)
+    {
+        this.copyMessages = copyMessages;
+    }
+
+    public int lastMessageLength()
+    {
+        return lastMessageLength;
+    }
+
+    public MutableAsciiBuffer lastMessage()
+    {
+        return lastMessage;
     }
 
     // ----------- EVENTS -----------
@@ -66,6 +89,13 @@ public class FakeHandler
         parser.onMessage(buffer, offset, length);
         acceptor.lastReceivedMessage().sequenceIndex(sequenceIndex);
         acceptor.forSession(session);
+
+        if (copyMessages)
+        {
+            lastMessageBuffer.putBytes(0, buffer, offset, length);
+            lastMessageLength = length;
+        }
+
         return CONTINUE;
     }
 
