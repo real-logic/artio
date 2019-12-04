@@ -1,31 +1,39 @@
+/*
+ * Copyright 2019 Adaptive Financial Consulting Ltd.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package uk.co.real_logic.artio.system_tests;
 
-import static io.aeron.CommonContext.IPC_CHANNEL;
-import static org.agrona.CloseHelper.close;
-import static org.junit.Assert.assertEquals;
-import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
-import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.artio.TestFixtures.unusedPort;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_LOGS;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.acceptorMonitoringFile;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.delete;
-
-import java.io.IOException;
-import java.util.concurrent.locks.LockSupport;
-
+import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.After;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
-
-import io.aeron.archive.ArchivingMediaDriver;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.decoder.ResendRequestDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.validation.SessionPersistenceStrategy;
 
-@Ignore
+import java.io.IOException;
+import java.util.concurrent.locks.LockSupport;
+
+import static io.aeron.CommonContext.IPC_CHANNEL;
+import static org.agrona.CloseHelper.close;
+import static org.junit.Assert.assertEquals;
+import static uk.co.real_logic.artio.TestFixtures.*;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
+
 public class TestRequestOutOfSequenceShouldNotTriggerHeartbeatBeforeResendRequestTest
 {
     private int port = unusedPort();
@@ -59,9 +67,7 @@ public class TestRequestOutOfSequenceShouldNotTriggerHeartbeatBeforeResendReques
 
             connection.msgSeqNum(3);
             connection.testRequest("firstRequest");
-            // TODO unexpected behaviour
-            // uncommenting this line makes the test pass, but the first received message should be a resend request
-            // connection.readMessage(new HeartbeatDecoder());
+
             // await resend request
             final ResendRequestDecoder resendRequest = connection.readMessage(new ResendRequestDecoder());
             assertEquals(2, resendRequest.beginSeqNo());

@@ -1212,9 +1212,10 @@ public class Session implements AutoCloseable
         final int testReqIdLength,
         final long sendingTime,
         final long origSendingTime,
-        final boolean isPossDupOrResend, final boolean possDup)
+        final boolean isPossDupOrResend,
+        final boolean possDup)
     {
-        if (msgSeqNo != MISSING_INT)
+        if (msgSeqNo == expectedReceivedSeqNum())
         {
             final int sentSeqNum = newSentSeqNum();
             final long position = proxy.sendHeartbeat(
