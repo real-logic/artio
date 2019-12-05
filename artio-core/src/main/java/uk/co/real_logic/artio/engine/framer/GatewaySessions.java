@@ -190,7 +190,10 @@ class GatewaySessions
             errorHandler,
             dictionary);
 
-        sessions.add(gatewaySession);
+        if (!sessions.contains(gatewaySession))
+        {
+            sessions.add(gatewaySession);
+        }
         gatewaySession.manage(sessionParser, session, engineBlockablePosition);
 
         final CompositeKey sessionKey = gatewaySession.sessionKey();
@@ -254,7 +257,7 @@ class GatewaySessions
         final List<GatewaySession> sessions = this.sessions;
 
         int eventsProcessed = 0;
-        for (int i = 0, size = sessions.size(); i < size; )
+        for (int i = 0, size = sessions.size(); i < size;)
         {
             final GatewaySession session = sessions.get(i);
             eventsProcessed += session.poll(time);
@@ -316,6 +319,13 @@ class GatewaySessions
             .computeIfAbsent(dictionary, newUserRequestExtractor);
 
         extractor.onUserRequest(buffer, offset, length, authenticationStrategy, connectionId, sessionId);
+    }
+
+    // We put the gateway session in our list of sessions to poll in order to check engine level timeouts,
+    // But we aren't actually acquiring the session.
+    public void track(final GatewaySession gatewaySession)
+    {
+        sessions.add(gatewaySession);
     }
 
     enum AuthenticationState

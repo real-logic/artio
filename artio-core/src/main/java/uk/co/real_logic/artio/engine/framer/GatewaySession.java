@@ -156,7 +156,8 @@ class GatewaySession implements SessionInfo
 
     int poll(final long timeInMs)
     {
-        return session.poll(timeInMs) + checkNoLogonDisconnect(timeInMs);
+        final int events = session != null ? session.poll(timeInMs) : 0;
+        return events + checkNoLogonDisconnect(timeInMs);
     }
 
     private int checkNoLogonDisconnect(final long timeInMs)

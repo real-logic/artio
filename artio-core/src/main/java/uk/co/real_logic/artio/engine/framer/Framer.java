@@ -538,7 +538,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         gatewaySession.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
 
         // In sole library mode we forward all connections to the sole library
-        if (!soleLibraryMode)
+        if (soleLibraryMode)
+        {
+            gatewaySessions.track(gatewaySession);
+        }
+        else
         {
             gatewaySessions.acquire(
                 gatewaySession,

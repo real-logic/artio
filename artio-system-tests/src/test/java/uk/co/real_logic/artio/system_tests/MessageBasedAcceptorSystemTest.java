@@ -21,6 +21,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.LogonEncoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
@@ -29,16 +30,20 @@ import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.decoder.RejectDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.library.FixLibrary;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.util.concurrent.locks.LockSupport;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.agrona.CloseHelper.close;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.TestFixtures.*;
+import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.ENGINE;
+import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.PERSISTENT_SEQUENCE_NUMBERS;
 import static uk.co.real_logic.artio.validation.PersistenceLevel.TRANSIENT_SEQUENCE_NUMBERS;
@@ -235,10 +240,47 @@ public class MessageBasedAcceptorSystemTest
     }
 
     @Test
-    public void bindingCanBeDeferred() throws IOException
+    public void shouldAllowBindingToBeDeferred() throws IOException
     {
         setup(true, false);
         cannotConnect();
+    }
+
+    @Test
+    public void shouldDisconnectConnectionWithNoLogonEngine() throws IOException
+    {
+        shouldDisconnectConnectionWithNoLogon(ENGINE);
+    }
+
+    @Test
+    public void shouldDisconnectConnectionWithNoLogonSoleLibrary() throws IOException
+    {
+        shouldDisconnectConnectionWithNoLogon(SOLE_LIBRARY);
+    }
+
+    private void shouldDisconnectConnectionWithNoLogon(final InitialAcceptedSessionOwner initialAcceptedSessionOwner)
+        throws IOException
+    {
+        setup(true, true, true, initialAcceptedSessionOwner);
+
+        final FakeOtfAcceptor fakeOtfAcceptor = new FakeOtfAcceptor();
+        final FakeHandler fakeHandler = new FakeHandler(fakeOtfAcceptor);
+        try (FixLibrary library = newAcceptingLibrary(fakeHandler))
+        {
+            try (FixConnection connection = FixConnection.initiate(port))
+            {
+                Timing.assertEventuallyTrue(
+                    "Never gets disconnected",
+                    () ->
+                    {
+                        library.poll(10);
+
+                        LockSupport.parkNanos(10_000);
+
+                        return !connection.isConnected();
+                    });
+            }
+        }
     }
 
     private void completeBind()
@@ -296,7 +338,19 @@ public class MessageBasedAcceptorSystemTest
         setup(sequenceNumberReset, shouldBind, true);
     }
 
-    private void setup(final boolean sequenceNumberReset, final boolean shouldBind, final boolean provideBindingAddress)
+    private void setup(
+        final boolean sequenceNumberReset,
+        final boolean shouldBind,
+        final boolean provideBindingAddress)
+    {
+        setup(sequenceNumberReset, shouldBind, provideBindingAddress, InitialAcceptedSessionOwner.ENGINE);
+    }
+
+    private void setup(
+        final boolean sequenceNumberReset,
+        final boolean shouldBind,
+        final boolean provideBindingAddress,
+        final InitialAcceptedSessionOwner initialAcceptedSessionOwner)
     {
         mediaDriver = launchMediaDriver();
 
@@ -305,6 +359,8 @@ public class MessageBasedAcceptorSystemTest
             .libraryAeronChannel(IPC_CHANNEL)
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(ACCEPTOR_LOGS)
+            .initialAcceptedSessionOwner(initialAcceptedSessionOwner)
+            .noLogonDisconnectTimeoutInMs(500)
             .sessionPersistenceStrategy(logon ->
             sequenceNumberReset ? TRANSIENT_SEQUENCE_NUMBERS : PERSISTENT_SEQUENCE_NUMBERS)
             .bindAtStartup(shouldBind);
