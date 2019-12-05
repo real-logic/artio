@@ -118,6 +118,12 @@ public class DecimalFloatTest
         new DecimalFloat().fromString("99999999999999990000000");
     }
 
+    @Test
+    public void parseZeroDecimalFloat()
+    {
+        assertThat(new DecimalFloat(0, 0), equalTo(new DecimalFloat().fromString("0")));
+    }
+
     // Bug reproduction testcase
     @Test(expected = ArithmeticException.class)
     public void shouldNotDecodeOverflowingValue()
