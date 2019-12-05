@@ -998,15 +998,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         receiverEndPoints.removeConnection(connectionId, reason);
         senderEndPoints.removeConnection(connectionId);
+        gatewaySessions.releaseByConnectionId(connectionId);
+
         final LiveLibraryInfo library = idToLibrary.get(libraryId);
         if (library != null)
         {
             library.removeSession(connectionId);
         }
-        else
-        {
-            gatewaySessions.releaseByConnectionId(connectionId);
-        }
+
+
 
         return CONTINUE;
     }

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
@@ -309,7 +310,7 @@ class GatewaySession implements SessionInfo
 
     void close()
     {
-        session.close();
+        CloseHelper.close(session);
     }
 
     int sequenceIndex()
