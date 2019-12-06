@@ -368,8 +368,9 @@ public class DecoderGenerator extends Generator
             .map((entry) -> validateEnum(entry, out))
             .collect(joining("\n"));
 
+        //maybe this should look at groups on components too?
         final String groupValidation = aggregate
-            .entriesWith(element -> element instanceof Group)
+            .allGroupsIncludingComponents()
             .map((entry) -> generateGroupValidation(entry, out))
             .collect(joining("\n"));
 

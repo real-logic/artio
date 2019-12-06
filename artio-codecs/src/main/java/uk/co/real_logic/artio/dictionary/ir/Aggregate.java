@@ -68,6 +68,20 @@ public abstract class Aggregate
                 ));
     }
 
+    /**
+     * @return all entries including those of nested components
+     */
+    public Stream<Entry> allGroupsIncludingComponents()
+    {
+        return entries.stream()
+            .flatMap(
+                (entry) -> entry.match(
+                    (ele, field) -> Stream.empty(),
+                    (ele, group) -> Stream.of(ele),
+                    (ele, component) -> component.allGroupsIncludingComponents()
+                ));
+    }
+
     public Stream<Entry> allComponents()
     {
         return entries.stream()
