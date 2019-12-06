@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.dictionary.generation;
 import org.agrona.AsciiSequenceView;
 import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
+import org.junit.Ignore;
 import org.junit.Test;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
@@ -571,6 +572,17 @@ public abstract class AbstractDecoderGeneratorTest
 
         assertFalse("Passed validation with missing fields", decoder.validate());
         assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", REQUIRED_TAG_MISSING, decoder.rejectReason());
+    }
+
+    @Test
+    @Ignore("Reproducer")
+    public void shouldValidateMissingRequiredFieldsInGroupsInsideComponents() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MISSING_REQUIRED_FIELD_IN_GROUP_INSIDE_COMPONENT_MESSAGE);
+
+        assertFalse("Passed validation with missing fields", decoder.validate());
+        assertEquals("Wrong tag id", 404, decoder.invalidTagId());
         assertEquals("Wrong reject reason", REQUIRED_TAG_MISSING, decoder.rejectReason());
     }
 

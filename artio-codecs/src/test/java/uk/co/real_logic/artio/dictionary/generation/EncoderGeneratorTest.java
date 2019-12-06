@@ -822,9 +822,11 @@ public class EncoderGeneratorTest
 
         Object componentGroup = getComponentGroup(egComponent, 2);
         setComponentGroupField(componentGroup, 1);
+        setRequiredComponentGroupField(componentGroup, 10);
 
         componentGroup = next(componentGroup);
         setComponentGroupField(componentGroup, 2);
+        setRequiredComponentGroupField(componentGroup, 20);
     }
 
     private void setEgGroupToTwoElements(final Encoder encoder) throws Exception
@@ -852,6 +854,11 @@ public class EncoderGeneratorTest
     private void setComponentGroupField(final Object group, final int value) throws Exception
     {
         setInt(group, "componentGroupField", value);
+    }
+
+    private void setRequiredComponentGroupField(final Object group, final int value) throws Exception
+    {
+        setInt(group, "requiredComponentGroupField", value);
     }
 
     private void setupHeader(final Encoder encoder) throws Exception
