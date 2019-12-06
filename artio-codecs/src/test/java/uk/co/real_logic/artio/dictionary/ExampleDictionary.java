@@ -180,10 +180,12 @@ public final class ExampleDictionary
         "    {\n" +
         "      \"MessageName\": \"ComponentGroupGroup\",\n" +
         "      \"ComponentGroupField\": \"1\",\n" +
+        "      \"RequiredComponentGroupField\": \"10\",\n" +
         "    },\n" +
         "    {\n" +
         "      \"MessageName\": \"ComponentGroupGroup\",\n" +
         "      \"ComponentGroupField\": \"2\",\n" +
+        "      \"RequiredComponentGroupField\": \"20\",\n" +
         "    }\n" +
         "    ]\n" +
         "    \"EgNestedComponent\":  {\n" +
@@ -367,12 +369,17 @@ public final class ExampleDictionary
         "\001120=2\001121=1\001121=2\00110=161\001";
 
     public static final String COMPONENT_MESSAGE =
-        "8=FIX.4.4\0019=77\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-        "\001124=2\001130=2\001131=1\001131=2\00110=069\001";
+        "8=FIX.4.4\0019=91\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001124=2\001130=2\001131=1\001404=10\001131=2\001404=20\00110=176\001";
 
     public static final String NESTED_COMPONENT_MESSAGE =
-        "8=FIX.4.4\0019=77\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-        "\001124=2\001130=2\001131=1\001131=2\001141=180\001142=2\001143=99\001143=100\00110=069\001";
+        "8=FIX.4.4\0019=91\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001124=2\001130=2\001131=1\001404=10\001131=2\001404=20\001141=180\001142=2\001143=99\001143=100\001" +
+        "10=069\001";
+
+    public static final String MISSING_REQUIRED_FIELD_IN_GROUP_INSIDE_COMPONENT_MESSAGE =
+        "8=FIX.4.4\0019=84\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001124=2\001130=2\001131=1\001404=10\001131=2\001141=180\001142=2\001143=99\001143=100\00110=069\001";
 
     public static final String SHORT_TIMESTAMP_MESSAGE =
         "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1" +
@@ -500,6 +507,7 @@ public final class ExampleDictionary
 
         final Group componentGroup = Group.of(registerField(messageEgFields, 130, NO_COMPONENT_GROUP, INT));
         componentGroup.optionalEntry(registerField(messageEgFields, 131, "ComponentGroupField", INT));
+        componentGroup.requiredEntry(registerField(messageEgFields, 404, "RequiredComponentGroupField", INT));
 
         final Group nestedComponentGroup = Group.of(registerField(messageEgFields, 142,
             NO_NESTED_COMPONENT_GROUP, INT));
