@@ -52,7 +52,7 @@ public final class DecimalFloatParser
         }
 
         // Throw away leading zeros
-        for (int index = workingOffset; charReader.isZero(data, index) && index < end; index++)
+        for (int index = workingOffset; index < end && charReader.isZero(data, index); index++)
         {
             workingOffset++;
         }
