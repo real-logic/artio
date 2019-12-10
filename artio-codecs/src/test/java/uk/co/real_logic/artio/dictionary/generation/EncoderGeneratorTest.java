@@ -240,11 +240,37 @@ public class EncoderGeneratorTest
     {
         final Object encoder = heartbeat.getConstructor().newInstance();
 
-        setEnumByRepresentation(encoder,
+        setEnum(encoder,
             ON_BEHALF_OF_COMP_ID,
             PARENT_PACKAGE + ".OnBehalfOfCompID",
             "abc");
         assertOnBehalfOfCompIDValue(encoder, "abc");
+    }
+
+    @Test
+    public void stringSettersByEnumThrowForNullValue() throws Exception
+    {
+        final Object encoder = heartbeat.getConstructor().newInstance();
+        assertThrows(() ->
+            setEnum(encoder,
+            ON_BEHALF_OF_COMP_ID,
+            PARENT_PACKAGE + ".OnBehalfOfCompID",
+            "NULL_VAL"),
+            EncodingException.class
+        );
+    }
+
+    @Test
+    public void stringSettersByEnumThrowForUnknownValue() throws Exception
+    {
+        final Object encoder = heartbeat.getConstructor().newInstance();
+        assertThrows(() ->
+            setEnum(encoder,
+            ON_BEHALF_OF_COMP_ID,
+            PARENT_PACKAGE + ".OnBehalfOfCompID",
+            "ARTIO_UNKNOWN"),
+            EncodingException.class
+        );
     }
 
     @Test
@@ -261,9 +287,29 @@ public class EncoderGeneratorTest
     public void intSettersByEnumWriteToFields() throws Exception
     {
         final Object encoder = heartbeat.getConstructor().newInstance();
-        setEnumByRepresentation(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", 1);
+        setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "ONE");
 
         assertEquals(1, getField(encoder, INT_FIELD));
+    }
+
+    @Test
+    public void intSettersByEnumThrowForNullValue() throws Exception
+    {
+        final Object encoder = heartbeat.getConstructor().newInstance();
+        assertThrows(
+            () -> setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "NULL_VAL"),
+            EncodingException.class
+        );
+    }
+
+    @Test
+    public void intSettersByEnumThrowForUnknownValue() throws Exception
+    {
+        final Object encoder = heartbeat.getConstructor().newInstance();
+        assertThrows(
+            () -> setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "ARTIO_UNKNOWN"),
+            EncodingException.class
+        );
     }
 
     @Test
@@ -1028,5 +1074,22 @@ public class EncoderGeneratorTest
     private void setDataFieldLength(final Encoder encoder) throws Exception
     {
         setInt(encoder, "dataFieldLength", 3);
+    }
+
+    private static void assertThrows(final ThrowingRunnable runnable, final Class<? extends Exception> thrown)
+    {
+        try
+        {
+            runnable.run();
+        }
+        catch (final Exception e)
+        {
+            assertThat(e.getCause().getClass(), is(thrown));
+        }
+    }
+
+    interface ThrowingRunnable
+    {
+        void run() throws Exception;
     }
 }

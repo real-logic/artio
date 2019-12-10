@@ -690,8 +690,13 @@ public class EncoderGenerator extends Generator
         final String enumType)
     {
         return String.format(
-            "    public %s %2$s(%3$s value)\n" +
+            "    public %1$s %2$s(%3$s value)\n" +
             "    {\n" +
+            "        if (" + CODEC_VALIDATION_ENABLED + " && " +
+            "(value == %3$s.NULL_VAL || value == %3$s.ARTIO_UNKNOWN))\n" +
+            "        {\n" +
+            "            throw new EncodingException(\"Invalid Value Field: " + fieldName + " Value: \" + value );\n" +
+            "        }\n" +
             "        return %2$s(value.representation());\n" +
             "    }\n\n",
             className, fieldName, enumType
