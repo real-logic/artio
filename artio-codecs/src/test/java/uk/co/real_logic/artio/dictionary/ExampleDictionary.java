@@ -67,6 +67,7 @@ public final class ExampleDictionary
     public static final String OTHER_MESSAGE_DECODER = TEST_PACKAGE + ".OtherMessageDecoder";
     public static final String OTHER_MESSAGE_ENCODER = TEST_PACKAGE + ".OtherMessageEncoder";
     public static final String ENUM_TEST_MESSAGE_DECODER = TEST_PACKAGE + ".EnumTestMessageDecoder";
+    public static final String ENUM_TEST_MESSAGE_ENCODER = TEST_PACKAGE + ".EnumTestMessageEncoder";
 
     public static final String PRINTER = TEST_PACKAGE + ".PrinterImpl";
 
@@ -95,6 +96,10 @@ public final class ExampleDictionary
     public static final String STRING_ENUM_RF = "StringEnumRF";
     public static final String INT_ENUM_RF = "IntEnumRF";
     public static final String CHAR_ENUM_RF = "CharEnumRF";
+
+    public static final String STRING_ENUM_REQ = "stringEnumReq";
+    public static final String INT_ENUM_REQ = "intEnumReq";
+    public static final String CHAR_ENUM_REQ = "charEnumReq";
 
     public static final String HAS_TEST_REQ_ID = "hasTestReqID";
     public static final String HAS_BOOLEAN_FIELD = "hasBooleanField";
