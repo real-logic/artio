@@ -31,7 +31,7 @@ def checkstyleVersion = '8.27'
 def hamcrestVersion = '2.2'
 def junitVersion = '4.12'
 def mockitoVersion = '3.2.0'
-def hdrHistogramVersion = '2.1.11'
+def hdrHistogramVersion = '2.1.12'
 def jmhVersion = '1.22'
 
 def aeronVersion = '1.24.0'
@@ -480,6 +480,6 @@ task uploadToMavenCentral {
 }
 
 wrapper {
-    gradleVersion = '5.6.3'
+    gradleVersion = '6.0.1'
     distributionType = 'ALL'
 }
