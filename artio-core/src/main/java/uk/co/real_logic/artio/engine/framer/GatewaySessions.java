@@ -48,6 +48,7 @@ import java.util.function.Function;
 
 import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.DUPLICATE_SESSION;
+import static uk.co.real_logic.artio.engine.framer.SessionContexts.UNKNOWN_SESSION;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.resetSequenceNumbersUponLogon;
 
 /**
@@ -177,7 +178,8 @@ class GatewaySessions
             reasonableTransmissionTimeInMs,
             asciiBuffer,
             gatewaySession.enableLastMsgSeqNumProcessed(),
-            beginString);
+            beginString,
+            customisationStrategy);
 
         session.awaitingResend(awaitingResend);
         session.closedResendInterval(gatewaySession.closedResendInterval());
@@ -575,6 +577,7 @@ class GatewaySessions
             header.sendingTime(
                 sendingTimeEncoder.buffer(), sendingTimeEncoder.encode(epochClock.time()));
             HeaderSetup.setup(logon.header(), header);
+            customisationStrategy.configureHeader(header, UNKNOWN_SESSION.sessionId());
 
             final long result = encoder.encode(asciiBuffer, 0);
             final int offset = Encoder.offset(result);

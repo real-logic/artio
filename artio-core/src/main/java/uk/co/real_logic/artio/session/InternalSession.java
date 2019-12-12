@@ -51,7 +51,8 @@ public class InternalSession extends Session
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
-        final String beginString)
+        final String beginString,
+        final SessionCustomisationStrategy customisationStrategy)
     {
         super(
             heartbeatIntervalInS,
@@ -70,7 +71,8 @@ public class InternalSession extends Session
             reasonableTransmissionTimeInMs,
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
-            beginString);
+            beginString,
+            customisationStrategy);
     }
 
     public int poll(final long time)

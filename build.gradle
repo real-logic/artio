@@ -470,7 +470,7 @@ subprojects {
     }
 }
 
-task uploadToMavenCentral {
+task uploadToMavenRepository {
     dependsOn 'artio-core:uploadArchives',
         'artio-samples:uploadArchives',
         'artio-system-tests:uploadArchives',

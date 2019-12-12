@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.session;
 
 import uk.co.real_logic.artio.builder.AbstractLogonEncoder;
 import uk.co.real_logic.artio.builder.AbstractLogoutEncoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 
 /**
  * Implement this interface if you want to alter logon or logoff messages with additional
@@ -47,4 +48,14 @@ public interface SessionCustomisationStrategy
      * @param sessionId the surrogate id for the Session that is being customised
      */
     void configureLogout(AbstractLogoutEncoder logout, long sessionId);
+
+    /**
+     * Add additional fields to the header of any message sent by Artio.
+     *
+     * @param header the header about to be sent
+     * @param sessionId the surrogate id for the Session that is being customised
+     */
+    default void configureHeader(SessionHeaderEncoder header, long sessionId)
+    {
+    }
 }
