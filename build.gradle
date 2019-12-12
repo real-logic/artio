@@ -46,12 +46,20 @@ ext {
     group = artioGroup
     isReleaseVersion = !version.endsWith("SNAPSHOT")
 
-    if (!project.hasProperty('ossrhUsername')) {
-        ossrhUsername = ''
+    if (!project.hasProperty('repoUsername')) {
+        repoUsername = ''
     }
 
-    if (!project.hasProperty('ossrhPassword')) {
-        ossrhPassword = ''
+    if (!project.hasProperty('repoPassword')) {
+        repoPassword = ''
+    }
+
+    if (!project.hasProperty('repoUrl')) {
+        repoUrl = ''
+    }
+
+    if (!project.hasProperty('snapshotUrl')) {
+        snapshotUrl = ''
     }
 }
 
@@ -422,12 +430,12 @@ subprojects {
             mavenDeployer {
                 beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 
-                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                repository(url: repoUrl) {
+                    authentication(userName: repoUsername, password: repoPassword)
                 }
 
-                snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                snapshotRepository(url: snapshotUrl) {
+                    authentication(userName: repoUsername, password: repoPassword)
                 }
 
                 pom.project {
