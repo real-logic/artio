@@ -1039,7 +1039,8 @@ public class EncoderGenerator extends Generator
     protected boolean hasFlag(final Entry entry, final Field field)
     {
         final Type type = field.type();
-        return (!entry.required() && !type.hasLengthField(false)) || type.isFloatBased() || type.isIntBased();
+        return (!entry.required() && !type.hasLengthField(false)) ||
+            type.isFloatBased() || type.isIntBased() || type.isCharBased();
     }
 
     protected String resetTemporalValue(final String name)

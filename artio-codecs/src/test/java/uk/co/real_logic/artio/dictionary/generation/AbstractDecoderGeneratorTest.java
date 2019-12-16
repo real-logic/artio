@@ -61,9 +61,6 @@ public abstract class AbstractDecoderGeneratorTest
     private static final String CHAR_ENUM_OPT = "charEnumOpt";
     private static final String INT_ENUM_OPT = "intEnumOpt";
     private static final String STRING_ENUM_OPT = "stringEnumOpt";
-    private static final String CHAR_ENUM_REQ = "charEnumReq";
-    private static final String INT_ENUM_REQ = "intEnumReq";
-    private static final String STRING_ENUM_REQ = "stringEnumReq";
 
     private static Class<?> heartbeatWithoutValidation;
     private static Class<?> heartbeatWithoutEnumValueValidation;

@@ -1285,7 +1285,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             configuration.reasonableTransmissionTimeInMs(),
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
-            fixDictionary.beginString());
+            fixDictionary.beginString(),
+            configuration.sessionCustomisationStrategy());
 
         session.initialLastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
 
@@ -1358,7 +1359,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             configuration.reasonableTransmissionTimeInMs(),
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
-            fixDictionary.beginString());
+            fixDictionary.beginString(),
+            configuration.sessionCustomisationStrategy());
         session.address(host, port);
         return session;
     }

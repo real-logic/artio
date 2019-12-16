@@ -48,6 +48,7 @@ public class EncoderGeneratorTest
 {
     private static Map<String, CharSequence> sources;
     private static Class<?> heartbeat;
+    private static Class<?> enumTestMessage;
     private static Class<?> otherMessage;
     private static Class<?> heartbeatWithoutValidation;
 
@@ -66,6 +67,11 @@ public class EncoderGeneratorTest
         }
         heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
         if (heartbeat == null && !AbstractDecoderGeneratorTest.CODEC_LOGGING)
+        {
+            System.out.println(sources);
+        }
+        enumTestMessage = compileInMemory(ENUM_TEST_MESSAGE_ENCODER, sources);
+        if (enumTestMessage == null && !AbstractDecoderGeneratorTest.CODEC_LOGGING)
         {
             System.out.println(sources);
         }
@@ -743,6 +749,60 @@ public class EncoderGeneratorTest
         encoder.encode(buffer, 1);
     }
 
+    @Test(expected = EncodingException.class)
+    public void shouldValidateMissingRequiredCharEnumFields() throws Exception
+    {
+        final Encoder encoder = newEnumTestMessage();
+
+        setEnum(
+            encoder,
+            INT_ENUM_REQ,
+            PARENT_PACKAGE + ".IntEnumReq",
+            "THIRTY");
+        setEnum(
+            encoder,
+            STRING_ENUM_REQ,
+            PARENT_PACKAGE + ".StringEnumReq",
+            "GAMMA");
+        encoder.encode(buffer, 1);
+    }
+
+    @Test(expected = EncodingException.class)
+    public void shouldValidateMissingRequiredIntEnumFields() throws Exception
+    {
+        final Encoder encoder = newEnumTestMessage();
+
+        setEnum(
+            encoder,
+            CHAR_ENUM_REQ,
+            PARENT_PACKAGE + ".CharEnumReq",
+            "C");
+        setEnum(
+            encoder,
+            STRING_ENUM_REQ,
+            PARENT_PACKAGE + ".StringEnumReq",
+            "GAMMA");
+        encoder.encode(buffer, 1);
+    }
+
+    @Test(expected = EncodingException.class)
+    public void shouldValidateMissingRequiredStringEnumFields() throws Exception
+    {
+        final Encoder encoder = newEnumTestMessage();
+
+        setEnum(
+            encoder,
+            CHAR_ENUM_REQ,
+            PARENT_PACKAGE + ".CharEnumReq",
+            "C");
+        setEnum(
+            encoder,
+            INT_ENUM_REQ,
+            PARENT_PACKAGE + ".IntEnumReq",
+            "THIRTY");
+        encoder.encode(buffer, 1);
+    }
+
     @Test
     public void canDisableRequiredStringFieldValidation() throws Exception
     {
@@ -1036,6 +1096,11 @@ public class EncoderGeneratorTest
     private Encoder newHeartbeat() throws Exception
     {
         return (Encoder)heartbeat.getConstructor().newInstance();
+    }
+
+    private Encoder newEnumTestMessage() throws Exception
+    {
+        return (Encoder)enumTestMessage.getConstructor().newInstance();
     }
 
     private void assertTestReqIdLength(final int expectedLength, final Object encoder) throws Exception
