@@ -40,12 +40,6 @@ public final class Reflection
         set(object, setter, int.class, value);
     }
 
-    public static void setEnum(final Object object, final String setter, final Object value)
-        throws Exception
-    {
-        set(object, setter, value.getClass(), value);
-    }
-
     public static void setEnumByRepresentation(
         final Object object,
         final String setter,
