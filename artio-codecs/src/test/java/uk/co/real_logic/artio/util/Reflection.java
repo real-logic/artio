@@ -17,16 +17,12 @@ package uk.co.real_logic.artio.util;
 
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.builder.Encoder;
-import uk.co.real_logic.artio.dictionary.CharArrayWrapper;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 
 import org.agrona.AsciiSequenceView;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 import java.util.Iterator;
-import java.util.Optional;
-import java.util.stream.Stream;
 
 public final class Reflection
 {
@@ -40,15 +36,13 @@ public final class Reflection
         set(object, setter, int.class, value);
     }
 
-    public static void setEnumByRepresentation(
-        final Object object,
-        final String setter,
-        final String enumClass,
-        final Object representation)
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static void setEnum(final Object object, final String setter, final String enumClassName, final String value)
         throws Exception
     {
-        final Object enumValue = getEnumByRepresentation(object, enumClass, representation);
-        set(object, setter, enumValue.getClass(), enumValue);
+        final Class<?> enumClass = object.getClass().getClassLoader().loadClass(enumClassName);
+        final Object enumValue = Enum.valueOf((Class<Enum>)enumClass, value);
+        set(object, setter, enumClass, enumValue);
     }
 
     public static void setFloat(final Object object, final String setter, final DecimalFloat value)
@@ -200,21 +194,6 @@ public final class Reflection
     public static Object getRepresentation(final Object object) throws Exception
     {
         return get(object, "representation");
-    }
-
-    public static Object getEnumByRepresentation(
-        final Object containingObject,
-        final String className,
-        final Object representation)
-        throws Exception
-    {
-        final Class<?> enumClass = containingObject.getClass().getClassLoader().loadClass(className);
-        final Optional<Method> decodeMethod = Stream.of(enumClass.getMethods())
-            .filter(method -> method.getName().equals("decode"))
-            .filter(method -> method.getParameterCount() == 1)
-            .filter(method -> method.getParameterTypes()[0] != CharArrayWrapper.class)
-            .findFirst();
-        return decodeMethod.get().invoke(null, representation);
     }
 
     public static byte[] getBytes(final Decoder decoder, final String field) throws Exception
