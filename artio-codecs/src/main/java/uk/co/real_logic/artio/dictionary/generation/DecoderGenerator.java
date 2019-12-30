@@ -816,8 +816,7 @@ public class DecoderGenerator extends Generator
                 "    {\n" +
                 "        throw new UnsupportedOperationException();\n" +
                 "    }\n",
-                propertyName,
-                className));
+                propertyName));
         }
     }
 

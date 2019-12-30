@@ -42,7 +42,7 @@ class FinalImagePositions implements UnavailableImageHandler
         final long position = image.position();
 
         final Long old = sessionIdToPosition.remove(sessionId);
-        if (old != LEAK_WITNESS)
+        if (old != LEAK_WITNESS) // lgtm [java/reference-equality-of-boxed-types]
         {
             sessionIdToPosition.put(sessionId, position);
         }

@@ -39,26 +39,27 @@ public final class DebugLogger
 
     static
     {
+        OUTPUT = makeOutputStream();
+    }
+
+    private static PrintStream makeOutputStream()
+    {
         if (DEBUG_FILE == null)
         {
-            OUTPUT = System.out;
+            return System.out;
         }
         else
         {
-            PrintStream output = null;
             try
             {
-                output = new PrintStream(new FileOutputStream(DEBUG_FILE));
+                return new PrintStream(new FileOutputStream(DEBUG_FILE));
             }
             catch (final IOException ex)
             {
                 ex.printStackTrace();
                 System.exit(-1);
             }
-            finally
-            {
-                OUTPUT = output;
-            }
+            return null;
         }
     }
 

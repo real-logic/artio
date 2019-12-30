@@ -484,7 +484,10 @@ class GatewaySessions
             switch (state)
             {
                 case AUTHENTICATED:
-                    session.onAuthenticationResult();
+                    if (session != null)
+                    {
+                        session.onAuthenticationResult();
+                    }
                     onAuthenticated();
                     return false;
 
@@ -492,16 +495,11 @@ class GatewaySessions
                     return true;
 
                 case REJECTED:
-                    session.onAuthenticationResult();
-                    session = null;
+                    checkedOnAuthenticationResult();
                     return true;
 
                 case SENDING_REJECT_MESSAGE:
-                    if (session != null)
-                    {
-                        session.onAuthenticationResult();
-                        session = null;
-                    }
+                    checkedOnAuthenticationResult();
                     return onSendingRejectMessage();
 
                 case LINGERING_REJECT_MESSAGE:
@@ -514,6 +512,15 @@ class GatewaySessions
                 case PENDING:
                 default:
                     return false;
+            }
+        }
+
+        private void checkedOnAuthenticationResult()
+        {
+            if (session != null)
+            {
+                session.onAuthenticationResult();
+                session = null;
             }
         }
 
