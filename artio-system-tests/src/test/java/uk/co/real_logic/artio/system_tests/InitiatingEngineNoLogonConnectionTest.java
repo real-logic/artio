@@ -27,7 +27,12 @@ import uk.co.real_logic.artio.session.Session;
 import java.io.IOException;
 import java.net.ServerSocket;
 
+import static org.hamcrest.Matchers.anyOf;
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
+import static uk.co.real_logic.artio.Reply.State.ERRORED;
+import static uk.co.real_logic.artio.Reply.State.TIMED_OUT;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
@@ -79,7 +84,7 @@ public class InitiatingEngineNoLogonConnectionTest extends AbstractGatewayToGate
         final Reply<Session> secondConnectReply = initiateSession();
         assertEquals(Reply.State.EXECUTING, secondConnectReply.state());
         testSystem.awaitReply(secondConnectReply);
-        assertEquals(secondConnectReply.toString(), Reply.State.TIMED_OUT, secondConnectReply.state());
+        assertThat(secondConnectReply.state(), anyOf(is(TIMED_OUT), is(ERRORED)));
     }
 
     private Reply<Session> initiateSession()
