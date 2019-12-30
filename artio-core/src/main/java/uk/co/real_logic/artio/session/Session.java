@@ -121,6 +121,7 @@ public class Session implements AutoCloseable
     private final long reasonableTransmissionTimeInMs;
     private final boolean enableLastMsgSeqNumProcessed;
     private final String beginString;
+    private final SessionCustomisationStrategy customisationStrategy;
 
     private CompositeKey sessionKey;
     private SessionState state;
@@ -178,8 +179,10 @@ public class Session implements AutoCloseable
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
-        final String beginString)
+        final String beginString,
+        final SessionCustomisationStrategy customisationStrategy)
     {
+        this.customisationStrategy = customisationStrategy;
         Verify.notNull(epochClock, "clock");
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
@@ -468,6 +471,9 @@ public class Session implements AutoCloseable
         {
             sessionIdStrategy.setupSession(sessionKey, header);
         }
+
+        customisationStrategy.configureHeader(header, id);
+
         return sentSeqNum;
     }
 

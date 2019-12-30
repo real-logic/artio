@@ -50,7 +50,8 @@ public class AcceptorSessionTest extends AbstractSessionTest
             DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
             new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]),
             DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED,
-            Constants.VERSION);
+            Constants.VERSION,
+            SessionCustomisationStrategy.none());
         acceptorSession.logonListener(mockLogonListener);
         return acceptorSession;
     }
