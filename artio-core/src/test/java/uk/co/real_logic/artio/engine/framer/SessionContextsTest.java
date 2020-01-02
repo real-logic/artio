@@ -34,8 +34,10 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.DUPLICATE_SESSION;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.LOWEST_VALID_SESSION_ID;
@@ -43,8 +45,6 @@ import static uk.co.real_logic.artio.engine.framer.SessionContexts.LOWEST_VALID_
 public class SessionContextsTest
 {
     private static final int BUFFER_SIZE = 8 * 1024;
-    private static final int SEQUENCE_INDEX = 1;
-    private static final int FILE_POSITION = 0;
 
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(BUFFER_SIZE));

@@ -18,9 +18,7 @@ package uk.co.real_logic.artio.dictionary.generation;
 import org.agrona.generation.CompilerUtil;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -30,11 +28,11 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.arrayWithSize;
 import static org.hamcrest.Matchers.hasKey;
-import static org.junit.Assert.*;
-
 
 import uk.co.real_logic.artio.dictionary.CharArrayWrapper;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.ENUM_MISSING_CHAR;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.ENUM_UNKNOWN_CHAR;
@@ -44,14 +42,10 @@ import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.PARENT
 
 public class EnumGeneratorTest
 {
-
     private static Map<String, CharSequence> sources;
     private static Class<?> egEnumClass;
     private static Class<?> otherEnumClass;
     private static Class<?> stringEnumClass;
-
-    @Rule
-    public ExpectedException expectedException = ExpectedException.none();
 
     @BeforeClass
     public static void generate() throws Exception
@@ -72,7 +66,7 @@ public class EnumGeneratorTest
     @Test
     public void generatesEnumConstants() throws Exception
     {
-        final Enum[] values = egEnumConstants();
+        final Enum<?>[] values = egEnumConstants();
 
         assertThat(values, arrayWithSize(4));
 
@@ -89,7 +83,7 @@ public class EnumGeneratorTest
     @Test
     public void generatesLookupTable() throws Exception
     {
-        final Enum[] values = egEnumConstants();
+        final Enum<?>[] values = egEnumConstants();
 
         final Method decode = decode(egEnumClass);
 
@@ -111,7 +105,7 @@ public class EnumGeneratorTest
     @Test
     public void generatesIntBasedEnumField() throws Exception
     {
-        final Enum[] values = (Enum[])otherEnumClass.getEnumConstants();
+        final Enum<?>[] values = (Enum<?>[])otherEnumClass.getEnumConstants();
 
         final Method decode = decode(otherEnumClass);
 
@@ -122,7 +116,7 @@ public class EnumGeneratorTest
     @Test
     public void generatesStringBasedEnumField() throws Exception
     {
-        final Enum[] values = getStringEnumConstants();
+        final Enum<?>[] values = getStringEnumConstants();
 
         final Method decode = stringDecode(stringEnumClass);
 
@@ -131,15 +125,15 @@ public class EnumGeneratorTest
         assertEquals(values[2], decode.invoke(null, "AA"));
     }
 
-    private Enum[] getStringEnumConstants()
+    private Enum<?>[] getStringEnumConstants()
     {
-        return (Enum[])stringEnumClass.getEnumConstants();
+        return (Enum<?>[])stringEnumClass.getEnumConstants();
     }
 
     @Test
     public void generatesCharArrayBasedDecode() throws Exception
     {
-        final Enum[] values = getStringEnumConstants();
+        final Enum<?>[] values = getStringEnumConstants();
         final CharArrayWrapper wrapper = new CharArrayWrapper();
         final Method decode = stringEnumClass.getMethod("decode", CharArrayWrapper.class);
 
@@ -156,7 +150,7 @@ public class EnumGeneratorTest
     @Test
     public void shouldReturnSentinelValueWhenDecodingUnknownRepresentation() throws Exception
     {
-        final Enum[] values = getStringEnumConstants();
+        final Enum<?>[] values = getStringEnumConstants();
 
         final Method decodeCharArray = stringEnumClass.getMethod("decode", CharArrayWrapper.class);
         final Method decodeString = stringEnumClass.getMethod("decode", String.class);
@@ -202,8 +196,8 @@ public class EnumGeneratorTest
         return outputManager.getSources();
     }
 
-    private Enum[] egEnumConstants()
+    private Enum<?>[] egEnumConstants()
     {
-        return (Enum[])egEnumClass.getEnumConstants();
+        return (Enum<?>[])egEnumClass.getEnumConstants();
     }
 }

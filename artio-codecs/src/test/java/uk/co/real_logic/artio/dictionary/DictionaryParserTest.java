@@ -24,6 +24,7 @@ import uk.co.real_logic.artio.dictionary.ir.Field.Value;
 
 import java.util.List;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
@@ -31,7 +32,6 @@ import static uk.co.real_logic.artio.dictionary.ir.Field.Type.INT;
 import static uk.co.real_logic.artio.dictionary.ir.Field.Type.STRING;
 import static uk.co.real_logic.artio.util.CustomMatchers.hasFluentProperty;
 
-@SuppressWarnings("unchecked")
 public class DictionaryParserTest
 {
     private static final String EXAMPLE_FILE = "example_dictionary.xml";

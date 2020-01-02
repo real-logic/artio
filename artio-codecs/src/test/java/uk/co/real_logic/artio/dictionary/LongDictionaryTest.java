@@ -26,9 +26,9 @@ import uk.co.real_logic.artio.dictionary.ir.Message;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
 

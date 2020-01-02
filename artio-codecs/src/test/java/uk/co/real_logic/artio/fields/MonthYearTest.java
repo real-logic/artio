@@ -26,8 +26,10 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import java.util.Arrays;
 
 import static java.time.Month.*;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasToString;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 @RunWith(Theories.class)
 public class MonthYearTest

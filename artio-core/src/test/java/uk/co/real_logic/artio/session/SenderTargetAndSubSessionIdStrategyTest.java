@@ -23,10 +23,10 @@ import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import java.util.Set;
 
 import static java.util.stream.Collectors.toSet;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static uk.co.real_logic.artio.session.SenderAndTargetSessionIdStrategyTest.IDS;

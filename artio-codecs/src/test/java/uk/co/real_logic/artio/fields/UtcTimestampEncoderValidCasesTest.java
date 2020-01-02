@@ -22,8 +22,8 @@ import org.junit.runners.Parameterized.Parameters;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.artio.fields.CalendricalUtil.*;
 import static uk.co.real_logic.artio.fields.UtcTimestampDecoderValidCasesTest.toEpochMillis;
 import static uk.co.real_logic.artio.fields.UtcTimestampEncoder.EpochFractionFormat.*;
@@ -32,7 +32,6 @@ import static uk.co.real_logic.artio.util.CustomMatchers.sequenceEqualsAscii;
 @RunWith(Parameterized.class)
 public class UtcTimestampEncoderValidCasesTest
 {
-
     private final String expectedTimestamp;
     private final boolean validNanoSecondTestCase;
     private final String expectedTimestampMicros;

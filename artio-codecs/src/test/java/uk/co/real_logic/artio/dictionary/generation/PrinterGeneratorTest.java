@@ -25,8 +25,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.Map;
 
 import static org.agrona.generation.CompilerUtil.compileInMemory;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
 
 public class PrinterGeneratorTest

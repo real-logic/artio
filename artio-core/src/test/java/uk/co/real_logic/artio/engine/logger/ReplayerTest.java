@@ -51,6 +51,7 @@ import java.util.regex.Pattern;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -418,7 +419,7 @@ public class ReplayerTest extends AbstractLogTest
         final long result = bufferHasResendRequest(endSeqNo);
         onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
 
-        // Processes the backpressured try claim
+        // Processes the back pressured try claim
         replayer.doWork();
 
         verifyClaim();
@@ -437,7 +438,7 @@ public class ReplayerTest extends AbstractLogTest
     }
 
     @Test
-    public void shouldGapFillMissingMesages()
+    public void shouldGapFillMissingMessages()
     {
         final int endSeqNo = endSeqNoForTwoMessages();
 
@@ -454,7 +455,7 @@ public class ReplayerTest extends AbstractLogTest
     }
 
     @Test
-    public void shouldGapFillMissingMesagesWhenBackPressured()
+    public void shouldGapFillMissingMessagesWhenBackPressured()
     {
         final int endSeqNo = endSeqNoForTwoMessages();
 
@@ -478,7 +479,7 @@ public class ReplayerTest extends AbstractLogTest
     }
 
     @Test
-    public void shouldGapFillMissingMesagesFollowedByApplicationMessage()
+    public void shouldGapFillMissingMessagesFollowedByApplicationMessage()
     {
         final int endSeqNo = endSeqNoForTwoMessages();
 

@@ -41,6 +41,7 @@ import java.nio.channels.SocketChannel;
 import java.util.List;
 
 import static org.agrona.CloseHelper.close;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;

@@ -15,22 +15,21 @@
  */
 package uk.co.real_logic.artio.otf;
 
-import org.junit.Rule;
 import org.junit.experimental.theories.DataPoint;
 import org.junit.experimental.theories.Theories;
 import org.junit.experimental.theories.Theory;
-import org.junit.rules.ExpectedException;
 import org.junit.runner.RunWith;
 import org.mockito.InOrder;
 import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.ValidationError.INVALID_CHECKSUM;
 import static uk.co.real_logic.artio.ValidationError.PARSE_ERROR;
 import static uk.co.real_logic.artio.util.TestMessages.*;
-
 
 @RunWith(Theories.class)
 public class OtfParserTest
@@ -50,9 +49,6 @@ public class OtfParserTest
 
     private InOrder inOrder = inOrder(mockAcceptor);
 
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
     @Theory
     public void notifiesAcceptorOfMessageStart(final int offset)
     {
@@ -71,10 +67,17 @@ public class OtfParserTest
 
         when(mockAcceptor.onNext()).thenThrow(new IllegalArgumentException(errorMessage));
 
-        thrown.expect(IllegalArgumentException.class);
-        thrown.expectMessage(errorMessage);
+        try
+        {
+            parser.onMessage(buffer, offset, MSG_LEN);
+        }
+        catch (final IllegalArgumentException ex)
+        {
+            assertEquals(errorMessage, ex.getMessage());
+            return;
+        }
 
-        parser.onMessage(buffer, offset, MSG_LEN);
+        fail("expected IllegalArgumentException");
     }
 
     @Theory

@@ -17,9 +17,7 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.After;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.Encoder;
@@ -50,9 +48,6 @@ import static uk.co.real_logic.artio.validation.PersistenceLevel.TRANSIENT_SEQUE
 
 public class MessageBasedAcceptorSystemTest
 {
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
     private int port = unusedPort();
 
     private ArchivingMediaDriver mediaDriver;
@@ -149,7 +144,7 @@ public class MessageBasedAcceptorSystemTest
     {
         setup(true, true);
 
-        try (FixConnection connection = FixConnection.initiate(port))
+        try (FixConnection ignore = FixConnection.initiate(port))
         {
             close(engine);
         }
@@ -160,7 +155,7 @@ public class MessageBasedAcceptorSystemTest
     {
         setup(true, true);
 
-        try (FixConnection connection = FixConnection.initiate(port))
+        try (FixConnection ignore = FixConnection.initiate(port))
         {
         }
 
@@ -178,7 +173,7 @@ public class MessageBasedAcceptorSystemTest
 
         completeBind();
 
-        try (FixConnection connection = FixConnection.initiate(port))
+        try (FixConnection ignore = FixConnection.initiate(port))
         {
         }
     }
@@ -190,7 +185,7 @@ public class MessageBasedAcceptorSystemTest
 
         completeBind();
 
-        try (FixConnection connection = FixConnection.initiate(port))
+        try (FixConnection ignore = FixConnection.initiate(port))
         {
         }
 
@@ -198,7 +193,7 @@ public class MessageBasedAcceptorSystemTest
         completeBind();
         completeBind();
 
-        try (FixConnection connection = FixConnection.initiate(port))
+        try (FixConnection ignore = FixConnection.initiate(port))
         {
         }
     }
@@ -299,8 +294,16 @@ public class MessageBasedAcceptorSystemTest
 
     private void cannotConnect() throws IOException
     {
-        thrown.expect(ConnectException.class);
-        FixConnection.initiate(port);
+        try
+        {
+            FixConnection.initiate(port);
+        }
+        catch (final ConnectException ignore)
+        {
+            return;
+        }
+
+        fail("expected ConnectException");
     }
 
     private void sendInvalidLogon(final FixConnection connection)

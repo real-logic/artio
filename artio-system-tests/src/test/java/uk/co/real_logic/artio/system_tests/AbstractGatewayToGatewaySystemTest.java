@@ -18,11 +18,8 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.junit.After;
-import uk.co.real_logic.artio.CommonConfiguration;
-import uk.co.real_logic.artio.Constants;
-import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.Reply.State;
-import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -38,6 +35,8 @@ import uk.co.real_logic.artio.session.Session;
 import java.util.ArrayList;
 import java.util.List;
 
+import static junit.framework.TestCase.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
@@ -99,8 +98,7 @@ public class AbstractGatewayToGatewaySystemTest
             initiatingOtfAcceptor.messages(), hasSize(initiatorMessageCount));
     }
 
-    void assertSequenceFromInitToAcceptAt(
-        final int expectedInitToAccSeqNum, final int expectedAccToInitSeqNum)
+    void assertSequenceFromInitToAcceptAt(final int expectedInitToAccSeqNum, final int expectedAccToInitSeqNum)
     {
         assertEquals(expectedInitToAccSeqNum, initiatingSession.lastSentMsgSeqNum());
         assertEquals(expectedInitToAccSeqNum, acceptingSession.lastReceivedMsgSeqNum());

@@ -40,6 +40,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.*;
@@ -64,7 +65,6 @@ public abstract class AbstractSessionTest
     static final long CONNECTION_ID = 3L;
     static final int HEARTBEAT_INTERVAL = 2;
     static final int SESSION_TIMEOUT = HEARTBEAT_INTERVAL + DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S;
-    static final CompositeKey SESSION_KEY = mock(CompositeKey.class);
     static final int LIBRARY_ID = 4;
     static final int SEQUENCE_INDEX = 0;
 
