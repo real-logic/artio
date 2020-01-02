@@ -216,7 +216,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
                 assertEquals(2, initiatingOtfAcceptor
                     .receivedReplayGapFill(3, 4)
                     .count());
-            }, 1000);
+            }, 5000);
     }
 
     private void launch(final int initiatorInitialReceivedSequenceNumber)
