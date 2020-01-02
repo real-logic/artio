@@ -200,7 +200,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         sendResendRequest(1, 3, initiatingOtfAcceptor, initiatingSession);
         sendResendRequest(1, 3, initiatingOtfAcceptor, initiatingSession);
 
-        assertEventuallyTrue("Failed to receive all the resends",
+        assertEventuallyTrue(() -> "Failed to receive all the resends: " + initiatingOtfAcceptor.messages(),
             () ->
             {
                 testSystem.poll();
@@ -216,7 +216,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
                 assertEquals(2, initiatingOtfAcceptor
                     .receivedReplayGapFill(3, 4)
                     .count());
-            }, 500);
+            }, 1000);
     }
 
     private void launch(final int initiatorInitialReceivedSequenceNumber)

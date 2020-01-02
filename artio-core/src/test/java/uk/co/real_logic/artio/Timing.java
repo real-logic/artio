@@ -73,6 +73,12 @@ public final class Timing
 
     public static void assertEventuallyTrue(final String message, final Block runnable, final long timeoutInMs)
     {
+        assertEventuallyTrue(() -> message, runnable, timeoutInMs);
+    }
+
+    public static void assertEventuallyTrue(
+        final Supplier<String> message, final Block runnable, final long timeoutInMs)
+    {
         final long endTime = System.currentTimeMillis() + timeoutInMs;
 
         Throwable lastThrowable;
