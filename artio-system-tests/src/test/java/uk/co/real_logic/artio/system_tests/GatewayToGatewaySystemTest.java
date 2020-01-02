@@ -111,6 +111,39 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
+    public void gatewayProcessesDuplicateResendRequests()
+    {
+        final String testReqID = "AAA";
+
+        acquireAcceptingSession();
+
+        exchangeExampleMessageFromInitiatorToAcceptor(testReqID);
+        assertTestRequestSentAndReceived(initiatingSession, testSystem, acceptingOtfAcceptor);
+
+        acceptorSendsResendRequest(1, 3);
+        acceptorSendsResendRequest(1, 3);
+
+        assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
+        assertEventuallyTrue("Failed to receive the reply",
+            () ->
+            {
+                testSystem.poll();
+
+                assertEquals(2, acceptingOtfAcceptor
+                    .receivedMessage(EXAMPLE_MESSAGE_MESSAGE_AS_STR)
+                    .filter(msg -> "Y".equals(msg.possDup()))
+                    .filter(msg -> 2 == msg.messageSequenceNumber())
+                    .filter(msg -> testReqID.equals(msg.testReqId()))
+                    .count());
+
+                assertNull("Detected Error", acceptingOtfAcceptor.lastError());
+                assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());
+            });
+
+        assertSequenceIndicesAre(0);
+    }
+
+    @Test
     public void gatewayProcessesResendRequestsOfFragmentedMessages()
     {
         final String testReqID = largeTestReqId();

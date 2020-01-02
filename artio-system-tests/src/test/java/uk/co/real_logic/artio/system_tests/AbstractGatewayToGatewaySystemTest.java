@@ -247,15 +247,29 @@ public class AbstractGatewayToGatewaySystemTest
 
     int acceptorSendsResendRequest(final int seqNum)
     {
-        final ResendRequestEncoder resendRequest = new ResendRequestEncoder()
-            .beginSeqNo(seqNum)
-            .endSeqNo(seqNum);
-
-        acceptingOtfAcceptor.messages().clear();
-
-        acceptingSession.send(resendRequest);
+        acceptorSendsResendRequest(seqNum, seqNum);
 
         return seqNum;
+    }
+
+    void acceptorSendsResendRequest(final int beginSeqNo, final int endSeqNo)
+    {
+        sendResendRequest(beginSeqNo, endSeqNo, acceptingOtfAcceptor, acceptingSession);
+    }
+
+    void sendResendRequest(
+        final int beginSeqNo, final int endSeqNo, final FakeOtfAcceptor otfAcceptor, final Session session)
+    {
+        final ResendRequestEncoder resendRequest = new ResendRequestEncoder()
+            .beginSeqNo(beginSeqNo)
+            .endSeqNo(endSeqNo);
+
+        otfAcceptor.messages().clear();
+
+        while (session.send(resendRequest) < 0)
+        {
+            Thread.yield();
+        }
     }
 
     void messagesCanBeExchanged()

@@ -45,6 +45,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.Constants.EXECUTION_REPORT_MESSAGE_AS_STR;
+import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
@@ -149,7 +150,6 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
     }
 
     // TODO: parameters
-    // graceful shutdown
     // business vs session messages
 
     @Test
@@ -170,8 +170,8 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         assertInitiatingSequenceIndexIs(0);
         if (shutdownCleanly)
         {
-            /*initiatingSession.startLogout();
-            assertSessionsDisconnected();*/
+            initiatingSession.startLogout();
+            assertSessionsDisconnected();
 
             close();
         }
@@ -194,9 +194,29 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         // 5. validate resent message
         final FixMessage resentExecutionReport =
             testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
-
         assertEquals(resendSeqNum, resentExecutionReport.messageSequenceNumber());
         assertEquals("Y", resentExecutionReport.possDup());
+
+        sendResendRequest(1, 3, initiatingOtfAcceptor, initiatingSession);
+        sendResendRequest(1, 3, initiatingOtfAcceptor, initiatingSession);
+
+        assertEventuallyTrue("Failed to receive all the resends",
+            () ->
+            {
+                testSystem.poll();
+
+                assertEquals(2, initiatingOtfAcceptor
+                    .receivedReplayGapFill(1, 2)
+                    .count());
+
+                assertEquals(2, initiatingOtfAcceptor
+                    .receivedReplay(EXECUTION_REPORT_MESSAGE_AS_STR, resendSeqNum)
+                    .count());
+
+                assertEquals(2, initiatingOtfAcceptor
+                    .receivedReplayGapFill(3, 4)
+                    .count());
+            }, 500);
     }
 
     private void launch(final int initiatorInitialReceivedSequenceNumber)

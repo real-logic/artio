@@ -140,7 +140,7 @@ public class TestSystem
         {
             poll();
 
-            return otfAcceptor.hasReceivedMessage(messageType).findFirst();
+            return otfAcceptor.receivedMessage(messageType).findFirst();
         },
         Timing.DEFAULT_TIMEOUT_IN_MS);
     }

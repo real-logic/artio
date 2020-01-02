@@ -31,8 +31,7 @@ import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.assertThat;
-import static uk.co.real_logic.artio.Constants.LOGON_MESSAGE;
-import static uk.co.real_logic.artio.Constants.MSG_TYPE;
+import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.LogTag.FIX_TEST;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasSequenceIndex;
@@ -153,11 +152,25 @@ public class FakeOtfAcceptor implements OtfMessageAcceptor
         return lastReceivedMessage().lastMsgSeqNumProcessed();
     }
 
-    public Stream<FixMessage> hasReceivedMessage(final String messageType)
+    public Stream<FixMessage> receivedMessage(final String messageType)
     {
         return messages()
             .stream()
             .filter((fixMessage) -> fixMessage.get(MSG_TYPE).equals(messageType));
+    }
+
+    public Stream<FixMessage> receivedReplay(final String messageType, final int sequenceNumber)
+    {
+        return receivedMessage(messageType)
+            .filter(msg -> "Y".equals(msg.possDup()))
+            .filter(msg -> sequenceNumber == msg.messageSequenceNumber());
+    }
+
+    public Stream<FixMessage> receivedReplayGapFill(final int sequenceNumber, final int newSeqNo)
+    {
+        return receivedReplay(SEQUENCE_RESET_MESSAGE_AS_STR, sequenceNumber)
+            .filter(msg -> "Y".equals(msg.get(GAP_FILL_FLAG)))
+            .filter(msg -> newSeqNo == msg.getInt(NEW_SEQ_NO));
     }
 
     void allMessagesHaveSequenceIndex(final int sequenceIndex)

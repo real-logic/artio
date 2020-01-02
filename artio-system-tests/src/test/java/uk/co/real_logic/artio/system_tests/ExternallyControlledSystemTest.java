@@ -163,7 +163,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         final FixMessage receivedNewOrderSingle = withTimeout("Unable to find NOS", () ->
         {
             testSystem.poll();
-            return initiatingOtfAcceptor.hasReceivedMessage("D").findFirst();
+            return initiatingOtfAcceptor.receivedMessage("D").findFirst();
         }, DEFAULT_TIMEOUT_IN_MS);
         assertEquals(newOrderSingleSeqNum, receivedNewOrderSingle.messageSequenceNumber());
         assertEquals(lastReceivedMsgSeqNum, initiatingSession.lastReceivedMsgSeqNum());

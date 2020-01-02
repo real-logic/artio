@@ -149,7 +149,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         // Test that we don't accidentally send another resend request
         // Reproduction of reported bug
         Timing.assertEventuallyTrue("", () -> testSystem.poll(), 100);
-        assertEquals(1, initiatingOtfAcceptor.hasReceivedMessage(RESEND_REQUEST_MESSAGE_AS_STR).count());
+        assertEquals(1, initiatingOtfAcceptor.receivedMessage(RESEND_REQUEST_MESSAGE_AS_STR).count());
     }
 
     @Test(timeout = TEST_TIMEOUT)

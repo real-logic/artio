@@ -133,7 +133,7 @@ public final class SystemTestUtil
             {
                 testSystem.poll();
                 return acceptor
-                    .hasReceivedMessage("1")
+                    .receivedMessage("1")
                     .anyMatch((msg) -> testReqId.equals(msg.testReqId()));
             });
     }
@@ -445,7 +445,7 @@ public final class SystemTestUtil
                 testSystem.poll();
 
                 return acceptor
-                    .hasReceivedMessage("0")
+                    .receivedMessage("0")
                     .anyMatch((message) -> testReqId.equals(message.get(Constants.TEST_REQ_ID)));
             });
     }

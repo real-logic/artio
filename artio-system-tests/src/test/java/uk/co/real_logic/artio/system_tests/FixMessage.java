@@ -59,7 +59,12 @@ public class FixMessage extends Int2ObjectHashMap<String>
 
     public int messageSequenceNumber()
     {
-        return Integer.parseInt(get(Constants.MSG_SEQ_NUM));
+        return getInt(Constants.MSG_SEQ_NUM);
+    }
+
+    public int getInt(final int tag)
+    {
+        return Integer.parseInt(get(tag));
     }
 
     public void messageSequenceNumber(final int messageSequenceNumber)
