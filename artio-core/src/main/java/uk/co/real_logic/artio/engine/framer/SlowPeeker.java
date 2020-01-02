@@ -42,7 +42,7 @@ class SlowPeeker extends BlockablePosition
         if (!peekImage.isClosed())
         {
             final long blockPosition = this.blockPosition;
-            if (blockPosition != DID_NOT_BLOCK)
+            if (blockPosition != DID_NOT_BLOCK) // lgtm [java/constant-comparison]
             {
                 peekImage.position(blockPosition);
             }

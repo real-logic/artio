@@ -77,7 +77,6 @@ public class SessionContexts
 
     private final Function<CompositeKey, SessionContext> onNewLogonFunc = this::onNewLogon;
     private final LongHashSet currentlyAuthenticatedSessionIds = new LongHashSet();
-    private final LongHashSet recordedSessions = new LongHashSet();
     private final Map<CompositeKey, SessionContext> compositeToContext = new HashMap<>();
 
     private final CRC32 crc32 = new CRC32();
@@ -150,7 +149,6 @@ public class SessionContexts
 
             compositeToContext.put(compositeKey,
                 new SessionContext(sessionId, sequenceIndex, logonTime, this, filePosition));
-            recordedSessions.add(sessionId);
             counter = Math.max(counter, sessionId + 1);
 
             filePosition += BLOCK_LENGTH + compositeKeyLength;
@@ -217,8 +215,6 @@ public class SessionContexts
         {
             return DUPLICATE_SESSION;
         }
-
-        recordedSessions.add(sessionContext.sessionId());
 
         return sessionContext;
     }

@@ -48,6 +48,7 @@ import java.util.function.Function;
 
 import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.DUPLICATE_SESSION;
+import static uk.co.real_logic.artio.engine.framer.SessionContexts.UNKNOWN_SESSION;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.resetSequenceNumbersUponLogon;
 
 /**
@@ -177,7 +178,8 @@ class GatewaySessions
             reasonableTransmissionTimeInMs,
             asciiBuffer,
             gatewaySession.enableLastMsgSeqNumProcessed(),
-            beginString);
+            beginString,
+            customisationStrategy);
 
         session.awaitingResend(awaitingResend);
         session.closedResendInterval(gatewaySession.closedResendInterval());
@@ -482,7 +484,10 @@ class GatewaySessions
             switch (state)
             {
                 case AUTHENTICATED:
-                    session.onAuthenticationResult();
+                    if (session != null)
+                    {
+                        session.onAuthenticationResult();
+                    }
                     onAuthenticated();
                     return false;
 
@@ -490,16 +495,11 @@ class GatewaySessions
                     return true;
 
                 case REJECTED:
-                    session.onAuthenticationResult();
-                    session = null;
+                    checkedOnAuthenticationResult();
                     return true;
 
                 case SENDING_REJECT_MESSAGE:
-                    if (session != null)
-                    {
-                        session.onAuthenticationResult();
-                        session = null;
-                    }
+                    checkedOnAuthenticationResult();
                     return onSendingRejectMessage();
 
                 case LINGERING_REJECT_MESSAGE:
@@ -512,6 +512,15 @@ class GatewaySessions
                 case PENDING:
                 default:
                     return false;
+            }
+        }
+
+        private void checkedOnAuthenticationResult()
+        {
+            if (session != null)
+            {
+                session.onAuthenticationResult();
+                session = null;
             }
         }
 
@@ -575,6 +584,7 @@ class GatewaySessions
             header.sendingTime(
                 sendingTimeEncoder.buffer(), sendingTimeEncoder.encode(epochClock.time()));
             HeaderSetup.setup(logon.header(), header);
+            customisationStrategy.configureHeader(header, UNKNOWN_SESSION.sessionId());
 
             final long result = encoder.encode(asciiBuffer, 0);
             final int offset = Encoder.offset(result);

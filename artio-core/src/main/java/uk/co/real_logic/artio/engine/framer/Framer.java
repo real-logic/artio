@@ -1076,18 +1076,19 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         for (final GatewaySession gatewaySession : gatewaySessions.sessions())
         {
-            unitsOfWork.add(
-                () ->
-                {
-                    final InternalSession session = gatewaySession.session();
-
-                    return saveManageSession(
-                        libraryId,
-                        gatewaySession,
-                        session.lastSentMsgSeqNum(),
-                        session.lastReceivedMsgSeqNum(),
-                        LIBRARY_NOTIFICATION);
-                });
+            final InternalSession session = gatewaySession.session();
+            // session could be null if this gatewaySession is still in the process of
+            // logging on at this point in time.
+            if (session != null)
+            {
+                unitsOfWork.add(
+                    () -> saveManageSession(
+                    libraryId,
+                    gatewaySession,
+                    session.lastSentMsgSeqNum(),
+                    session.lastReceivedMsgSeqNum(),
+                    LIBRARY_NOTIFICATION));
+            }
         }
 
         return retryManager.firstAttempt(correlationId, new UnitOfWork(unitsOfWork));

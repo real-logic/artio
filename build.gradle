@@ -27,10 +27,10 @@ plugins {
     id "com.github.ben-manes.versions" version "0.27.0"
 }
 
-def checkstyleVersion = '8.27'
+def checkstyleVersion = '8.28'
 def hamcrestVersion = '2.2'
 def junitVersion = '4.12'
-def mockitoVersion = '3.2.0'
+def mockitoVersion = '3.2.4'
 def hdrHistogramVersion = '2.1.12'
 def jmhVersion = '1.22'
 
@@ -46,12 +46,20 @@ ext {
     group = artioGroup
     isReleaseVersion = !version.endsWith("SNAPSHOT")
 
-    if (!project.hasProperty('ossrhUsername')) {
-        ossrhUsername = ''
+    if (!project.hasProperty('repoUsername')) {
+        repoUsername = ''
     }
 
-    if (!project.hasProperty('ossrhPassword')) {
-        ossrhPassword = ''
+    if (!project.hasProperty('repoPassword')) {
+        repoPassword = ''
+    }
+
+    if (!project.hasProperty('repoUrl')) {
+        repoUrl = ''
+    }
+
+    if (!project.hasProperty('snapshotUrl')) {
+        snapshotUrl = ''
     }
 }
 
@@ -422,12 +430,12 @@ subprojects {
             mavenDeployer {
                 beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 
-                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                repository(url: repoUrl) {
+                    authentication(userName: repoUsername, password: repoPassword)
                 }
 
-                snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                snapshotRepository(url: snapshotUrl) {
+                    authentication(userName: repoUsername, password: repoPassword)
                 }
 
                 pom.project {
@@ -470,7 +478,7 @@ subprojects {
     }
 }
 
-task uploadToMavenCentral {
+task uploadToMavenRepository {
     dependsOn 'artio-core:uploadArchives',
         'artio-samples:uploadArchives',
         'artio-system-tests:uploadArchives',

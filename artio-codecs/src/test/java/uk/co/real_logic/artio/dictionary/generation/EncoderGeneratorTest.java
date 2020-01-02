@@ -19,9 +19,12 @@ import org.agrona.AsciiSequenceView;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.StringWriterOutputManager;
+import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import uk.co.real_logic.artio.EncodingException;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.fields.DecimalFloat;
@@ -49,7 +52,10 @@ public class EncoderGeneratorTest
     private static Class<?> otherMessage;
     private static Class<?> heartbeatWithoutValidation;
 
+    @Rule
+    public ExpectedException thrown = ExpectedException.none();
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
+
 
     @BeforeClass
     public static void generate() throws Exception
@@ -254,28 +260,26 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void stringSettersByEnumThrowForNullValue() throws Exception
+    public void stringSettersByEnumDoesNothingNullValue() throws Exception
     {
         final Object encoder = heartbeat.getConstructor().newInstance();
-        assertThrows(() ->
-            setEnum(encoder,
+        setEnum(encoder,
             ON_BEHALF_OF_COMP_ID,
             PARENT_PACKAGE + ".OnBehalfOfCompID",
-            "NULL_VAL"),
-            EncodingException.class
+            "NULL_VAL"
         );
+        assertOnBehalfOfCompIDValue(encoder, "");
     }
 
     @Test
     public void stringSettersByEnumThrowForUnknownValue() throws Exception
     {
         final Object encoder = heartbeat.getConstructor().newInstance();
-        assertThrows(() ->
-            setEnum(encoder,
+        thrown.expectCause(Matchers.any(EncodingException.class));
+        setEnum(encoder,
             ON_BEHALF_OF_COMP_ID,
             PARENT_PACKAGE + ".OnBehalfOfCompID",
-            "ARTIO_UNKNOWN"),
-            EncodingException.class
+            "ARTIO_UNKNOWN"
         );
     }
 
@@ -299,23 +303,19 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void intSettersByEnumThrowForNullValue() throws Exception
+    public void intSettersByEnumDoesNothingForNullValue() throws Exception
     {
         final Object encoder = heartbeat.getConstructor().newInstance();
-        assertThrows(
-            () -> setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "NULL_VAL"),
-            EncodingException.class
-        );
+        setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "NULL_VAL");
+        assertEquals(0, getField(encoder, INT_FIELD));
     }
 
     @Test
     public void intSettersByEnumThrowForUnknownValue() throws Exception
     {
         final Object encoder = heartbeat.getConstructor().newInstance();
-        assertThrows(
-            () -> setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "ARTIO_UNKNOWN"),
-            EncodingException.class
-        );
+        thrown.expectCause(Matchers.any(EncodingException.class));
+        setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "ARTIO_UNKNOWN");
     }
 
     @Test
@@ -1139,22 +1139,5 @@ public class EncoderGeneratorTest
     private void setDataFieldLength(final Encoder encoder) throws Exception
     {
         setInt(encoder, "dataFieldLength", 3);
-    }
-
-    private static void assertThrows(final ThrowingRunnable runnable, final Class<? extends Exception> thrown)
-    {
-        try
-        {
-            runnable.run();
-        }
-        catch (final Exception e)
-        {
-            assertThat(e.getCause().getClass(), is(thrown));
-        }
-    }
-
-    interface ThrowingRunnable
-    {
-        void run() throws Exception;
     }
 }

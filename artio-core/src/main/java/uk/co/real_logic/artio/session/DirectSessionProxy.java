@@ -151,6 +151,7 @@ public class DirectSessionProxy implements SessionProxy
         for (final SessionHeaderEncoder header : headers)
         {
             sessionIdStrategy.setupSession(sessionKey, header);
+            customisationStrategy.configureHeader(header, sessionId);
         }
     }
 

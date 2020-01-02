@@ -22,11 +22,13 @@ import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.AbstractLogonEncoder;
 import uk.co.real_logic.artio.builder.AbstractLogoutEncoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
 import uk.co.real_logic.artio.fixt.ApplVerID;
 import uk.co.real_logic.artio.fixt.FixDictionaryImpl;
+import uk.co.real_logic.artio.fixt.builder.HeaderEncoder;
 import uk.co.real_logic.artio.fixt.builder.LogonEncoder;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -43,6 +45,7 @@ import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.unusedPort;
 import static uk.co.real_logic.artio.fixt.ApplVerID.FIX50;
+import static uk.co.real_logic.artio.fixt.Constants.APPL_VER_ID;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class MultipleFixVersionInitiatorSystemTest extends AbstractGatewayToGatewaySystemTest
@@ -158,6 +161,8 @@ public class MultipleFixVersionInitiatorSystemTest extends AbstractGatewayToGate
         acquireFixTSession();
 
         bothSessionsCanExchangeMessages();
+
+        assertHeaderHasApplVerId(fixtAcceptingOtfAcceptor);
     }
 
     private void bothSessionsCanExchangeMessages()
@@ -169,6 +174,15 @@ public class MultipleFixVersionInitiatorSystemTest extends AbstractGatewayToGate
         final String testReqID = testReqId();
         sendTestRequest(fixtInitiatingSession, testReqID, fixtDictionary);
         assertReceivedSingleHeartbeat(testSystem, initiatingOtfAcceptor, testReqID);
+
+        assertHeaderHasApplVerId(initiatingOtfAcceptor);
+    }
+
+    private void assertHeaderHasApplVerId(final FakeOtfAcceptor acceptor)
+    {
+        final FixMessage message = acceptor.lastReceivedMessage();
+        final ApplVerID applVerID = ApplVerID.decode(message.get(APPL_VER_ID));
+        assertEquals(FIX50, applVerID);
     }
 
     private void acquireFixTSession()
@@ -217,5 +231,17 @@ class FixTSessionCustomisationStrategy implements SessionCustomisationStrategy
 
     public void configureLogout(final AbstractLogoutEncoder logout, final long sessionId)
     {
+    }
+
+    public void configureHeader(final SessionHeaderEncoder sessionHeader, final long sessionId)
+    {
+        if (sessionHeader instanceof HeaderEncoder)
+        {
+            final HeaderEncoder header = (HeaderEncoder)sessionHeader;
+            if (!header.hasApplVerID())
+            {
+                header.applVerID(applVerID);
+            }
+        }
     }
 }

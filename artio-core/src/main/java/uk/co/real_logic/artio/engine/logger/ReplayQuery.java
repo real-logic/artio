@@ -240,7 +240,8 @@ public class ReplayQuery implements AutoCloseable
         private long jumpPosition(final int beginSequenceNumber, final int sequenceNumber, final long iteratorPosition)
         {
             final int sequenceNumberJump = beginSequenceNumber - sequenceNumber;
-            return iteratorPosition + sequenceNumberJump * RECORD_LENGTH;
+            final int jumpInBytes = sequenceNumberJump * RECORD_LENGTH;
+            return iteratorPosition + jumpInBytes;
         }
 
         private ReplayOperation newReplayOperation(

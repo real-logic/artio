@@ -692,10 +692,17 @@ public class EncoderGenerator extends Generator
         return String.format(
             "    public %1$s %2$s(%3$s value)\n" +
             "    {\n" +
-            "        if (" + CODEC_VALIDATION_ENABLED + " && " +
-            "(value == %3$s.NULL_VAL || value == %3$s.ARTIO_UNKNOWN))\n" +
+            "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
             "        {\n" +
-            "            throw new EncodingException(\"Invalid Value Field: " + fieldName + " Value: \" + value );\n" +
+            "            if (value == %3$s.ARTIO_UNKNOWN)\n" +
+            "            {\n" +
+            "                throw new EncodingException(\"Invalid Value Field: " + fieldName +
+            " Value: \" + value );\n" +
+            "            }\n" +
+            "            if (value == %3$s.NULL_VAL)\n" +
+            "            {\n" +
+            "                return this;\n" +
+            "            }\n" +
             "        }\n" +
             "        return %2$s(value.representation());\n" +
             "    }\n\n",
