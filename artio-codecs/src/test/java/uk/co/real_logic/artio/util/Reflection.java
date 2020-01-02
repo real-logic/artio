@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.util;
 
+import org.agrona.LangUtil;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.fields.DecimalFloat;
@@ -22,6 +23,7 @@ import uk.co.real_logic.artio.fields.DecimalFloat;
 import org.agrona.AsciiSequenceView;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Iterator;
 
 public final class Reflection
@@ -81,9 +83,16 @@ public final class Reflection
         final Class<?> type,
         final Object value) throws Exception
     {
-        object.getClass()
-            .getMethod(setterName, type)
-            .invoke(object, value);
+        try
+        {
+            object.getClass()
+                .getMethod(setterName, type)
+                .invoke(object, value);
+        }
+        catch (final InvocationTargetException e)
+        {
+            LangUtil.rethrowUnchecked(e.getCause());
+        }
     }
 
     private static void set(

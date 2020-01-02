@@ -19,11 +19,8 @@ import org.agrona.AsciiSequenceView;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.StringWriterOutputManager;
-import org.hamcrest.Matchers;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import uk.co.real_logic.artio.EncodingException;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.fields.DecimalFloat;
@@ -51,9 +48,6 @@ public class EncoderGeneratorTest
     private static Class<?> enumTestMessage;
     private static Class<?> otherMessage;
     private static Class<?> heartbeatWithoutValidation;
-
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
 
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
 
@@ -275,12 +269,14 @@ public class EncoderGeneratorTest
     public void stringSettersByEnumThrowForUnknownValue() throws Exception
     {
         final Object encoder = heartbeat.getConstructor().newInstance();
-        thrown.expectCause(Matchers.any(EncodingException.class));
-        setEnum(encoder,
-            ON_BEHALF_OF_COMP_ID,
-            PARENT_PACKAGE + ".OnBehalfOfCompID",
-            "ARTIO_UNKNOWN"
-        );
+        assertThrows(EncodingException.class, () ->
+        {
+            setEnum(encoder,
+                ON_BEHALF_OF_COMP_ID,
+                PARENT_PACKAGE + ".OnBehalfOfCompID",
+                "ARTIO_UNKNOWN"
+            );
+        });
     }
 
     @Test
@@ -314,8 +310,10 @@ public class EncoderGeneratorTest
     public void intSettersByEnumThrowForUnknownValue() throws Exception
     {
         final Object encoder = heartbeat.getConstructor().newInstance();
-        thrown.expectCause(Matchers.any(EncodingException.class));
-        setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "ARTIO_UNKNOWN");
+        assertThrows(EncodingException.class, () ->
+        {
+            setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "ARTIO_UNKNOWN");
+        });
     }
 
     @Test
