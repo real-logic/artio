@@ -333,8 +333,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private int checkDutyCycle()
     {
         return removeIf(replies, ResetSequenceNumberCommand::poll) +
-            resendSaveNotifications(this.resendSlowStatus, SlowStatus.SLOW) +
-            resendSaveNotifications(this.resendNotSlowStatus, SlowStatus.NOT_SLOW);
+            resendSaveNotifications(resendSlowStatus, SlowStatus.SLOW) +
+            resendSaveNotifications(resendNotSlowStatus, SlowStatus.NOT_SLOW);
     }
 
     private int resendSaveNotifications(final Long2LongHashMap resend, final SlowStatus status)
@@ -351,9 +351,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     libraryId, connectionId, status);
                 if (position > 0)
                 {
-                    actions++;
                     keyIterator.remove();
                 }
+                actions++;
             }
         }
 
@@ -1732,22 +1732,22 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         if (hasBecomeSlow)
         {
-            sendSlowStatus(libraryId, connectionId, resendNotSlowStatus, resendSlowStatus, SlowStatus.SLOW);
+            resendNotSlowStatus.remove(connectionId);
+            sendSlowStatus(libraryId, connectionId, resendSlowStatus, SlowStatus.SLOW);
         }
         else
         {
-            sendSlowStatus(libraryId, connectionId, resendSlowStatus, resendNotSlowStatus, SlowStatus.NOT_SLOW);
+            resendSlowStatus.remove(connectionId);
+            sendSlowStatus(libraryId, connectionId, resendNotSlowStatus, SlowStatus.NOT_SLOW);
         }
     }
 
     private void sendSlowStatus(
         final int libraryId,
         final long connectionId,
-        final Long2LongHashMap toNotResend,
         final Long2LongHashMap toResend,
         final SlowStatus status)
     {
-        toNotResend.remove(connectionId);
         final long position = inboundPublication.saveSlowStatusNotification(libraryId, connectionId, status);
 
         if (Pressure.isBackPressured(position))

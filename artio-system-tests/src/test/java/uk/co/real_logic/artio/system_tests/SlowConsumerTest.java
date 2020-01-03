@@ -88,13 +88,19 @@ public class SlowConsumerTest
             testSystem.poll();
         }
 
-        assertNotSlow(session);
-        // startStepping();
+        assertNotSlow();
+
+        boolean hasBecomeSlow = false;
 
         while (socketIsConnected())
         {
             if (session.canSendMessage())
             {
+                if (handler.isSlow(session))
+                {
+                    hasBecomeSlow = true;
+                }
+
                 session.send(testRequest);
             }
 
@@ -103,7 +109,7 @@ public class SlowConsumerTest
 
         bytesInBufferAtLeast(sessionInfo, senderMaxBytesInBuffer);
 
-        // stopStepping();
+        assertTrue(hasBecomeSlow);
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -128,8 +134,7 @@ public class SlowConsumerTest
             testSystem.poll();
         }
 
-        assertNotSlow(session);
-        // stopStepping();
+        assertNotSlow();
 
         assertEquals(ACTIVE, session.state());
         assertTrue(socketIsConnected());
@@ -139,8 +144,6 @@ public class SlowConsumerTest
     public void shouldNotifyLibraryOfSlowConnectionWhenAcquired() throws IOException
     {
         sessionBecomesSlow();
-
-        // stopStepping();
 
         assertEquals(SessionReplyStatus.OK, releaseToGateway(library, session, testSystem));
 
@@ -159,9 +162,7 @@ public class SlowConsumerTest
         session = acquireSession(handler, library, sessionId, testSystem);
         final SessionInfo sessionInfo = getSessionInfo();
 
-        assertNotSlow(session);
-
-        // startStepping();
+        assertNotSlow();
 
         // Get into a slow state
         while (sessionInfo.bytesInBuffer() == 0 || !handler.isSlow(session))
@@ -174,11 +175,16 @@ public class SlowConsumerTest
             testSystem.poll();
         }
 
-        assertTrue(handler.isSlow(session));
+        assertIsSlow();
         return sessionInfo;
     }
 
-    private void assertNotSlow(final Session session)
+    private void assertIsSlow()
+    {
+        assertTrue(handler.isSlow(session));
+    }
+
+    private void assertNotSlow()
     {
         assertFalse(handler.isSlow(session));
     }
