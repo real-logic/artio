@@ -30,6 +30,7 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.library.FixLibrary;
+import uk.co.real_logic.artio.session.Session;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -251,6 +252,59 @@ public class MessageBasedAcceptorSystemTest
     public void shouldDisconnectConnectionWithNoLogonSoleLibrary() throws IOException
     {
         shouldDisconnectConnectionWithNoLogon(SOLE_LIBRARY);
+    }
+
+    @Test
+    public void shouldSupportRapidLogonAndLogoutOperations() throws IOException
+    {
+        setup(false, true, true, ENGINE);
+
+        final FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
+        final FakeHandler handler = new FakeHandler(otfAcceptor);
+        final TestSystem testSystem = new TestSystem();
+        final Session session;
+
+        try (FixLibrary library = testSystem.connect(acceptingLibraryConfig(handler)))
+        {
+            try (FixConnection connection = FixConnection.initiate(port))
+            {
+                connection.logon(false);
+
+                handler.awaitSessionId(testSystem::poll);
+
+                final long sessionId = handler.awaitSessionId(testSystem::poll);
+                handler.clearSessionExistsInfos();
+                session = acquireSession(handler, library, sessionId, testSystem);
+                assertNotNull(session);
+
+                connection.readLogonReply();
+
+                connection.logout();
+            }
+
+            try (FixConnection connection = FixConnection.initiate(port))
+            {
+                connection.msgSeqNum(3);
+
+                connection.logon(false);
+
+                // The previous connection hasn't yet been detected as it's still active.
+                assertTrue(session.isActive());
+
+                // During this loop the logout message for the disconnected connection is sent,
+                // But not received by the new connection.
+                Timing.assertEventuallyTrue("Library has disconnected old session", () ->
+                {
+                    testSystem.poll();
+
+                    return !handler.sessions().contains(session);
+                });
+
+                // Use sequence number 3 to ensure that we're getting a logon reply
+                final LogonDecoder logonReply = connection.readLogonReply();
+                assertEquals(3, logonReply.header().msgSeqNum());
+            }
+        }
     }
 
     private void shouldDisconnectConnectionWithNoLogon(final InitialAcceptedSessionOwner initialAcceptedSessionOwner)
