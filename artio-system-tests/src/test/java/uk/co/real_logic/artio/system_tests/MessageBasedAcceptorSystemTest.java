@@ -25,6 +25,7 @@ import uk.co.real_logic.artio.builder.LogonEncoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.builder.TestRequestEncoder;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.decoder.LogoutDecoder;
 import uk.co.real_logic.artio.decoder.RejectDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -284,12 +285,12 @@ public class MessageBasedAcceptorSystemTest
 
             try (FixConnection connection = FixConnection.initiate(port))
             {
+                // The previous connection hasn't yet been detected as it's still active.
+                assertTrue(session.isActive());
+
                 connection.msgSeqNum(3);
 
                 connection.logon(false);
-
-                // The previous connection hasn't yet been detected as it's still active.
-                assertTrue(session.isActive());
 
                 // During this loop the logout message for the disconnected connection is sent,
                 // But not received by the new connection.
@@ -303,6 +304,9 @@ public class MessageBasedAcceptorSystemTest
                 // Use sequence number 3 to ensure that we're getting a logon reply
                 final LogonDecoder logonReply = connection.readLogonReply();
                 assertEquals(3, logonReply.header().msgSeqNum());
+
+                final LogoutDecoder logoutDecoder = connection.logoutAndAwaitReply();
+                assertEquals(4, logoutDecoder.header().msgSeqNum());
             }
         }
     }

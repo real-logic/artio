@@ -268,13 +268,15 @@ final class FixConnection implements AutoCloseable
         CloseHelper.close(socket);
     }
 
-    void logoutAndAwaitReply()
+    LogoutDecoder logoutAndAwaitReply()
     {
         logout();
 
         final LogoutDecoder logout = readMessage(new LogoutDecoder());
 
         assertFalse(logout.textAsString(), logout.hasText());
+
+        return logout;
     }
 
     public void sendExecutionReport(final int msgSeqNum, final boolean possDupFlag)
