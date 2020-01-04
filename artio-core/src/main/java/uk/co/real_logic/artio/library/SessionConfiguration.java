@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.library;
 
 import org.agrona.collections.IntArrayList;
 import uk.co.real_logic.artio.CommonConfiguration;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.SequenceNumberType;
 
 import java.util.ArrayList;
@@ -57,6 +58,7 @@ public final class SessionConfiguration
     private final int resendRequestChunkSize;
     private final boolean sendRedundantResendRequests;
     private final boolean enableLastMsgSeqNumProcessed;
+    private final Class<? extends FixDictionary> fixDictionary;
 
     public static Builder builder()
     {
@@ -82,7 +84,8 @@ public final class SessionConfiguration
         final boolean closedResendInterval,
         final int resendRequestChunkSize,
         final boolean sendRedundantResendRequests,
-        final boolean enableLastMsgSeqNumProcessed)
+        final boolean enableLastMsgSeqNumProcessed,
+        final Class<? extends FixDictionary> fixDictionary)
     {
         Objects.requireNonNull(hosts);
         Objects.requireNonNull(ports);
@@ -92,6 +95,7 @@ public final class SessionConfiguration
         Objects.requireNonNull(targetCompId);
         Objects.requireNonNull(targetSubId);
         Objects.requireNonNull(targetLocationId);
+        Objects.requireNonNull(fixDictionary);
 
         requireNonEmpty(hosts, "hosts");
         requireNonEmpty(ports, "ports");
@@ -115,6 +119,7 @@ public final class SessionConfiguration
         this.resendRequestChunkSize = resendRequestChunkSize;
         this.sendRedundantResendRequests = sendRedundantResendRequests;
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
+        this.fixDictionary = fixDictionary;
     }
 
     private void requireNonEmpty(final List<?> values, final String name)
@@ -225,6 +230,11 @@ public final class SessionConfiguration
         return enableLastMsgSeqNumProcessed;
     }
 
+    public Class<? extends FixDictionary> fixDictionary()
+    {
+        return fixDictionary;
+    }
+
     @Override
     public String toString()
     {
@@ -247,6 +257,7 @@ public final class SessionConfiguration
             ", closedResendInterval=" + closedResendInterval +
             ", resendRequestChunkSize=" + resendRequestChunkSize +
             ", enableLastMsgSeqNumProcessed=" + enableLastMsgSeqNumProcessed +
+            ", fixDictionary=" + fixDictionary +
             '}';
     }
 
@@ -271,6 +282,7 @@ public final class SessionConfiguration
         private int resendRequestChunkSize = NO_RESEND_REQUEST_CHUNK_SIZE;
         private boolean sendRedundantResendRequests = DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS;
         private boolean enableLastMsgSeqNumProcessed;
+        private Class<? extends FixDictionary> fixDictionary;
 
         private Builder()
         {
@@ -503,8 +515,25 @@ public final class SessionConfiguration
             return this;
         }
 
+        /**
+         * Set the FIX Dictionary that is used by this session.
+         *
+         * @param fixDictionary the FIX Dictionary that is used by this session.
+         * @return this build
+         */
+        public Builder fixDictionary(final Class<? extends FixDictionary> fixDictionary)
+        {
+            this.fixDictionary = fixDictionary;
+            return this;
+        }
+
         public SessionConfiguration build()
         {
+            if (fixDictionary == null)
+            {
+                fixDictionary = FixDictionary.findDefault();
+            }
+
             return new SessionConfiguration(
                 hosts,
                 ports,
@@ -524,7 +553,8 @@ public final class SessionConfiguration
                 closedResendInterval,
                 resendRequestChunkSize,
                 sendRedundantResendRequests,
-                enableLastMsgSeqNumProcessed);
+                enableLastMsgSeqNumProcessed,
+                fixDictionary);
         }
     }
 }

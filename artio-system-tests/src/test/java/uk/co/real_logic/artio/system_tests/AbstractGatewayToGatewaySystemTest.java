@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,27 +18,33 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.junit.After;
-import uk.co.real_logic.artio.Constants;
-import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.Reply.State;
-import uk.co.real_logic.artio.TestFixtures;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
+import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.session.Session;
 
+import java.util.ArrayList;
 import java.util.List;
 
+import static junit.framework.TestCase.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixMatchers.*;
-import static uk.co.real_logic.artio.TestFixtures.*;
+import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
+import static uk.co.real_logic.artio.TestFixtures.unusedPort;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_ARCHIVE_SCANNER_STREAM;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionState.DISCONNECTED;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -66,13 +72,23 @@ public class AbstractGatewayToGatewaySystemTest
     @After
     public void close()
     {
+        closeInitiatingEngine();
+        closeAcceptingEngine();
+
         CloseHelper.close(initiatingLibrary);
         CloseHelper.close(acceptingLibrary);
 
-        CloseHelper.close(initiatingEngine);
-        CloseHelper.close(acceptingEngine);
-
         cleanupMediaDriver(mediaDriver);
+    }
+
+    void closeInitiatingEngine()
+    {
+        testSystem.awaitBlocking(() -> CloseHelper.close(initiatingEngine));
+    }
+
+    void closeAcceptingEngine()
+    {
+        testSystem.awaitBlocking(() -> CloseHelper.close(acceptingEngine));
     }
 
     void assertOriginalLibraryDoesNotReceiveMessages(final int initiatorMessageCount)
@@ -82,8 +98,7 @@ public class AbstractGatewayToGatewaySystemTest
             initiatingOtfAcceptor.messages(), hasSize(initiatorMessageCount));
     }
 
-    void assertSequenceFromInitToAcceptAt(
-        final int expectedInitToAccSeqNum, final int expectedAccToInitSeqNum)
+    void assertSequenceFromInitToAcceptAt(final int expectedInitToAccSeqNum, final int expectedAccToInitSeqNum)
     {
         assertEquals(expectedInitToAccSeqNum, initiatingSession.lastSentMsgSeqNum());
         assertEquals(expectedInitToAccSeqNum, acceptingSession.lastReceivedMsgSeqNum());
@@ -168,17 +183,24 @@ public class AbstractGatewayToGatewaySystemTest
     void connectSessions()
     {
         final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
-        completeConnectSessions(reply);
+        completeConnectInitiatingSession(reply);
     }
 
-    void completeConnectSessions(final Reply<Session> reply)
+    void completeConnectInitiatingSession(final Reply<Session> reply)
+    {
+        initiatingSession = completeConnectSessions(reply);
+    }
+
+    Session completeConnectSessions(final Reply<Session> reply)
     {
         testSystem.awaitReply(reply);
 
-        initiatingSession = reply.resultIfPresent();
+        final Session session = reply.resultIfPresent();
 
         assertEquals(reply.toString(), State.COMPLETED, reply.state());
-        assertConnected(initiatingSession);
+        assertConnected(session);
+
+        return session;
     }
 
     void completeFailedSession(final Reply<Session> reply)
@@ -223,15 +245,29 @@ public class AbstractGatewayToGatewaySystemTest
 
     int acceptorSendsResendRequest(final int seqNum)
     {
-        final ResendRequestEncoder resendRequest = new ResendRequestEncoder()
-            .beginSeqNo(seqNum)
-            .endSeqNo(seqNum);
-
-        acceptingOtfAcceptor.messages().clear();
-
-        acceptingSession.send(resendRequest);
+        acceptorSendsResendRequest(seqNum, seqNum);
 
         return seqNum;
+    }
+
+    void acceptorSendsResendRequest(final int beginSeqNo, final int endSeqNo)
+    {
+        sendResendRequest(beginSeqNo, endSeqNo, acceptingOtfAcceptor, acceptingSession);
+    }
+
+    void sendResendRequest(
+        final int beginSeqNo, final int endSeqNo, final FakeOtfAcceptor otfAcceptor, final Session session)
+    {
+        final ResendRequestEncoder resendRequest = new ResendRequestEncoder()
+            .beginSeqNo(beginSeqNo)
+            .endSeqNo(endSeqNo);
+
+        otfAcceptor.messages().clear();
+
+        while (session.send(resendRequest) < 0)
+        {
+            Thread.yield();
+        }
     }
 
     void messagesCanBeExchanged()
@@ -426,5 +462,33 @@ public class AbstractGatewayToGatewaySystemTest
     void launchMediaDriverWithDirs()
     {
         mediaDriver = TestFixtures.launchMediaDriverWithDirs();
+    }
+
+    void assertLastLogonEquals(final int lastLogonReceivedSequenceNumber, final int lastLogonSequenceIndex)
+    {
+        assertEquals(lastLogonReceivedSequenceNumber, acceptingHandler.lastLogonReceivedSequenceNumber());
+        assertEquals(lastLogonSequenceIndex, acceptingHandler.lastLogonSequenceIndex());
+    }
+
+    List<String> getMessagesFromArchive(final EngineConfiguration configuration, final int queryStreamId)
+    {
+        final List<String> messages = new ArrayList<>();
+        final FixMessageConsumer fixMessageConsumer =
+            (message, buffer, offset, length, header) -> messages.add(message.body());
+
+        final FixArchiveScanner.Context context = new FixArchiveScanner.Context()
+            .aeronDirectoryName(configuration.aeronContext().aeronDirectoryName())
+            .idleStrategy(CommonConfiguration.backoffIdleStrategy());
+
+        try (FixArchiveScanner scanner = new FixArchiveScanner(context))
+        {
+            scanner.scan(
+                configuration.libraryAeronChannel(),
+                queryStreamId,
+                fixMessageConsumer,
+                false,
+                DEFAULT_ARCHIVE_SCANNER_STREAM);
+        }
+        return messages;
     }
 }

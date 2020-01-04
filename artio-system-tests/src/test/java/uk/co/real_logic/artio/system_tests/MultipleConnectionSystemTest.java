@@ -45,19 +45,9 @@ public class MultipleConnectionSystemTest extends AbstractGatewayToGatewaySystem
 
         // Complete a second connection
         final Reply<Session> successfulReply = initiate(initiatingLibrary, port, INITIATOR_ID2, ACCEPTOR_ID);
-        completeConnectSessions(successfulReply);
+        completeConnectInitiatingSession(successfulReply);
 
         messagesCanBeExchanged();
-    }
-
-    private void failedAuthenticationWithInvalidCompId()
-    {
-        final Reply<Session> failureReply =
-            initiate(initiatingLibrary, port, "invalidSenderCompId", ACCEPTOR_ID);
-        testSystem.awaitReply(failureReply);
-
-        assertEquals(Reply.State.ERRORED, failureReply.state());
-        assertEquals("UNABLE_TO_LOGON: Disconnected before session active", failureReply.error().getMessage());
     }
 
     @Test
@@ -84,6 +74,16 @@ public class MultipleConnectionSystemTest extends AbstractGatewayToGatewaySystem
 
         connectSessions();
         messagesCanBeExchanged();
+    }
+
+    private void failedAuthenticationWithInvalidCompId()
+    {
+        final Reply<Session> failureReply =
+            initiate(initiatingLibrary, port, "invalidSenderCompId", ACCEPTOR_ID);
+        testSystem.awaitReply(failureReply);
+
+        assertEquals(Reply.State.ERRORED, failureReply.state());
+        assertEquals("UNABLE_TO_LOGON: Disconnected before session active", failureReply.error().getMessage());
     }
 
     @After

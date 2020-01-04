@@ -2,7 +2,7 @@ package uk.co.real_logic.artio.engine;
 
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
-import uk.co.real_logic.artio.dictionary.IntDictionary;
+import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.otf.OtfParser;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -20,7 +20,7 @@ public class PossDupFinderTest
             "52=20161206-11:04:51.461\00143=Y\00110=088\001").getBytes(US_ASCII);
 
     private final PossDupFinder possDupFinder = new PossDupFinder();
-    private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
+    private final OtfParser parser = new OtfParser(possDupFinder, new LongDictionary());
     private final UnsafeBuffer buffer = new UnsafeBuffer(new byte[FIRST_MESSAGE.length + SECOND_MESSAGE.length]);
 
     @Test

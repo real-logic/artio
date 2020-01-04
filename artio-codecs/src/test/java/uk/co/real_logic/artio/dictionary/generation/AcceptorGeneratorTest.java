@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,8 @@ public class AcceptorGeneratorTest
         new EnumGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static DecoderGenerator decoderGenerator =
         new DecoderGenerator(MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, ValidationOn.class,
-        RejectUnknownFieldOff.class, RejectUnknownEnumValueOn.class, false);
+        RejectUnknownFieldOff.class, RejectUnknownEnumValueOn.class, false,
+        Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
     private static AcceptorGenerator acceptorGenerator =
         new AcceptorGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, outputManager);
     private static Class<?> acceptor;
@@ -113,7 +114,7 @@ public class AcceptorGeneratorTest
     private void onMessage(final Object inst) throws Exception
     {
         buffer.putAscii(1, ENCODED_MESSAGE);
-        decoder.getMethod(ON_MESSAGE, AsciiBuffer.class, int.class, int.class, int.class)
+        decoder.getMethod(ON_MESSAGE, AsciiBuffer.class, int.class, int.class, long.class)
                .invoke(inst, buffer, 1, ENCODED_MESSAGE.length(), '0');
     }
 

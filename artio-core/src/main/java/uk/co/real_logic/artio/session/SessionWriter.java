@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -87,12 +87,12 @@ public class SessionWriter
      * @param offset the offset within the messageBuffer where the message starts
      * @param length the length of the message within the messageBuffer
      * @param seqNum the sequence number of the sent message
-     * @param messageType the int encoded message type.
+     * @param messageType the long encoded message type.
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
      */
     public long send(
-        final DirectBuffer messageBuffer, final int offset, final int length, final int seqNum, final int messageType)
+        final DirectBuffer messageBuffer, final int offset, final int length, final int seqNum, final long messageType)
     {
         return publication.saveMessage(
             messageBuffer, offset, length, libraryId, messageType, id, sequenceIndex, connectionId, OK, seqNum);

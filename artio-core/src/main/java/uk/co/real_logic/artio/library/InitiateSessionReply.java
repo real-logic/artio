@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import uk.co.real_logic.artio.session.Session;
 
 import java.util.List;
 
+import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_CONNECT;
 
 /**
@@ -31,6 +32,7 @@ import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_CONNECT;
 class InitiateSessionReply extends LibraryReply<Session>
 {
     private final SessionConfiguration configuration;
+    private long connectionId = NO_CONNECTION_ID;
 
     private int addressIndex = 0;
 
@@ -85,17 +87,20 @@ class InitiateSessionReply extends LibraryReply<Session>
         final String host = configuration.hosts().get(addressIndex);
         final int port = configuration.ports().getInt(addressIndex);
         ((InternalSession)result).address(host, port);
+        libraryPoller.deregister(correlationId);
         super.onComplete(result);
+    }
+
+    void onTcpConnected(final long connectionId)
+    {
+        this.connectionId = connectionId;
     }
 
     protected boolean onTimeout()
     {
-        if (libraryPoller.saveMidConnectionDisconnect(correlationId) > 0)
-        {
-            super.onTimeout();
-        }
+        libraryPoller.onInitiatorSessionTimeout(correlationId, connectionId);
 
-        return false;
+        return super.onTimeout();
     }
 
     SessionConfiguration configuration()

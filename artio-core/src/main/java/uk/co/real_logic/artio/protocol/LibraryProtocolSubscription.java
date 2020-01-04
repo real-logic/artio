@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.protocol;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.*;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -304,6 +305,8 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.lastResendChunkMsgSeqNum(),
             manageSession.endOfResendRequestRange(),
             manageSession.awaitingHeartbeat() == Bool.TRUE,
+            manageSession.logonReceivedSequenceNumber(),
+            manageSession.logonSequenceIndex(),
             manageSession.localCompId(),
             manageSession.localSubId(),
             manageSession.localLocationId(),
@@ -312,7 +315,8 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.remoteLocationId(),
             manageSession.address(),
             manageSession.username(),
-            manageSession.password());
+            manageSession.password(),
+            FixDictionary.find(manageSession.fixDictionary()));
     }
 
     private Action onEndOfDay(
@@ -330,7 +334,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             return action;
         }
 
-        return handler.onEndOfDay(libraryId);
+        return handler.onEngineClose(libraryId);
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,7 +114,8 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         }
         else
         {
-            logReplayError(connectionId, buffer, offset, length);
+            // We don't log the replay error at this point, as it will likely be a message that has already been
+            // attempted. This cannot be a slow endpoint anymore - it's a disconnected endpoint.
 
             return CONTINUE;
         }
@@ -123,7 +124,8 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
     private void logReplayError(final long connectionId, final DirectBuffer buffer, final int offset, final int length)
     {
         errorHandler.onError(new IllegalArgumentException(String.format(
-            "Failed to replay message on conn=%1$d [%2$s]",
+            "Failed to replay message on conn=%1$d [%2$s], this probably indicates the connection has disconnected " +
+            "from Artio whilst this message was in the process of being replayed",
             connectionId,
             buffer.getStringWithoutLengthUtf8(offset, length))));
     }

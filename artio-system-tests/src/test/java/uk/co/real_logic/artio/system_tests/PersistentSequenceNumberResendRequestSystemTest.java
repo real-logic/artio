@@ -45,9 +45,10 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
 import static uk.co.real_logic.artio.Constants.EXECUTION_REPORT_MESSAGE_AS_STR;
+import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
+import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
 
 @RunWith(Parameterized.class)
 public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGatewayToGatewaySystemTest
@@ -73,7 +74,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
                 final int libraryId,
                 final Session session,
                 final int sequenceIndex,
-                final int messageType,
+                final long messageType,
                 final long timestampInNs,
                 final long position)
             {
@@ -149,7 +150,6 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
     }
 
     // TODO: parameters
-    // graceful shutdown
     // business vs session messages
 
     @Test
@@ -170,8 +170,8 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         assertInitiatingSequenceIndexIs(0);
         if (shutdownCleanly)
         {
-            /*initiatingSession.startLogout();
-            assertSessionsDisconnected();*/
+            initiatingSession.startLogout();
+            assertSessionsDisconnected();
 
             close();
         }
@@ -194,15 +194,35 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
         // 5. validate resent message
         final FixMessage resentExecutionReport =
             testSystem.awaitMessageOf(initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
-
         assertEquals(resendSeqNum, resentExecutionReport.messageSequenceNumber());
         assertEquals("Y", resentExecutionReport.possDup());
+
+        sendResendRequest(1, 3, initiatingOtfAcceptor, initiatingSession);
+        sendResendRequest(1, 3, initiatingOtfAcceptor, initiatingSession);
+
+        assertEventuallyTrue(() -> "Failed to receive all the resends: " + initiatingOtfAcceptor.messages(),
+            () ->
+            {
+                testSystem.poll();
+
+                assertEquals(2, initiatingOtfAcceptor
+                    .receivedReplayGapFill(1, 2)
+                    .count());
+
+                assertEquals(2, initiatingOtfAcceptor
+                    .receivedReplay(EXECUTION_REPORT_MESSAGE_AS_STR, resendSeqNum)
+                    .count());
+
+                assertEquals(2, initiatingOtfAcceptor
+                    .receivedReplayGapFill(3, 4)
+                    .count());
+            }, 5000);
     }
 
     private void launch(final int initiatorInitialReceivedSequenceNumber)
     {
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
-        acceptingConfig.sessionPersistenceStrategy(logon -> INDEXED);
+        acceptingConfig.sessionPersistenceStrategy(alwaysPersistent());
         acceptingConfig.printStartupWarnings(PRINT_ERROR_MESSAGES);
         acceptingConfig.printErrorMessages(PRINT_ERROR_MESSAGES);
         acceptingConfig.gracefulShutdown(shutdownCleanly);

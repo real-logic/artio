@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,13 +22,21 @@ buildscript {
 }
 
 plugins {
-    id 'com.github.johnrengelman.shadow' version '5.1.0' apply false
-    id 'net.researchgate.release' version '2.8.0'
+    id 'com.github.johnrengelman.shadow' version '5.2.0' apply false
+    id 'net.researchgate.release' version '2.8.1'
+    id "com.github.ben-manes.versions" version "0.27.0"
 }
 
-def aeronVersion = '1.21.1'
-def agronaVersion = '1.0.7'
-def sbeVersion = '1.13.1'
+def checkstyleVersion = '8.28'
+def hamcrestVersion = '2.2'
+def junitVersion = '4.13'
+def mockitoVersion = '3.2.4'
+def hdrHistogramVersion = '2.1.12'
+def jmhVersion = '1.22'
+
+def aeronVersion = '1.24.0'
+def agronaVersion = '1.1.0'
+def sbeVersion = '1.15.0'
 def artioJavaVersion = JavaVersion.VERSION_1_8
 def artioGroup = 'uk.co.real-logic'
 
@@ -38,12 +46,20 @@ ext {
     group = artioGroup
     isReleaseVersion = !version.endsWith("SNAPSHOT")
 
-    if (!project.hasProperty('ossrhUsername')) {
-        ossrhUsername = ''
+    if (!project.hasProperty('repoUsername')) {
+        repoUsername = ''
     }
 
-    if (!project.hasProperty('ossrhPassword')) {
-        ossrhPassword = ''
+    if (!project.hasProperty('repoPassword')) {
+        repoPassword = ''
+    }
+
+    if (!project.hasProperty('repoUrl')) {
+        repoUrl = ''
+    }
+
+    if (!project.hasProperty('snapshotUrl')) {
+        snapshotUrl = ''
     }
 }
 
@@ -99,16 +115,20 @@ subprojects {
     }
 
     dependencies {
-        checkstyle 'com.puppycrawl.tools:checkstyle:8.23'
+        checkstyle "com.puppycrawl.tools:checkstyle:${checkstyleVersion}"
 
-        testCompile 'org.hamcrest:hamcrest:2.1'
-        testCompile 'org.mockito:mockito-core:3.0.0'
-        testCompile 'junit:junit:4.12'
+        testCompile "org.hamcrest:hamcrest:${hamcrestVersion}"
+        testCompile "org.mockito:mockito-core:${mockitoVersion}"
+        testCompile "junit:junit:${junitVersion}"
     }
 
-    checkstyle.toolVersion = "8.23"
+    checkstyle.toolVersion = "${checkstyleVersion}"
 
     test {
+        if (JavaVersion.current().ordinal() >= JavaVersion.VERSION_1_9.ordinal()) {
+            jvmArgs('--add-opens', 'java.base/sun.nio.ch=ALL-UNNAMED')
+        }
+
         testLogging {
             events 'skipped', 'failed'
             showStandardStreams = true
@@ -141,7 +161,7 @@ subprojects {
 
     javadoc {
         title = '<h1>Artio</h1>'
-        options.bottom = '<i>Copyright &#169; 2015-2019 Real Logic Ltd. All Rights Reserved.</i>'
+        options.bottom = '<i>Copyright &#169; 2015-2020 Real Logic Limited. All Rights Reserved.</i>'
         if (JavaVersion.current().ordinal() >= JavaVersion.VERSION_1_10.ordinal()) {
             options.addBooleanOption 'html5', true
         }
@@ -290,6 +310,7 @@ project(':artio-session-fixt-codecs') {
     task generateCodecs(type: JavaExec) {
         main = 'uk.co.real_logic.artio.dictionary.CodecGenerationTool'
         classpath = sourceSets.main.runtimeClasspath
+        systemProperty("fix.codecs.parent_package", "uk.co.real_logic.artio.fixt")
         args = [generatedDir, 'src/main/resources/FIXT11.xml']
         outputs.dir generatedDir
     }
@@ -306,11 +327,13 @@ project(':artio-session-fixt-codecs') {
 project(':artio-core') {
     dependencies {
         testCompile project(path: ':artio-codecs', configuration: 'tests')
-        compile project(':artio-session-codecs')
+        testCompile project(':artio-session-codecs')
         compile project(':artio-codecs')
 
-        compile "io.aeron:aeron-all:${aeronVersion}"
-        compile 'org.hdrhistogram:HdrHistogram:2.1.11'
+        compile "io.aeron:aeron-client:${aeronVersion}"
+        compile "io.aeron:aeron-driver:${aeronVersion}"
+        compile "io.aeron:aeron-archive:${aeronVersion}"
+        compile "org.hdrhistogram:HdrHistogram:${hdrHistogramVersion}"
     }
 
     test {
@@ -319,7 +342,7 @@ project(':artio-core') {
 
     idea {
         dependencies {
-            compile project(':artio-session-codecs').sourceSets.generated.output
+            testCompile project(':artio-session-codecs').sourceSets.generated.output
             compile project(':artio-codecs').sourceSets.generated.output
         }
     }
@@ -336,11 +359,24 @@ project(':artio-system-tests') {
         testCompile project(path: ':artio-core', configuration: 'tests')
         testCompile project(path: ':artio-codecs', configuration: 'tests')
 
+        testCompile project(path: ':artio-session-codecs', configuration: 'tests')
+        testCompile project(path: ':artio-session-fixt-codecs', configuration: 'tests')
+
+        compile project(':artio-session-codecs')
+        compile project(':artio-session-fixt-codecs')
+
         compile project(path: ':artio-core')
 
         perfCompile project
-        perfCompile 'org.openjdk.jmh:jmh-core:1.21'
-        annotationProcessor 'org.openjdk.jmh:jmh-generator-annprocess:1.21'
+        perfCompile "org.openjdk.jmh:jmh-core:${jmhVersion}"
+        annotationProcessor "org.openjdk.jmh:jmh-generator-annprocess:${jmhVersion}"
+
+        idea {
+            dependencies {
+                compile project(':artio-session-codecs').sourceSets.generated.output
+                compile project(':artio-session-fixt-codecs').sourceSets.generated.output
+            }
+        }
     }
 
     idea.module {
@@ -376,6 +412,7 @@ project(':artio-samples') {
 
     dependencies {
         compile project(':artio-core')
+        compile project(':artio-session-codecs')
     }
 
     shadowJar {
@@ -393,12 +430,12 @@ subprojects {
             mavenDeployer {
                 beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
 
-                repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                repository(url: repoUrl) {
+                    authentication(userName: repoUsername, password: repoPassword)
                 }
 
-                snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-                    authentication(userName: ossrhUsername, password: ossrhPassword)
+                snapshotRepository(url: snapshotUrl) {
+                    authentication(userName: repoUsername, password: repoPassword)
                 }
 
                 pom.project {
@@ -441,7 +478,7 @@ subprojects {
     }
 }
 
-task uploadToMavenCentral {
+task uploadToMavenRepository {
     dependsOn 'artio-core:uploadArchives',
         'artio-samples:uploadArchives',
         'artio-system-tests:uploadArchives',
@@ -451,6 +488,6 @@ task uploadToMavenCentral {
 }
 
 wrapper {
-    gradleVersion = '5.5.1'
+    gradleVersion = '6.0.1'
     distributionType = 'ALL'
 }

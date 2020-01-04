@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,12 +15,14 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import org.agrona.CloseHelper;
+import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.ConnectionType;
 import uk.co.real_logic.artio.messages.SlowStatus;
 import uk.co.real_logic.artio.session.*;
-import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.function.Consumer;
 
@@ -40,6 +42,8 @@ class GatewaySession implements SessionInfo
     private final int resendRequestChunkSize;
     private final boolean sendRedundantResendRequests;
     private final boolean enableLastMsgSeqNumProcessed;
+    private final FixDictionary fixDictionary;
+    private final long authenticationTimeoutInMs;
 
     private ReceiverEndPoint receiverEndPoint;
     private SenderEndPoint senderEndPoint;
@@ -51,11 +55,14 @@ class GatewaySession implements SessionInfo
     private String username;
     private String password;
     private int heartbeatIntervalInS;
-    private long disconnectTimeout = NO_TIMEOUT;
+    private long disconnectTimeInMs = NO_TIMEOUT;
 
     private Consumer<GatewaySession> onGatewaySessionLogon;
     private SessionLogonListener logonListener = this::onSessionLogon;
     private boolean initialResetSeqNum;
+    private boolean hasStartedAuthentication = false;
+    private int logonReceivedSequenceNumber;
+    private int logonSequenceIndex;
 
     GatewaySession(
         final long connectionId,
@@ -69,7 +76,9 @@ class GatewaySession implements SessionInfo
         final boolean closedResendInterval,
         final int resendRequestChunkSize,
         final boolean sendRedundantResendRequests,
-        final boolean enableLastMsgSeqNumProcessed)
+        final boolean enableLastMsgSeqNumProcessed,
+        final FixDictionary fixDictionary,
+        final long authenticationTimeoutInMs)
     {
         this.connectionId = connectionId;
         this.sessionId = context.sessionId();
@@ -84,6 +93,8 @@ class GatewaySession implements SessionInfo
         this.resendRequestChunkSize = resendRequestChunkSize;
         this.sendRedundantResendRequests = sendRedundantResendRequests;
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
+        this.fixDictionary = fixDictionary;
+        this.authenticationTimeoutInMs = authenticationTimeoutInMs;
     }
 
     public long connectionId()
@@ -144,31 +155,44 @@ class GatewaySession implements SessionInfo
         receiverEndPoint.play();
     }
 
-    int poll(final long time)
+    int poll(final long timeInMs)
     {
-        return session.poll(time) + checkNoLogonDisconnect(time);
+        final int events = session != null ? session.poll(timeInMs) : 0;
+        return events + checkNoLogonDisconnect(timeInMs);
     }
 
-    private int checkNoLogonDisconnect(final long time)
+    private int checkNoLogonDisconnect(final long timeInMs)
     {
-        if (disconnectTimeout == NO_TIMEOUT)
+        if (disconnectTimeInMs == NO_TIMEOUT)
         {
             return 0;
         }
 
-        if (sessionKey != null)
+        if (disconnectTimeInMs <= timeInMs && !receiverEndPoint.hasDisconnected())
         {
-            disconnectTimeout = NO_TIMEOUT;
-            return 1;
-        }
-
-        if (disconnectTimeout <= time && !receiverEndPoint.hasDisconnected())
-        {
-            receiverEndPoint.onNoLogonDisconnect();
+            if (hasStartedAuthentication)
+            {
+                receiverEndPoint.onAuthenticationTimeoutDisconnect();
+            }
+            else
+            {
+                receiverEndPoint.onNoLogonDisconnect();
+            }
             return 1;
         }
 
         return 0;
+    }
+
+    void startAuthentication(final long timeInMs)
+    {
+        hasStartedAuthentication = true;
+        disconnectTimeInMs = timeInMs + authenticationTimeoutInMs;
+    }
+
+    void onAuthenticationResult()
+    {
+        disconnectTimeInMs = NO_TIMEOUT;
     }
 
     private void onSessionLogon(final Session session)
@@ -188,10 +212,10 @@ class GatewaySession implements SessionInfo
     }
 
     public void onMessage(
-        final MutableAsciiBuffer buffer,
+        final DirectBuffer buffer,
         final int offset,
         final int length,
-        final int messageType,
+        final long messageType,
         final long sessionId)
     {
         if (sessionParser != null)
@@ -225,11 +249,15 @@ class GatewaySession implements SessionInfo
         final CompositeKey sessionKey,
         final String username,
         final String password,
-        final int heartbeatIntervalInS)
+        final int heartbeatIntervalInS,
+        final int logonReceivedSequenceNumber)
     {
         this.sessionId = sessionId;
         this.context = context;
         this.sessionKey = sessionKey;
+        this.logonReceivedSequenceNumber = logonReceivedSequenceNumber;
+        this.logonSequenceIndex = context.sequenceIndex();
+
         onLogon(username, password, heartbeatIntervalInS);
     }
 
@@ -253,7 +281,7 @@ class GatewaySession implements SessionInfo
         if (session != null)
         {
             session.lastSentMsgSeqNum(adjustLastSequenceNumber(retrievedSentSequenceNumber));
-            session.lastReceivedMsgSeqNum(adjustLastSequenceNumber(retrievedReceivedSequenceNumber));
+            session.initialLastReceivedMsgSeqNum(adjustLastSequenceNumber(retrievedReceivedSequenceNumber));
         }
     }
 
@@ -272,7 +300,7 @@ class GatewaySession implements SessionInfo
 
     void disconnectAt(final long disconnectTimeout)
     {
-        this.disconnectTimeout = disconnectTimeout;
+        this.disconnectTimeInMs = disconnectTimeout;
     }
 
     public long bytesInBuffer()
@@ -282,7 +310,7 @@ class GatewaySession implements SessionInfo
 
     void close()
     {
-        session.close();
+        CloseHelper.close(session);
     }
 
     int sequenceIndex()
@@ -333,5 +361,20 @@ class GatewaySession implements SessionInfo
     boolean initialResetSeqNum()
     {
         return initialResetSeqNum;
+    }
+
+    FixDictionary fixDictionary()
+    {
+        return fixDictionary;
+    }
+
+    public int logonReceivedSequenceNumber()
+    {
+        return logonReceivedSequenceNumber;
+    }
+
+    public int logonSequenceIndex()
+    {
+        return logonSequenceIndex;
     }
 }

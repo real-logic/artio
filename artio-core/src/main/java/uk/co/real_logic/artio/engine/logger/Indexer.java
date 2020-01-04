@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,7 +95,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
                     {
                         DebugLogger.log(
                             LogTag.INDEX,
-                            "Catchup [%s]: recordingId = %d, recordingStopped @ %d, indexStopped @ %d",
+                            "Catchup [%s]: recordingId = %d, recordingStopped @ %d, indexStopped @ %d%n",
                             index.getName(),
                             recordingId,
                             recordingStoppedPosition,
@@ -157,7 +157,8 @@ public class Indexer implements Agent, ControlledFragmentHandler
 
         for (int i = 0, size = indices.size(); i < size; i++)
         {
-            indices.get(i).onFragment(buffer, offset, length, header);
+            final Index index = indices.get(i);
+            index.onFragment(buffer, offset, length, header);
         }
 
         return CONTINUE;

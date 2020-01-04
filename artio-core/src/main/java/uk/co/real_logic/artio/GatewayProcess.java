@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio;
 
 import io.aeron.Aeron;
+import io.aeron.archive.client.AeronArchive;
 import org.agrona.ErrorHandler;
 import org.agrona.concurrent.*;
 import org.agrona.concurrent.errors.DistinctErrorLog;
@@ -132,7 +133,8 @@ public class GatewayProcess implements AutoCloseable
         return ctx;
     }
 
-    protected void initMonitoringAgent(final List<Timer> timers, final CommonConfiguration configuration)
+    protected void initMonitoringAgent(
+        final List<Timer> timers, final CommonConfiguration configuration, final AeronArchive aeronArchive)
     {
         final List<Agent> agents = new ArrayList<>();
         if (TIME_MESSAGES)
@@ -149,7 +151,11 @@ public class GatewayProcess implements AutoCloseable
 
         if (configuration.printErrorMessages())
         {
-            agents.add(new ErrorPrinter(monitoringFile.errorBuffer(), configuration.agentNamePrefix(), startTimeInMs));
+            agents.add(new ErrorPrinter(
+                monitoringFile.errorBuffer(),
+                configuration.agentNamePrefix(),
+                startTimeInMs,
+                aeronArchive));
         }
 
         if (!agents.isEmpty())

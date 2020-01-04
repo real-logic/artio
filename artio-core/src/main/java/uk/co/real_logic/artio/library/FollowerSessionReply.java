@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,12 @@
  */
 package uk.co.real_logic.artio.library;
 
-import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.builder.Encoder;
-import uk.co.real_logic.artio.builder.HeaderEncoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.session.SessionWriter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
+
+import static uk.co.real_logic.artio.dictionary.SessionConstants.LOGON_MESSAGE_TYPE_STR;
 
 class FollowerSessionReply extends LibraryReply<SessionWriter>
 {
@@ -32,11 +33,11 @@ class FollowerSessionReply extends LibraryReply<SessionWriter>
     FollowerSessionReply(
         final LibraryPoller libraryPoller,
         final long latestReplyArrivalTimeInMs,
-        final HeaderEncoder headerEncoder)
+        final SessionHeaderEncoder headerEncoder)
     {
         super(libraryPoller, latestReplyArrivalTimeInMs);
         headerEncoder
-            .msgType(Constants.LOGON_MESSAGE_AS_STR)
+            .msgType(LOGON_MESSAGE_TYPE_STR)
             .sendingTime(new byte[1]);
         final long result = headerEncoder.startMessage(buffer, 0);
         length = Encoder.length(result);

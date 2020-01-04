@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -240,7 +240,8 @@ public class ReplayQuery implements AutoCloseable
         private long jumpPosition(final int beginSequenceNumber, final int sequenceNumber, final long iteratorPosition)
         {
             final int sequenceNumberJump = beginSequenceNumber - sequenceNumber;
-            return iteratorPosition + sequenceNumberJump * RECORD_LENGTH;
+            final int jumpInBytes = sequenceNumberJump * RECORD_LENGTH;
+            return iteratorPosition + jumpInBytes;
         }
 
         private ReplayOperation newReplayOperation(

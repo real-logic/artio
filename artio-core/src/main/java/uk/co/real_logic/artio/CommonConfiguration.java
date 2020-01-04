@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -199,7 +199,7 @@ public class CommonConfiguration
     public static final long DEFAULT_SENDING_TIME_WINDOW = MINUTES.toMillis(2);
     public static final int DEFAULT_HEARTBEAT_INTERVAL_IN_S = 10;
 
-    public static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 3_000L;
+    public static final long DEFAULT_REPLY_TIMEOUT_IN_MS = 10_000L;
     public static final long DEFAULT_HISTOGRAM_POLL_PERIOD_IN_MS = MINUTES.toMillis(1);
 
     public static final int DEFAULT_INBOUND_LIBRARY_STREAM = 1;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,10 @@ public interface SessionExistsHandler
      * @param remoteCompId the compId for the local party in the logon message (eg senderCompId if acceptor).
      * @param remoteSubId the subId for the local party in the logon message (eg senderSubId if acceptor).
      * @param remoteLocationId the locationId for the local party in the logon message (eg senderLocationId if acceptor)
+     * @param logonReceivedSequenceNumber the message sequence number of the latest connection's logon message for this
+     *                                    session.
+     * @param logonSequenceIndex the sequence index at the time of the latest connection's logon message for this
+     *                           session.
      */
     void onSessionExists(
         FixLibrary library,
@@ -47,5 +51,7 @@ public interface SessionExistsHandler
         String localLocationId,
         String remoteCompId,
         String remoteSubId,
-        String remoteLocationId);
+        String remoteLocationId,
+        int logonReceivedSequenceNumber,
+        int logonSequenceIndex);
 }

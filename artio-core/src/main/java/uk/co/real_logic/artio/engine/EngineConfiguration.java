@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,14 +15,17 @@
  */
 package uk.co.real_logic.artio.engine;
 
+import io.aeron.Aeron;
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.CloseHelper;
+import org.agrona.IoUtil;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.CommonConfiguration;
-import uk.co.real_logic.artio.decoder.*;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.engine.framer.DefaultTcpChannelSupplier;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier;
 import uk.co.real_logic.artio.library.SessionConfiguration;
@@ -42,7 +45,7 @@ import static java.lang.System.getProperty;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.INITIAL_RECORD_OFFSET;
 import static uk.co.real_logic.artio.library.SessionConfiguration.*;
-import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysUnindexed;
+import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysTransient;
 
 /**
  * Configuration that exists for the entire duration of a fix gateway. Some options are configurable via
@@ -124,7 +127,7 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public static final int DEFAULT_LOGGER_CACHE_NUM_SETS = 8;
     public static final int DEFAULT_LOGGER_CACHE_SET_SIZE = 4;
 
-    public static final int DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT = 100;
+    public static final int DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT = 20;
     public static final int DEFAULT_REPLAY_FRAGMENT_LIMIT = 5;
     public static final int DEFAULT_INBOUND_BYTES_RECEIVED_LIMIT = 8 * 1024;
     public static final int DEFAULT_RECEIVER_BUFFER_SIZE = 16 * 1024;
@@ -146,16 +149,17 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     /** Unmodifiable set of defaults, please make a copy if you wish to modify them. */
     public static final Set<String> DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES;
     public static final long DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS = 10_000;
+    public static final long DEFAULT_AUTHENTICATION_TIMEOUT_IN_MS = 60_000;
 
     static
     {
         final Set<String> defaultGapFillOnReplayMessageTypes = new HashSet<>();
-        defaultGapFillOnReplayMessageTypes.add(LogonDecoder.MESSAGE_TYPE_AS_STRING);
-        defaultGapFillOnReplayMessageTypes.add(LogoutDecoder.MESSAGE_TYPE_AS_STRING);
-        defaultGapFillOnReplayMessageTypes.add(ResendRequestDecoder.MESSAGE_TYPE_AS_STRING);
-        defaultGapFillOnReplayMessageTypes.add(HeartbeatDecoder.MESSAGE_TYPE_AS_STRING);
-        defaultGapFillOnReplayMessageTypes.add(TestRequestDecoder.MESSAGE_TYPE_AS_STRING);
-        defaultGapFillOnReplayMessageTypes.add(SequenceResetDecoder.MESSAGE_TYPE_AS_STRING);
+        defaultGapFillOnReplayMessageTypes.add(SessionConstants.LOGON_MESSAGE_TYPE_STR);
+        defaultGapFillOnReplayMessageTypes.add(SessionConstants.LOGOUT_MESSAGE_TYPE_STR);
+        defaultGapFillOnReplayMessageTypes.add(SessionConstants.RESEND_REQUEST_MESSAGE_TYPE_STR);
+        defaultGapFillOnReplayMessageTypes.add(SessionConstants.HEARTBEAT_MESSAGE_TYPE_STR);
+        defaultGapFillOnReplayMessageTypes.add(SessionConstants.TEST_REQUEST_MESSAGE_TYPE_STR);
+        defaultGapFillOnReplayMessageTypes.add(SessionConstants.SEQUENCE_RESET_TYPE_STR);
         DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES = Collections.unmodifiableSet(defaultGapFillOnReplayMessageTypes);
     }
 
@@ -181,6 +185,8 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private MappedFile sessionIdBuffer;
     private Set<String> gapfillOnReplayMessageTypes = new HashSet<>(DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES);
     private final AeronArchive.Context archiveContext = new AeronArchive.Context();
+    private AeronArchive.Context archiveContextClone;
+    private Aeron.Context aeronContextClone;
 
     private int outboundLibraryFragmentLimit =
         getInteger(OUTBOUND_LIBRARY_FRAGMENT_LIMIT_PROP, DEFAULT_OUTBOUND_LIBRARY_FRAGMENT_LIMIT);
@@ -215,9 +221,13 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     private int acceptedSessionResendRequestChunkSize = NO_RESEND_REQUEST_CHUNK_SIZE;
     private boolean acceptedSessionSendRedundantResendRequests = DEFAULT_SEND_REDUNDANT_RESEND_REQUESTS;
     private boolean acceptedEnableLastMsgSeqNumProcessed = DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED;
-    private boolean soleLibraryMode = false;
+    private InitialAcceptedSessionOwner initialAcceptedSessionOwner = InitialAcceptedSessionOwner.ENGINE;
     private AuthenticationStrategy authenticationStrategy = AuthenticationStrategy.none();
     private long indexFileStateFlushTimeoutInMs = DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
+    private FixDictionary acceptorfixDictionary;
+    private boolean deleteLogFileDirOnStart = false;
+    private long authenticationTimeoutInMs = DEFAULT_AUTHENTICATION_TIMEOUT_IN_MS;
+    private boolean bindAtStartup = true;
 
     /**
      * Sets the local address to bind to when the Gateway is used to accept connections.
@@ -233,6 +243,19 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         Objects.requireNonNull(host, "host");
         this.host = host;
         this.port = port;
+        return this;
+    }
+
+    /**
+     * Controls whether the engine should eagerly bind the network interface at startup when {@link #bindTo(String, int)} is used, or
+     * whether it is delayed delayed until {@link FixEngine#bind()} is invoked.
+     *
+     * @param bindAtStartup false to delay binding until {@link FixEngine#bind()} is invoked.
+     * @return this
+     */
+    public EngineConfiguration bindAtStartup(final boolean bindAtStartup)
+    {
+        this.bindAtStartup = bindAtStartup;
         return this;
     }
 
@@ -586,14 +609,20 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     }
 
     /**
-     * NB: This is an experimental API and is subject to change or potentially removal.
+     * Set whether accepted sessions are initially owned by the Engine or a Library - the default is
+     * the Engine. When a FIX initiator initially connects to an Artio acceptor then by default this session is owned
+     * by the Engine and Libraries can request ownership of the Session from the Engine. If <code>SOLE_LIBRARY</code>
+     * mode is chosen then only a single library instance must connect.
      *
-     * @param singleLibraryMode true to switch singleLibraryMode on or false (the default) to switch it off.
+     * NB: This is an experimental API and is subject to change.
+     *
+     * @param initialAcceptedSessionOwner whether accepted sessions are initially owned by the Engine or a Library
      * @return this
      */
-    public EngineConfiguration soleLibraryMode(final boolean singleLibraryMode)
+    public EngineConfiguration initialAcceptedSessionOwner(
+        final InitialAcceptedSessionOwner initialAcceptedSessionOwner)
     {
-        this.soleLibraryMode = singleLibraryMode;
+        this.initialAcceptedSessionOwner = initialAcceptedSessionOwner;
         return this;
     }
 
@@ -629,6 +658,24 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return this;
     }
 
+    public EngineConfiguration acceptorfixDictionary(final Class<? extends FixDictionary> acceptorfixDictionary)
+    {
+        this.acceptorfixDictionary = FixDictionary.of(acceptorfixDictionary);
+        return this;
+    }
+
+    public EngineConfiguration deleteLogFileDirOnStart(final boolean deleteLogFileDirOnStart)
+    {
+        this.deleteLogFileDirOnStart = deleteLogFileDirOnStart;
+        return this;
+    }
+
+    public EngineConfiguration authenticationTimeoutInMs(final long authenticationTimeoutInMs)
+    {
+        this.authenticationTimeoutInMs = authenticationTimeoutInMs;
+        return this;
+    }
+
     public int receiverBufferSize()
     {
         return receiverBufferSize;
@@ -652,6 +699,11 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public InetSocketAddress bindAddress()
     {
         return new InetSocketAddress(host, port);
+    }
+
+    public boolean bindAtStartup()
+    {
+        return this.bindAtStartup;
     }
 
     public String logFileDir()
@@ -784,9 +836,9 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return replayHandler;
     }
 
-    public boolean soleLibraryMode()
+    public InitialAcceptedSessionOwner initialAcceptedSessionOwner()
     {
-        return soleLibraryMode;
+        return initialAcceptedSessionOwner;
     }
 
     public AuthenticationStrategy authenticationStrategy()
@@ -797,6 +849,21 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
     public long indexFileStateFlushTimeoutInMs()
     {
         return indexFileStateFlushTimeoutInMs;
+    }
+
+    public FixDictionary acceptorfixDictionary()
+    {
+        return acceptorfixDictionary;
+    }
+
+    public boolean deleteLogFileDirOnStart()
+    {
+        return deleteLogFileDirOnStart;
+    }
+
+    public long authenticationTimeoutInMs()
+    {
+        return authenticationTimeoutInMs;
     }
 
     /**
@@ -876,6 +943,16 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return archiveContext;
     }
 
+    public Aeron.Context aeronContextClone()
+    {
+        return aeronContextClone;
+    }
+
+    public AeronArchive.Context archiveContextClone()
+    {
+        return archiveContextClone;
+    }
+
     public int outboundReplayStream()
     {
         return outboundReplayStream;
@@ -924,6 +1001,15 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
                 sessionBufferSize()));
         }
 
+        if (deleteLogFileDirOnStart())
+        {
+            final File logFileDir = new File(logFileDir());
+            if (logFileDir.exists())
+            {
+                IoUtil.delete(logFileDir, false);
+            }
+        }
+
         if (sentSequenceNumberIndex() == null)
         {
             sentSequenceNumberIndex = mapFile(DEFAULT_SEQUENCE_NUMBERS_SENT_FILE, sequenceNumberIndexSize);
@@ -951,8 +1037,16 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
 
         if (sessionPersistenceStrategy() == null)
         {
-            sessionPersistenceStrategy(alwaysUnindexed());
+            sessionPersistenceStrategy(alwaysTransient());
         }
+
+        if (acceptorfixDictionary() == null)
+        {
+            acceptorfixDictionary(FixDictionary.findDefault());
+        }
+
+        aeronContextClone = aeronContext().clone();
+        archiveContextClone = archiveContext.clone();
 
         return this;
     }
@@ -972,10 +1066,17 @@ public final class EngineConfiguration extends CommonConfiguration implements Au
         return channelSupplierFactory.apply(this);
     }
 
+    public boolean isRelevantStreamId(final int streamId)
+    {
+        return (streamId == outboundLibraryStream() && logOutboundMessages()) ||
+            (streamId == inboundLibraryStream() && logInboundMessages());
+    }
+
     public void close()
     {
         CloseHelper.close(sentSequenceNumberIndex);
         CloseHelper.close(receivedSequenceNumberIndex);
         CloseHelper.close(sessionIdBuffer);
     }
+
 }

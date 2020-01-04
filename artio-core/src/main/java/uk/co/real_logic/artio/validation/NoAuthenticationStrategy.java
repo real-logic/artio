@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.validation;
 
-import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 
 final class NoAuthenticationStrategy implements AuthenticationStrategy
 {
@@ -23,7 +23,7 @@ final class NoAuthenticationStrategy implements AuthenticationStrategy
     {
     }
 
-    public boolean authenticate(final LogonDecoder logon)
+    public boolean authenticate(final AbstractLogonDecoder logon)
     {
         return true;
     }

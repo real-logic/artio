@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.protocol;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.SequenceNumberType;
 import uk.co.real_logic.artio.messages.SessionState;
@@ -50,6 +51,7 @@ public interface EngineEndPointHandler
         boolean enableLastMsgSeqNumProcessed,
         String username,
         String password,
+        Class<? extends FixDictionary> fixDictionary,
         int heartbeatIntervalInS,
         long correlationId,
         Header header);

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import java.io.File;
 
 public final class ReplayIndexDescriptor
 {
-    static final int REPLAY_POSITION_BUFFER_SIZE = 128 * 1024;
+    static final int REPLAY_POSITION_BUFFER_SIZE = 4 * 1024;
 
     private static final int BEGIN_CHANGE_OFFSET = MessageHeaderEncoder.ENCODED_LENGTH;
     private static final int END_CHANGE_OFFSET = BEGIN_CHANGE_OFFSET + BitUtil.SIZE_OF_LONG;
@@ -36,7 +36,7 @@ public final class ReplayIndexDescriptor
     static
     {
         // Safety check against making the ReplayIndexRecord big without modifying this
-        if (RECORD_LENGTH < ReplayIndexRecordDecoder.BLOCK_LENGTH)
+        if (RECORD_LENGTH < ReplayIndexRecordDecoder.BLOCK_LENGTH) // lgtm [java/constant-comparison]
         {
             throw new IllegalStateException("Invalid record length");
         }

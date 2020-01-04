@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,23 +19,25 @@ import org.agrona.LangUtil;
 import org.agrona.generation.OutputManager;
 import org.agrona.generation.ResourceConsumer;
 import uk.co.real_logic.artio.builder.Decoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
+import uk.co.real_logic.artio.dictionary.ir.Dictionary;
 import uk.co.real_logic.artio.dictionary.ir.*;
 import uk.co.real_logic.artio.dictionary.ir.Field.Type;
 import uk.co.real_logic.artio.fields.*;
 
 import java.io.IOException;
 import java.io.Writer;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Stream;
 
+import static java.util.Collections.emptySet;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toList;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.*;
 import static uk.co.real_logic.artio.dictionary.generation.ConstantGenerator.sizeHashSet;
 import static uk.co.real_logic.artio.dictionary.generation.EnumGenerator.NULL_VAL_NAME;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.constantName;
-import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.fileHeader;
+import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.*;
+import static uk.co.real_logic.artio.dictionary.generation.OptionalSessionFields.DECODER_OPTIONAL_SESSION_FIELDS;
 import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 // TODO: optimisations
@@ -49,6 +51,16 @@ import static uk.co.real_logic.sbe.generation.java.JavaUtil.formatPropertyName;
 
 public class DecoderGenerator extends Generator
 {
+    private static final Set<String> REQUIRED_SESSION_CODECS = new HashSet<>(Arrays.asList(
+        "LogonDecoder",
+        "LogoutDecoder",
+        "RejectDecoder",
+        "TestRequestDecoder",
+        "SequenceResetDecoder",
+        "HeartbeatDecoder",
+        "ResendRequestDecoder",
+        "UserRequestDecoder"));
+
     public static final String REQUIRED_FIELDS = "REQUIRED_FIELDS";
     private static final String GROUP_FIELDS = "GROUP_FIELDS";
 
@@ -74,7 +86,6 @@ public class DecoderGenerator extends Generator
     public static final int VALUE_IS_INCORRECT =
         RejectReason.VALUE_IS_INCORRECT.representation();
 
-    // TODO: ensure that these are only used in the case that we're dealing with FIX 4.4. or later
     public static final int TAG_APPEARS_MORE_THAN_ONCE =
         RejectReason.TAG_APPEARS_MORE_THAN_ONCE.representation();
     public static final int TAG_SPECIFIED_OUT_OF_REQUIRED_ORDER = 14;
@@ -102,10 +113,11 @@ public class DecoderGenerator extends Generator
         final Class<?> validationClass,
         final Class<?> rejectUnknownFieldClass,
         final Class<?> rejectUnknownEnumValueClass,
-        final boolean flyweightsEnabled)
+        final boolean flyweightsEnabled,
+        final String codecRejectUnknownEnumValueEnabled)
     {
         super(dictionary, thisPackage, commonPackage, outputManager, validationClass, rejectUnknownFieldClass,
-            rejectUnknownEnumValueClass, flyweightsEnabled);
+            rejectUnknownEnumValueClass, flyweightsEnabled, codecRejectUnknownEnumValueEnabled);
         this.initialBufferSize = initialBufferSize;
     }
 
@@ -143,6 +155,15 @@ public class DecoderGenerator extends Generator
             {
                 out.append(fileHeader(builderPackage));
 
+                if (REQUIRED_SESSION_CODECS.contains(className))
+                {
+                    out.append(importFor("uk.co.real_logic.artio.decoder.Abstract" + className));
+                }
+                else if (type == HEADER)
+                {
+                    out.append(importFor(SessionHeaderDecoder.class));
+                }
+
                 generateImports("Decoder", type, out);
                 generateAggregateClass(aggregate, type, className, out);
             });
@@ -164,7 +185,19 @@ public class DecoderGenerator extends Generator
             .map((comp) -> decoderClassName((Aggregate)comp.element()))
             .collect(toList());
 
-        interfaces.add(isMessage ? "MessageDecoder" : "Decoder");
+        if (isMessage)
+        {
+            interfaces.add("MessageDecoder");
+
+            if (REQUIRED_SESSION_CODECS.contains(className))
+            {
+                interfaces.add("Abstract" + className);
+            }
+        }
+        else if (type == HEADER)
+        {
+            interfaces.add(SessionHeaderDecoder.class.getSimpleName());
+        }
 
         out.append(classDeclaration(className, interfaces, false));
         generateValidation(out, aggregate, type);
@@ -179,7 +212,7 @@ public class DecoderGenerator extends Generator
         }
         groupMethods(out, aggregate);
         headerMethods(out, aggregate, type);
-        getters(out, aggregate.entries());
+        generateGetters(out, className, aggregate.entries());
         out.append(decodeMethod(aggregate.entries(), aggregate, type));
         out.append(completeResetMethod(isMessage, aggregate.entries(), additionalReset(isGroup)));
         out.append(toString(aggregate, isMessage));
@@ -303,8 +336,8 @@ public class DecoderGenerator extends Generator
             "        buffer = null;\n" +
             "        if (" + CODEC_VALIDATION_ENABLED + ")\n" +
             "        {\n" +
-            "            invalidTagId = NO_ERROR;\n" +
-            "            rejectReason = NO_ERROR;\n" +
+            "            invalidTagId = Decoder.NO_ERROR;\n" +
+            "            rejectReason = Decoder.NO_ERROR;\n" +
             "            missingRequiredFields.clear();\n" +
             (isGroup ? "" :
                 "            unknownFields.clear();\n" +
@@ -335,8 +368,9 @@ public class DecoderGenerator extends Generator
             .map((entry) -> validateEnum(entry, out))
             .collect(joining("\n"));
 
+        //maybe this should look at groups on components too?
         final String groupValidation = aggregate
-            .entriesWith(element -> element instanceof Group)
+            .allGroupsIncludingComponents()
             .map((entry) -> generateGroupValidation(entry, out))
             .collect(joining("\n"));
 
@@ -369,12 +403,12 @@ public class DecoderGenerator extends Generator
             "    private final IntHashSet alreadyVisitedFields = new IntHashSet(%5$d);\n\n" +
             "    private final IntHashSet unknownFields = new IntHashSet(10);\n\n") +
             "    private final IntHashSet missingRequiredFields = new IntHashSet(%1$d);\n\n" +
-            "    private int invalidTagId = NO_ERROR;\n\n" +
+            "    private int invalidTagId = Decoder.NO_ERROR;\n\n" +
             "    public int invalidTagId()\n" +
             "    {\n" +
             "        return invalidTagId;\n" +
             "    }\n\n" +
-            "    private int rejectReason = NO_ERROR;\n\n" +
+            "    private int rejectReason = Decoder.NO_ERROR;\n\n" +
             "    public int rejectReason()\n" +
             "    {\n" +
             "        return rejectReason;\n" +
@@ -382,7 +416,7 @@ public class DecoderGenerator extends Generator
             "    public boolean validate()\n" +
             "    {\n" +
             // validation for some tags performed in the decode method
-            "        if (rejectReason != NO_ERROR)\n" +
+            "        if (rejectReason != Decoder.NO_ERROR)\n" +
             "        {\n" +
             "            return false;\n" +
             "        }\n" +
@@ -464,7 +498,7 @@ public class DecoderGenerator extends Generator
         final boolean isPrimitive = type.isIntBased() || type == Type.CHAR;
 
         final String enumValidation = String.format(
-            "        if (" + CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED + " && !%1$s.isValid(%2$s%4$s))\n" +
+            "        if (" + codecRejectUnknownEnumValueEnabled + " && !%1$s.isValid(%2$s%4$s))\n" +
             "        {\n" +
             "            invalidTagId = %3$s;\n" +
             "            rejectReason = " + VALUE_IS_INCORRECT + ";\n" +
@@ -689,12 +723,14 @@ public class DecoderGenerator extends Generator
             stringAsciiView);
     }
 
-    private void getter(final Entry entry, final Writer out) throws IOException
+    private void generateGetter(
+        final Entry entry, final Writer out, final Set<String> missingOptionalFields)
+        throws IOException
     {
         entry.forEach(
-            (field) -> out.append(fieldGetter(entry, field)),
-            (group) -> groupGetter(group, out),
-            (component) -> componentGetter(component, out));
+            (field) -> out.append(fieldGetter(entry, field, missingOptionalFields)),
+            (group) -> groupGetter(group, out, missingOptionalFields),
+            (component) -> componentGetter(component, out, missingOptionalFields));
     }
 
     private void groupMethods(final Writer out, final Aggregate aggregate) throws IOException
@@ -741,10 +777,10 @@ public class DecoderGenerator extends Generator
             decoderClassName(aggregate)));
     }
 
-    private String messageType(final String fullType, final int packedType)
+    private String messageType(final String fullType, final long packedType)
     {
         return String.format(
-            "    public static final int MESSAGE_TYPE = %1$d;\n\n" +
+            "    public static final long MESSAGE_TYPE = %1$dL;\n\n" +
             "    public static final String MESSAGE_TYPE_AS_STRING = \"%2$s\";\n\n" +
             "    public static final char[] MESSAGE_TYPE_CHARS = MESSAGE_TYPE_AS_STRING.toCharArray();\n\n" +
             "    public static final byte[] MESSAGE_TYPE_BYTES = MESSAGE_TYPE_AS_STRING.getBytes(US_ASCII);\n\n",
@@ -752,23 +788,50 @@ public class DecoderGenerator extends Generator
             fullType);
     }
 
-    private void getters(final Writer out, final List<Entry> entries) throws IOException
+    private void generateGetters(final Writer out, final String className, final List<Entry> entries)
+        throws IOException
     {
+        final List<String> optionalFields = DECODER_OPTIONAL_SESSION_FIELDS.get(className);
+        final Set<String> missingOptionalFields = (optionalFields == null) ? emptySet() : new HashSet<>(optionalFields);
+
         for (final Entry entry : entries)
         {
-            getter(entry, out);
+            generateGetter(entry, out, missingOptionalFields);
+        }
+
+        generateMissingOptionalSessionFields(out, className, missingOptionalFields);
+        generateOptionalSessionFieldsSupportedMethods(optionalFields, missingOptionalFields, out);
+    }
+
+    private void generateMissingOptionalSessionFields(
+        final Writer out, final String className, final Set<String> missingOptionalFields)
+        throws IOException
+    {
+        for (final String optionalField : missingOptionalFields)
+        {
+            final String propertyName = formatPropertyName(optionalField);
+
+            out.append(String.format(
+                "    public String %1$sAsString()\n" +
+                "    {\n" +
+                "        throw new UnsupportedOperationException();\n" +
+                "    }\n",
+                propertyName));
         }
     }
 
-    private void componentGetter(final Component component, final Writer out) throws IOException
+    private void componentGetter(
+        final Component component, final Writer out, final Set<String> missingOptionalFields)
+        throws IOException
     {
         final Aggregate parentAggregate = currentAggregate;
         currentAggregate = component;
-        wrappedForEachEntry(component, out, entry -> getter(entry, out));
+        wrappedForEachEntry(component, out, entry -> generateGetter(entry, out, missingOptionalFields));
         currentAggregate = parentAggregate;
     }
 
-    private void groupGetter(final Group group, final Writer out) throws IOException
+    private void groupGetter(final Group group, final Writer out, final Set<String> missingOptionalFields)
+        throws IOException
     {
         // The component interface will generate the group class
         if (!(currentAggregate instanceof Component))
@@ -778,7 +841,7 @@ public class DecoderGenerator extends Generator
         }
 
         final Entry numberField = group.numberField();
-        final String prefix = fieldGetter(numberField, (Field)numberField.element());
+        final String prefix = fieldGetter(numberField, (Field)numberField.element(), missingOptionalFields);
 
         out.append(String.format(
             "\n" +
@@ -848,13 +911,15 @@ public class DecoderGenerator extends Generator
             formatPropertyName(group.name())));
     }
 
-    private String fieldGetter(final Entry entry, final Field field)
+    private String fieldGetter(final Entry entry, final Field field, final Set<String> missingOptionalFields)
     {
         final String name = field.name();
         final String fieldName = formatPropertyName(name);
         final Type type = field.type();
         final String optionalCheck = optionalCheck(entry);
         final String asStringBody = generateAsStringBody(entry, name, fieldName);
+
+        missingOptionalFields.remove(name);
 
         final String extraStringDecode = type.isStringBased() ? String.format(
             "    public String %1$sAsString()\n" +

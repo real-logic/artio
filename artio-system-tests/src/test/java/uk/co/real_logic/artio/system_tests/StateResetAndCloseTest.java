@@ -17,30 +17,31 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.client.AeronArchive;
 import org.agrona.IoUtil;
-import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.session.Session;
 
 import java.io.File;
+import java.util.Objects;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
+import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
 
-public class EndOfDayTest extends AbstractGatewayToGatewaySystemTest
+public class StateResetAndCloseTest extends AbstractGatewayToGatewaySystemTest
 {
 
     private File backupLocation = new File("backup");
 
-    @Before
+    @After
     public void cleanup()
     {
         if (backupLocation.exists())
@@ -77,21 +78,23 @@ public class EndOfDayTest extends AbstractGatewayToGatewaySystemTest
             assertSequenceFromInitToAcceptAt(2, 2);
         }
 
-        testSystem.awaitBlocking(() -> acceptingEngine.endDayClose(backupLocation));
+        testSystem.awaitBlocking(() -> acceptingEngine.close());
+        assertTrue(acceptingEngine.isClosed());
 
-        Timing.assertEventuallyTrue("fix library never closed", () ->
-        {
-            testSystem.poll();
-            return acceptingLibrary.isClosed();
-        });
         final FixMessage logout = testSystem.awaitMessageOf(initiatingOtfAcceptor, LOGOUT_MESSAGE_AS_STR);
         assertEquals(3, logout.messageSequenceNumber());
+
+        testSystem.awaitBlocking(() -> acceptingEngine.resetState(backupLocation));
+        assertRecordingsDeleted();
 
         assertTrue("backupLocation missing", backupLocation.exists());
         assertTrue("backupLocation not directory", backupLocation.isDirectory());
 
         clearMessages();
         close();
+
+        // resetState should be idempotent
+        acceptingEngine.resetState(backupLocation);
 
         launchMediaDriverWithDirs();
         launch(1, 1);
@@ -109,6 +112,14 @@ public class EndOfDayTest extends AbstractGatewayToGatewaySystemTest
 
         assertAcceptingSessionHasSequenceIndex(0);
         assertRecordingsTruncated();
+    }
+
+    private void assertRecordingsDeleted()
+    {
+        final File archiveDir = mediaDriver.archive().context().archiveDir();
+        final File[] recordings = archiveDir.listFiles(file -> file.getName().endsWith(".rec"));
+        final int numberOfRecordings = Objects.requireNonNull(recordings).length;
+        assertEquals(4, numberOfRecordings);
     }
 
     private void assertRecordingsTruncated()
@@ -143,7 +154,7 @@ public class EndOfDayTest extends AbstractGatewayToGatewaySystemTest
         final int initialReceivedSequenceNumber)
     {
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
-        acceptingConfig.sessionPersistenceStrategy(logon -> INDEXED);
+        acceptingConfig.sessionPersistenceStrategy(alwaysPersistent());
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);

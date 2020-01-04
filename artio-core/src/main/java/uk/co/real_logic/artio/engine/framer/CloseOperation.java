@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.InternalSession;
 
@@ -22,24 +23,24 @@ import java.util.List;
 
 import static io.aeron.Publication.BACK_PRESSURED;
 
-class EndOfDayOperation implements Continuation
+class CloseOperation implements Continuation
 {
     private final GatewayPublication inboundPublication;
     private final List<LiveLibraryInfo> libraries;
     private final List<GatewaySession> gatewaySessions;
     private final ReceiverEndPoints receiverEndPoints;
-    private final EndOfDayCommand command;
+    private final StartCloseCommand command;
 
     private Step step = Step.CLOSING_NOT_LOGGED_ON_RECEIVER_END_POINTS;
     private int libraryIndex = 0;
     private int gatewaySessionIndex = 0;
 
-    EndOfDayOperation(
+    CloseOperation(
         final GatewayPublication inboundPublication,
         final List<LiveLibraryInfo> libraries,
         final List<GatewaySession> gatewaySessions,
         final ReceiverEndPoints receiverEndPoints,
-        final EndOfDayCommand command)
+        final StartCloseCommand command)
     {
         this.inboundPublication = inboundPublication;
         this.libraries = libraries;
@@ -115,10 +116,42 @@ class EndOfDayOperation implements Continuation
             final InternalSession session = gatewaySession.session();
             if (session != null)
             {
-                final long position = session.logoutAndDisconnect();
-                if (position < 0)
+                final SessionState state = session.state();
+                switch (state)
                 {
-                    return position;
+                    case SENT_LOGON:
+                    case ACTIVE:
+                    case AWAITING_LOGOUT:
+                    case LOGGING_OUT_AND_DISCONNECTING:
+                    case LOGGING_OUT:
+                    {
+                        final long position = session.logoutAndDisconnect();
+                        if (position < 0)
+                        {
+                            return position;
+                        }
+
+                        break;
+                    }
+
+                    case CONNECTED:
+                    case CONNECTING:
+                    case DISCONNECTING:
+                    {
+                        final long position = session.requestDisconnect();
+                        if (position < 0)
+                        {
+                            return position;
+                        }
+
+                        break;
+                    }
+
+                    case DISCONNECTED:
+                    case DISABLED:
+                    default:
+                        // deliberately blank
+                        break;
                 }
             }
 

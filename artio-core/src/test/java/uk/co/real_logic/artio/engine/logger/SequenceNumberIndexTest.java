@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.Aeron;
+import io.aeron.Image;
 import io.aeron.Publication;
 import io.aeron.Subscription;
 import io.aeron.driver.MediaDriver;
@@ -29,6 +30,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.SessionInfo;
@@ -38,8 +40,8 @@ import java.io.File;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static org.agrona.IoUtil.deleteIfExists;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -90,8 +92,15 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @After
     public void tearDown()
     {
-        CloseHelper.quietClose(writer);
+        CloseHelper.close(writer);
         deleteFiles();
+
+        verify(errorHandler, never()).onError(any());
+
+        CloseHelper.close(aeron);
+        CloseHelper.close(mediaDriver);
+
+        Mockito.framework().clearInlineMocks();
     }
 
     @Test
@@ -111,9 +120,11 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     @Test
     public void shouldStashNewSequenceNumberForLargeMessage()
     {
-        indexLargeFixMessage();
+        final long position = indexLargeFixMessage();
 
         assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER);
+
+        assertEquals(position, reader.indexedPosition(publication.sessionId()));
     }
 
     @Test
@@ -302,16 +313,6 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         assertUnknownSession();
     }
 
-    @After
-    public void verifyNoErrors()
-    {
-        writer.close();
-        verify(errorHandler, never()).onError(any());
-
-        CloseHelper.close(aeron);
-        CloseHelper.close(mediaDriver);
-    }
-
     private SequenceNumberIndexReader newInstanceAfterRestart()
     {
         final AtomicBuffer inMemoryBuffer = newBuffer();
@@ -347,17 +348,17 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         indexRecord();
     }
 
-    private void indexLargeFixMessage()
+    private long indexLargeFixMessage()
     {
         buffer = new UnsafeBuffer(new byte[BIG_BUFFER_LENGTH]);
 
         final String testReqId = largeTestReqId();
         bufferContainsExampleMessage(true, SESSION_ID, SEQUENCE_NUMBER, SEQUENCE_INDEX, testReqId);
 
-        indexRecord();
+        return indexRecord();
     }
 
-    private void indexRecord()
+    private long indexRecord()
     {
         long position = 0;
         while (position < 1)
@@ -370,11 +371,22 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         /*System.out.println("position = " + position);
         System.out.println("p = " + p);*/
 
-        int read = 0;
-        while (read < 1)
+
+        Image image = null;
+        while (image == null || image.position() < position)
         {
-            read += subscription.poll(writer, 1);
+            if (image == null)
+            {
+                image = subscription.imageBySessionId(publication.sessionId());
+            }
+
+            if (image != null)
+            {
+                image.poll(writer, 1);
+            }
         }
+
+        return position;
     }
 
     private void assertLastKnownSequenceNumberIs(final long sessionId, final int expectedSequenceNumber)
@@ -394,7 +406,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     private void deleteFiles()
     {
         deleteIfExists(new File(INDEX_FILE_PATH));
-        deleteIfExists(writablePath(INDEX_FILE_PATH));
-        deleteIfExists(passingPath(INDEX_FILE_PATH));
+        deleteIfExists(writableFile(INDEX_FILE_PATH));
+        deleteIfExists(passingFile(INDEX_FILE_PATH));
     }
 }

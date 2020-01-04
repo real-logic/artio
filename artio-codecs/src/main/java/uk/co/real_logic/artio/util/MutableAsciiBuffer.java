@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,9 @@ package uk.co.real_logic.artio.util;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.fields.*;
+import uk.co.real_logic.artio.util.float_parsing.AsciiBufferCharReader;
+import uk.co.real_logic.artio.util.float_parsing.DecimalFloatParser;
+
 
 import java.nio.ByteBuffer;
 
@@ -27,13 +30,9 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
 {
     private static final byte ZERO = '0';
     private static final byte DOT = (byte)'.';
-    private static final byte SPACE = ' ';
 
     private static final byte Y = (byte)'Y';
     private static final byte N = (byte)'N';
-
-    private static final byte[] MIN_INTEGER_VALUE = String.valueOf(Integer.MIN_VALUE).getBytes(US_ASCII);
-    private static final byte[] MIN_LONG_VALUE = String.valueOf(Long.MIN_VALUE).getBytes(US_ASCII);
 
     public MutableAsciiBuffer()
     {
@@ -170,82 +169,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
     @SuppressWarnings("FinalParameters")
     public DecimalFloat getFloat(final DecimalFloat number, int offset, int length)
     {
-        // Throw away trailing spaces or zeros
-        int end = offset + length;
-        for (int index = end - 1; isSpace(index) && index > offset; index--)
-        {
-            end--;
-        }
-
-        int endDiff = 0;
-        for (int index = end - 1; isZero(index) && index > offset; index--)
-        {
-            endDiff++;
-        }
-
-        boolean isFloatingPoint = false;
-        for (int index = end - endDiff - 1; index > offset; index--)
-        {
-            if (getByte(index) == DOT)
-            {
-                isFloatingPoint = true;
-                break;
-            }
-        }
-
-        if (isFloatingPoint)
-        {
-            end -= endDiff;
-        }
-
-        // Throw away leading spaces
-        for (int index = offset; isSpace(index) && index < end; index++)
-        {
-            offset++;
-        }
-
-        // Is it negative?
-        final boolean negative = getByte(offset) == '-';
-        if (negative)
-        {
-            offset++;
-        }
-
-        // Throw away leading zeros
-        for (int index = offset; isZero(index) && index < end; index++)
-        {
-            offset++;
-        }
-
-        int scale = 0;
-        long value = 0;
-        for (int index = offset; index < end; index++)
-        {
-            final byte byteValue = getByte(index);
-            if (byteValue == DOT)
-            {
-                // number of digits after the dot
-                scale = end - (index + 1);
-            }
-            else
-            {
-                final int digit = getDigit(index, byteValue);
-                value = value * 10 + digit;
-            }
-        }
-
-        number.set(negative ? -1 * value : value, scale);
-        return number;
-    }
-
-    private boolean isSpace(final int index)
-    {
-        return getByte(index) == SPACE;
-    }
-
-    private boolean isZero(final int index)
-    {
-        return getByte(index) == ZERO;
+        return DecimalFloatParser.extract(number, AsciiBufferCharReader.INSTANCE, this, offset, length);
     }
 
     public int getLocalMktDate(final int offset, final int length)
@@ -313,7 +237,7 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
         int total = 0;
         for (int index = offset; index < end; index++)
         {
-            total += (int)getByte(index);
+            total += getByte(index);
         }
 
         return total % 256;
@@ -365,10 +289,16 @@ public final class MutableAsciiBuffer extends UnsafeBuffer implements AsciiBuffe
      * @param offset the position at which to start putting ascii encoded float.
      * @param value the value of the float to encode - see {@link DecimalFloat} for details.
      * @param scale the scale of the float to encode - see {@link DecimalFloat} for details.
+     * @throws IllegalArgumentException if you try to encode NaN.
      * @return the length of the encoded value
      */
     public int putFloatAscii(final int offset, final long value, final int scale)
     {
+        if (DecimalFloat.isNaNValue(value, scale))
+        {
+            throw new IllegalArgumentException("You cannot encode NaN into a buffer - it's not a number");
+        }
+
         if (value == 0)
         {
             return handleZero(offset, scale);

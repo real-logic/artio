@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,13 +26,13 @@ import uk.co.real_logic.artio.dictionary.ir.Message;
 import java.util.Arrays;
 import java.util.List;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.dictionary.ir.Category.ADMIN;
 
-public class IntDictionaryTest
+public class LongDictionaryTest
 {
     private Dictionary data;
 
@@ -50,25 +50,25 @@ public class IntDictionaryTest
     @Test
     public void buildsValidationDictionaryForRequiredFields()
     {
-        final IntDictionary intDictionary = IntDictionary.requiredFields(data);
-        final IntHashSet heartbeat = intDictionary.values('0');
+        final LongDictionary longDictionary = LongDictionary.requiredFields(data);
+        final IntHashSet heartbeat = longDictionary.values('0');
 
         assertThat(heartbeat, hasItem(115));
         assertThat(heartbeat, hasSize(1));
-        assertTrue(intDictionary.contains('0', 115));
+        assertTrue(longDictionary.contains('0', 115));
     }
 
     @Test
     public void buildsValidationDictionaryForAllFields()
     {
-        final IntDictionary intDictionary = IntDictionary.allFields(data);
-        final IntHashSet heartbeat = intDictionary.values('0');
+        final LongDictionary longDictionary = LongDictionary.allFields(data);
+        final IntHashSet heartbeat = longDictionary.values('0');
 
         assertThat(heartbeat, hasItem(115));
         assertThat(heartbeat, hasItem(112));
         assertThat(heartbeat, hasSize(2));
 
-        assertTrue(intDictionary.contains('0', 115));
-        assertTrue(intDictionary.contains('0', 112));
+        assertTrue(longDictionary.contains('0', 115));
+        assertTrue(longDictionary.contains('0', 112));
     }
 }

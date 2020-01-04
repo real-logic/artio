@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,14 +23,12 @@ import org.agrona.IoUtil;
 import org.agrona.collections.Long2ObjectCache;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
+import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.FixMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 import uk.co.real_logic.artio.storage.messages.ReplayIndexRecordEncoder;
-import uk.co.real_logic.artio.util.AsciiBuffer;
-import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -38,6 +36,7 @@ import java.util.function.LongFunction;
 
 import static io.aeron.logbuffer.FrameDescriptor.*;
 import static org.agrona.UnsafeAccess.UNSAFE;
+import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
@@ -56,14 +55,14 @@ import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 public class ReplayIndex implements Index
 {
     private final LongFunction<SessionIndex> newSessionIndex = SessionIndex::new;
-    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final MessageHeaderDecoder frameHeaderDecoder = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
-    private final HeaderDecoder fixHeader = new HeaderDecoder();
     private final ReplayIndexRecordEncoder replayIndexRecord = new ReplayIndexRecordEncoder();
     private final MessageHeaderEncoder indexHeaderEncoder = new MessageHeaderEncoder();
+
     private final IndexedPositionWriter positionWriter;
     private final IndexedPositionReader positionReader;
+    private final SequenceNumberExtractor sequenceNumberExtractor;
 
     private final Long2ObjectCache<SessionIndex> fixSessionIdToIndex;
 
@@ -92,6 +91,7 @@ public class ReplayIndex implements Index
         this.positionBuffer = positionBuffer;
         this.recordingIdLookup = recordingIdLookup;
 
+        sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
         checkIndexFileSize(indexFileSize);
         fixSessionIdToIndex = new Long2ObjectCache<>(cacheNumSets, cacheSetSize, SessionIndex::close);
         final String replayPositionPath = replayPositionPath(logFileDir, requiredStreamId);
@@ -135,23 +135,24 @@ public class ReplayIndex implements Index
                 {
                     offset += actingBlockLength + 2;
 
-                    asciiBuffer.wrap(srcBuffer);
-                    fixHeader.decode(asciiBuffer, offset, messageFrame.bodyLength());
-
                     final long fixSessionId = messageFrame.session();
-                    final int sequenceNumber = fixHeader.msgSeqNum();
+                    final int sequenceNumber = sequenceNumberExtractor.extract(
+                        srcBuffer, offset, messageFrame.bodyLength());
                     final int sequenceIndex = messageFrame.sequenceIndex();
 
-                    if (beginMessage)
+                    if (sequenceNumber != NO_SEQUENCE_NUMBER)
                     {
-                        continuedFixSessionId = fixSessionId;
-                        continuedSequenceNumber = sequenceNumber;
-                        continuedSequenceIndex = sequenceIndex;
-                    }
+                        if (beginMessage)
+                        {
+                            continuedFixSessionId = fixSessionId;
+                            continuedSequenceNumber = sequenceNumber;
+                            continuedSequenceIndex = sequenceIndex;
+                        }
 
-                    fixSessionIdToIndex
-                        .computeIfAbsent(fixSessionId, newSessionIndex)
-                        .onRecord(endPosition, length, sequenceNumber, sequenceIndex, header);
+                        fixSessionIdToIndex
+                            .computeIfAbsent(fixSessionId, newSessionIndex)
+                            .onRecord(endPosition, length, sequenceNumber, sequenceIndex, header);
+                    }
                 }
             }
         }

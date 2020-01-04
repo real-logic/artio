@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,10 @@ public abstract class TcpChannelSupplier implements AutoCloseable
     abstract void stopConnecting(InetSocketAddress address) throws IOException;
 
     abstract int pollSelector(long timeInMs, NewChannelHandler handler) throws IOException;
+
+    abstract void unbind() throws IOException;
+
+    abstract void bind() throws IOException;
 
     @FunctionalInterface
     public interface InitiatedChannelHandler

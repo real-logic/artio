@@ -1,5 +1,5 @@
 /*
- * Copyright 2015=2016 Real Logic Ltd.
+ * Copyright 2015=2016 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,12 +65,12 @@ final class SequenceNumberIndexDescriptor
         return proposedCapacity;
     }
 
-    public static File passingPath(final String indexFilePath)
+    public static File passingFile(final String indexFilePath)
     {
         return new File(indexFilePath + "-passing");
     }
 
-    public static File writablePath(final String indexFilePath)
+    public static File writableFile(final String indexFilePath)
     {
         return new File(indexFilePath + "-writable");
     }

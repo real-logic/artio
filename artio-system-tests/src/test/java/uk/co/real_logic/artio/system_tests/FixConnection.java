@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -102,6 +102,19 @@ final class FixConnection implements AutoCloseable
         this.targetCompID = targetCompID;
     }
 
+    // Can read data
+    boolean isConnected()
+    {
+        try
+        {
+            return socket.read(readBuffer) != -1;
+        }
+        catch (final IOException e)
+        {
+            return false;
+        }
+    }
+
     void logon(final boolean resetSeqNumFlag)
     {
         setupHeader(logon.header(), msgSeqNum++, false);
@@ -121,6 +134,11 @@ final class FixConnection implements AutoCloseable
         return this;
     }
 
+    int acquireMsgSeqNum()
+    {
+        return this.msgSeqNum++;
+    }
+
     void logout()
     {
         setupHeader(logout.header(), msgSeqNum++, false);
@@ -128,7 +146,7 @@ final class FixConnection implements AutoCloseable
         send(logout);
     }
 
-    void setupHeader(final HeaderEncoder header, final int msgSeqNum, final boolean possDupFlag)
+    void setupHeader(final SessionHeaderEncoder header, final int msgSeqNum, final boolean possDupFlag)
     {
         final long timestamp = System.currentTimeMillis();
         final int timestampLength = sendingTimeEncoder.encode(timestamp);
@@ -250,13 +268,15 @@ final class FixConnection implements AutoCloseable
         CloseHelper.close(socket);
     }
 
-    void logoutAndAwaitReply()
+    LogoutDecoder logoutAndAwaitReply()
     {
         logout();
 
         final LogoutDecoder logout = readMessage(new LogoutDecoder());
 
         assertFalse(logout.textAsString(), logout.hasText());
+
+        return logout;
     }
 
     public void sendExecutionReport(final int msgSeqNum, final boolean possDupFlag)

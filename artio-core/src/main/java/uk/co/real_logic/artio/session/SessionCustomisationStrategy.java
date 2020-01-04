@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,9 @@
  */
 package uk.co.real_logic.artio.session;
 
-import uk.co.real_logic.artio.builder.LogonEncoder;
-import uk.co.real_logic.artio.builder.LogoutEncoder;
+import uk.co.real_logic.artio.builder.AbstractLogonEncoder;
+import uk.co.real_logic.artio.builder.AbstractLogoutEncoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 
 /**
  * Implement this interface if you want to alter logon or logoff messages with additional
@@ -38,7 +39,7 @@ public interface SessionCustomisationStrategy
      * @param logon the logon message about to be sent
      * @param sessionId the surrogate id for the Session that is being customised
      */
-    void configureLogon(LogonEncoder logon, long sessionId);
+    void configureLogon(AbstractLogonEncoder logon, long sessionId);
 
     /**
      * Add additional fields or information to the logout message.
@@ -46,5 +47,15 @@ public interface SessionCustomisationStrategy
      * @param logout the logout message about to be sent
      * @param sessionId the surrogate id for the Session that is being customised
      */
-    void configureLogout(LogoutEncoder logout, long sessionId);
+    void configureLogout(AbstractLogoutEncoder logout, long sessionId);
+
+    /**
+     * Add additional fields to the header of any message sent by Artio.
+     *
+     * @param header the header about to be sent
+     * @param sessionId the surrogate id for the Session that is being customised
+     */
+    default void configureHeader(SessionHeaderEncoder header, long sessionId)
+    {
+    }
 }

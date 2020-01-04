@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
 import org.junit.Test;
 import uk.co.real_logic.artio.builder.Decoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.ExampleDictionary;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.RejectReason;
@@ -37,6 +38,7 @@ import java.util.Set;
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
 import static org.agrona.generation.CompilerUtil.compileInMemory;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.builder.Decoder.NO_ERROR;
@@ -60,9 +62,6 @@ public abstract class AbstractDecoderGeneratorTest
     private static final String CHAR_ENUM_OPT = "charEnumOpt";
     private static final String INT_ENUM_OPT = "intEnumOpt";
     private static final String STRING_ENUM_OPT = "stringEnumOpt";
-    private static final String CHAR_ENUM_REQ = "charEnumReq";
-    private static final String INT_ENUM_REQ = "intEnumReq";
-    private static final String STRING_ENUM_REQ = "stringEnumReq";
 
     private static Class<?> heartbeatWithoutValidation;
     private static Class<?> heartbeatWithoutEnumValueValidation;
@@ -107,7 +106,7 @@ public abstract class AbstractDecoderGeneratorTest
         }
     }
 
-    static Map<String, CharSequence> generateSources(
+    private static Map<String, CharSequence> generateSources(
         final boolean validation, final boolean rejectingUnknownFields, final boolean rejectingUnknownEnumValue,
         final boolean flyweightStringsEnabled)
     {
@@ -122,7 +121,7 @@ public abstract class AbstractDecoderGeneratorTest
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
             MESSAGE_EXAMPLE, 1, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass, rejectUnknownField,
-            rejectUnknownEnumValue, flyweightStringsEnabled);
+            rejectUnknownEnumValue, flyweightStringsEnabled, String.valueOf(rejectingUnknownEnumValue));
 
         constantGenerator.generate();
         enumGenerator.generate();
@@ -354,7 +353,7 @@ public abstract class AbstractDecoderGeneratorTest
     @Test
     public void hasMessageTypeFlag() throws Exception
     {
-        final int messageType = (int)getStatic(heartbeat, "MESSAGE_TYPE");
+        final long messageType = (long)getStatic(heartbeat, "MESSAGE_TYPE");
 
         assertEquals(HEARTBEAT_TYPE, messageType);
     }
@@ -364,10 +363,10 @@ public abstract class AbstractDecoderGeneratorTest
     {
         final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE);
 
-        final Decoder header = getHeader(decoder);
+        final SessionHeaderDecoder header = getHeader(decoder);
         assertEquals(81, getBodyLength(header));
 
-        final Decoder trailer = getTrailer(decoder);
+        final Object trailer = getTrailer(decoder);
         assertEquals("199", getChecksum(trailer));
     }
 
@@ -570,6 +569,16 @@ public abstract class AbstractDecoderGeneratorTest
 
         assertFalse("Passed validation with missing fields", decoder.validate());
         assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong reject reason", REQUIRED_TAG_MISSING, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldValidateMissingRequiredFieldsInGroupsInsideComponents() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(MISSING_REQUIRED_FIELD_IN_GROUP_INSIDE_COMPONENT_MESSAGE);
+
+        assertFalse("Passed validation with missing fields", decoder.validate());
+        assertEquals("Wrong tag id", 404, decoder.invalidTagId());
         assertEquals("Wrong reject reason", REQUIRED_TAG_MISSING, decoder.rejectReason());
     }
 
@@ -866,7 +875,7 @@ public abstract class AbstractDecoderGeneratorTest
     public void shouldProduceCorrectMessageTypeForTwoCharTypes() throws Exception
     {
         final byte[] messageTypeBytes = (byte[])getStatic(otherMessage, "MESSAGE_TYPE_BYTES");
-        final int messageTypePacked = (int)getStatic(otherMessage, "MESSAGE_TYPE");
+        final long messageTypePacked = (long)getStatic(otherMessage, "MESSAGE_TYPE");
 
         assertEquals(OTHER_MESSAGE_TYPE_PACKED, messageTypePacked);
         assertArrayEquals(OTHER_MESSAGE_TYPE_BYTES, messageTypeBytes);
@@ -928,7 +937,7 @@ public abstract class AbstractDecoderGeneratorTest
         assertEquals(0, someTimeValue);
 
         final String someTimeFieldAsString = getSomeTimeFieldAsString(decoder);
-        assertEquals("19700101-00:00:00", someTimeFieldAsString);
+        assertEquals("19700101-00:00:00.000", someTimeFieldAsString);
     }
 
     @Test
@@ -1553,24 +1562,24 @@ public abstract class AbstractDecoderGeneratorTest
         return (int)get(group, "groupField");
     }
 
-    private int getBodyLength(final Decoder header) throws Exception
+    private int getBodyLength(final SessionHeaderDecoder header) throws Exception
     {
         return (int)get(header, ExampleDictionary.BODY_LENGTH);
     }
 
-    private Decoder getTrailer(final Decoder trailer) throws Exception
+    private Object getTrailer(final Decoder trailer) throws Exception
     {
-        return (Decoder)get(trailer, "trailer");
+        return get(trailer, "trailer");
     }
 
-    private String getChecksum(final Decoder trailer) throws Exception
+    private String getChecksum(final Object trailer) throws Exception
     {
         return (String)get(trailer, "checkSumAsString");
     }
 
-    private Decoder getHeader(final Decoder decoder) throws Exception
+    private SessionHeaderDecoder getHeader(final Decoder decoder) throws Exception
     {
-        return (Decoder)get(decoder, "header");
+        return (SessionHeaderDecoder)get(decoder, "header");
     }
 
     private Decoder decodeHeartbeat(final String example) throws Exception

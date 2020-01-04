@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,8 +29,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.Timing;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.CompletionPosition;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.RecordingCoordinator;
@@ -55,10 +57,12 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import static io.aeron.CommonContext.IPC_CHANNEL;
 import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -125,7 +129,9 @@ public class FramerTest
 
     private final EngineConfiguration engineConfiguration = new EngineConfiguration()
         .bindTo(FRAMER_ADDRESS.getHostName(), FRAMER_ADDRESS.getPort())
-        .replyTimeoutInMs(REPLY_TIMEOUT_IN_MS);
+        .replyTimeoutInMs(REPLY_TIMEOUT_IN_MS)
+        .libraryAeronChannel(IPC_CHANNEL)
+        .conclude();
 
     private Framer framer;
 
@@ -159,6 +165,7 @@ public class FramerTest
         when(mockReceiverEndPoint.libraryId()).thenReturn(LIBRARY_ID);
 
         when(gatewaySession.session()).thenReturn(session);
+        when(gatewaySession.fixDictionary()).thenReturn(FixDictionary.of(FixDictionary.findDefault()));
 
         when(session.logonTime()).thenReturn(-1L);
         when(session.compositeKey()).thenReturn(sessionKey);
@@ -206,6 +213,8 @@ public class FramerTest
         {
             client.close();
         }
+
+        Mockito.framework().clearInlineMocks();
     }
 
     @Test
@@ -531,6 +540,9 @@ public class FramerTest
             anyInt(),
             anyInt(),
             anyBoolean(),
+            anyInt(),
+            anyInt(),
+            any(),
             any(),
             any(),
             any(),
@@ -573,6 +585,9 @@ public class FramerTest
             anyInt(),
             anyInt(),
             anyBoolean(),
+            anyInt(),
+            anyInt(),
+            any(),
             any(),
             any(),
             any(),
@@ -760,6 +775,9 @@ public class FramerTest
             anyInt(),
             anyInt(),
             anyBoolean(),
+            anyInt(),
+            anyInt(),
+            any(),
             any(),
             any(),
             any(),
@@ -844,6 +862,7 @@ public class FramerTest
             false,
             "",
             "",
+            FixDictionary.findDefault(),
             HEARTBEAT_INTERVAL_IN_S,
             CORR_ID,
             header);
@@ -890,6 +909,9 @@ public class FramerTest
             anyInt(),
             anyInt(),
             anyBoolean(),
+            anyInt(),
+            anyInt(),
+            any(),
             any(),
             any(),
             any(),
@@ -925,6 +947,9 @@ public class FramerTest
             anyInt(),
             anyInt(),
             anyBoolean(),
+            anyInt(),
+            anyInt(),
+            any(),
             any(),
             any(),
             any(),

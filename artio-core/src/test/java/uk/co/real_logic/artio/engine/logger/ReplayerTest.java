@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,6 +51,7 @@ import java.util.regex.Pattern;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -64,7 +65,7 @@ import static uk.co.real_logic.artio.util.CustomMatchers.sequenceEqualsAscii;
 
 public class ReplayerTest extends AbstractLogTest
 {
-    private static final String DATE_TIME_STR = "19840521-15:00:00";
+    private static final String DATE_TIME_STR = "19840521-15:00:00.000";
     private static final long DATE_TIME_EPOCH_MS =
         new UtcTimestampDecoder().decode(DATE_TIME_STR.getBytes(US_ASCII));
 
@@ -114,7 +115,8 @@ public class ReplayerTest extends AbstractLogTest
             clock,
             EngineConfiguration.DEFAULT_GAPFILL_ON_REPLAY_MESSAGE_TYPES,
             replayHandler,
-            senderSequenceNumbers);
+            senderSequenceNumbers,
+            new FakeFixSessionCodecsFactory());
     }
 
     private void setReplayedMessages(final int replayedMessages)
@@ -194,8 +196,6 @@ public class ReplayerTest extends AbstractLogTest
 
         assertHasResentWithPossDupFlag(srcLength, times(2));
     }
-
-    // TODO: queue replay requests by fix session
 
     @Test
     public void shouldGapFillAdminMessages()
@@ -419,7 +419,7 @@ public class ReplayerTest extends AbstractLogTest
         final long result = bufferHasResendRequest(endSeqNo);
         onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
 
-        // Processes the backpressured try claim
+        // Processes the back pressured try claim
         replayer.doWork();
 
         verifyClaim();
@@ -438,7 +438,7 @@ public class ReplayerTest extends AbstractLogTest
     }
 
     @Test
-    public void shouldGapFillMissingMesages()
+    public void shouldGapFillMissingMessages()
     {
         final int endSeqNo = endSeqNoForTwoMessages();
 
@@ -455,7 +455,7 @@ public class ReplayerTest extends AbstractLogTest
     }
 
     @Test
-    public void shouldGapFillMissingMesagesWhenBackPressured()
+    public void shouldGapFillMissingMessagesWhenBackPressured()
     {
         final int endSeqNo = endSeqNoForTwoMessages();
 
@@ -479,7 +479,7 @@ public class ReplayerTest extends AbstractLogTest
     }
 
     @Test
-    public void shouldGapFillMissingMesagesFollowedByApplicationMessage()
+    public void shouldGapFillMissingMessagesFollowedByApplicationMessage()
     {
         final int endSeqNo = endSeqNoForTwoMessages();
 
@@ -772,13 +772,13 @@ public class ReplayerTest extends AbstractLogTest
         onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
     }
 
-    private void onMessage(final int messageType, final long result, final Action expectedAction)
+    private void onMessage(final long messageType, final long result, final Action expectedAction)
     {
         onMessageWithSession(messageType, result, expectedAction, SESSION_ID, CONNECTION_ID);
     }
 
     private void onMessageWithSession(
-        final int messageType,
+        final long messageType,
         final long result,
         final Action expectedAction,
         final long sessionId,

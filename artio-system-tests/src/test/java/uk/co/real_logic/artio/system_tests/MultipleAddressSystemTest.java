@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,10 +41,10 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
         final MediaDriver.Context context = mediaDriverContext(TestFixtures.TERM_BUFFER_LENGTH, true);
         mediaDriver = launchMediaDriver(context);
 
-        delete(ACCEPTOR_LOGS);
         acceptingEngine = FixEngine.launch(
             acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
-                .scheduler(new LowResourceEngineScheduler()));
+                .scheduler(new LowResourceEngineScheduler())
+                .deleteLogFileDirOnStart(true));
 
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 

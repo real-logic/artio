@@ -1,5 +1,5 @@
 /*
- * Copyright 2014-2016 Real Logic Ltd.
+ * Copyright 2014-2016 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +17,20 @@ package uk.co.real_logic.artio.engine.framer;
 
 import uk.co.real_logic.artio.Reply;
 
-final class EndOfDayCommand implements AdminCommand, Reply<Void>
+final class StartCloseCommand implements AdminCommand, Reply<Void>
 {
     private volatile State state = State.EXECUTING;
 
     // thread-safe publication by writes to state after, and reads of state before its read.
     private Exception error;
 
-    EndOfDayCommand()
+    StartCloseCommand()
     {
     }
 
     public void execute(final Framer framer)
     {
-        framer.onEndOfDay(this);
+        framer.onStartClose(this);
     }
 
     void onError(final Exception error)

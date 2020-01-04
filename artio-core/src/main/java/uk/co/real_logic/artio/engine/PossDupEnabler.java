@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
-import uk.co.real_logic.artio.dictionary.IntDictionary;
+import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
@@ -56,7 +56,7 @@ public class PossDupEnabler
 
     private final ExpandableArrayBuffer fragmentedMessageBuffer = new ExpandableArrayBuffer();
     private final PossDupFinder possDupFinder = new PossDupFinder();
-    private final OtfParser parser = new OtfParser(possDupFinder, new IntDictionary());
+    private final OtfParser parser = new OtfParser(possDupFinder, new LongDictionary());
     private final MutableAsciiBuffer mutableAsciiFlyweight = new MutableAsciiBuffer();
     private final UtcTimestampEncoder utcTimestampEncoder = new UtcTimestampEncoder();
 

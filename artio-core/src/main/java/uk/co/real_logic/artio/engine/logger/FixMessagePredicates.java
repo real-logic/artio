@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,25 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import org.agrona.ExpandableArrayBuffer;
-import org.agrona.collections.IntHashSet;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
-import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
-import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
-import uk.co.real_logic.artio.util.AsciiBuffer;
-import uk.co.real_logic.artio.util.BufferAsciiSequence;
-import uk.co.real_logic.artio.util.MutableAsciiBuffer;
-
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.ToIntFunction;
 import java.util.regex.Pattern;
-import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
+
+import org.agrona.ExpandableArrayBuffer;
+import org.agrona.collections.LongHashSet;
+
+
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
+import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
+import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
+import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
+import uk.co.real_logic.artio.util.AsciiBuffer;
+import uk.co.real_logic.artio.util.BufferAsciiSequence;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 /**
  * Filters to be used in conjunction with {@link FixArchiveScanner}.
@@ -114,9 +118,9 @@ public final class FixMessagePredicates
      */
     public static FixMessagePredicate messageTypeOf(final String... messageTypes)
     {
-        final IntHashSet hashSet = new IntHashSet();
+        final LongHashSet hashSet = new LongHashSet();
         Stream.of(messageTypes)
-            .mapToInt(GenerationUtil::packMessageType)
+            .mapToLong(GenerationUtil::packMessageType)
             .forEach(hashSet::add);
         return messageTypeOf(hashSet);
     }
@@ -124,70 +128,83 @@ public final class FixMessagePredicates
     /**
      * Filter messages by the message type of their fix message.
      *
-     * @param messageTypes the fix message types encoded as packed ints.
+     * @param messageTypes the fix message types encoded as packed longs.
      * @return the resulting predicate.
      */
-    public static FixMessagePredicate messageTypeOf(final int... messageTypes)
+    public static FixMessagePredicate messageTypeOf(final long... messageTypes)
     {
-        final IntHashSet hashSet = new IntHashSet();
-        IntStream.of(messageTypes)
-            .forEach(hashSet::add);
+        final LongHashSet hashSet = new LongHashSet();
+        LongStream.of(messageTypes)
+                  .forEach(hashSet::add);
         return messageTypeOf(hashSet);
     }
 
-    private static FixMessagePredicate messageTypeOf(final IntHashSet hashSet)
+    private static FixMessagePredicate messageTypeOf(final LongHashSet hashSet)
     {
-        return (message) -> hashSet.contains(message.messageType());
+        return (message) ->
+        {
+            final long messageType = MessageTypeExtractor.getMessageType(message);
+            return hashSet.contains(messageType);
+        };
     }
 
     /**
      * Filter the fix message predicate by parsing the sender and target comp ids out of the message body.
      *
+     * @param fixDictionary the fixDictionary to specify the version of the project.
      * @param senderCompId the sender comp id required in the message.
      * @param targetCompId the target comp id required in the message.
      * @return the resulting predicate.
      */
     public static FixMessagePredicate sessionOf(
+        final FixDictionary fixDictionary,
         final String senderCompId,
         final String targetCompId)
     {
-        return whereHeader(senderCompIdOf(senderCompId).and(targetCompIdOf(targetCompId)));
+        return whereHeader(fixDictionary,
+            senderCompIdOf(senderCompId).and(targetCompIdOf(targetCompId)));
     }
 
-    public static Predicate<HeaderDecoder> senderCompIdOf(final String senderCompId)
+    public static Predicate<SessionHeaderDecoder> senderCompIdOf(final String senderCompId)
     {
-        return headerMatches(senderCompId, HeaderDecoder::senderCompID, HeaderDecoder::senderCompIDLength);
+        return headerMatches(
+            senderCompId, SessionHeaderDecoder::senderCompID, SessionHeaderDecoder::senderCompIDLength);
     }
 
-    public static Predicate<HeaderDecoder> targetCompIdOf(final String targetCompId)
+    public static Predicate<SessionHeaderDecoder> targetCompIdOf(final String targetCompId)
     {
-        return headerMatches(targetCompId, HeaderDecoder::targetCompID, HeaderDecoder::targetCompIDLength);
+        return headerMatches(
+            targetCompId, SessionHeaderDecoder::targetCompID, SessionHeaderDecoder::targetCompIDLength);
     }
 
-    public static Predicate<HeaderDecoder> senderSubIdOf(final String senderSubId)
+    public static Predicate<SessionHeaderDecoder> senderSubIdOf(final String senderSubId)
     {
-        return headerMatches(senderSubId, HeaderDecoder::senderSubID, HeaderDecoder::senderSubIDLength);
+        return headerMatches(
+            senderSubId, SessionHeaderDecoder::senderSubID, SessionHeaderDecoder::senderSubIDLength);
     }
 
-    public static Predicate<HeaderDecoder> targetSubIdOf(final String targetSubId)
+    public static Predicate<SessionHeaderDecoder> targetSubIdOf(final String targetSubId)
     {
-        return headerMatches(targetSubId, HeaderDecoder::targetSubID, HeaderDecoder::targetSubIDLength);
+        return headerMatches(
+            targetSubId, SessionHeaderDecoder::targetSubID, SessionHeaderDecoder::targetSubIDLength);
     }
 
-    public static Predicate<HeaderDecoder> senderLocationIdOf(final String senderLocationId)
+    public static Predicate<SessionHeaderDecoder> senderLocationIdOf(final String senderLocationId)
     {
-        return headerMatches(senderLocationId, HeaderDecoder::senderLocationID, HeaderDecoder::senderLocationIDLength);
+        return headerMatches(
+            senderLocationId, SessionHeaderDecoder::senderLocationID, SessionHeaderDecoder::senderLocationIDLength);
     }
 
-    public static Predicate<HeaderDecoder> targetLocationIdOf(final String targetLocationId)
+    public static Predicate<SessionHeaderDecoder> targetLocationIdOf(final String targetLocationId)
     {
-        return headerMatches(targetLocationId, HeaderDecoder::targetLocationID, HeaderDecoder::targetLocationIDLength);
+        return headerMatches(
+            targetLocationId, SessionHeaderDecoder::targetLocationID, SessionHeaderDecoder::targetLocationIDLength);
     }
 
-    public static Predicate<HeaderDecoder> headerMatches(
+    public static Predicate<SessionHeaderDecoder> headerMatches(
         final String value,
-        final Function<HeaderDecoder, char[]> charExtractor,
-        final ToIntFunction<HeaderDecoder> lengthExtractor)
+        final Function<SessionHeaderDecoder, char[]> charExtractor,
+        final ToIntFunction<SessionHeaderDecoder> lengthExtractor)
     {
         final char[] expectedChars = value.toCharArray();
         return header ->
@@ -199,9 +216,10 @@ public final class FixMessagePredicates
     }
 
     public static FixMessagePredicate whereHeader(
-        final Predicate<HeaderDecoder> matches)
+        final FixDictionary fixDictionary,
+        final Predicate<SessionHeaderDecoder> matches)
     {
-        final HeaderDecoder header = new HeaderDecoder();
+        final SessionHeaderDecoder header = fixDictionary.makeHeaderDecoder();
         final ExpandableArrayBuffer buffer = new ExpandableArrayBuffer(1024);
         final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
         return message ->

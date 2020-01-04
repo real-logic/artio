@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import org.agrona.IoUtil;
 import org.agrona.LangUtil;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.concurrent.BackoffIdleStrategy;
+import org.agrona.concurrent.SigInt;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 
 import java.io.File;
@@ -28,6 +29,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.MappedByteBuffer;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.nio.channels.FileChannel.MapMode.READ_ONLY;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -45,31 +47,30 @@ public class HistogramLogReader implements AutoCloseable
     {
         if (args.length < 1)
         {
-            System.err.println("Usage: HistogramLogReader <logFile> [-s]");
+            System.err.println("Usage: HistogramLogReader <logFile>");
             System.err.println("Where <logFile> is the path to histogram log file");
             System.exit(-1);
         }
 
         final String path = args[0];
-        final boolean justSample = args.length == 2 && "-s".equals(args[1]);
-        final boolean loop = !justSample;
-
         final File file = new File(path);
         final double scalingFactor = MICROSECONDS.toNanos(1);
         final BackoffIdleStrategy idleStrategy = new BackoffIdleStrategy(0, 0, MILLISECONDS.toNanos(1),
             MINUTES.toNanos(1));
 
+        final AtomicBoolean running = new AtomicBoolean(true);
+        SigInt.register(() -> running.set(false));
+
         try (HistogramLogReader logReader = new HistogramLogReader(file))
         {
             do
             {
-
                 final int sampleCount = logReader.read(
                     (recordedAtTime, name, histogram) -> prettyPrint(recordedAtTime, histogram, name, scalingFactor));
 
                 idleStrategy.idle(sampleCount);
             }
-            while (loop);
+            while (running.get());
         }
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -67,6 +67,7 @@ public final class ExampleDictionary
     public static final String OTHER_MESSAGE_DECODER = TEST_PACKAGE + ".OtherMessageDecoder";
     public static final String OTHER_MESSAGE_ENCODER = TEST_PACKAGE + ".OtherMessageEncoder";
     public static final String ENUM_TEST_MESSAGE_DECODER = TEST_PACKAGE + ".EnumTestMessageDecoder";
+    public static final String ENUM_TEST_MESSAGE_ENCODER = TEST_PACKAGE + ".EnumTestMessageEncoder";
 
     public static final String PRINTER = TEST_PACKAGE + ".PrinterImpl";
 
@@ -96,6 +97,10 @@ public final class ExampleDictionary
     public static final String INT_ENUM_RF = "IntEnumRF";
     public static final String CHAR_ENUM_RF = "CharEnumRF";
 
+    public static final String STRING_ENUM_REQ = "stringEnumReq";
+    public static final String INT_ENUM_REQ = "intEnumReq";
+    public static final String CHAR_ENUM_REQ = "charEnumReq";
+
     public static final String HAS_TEST_REQ_ID = "hasTestReqID";
     public static final String HAS_BOOLEAN_FIELD = "hasBooleanField";
     public static final String HAS_DATA_FIELD = "hasDataField";
@@ -104,7 +109,7 @@ public final class ExampleDictionary
     public static final String MSG_TYPE = "msgType";
     public static final String BODY_LENGTH = "bodyLength";
 
-    public static final int HEARTBEAT_TYPE = '0';
+    public static final long HEARTBEAT_TYPE = '0';
 
     public static final Dictionary FIELD_EXAMPLE;
 
@@ -180,10 +185,12 @@ public final class ExampleDictionary
         "    {\n" +
         "      \"MessageName\": \"ComponentGroupGroup\",\n" +
         "      \"ComponentGroupField\": \"1\",\n" +
+        "      \"RequiredComponentGroupField\": \"10\",\n" +
         "    },\n" +
         "    {\n" +
         "      \"MessageName\": \"ComponentGroupGroup\",\n" +
         "      \"ComponentGroupField\": \"2\",\n" +
+        "      \"RequiredComponentGroupField\": \"20\",\n" +
         "    }\n" +
         "    ]\n" +
         "    \"EgNestedComponent\":  {\n" +
@@ -367,16 +374,21 @@ public final class ExampleDictionary
         "\001120=2\001121=1\001121=2\00110=161\001";
 
     public static final String COMPONENT_MESSAGE =
-        "8=FIX.4.4\0019=77\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-        "\001124=2\001130=2\001131=1\001131=2\00110=069\001";
+        "8=FIX.4.4\0019=91\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001124=2\001130=2\001131=1\001404=10\001131=2\001404=20\00110=176\001";
 
     public static final String NESTED_COMPONENT_MESSAGE =
-        "8=FIX.4.4\0019=77\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
-        "\001124=2\001130=2\001131=1\001131=2\001141=180\001142=2\001143=99\001143=100\00110=069\001";
+        "8=FIX.4.4\0019=91\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001124=2\001130=2\001131=1\001404=10\001131=2\001404=20\001141=180\001142=2\001143=99\001143=100\001" +
+        "10=069\001";
+
+    public static final String MISSING_REQUIRED_FIELD_IN_GROUP_INSIDE_COMPONENT_MESSAGE =
+        "8=FIX.4.4\0019=84\00135=0\001115=abc\001116=2\001117=1.1\001127=19700101-00:00:00.001" +
+        "\001124=2\001130=2\001131=1\001404=10\001131=2\001141=180\001142=2\001143=99\001143=100\00110=069\001";
 
     public static final String SHORT_TIMESTAMP_MESSAGE =
-        "8=FIX.4.4\0019=49\00135=0\001115=abc\001116=2\001117=1.1" +
-        "\001127=19700101-00:00:00\00110=113\001";
+        "8=FIX.4.4\0019=53\00135=0\001115=abc\001116=2\001117=1.1" +
+        "\001127=19700101-00:00:00.000\00110=042\001";
 
     public static final String EG_FIELDS_MESSAGE =
         "8=FIX.4.4\0019=0049\00135=Z\0011001=GBP\0011002=XLON\0011003=GB" +
@@ -415,7 +427,7 @@ public final class ExampleDictionary
 
     public static final String OTHER_MESSAGE_TYPE = "AB";
     public static final byte[] OTHER_MESSAGE_TYPE_BYTES = OTHER_MESSAGE_TYPE.getBytes(US_ASCII);
-    public static final int OTHER_MESSAGE_TYPE_PACKED = GenerationUtil.packMessageType(OTHER_MESSAGE_TYPE);
+    public static final long OTHER_MESSAGE_TYPE_PACKED = GenerationUtil.packMessageType(OTHER_MESSAGE_TYPE);
     private static final String ENUM_TEST_MESSAGE = "EnumTestMessage";
     private static final String ENUM_TEST_MESSAGE_TYPE = "ET";
     public static final String DATA_FIELD_LENGTH = "DataFieldLength";
@@ -500,6 +512,7 @@ public final class ExampleDictionary
 
         final Group componentGroup = Group.of(registerField(messageEgFields, 130, NO_COMPONENT_GROUP, INT));
         componentGroup.optionalEntry(registerField(messageEgFields, 131, "ComponentGroupField", INT));
+        componentGroup.requiredEntry(registerField(messageEgFields, 404, "RequiredComponentGroupField", INT));
 
         final Group nestedComponentGroup = Group.of(registerField(messageEgFields, 142,
             NO_NESTED_COMPONENT_GROUP, INT));

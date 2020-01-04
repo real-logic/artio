@@ -32,7 +32,11 @@ import java.util.stream.Stream;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.junit.Assert.assertFalse;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ManySessionsSystemTest extends AbstractGatewayToGatewaySystemTest
@@ -90,6 +94,30 @@ public class ManySessionsSystemTest extends AbstractGatewayToGatewaySystemTest
             .collect(Collectors.toList());
 
         sessions.forEach(this::messagesCanBeExchanged);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void shouldBeNotifiedOnSessionLogoutAndDisconnect()
+    {
+        final Reply<Session> sessionReply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+
+        acquireAcceptingSession();
+
+        testSystem.awaitCompletedReplies(sessionReply);
+        initiatingSession = sessionReply.resultIfPresent();
+
+        assertFalse(acceptingHandler.hasDisconnected());
+
+        assertThat(initiatingSession.logoutAndDisconnect(), greaterThan(0L));
+
+        assertSessionDisconnected(initiatingSession);
+
+        assertEventuallyTrue("SessionHandler.onDisconnect has not been called", () ->
+        {
+            testSystem.poll();
+            return acceptingHandler.hasDisconnected();
+        });
     }
 
     private static String accId(final int i)

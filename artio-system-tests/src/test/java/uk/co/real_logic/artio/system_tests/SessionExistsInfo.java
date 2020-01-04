@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,17 +15,26 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-public final class CompleteSessionId
+public final class SessionExistsInfo
 {
     private final String localCompId;
     private final String remoteCompId;
     private final long surrogateId;
+    private final int logonReceivedSequenceNumber;
+    private final int logonSequenceIndex;
 
-    CompleteSessionId(final String localCompId, final String remoteCompId, final long surrogateId)
+    SessionExistsInfo(
+        final String localCompId,
+        final String remoteCompId,
+        final long surrogateId,
+        final int logonReceivedSequenceNumber,
+        final int logonSequenceIndex)
     {
         this.localCompId = localCompId;
         this.remoteCompId = remoteCompId;
         this.surrogateId = surrogateId;
+        this.logonReceivedSequenceNumber = logonReceivedSequenceNumber;
+        this.logonSequenceIndex = logonSequenceIndex;
     }
 
     public String localCompId()
@@ -41,5 +50,15 @@ public final class CompleteSessionId
     public long surrogateId()
     {
         return surrogateId;
+    }
+
+    public int logonReceivedSequenceNumber()
+    {
+        return logonReceivedSequenceNumber;
+    }
+
+    public int logonSequenceIndex()
+    {
+        return logonSequenceIndex;
     }
 }

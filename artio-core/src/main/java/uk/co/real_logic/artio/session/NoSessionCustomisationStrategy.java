@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +15,19 @@
  */
 package uk.co.real_logic.artio.session;
 
-import uk.co.real_logic.artio.builder.LogonEncoder;
-import uk.co.real_logic.artio.builder.LogoutEncoder;
+import uk.co.real_logic.artio.builder.AbstractLogonEncoder;
+import uk.co.real_logic.artio.builder.AbstractLogoutEncoder;
 
 /**
  * A {@link SessionCustomisationStrategy} that does no customisation.
  */
 class NoSessionCustomisationStrategy implements SessionCustomisationStrategy
 {
-    public void configureLogon(final LogonEncoder logon, final long sessionId)
+    public void configureLogon(final AbstractLogonEncoder logon, final long sessionId)
     {
     }
 
-    public void configureLogout(final LogoutEncoder logout, final long sessionId)
+    public void configureLogout(final AbstractLogoutEncoder logout, final long sessionId)
     {
     }
 }

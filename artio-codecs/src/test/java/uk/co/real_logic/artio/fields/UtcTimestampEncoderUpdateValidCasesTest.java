@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,29 +72,14 @@ public class UtcTimestampEncoderUpdateValidCasesTest
         validNanoSecondTestCase = firstvalidNanoSecondTestCase && secondValidNanoSecondTestCase;
         epochMillis = toEpochMillis(expectedTimestamp);
         expectedLength = expectedTimestamp.length();
-
-        if (expectedLength == UtcTimestampEncoder.LENGTH_WITHOUT_MILLISECONDS)
-        {
-            expectedLengthMicros = expectedLength;
-            expectedLengthNanos = expectedLength;
-            expectedTimestampMicros = expectedTimestamp;
-            expectedTimestampNanos = expectedTimestamp;
-            epochMicros = epochMillis * MICROS_IN_MILLIS;
-            epochNanos = epochMillis * NANOS_IN_MILLIS;
-            otherEpochMicros = otherEpochMillis * MICROS_IN_MILLIS;
-            otherEpochNanos = epochMillis * NANOS_IN_MILLIS;
-        }
-        else
-        {
-            expectedLengthMicros = expectedLength + 3;
-            expectedLengthNanos = expectedLength + 6;
-            expectedTimestampMicros = expectedTimestamp + "001";
-            expectedTimestampNanos = expectedTimestamp + "000001";
-            epochMicros = epochMillis * MICROS_IN_MILLIS + 1;
-            epochNanos = epochMillis * NANOS_IN_MILLIS + 1;
-            otherEpochMicros = otherEpochMillis * MICROS_IN_MILLIS + 1;
-            otherEpochNanos = otherEpochMillis * NANOS_IN_MILLIS + 1;
-        }
+        expectedLengthMicros = expectedLength + 3;
+        expectedLengthNanos = expectedLength + 6;
+        expectedTimestampMicros = expectedTimestamp + "001";
+        expectedTimestampNanos = expectedTimestamp + "000001";
+        epochMicros = epochMillis * MICROS_IN_MILLIS + 1;
+        epochNanos = epochMillis * NANOS_IN_MILLIS + 1;
+        otherEpochMicros = otherEpochMillis * MICROS_IN_MILLIS + 1;
+        otherEpochNanos = otherEpochMillis * NANOS_IN_MILLIS + 1;
     }
 
     @Test

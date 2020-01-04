@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 package uk.co.real_logic.artio.validation;
 
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 
 /**
  * A dummy message validation strategy that checks nothing.
@@ -26,7 +26,7 @@ class NoMessageValidationStrategy implements MessageValidationStrategy
     {
     }
 
-    public boolean validate(final HeaderDecoder logon)
+    public boolean validate(final SessionHeaderDecoder logon)
     {
         return true;
     }

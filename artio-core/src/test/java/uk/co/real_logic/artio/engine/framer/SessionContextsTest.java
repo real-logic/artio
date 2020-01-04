@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,9 @@ import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Test;
 import uk.co.real_logic.artio.FileSystemCorruptionException;
-import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.LogonEncoder;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
-import uk.co.real_logic.artio.decoder.LogonDecoder;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.session.CompositeKey;
-import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -38,8 +34,10 @@ import java.util.List;
 import java.util.stream.IntStream;
 
 import static java.util.stream.Collectors.toList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotEquals;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.DUPLICATE_SESSION;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.LOWEST_VALID_SESSION_ID;
@@ -47,8 +45,6 @@ import static uk.co.real_logic.artio.engine.framer.SessionContexts.LOWEST_VALID_
 public class SessionContextsTest
 {
     private static final int BUFFER_SIZE = 8 * 1024;
-    private static final int SEQUENCE_INDEX = 1;
-    private static final int FILE_POSITION = 0;
 
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(BUFFER_SIZE));
@@ -211,32 +207,12 @@ public class SessionContextsTest
     }
 
     @Test
-    public void handsOutSameSessionContextAfterTakingOverAsLeader()
-    {
-        final long sessionId = 123;
-        final HeaderDecoder header = mock(HeaderDecoder.class);
-        when(header.senderCompIDAsString()).thenReturn(aSession.localCompId());
-        when(header.targetCompIDAsString()).thenReturn(aSession.remoteCompId());
-
-        sessionContexts.onSentFollowerLogon(header, sessionId, SEQUENCE_INDEX);
-
-        final SessionContext sessionContext = sessionContexts.onLogon(aSession);
-        assertValuesEqual(
-            sessionContext,
-            new SessionContext(sessionId, SEQUENCE_INDEX, Session.NO_LOGON_TIME, sessionContexts, FILE_POSITION));
-    }
-
-    @Test
     public void doesNotReuseExistingSessionIdsForDistinctCompositeKeys()
     {
-        final SessionContext aContext = sessionContexts.onLogon(aSession);
-        final SessionContext bContext = sessionContexts.onLogon(bSession); // bump counter
+        sessionContexts.onLogon(aSession);
+        sessionContexts.onLogon(bSession); // bump counter
 
-        final long result = logonWithSenderAndTarget(aSession.localCompId(), aSession.remoteCompId());
-
-        sessionContexts.onSentFollowerMessage(
-            aContext.sessionId(), aContext.sequenceIndex(), LogonDecoder.MESSAGE_TYPE, asciiBuffer,
-            Encoder.offset(result), Encoder.length(result));
+        logonWithSenderAndTarget(aSession.localCompId(), aSession.remoteCompId());
 
         final SessionContext cContext = sessionContexts.onLogon(cSession);
 

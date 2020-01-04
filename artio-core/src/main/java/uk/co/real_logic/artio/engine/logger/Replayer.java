@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,27 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import io.aeron.ExclusivePublication;
-import io.aeron.Subscription;
-import io.aeron.logbuffer.BufferClaim;
-import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import java.util.ArrayList;
+import java.util.Set;
+
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
-import org.agrona.collections.IntHashSet;
+import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
+
+import static org.agrona.collections.ArrayListUtil.fastUnorderedRemove;
+
+
+import io.aeron.ExclusivePublication;
+import io.aeron.Subscription;
+import io.aeron.logbuffer.BufferClaim;
+import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.decoder.ResendRequestDecoder;
+import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
+import uk.co.real_logic.artio.dictionary.SessionConstants;
 import uk.co.real_logic.artio.dictionary.generation.GenerationUtil;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
@@ -39,12 +48,8 @@ import uk.co.real_logic.artio.protocol.ProtocolSubscription;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import java.util.ArrayList;
-import java.util.Set;
-
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.COMMIT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static org.agrona.collections.ArrayListUtil.fastUnorderedRemove;
 import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
@@ -63,12 +68,11 @@ public class Replayer implements ProtocolHandler, Agent
     static final int MOST_RECENT_MESSAGE = 0;
     private static final int POLL_LIMIT = 10;
 
-    private final ResendRequestDecoder resendRequest = new ResendRequestDecoder();
-
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
 
     private final BufferClaim bufferClaim;
-    private final ProtocolSubscription protocolSubscription = ProtocolSubscription.of(this);
+    private final FixSessionCodecsFactory fixSessionCodecsFactory;
+    private final ControlledFragmentHandler protocolSubscription;
     private final ArrayList<ReplayerSession> replayerSessions = new ArrayList<>();
 
     private final ReplayQuery replayQuery;
@@ -76,9 +80,9 @@ public class Replayer implements ProtocolHandler, Agent
     private final IdleStrategy idleStrategy;
     private final ErrorHandler errorHandler;
     private final int maxClaimAttempts;
-    private final Subscription subscription;
+    private final Subscription inboundSubscription;
     private final String agentNamePrefix;
-    private final IntHashSet gapFillMessageTypes;
+    private final LongHashSet gapFillMessageTypes;
     private final EpochClock clock;
     private final ReplayHandler replayHandler;
     private final SenderSequenceNumbers senderSequenceNumbers;
@@ -90,12 +94,13 @@ public class Replayer implements ProtocolHandler, Agent
         final IdleStrategy idleStrategy,
         final ErrorHandler errorHandler,
         final int maxClaimAttempts,
-        final Subscription subscription,
+        final Subscription inboundSubscription,
         final String agentNamePrefix,
         final EpochClock clock,
         final Set<String> gapfillOnReplayMessageTypes,
         final ReplayHandler replayHandler,
-        final SenderSequenceNumbers senderSequenceNumbers)
+        final SenderSequenceNumbers senderSequenceNumbers,
+        final FixSessionCodecsFactory fixSessionCodecsFactory)
     {
         this.replayQuery = replayQuery;
         this.publication = publication;
@@ -103,15 +108,18 @@ public class Replayer implements ProtocolHandler, Agent
         this.idleStrategy = idleStrategy;
         this.errorHandler = errorHandler;
         this.maxClaimAttempts = maxClaimAttempts;
-        this.subscription = subscription;
+        this.inboundSubscription = inboundSubscription;
         this.agentNamePrefix = agentNamePrefix;
         this.clock = clock;
         this.replayHandler = replayHandler;
         this.senderSequenceNumbers = senderSequenceNumbers;
+        this.fixSessionCodecsFactory = fixSessionCodecsFactory;
 
-        gapFillMessageTypes = new IntHashSet();
+        gapFillMessageTypes = new LongHashSet();
         gapfillOnReplayMessageTypes.forEach(messageTypeAsString ->
             gapFillMessageTypes.add(GenerationUtil.packMessageType(messageTypeAsString)));
+
+        protocolSubscription = ProtocolSubscription.of(this, this.fixSessionCodecsFactory);
     }
 
     public Action onMessage(
@@ -122,18 +130,20 @@ public class Replayer implements ProtocolHandler, Agent
         final long connectionId,
         final long sessionId,
         final int sequenceIndex,
-        final int messageType,
+        final long messageType,
         final long timestamp,
         final MessageStatus status,
         final int sequenceNumber,
         final long position)
     {
-        if (messageType == ResendRequestDecoder.MESSAGE_TYPE && status == OK)
+        if (messageType == SessionConstants.RESEND_REQUEST_MESSAGE_TYPE && status == OK)
         {
             final int limit = Math.min(length, srcBuffer.capacity() - srcOffset);
 
             asciiBuffer.wrap(srcBuffer);
 
+            final FixSessionCodecs sessionCodecs = fixSessionCodecsFactory.get(sessionId);
+            final AbstractResendRequestDecoder resendRequest = sessionCodecs.resendRequest();
             resendRequest.reset();
             resendRequest.decode(asciiBuffer, srcOffset, limit);
 
@@ -158,6 +168,9 @@ public class Replayer implements ProtocolHandler, Agent
                 return CONTINUE;
             }
 
+            final GapFillEncoder encoder = sessionCodecs.makeGapFillEncoder();
+            encoder.setupMessage(resendRequest.header());
+
             final ReplayerSession replayerSession = new ReplayerSession(
                 bufferClaim,
                 idleStrategy,
@@ -176,7 +189,7 @@ public class Replayer implements ProtocolHandler, Agent
                 replayQuery,
                 message,
                 errorHandler,
-                resendRequest.header());
+                encoder);
 
             replayerSession.query();
 
@@ -197,7 +210,7 @@ public class Replayer implements ProtocolHandler, Agent
     {
         int work = senderSequenceNumbers.poll();
         work += pollReplayerSessions();
-        return work + subscription.controlledPoll(protocolSubscription, POLL_LIMIT);
+        return work + inboundSubscription.controlledPoll(protocolSubscription, POLL_LIMIT);
     }
 
     private int pollReplayerSessions()
@@ -218,6 +231,7 @@ public class Replayer implements ProtocolHandler, Agent
 
     public void onClose()
     {
+        replayerSessions.forEach(ReplayerSession::close);
         publication.close();
         replayQuery.close();
     }

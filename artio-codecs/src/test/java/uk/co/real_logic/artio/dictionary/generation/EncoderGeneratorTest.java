@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd., Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited., Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ import org.agrona.AsciiSequenceView;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.StringWriterOutputManager;
-import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.artio.EncodingException;
@@ -35,6 +34,7 @@ import java.util.Map;
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
 import static org.agrona.generation.CompilerUtil.compileInMemory;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
@@ -45,6 +45,7 @@ public class EncoderGeneratorTest
 {
     private static Map<String, CharSequence> sources;
     private static Class<?> heartbeat;
+    private static Class<?> enumTestMessage;
     private static Class<?> otherMessage;
     private static Class<?> heartbeatWithoutValidation;
 
@@ -60,6 +61,11 @@ public class EncoderGeneratorTest
         }
         heartbeat = compileInMemory(HEARTBEAT_ENCODER, sources);
         if (heartbeat == null && !AbstractDecoderGeneratorTest.CODEC_LOGGING)
+        {
+            System.out.println(sources);
+        }
+        enumTestMessage = compileInMemory(ENUM_TEST_MESSAGE_ENCODER, sources);
+        if (enumTestMessage == null && !AbstractDecoderGeneratorTest.CODEC_LOGGING)
         {
             System.out.println(sources);
         }
@@ -79,7 +85,7 @@ public class EncoderGeneratorTest
         final EnumGenerator enumGenerator = new EnumGenerator(MESSAGE_EXAMPLE, TEST_PARENT_PACKAGE, outputManager);
         final EncoderGenerator encoderGenerator =
             new EncoderGenerator(MESSAGE_EXAMPLE, TEST_PACKAGE, TEST_PARENT_PACKAGE, outputManager, validationClass,
-            rejectUnknownField, rejectUnknownEnumValue);
+            rejectUnknownField, rejectUnknownEnumValue, Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
         enumGenerator.generate();
         encoderGenerator.generate();
         return outputManager.getSources();
@@ -167,7 +173,7 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void offsetAndLengthbyteArraySettersWriteFields() throws Exception
+    public void offsetAndLengthByteArraySettersWriteFields() throws Exception
     {
         final Encoder encoder = newHeartbeat();
 
@@ -240,11 +246,37 @@ public class EncoderGeneratorTest
     {
         final Object encoder = heartbeat.getConstructor().newInstance();
 
-        setEnumByRepresentation(encoder,
+        setEnum(encoder,
             ON_BEHALF_OF_COMP_ID,
             PARENT_PACKAGE + ".OnBehalfOfCompID",
             "abc");
         assertOnBehalfOfCompIDValue(encoder, "abc");
+    }
+
+    @Test
+    public void stringSettersByEnumDoesNothingNullValue() throws Exception
+    {
+        final Object encoder = heartbeat.getConstructor().newInstance();
+        setEnum(encoder,
+            ON_BEHALF_OF_COMP_ID,
+            PARENT_PACKAGE + ".OnBehalfOfCompID",
+            "NULL_VAL"
+        );
+        assertOnBehalfOfCompIDValue(encoder, "");
+    }
+
+    @Test
+    public void stringSettersByEnumThrowForUnknownValue() throws Exception
+    {
+        final Object encoder = heartbeat.getConstructor().newInstance();
+        assertThrows(EncodingException.class, () ->
+        {
+            setEnum(encoder,
+                ON_BEHALF_OF_COMP_ID,
+                PARENT_PACKAGE + ".OnBehalfOfCompID",
+                "ARTIO_UNKNOWN"
+            );
+        });
     }
 
     @Test
@@ -261,9 +293,27 @@ public class EncoderGeneratorTest
     public void intSettersByEnumWriteToFields() throws Exception
     {
         final Object encoder = heartbeat.getConstructor().newInstance();
-        setEnumByRepresentation(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", 1);
+        setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "ONE");
 
         assertEquals(1, getField(encoder, INT_FIELD));
+    }
+
+    @Test
+    public void intSettersByEnumDoesNothingForNullValue() throws Exception
+    {
+        final Object encoder = heartbeat.getConstructor().newInstance();
+        setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "NULL_VAL");
+        assertEquals(0, getField(encoder, INT_FIELD));
+    }
+
+    @Test
+    public void intSettersByEnumThrowForUnknownValue() throws Exception
+    {
+        final Object encoder = heartbeat.getConstructor().newInstance();
+        assertThrows(EncodingException.class, () ->
+        {
+            setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "ARTIO_UNKNOWN");
+        });
     }
 
     @Test
@@ -275,7 +325,7 @@ public class EncoderGeneratorTest
 
         setFloat(encoder, FLOAT_FIELD, value);
 
-        Assert.assertEquals(value, getField(encoder, FLOAT_FIELD));
+        assertEquals(value, getField(encoder, FLOAT_FIELD));
     }
 
     @Test
@@ -697,6 +747,60 @@ public class EncoderGeneratorTest
         encoder.encode(buffer, 1);
     }
 
+    @Test(expected = EncodingException.class)
+    public void shouldValidateMissingRequiredCharEnumFields() throws Exception
+    {
+        final Encoder encoder = newEnumTestMessage();
+
+        setEnum(
+            encoder,
+            INT_ENUM_REQ,
+            PARENT_PACKAGE + ".IntEnumReq",
+            "THIRTY");
+        setEnum(
+            encoder,
+            STRING_ENUM_REQ,
+            PARENT_PACKAGE + ".StringEnumReq",
+            "GAMMA");
+        encoder.encode(buffer, 1);
+    }
+
+    @Test(expected = EncodingException.class)
+    public void shouldValidateMissingRequiredIntEnumFields() throws Exception
+    {
+        final Encoder encoder = newEnumTestMessage();
+
+        setEnum(
+            encoder,
+            CHAR_ENUM_REQ,
+            PARENT_PACKAGE + ".CharEnumReq",
+            "C");
+        setEnum(
+            encoder,
+            STRING_ENUM_REQ,
+            PARENT_PACKAGE + ".StringEnumReq",
+            "GAMMA");
+        encoder.encode(buffer, 1);
+    }
+
+    @Test(expected = EncodingException.class)
+    public void shouldValidateMissingRequiredStringEnumFields() throws Exception
+    {
+        final Encoder encoder = newEnumTestMessage();
+
+        setEnum(
+            encoder,
+            CHAR_ENUM_REQ,
+            PARENT_PACKAGE + ".CharEnumReq",
+            "C");
+        setEnum(
+            encoder,
+            INT_ENUM_REQ,
+            PARENT_PACKAGE + ".IntEnumReq",
+            "THIRTY");
+        encoder.encode(buffer, 1);
+    }
+
     @Test
     public void canDisableRequiredStringFieldValidation() throws Exception
     {
@@ -822,9 +926,11 @@ public class EncoderGeneratorTest
 
         Object componentGroup = getComponentGroup(egComponent, 2);
         setComponentGroupField(componentGroup, 1);
+        setRequiredComponentGroupField(componentGroup, 10);
 
         componentGroup = next(componentGroup);
         setComponentGroupField(componentGroup, 2);
+        setRequiredComponentGroupField(componentGroup, 20);
     }
 
     private void setEgGroupToTwoElements(final Encoder encoder) throws Exception
@@ -852,6 +958,11 @@ public class EncoderGeneratorTest
     private void setComponentGroupField(final Object group, final int value) throws Exception
     {
         setInt(group, "componentGroupField", value);
+    }
+
+    private void setRequiredComponentGroupField(final Object group, final int value) throws Exception
+    {
+        setInt(group, "requiredComponentGroupField", value);
     }
 
     private void setupHeader(final Encoder encoder) throws Exception
@@ -983,6 +1094,11 @@ public class EncoderGeneratorTest
     private Encoder newHeartbeat() throws Exception
     {
         return (Encoder)heartbeat.getConstructor().newInstance();
+    }
+
+    private Encoder newEnumTestMessage() throws Exception
+    {
+        return (Encoder)enumTestMessage.getConstructor().newInstance();
     }
 
     private void assertTestReqIdLength(final int expectedLength, final Object encoder) throws Exception

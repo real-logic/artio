@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -129,7 +129,7 @@ public class AbstractLogTest
         final int sequenceIndex,
         final Encoder exampleMessage,
         final HeaderEncoder header,
-        final int messageType)
+        final long messageType)
     {
         final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
         final int timestampLength = timestampEncoder.encode(ORIGINAL_SENDING_EPOCH_MS);
@@ -153,7 +153,7 @@ public class AbstractLogTest
         final long sessionId,
         final int sequenceIndex,
         final MutableAsciiBuffer asciiBuffer,
-        final int messageType)
+        final long messageType)
     {
         offset = START;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.client;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.ValidationError;
-import uk.co.real_logic.artio.dictionary.IntDictionary;
+import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.library.SessionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -35,7 +35,7 @@ import static uk.co.real_logic.artio.Constants.TEST_REQ_ID;
 public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
 {
 
-    private final OtfParser parser = new OtfParser(this, new IntDictionary());
+    private final OtfParser parser = new OtfParser(this, new LongDictionary());
     private final MutableAsciiBuffer latestTestRequestMessageBuffer = new MutableAsciiBuffer(new byte[8 * 1024]);
     private int latestTestRequestMessageLength = 0;
 
@@ -48,7 +48,7 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
         final int libraryId,
         final Session session,
         final int sequenceIndex,
-        final int messageType,
+        final long messageType,
         final long timestampInNs,
         final long position)
     {
@@ -118,7 +118,7 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
 
     public boolean onError(
         final ValidationError error,
-        final int messageType,
+        final long messageType,
         final int tagNumber,
         final AsciiFieldFlyweight value)
     {

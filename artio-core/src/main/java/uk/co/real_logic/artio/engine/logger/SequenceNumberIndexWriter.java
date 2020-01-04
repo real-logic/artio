@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,19 +23,22 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.EpochClock;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
 import uk.co.real_logic.artio.engine.ChecksumFramer;
 import uk.co.real_logic.artio.engine.MappedFile;
+import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder;
-import uk.co.real_logic.artio.util.AsciiBuffer;
-import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 
 import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
+import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
@@ -54,21 +57,20 @@ public class SequenceNumberIndexWriter implements Index
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final ResetSequenceNumberDecoder resetSequenceNumber = new ResetSequenceNumberDecoder();
-    private final HeaderDecoder fixHeader = new HeaderDecoder();
 
-    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final MessageHeaderDecoder fileHeaderDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder fileHeaderEncoder = new MessageHeaderEncoder();
     private final LastKnownSequenceNumberEncoder lastKnownEncoder = new LastKnownSequenceNumberEncoder();
     private final LastKnownSequenceNumberDecoder lastKnownDecoder = new LastKnownSequenceNumberDecoder();
     private final Long2LongHashMap recordOffsets = new Long2LongHashMap(MISSING_RECORD);
 
+    private final SequenceNumberExtractor sequenceNumberExtractor;
     private final ChecksumFramer checksumFramer;
     private final AtomicBuffer inMemoryBuffer;
     private final ErrorHandler errorHandler;
-    private final File indexPath;
-    private final File writablePath;
-    private final File passingPlacePath;
+    private final Path indexPath;
+    private final Path writablePath;
+    private final Path passingPlacePath;
     private final int fileCapacity;
     private final RecordingIdLookup recordingIdLookup;
     private final int streamId;
@@ -103,10 +105,12 @@ public class SequenceNumberIndexWriter implements Index
         this.clock = clock;
 
         final String indexFilePath = indexFile.file().getAbsolutePath();
-        indexPath = indexFile.file();
-        writablePath = writablePath(indexFilePath);
-        passingPlacePath = passingPath(indexFilePath);
-        writableFile = MappedFile.map(writablePath, fileCapacity);
+        indexPath = indexFile.file().toPath();
+        final File writeableFile = writableFile(indexFilePath);
+        writablePath = writeableFile.toPath();
+        passingPlacePath = passingFile(indexFilePath).toPath();
+        writableFile = MappedFile.map(writeableFile, fileCapacity);
+        sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
 
         // TODO: Fsync parent directory
         indexedPositionsOffset = positionTableOffset(fileCapacity);
@@ -144,51 +148,50 @@ public class SequenceNumberIndexWriter implements Index
             return;
         }
 
-        if ((header.flags() & BEGIN_FLAG) != BEGIN_FLAG)
+        if ((header.flags() & BEGIN_FLAG) == BEGIN_FLAG)
         {
-            return;
-        }
+            int offset = srcOffset;
+            messageHeader.wrap(buffer, offset);
 
-        int offset = srcOffset;
-        messageHeader.wrap(buffer, offset);
+            offset += messageHeader.encodedLength();
+            final int actingBlockLength = messageHeader.blockLength();
+            final int version = messageHeader.version();
 
-        offset += messageHeader.encodedLength();
-        final int actingBlockLength = messageHeader.blockLength();
-        final int version = messageHeader.version();
-
-        switch (messageHeader.templateId())
-        {
-            case FixMessageEncoder.TEMPLATE_ID:
+            switch (messageHeader.templateId())
             {
-                messageFrame.wrap(buffer, offset, actingBlockLength, version);
-
-                if (messageFrame.status() != MessageStatus.OK)
+                case FixMessageEncoder.TEMPLATE_ID:
                 {
-                    return;
+                    messageFrame.wrap(buffer, offset, actingBlockLength, version);
+
+                    if (messageFrame.status() != MessageStatus.OK)
+                    {
+                        return;
+                    }
+
+                    offset += actingBlockLength + 2;
+
+                    final long sessionId = messageFrame.session();
+
+                    final int msgSeqNum = sequenceNumberExtractor.extract(
+                        buffer, offset, messageFrame.bodyLength());
+                    if (msgSeqNum != NO_SEQUENCE_NUMBER)
+                    {
+                        saveRecord(msgSeqNum, sessionId);
+                    }
+                    break;
                 }
 
-                offset += actingBlockLength + 2;
+                case ResetSessionIdsDecoder.TEMPLATE_ID:
+                {
+                    resetSequenceNumbers();
+                    break;
+                }
 
-                asciiBuffer.wrap(buffer);
-                fixHeader.decode(asciiBuffer, offset, messageFrame.bodyLength());
-
-                final int msgSeqNum = fixHeader.msgSeqNum();
-                final long sessionId = messageFrame.session();
-
-                saveRecord(msgSeqNum, sessionId);
-                break;
-            }
-
-            case ResetSessionIdsDecoder.TEMPLATE_ID:
-            {
-                resetSequenceNumbers();
-                break;
-            }
-
-            case ResetSequenceNumberDecoder.TEMPLATE_ID:
-            {
-                resetSequenceNumber.wrap(buffer, offset, actingBlockLength, version);
-                saveRecord(0, resetSequenceNumber.session());
+                case ResetSequenceNumberDecoder.TEMPLATE_ID:
+                {
+                    resetSequenceNumber.wrap(buffer, offset, actingBlockLength, version);
+                    saveRecord(0, resetSequenceNumber.session());
+                }
             }
         }
 
@@ -277,18 +280,21 @@ public class SequenceNumberIndexWriter implements Index
         }
     }
 
-    private boolean rename(final File src, final File dest)
+    private boolean rename(final Path src, final Path dest)
     {
-        if (src.renameTo(dest))
+        try
         {
+            Files.move(src, dest, StandardCopyOption.ATOMIC_MOVE);
             return true;
         }
-
-        errorHandler.onError(new IllegalStateException("unable to rename " + src + " to " + dest));
-        return false;
+        catch (final IOException e)
+        {
+            errorHandler.onError(e);
+            return false;
+        }
     }
 
-    public File passingPlace()
+    public Path passingPlace()
     {
         return passingPlacePath;
     }
@@ -380,9 +386,9 @@ public class SequenceNumberIndexWriter implements Index
         {
             readFile(fileBuffer);
         }
-        else if (passingPlacePath.exists())
+        else if (Files.exists(passingPlacePath))
         {
-            if (passingPlacePath.renameTo(indexPath))
+            if (rename(passingPlacePath, indexPath))
             {
                 // TODO: fsync parent directory
                 indexFile.remap();

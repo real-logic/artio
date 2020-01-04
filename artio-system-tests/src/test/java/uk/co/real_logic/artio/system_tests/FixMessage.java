@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -59,7 +59,12 @@ public class FixMessage extends Int2ObjectHashMap<String>
 
     public int messageSequenceNumber()
     {
-        return Integer.parseInt(get(Constants.MSG_SEQ_NUM));
+        return getInt(Constants.MSG_SEQ_NUM);
+    }
+
+    public int getInt(final int tag)
+    {
+        return Integer.parseInt(get(tag));
     }
 
     public void messageSequenceNumber(final int messageSequenceNumber)

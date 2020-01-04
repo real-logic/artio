@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,7 @@ public class FramerContext
 
     private final Framer framer;
 
+    private final EngineConfiguration configuration;
     private final GatewaySessions gatewaySessions;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
@@ -67,12 +68,18 @@ public class FramerContext
         final AgentInvoker conductorAgentInvoker,
         final RecordingCoordinator recordingCoordinator)
     {
+        this.configuration = configuration;
+
         final SessionIdStrategy sessionIdStrategy = configuration.sessionIdStrategy();
-        this.sessionContexts = new SessionContexts(configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
+
         final IdleStrategy idleStrategy = configuration.framerIdleStrategy();
         final Streams outboundLibraryStreams = engineContext.outboundLibraryStreams();
 
-        final SystemEpochClock clock = new SystemEpochClock();
+        final SystemEpochClock epochClock = new SystemEpochClock();
+
+        this.sessionContexts = new SessionContexts(
+            configuration.sessionIdBuffer(), sessionIdStrategy, errorHandler);
+
         this.inboundPublication = engineContext.inboundPublication();
         this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "outboundPublication");
 
@@ -82,7 +89,7 @@ public class FramerContext
             configuration.receivedSequenceNumberBuffer(), errorHandler);
 
         gatewaySessions = new GatewaySessions(
-            clock,
+            epochClock,
             outboundPublication,
             sessionIdStrategy,
             configuration.sessionCustomisationStrategy(),
@@ -97,7 +104,8 @@ public class FramerContext
             sessionContexts,
             configuration.sessionPersistenceStrategy(),
             sentSequenceNumberIndex,
-            receivedSequenceNumberIndex);
+            receivedSequenceNumberIndex
+        );
 
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,
@@ -106,12 +114,13 @@ public class FramerContext
             fixCounters,
             errorHandler,
             gatewaySessions,
-            engineContext.senderSequenceNumbers());
+            engineContext.senderSequenceNumbers()
+        );
 
         final FinalImagePositions finalImagePositions = new FinalImagePositions();
 
         framer = new Framer(
-            clock,
+            epochClock,
             timers.outboundTimer(),
             timers.sendTimer(),
             configuration,
@@ -202,10 +211,10 @@ public class FramerContext
         return null;
     }
 
-    public void runEndOfDay()
+    public void startClose()
     {
         final IdleStrategy idleStrategy = CommonConfiguration.backoffIdleStrategy();
-        final EndOfDayCommand command = new EndOfDayCommand();
+        final StartCloseCommand command = new StartCloseCommand();
         while (!adminCommands.offer(command))
         {
             idleStrategy.idle();
@@ -239,6 +248,24 @@ public class FramerContext
             remoteSubId,
             localLocationId,
             remoteLocationId);
+
+        if (adminCommands.offer(command))
+        {
+            return command;
+        }
+
+        return null;
+    }
+
+    public Reply<?> bind(final boolean bind)
+    {
+        final BindCommand command = new BindCommand(bind);
+
+        if (bind && !configuration.hasBindAddress())
+        {
+            command.onError(new IllegalStateException("Missing address: EngineConfiguration.bindTo()"));
+            return command;
+        }
 
         if (adminCommands.offer(command))
         {

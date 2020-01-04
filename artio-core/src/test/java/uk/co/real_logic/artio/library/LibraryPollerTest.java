@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import org.mockito.stubbing.Answer;
 import org.mockito.stubbing.OngoingStubbing;
 import org.mockito.verification.VerificationMode;
 import uk.co.real_logic.artio.FixCounters;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.artio.messages.SessionStatus;
@@ -371,14 +372,16 @@ public class LibraryPollerTest
             InternalSession.INITIAL_LAST_RESEND_CHUNK_MSG_SEQ_NUM,
             InternalSession.INITIAL_END_OF_RESEND_REQUEST_RANGE,
             InternalSession.INITIAL_AWAITING_HEARTBEAT,
-            "ABC",
+            LAST_RECEIVED_SEQUENCE_NUMBER, SEQUENCE_INDEX, "ABC",
             "",
             "",
             "DEF",
             "",
             "", address,
             "",
-            "");
+            "",
+            FixDictionary.findDefault()
+        );
     }
 
     private SessionsDecoder hasOtherSessionId()

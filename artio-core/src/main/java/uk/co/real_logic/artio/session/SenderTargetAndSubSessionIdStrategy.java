@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.session;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
+import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.storage.messages.SenderTargetAndSubCompositeKeyDecoder;
 import uk.co.real_logic.artio.storage.messages.SenderTargetAndSubCompositeKeyEncoder;
@@ -44,7 +44,7 @@ class SenderTargetAndSubSessionIdStrategy implements SessionIdStrategy
     {
     }
 
-    public CompositeKey onAcceptLogon(final HeaderDecoder header)
+    public CompositeKey onAcceptLogon(final SessionHeaderDecoder header)
     {
         return new CompositeKeyImpl(
             header.targetCompID(), header.targetCompIDLength(),

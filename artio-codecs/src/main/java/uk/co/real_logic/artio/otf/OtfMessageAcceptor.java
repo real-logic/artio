@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,5 +56,5 @@ public interface OtfMessageAcceptor
      */
     MessageControl onGroupEnd(int tag, int numInGroup, int index);
 
-    boolean onError(ValidationError error, int messageType, int tagNumber, AsciiFieldFlyweight value);
+    boolean onError(ValidationError error, long messageType, int tagNumber, AsciiFieldFlyweight value);
 }

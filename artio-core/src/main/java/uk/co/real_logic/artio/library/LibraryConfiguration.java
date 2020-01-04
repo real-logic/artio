@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,9 @@ public final class LibraryConfiguration extends CommonConfiguration
         senderLocationId,
         targetCompId,
         remoteSubId,
-        remoteLocationId) -> {};
+        remoteLocationId,
+        logonReceivedSequence,
+        logonSequenceIndex) -> {};
     public static final LibraryConnectHandler DEFAULT_LIBRARY_CONNECT_HANDLER = new LibraryConnectHandler()
     {
         public void onConnect(final FixLibrary library)

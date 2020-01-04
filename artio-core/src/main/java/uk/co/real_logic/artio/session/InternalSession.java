@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ public class InternalSession extends Session
     public InternalSession(
         final int heartbeatIntervalInS,
         final long connectionId,
-        final EpochClock clock,
+        final EpochClock epochClock,
         final SessionState state,
         final SessionProxy proxy,
         final GatewayPublication publication,
@@ -50,12 +50,14 @@ public class InternalSession extends Session
         final int sequenceIndex,
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer,
-        final boolean enableLastMsgSeqNumProcessed)
+        final boolean enableLastMsgSeqNumProcessed,
+        final String beginString,
+        final SessionCustomisationStrategy customisationStrategy)
     {
         super(
             heartbeatIntervalInS,
             connectionId,
-            clock,
+            epochClock,
             state,
             proxy,
             publication,
@@ -68,7 +70,9 @@ public class InternalSession extends Session
             sequenceIndex,
             reasonableTransmissionTimeInMs,
             asciiBuffer,
-            enableLastMsgSeqNumProcessed);
+            enableLastMsgSeqNumProcessed,
+            beginString,
+            customisationStrategy);
     }
 
     public int poll(final long time)
@@ -134,6 +138,11 @@ public class InternalSession extends Session
     public void updateLastMessageProcessed()
     {
         super.updateLastMessageProcessed();
+    }
+
+    public void initialLastReceivedMsgSeqNum(final int lastReceivedMsgSeqNum)
+    {
+        super.initialLastReceivedMsgSeqNum(lastReceivedMsgSeqNum);
     }
 
     public ControlledFragmentHandler.Action onInvalidMessage(

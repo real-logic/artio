@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -183,7 +183,7 @@ public final class UtcTimestampEncoder
         UtcTimeOnlyEncoder.encodeFraction(
             localSecond, fractionOfSecond, flyweight, LENGTH_OF_DATE_AND_DASH, fractionFieldLength);
 
-        return fractionOfSecond > 0 ? lengthWithFraction : LENGTH_WITHOUT_MILLISECONDS;
+        return lengthWithFraction;
     }
 
     /**
@@ -231,7 +231,7 @@ public final class UtcTimestampEncoder
         UtcTimeOnlyEncoder.encodeFraction(
             localSecond, fractionOfSecond, flyweight, LENGTH_OF_DATE_AND_DASH, fractionFieldLength);
 
-        return fractionOfSecond > 0 ? lengthWithFraction : LENGTH_WITHOUT_MILLISECONDS;
+        return lengthWithFraction;
     }
 
     public byte[] buffer()
@@ -312,7 +312,7 @@ public final class UtcTimestampEncoder
             offset + LENGTH_OF_DATE_AND_DASH,
             fractionFieldLength);
 
-        return fractionOfSecond > 0 ? lengthWithFraction : LENGTH_WITHOUT_MILLISECONDS;
+        return lengthWithFraction;
     }
 
     private static long epochDay(final long localSecond)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,38 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.lessThan;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.fail;
+import static uk.co.real_logic.artio.Constants.LOGON_MESSAGE_AS_STR;
+import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
+import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.ACCEPTOR_ID;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.INITIATOR_ID;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.TEST_REPLY_TIMEOUT_IN_MS;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.acceptingConfig;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.acceptingLibraryConfig;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.connect;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.initiate;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.launchInitiatingEngine;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.newInitiatingLibrary;
+
+import java.util.List;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
 import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.builder.Encoder;
+import uk.co.real_logic.artio.builder.RejectEncoder;
+import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -27,27 +54,24 @@ import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.validation.AuthenticationProxy;
 import uk.co.real_logic.artio.validation.AuthenticationStrategy;
 
-import static org.hamcrest.Matchers.containsString;
-import static org.junit.Assert.*;
-import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
-import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
-
 public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 {
     private static final int DEFAULT_TIMEOUT_IN_MS = 1_000;
+    private static final long LINGER_TIMEOUT_IN_MS = 1_000L;
+    private static final long AUTHENTICATION_TIMEOUT_IN_MS = 1_000L;
     private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
-    private final FakeAsyncAuthenticationStrategy auth = new FakeAsyncAuthenticationStrategy();
+    private final ControllableAuthenticationStrategy auth = new ControllableAuthenticationStrategy();
 
     @Before
     public void launch()
     {
-        delete(ACCEPTOR_LOGS);
-
         mediaDriver = launchMediaDriver();
 
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
+        acceptingConfig.deleteLogFileDirOnStart(true);
+        acceptingConfig.printErrorMessages(false);
         acceptingConfig.authenticationStrategy(auth);
+        acceptingConfig.authenticationTimeoutInMs(AUTHENTICATION_TIMEOUT_IN_MS);
 
         acceptingEngine = FixEngine.launch(acceptingConfig);
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
@@ -60,24 +84,109 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
     }
 
     @Test
-    public void messagesCanBeSentFromInitiatorToAcceptor()
+    public void shouldConnectedAcceptedAuthentications()
     {
-        final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
-
-        acquireAuthProxy(reply);
+        final Reply<Session> reply = acquireAuthProxy();
 
         auth.accept();
-        completeConnectSessions(reply);
+        completeConnectInitiatingSession(reply);
         messagesCanBeExchanged();
         assertInitiatingSequenceIndexIs(0);
     }
 
     @Test
+    public void logonsCanBeRejected()
+    {
+        final Reply<Session> reply = acquireAuthProxy();
+
+        auth.reject();
+
+        assertDisconnectRejected(reply);
+    }
+
+    @Test
+    public void logonsCanBeRejectedWithCustomMessages()
+    {
+        final Reply<Session> reply = acquireAuthProxy();
+
+        final RejectEncoder rejectEncoder = newRejectEncoder();
+
+        final long startTime = System.currentTimeMillis();
+        auth.reject(rejectEncoder, LINGER_TIMEOUT_IN_MS);
+
+        assertDisconnectRejected(reply);
+        final long rejectTime = System.currentTimeMillis() - startTime;
+        assertThat(rejectTime, greaterThanOrEqualTo(LINGER_TIMEOUT_IN_MS));
+        assertThat(rejectTime, lessThan(2 * LINGER_TIMEOUT_IN_MS));
+
+        final EngineConfiguration config = initiatingEngine.configuration();
+        final List<String> messages = getMessagesFromArchive(config, config.inboundLibraryStream());
+        assertThat(messages, hasSize(1));
+        final String rejectMessage = messages.get(0);
+        assertThat(rejectMessage, containsString("372=A\00158=Invalid Logon"));
+        assertThat(rejectMessage, containsString("35=3\00149=acceptor\00156=initiator\00134=1"));
+    }
+
+    @Test(expected = NullPointerException.class)
+    public void rejectWithEncoderMustProvideAnEncoder()
+    {
+        acquireAuthProxy();
+
+        try
+        {
+            auth.reject(null, LINGER_TIMEOUT_IN_MS);
+        }
+        finally
+        {
+            // Test optimisation.
+            auth.reject();
+        }
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void lingerTimeoutShouldBeValid()
+    {
+        acquireAuthProxy();
+
+        final RejectEncoder encoder = newRejectEncoder();
+
+        try
+        {
+            auth.reject(encoder, -1);
+        }
+        finally
+        {
+            // Test optimisation.
+            auth.reject();
+        }
+    }
+
+    @Test
+    public void invalidEncoderShouldStillDisconnect()
+    {
+        final Reply<Session> reply = acquireAuthProxy();
+
+        final RejectEncoder invalidEncoder = new RejectEncoder();
+
+        auth.reject(invalidEncoder, 0);
+
+        assertDisconnectRejected(reply);
+    }
+
+    @Test
+    public void shouldDisconnectSessionsWhenAuthStrategyFails()
+    {
+        auth.throwWhenInvoked = true;
+
+        final Reply<Session> reply = acquireAuthProxy();
+
+        assertDisconnectRejected(reply);
+    }
+
+    @Test
     public void messagesCanBeSentFromInitiatorToAcceptorAfterFailedAuthenticationAttempt()
     {
-        final Reply<Session> invalidReply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
-
-        acquireAuthProxy(invalidReply);
+        final Reply<Session> invalidReply = acquireAuthProxy();
 
         auth.reject();
 
@@ -85,14 +194,46 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
 
         auth.reset();
 
-        final Reply<Session> validReply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
-
-        acquireAuthProxy(validReply);
+        final Reply<Session> validReply = acquireAuthProxy();
 
         auth.accept();
-        completeConnectSessions(validReply);
+        completeConnectInitiatingSession(validReply);
         messagesCanBeExchanged();
         assertInitiatingSequenceIndexIs(1);
+    }
+
+    @Test
+    public void shouldOnlyUseFirstMethodCall()
+    {
+        final Reply<Session> reply = acquireAuthProxy();
+
+        auth.accept();
+
+        completeConnectInitiatingSession(reply);
+
+        try
+        {
+            auth.reject();
+            fail("Should not allow a reject after an accept");
+        }
+        catch (final IllegalStateException e)
+        {
+            // Deliberately blank
+        }
+
+        messagesCanBeExchanged();
+        assertInitiatingSequenceIndexIs(0);
+    }
+
+    @Test
+    public void shouldDisconnectPendingAuthenticationAfterTimeout()
+    {
+        final long start = System.currentTimeMillis();
+        final Reply<Session> reply = acquireAuthProxy();
+        assertDisconnectRejected(reply);
+        final long duration = System.currentTimeMillis() - start;
+        assertThat(duration, is(greaterThanOrEqualTo(AUTHENTICATION_TIMEOUT_IN_MS)));
+        assertThat(duration, is(lessThan(TEST_REPLY_TIMEOUT_IN_MS)));
     }
 
     @After
@@ -101,8 +242,26 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         auth.verifyNoBlockingCalls();
     }
 
-    private void acquireAuthProxy(final Reply<Session> reply)
+    private RejectEncoder newRejectEncoder()
     {
+        final RejectEncoder rejectEncoder = new RejectEncoder();
+        rejectEncoder.refMsgType(LOGON_MESSAGE_AS_STR);
+        rejectEncoder.refSeqNum(1);
+        rejectEncoder.text("Invalid Logon");
+        return rejectEncoder;
+    }
+
+    private void assertDisconnectRejected(final Reply<Session> reply)
+    {
+        testSystem.awaitReply(reply);
+        assertEquals(reply.toString(), Reply.State.ERRORED, reply.state());
+        assertThat(reply.error().getMessage(), containsString("UNABLE_TO_LOGON: Disconnected before session active"));
+    }
+
+    private Reply<Session> acquireAuthProxy()
+    {
+        final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+
         assertEventuallyTrue("failed to receive auth proxy", () ->
         {
             testSystem.poll();
@@ -110,21 +269,29 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         }, DEFAULT_TIMEOUT_IN_MS);
 
         assertEquals(Reply.State.EXECUTING, reply.state());
+
+        return reply;
     }
 
-    private class FakeAsyncAuthenticationStrategy implements AuthenticationStrategy
+    private static class ControllableAuthenticationStrategy implements AuthenticationStrategy
     {
-        volatile boolean blockingAuthenticateCalled;
+        private volatile boolean throwWhenInvoked;
+        private volatile boolean blockingAuthenticateCalled;
         private volatile AuthenticationProxy authProxy;
 
-        public void authenticateAsync(final LogonDecoder logon, final AuthenticationProxy authProxy)
+        public void authenticateAsync(final AbstractLogonDecoder logon, final AuthenticationProxy authProxy)
         {
             this.authProxy = authProxy;
 
             assertThat(authProxy.remoteAddress(), containsString("127.0.0.1"));
+
+            if (throwWhenInvoked)
+            {
+                throw new RuntimeException("Broken application code");
+            }
         }
 
-        public boolean authenticate(final LogonDecoder logon)
+        public boolean authenticate(final AbstractLogonDecoder logon)
         {
             blockingAuthenticateCalled = true;
 
@@ -144,6 +311,11 @@ public class AsyncAuthenticatorTest extends AbstractGatewayToGatewaySystemTest
         void reject()
         {
             authProxy.reject();
+        }
+
+        void reject(final Encoder encoder, final long lingerTimeoutInMs)
+        {
+            authProxy.reject(encoder, lingerTimeoutInMs);
         }
 
         boolean hasAuthenticateBeenInvoked()

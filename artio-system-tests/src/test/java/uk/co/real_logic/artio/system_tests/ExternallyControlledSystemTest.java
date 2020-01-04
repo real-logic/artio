@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,11 +15,13 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.agrona.ErrorHandler;
 import org.agrona.concurrent.EpochClock;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.*;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.fields.DecimalFloat;
@@ -35,12 +37,14 @@ import java.util.List;
 
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.DEFAULT_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.Timing.withTimeout;
+import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySystemTest
@@ -67,12 +71,11 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
     @Before
     public void launch()
     {
-        delete(ACCEPTOR_LOGS);
-
         mediaDriver = launchMediaDriver();
 
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
-        acceptingConfig.soleLibraryMode(true);
+        acceptingConfig.deleteLogFileDirOnStart(true);
+        acceptingConfig.initialAcceptedSessionOwner(SOLE_LIBRARY);
 
         acceptingEngine = FixEngine.launch(acceptingConfig);
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
@@ -161,7 +164,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         final FixMessage receivedNewOrderSingle = withTimeout("Unable to find NOS", () ->
         {
             testSystem.poll();
-            return initiatingOtfAcceptor.hasReceivedMessage("D").findFirst();
+            return initiatingOtfAcceptor.receivedMessage("D").findFirst();
         }, DEFAULT_TIMEOUT_IN_MS);
         assertEquals(newOrderSingleSeqNum, receivedNewOrderSingle.messageSequenceNumber());
         assertEquals(lastReceivedMsgSeqNum, initiatingSession.lastReceivedMsgSeqNum());
@@ -239,7 +242,9 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         final SessionCustomisationStrategy customisationStrategy,
         final EpochClock clock,
         final long connectionId,
-        final int libraryId)
+        final int libraryId,
+        final FixDictionary fixDictionary,
+        final ErrorHandler errorHandler)
     {
         sessionProxyRequests++;
         return fakeSessionProxy;

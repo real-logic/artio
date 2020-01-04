@@ -10,9 +10,10 @@ import uk.co.real_logic.artio.library.SessionConfiguration;
 import uk.co.real_logic.artio.session.Session;
 
 import static org.junit.Assert.assertEquals;
+import static uk.co.real_logic.artio.Constants.LOGOUT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.artio.system_tests.SystemTestUtil.newInitiatingLibrary;
+import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
 
 public class EnableLastMsgSeqNumProcessedTest extends AbstractGatewayToGatewaySystemTest
 {
@@ -21,12 +22,12 @@ public class EnableLastMsgSeqNumProcessedTest extends AbstractGatewayToGatewaySy
     @Before
     public void launch()
     {
-        deleteLogs();
-
         mediaDriver = launchMediaDriver();
 
         final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
+        acceptingConfig.deleteLogFileDirOnStart(true);
         acceptingConfig.acceptedEnableLastMsgSeqNumProcessed(true);
+        acceptingConfig.sessionPersistenceStrategy(alwaysPersistent());
 
         acceptingEngine = FixEngine.launch(acceptingConfig);
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
@@ -37,16 +38,23 @@ public class EnableLastMsgSeqNumProcessedTest extends AbstractGatewayToGatewaySy
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
         testSystem = new TestSystem(acceptingLibrary, initiatingLibrary);
 
+        final Reply<Session> reply = connectSession();
+        completeConnectInitiatingSession(reply);
+    }
+
+    private Reply<Session> connectSession()
+    {
         final SessionConfiguration config = SessionConfiguration.builder()
             .address("localhost", port)
             .credentials(USERNAME, PASSWORD)
             .senderCompId(INITIATOR_ID)
             .targetCompId(ACCEPTOR_ID)
+            .sequenceNumbersPersistent(true)
+            .initialSentSequenceNumber(1)
             .enableLastMsgSeqNumProcessed(true)
             .build();
 
-        final Reply<Session> reply = initiatingLibrary.initiate(config);
-        completeConnectSessions(reply);
+        return initiatingLibrary.initiate(config);
     }
 
     @Test
@@ -56,7 +64,7 @@ public class EnableLastMsgSeqNumProcessedTest extends AbstractGatewayToGatewaySy
 
         messagesCanBeExchanged();
 
-        assertEquals(2, initiatingOtfAcceptor.lastReceivedMsgSeqNumProcessed());
+        assertLastInitiatorReceivedMsgSeqNumProcessed(2);
     }
 
     @Test
@@ -68,8 +76,32 @@ public class EnableLastMsgSeqNumProcessedTest extends AbstractGatewayToGatewaySy
 
         messagesCanBeExchanged();
 
-        assertEquals(2, initiatingOtfAcceptor.lastReceivedMsgSeqNumProcessed());
+        assertLastInitiatorReceivedMsgSeqNumProcessed(2);
         assertEquals(2, acceptingOtfAcceptor.lastReceivedMsgSeqNumProcessed());
+    }
+
+    @Test
+    public void lastMsgSeqNumProcessedCorrectInLowSequenceNumberLogout()
+    {
+        messagesCanBeExchanged();
+        messagesCanBeExchanged();
+
+        assertLastInitiatorReceivedMsgSeqNumProcessed(2);
+
+        acquireAcceptingSession();
+        disconnectSessions();
+
+        clearMessages();
+
+        final Reply<Session> reply = connectSession();
+        testSystem.awaitReply(reply);
+        testSystem.awaitMessageOf(initiatingOtfAcceptor, LOGOUT_MESSAGE_AS_STR);
+        assertLastInitiatorReceivedMsgSeqNumProcessed(4);
+    }
+
+    private void assertLastInitiatorReceivedMsgSeqNumProcessed(final int expected)
+    {
+        assertEquals(expected, initiatingOtfAcceptor.lastReceivedMsgSeqNumProcessed());
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,16 +20,23 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
+import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
+import uk.co.real_logic.artio.builder.HeaderEncoder;
+import uk.co.real_logic.artio.decoder.ExecutionReportDecoder;
 import uk.co.real_logic.artio.decoder.ResendRequestDecoder;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.session.Session;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.IOException;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.junit.Assert.*;
+import static uk.co.real_logic.artio.Constants.EXECUTION_REPORT_MESSAGE_AS_STR;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -72,11 +79,7 @@ public class MessageBasedInitiatorSystemTest
 
             connection.msgSeqNum(LOGON_SEQ_NUM).logon(false);
 
-            final Reply<Session> reply = testSystem.awaitReply(this.sessionReply);
-            assertEquals(COMPLETED, reply.state());
-
-            final Session session = reply.resultIfPresent();
-            assertEquals(ACTIVE, session.state());
+            final Session session = lookupSession();
             assertTrue(session.awaitingResend());
         }
     }
@@ -90,13 +93,68 @@ public class MessageBasedInitiatorSystemTest
 
             connection.logon(true);
 
-            final Reply<Session> reply = testSystem.awaitReply(this.sessionReply);
-            assertEquals(COMPLETED, reply.state());
-
-            final Session session = reply.resultIfPresent();
-            assertEquals(ACTIVE, session.state());
+            final Session session = lookupSession();
             assertEquals(1, session.lastReceivedMsgSeqNum());
         }
+    }
+
+    private Session lookupSession()
+    {
+        final Reply<Session> reply = testSystem.awaitReply(this.sessionReply);
+        assertEquals(COMPLETED, reply.state());
+
+        final Session session = reply.resultIfPresent();
+        assertEquals(ACTIVE, session.state());
+
+        return session;
+    }
+
+    @Test
+    public void shouldValidateMissingEnumValue() throws IOException
+    {
+        try (FixConnection connection = acceptConnection())
+        {
+            sendLogonToAcceptor(connection);
+            connection.logon(false);
+
+            final Session session = lookupSession();
+            assertEquals(1, session.lastReceivedMsgSeqNum());
+
+            handler.copyMessages(true);
+            sendInvalidExecutionReport(connection);
+
+            testSystem.awaitMessageOf(otfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
+            assertEquals(2, session.lastReceivedMsgSeqNum());
+
+            final MutableAsciiBuffer lastMessage = handler.lastMessage();
+            final int length = handler.lastMessageLength();
+
+            final ExecutionReportDecoder executionReportDecoder = new ExecutionReportDecoder();
+            executionReportDecoder.decode(lastMessage, 0, length);
+
+            assertFalse(executionReportDecoder.validate());
+            assertEquals(Constants.EXEC_TYPE, executionReportDecoder.invalidTagId());
+            assertEquals(RejectReason.VALUE_IS_INCORRECT, RejectReason.decode(executionReportDecoder.rejectReason()));
+        }
+    }
+
+    private void sendInvalidExecutionReport(final FixConnection connection)
+    {
+        final ExecutionReportEncoder executionReportEncoder = new ExecutionReportEncoder();
+        final HeaderEncoder header = executionReportEncoder.header();
+
+        connection.setupHeader(header, 2, false);
+
+        executionReportEncoder
+            .orderID("order")
+            .execID("exec")
+            .execType('5') // Invalid exec type
+            .ordStatus(OrdStatus.FILLED)
+            .side(Side.BUY);
+
+        executionReportEncoder.instrument().symbol("IBM");
+
+        connection.send(executionReportEncoder);
     }
 
     @Test
@@ -110,11 +168,7 @@ public class MessageBasedInitiatorSystemTest
 
             connection.msgSeqNum(4).logon(false);
 
-            final Reply<Session> reply = testSystem.awaitReply(this.sessionReply);
-            assertEquals(COMPLETED, reply.state());
-
-            final Session session = reply.resultIfPresent();
-            assertEquals(ACTIVE, session.state());
+            final Session session = lookupSession();
             assertTrue(session.awaitingResend());
 
             // Receive resend request for missing messages.
@@ -139,6 +193,32 @@ public class MessageBasedInitiatorSystemTest
             testSystem.poll();
 
             connection.readHeartbeat(testReqID);
+        }
+    }
+
+    @Test
+    public void shouldBeNotifiedOnDisconnect() throws IOException
+    {
+        try (FixConnection connection = acceptConnection())
+        {
+            sendLogonToAcceptor(connection);
+
+            assertFalse(handler.hasDisconnected());
+
+            final Session session = handler.lastSession();
+            assertThat(session.logoutAndDisconnect(), greaterThan(0L));
+
+            assertEventuallyTrue("Socket is not disconnected", () ->
+            {
+                testSystem.poll();
+                return !connection.isConnected();
+            });
+
+            assertEventuallyTrue("SessionHandler.onDisconnect has not been called", () ->
+            {
+                testSystem.poll();
+                return handler.hasDisconnected();
+            });
         }
     }
 

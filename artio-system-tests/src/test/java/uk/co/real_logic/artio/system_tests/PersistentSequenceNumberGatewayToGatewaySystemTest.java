@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.function.Consumer;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
@@ -44,10 +45,11 @@ import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasSequenceIndex;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
-import static uk.co.real_logic.artio.validation.PersistenceLevel.INDEXED;
+import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.alwaysPersistent;
 
 public class PersistentSequenceNumberGatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
+    private static final int HIGH_INITIAL_SEQUENCE_NUMBER = 1000;
     private static final long TEST_TIMEOUT = 10_000L;
     private static final int DOES_NOT_MATTER = -1;
     private static final int DEFAULT_SEQ_NUM_AFTER = 4;
@@ -63,7 +65,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private Consumer<Reply<Session>> onInitiateReply = reply ->
     {
-        assertEquals("Repy failed: " + reply, Reply.State.COMPLETED, reply.state());
+        assertEquals("Reply failed: " + reply, Reply.State.COMPLETED, reply.state());
         initiatingSession = reply.resultIfPresent();
         assertConnected(initiatingSession);
     };
@@ -97,6 +99,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DEFAULT_SEQ_NUM_AFTER);
 
         assertSequenceIndicesAre(0);
+        assertLastLogonEquals(4, 0);
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -107,6 +110,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DEFAULT_SEQ_NUM_AFTER);
 
         assertSequenceIndicesAre(0);
+        assertLastLogonEquals(4, 0);
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -123,17 +127,16 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, DOES_NOT_MATTER);
 
         assertOnlyAcceptorSequenceReset();
+        assertLastLogonEquals(1, 0);
     }
 
     @Test(timeout = TEST_TIMEOUT)
     public void shouldCopeWithResendRequestOfMissingMessagesWithHighInitialSequenceNumberSet()
     {
-        final int highInitialSequenceNumber = 1000;
-
         exchangeMessagesAroundARestart(
-            highInitialSequenceNumber,
+            HIGH_INITIAL_SEQUENCE_NUMBER,
             4,
-            highInitialSequenceNumber,
+            HIGH_INITIAL_SEQUENCE_NUMBER,
             5);
 
         final FixMessage gapFillMessage =
@@ -142,12 +145,12 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final String gapFillFlag = gapFillMessage.get(Constants.GAP_FILL_FLAG);
 
         assertEquals("Y", gapFillFlag);
-        assertThat(newSeqNo, greaterThan(highInitialSequenceNumber));
+        assertThat(newSeqNo, greaterThan(HIGH_INITIAL_SEQUENCE_NUMBER));
 
         // Test that we don't accidentally send another resend request
         // Reproduction of reported bug
         Timing.assertEventuallyTrue("", () -> testSystem.poll(), 100);
-        assertEquals(1, initiatingOtfAcceptor.hasReceivedMessage(RESEND_REQUEST_MESSAGE_AS_STR).count());
+        assertEquals(1, initiatingOtfAcceptor.receivedMessage(RESEND_REQUEST_MESSAGE_AS_STR).count());
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -169,6 +172,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertEquals(message.get(Constants.TARGET_COMP_ID), INITIATOR_ID);
 
         assertSequenceIndicesAre(0);
+        assertLastLogonEquals(4, 0);
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -177,6 +181,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         exchangeMessagesAroundARestart(4, DEFAULT_SEQ_NUM_AFTER);
 
         assertSequenceIndicesAre(0);
+        assertLastLogonEquals(4, 0);
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -188,6 +193,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         // Different sessions themselves, so we start again at 0
         assertSequenceIndicesAre(0);
+        assertLastLogonEquals(1, 0);
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -198,6 +204,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         exchangeMessagesAroundARestart(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, 1);
 
         assertSequenceIndicesAre(1);
+        assertLastLogonEquals(1, 1);
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -210,6 +217,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         acceptingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
         initiatingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
         assertSequenceIndicesAre(1);
+        assertLastLogonEquals(1, 1);
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -273,6 +281,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         // 5: logon, test-req/heartbeat, logout. logon 2, test-req/heartbeat 2
         assertSequenceFromInitToAcceptAt(5, 5);
+        assertLastLogonEquals(4, 0);
     }
 
     private void resetSequenceNumbers()
@@ -296,7 +305,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
             dirsDeleteOnStart));
 
         final EngineConfiguration config = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID);
-        config.sessionPersistenceStrategy(logon -> INDEXED);
+        config.sessionPersistenceStrategy(alwaysPersistent());
         config.printErrorMessages(printErrorMessages);
         acceptingEngine = FixEngine.launch(config);
         final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
@@ -347,6 +356,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     {
         launch(this::nothing);
         connectPersistingSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, resetSequenceNumbersOnLogon);
+        assertLastLogonEquals(1, 0);
 
         assertSequenceIndicesAre(0);
 
@@ -361,6 +371,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         assertInitiatingSequenceIndexIs(0);
         clearMessages();
+        acceptingHandler.clearSessionExistsInfos();
         close();
 
         duringRestart.run();

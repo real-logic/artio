@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import io.aeron.archive.status.RecordingPos;
 import org.agrona.collections.IntHashSet;
 import org.agrona.collections.IntHashSet.IntIterator;
 import org.agrona.collections.Long2LongHashMap;
-import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.CountersReader;
 import uk.co.real_logic.artio.CommonConfiguration;
@@ -58,7 +57,6 @@ public class RecordingCoordinator implements AutoCloseable
     private Long2LongHashMap outboundAeronSessionIdToCompletionPosition;
 
     private boolean closed = false;
-    private boolean atEndOfDay = false;
 
     RecordingCoordinator(
         final AeronArchive archive,
@@ -123,16 +121,10 @@ public class RecordingCoordinator implements AutoCloseable
     public void track(final Publication publication)
     {
         final int streamId = publication.streamId();
-        if (isRelevantStreamId(streamId))
+        if (configuration.isRelevantStreamId(streamId))
         {
             trackedSessionIds.add(publication.sessionId());
         }
-    }
-
-    private boolean isRelevantStreamId(final int streamId)
-    {
-        return (streamId == configuration.outboundLibraryStream() && configuration.logOutboundMessages()) ||
-            (streamId == configuration.inboundLibraryStream() && configuration.logInboundMessages());
     }
 
     // Only called on single threaded engine startup
@@ -231,58 +223,15 @@ public class RecordingCoordinator implements AutoCloseable
             archive.stopRecording(channel, configuration.outboundLibraryStream());
         }
 
-        truncateEndOfDay();
-
         if (configuration.logAnyMessages())
         {
             archive.close();
         }
     }
 
-    private void truncateEndOfDay()
-    {
-        if (atEndOfDay)
-        {
-            final LongHashSet relevantRecordingIds = new LongHashSet();
-            archive.listRecording(0,
-                (controlSessionId,
-                correlationId,
-                recordingId,
-                startTimestamp,
-                stopTimestamp,
-                startPosition,
-                stopPosition,
-                initialTermId,
-                segmentFileLength,
-                termBufferLength,
-                mtuLength,
-                sessionId,
-                streamId,
-                strippedChannel,
-                originalChannel,
-                sourceIdentity) ->
-                {
-                    if (isRelevantStreamId(streamId) && originalChannel.equals(channel))
-                    {
-                        relevantRecordingIds.add(recordingId);
-                    }
-                });
-
-            for (final long recordingId : relevantRecordingIds)
-            {
-                archive.truncateRecording(recordingId, 0);
-            }
-        }
-    }
-
     private boolean hasRecordingStarted(final int sessionId)
     {
         return RecordingPos.findCounterIdBySession(counters, sessionId) != NULL_COUNTER_ID;
-    }
-
-    public void startEndOfDay()
-    {
-        atEndOfDay = true;
     }
 
     private class CompletingRecording

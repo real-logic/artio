@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.agrona.collections.CollectionUtil.removeIf;
 
-class RetryManager
+class RetryManager implements AutoCloseable
 {
     private final Long2ObjectHashMap<Continuation> correlationIdToTransactions = new Long2ObjectHashMap<>();
     private final List<Continuation> continuations = new ArrayList<>();
@@ -66,5 +66,11 @@ class RetryManager
     int attemptSteps()
     {
         return removeIf(continuations, step -> step.attemptToAction() == CONTINUE);
+    }
+
+    public void close()
+    {
+        continuations.forEach(Continuation::close);
+        correlationIdToTransactions.values().forEach(Continuation::close);
     }
 }

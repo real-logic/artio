@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.protocol;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
 
@@ -60,7 +61,7 @@ public interface LibraryEndPointHandler
         int lastResendChunkMsgSeqNum,
         int endOfResendRequestRange,
         boolean awaitingHeartbeat,
-        String localCompId,
+        int logonReceivedSequenceNumber, int logonSequenceIndex, String localCompId,
         String localSubId,
         String localLocationId,
         String remoteCompId,
@@ -68,9 +69,10 @@ public interface LibraryEndPointHandler
         String remoteLocationId,
         String address,
         String username,
-        String password);
+        String password,
+        Class<? extends FixDictionary> fixDictionary);
 
     Action onFollowerSessionReply(int libraryId, long replyToId, long session);
 
-    Action onEndOfDay(int libraryId);
+    Action onEngineClose(int libraryId);
 }

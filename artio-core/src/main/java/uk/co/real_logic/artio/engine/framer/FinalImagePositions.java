@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ class FinalImagePositions implements UnavailableImageHandler
         final long position = image.position();
 
         final Long old = sessionIdToPosition.remove(sessionId);
-        if (old != LEAK_WITNESS)
+        if (old != LEAK_WITNESS) // lgtm [java/reference-equality-of-boxed-types]
         {
             sessionIdToPosition.put(sessionId, position);
         }

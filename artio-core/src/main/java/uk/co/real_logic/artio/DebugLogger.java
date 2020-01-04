@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,26 +39,27 @@ public final class DebugLogger
 
     static
     {
+        OUTPUT = makeOutputStream();
+    }
+
+    private static PrintStream makeOutputStream()
+    {
         if (DEBUG_FILE == null)
         {
-            OUTPUT = System.out;
+            return System.out;
         }
         else
         {
-            PrintStream output = null;
             try
             {
-                output = new PrintStream(new FileOutputStream(DEBUG_FILE));
+                return new PrintStream(new FileOutputStream(DEBUG_FILE));
             }
             catch (final IOException ex)
             {
                 ex.printStackTrace();
                 System.exit(-1);
             }
-            finally
-            {
-                OUTPUT = output;
-            }
+            return null;
         }
     }
 

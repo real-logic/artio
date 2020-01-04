@@ -2,8 +2,8 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="2"
-                   semanticVersion="0.1"
+                   version="4"
+                   semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
     <types>
@@ -33,7 +33,8 @@
         <type name="ConnectionId" primitiveType="int64"/>
         <type name="CorrelationId" primitiveType="int64"/>
         <type name="TermId" primitiveType="int32"/>
-        <type name="MessageType" primitiveType="int32"/>
+        <type deprecated="3" name="DeprecatedMessageType" primitiveType="int32"/>
+        <type name="MessageType" primitiveType="int64"/>
         <type name="Timestamp" primitiveType="int64"/>
         <enum name="ConnectionType" encodingType="uint8">
             <validValue name="ACCEPTOR">0</validValue>
@@ -107,7 +108,9 @@
             <validValue name="INVALID_FIX_MESSAGE"
                         description="We disconnected due to codec validation failing">17</validValue>
             <validValue name="INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES"
-                        description="Persistence Strategy specified INDEXED but EngineConfiguration has disabled required logging of messsages">18</validValue>
+                        description="Persistence Strategy specified INDEXED but EngineConfiguration has disabled required logging of messages">18</validValue>
+            <validValue name="AUTHENTICATION_TIMEOUT"
+                        description="We disconnected due to the authentication strategy not responding within the timeout">19</validValue>
         </enum>
         <enum name="SessionState" encodingType="uint8">
             <validValue name="CONNECTING"
@@ -196,6 +199,7 @@
         <data name="targetLocationId" id="14" type="Utf8String"/>
         <data name="username" id="15" type="Utf8String"/>
         <data name="password" id="16" type="Utf8String"/>
+        <data name="fixDictionary" id="22" type="Utf8String"/>
     </sbe:message>
 
     <sbe:message name="RequestDisconnect" id="12" description="Request a connection be disconnected">
@@ -282,6 +286,8 @@
         <field name="resendRequestChunkSize" id="23" type="int32" />
         <field name="sendRedundantResendRequests" id="24" type="Bool" />
         <field name="enableLastMsgSeqNumProcessed" id="25" type="Bool" />
+        <field name="logonReceivedSequenceNumber" id="33" type="int32" sinceVersion="4"/>
+        <field name="logonSequenceIndex" id="34" type="SequenceIndex" sinceVersion="4"/>
 
         <!-- State modified by the Session itself -->
         <field name="awaitingResend" id="21" type="AwaitingResend" />
@@ -299,6 +305,7 @@
         <data name="address" id="20" type="Utf8String"/>
         <data name="username" id="26" type="Utf8String"/>
         <data name="password" id="27" type="Utf8String"/>
+        <data name="fixDictionary" id="32" type="Utf8String"/>
 
     </sbe:message>
 
@@ -359,7 +366,7 @@
 
     <!-- Messages In Either Direction -->
     <sbe:message name="FixMessage" id="1" description="A framed FIX message">
-        <field name="messageType" id="1" type="MessageType"/>
+        <field deprecated="3" name="deprecatedMessageType" id="1" type="DeprecatedMessageType"/>
         <field name="session" id="2" type="FixSessionId"/>
         <field name="connection" id="3" type="ConnectionId"/>
         <field name="timestamp" id="4" type="Timestamp"/>
@@ -369,6 +376,7 @@
         <field name="sequenceIndex" id="8" type="SequenceIndex" />
         <!-- only visible outbound -->
         <field name="sequenceNumber" id="9" type="int32" />
+        <field name="messageType" id="11" type="MessageType" presence="optional" sinceVersion="3"/>
         <data name="body" id="10" type="AsciiString"/>
     </sbe:message>
 

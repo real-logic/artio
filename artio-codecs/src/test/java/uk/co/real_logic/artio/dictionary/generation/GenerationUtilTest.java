@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Real Logic Ltd.
+ * Copyright 2013 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,18 @@ public class GenerationUtilTest
         assertNotEquals(packMessageType("BC"), packMessageType("BB"));
         assertNotEquals(packMessageType("BD"), packMessageType("BE"));
         assertNotEquals(packMessageType("BG"), packMessageType("BF"));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void willFailToGeneratePackedMessageTypeWithMoreThan8Characters()
+    {
+        packMessageType("ABCDEFGHI");
+    }
+
+    @Test
+    public void supportsPackingMessageTypesOfLength7()
+    {
+        assertNotEquals(packMessageType("ABCDEFGH"), packMessageType("ABCDEFG"));
     }
 
     @Test

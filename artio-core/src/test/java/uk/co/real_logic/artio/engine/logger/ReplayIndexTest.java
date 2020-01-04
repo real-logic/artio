@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,6 +44,7 @@ import java.nio.ByteBuffer;
 import java.util.stream.IntStream;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.TestFixtures.cleanupMediaDriver;
@@ -186,24 +187,21 @@ public class ReplayIndexTest extends AbstractLogTest
     {
         indexExampleMessage();
 
+        replayIndex.close();
+
         // Fake restarting the gateway
         final File logFile = logFile(SESSION_ID);
-        IoUtil.ensureDirectoryExists(new File(DEFAULT_LOG_FILE_DIR), DEFAULT_LOG_FILE_DIR);
-        logFile.createNewFile();
-        try
-        {
-            newReplayIndex();
+        final File defaultLogFileDir = new File(DEFAULT_LOG_FILE_DIR);
+        IoUtil.ensureDirectoryExists(defaultLogFileDir, DEFAULT_LOG_FILE_DIR);
+        assertTrue(logFile.createNewFile());
 
-            final int msgCount = query();
+        newReplayIndex();
 
-            verifyMappedFile(SESSION_ID, 1);
-            verifyMessagesRead(1);
-            assertEquals(1, msgCount);
-        }
-        finally
-        {
-            IoUtil.delete(new File(DEFAULT_LOG_FILE_DIR), false);
-        }
+        final int msgCount = query();
+
+        verifyMappedFile(SESSION_ID, 1);
+        verifyMessagesRead(1);
+        assertEquals(1, msgCount);
     }
 
     @Test(timeout = 20_000L)

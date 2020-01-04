@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
 import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
+import uk.co.real_logic.artio.builder.UserRequestEncoder;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
@@ -33,6 +35,7 @@ import uk.co.real_logic.artio.session.Session;
 import java.util.List;
 import java.util.function.IntSupplier;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
@@ -47,20 +50,27 @@ import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
 import static uk.co.real_logic.artio.messages.SessionState.DISABLED;
 import static uk.co.real_logic.artio.system_tests.FixMessage.hasMessageSequenceNumber;
+import static uk.co.real_logic.artio.system_tests.SystemTestUtil.PASSWORD;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
+    private static final String NEW_PASSWORD = "ABCDEF";
+
     private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
+    private CapturingAuthenticationStrategy auth;
 
     @Before
     public void launch()
     {
-        delete(ACCEPTOR_LOGS);
-
         mediaDriver = launchMediaDriver();
 
-        launchAcceptingEngine();
+        final EngineConfiguration acceptingConfig = acceptingConfig(port, ACCEPTOR_ID, INITIATOR_ID)
+            .deleteLogFileDirOnStart(true);
+        auth = new CapturingAuthenticationStrategy(acceptingConfig.messageValidationStrategy());
+        acceptingConfig.authenticationStrategy(auth);
+        acceptingEngine = FixEngine.launch(acceptingConfig);
+
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
 
         final LibraryConfiguration acceptingLibraryConfig = acceptingLibraryConfig(acceptingHandler);
@@ -75,6 +85,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void messagesCanBeSentFromInitiatorToAcceptor()
     {
+        assertLastLogonEquals(1, 0);
+
         messagesCanBeExchanged();
 
         assertInitiatingSequenceIndexIs(0);
@@ -84,6 +96,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     public void messagesCanBeSentFromInitiatorToAcceptingLibrary()
     {
         acquireAcceptingSession();
+        assertLastLogonEquals(1, 0);
 
         messagesCanBeExchanged();
 
@@ -96,6 +109,39 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final String testReqID = "AAA";
 
         gatewayProcessesResendRequests(testReqID);
+    }
+
+    @Test
+    public void gatewayProcessesDuplicateResendRequests()
+    {
+        final String testReqID = "AAA";
+
+        acquireAcceptingSession();
+
+        exchangeExampleMessageFromInitiatorToAcceptor(testReqID);
+        assertTestRequestSentAndReceived(initiatingSession, testSystem, acceptingOtfAcceptor);
+
+        acceptorSendsResendRequest(1, 3);
+        acceptorSendsResendRequest(1, 3);
+
+        assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
+        assertEventuallyTrue("Failed to receive the reply",
+            () ->
+            {
+                testSystem.poll();
+
+                assertEquals(2, acceptingOtfAcceptor
+                    .receivedMessage(EXAMPLE_MESSAGE_MESSAGE_AS_STR)
+                    .filter(msg -> "Y".equals(msg.possDup()))
+                    .filter(msg -> 2 == msg.messageSequenceNumber())
+                    .filter(msg -> testReqID.equals(msg.testReqId()))
+                    .count());
+
+                assertNull("Detected Error", acceptingOtfAcceptor.lastError());
+                assertTrue("Failed to complete parsing", acceptingOtfAcceptor.isCompleted());
+            });
+
+        assertSequenceIndicesAre(0);
     }
 
     @Test
@@ -218,7 +264,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final FakeHandler initiatingSessionHandler2 = new FakeHandler(initiatingOtfAcceptor2);
         try (FixLibrary library2 = testSystem.add(newInitiatingLibrary(libraryAeronPort, initiatingSessionHandler2)))
         {
-            acceptingHandler.clearSessions();
+            acceptingHandler.clearSessionExistsInfos();
             final Reply<Session> reply = testSystem.awaitReply(initiate(library2, port, INITIATOR_ID2, ACCEPTOR_ID));
 
             final Session session2 = reply.resultIfPresent();
@@ -325,7 +371,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acquireAcceptingSession();
 
         final long sessionId = acceptingSession.id();
-        acceptingHandler.clearSessions();
+        acceptingHandler.clearSessionExistsInfos();
 
         releaseToGateway(acceptingLibrary, acceptingSession, testSystem);
 
@@ -442,6 +488,9 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         testSystem.close(acceptingLibrary);
         acceptingEngine.close();
         assertSequenceIndicesAre(0);
+
+        testSystem.awaitMessageOf(initiatingOtfAcceptor, LOGOUT_MESSAGE_AS_STR);
+
         clearMessages();
 
         launchAcceptingEngine();
@@ -461,12 +510,13 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acceptingEngine.close();
 
         assertAllMessagesHaveSequenceIndex(0);
-        clearMessages();
 
         testSystem.close(acceptingLibrary);
-        acceptingHandler.clearSessions();
+        acceptingHandler.clearSessionExistsInfos();
 
         initiatingEngineHasLibraryConnected();
+
+        clearMessages();
 
         launchAcceptingEngine();
 
@@ -540,7 +590,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         try (LibraryDriver library2 = LibraryDriver.accepting(testSystem))
         {
-            final CompleteSessionId sessionId = library2.awaitCompleteSessionId();
+            final SessionExistsInfo sessionId = library2.awaitCompleteSessionId();
             assertSameSession(sessionId, acceptingSession);
         }
     }
@@ -552,17 +602,17 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         try (LibraryDriver library2 = LibraryDriver.initiating(libraryAeronPort, testSystem))
         {
-            final CompleteSessionId sessionId = library2.awaitCompleteSessionId();
+            final SessionExistsInfo sessionId = library2.awaitCompleteSessionId();
             assertSameSession(sessionId, initiatingSession);
 
             try (LibraryDriver library3 = LibraryDriver.initiating(libraryAeronPort, testSystem))
             {
-                final CompleteSessionId sessionId3 = library3.awaitCompleteSessionId();
+                final SessionExistsInfo sessionId3 = library3.awaitCompleteSessionId();
                 assertSameSession(sessionId3, initiatingSession);
 
                 try (LibraryDriver library4 = LibraryDriver.initiating(libraryAeronPort, testSystem))
                 {
-                    final CompleteSessionId sessionId4 = library4.awaitCompleteSessionId();
+                    final SessionExistsInfo sessionId4 = library4.awaitCompleteSessionId();
                     assertSameSession(sessionId4, initiatingSession);
                 }
             }
@@ -582,7 +632,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void shouldReconnectToBouncedGatewayViaIpc()
     {
-        acceptingEngine.close();
+        closeAcceptingEngine();
 
         awaitIsConnected(false, acceptingLibrary);
 
@@ -594,7 +644,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void shouldReconnectToBouncedGatewayViaUdp()
     {
-        initiatingEngine.close();
+        closeInitiatingEngine();
 
         awaitIsConnected(false, initiatingLibrary);
 
@@ -612,7 +662,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertTrue("Session not active", acceptingSession.isActive());
 
-        acceptingEngine.close();
+        closeAcceptingEngine();
 
         launchAcceptingEngine();
 
@@ -689,7 +739,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertInitSeqNum(2, 2, 0);
 
-        final Reply<?> resetSequenceNumber = resetSequenceNumber((long)400);
+        final Reply<?> resetSequenceNumber = resetSequenceNumber(400);
         assertTrue("Should have errored: " + resetSequenceNumber, resetSequenceNumber.hasErrored());
         final String message = resetSequenceNumber.error().getMessage();
         assertTrue(message, message.contains("Unknown sessionId: 400"));
@@ -806,6 +856,61 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertEquals(1, replayedMessages.get(0).messageSequenceNumber());
 
         messagesCanBeExchanged();
+    }
+
+    @Test
+    public void shouldWipePasswordsFromLogs()
+    {
+        assertArchiveDoesNotContainPassword();
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldHandleUserRequestMessages()
+    {
+        final String id = "A";
+        final UserRequestEncoder userRequestEncoder
+            = new UserRequestEncoder()
+            .userRequestID(id)
+            .userRequestType(UserRequestType.ChangePasswordForUser)
+            .username(SystemTestUtil.USERNAME)
+            .password(PASSWORD)
+            .newPassword(NEW_PASSWORD);
+
+        while (initiatingSession.send(userRequestEncoder) < 0)
+        {
+            testSystem.poll();
+
+            Thread.yield();
+        }
+
+        while (!auth.receivedUserRequest())
+        {
+            testSystem.poll();
+
+            Thread.yield();
+        }
+
+        assertEquals(PASSWORD, auth.logonPassword());
+        assertEquals(PASSWORD, auth.userRequestPassword());
+        assertEquals(NEW_PASSWORD, auth.userRequestNewPassword());
+        assertEquals(1, auth.sessionId());
+
+        assertArchiveDoesNotContainPassword();
+    }
+
+    private void assertArchiveDoesNotContainPassword()
+    {
+        final EngineConfiguration configuration = acceptingEngine.configuration();
+
+        final List<String> messages = getMessagesFromArchive(
+            configuration, configuration.inboundLibraryStream());
+        assertThat(messages, hasSize(greaterThanOrEqualTo(1)));
+        for (final String message : messages)
+        {
+            assertThat(message + " contains the password",
+                message,
+                allOf(not(containsString(PASSWORD)), not(containsString(NEW_PASSWORD))));
+        }
     }
 
     private void exchangeExecutionReport()
@@ -932,12 +1037,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             assertEquals(ENGINE_LIBRARY_ID, engineLibraryInfo.libraryId());
             assertThat(engineLibraryInfo.sessions(), contains(hasConnectionId(session.connectionId())));
 
-            final CompleteSessionId sessionId = library2.awaitCompleteSessionId();
+            final SessionExistsInfo sessionId = library2.awaitCompleteSessionId();
             assertSameSession(sessionId, session);
         }
     }
 
-    private void assertSameSession(final CompleteSessionId sessionId, final Session session)
+    private void assertSameSession(final SessionExistsInfo sessionId, final Session session)
     {
         final CompositeKey compositeKey = session.compositeKey();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -65,6 +65,20 @@ public abstract class Aggregate
                     (ele, field) -> Stream.of(ele),
                     (ele, group) -> Stream.empty(),
                     (ele, component) -> component.allFieldsIncludingComponents()
+                ));
+    }
+
+    /**
+     * @return all entries including those of nested components
+     */
+    public Stream<Entry> allGroupsIncludingComponents()
+    {
+        return entries.stream()
+            .flatMap(
+                (entry) -> entry.match(
+                    (ele, field) -> Stream.empty(),
+                    (ele, group) -> Stream.of(ele),
+                    (ele, component) -> component.allGroupsIncludingComponents()
                 ));
     }
 

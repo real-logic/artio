@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,7 +28,8 @@ import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.SystemEpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.*;
-import uk.co.real_logic.artio.builder.HeaderEncoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
@@ -40,15 +41,17 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.util.AbstractList;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.BooleanSupplier;
 import java.util.function.ToIntFunction;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.util.Objects.requireNonNull;
-import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
 import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
+import static uk.co.real_logic.artio.GatewayProcess.NO_CORRELATION_ID;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
@@ -85,7 +88,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     /**
      * End of day operation has started
      */
-    private static final int END_OF_DAY = 5;
+    private static final int ENGINE_CLOSE = 5;
 
     private final Long2ObjectHashMap<SessionSubscriber> connectionIdToSession = new Long2ObjectHashMap<>();
     private InternalSession[] sessions = new InternalSession[0];
@@ -109,7 +112,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     // Uniquely identifies library session
     private final int libraryId;
-    private final EpochClock clock;
+    private final EpochClock epochClock;
     private final LibraryConfiguration configuration;
     private final SessionIdStrategy sessionIdStrategy;
     private final Timer sessionTimer;
@@ -120,6 +123,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final FixCounters fixCounters;
 
     private final Long2ObjectHashMap<LibraryReply<?>> correlationIdToReply = new Long2ObjectHashMap<>();
+    private final List<BooleanSupplier> tasks = new ArrayList<>();
     private final LibraryTransport transport;
     private final FixLibrary fixLibrary;
     private final Runnable onDisconnectFunc = this::onDisconnect;
@@ -152,7 +156,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final FixCounters fixCounters,
         final LibraryTransport transport,
         final FixLibrary fixLibrary,
-        final EpochClock clock)
+        final EpochClock epochClock)
     {
         this.libraryId = configuration.libraryId();
         this.fixCounters = fixCounters;
@@ -166,7 +170,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         this.sessionIdStrategy = configuration.sessionIdStrategy();
         this.sessionExistsHandler = configuration.sessionExistsHandler();
         this.sentPositionHandler = configuration.sentPositionHandler();
-        this.clock = clock;
+        this.epochClock = epochClock;
         this.enginesAreClustered = configuration.libraryAeronChannels().size() > 1;
     }
 
@@ -182,7 +186,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     boolean isAtEndOfDay()
     {
-        return state == END_OF_DAY;
+        return state == ENGINE_CLOSE;
     }
 
     int libraryId()
@@ -246,7 +250,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             sequenceIndex);
     }
 
-    Reply<SessionWriter> followerSession(final HeaderEncoder headerEncoder, final long timeoutInMs)
+    Reply<SessionWriter> followerSession(final SessionHeaderEncoder headerEncoder, final long timeoutInMs)
     {
         validateEndOfDay();
 
@@ -306,15 +310,43 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             configuration.enableLastMsgSeqNumProcessed(),
             configuration.username(),
             configuration.password(),
+            configuration.fixDictionary(),
             this.configuration.defaultHeartbeatIntervalInS(),
             correlationId);
     }
 
-    long saveMidConnectionDisconnect(final long correlationId)
+    void onInitiatorSessionTimeout(final long correlationId, final long connectionId)
     {
         checkState();
 
-        return outboundPublication.saveMidConnectionDisconnect(libraryId, correlationId);
+        if (connectionId == NO_CONNECTION_ID)
+        {
+            // We've timed out when waiting for a connection to complete.
+
+            if (!saveMidConnectionDisconnect(correlationId))
+            {
+                tasks.add(() -> saveMidConnectionDisconnect(correlationId));
+            }
+        }
+        else
+        {
+            // We've timed out when the TCP connection has completed, but the logon hasn't finished.
+
+            if (!saveNoLogonRequestDisconnect(connectionId))
+            {
+                tasks.add(() -> saveNoLogonRequestDisconnect(connectionId));
+            }
+        }
+    }
+
+    private boolean saveMidConnectionDisconnect(final long correlationId)
+    {
+        return outboundPublication.saveMidConnectionDisconnect(libraryId, correlationId) > 0;
+    }
+
+    private boolean saveNoLogonRequestDisconnect(final long connectionId)
+    {
+        return outboundPublication.saveRequestDisconnect(libraryId, connectionId, DisconnectReason.NO_LOGON) > 0;
     }
 
     long saveRequestSession(
@@ -369,8 +401,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 state = CONNECTING;
                 return pollWithoutReconnect(timeInMs, fragmentLimit);
 
-            case END_OF_DAY:
-                attemptEndOfDayOperation();
+            case ENGINE_CLOSE:
+                attemptEngineCloseBasedLogout();
                 return pollWithoutReconnect(timeInMs, fragmentLimit);
 
             case CLOSED:
@@ -620,18 +652,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private long timeInMs()
     {
-        return clock.time();
+        return epochClock.time();
     }
 
     private int checkReplies(final long timeInMs)
     {
-        if (correlationIdToReply.isEmpty())
-        {
-            return 0;
-        }
-
         int count = 0;
-        final Iterator<LibraryReply<?>> iterator = correlationIdToReply.values().iterator();
+        final Long2ObjectHashMap<LibraryReply<?>>.ValueIterator iterator = correlationIdToReply.values().iterator();
         while (iterator.hasNext())
         {
             final LibraryReply<?> reply = iterator.next();
@@ -639,6 +666,17 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 iterator.remove();
                 count++;
+            }
+        }
+
+        final Iterator<BooleanSupplier> tasksIt = tasks.iterator();
+        while (tasksIt.hasNext())
+        {
+            final BooleanSupplier task = tasksIt.next();
+
+            if (task.getAsBoolean())
+            {
+                tasksIt.remove();
             }
         }
 
@@ -652,6 +690,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return correlationId;
     }
 
+    void deregister(final long correlationId)
+    {
+        correlationIdToReply.remove(correlationId);
+    }
+
     // -----------------------------------------------------------------------
     //                     BEGIN EVENT HANDLERS
     // -----------------------------------------------------------------------
@@ -661,12 +704,122 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public Action onManageSession(
         final int libraryId,
-        final long connection,
+        final long connectionId,
         final long sessionId,
         final int lastSentSeqNum,
         final int lastRecvSeqNum,
         final long logonTime,
         final SessionStatus sessionStatus,
+        final SlowStatus slowStatus,
+        final ConnectionType connectionType,
+        final SessionState sessionState,
+        final int heartbeatIntervalInS,
+        final boolean closedResendInterval,
+        final int resendRequestChunkSize,
+        final boolean sendRedundantResendRequests,
+        final boolean enableLastMsgSeqNumProcessed,
+        final long correlationId,
+        final int sequenceIndex,
+        final boolean awaitingResend,
+        final int lastResentMsgSeqNo,
+        final int lastResendChunkMsgSeqNum,
+        final int endOfResendRequestRange,
+        final boolean awaitingHeartbeat,
+        final int logonReceivedSequenceNumber,
+        final int logonSequenceIndex,
+        final String localCompId,
+        final String localSubId,
+        final String localLocationId,
+        final String remoteCompId,
+        final String remoteSubId,
+        final String remoteLocationId,
+        final String address,
+        final String username,
+        final String password,
+        final Class<? extends FixDictionary> fixDictionaryType)
+    {
+        if (state == CONNECTED)
+        {
+            final FixDictionary fixDictionary = FixDictionary.of(fixDictionaryType);
+            if (libraryId == ENGINE_LIBRARY_ID)
+            {
+                // Simple case of engine notifying that it has a session available.
+                sessionExistsHandler.onSessionExists(
+                    fixLibrary,
+                    sessionId,
+                    localCompId,
+                    localSubId,
+                    localLocationId,
+                    remoteCompId,
+                    remoteSubId,
+                    remoteLocationId,
+                    logonReceivedSequenceNumber,
+                    logonSequenceIndex);
+            }
+            else if (libraryId == this.libraryId)
+            {
+                if (sessionStatus == SessionStatus.SESSION_HANDOVER)
+                {
+                    onHandoverSession(
+                        libraryId,
+                        connectionId,
+                        sessionId,
+                        lastSentSeqNum,
+                        lastRecvSeqNum,
+                        logonTime,
+                        slowStatus,
+                        connectionType,
+                        sessionState,
+                        heartbeatIntervalInS,
+                        closedResendInterval,
+                        resendRequestChunkSize,
+                        sendRedundantResendRequests,
+                        enableLastMsgSeqNumProcessed,
+                        correlationId,
+                        sequenceIndex,
+                        awaitingResend,
+                        lastResentMsgSeqNo,
+                        lastResendChunkMsgSeqNum,
+                        endOfResendRequestRange,
+                        awaitingHeartbeat,
+                        localCompId,
+                        localSubId,
+                        localLocationId,
+                        remoteCompId,
+                        remoteSubId,
+                        remoteLocationId,
+                        address,
+                        username,
+                        password,
+                        fixDictionary);
+                }
+                else
+                {
+                    sessionExistsHandler.onSessionExists(
+                        fixLibrary,
+                        sessionId,
+                        localCompId,
+                        localSubId,
+                        localLocationId,
+                        remoteCompId,
+                        remoteSubId,
+                        remoteLocationId,
+                        logonReceivedSequenceNumber,
+                        logonSequenceIndex);
+                }
+            }
+        }
+
+        return CONTINUE;
+    }
+
+    private void onHandoverSession(
+        final int libraryId,
+        final long connection,
+        final long sessionId,
+        final int lastSentSeqNum,
+        final int lastRecvSeqNum,
+        final long logonTime,
         final SlowStatus slowStatus,
         final ConnectionType connectionType,
         final SessionState sessionState,
@@ -690,104 +843,73 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final String remoteLocationId,
         final String address,
         final String username,
-        final String password)
+        final String password,
+        final FixDictionary fixDictionary)
     {
-        if (state == CONNECTED)
+        final InternalSession session;
+        InitiateSessionReply reply = null;
+
+        // From manageConnection - ie set up the session in this library.
+        if (connectionType == INITIATOR)
         {
-            if (libraryId == ENGINE_LIBRARY_ID)
+            DebugLogger.log(FIX_CONNECTION, "Init Connect: %d, %d%n", connection, libraryId);
+            final LibraryReply<?> task = correlationIdToReply.get(correlationId);
+            final boolean isReply = task instanceof InitiateSessionReply;
+            if (isReply)
             {
-                // Simple case of engine notifying that it has a session available.
-                sessionExistsHandler.onSessionExists(
-                    fixLibrary,
-                    sessionId,
-                    localCompId,
-                    localSubId,
-                    localLocationId,
-                    remoteCompId,
-                    remoteSubId,
-                    remoteLocationId);
+                reply = (InitiateSessionReply)task;
+                reply.onTcpConnected(connection);
             }
-            else if (libraryId == this.libraryId)
-            {
-                final InternalSession session;
-                InitiateSessionReply reply = null;
-                if (sessionStatus == SessionStatus.SESSION_HANDOVER)
-                {
-                    // From manageConnection - ie set up the session in this library.
-                    if (connectionType == INITIATOR)
-                    {
-                        DebugLogger.log(FIX_CONNECTION, "Init Connect: %d, %d%n", connection, libraryId);
-                        final boolean isReply = correlationIdToReply.get(correlationId) instanceof InitiateSessionReply;
-                        if (isReply)
-                        {
-                            reply = (InitiateSessionReply)correlationIdToReply.remove(correlationId);
-                        }
-                        session = newInitiatorSession(
-                            connection,
-                            lastSentSeqNum,
-                            lastRecvSeqNum,
-                            sessionState,
-                            isReply ? reply.configuration() : null,
-                            sequenceIndex,
-                            enableLastMsgSeqNumProcessed);
-                    }
-                    else
-                    {
-                        DebugLogger.log(FIX_CONNECTION, "Acct Connect: %d, %d%n", connection, libraryId);
-                        session = acceptSession(
-                            connection, address, sessionState, heartbeatIntervalInS, sequenceIndex,
-                            enableLastMsgSeqNumProcessed);
-                        session.lastSentMsgSeqNum(lastSentSeqNum);
-                        session.lastReceivedMsgSeqNum(lastRecvSeqNum);
-                    }
-
-                    final CompositeKey compositeKey = sessionIdStrategy.onInitiateLogon(
-                        localCompId,
-                        localSubId,
-                        localLocationId,
-                        remoteCompId,
-                        remoteSubId,
-                        remoteLocationId);
-
-                    session.username(username);
-                    session.password(password);
-                    session.setupSession(sessionId, compositeKey);
-                    session.logonTime(logonTime);
-                    session.closedResendInterval(closedResendInterval);
-                    session.resendRequestChunkSize(resendRequestChunkSize);
-                    session.sendRedundantResendRequests(sendRedundantResendRequests);
-                    session.awaitingResend(awaitingResend);
-                    session.lastResentMsgSeqNo(lastResentMsgSeqNo);
-                    session.lastResendChunkMsgSeqNum(lastResendChunkMsgSeqNum);
-                    session.endOfResendRequestRange(endOfResendRequestRange);
-                    session.awaitingHeartbeat(awaitingHeartbeat);
-
-                    createSessionSubscriber(connection, session, reply, slowStatus);
-                    insertSession(session, connectionType, sessionState);
-
-                    DebugLogger.log(GATEWAY_MESSAGE,
-                        "onSessionExists: conn=%d, sess=%d, sentSeqNo=%d, recvSeqNo=%d%n",
-                        connection,
-                        sessionId,
-                        lastSentSeqNum,
-                        lastRecvSeqNum);
-                }
-                else
-                {
-                    sessionExistsHandler.onSessionExists(
-                        fixLibrary,
-                        sessionId,
-                        localCompId,
-                        localSubId,
-                        localLocationId,
-                        remoteCompId,
-                        remoteSubId,
-                        remoteLocationId);
-                }
-            }
+            session = newInitiatorSession(
+                connection,
+                lastSentSeqNum,
+                lastRecvSeqNum,
+                sessionState,
+                isReply ? reply.configuration() : null,
+                sequenceIndex,
+                enableLastMsgSeqNumProcessed,
+                fixDictionary);
+        }
+        else
+        {
+            DebugLogger.log(FIX_CONNECTION, "Acct Connect: %d, %d%n", connection, libraryId);
+            session = acceptSession(
+                connection, address, sessionState, heartbeatIntervalInS, sequenceIndex,
+                enableLastMsgSeqNumProcessed, fixDictionary);
+            session.lastSentMsgSeqNum(lastSentSeqNum);
+            session.initialLastReceivedMsgSeqNum(lastRecvSeqNum);
         }
 
-        return CONTINUE;
+        final CompositeKey compositeKey = sessionIdStrategy.onInitiateLogon(
+            localCompId,
+            localSubId,
+            localLocationId,
+            remoteCompId,
+            remoteSubId,
+            remoteLocationId);
+
+        session.username(username);
+        session.password(password);
+        session.setupSession(sessionId, compositeKey);
+        session.logonTime(logonTime);
+        session.closedResendInterval(closedResendInterval);
+        session.resendRequestChunkSize(resendRequestChunkSize);
+        session.sendRedundantResendRequests(sendRedundantResendRequests);
+        session.awaitingResend(awaitingResend);
+        session.lastResentMsgSeqNo(lastResentMsgSeqNo);
+        session.lastResendChunkMsgSeqNum(lastResendChunkMsgSeqNum);
+        session.endOfResendRequestRange(endOfResendRequestRange);
+        session.awaitingHeartbeat(awaitingHeartbeat);
+
+        createSessionSubscriber(connection, session, reply, slowStatus, fixDictionary);
+        insertSession(session, connectionType, sessionState);
+
+        DebugLogger.log(GATEWAY_MESSAGE,
+            "onSessionExists: conn=%d, sess=%d, sentSeqNo=%d, recvSeqNo=%d%n",
+            connection,
+            sessionId,
+            lastSentSeqNum,
+            lastRecvSeqNum);
     }
 
     private void insertSession(
@@ -811,7 +933,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long connectionId,
         final long sessionId,
         final int sequenceIndex,
-        final int messageType,
+        final long messageType,
         final long timestamp,
         final MessageStatus status,
         final int sequenceNumber,
@@ -947,19 +1069,19 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
-    public Action onEndOfDay(final int libraryId)
+    public Action onEngineClose(final int libraryId)
     {
         if (libraryId == this.libraryId)
         {
-            state = END_OF_DAY;
+            state = ENGINE_CLOSE;
 
-            attemptEndOfDayOperation();
+            attemptEngineCloseBasedLogout();
         }
 
         return CONTINUE;
     }
 
-    private void attemptEndOfDayOperation()
+    private void attemptEngineCloseBasedLogout()
     {
         final InternalSession[] sessions = this.sessions;
         final int length = sessions.length;
@@ -975,7 +1097,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             sessionLogoutIndex++;
         }
 
-        state = CLOSED;
+        // Yes, technically the engine is closing down, so we could flip to ATTEMPT_CONNECT state here.
+        // But actually we just want to follow the normal linger and timeout procedure.
+        state = CONNECTED;
     }
 
     private void validateEndOfDay()
@@ -998,7 +1122,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     public Action onControlNotification(final int libraryId, final SessionsDecoder sessionsDecoder)
     {
-        // TODO(Nick): Reorganise this as it is confusing.
         if (libraryId == this.libraryId)
         {
             final long timeInMs = timeInMs();
@@ -1106,11 +1229,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long connectionId,
         final InternalSession session,
         final InitiateSessionReply reply,
-        final SlowStatus slowStatus)
+        final SlowStatus slowStatus,
+        final FixDictionary fixDictionary)
     {
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
-            session, validationStrategy, null);
+            session, validationStrategy, null, fixDictionary);
         final SessionSubscriber subscriber = new SessionSubscriber(
             parser,
             session,
@@ -1130,13 +1254,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final SessionState state,
         final SessionConfiguration sessionConfiguration,
         final int sequenceIndex,
-        final boolean enableLastMsgSeqNumProcessed)
+        final boolean enableLastMsgSeqNumProcessed,
+        final FixDictionary fixDictionary)
     {
         final int defaultInterval = configuration.defaultHeartbeatIntervalInS();
         final GatewayPublication publication = transport.outboundPublication();
 
         final MutableAsciiBuffer asciiBuffer = sessionBuffer();
-        final SessionProxy sessionProxy = sessionProxy(connectionId);
+        final SessionProxy sessionProxy = sessionProxy(connectionId, fixDictionary);
         final int initialReceivedSequenceNumber = initiatorNewSequenceNumber(
             sessionConfiguration, SessionConfiguration::initialReceivedSequenceNumber, lastReceivedSequenceNumber);
         final int initialSentSequenceNumber = initiatorNewSequenceNumber(
@@ -1145,7 +1270,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final InitiatorSession session = new InitiatorSession(
             defaultInterval,
             connectionId,
-            clock,
+            epochClock,
             sessionProxy,
             publication,
             sessionIdStrategy,
@@ -1159,9 +1284,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             sessionConfiguration != null && sessionConfiguration.resetSeqNum(),
             configuration.reasonableTransmissionTimeInMs(),
             asciiBuffer,
-            enableLastMsgSeqNumProcessed);
+            enableLastMsgSeqNumProcessed,
+            fixDictionary.beginString(),
+            configuration.sessionCustomisationStrategy());
 
-        session.lastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
+        session.initialLastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
 
         return session;
     }
@@ -1202,7 +1329,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final SessionState state,
         final int heartbeatIntervalInS,
         final int sequenceIndex,
-        final boolean enableLastMsgSeqNumProcessed)
+        final boolean enableLastMsgSeqNumProcessed,
+        final FixDictionary fixDictionary)
     {
         final GatewayPublication publication = transport.outboundPublication();
         final long sendingTimeWindow = configuration.sendingTimeWindowInMs();
@@ -1217,8 +1345,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final InternalSession session = new AcceptorSession(
             heartbeatIntervalInS,
             connectionId,
-            clock,
-            sessionProxy(connectionId),
+            epochClock,
+            sessionProxy(connectionId, fixDictionary),
             publication,
             sessionIdStrategy,
             sendingTimeWindow,
@@ -1230,12 +1358,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             state,
             configuration.reasonableTransmissionTimeInMs(),
             asciiBuffer,
-            enableLastMsgSeqNumProcessed);
+            enableLastMsgSeqNumProcessed,
+            fixDictionary.beginString(),
+            configuration.sessionCustomisationStrategy());
         session.address(host, port);
         return session;
     }
 
-    private SessionProxy sessionProxy(final long connectionId)
+    private SessionProxy sessionProxy(final long connectionId, final FixDictionary fixDictionary)
     {
         return configuration.sessionProxyFactory().make(
             configuration.sessionBufferSize(),
@@ -1244,7 +1374,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             configuration.sessionCustomisationStrategy(),
             new SystemEpochClock(),
             connectionId,
-            libraryId);
+            libraryId,
+            fixDictionary,
+            LangUtil::rethrowUnchecked);
     }
 
     private void checkState()

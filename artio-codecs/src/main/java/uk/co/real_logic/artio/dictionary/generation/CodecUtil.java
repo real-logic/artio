@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -146,6 +146,24 @@ public final class CodecUtil
     public static boolean equals(final char[] value, final char[] expected, final int length)
     {
         return equals(value, expected, 0, 0, length);
+    }
+
+    public static boolean equals(final char[] value, final String expected, final int length)
+    {
+        if (value.length < length || expected.length() != length)
+        {
+            return false;
+        }
+
+        for (int i = 0; i < length; i++)
+        {
+            if (value[i] != expected.charAt(i))
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public static int hashCode(final char[] value, final int offset, final int length)

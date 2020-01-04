@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,13 +13,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.util;
+package uk.co.real_logic.artio.fields;
 
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import uk.co.real_logic.artio.fields.DecimalFloat;
+import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.Arrays;
 
@@ -35,21 +35,41 @@ public class DecimalFloatDecodingTest
         return Arrays.asList(new Object[][]
         {
             {"55.36", 5536L, 2},
+            {"5.536e0", 5536L, 3},
+            {"5.536e1", 5536L, 2},
+            {"5.536e2", 5536L, 1},
+            {"5.536e+2", 5536L, 1},
+            {"5.536e+02", 5536L, 1},
+            {"5.536e-1", 5536L, 4},
+            {"5.536e-01", 5536L, 4},
             {"55.3600", 5536L, 2},
+            {"1e+016", 10000000000000000L, 0},
+            {"1e-016", 1L, 16},
+            {"5.536e-2", 5536L, 5},
+            {"5.536e-02", 5536L, 5},
             {"0055.36", 5536L, 2},
             {"0055.3600", 5536L, 2},
             {".995", 995L, 3},
             {"0.9950", 995L, 3},
             {"25", 25L, 0},
             {"-55.36", -5536L, 2},
+            {"-553.6e-1", -5536L, 2},
             {"-0055.3600", -5536L, 2},
+            {"-0055.3600e0", -5536L, 2},
+            {"-0055.3600e5", -5536000L, 0},
             {"-55.3600", -5536L, 2},
             {"-.995", -995L, 3},
             {"-0.9950", -995L, 3},
             {"-25", -25L, 0},
             {".6", 6L, 1},
+            {".6e0", 6L, 1},
+            {".6e2", 60L, 0},
             {".06", 6L, 2},
+            {".06e-2", 6L, 4},
             {"-.6", -6L, 1},
+            {"-.6e0", -6L, 1},
+            {"-.6e2", -60L, 0},
+            {"-.6e-2", -6L, 3},
             {"-.06", -6L, 2},
             {"10", 10L, 0},
             {"-10", -10L, 0},

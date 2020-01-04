@@ -13,8 +13,7 @@ public interface ReplayHandler
 {
     /**
      * Event to indicate that a fix message has arrived to process.
-     *
-     * @param buffer the buffer containing the fix message.
+     *  @param buffer the buffer containing the fix message.
      * @param offset the offset in the buffer where the message starts.
      * @param length the length of the message within the buffer.
      * @param libraryId the id of the library which has received this message.
@@ -29,5 +28,5 @@ public interface ReplayHandler
         int libraryId,
         long sessionId,
         int sequenceIndex,
-        int messageType);
+        long messageType);
 }

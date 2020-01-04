@@ -35,7 +35,7 @@ public class ResendRedundantResendRequestTest
             .libraryAeronChannel(IPC_CHANNEL)
             .monitoringFile(acceptorMonitoringFile("engineCounters"))
             .logFileDir(ACCEPTOR_LOGS)
-            .sessionPersistenceStrategy(SessionPersistenceStrategy.alwaysIndexed())
+            .sessionPersistenceStrategy(SessionPersistenceStrategy.alwaysPersistent())
             .acceptedSessionSendRedundantResendRequests(resendRedundantResendRequest);
         engine = FixEngine.launch(config);
     }

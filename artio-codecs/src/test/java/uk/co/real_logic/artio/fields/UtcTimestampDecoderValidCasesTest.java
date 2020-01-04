@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,10 +55,10 @@ public class UtcTimestampDecoderValidCasesTest
     public static Collection<Object[]> data()
     {
         return Arrays.asList(
-            new Object[] {"20150225-17:51:32", true},
+            new Object[] {"20150225-17:51:32.000", true},
             new Object[] {"20150225-17:51:32.123", true},
             new Object[] {"20600225-17:51:32.123", true},
-            new Object[] {"00010101-00:00:00", false},
+            new Object[] {"00010101-00:00:00.000", false},
             new Object[] {"00010101-00:00:00.001", false},
             new Object[] {"99991231-23:59:59.999", false}
         );

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,9 @@ class ReceiverEndPoints extends TransportPoller
     // complete, so these endpoints are always polled, rather than using the selector.
     private ReceiverEndPoint[] requiredPollingEndPoints = new ReceiverEndPoint[0];
     private ReceiverEndPoint[] endPoints = new ReceiverEndPoint[0];
+    // An endpoint that has read data out of the TCP layer but has been back-pressured when attempting to write
+    // the data into the Aeron stream.
+    private ReceiverEndPoint backpressuredEndPoint = null;
 
     ReceiverEndPoints(final ErrorHandler errorHandler)
     {
@@ -150,26 +153,21 @@ class ReceiverEndPoints extends TransportPoller
         try
         {
             final ReceiverEndPoint[] requiredPollingEndPoints = this.requiredPollingEndPoints;
-            final ReceiverEndPoint[] endPoints = this.endPoints;
-
+            final ReceiverEndPoint backpressuredEndPoint = this.backpressuredEndPoint;
             final int numRequiredPollingEndPoints = requiredPollingEndPoints.length;
-            final int numEndPoints = endPoints.length;
-            final int threshold = ITERATION_THRESHOLD - numRequiredPollingEndPoints;
-            if (numEndPoints <= threshold)
+
+            if (backpressuredEndPoint != null)
             {
-                bytesReceived = pollArray(bytesReceived, endPoints, numEndPoints);
+                if (backpressuredEndPoint.retryFrameMessages())
+                {
+                    this.backpressuredEndPoint = null;
+
+                    bytesReceived += pollNormalEndPoints(numRequiredPollingEndPoints);
+                }
             }
             else
             {
-                selector.selectNow();
-
-                final SelectionKey[] keys = selectedKeySet.keys();
-                for (int i = selectedKeySet.size() - 1; i >= 0; i--)
-                {
-                    bytesReceived += ((ReceiverEndPoint)keys[i].attachment()).poll();
-                }
-
-                selectedKeySet.reset();
+                bytesReceived += pollNormalEndPoints(numRequiredPollingEndPoints);
             }
 
             bytesReceived = pollArray(bytesReceived, requiredPollingEndPoints, numRequiredPollingEndPoints);
@@ -179,6 +177,46 @@ class ReceiverEndPoints extends TransportPoller
             LangUtil.rethrowUnchecked(ex);
         }
 
+        return bytesReceived;
+    }
+
+    private int pollNormalEndPoints(final int numRequiredPollingEndPoints) throws IOException
+    {
+        int bytesReceived = 0;
+        final ReceiverEndPoint[] endPoints = this.endPoints;
+        final int numEndPoints = endPoints.length;
+        final int threshold = ITERATION_THRESHOLD - numRequiredPollingEndPoints;
+        if (numEndPoints <= threshold)
+        {
+            bytesReceived = pollArray(bytesReceived, endPoints, numEndPoints);
+        }
+        else
+        {
+            selector.selectNow();
+
+            final SelectionKey[] keys = selectedKeySet.keys();
+            final int size = selectedKeySet.size();
+            int i;
+            for (i = 0; i < size; i++)
+            {
+                final ReceiverEndPoint endPoint = (ReceiverEndPoint)keys[i].attachment();
+                final int polledBytes = endPoint.poll();
+                if (polledBytes < 0)
+                {
+                    backpressuredEndPoint = endPoint;
+                    bytesReceived -= polledBytes;
+                    break;
+                }
+
+                bytesReceived += polledBytes;
+            }
+
+            // check we need to reset
+            if (i != 0)
+            {
+                selectedKeySet.reset(i);
+            }
+        }
         return bytesReceived;
     }
 

@@ -59,6 +59,13 @@
             <field name="Username" required="N"/>
             <field name="Password" required="N"/>
         </message>
+        <message name="UserRequest" msgtype="BE" msgcat="admin">
+            <field name="UserRequestID" required="Y"/>
+            <field name="UserRequestType" required="Y"/>
+            <field name="Username" required="Y"/>
+            <field name="Password" required="N"/>
+            <field name="NewPassword" required="N"/>
+        </message>
 
         <!-- Messages for Samples -->
         <message name="NewOrderSingle" msgtype="D" msgcat="app">
@@ -98,7 +105,10 @@
             <value enum="3" description="REJECT"/>
             <value enum="4" description="SEQUENCE_RESET"/>
             <value enum="5" description="LOGOUT"/>
+            <value enum="8" description="EXECUTION_REPORT"/>
             <value enum="A" description="LOGON"/>
+            <value enum="D" description="ORDER_SINGLE"/>
+            <value enum="BE" description="USER_REQUEST"/>
         </field>
         <field number="10" name="CheckSum" type="STRING"/>
         <field number="49" name="SenderCompID" type="STRING"/>
@@ -162,6 +172,14 @@
         <field number="464" name="TestMessageIndicator" type="BOOLEAN"/>
         <field number="553" name="Username" type="STRING"/>
         <field number="554" name="Password" type="STRING"/>
+        <field number="923" name="UserRequestID" type="STRING"/>
+        <field number="924" name="UserRequestType" type="INT">
+            <value enum="1" description="LogOnUser"/>
+            <value enum="2" description="LogOffUser"/>
+            <value enum="3" description="ChangePasswordForUser"/>
+            <value enum="4" description="RequestIndividualUserStatus"/>
+        </field>
+        <field number="925" name="NewPassword" type="STRING"/>
 
         <!-- Fields for Samples -->
         <field number="11" name="ClOrdID" type="STRING"/>

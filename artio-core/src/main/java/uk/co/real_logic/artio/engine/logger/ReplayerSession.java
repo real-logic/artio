@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,32 +15,40 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
+import org.agrona.MutableDirectBuffer;
+import org.agrona.collections.LongHashSet;
+import org.agrona.concurrent.EpochClock;
+import org.agrona.concurrent.IdleStrategy;
+
+
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
-import org.agrona.DirectBuffer;
-import org.agrona.ErrorHandler;
-import org.agrona.MutableDirectBuffer;
-import org.agrona.collections.IntHashSet;
-import org.agrona.concurrent.EpochClock;
-import org.agrona.concurrent.IdleStrategy;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.Encoder;
-import uk.co.real_logic.artio.decoder.HeaderDecoder;
-import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
 import uk.co.real_logic.artio.engine.PossDupEnabler;
 import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
-import uk.co.real_logic.artio.messages.*;
+import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
+import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
+import uk.co.real_logic.artio.messages.FixMessageDecoder;
+import uk.co.real_logic.artio.messages.FixMessageEncoder;
+import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
+import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
+import uk.co.real_logic.artio.messages.MessageStatus;
+import uk.co.real_logic.artio.messages.ReplayCompleteEncoder;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
-import static uk.co.real_logic.artio.LogTag.REPLAY;
+import static uk.co.real_logic.artio.LogTag.*;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
 
@@ -59,12 +67,11 @@ class ReplayerSession implements ControlledFragmentHandler
     private static final FixMessageEncoder FIX_MESSAGE_ENCODER = new FixMessageEncoder();
     private static final MessageHeaderDecoder MESSAGE_HEADER = new MessageHeaderDecoder();
     private static final FixMessageDecoder FIX_MESSAGE = new FixMessageDecoder();
-    private static final HeaderDecoder FIX_HEADER = new HeaderDecoder();
     private static final MessageHeaderEncoder MESSAGE_HEADER_ENCODER = new MessageHeaderEncoder();
     private static final AsciiBuffer ASCII_BUFFER = new MutableAsciiBuffer();
     private static final ReplayCompleteEncoder REPLAY_COMPLETE_ENCODER = new ReplayCompleteEncoder();
 
-    private final GapFillEncoder gapFillEncoder = new GapFillEncoder();
+    private final GapFillEncoder gapFillEncoder;
 
     private final BufferClaim bufferClaim;
     private final PossDupEnabler possDupEnabler;
@@ -72,11 +79,12 @@ class ReplayerSession implements ControlledFragmentHandler
     private final IdleStrategy idleStrategy;
     private final ReplayHandler replayHandler;
     private final int maxClaimAttempts;
-    private final IntHashSet gapFillMessageTypes;
+    private final LongHashSet gapFillMessageTypes;
     private final SenderSequenceNumbers senderSequenceNumbers;
     private final ExclusivePublication publication;
     private final ReplayQuery replayQuery;
     private final ErrorHandler errorHandler;
+    private final SequenceNumberExtractor sequenceNumberExtractor;
 
     private int beginSeqNo;
     private int endSeqNo;
@@ -97,7 +105,7 @@ class ReplayerSession implements ControlledFragmentHandler
         final IdleStrategy idleStrategy,
         final ReplayHandler replayHandler,
         final int maxClaimAttempts,
-        final IntHashSet gapFillMessageTypes,
+        final LongHashSet gapFillMessageTypes,
         final SenderSequenceNumbers senderSequenceNumbers,
         final ExclusivePublication publication,
         final EpochClock clock,
@@ -110,7 +118,7 @@ class ReplayerSession implements ControlledFragmentHandler
         final ReplayQuery replayQuery,
         final String message,
         final ErrorHandler errorHandler,
-        final HeaderDecoder requestHeader)
+        final GapFillEncoder gapFillEncoder)
     {
         this.bufferClaim = bufferClaim;
         this.idleStrategy = idleStrategy;
@@ -128,10 +136,11 @@ class ReplayerSession implements ControlledFragmentHandler
         this.message = message;
         this.errorHandler = errorHandler;
         this.replayQuery = replayQuery;
+        this.gapFillEncoder = gapFillEncoder;
+
+        sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
 
         lastSeqNo = beginSeqNo - 1;
-
-        gapFillEncoder.setupMessage(requestHeader);
 
         possDupEnabler = new PossDupEnabler(
             bufferClaim,
@@ -174,7 +183,7 @@ class ReplayerSession implements ControlledFragmentHandler
             sequenceIndex,
             endSeqNo,
             sequenceIndex,
-            LogTag.CATCHUP);
+            CATCHUP);
     }
 
     // Callback for the ReplayQuery:
@@ -194,12 +203,10 @@ class ReplayerSession implements ControlledFragmentHandler
         final int messageOffset = srcOffset + MESSAGE_FRAME_BLOCK_LENGTH;
         final int messageLength = srcLength - MESSAGE_FRAME_BLOCK_LENGTH;
 
-        ASCII_BUFFER.wrap(srcBuffer);
-        FIX_HEADER.reset();
-        FIX_HEADER.decode(ASCII_BUFFER, messageOffset, messageLength);
-        final int msgSeqNum = FIX_HEADER.msgSeqNum();
-        final int messageType = FIX_MESSAGE.messageType();
+        final int msgSeqNum = sequenceNumberExtractor.extract(srcBuffer, messageOffset, messageLength);
+        final long messageType = MessageTypeExtractor.getMessageType(FIX_MESSAGE);
 
+        ASCII_BUFFER.wrap(srcBuffer);
         replayHandler.onReplayedMessage(
             ASCII_BUFFER,
             messageOffset,
@@ -256,7 +263,7 @@ class ReplayerSession implements ControlledFragmentHandler
             FIX_MESSAGE_ENCODER
                 .wrapAndApplyHeader(destBuffer, destOffset, MESSAGE_HEADER_ENCODER)
                 .libraryId(ENGINE_LIBRARY_ID)
-                .messageType(SequenceResetDecoder.MESSAGE_TYPE)
+                .messageType(SEQUENCE_RESET_MESSAGE_TYPE)
                 .session(this.sessionId)
                 .sequenceIndex(this.sequenceIndex)
                 .connection(this.connectionId)
@@ -308,7 +315,7 @@ class ReplayerSession implements ControlledFragmentHandler
         switch (state)
         {
             case REPLAYING:
-                DebugLogger.log(REPLAY, "ReplayerSession: REPLAYING step");
+                DebugLogger.log(REPLAY_ATTEMPT, "ReplayerSession: REPLAYING step");
                 if (replayOperation.attemptReplay())
                 {
                     state = State.CHECK_REPLAY;
@@ -317,7 +324,7 @@ class ReplayerSession implements ControlledFragmentHandler
                 return false;
 
             case CHECK_REPLAY:
-                DebugLogger.log(REPLAY, "ReplayerSession: CHECK_REPLAY step");
+                DebugLogger.log(REPLAY_ATTEMPT, "ReplayerSession: CHECK_REPLAY step");
                 if (completeReplay())
                 {
                     state = State.SEND_COMPLETE_MESSAGE;
@@ -425,6 +432,14 @@ class ReplayerSession implements ControlledFragmentHandler
     private int newSeqNo(final long connectionId)
     {
         return senderSequenceNumbers.lastSentSequenceNumber(connectionId) + 1;
+    }
+
+    public void close()
+    {
+        if (replayOperation != null)
+        {
+            replayOperation.close();
+        }
     }
 
 }

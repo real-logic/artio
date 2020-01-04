@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,6 +72,12 @@ public final class Timing
     }
 
     public static void assertEventuallyTrue(final String message, final Block runnable, final long timeoutInMs)
+    {
+        assertEventuallyTrue(() -> message, runnable, timeoutInMs);
+    }
+
+    public static void assertEventuallyTrue(
+        final Supplier<String> message, final Block runnable, final long timeoutInMs)
     {
         final long endTime = System.currentTimeMillis() + timeoutInMs;
 

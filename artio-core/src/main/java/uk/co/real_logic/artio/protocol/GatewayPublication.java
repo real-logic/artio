@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,16 +23,19 @@ import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationEncoder.SessionsEncoder;
 
 import java.util.List;
 
+import static io.aeron.logbuffer.FrameDescriptor.FRAME_ALIGNMENT;
 import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static io.aeron.protocol.DataHeaderFlyweight.END_FLAG;
 import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.UTF_8;
+import static org.agrona.BitUtil.align;
 import static uk.co.real_logic.artio.DebugLogger.logSbeMessage;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.messages.ErrorDecoder.messageHeaderLength;
@@ -64,9 +67,9 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + SlowStatusNotificationEncoder.BLOCK_LENGTH;
     private static final byte MIDDLE_FLAG = 0;
     private static final int MANAGE_SESSION_BLOCK_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
-        ManageSessionEncoder.BLOCK_LENGTH + ManageSessionEncoder.localCompIdHeaderLength() * 9;
+        ManageSessionEncoder.BLOCK_LENGTH + ManageSessionEncoder.localCompIdHeaderLength() * 10;
     private static final int INITIATE_CONNECTION_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
-        InitiateConnectionEncoder.BLOCK_LENGTH + InitiateConnectionDecoder.hostHeaderLength() * 9;
+        InitiateConnectionEncoder.BLOCK_LENGTH + InitiateConnectionDecoder.hostHeaderLength() * 10;
     private static final int CONTROL_NOTIFICATION_LENGTH = HEADER_LENGTH + ControlNotificationEncoder.BLOCK_LENGTH +
         GroupSizeEncodingEncoder.ENCODED_LENGTH;
     private static final int MID_CONNECTION_DISCONNECT_LENGTH =
@@ -126,20 +129,69 @@ public class GatewayPublication extends ClaimablePublication
         final int srcOffset,
         final int srcLength,
         final int libraryId,
-        final int messageType,
+        final long messageType,
         final long sessionId,
         final int sequenceIndex,
         final long connectionId,
         final MessageStatus status,
         final int sequenceNumber)
     {
+        return saveMessage(
+            srcBuffer,
+            srcOffset,
+            srcLength,
+            libraryId,
+            messageType,
+            sessionId,
+            sequenceIndex,
+            connectionId,
+            status,
+            sequenceNumber,
+            clock.time());
+    }
+
+    public long saveMessage(
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int srcLength,
+        final int libraryId,
+        final long messageType,
+        final long sessionId,
+        final int sequenceIndex,
+        final long connectionId,
+        final MessageStatus status,
+        final int sequenceNumber,
+        final long timestamp)
+    {
         final BufferClaim bufferClaim = this.bufferClaim;
-        final long timestamp = clock.time();
         final int framedLength = FRAMED_MESSAGE_SIZE + srcLength;
         final boolean fragmented = framedLength > maxPayloadLength;
         final int claimLength = fragmented ? maxPayloadLength : framedLength;
         int srcFragmentLength = fragmented ? maxInitialBodyLength : srcLength;
         int srcFragmentOffset = srcOffset;
+
+        if (fragmented)
+        {
+            // Add a padding message at the end of the term buffer if needed.
+            final int length = framedLength;
+            final int numMaxPayloads = length / maxPayloadLength;
+            final int remainingPayload = length % maxPayloadLength;
+            final int lastFrameLength = remainingPayload > 0 ?
+                align(remainingPayload + HEADER_LENGTH, FRAME_ALIGNMENT) : 0;
+            final int requiredLength = (numMaxPayloads * (maxPayloadLength + HEADER_LENGTH)) + lastFrameLength;
+            final int termLength = dataPublication.termBufferLength();
+            final int termOffset = dataPublication.termOffset();
+            final int resultingOffset = termOffset + requiredLength;
+
+            if (resultingOffset > termLength)
+            {
+                final long paddingPosition = dataPublication.appendPadding(termLength - termOffset);
+                if (paddingPosition < 0)
+                {
+                    return paddingPosition;
+                }
+            }
+        }
 
         long position = claim(claimLength);
         if (position < 0)
@@ -232,6 +284,8 @@ public class GatewayPublication extends ClaimablePublication
         final int lastResendChunkMsgSeqNum,
         final int endOfResendRequestRange,
         final boolean awaitingHeartbeat,
+        final int logonReceivedSequenceNumber,
+        final int logonSequenceIndex,
         final String localCompId,
         final String localSubId,
         final String localLocationId,
@@ -240,7 +294,8 @@ public class GatewayPublication extends ClaimablePublication
         final String remoteLocationId,
         final String address,
         final String username,
-        final String password)
+        final String password,
+        final Class<? extends FixDictionary> fixDictionary)
     {
         final byte[] localCompIdBytes = bytes(localCompId);
         final byte[] localSubIdBytes = bytes(localSubId);
@@ -251,11 +306,13 @@ public class GatewayPublication extends ClaimablePublication
         final byte[] addressBytes = bytes(address);
         final byte[] usernameBytes = bytes(username);
         final byte[] passwordBytes = bytes(password);
+        final byte[] fixDictionaryBytes = bytes(fixDictionary.getName());
 
         final long position = claim(
             MANAGE_SESSION_BLOCK_LENGTH + localCompIdBytes.length + localSubIdBytes.length +
             localLocationIdBytes.length + remoteCompIdBytes.length + remoteSubIdBytes.length +
-            remoteLocationIdBytes.length + addressBytes.length + usernameBytes.length + passwordBytes.length);
+            remoteLocationIdBytes.length + addressBytes.length + usernameBytes.length + passwordBytes.length +
+            fixDictionaryBytes.length);
 
         if (position < 0)
         {
@@ -288,6 +345,8 @@ public class GatewayPublication extends ClaimablePublication
             .lastResendChunkMsgSeqNum(lastResendChunkMsgSeqNum)
             .endOfResendRequestRange(endOfResendRequestRange)
             .awaitingHeartbeat(toBool(awaitingHeartbeat))
+            .logonReceivedSequenceNumber(logonReceivedSequenceNumber)
+            .logonSequenceIndex(logonSequenceIndex)
             .putLocalCompId(localCompIdBytes, 0, localCompIdBytes.length)
             .putLocalSubId(localSubIdBytes, 0, localSubIdBytes.length)
             .putLocalLocationId(localLocationIdBytes, 0, localLocationIdBytes.length)
@@ -296,7 +355,8 @@ public class GatewayPublication extends ClaimablePublication
             .putRemoteLocationId(remoteLocationIdBytes, 0, remoteLocationIdBytes.length)
             .putAddress(addressBytes, 0, addressBytes.length)
             .putUsername(usernameBytes, 0, usernameBytes.length)
-            .putPassword(passwordBytes, 0, passwordBytes.length);
+            .putPassword(passwordBytes, 0, passwordBytes.length)
+            .putFixDictionary(fixDictionaryBytes, 0, fixDictionaryBytes.length);
 
         bufferClaim.commit();
 
@@ -481,6 +541,7 @@ public class GatewayPublication extends ClaimablePublication
         final boolean enableLastMsgSeqNumProcessed,
         final String username,
         final String password,
+        final Class<? extends FixDictionary> fixDictionary,
         final int heartbeatIntervalInS,
         final long correlationId)
     {
@@ -493,11 +554,13 @@ public class GatewayPublication extends ClaimablePublication
         final byte[] targetLocationIdBytes = bytes(targetLocationId);
         final byte[] usernameBytes = bytes(username);
         final byte[] passwordBytes = bytes(password);
+        final byte[] fixDictionaryBytes = bytes(fixDictionary.getName());
 
         final long position = claim(
             INITIATE_CONNECTION_LENGTH + hostBytes.length + senderCompIdBytes.length +
             senderSubIdBytes.length + senderLocationIdBytes.length + targetCompIdBytes.length +
-            targetSubIdBytes.length + targetLocationIdBytes.length + usernameBytes.length + passwordBytes.length);
+            targetSubIdBytes.length + targetLocationIdBytes.length + usernameBytes.length + passwordBytes.length +
+            fixDictionaryBytes.length);
 
         if (position < 0)
         {
@@ -528,7 +591,8 @@ public class GatewayPublication extends ClaimablePublication
             .putTargetSubId(targetSubIdBytes, 0, targetSubIdBytes.length)
             .putTargetLocationId(targetLocationIdBytes, 0, targetLocationIdBytes.length)
             .putUsername(usernameBytes, 0, usernameBytes.length)
-            .putPassword(passwordBytes, 0, passwordBytes.length);
+            .putPassword(passwordBytes, 0, passwordBytes.length)
+            .putFixDictionary(fixDictionaryBytes, 0, fixDictionaryBytes.length);
 
         bufferClaim.commit();
 

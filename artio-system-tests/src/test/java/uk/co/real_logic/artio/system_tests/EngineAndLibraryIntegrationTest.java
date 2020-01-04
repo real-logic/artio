@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,8 +34,8 @@ import java.util.Arrays;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
-import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -77,8 +77,8 @@ public class EngineAndLibraryIntegrationTest
 
     private void launchEngine(final int replyTimeoutInMs)
     {
-        delete(ACCEPTOR_LOGS);
         final EngineConfiguration config = acceptingConfig(unusedPort(), ACCEPTOR_ID, INITIATOR_ID);
+        config.deleteLogFileDirOnStart(true);
         config.replyTimeoutInMs(replyTimeoutInMs);
         engine = FixEngine.launch(config);
     }

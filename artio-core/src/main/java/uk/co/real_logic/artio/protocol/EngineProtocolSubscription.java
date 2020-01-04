@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.protocol;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.*;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
@@ -195,6 +196,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
         {
             return action; // Continue processing messages, but don't process this message.
         }
+
         return handler.onInitiateConnection(
             libraryId,
             initiateConnection.port(),
@@ -215,6 +217,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             initiateConnection.enableLastMsgSeqNumProcessed() == Bool.TRUE,
             initiateConnection.username(),
             initiateConnection.password(),
+            FixDictionary.find(initiateConnection.fixDictionary()),
             initiateConnection.heartbeatIntervalInS(),
             initiateConnection.correlationId(),
             header

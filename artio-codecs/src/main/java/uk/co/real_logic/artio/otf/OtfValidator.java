@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +17,12 @@ package uk.co.real_logic.artio.otf;
 
 import org.agrona.collections.IntHashSet;
 import uk.co.real_logic.artio.ValidationError;
-import uk.co.real_logic.artio.dictionary.IntDictionary;
+import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 
 import static uk.co.real_logic.artio.ValidationError.*;
-import static uk.co.real_logic.artio.dictionary.StandardFixConstants.MESSAGE_TYPE;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.MESSAGE_TYPE;
 
 /**
  * Acceptor that validates messages according to a dictionary
@@ -35,18 +35,18 @@ public final class OtfValidator implements OtfMessageAcceptor
     private final AsciiFieldFlyweight stringField = new AsciiFieldFlyweight();
 
     private final OtfMessageAcceptor delegate;
-    private final IntDictionary allFields;
-    private final IntDictionary requiredFields;
+    private final LongDictionary allFields;
+    private final LongDictionary requiredFields;
 
     private int groupLevel = 0;
 
-    private int messageType;
+    private long messageType;
     private IntHashSet allFieldsForMessageType;
 
     public OtfValidator(
         final OtfMessageAcceptor delegate,
-        final IntDictionary allFields,
-        final IntDictionary requiredFields)
+        final LongDictionary allFields,
+        final LongDictionary requiredFields)
     {
         this.delegate = delegate;
         this.allFields = allFields;
@@ -126,7 +126,7 @@ public final class OtfValidator implements OtfMessageAcceptor
     }
 
     public boolean onError(
-        final ValidationError error, final int messageType, final int tagNumber, final AsciiFieldFlyweight value)
+        final ValidationError error, final long messageType, final int tagNumber, final AsciiFieldFlyweight value)
     {
         return delegate.onError(error, messageType, tagNumber, value);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -92,7 +92,8 @@ public class EngineContext implements AutoCloseable
                 configuration.outboundLibraryStream(),
                 recordingCoordinator.outboundRecordingIdLookup(),
                 configuration.indexFileStateFlushTimeoutInMs(),
-                epochClock);
+                epochClock
+            );
             receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.receivedSequenceNumberBuffer(),
                 configuration.receivedSequenceNumberIndex(),
@@ -100,7 +101,8 @@ public class EngineContext implements AutoCloseable
                 configuration.inboundLibraryStream(),
                 recordingCoordinator.inboundRecordingIdLookup(),
                 configuration.indexFileStateFlushTimeoutInMs(),
-                epochClock);
+                epochClock
+            );
 
             newStreams();
             newArchivingAgent();
@@ -193,7 +195,8 @@ public class EngineContext implements AutoCloseable
             new SystemEpochClock(),
             configuration.gapfillOnReplayMessageTypes(),
             configuration.replayHandler(),
-            senderSequenceNumbers);
+            senderSequenceNumbers,
+            new FixSessionCodecsFactory());
     }
 
     private void newIndexers()
@@ -267,7 +270,7 @@ public class EngineContext implements AutoCloseable
                 inboundLibraryStreams.subscription("replayer"),
                 replayGatewayPublication,
                 configuration.agentNamePrefix(),
-                senderSequenceNumbers);
+                senderSequenceNumbers, new FixSessionCodecsFactory());
         }
     }
 

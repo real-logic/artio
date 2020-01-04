@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -81,6 +81,15 @@ public final class CodecGenerationTool
         final EnumGenerator enumGenerator = new EnumGenerator(dictionary, PARENT_PACKAGE, parentOutput);
         final ConstantGenerator constantGenerator = new ConstantGenerator(dictionary, PARENT_PACKAGE, parentOutput);
 
+        final String codecRejectUnknownEnumValueEnabled = HARD_CODED_REJECT_UNKNOWN_EMUM_VALUES
+            .map(String::valueOf)
+            .orElse(Generator.RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY);
+        final FixDictionaryGenerator fixDictionaryGenerator = new FixDictionaryGenerator(
+            dictionary,
+            parentOutput,
+            ENCODER_PACKAGE,
+            DECODER_PACKAGE,
+            PARENT_PACKAGE);
 
         final EncoderGenerator encoderGenerator = new EncoderGenerator(
             dictionary,
@@ -89,7 +98,8 @@ public final class CodecGenerationTool
             encoderOutput,
             Validation.class,
             RejectUnknownField.class,
-            RejectUnknownEnumValue.class);
+            RejectUnknownEnumValue.class,
+            codecRejectUnknownEnumValueEnabled);
 
         final DecoderGenerator decoderGenerator = new DecoderGenerator(
             dictionary,
@@ -100,7 +110,8 @@ public final class CodecGenerationTool
             Validation.class,
             RejectUnknownField.class,
             RejectUnknownEnumValue.class,
-            false);
+            false,
+            codecRejectUnknownEnumValueEnabled);
         final PrinterGenerator printerGenerator = new PrinterGenerator(dictionary, DECODER_PACKAGE, decoderOutput);
         final AcceptorGenerator acceptorGenerator = new AcceptorGenerator(dictionary, DECODER_PACKAGE, decoderOutput);
 
@@ -112,6 +123,7 @@ public final class CodecGenerationTool
         decoderGenerator.generate();
         printerGenerator.generate();
         acceptorGenerator.generate();
+        fixDictionaryGenerator.generate();
 
         if (FLYWEIGHTS_ENABLED)
         {
@@ -127,7 +139,8 @@ public final class CodecGenerationTool
                 Validation.class,
                 RejectUnknownField.class,
                 RejectUnknownEnumValue.class,
-                true);
+                true,
+                codecRejectUnknownEnumValueEnabled);
 
             flyweightDecoderGenerator.generate();
         }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
 import uk.co.real_logic.artio.messages.DisconnectDecoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
@@ -115,6 +116,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
     {
         messageFrame.wrap(buffer, offset, blockLength, version);
         final int messageLength = messageFrame.bodyLength();
+        final long messageType = MessageTypeExtractor.getMessageType(messageFrame);
         return protocolHandler.onMessage(
             buffer,
             offset + FRAME_SIZE,
@@ -123,7 +125,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
             messageFrame.connection(),
             messageFrame.session(),
             messageFrame.sequenceIndex(),
-            messageFrame.messageType(),
+            messageType,
             messageFrame.timestamp(),
             messageFrame.status(),
             messageFrame.sequenceNumber(),

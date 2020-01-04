@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.GatewayProcess;
 import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.builder.HeaderEncoder;
+import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionWriter;
@@ -69,7 +69,7 @@ public class FixLibrary extends GatewayProcess
             scheduler.configure(configuration.aeronContext());
             init(configuration);
             final LibraryTimers timers = new LibraryTimers(configuration.clock());
-            initMonitoringAgent(timers.all(), configuration);
+            initMonitoringAgent(timers.all(), configuration, null);
 
             final LibraryTransport transport = new LibraryTransport(configuration, fixCounters, aeron);
             poller = new LibraryPoller(
@@ -248,24 +248,37 @@ public class FixLibrary extends GatewayProcess
     {
         if (configuration.gracefulShutdown())
         {
-            removeParentDirectory(configuration.histogramLoggingFile());
-            removeParentDirectory(configuration.monitoringFile());
+            final boolean deletedHistogramFile = removeParentDirectory(configuration.histogramLoggingFile());
+            final boolean deletedMonitoringFile = removeParentDirectory(configuration.monitoringFile());
+
+            checkFileDeletion(deletedHistogramFile, configuration.histogramLoggingFile());
+            checkFileDeletion(deletedMonitoringFile, configuration.monitoringFile());
         }
     }
 
-    private void removeParentDirectory(final String path)
+    private void checkFileDeletion(final boolean deletedFile, final String path)
+    {
+        if (!deletedFile)
+        {
+            throw new FixGatewayException("Unable to delete: " + path);
+        }
+    }
+
+    private boolean removeParentDirectory(final String path)
     {
         final File file = new File(path);
         if (file.exists() && !file.delete())
         {
-            errorHandler.onError(new RuntimeException("Unable to delete: " + path));
+            return false;
         }
 
         final File parentFile = file.getParentFile();
-        if (parentFile != null & parentFile.exists() && parentFile.listFiles().length == 0)
+        if (parentFile != null && parentFile.exists() && parentFile.listFiles().length == 0)
         {
             IoUtil.delete(parentFile, true);
         }
+
+        return true;
     }
 
     /**
@@ -382,7 +395,7 @@ public class FixLibrary extends GatewayProcess
      * @return a <code>Reply</code> that will eventually contain the <code>SessionWriter</code>.
      */
     public Reply<SessionWriter> followerSession(
-        final HeaderEncoder headerEncoder, final long timeoutInMs)
+        final SessionHeaderEncoder headerEncoder, final long timeoutInMs)
     {
         return poller.followerSession(headerEncoder, timeoutInMs);
     }

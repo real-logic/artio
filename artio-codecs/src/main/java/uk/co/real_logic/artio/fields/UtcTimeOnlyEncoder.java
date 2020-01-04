@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,11 +97,7 @@ public final class UtcTimeOnlyEncoder
         string.putNaturalPaddedIntAscii(offset + 3, 2, minutes);
         string.putChar(offset + 5, ':');
         string.putNaturalPaddedIntAscii(offset + 6, 2, secondOfDay);
-
-        if (fractionOfSecond > 0)
-        {
-            string.putChar(offset + 8, '.');
-            string.putNaturalPaddedIntAscii(offset + 9, fractionFieldLength, fractionOfSecond);
-        }
+        string.putChar(offset + 8, '.');
+        string.putNaturalPaddedIntAscii(offset + 9, fractionFieldLength, fractionOfSecond);
     }
 }

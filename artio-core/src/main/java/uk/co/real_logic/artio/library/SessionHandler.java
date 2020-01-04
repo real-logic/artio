@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ public interface SessionHandler
         int libraryId,
         Session session,
         int sequenceIndex,
-        int messageType,
+        long messageType,
         long timestampInNs,
         long position);
 
