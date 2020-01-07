@@ -115,8 +115,6 @@ subprojects {
     }
 
     dependencies {
-        checkstyle "com.puppycrawl.tools:checkstyle:${checkstyleVersion}"
-
         testCompile "org.hamcrest:hamcrest:${hamcrestVersion}"
         testCompile "org.mockito:mockito-core:${mockitoVersion}"
         testCompile "junit:junit:${junitVersion}"
