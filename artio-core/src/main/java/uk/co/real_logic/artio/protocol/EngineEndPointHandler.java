@@ -89,4 +89,17 @@ public interface EngineEndPointHandler
         DirectBuffer srcBuffer,
         int srcOffset,
         int srcLength);
+
+    Action onWriteMetaData(
+        int libraryId,
+        long sessionId,
+        long correlationId,
+        DirectBuffer srcBuffer,
+        int srcOffset,
+        int srcLength);
+
+    Action onReadMetaData(
+        int libraryId,
+        long sessionId,
+        long correlationId);
 }

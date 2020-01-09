@@ -26,11 +26,16 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 public final class LibraryProtocolSubscription implements ControlledFragmentHandler
 {
+    private static final int READ_META_DATA_META_DATA_PREFIX =
+        ReadMetaDataReplyDecoder.BLOCK_LENGTH + ReadMetaDataReplyDecoder.metaDataHeaderLength();
+
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final ErrorDecoder error = new ErrorDecoder();
     private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
     private final ReleaseSessionReplyDecoder releaseSessionReply = new ReleaseSessionReplyDecoder();
     private final RequestSessionReplyDecoder requestSessionReply = new RequestSessionReplyDecoder();
+    private final WriteMetaDataReplyDecoder writeMetaDataReply = new WriteMetaDataReplyDecoder();
+    private final ReadMetaDataReplyDecoder readMetaDataReply = new ReadMetaDataReplyDecoder();
     private final NewSentPositionDecoder newSentPosition = new NewSentPositionDecoder();
     private final ControlNotificationDecoder controlNotification = new ControlNotificationDecoder();
     private final SlowStatusNotificationDecoder slowStatusNotification = new SlowStatusNotificationDecoder();
@@ -106,6 +111,16 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             case FollowerSessionReplyDecoder.TEMPLATE_ID:
             {
                 return onFollowerSessionReply(buffer, offset, blockLength, version);
+            }
+
+            case WriteMetaDataReplyDecoder.TEMPLATE_ID:
+            {
+                return onWriteMetaDataReply(buffer, offset, blockLength, version);
+            }
+
+            case ReadMetaDataReplyDecoder.TEMPLATE_ID:
+            {
+                return onReadMetaDataReply(buffer, offset, blockLength, version);
             }
 
             case EndOfDayDecoder.TEMPLATE_ID:
@@ -237,6 +252,43 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             libraryId,
             requestSessionReply.replyToId(),
             requestSessionReply.status());
+    }
+
+    private Action onWriteMetaDataReply(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        writeMetaDataReply.wrap(buffer, offset, blockLength, version);
+        final int libraryId = writeMetaDataReply.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
+
+        return handler.onWriteMetaDataReply(
+            libraryId,
+            writeMetaDataReply.replyToId(),
+            writeMetaDataReply.status());
+    }
+
+    private Action onReadMetaDataReply(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        readMetaDataReply.wrap(buffer, offset, blockLength, version);
+        final int libraryId = readMetaDataReply.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
+
+        return handler.onReadMetaDataReply(
+            libraryId,
+            readMetaDataReply.replyToId(),
+            readMetaDataReply.status(),
+            buffer,
+            offset + READ_META_DATA_META_DATA_PREFIX,
+            readMetaDataReply.metaDataLength());
     }
 
     private Action onError(

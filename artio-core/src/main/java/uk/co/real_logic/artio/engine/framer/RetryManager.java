@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.engine.framer;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.collections.Long2ObjectHashMap;
+import uk.co.real_logic.artio.Pressure;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -60,7 +61,10 @@ class RetryManager implements AutoCloseable
 
     void schedule(final Continuation continuation)
     {
-        continuations.add(continuation);
+        if (continuation.attemptToAction() != CONTINUE)
+        {
+            continuations.add(continuation);
+        }
     }
 
     int attemptSteps()

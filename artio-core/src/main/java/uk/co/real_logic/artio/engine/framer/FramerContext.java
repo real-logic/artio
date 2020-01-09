@@ -43,7 +43,7 @@ import java.util.List;
  */
 public class FramerContext
 {
-    private static final int ADMIN_COMMAND_CAPACITY = 16;
+    private static final int ADMIN_COMMAND_CAPACITY = 64;
 
     private final QueuedPipe<AdminCommand> adminCommands = new ManyToOneConcurrentArrayQueue<>(ADMIN_COMMAND_CAPACITY);
 
@@ -273,5 +273,10 @@ public class FramerContext
         }
 
         return null;
+    }
+
+    public boolean offer(final WriteMetaDataResponse response)
+    {
+        return adminCommands.offer(response);
     }
 }

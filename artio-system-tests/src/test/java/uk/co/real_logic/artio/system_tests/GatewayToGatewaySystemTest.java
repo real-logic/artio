@@ -15,6 +15,8 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.agrona.DirectBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
@@ -28,6 +30,8 @@ import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.library.MetadataHandler;
+import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
@@ -35,6 +39,8 @@ import uk.co.real_logic.artio.session.Session;
 import java.util.List;
 import java.util.function.IntSupplier;
 
+import static org.agrona.BitUtil.SIZE_OF_INT;
+import static org.agrona.BitUtil.SIZE_OF_LONG;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
@@ -55,6 +61,8 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
+    private static final long META_DATA_SESSION_ID = 1L;
+
     private static final String NEW_PASSWORD = "ABCDEF";
 
     private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
@@ -898,6 +906,125 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertArchiveDoesNotContainPassword();
     }
 
+    @Test(timeout = 10_000L)
+    public void shouldReadWrittenSessionMetaData()
+    {
+        final int value = 123;
+
+        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
+        writeBuffer.putInt(0, value);
+
+        writeMetaData(writeBuffer);
+
+        final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
+        assertEquals(value, readBuffer.getInt(0));
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldUpdateWrittenSessionMetaDataFittingWithinSlot()
+    {
+        final int value = 124;
+
+        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
+
+        writeBuffer.putInt(0, 123);
+        writeMetaData(writeBuffer);
+
+        writeBuffer.putInt(0, value);
+        writeMetaData(writeBuffer);
+
+        final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
+        assertEquals(value, readBuffer.getInt(0));
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldUpdateWrittenSessionMetaDataTooBigForOldSlot()
+    {
+        final int value = 124;
+
+        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
+
+        writeBuffer.putInt(0, 123);
+        writeMetaData(writeBuffer);
+
+        final UnsafeBuffer bigWriteBuffer = new UnsafeBuffer(new byte[SIZE_OF_LONG]);
+        bigWriteBuffer.putLong(0, value);
+        writeMetaData(bigWriteBuffer);
+
+        final UnsafeBuffer readBuffer = readSuccessfulMetaData(bigWriteBuffer);
+        assertEquals(value, readBuffer.getInt(0));
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldReceiveReadErrorForUnwrittenSessionMetaData()
+    {
+        final FakeMetadataHandler handler = readMetaData(1L);
+        assertEquals(MetaDataStatus.NO_META_DATA, handler.status());
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldReceiveReadErrorForMetaDataWithUnknownSession()
+    {
+        final FakeMetadataHandler handler = readMetaData(2L);
+        assertEquals(MetaDataStatus.UNKNOWN_SESSION, handler.status());
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldReceiveWriteErrorForMetaDataWithUnknownSession()
+    {
+        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
+        final Reply<?> reply = writeMetaData(writeBuffer, 2L);
+        assertEquals(MetaDataStatus.UNKNOWN_SESSION, reply.resultIfPresent());
+    }
+
+    private void writeMetaData(final UnsafeBuffer writeBuffer)
+    {
+        final Reply<MetaDataStatus> reply = writeMetaData(writeBuffer, META_DATA_SESSION_ID);
+        assertEquals(MetaDataStatus.OK, reply.resultIfPresent());
+
+    }
+
+    private Reply<MetaDataStatus> writeMetaData(final UnsafeBuffer writeBuffer, final long sessionId)
+    {
+        final Reply<MetaDataStatus> reply = acceptingLibrary.writeMetaData(
+            sessionId, writeBuffer, 0, writeBuffer.capacity());
+
+        testSystem.awaitCompletedReplies(reply);
+
+        return reply;
+    }
+
+    private UnsafeBuffer readSuccessfulMetaData(final UnsafeBuffer writeBuffer)
+    {
+        final FakeMetadataHandler handler = readMetaData(META_DATA_SESSION_ID);
+        assertEquals(MetaDataStatus.OK, handler.status());
+
+        final UnsafeBuffer readBuffer = handler.buffer();
+        assertEquals(writeBuffer.capacity(), readBuffer.capacity());
+        return readBuffer;
+    }
+
+    private FakeMetadataHandler readMetaData(final long sessionId)
+    {
+        final FakeMetadataHandler handler = new FakeMetadataHandler();
+
+        acceptingLibrary.readMetaData(sessionId, handler);
+
+        Timing.assertEventuallyTrue("reading session meta data failed to terminate", () ->
+        {
+            testSystem.poll();
+
+            return handler.callbackReceived();
+        });
+
+        return handler;
+    }
+
+    // TODO: deleted file
+    // TODO: wrong checksum
+    // TODO: sequence resets
+    // TODO: persistent over restarts
+
     private void assertArchiveDoesNotContainPassword()
     {
         final EngineConfiguration configuration = acceptingEngine.configuration();
@@ -1049,5 +1176,41 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertEquals(sessionId.surrogateId(), session.id());
         assertEquals(compositeKey.localCompId(), sessionId.localCompId());
         assertEquals(compositeKey.remoteCompId(), sessionId.remoteCompId());
+    }
+
+    private static class FakeMetadataHandler implements MetadataHandler
+    {
+        boolean callbackReceived = false;
+
+        private MetaDataStatus status;
+        private UnsafeBuffer buffer;
+
+        public void onMetaData(
+            final long sessionId,
+            final MetaDataStatus status,
+            final DirectBuffer buffer,
+            final int offset,
+            final int length)
+        {
+            this.buffer = new UnsafeBuffer(new byte[length]);
+            this.buffer.putBytes(0, buffer, offset, length);
+            this.status = status;
+            callbackReceived = true;
+        }
+
+        public boolean callbackReceived()
+        {
+            return callbackReceived;
+        }
+
+        public UnsafeBuffer buffer()
+        {
+            return buffer;
+        }
+
+        public MetaDataStatus status()
+        {
+            return status;
+        }
     }
 }

@@ -277,6 +277,8 @@ public final class FixEngine extends GatewayProcess
             timers,
             aeron.conductorAgentInvoker(),
             recordingCoordinator);
+
+        engineContext.framerContext(framerContext);
     }
 
     private Image replayImage(final String name, final int replaySessionId)

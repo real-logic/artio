@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.library;
 
 import io.aeron.Aeron;
 import io.aeron.exceptions.ConductorServiceTimeoutException;
+import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.IdleStrategy;
@@ -26,6 +27,7 @@ import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.GatewayProcess;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionWriter;
@@ -398,6 +400,21 @@ public class FixLibrary extends GatewayProcess
         final SessionHeaderEncoder headerEncoder, final long timeoutInMs)
     {
         return poller.followerSession(headerEncoder, timeoutInMs);
+    }
+
+    public Reply<MetaDataStatus> writeMetaData(
+        final long sessionId,
+        final DirectBuffer buffer,
+        final int offset,
+        final int length)
+    {
+        return poller.writeMetaData(sessionId, buffer, offset, length);
+    }
+
+    public void readMetaData(
+        final long sessionId, final MetadataHandler handler)
+    {
+        poller.readMetaData(sessionId, handler);
     }
 
     public String currentAeronChannel()

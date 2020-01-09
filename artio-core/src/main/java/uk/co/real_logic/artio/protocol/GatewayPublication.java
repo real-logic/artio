@@ -80,6 +80,14 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + FollowerSessionReplyEncoder.BLOCK_LENGTH;
     private static final int END_OF_DAY_LENGTH =
         HEADER_LENGTH + EndOfDayEncoder.BLOCK_LENGTH;
+    private static final int WRITE_META_DATA_LENGTH =
+        HEADER_LENGTH + WriteMetaDataEncoder.BLOCK_LENGTH + WriteMetaDataDecoder.metaDataHeaderLength();
+    private static final int WRITE_META_DATA_REPLY_LENGTH =
+        HEADER_LENGTH + WriteMetaDataReplyEncoder.BLOCK_LENGTH;
+    private static final int READ_META_DATA_LENGTH =
+        HEADER_LENGTH + ReadMetaDataEncoder.BLOCK_LENGTH;
+    private static final int READ_META_DATA_REPLy_LENGTH =
+        HEADER_LENGTH + ReadMetaDataReplyEncoder.BLOCK_LENGTH + ReadMetaDataReplyEncoder.metaDataHeaderLength();
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -106,6 +114,10 @@ public class GatewayPublication extends ClaimablePublication
     private final FollowerSessionRequestEncoder followerSessionRequest = new FollowerSessionRequestEncoder();
     private final FollowerSessionReplyEncoder followerSessionReply = new FollowerSessionReplyEncoder();
     private final EndOfDayEncoder endOfDay = new EndOfDayEncoder();
+    private final WriteMetaDataEncoder writeMetaData = new WriteMetaDataEncoder();
+    private final WriteMetaDataReplyEncoder writeMetaDataReply = new WriteMetaDataReplyEncoder();
+    private final ReadMetaDataEncoder readMetaData = new ReadMetaDataEncoder();
+    private final ReadMetaDataReplyEncoder readMetaDataReply = new ReadMetaDataReplyEncoder();
 
     private final Clock clock;
     private final int maxPayloadLength;
@@ -973,6 +985,122 @@ public class GatewayPublication extends ClaimablePublication
         bufferClaim.commit();
 
         logSbeMessage(GATEWAY_MESSAGE, endOfDay);
+
+        return position;
+    }
+
+    public long saveWriteMetaData(
+        final int libraryId,
+        final long sessionId,
+        final long correlationId,
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int srcLength)
+    {
+        final long position = claim(WRITE_META_DATA_LENGTH + srcLength);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        writeMetaData
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .session(sessionId)
+            .correlationId(correlationId)
+            .putMetaData(srcBuffer, srcOffset, srcLength);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, writeMetaData);
+
+        return position;
+    }
+
+    public long saveWriteMetaDataReply(
+        final int libraryId,
+        final long replyToId,
+        final MetaDataStatus status)
+    {
+        final long position = claim(WRITE_META_DATA_REPLY_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        writeMetaDataReply
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .replyToId(replyToId)
+            .status(status);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, writeMetaDataReply);
+
+        return position;
+    }
+
+    public long saveReadMetaData(
+        final int libraryId,
+        final long sessionId,
+        final long correlationId)
+    {
+        final long position = claim(READ_META_DATA_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        readMetaData
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .session(sessionId)
+            .correlationId(correlationId);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, readMetaData);
+
+        return position;
+    }
+
+    public long saveReadMetaDataReply(
+        final int libraryId,
+        final long replyToId,
+        final MetaDataStatus status,
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int srcLength)
+    {
+        final long position = claim(READ_META_DATA_REPLy_LENGTH + srcLength);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        readMetaDataReply
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .replyToId(replyToId)
+            .status(status)
+            .putMetaData(srcBuffer, srcOffset, srcLength);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, readMetaDataReply);
 
         return position;
     }

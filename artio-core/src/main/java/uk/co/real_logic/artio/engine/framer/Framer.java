@@ -27,10 +27,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2LongHashMap.KeyIterator;
-import org.agrona.concurrent.Agent;
-import org.agrona.concurrent.AgentInvoker;
-import org.agrona.concurrent.EpochClock;
-import org.agrona.concurrent.QueuedPipe;
+import org.agrona.concurrent.*;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LivenessDetector;
 import uk.co.real_logic.artio.Pressure;
@@ -861,7 +858,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final String address,
         final ConnectionType connectionType)
     {
-        retryManager.schedule(new HandoverNewConnectionToLibrary(
+        schedule(new HandoverNewConnectionToLibrary(
             gatewaySession,
             aeronSessionId,
             requiredPosition,
@@ -1227,9 +1224,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         DebugLogger.log(LIBRARY_MANAGEMENT, "Handing control for session %s to library %s%n", sessionId, libraryId);
 
-
-
-
         // Ensure that we've indexed up to this point in time.
         // If we don't do this then the indexer thread could receive a message sent from the Framer after
         // the library has sent its first message and get the wrong sent sequence number.
@@ -1309,7 +1303,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySession,
             lastRecvSeqNum);
 
-        retryManager.schedule(new UnitOfWork(continuations));
+        schedule(new UnitOfWork(continuations));
     }
 
     public Action onFollowerSessionRequest(
@@ -1326,7 +1320,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final SessionContext sessionContext = sessionContexts.newSessionContext(compositeKey);
         final long sessionId = sessionContext.sessionId();
 
-        retryManager.schedule(() -> inboundPublication.saveFollowerSessionReply(
+        schedule(() -> inboundPublication.saveFollowerSessionReply(
             libraryId,
             correlationId,
             sessionId));
@@ -1672,6 +1666,38 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             receivedSequenceNumberIndex.lastKnownSequenceNumber(1) != UNK_SESSION;
     }
 
+    public Action onWriteMetaData(
+        int libraryId,
+        long sessionId,
+        long correlationId,
+        DirectBuffer srcBuffer,
+        int srcOffset,
+        int srcLength)
+    {
+        // Handled by the Sent SequenceNumberIndexWriter
+
+        return CONTINUE;
+    }
+
+    public Action onReadMetaData(
+        int libraryId,
+        long sessionId,
+        long correlationId)
+    {
+        final DirectBuffer buffer = new UnsafeBuffer();
+        final MetaDataStatus status = sentSequenceNumberIndex.readMetaData(sessionId, buffer);
+
+        schedule(() -> inboundPublication.saveReadMetaDataReply(
+                libraryId,
+                correlationId,
+                status,
+                buffer,
+                0,
+                buffer.capacity()));
+
+        return CONTINUE;
+    }
+
     public void onClose()
     {
         if (configuration.gracefulShutdown())
@@ -1722,10 +1748,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     void schedule(final Continuation continuation)
     {
-        if (continuation.attemptToAction() != CONTINUE)
-        {
-            retryManager.schedule(continuation);
-        }
+        retryManager.schedule(continuation);
     }
 
     void slowStatus(final int libraryId, final long connectionId, final boolean hasBecomeSlow)
@@ -1779,6 +1802,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             bindCommand.onError(e);
         }
+    }
+
+    public void onWriteMetaDataResponse(final WriteMetaDataResponse response)
+    {
+        schedule(() -> inboundPublication.saveWriteMetaDataReply(
+            response.libraryId(),
+            response.correlationId(),
+            response.status()));
     }
 
     class HandoverNewConnectionToLibrary extends UnitOfWork

@@ -15,12 +15,20 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
+import org.agrona.LangUtil;
 import org.agrona.concurrent.AtomicBuffer;
 import uk.co.real_logic.artio.engine.SectorFramer;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
+import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.util.zip.CRC32;
 
 import static uk.co.real_logic.artio.engine.SectorFramer.OUT_OF_SPACE;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
@@ -36,6 +44,8 @@ public class SequenceNumberIndexReader
     private final SectorFramer sectorFramer;
     private final IndexedPositionReader positions;
     private final ErrorHandler errorHandler;
+    private final RandomAccessFile metaDataFile;
+    private final CRC32 checksum = new CRC32();
 
     public SequenceNumberIndexReader(final AtomicBuffer inMemoryBuffer, final ErrorHandler errorHandler)
     {
@@ -45,6 +55,21 @@ public class SequenceNumberIndexReader
         sectorFramer = new SectorFramer(positionTableOffset);
         validateBuffer();
         positions = new IndexedPositionReader(positionsBuffer(inMemoryBuffer, positionTableOffset));
+        metaDataFile = openMetaDataFile();
+    }
+
+    private RandomAccessFile openMetaDataFile()
+    {
+        // TODO: better file naming
+        try
+        {
+            return new RandomAccessFile("sessionMetaData", "r");
+        }
+        catch (FileNotFoundException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+            return null;
+        }
     }
 
     public int lastKnownSequenceNumber(final long sessionId)
@@ -81,5 +106,53 @@ public class SequenceNumberIndexReader
             fileHeaderDecoder,
             LastKnownSequenceNumberEncoder.SCHEMA_ID,
             errorHandler);
+    }
+
+    public MetaDataStatus readMetaData(final long sessionId, final DirectBuffer buffer)
+    {
+        if (lastKnownSequenceNumber(sessionId) == UNK_SESSION)
+        {
+            return MetaDataStatus.UNKNOWN_SESSION;
+        }
+
+        final int metaDataPosition = lastKnownDecoder.metaDataPosition();
+        if (metaDataPosition == NO_META_DATA)
+        {
+            return MetaDataStatus.NO_META_DATA;
+        }
+
+        try
+        {
+            metaDataFile.seek(metaDataPosition);
+            final long checksumValue = metaDataFile.readLong();
+            final int metaDataLength = metaDataFile.readInt();
+
+            final byte[] metaDataValue = new byte[metaDataLength];
+            metaDataFile.read(metaDataValue);
+
+            checksum.update(metaDataValue);
+            long actualChecksumValue = checksum.getValue();
+            checksum.reset();
+
+            if (checksumValue != actualChecksumValue)
+            {
+                errorHandler.onError(new IllegalStateException(String.format(
+                    "Invalid checksum found when reading meta data, sess=%d, pos=%d, expected=%d, actual=%d",
+                    sessionId,
+                    metaDataPosition,
+                    checksumValue,
+                    actualChecksumValue)));
+                return MetaDataStatus.INVALID_CHECKSUM;
+            }
+
+            buffer.wrap(metaDataValue);
+
+            return MetaDataStatus.OK;
+        }
+        catch (IOException e)
+        {
+            errorHandler.onError(e);
+            return MetaDataStatus.FILE_ERROR;
+        }
     }
 }

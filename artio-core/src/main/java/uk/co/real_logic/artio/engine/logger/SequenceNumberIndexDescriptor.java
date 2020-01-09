@@ -22,6 +22,7 @@ import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
 
 import java.io.File;
 
+import static org.agrona.BitUtil.SIZE_OF_LONG;
 import static uk.co.real_logic.artio.engine.SectorFramer.SECTOR_SIZE;
 import static uk.co.real_logic.artio.engine.SectorFramer.nextSectorStart;
 
@@ -40,6 +41,9 @@ final class SequenceNumberIndexDescriptor
 {
     static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
     static final int RECORD_SIZE = LastKnownSequenceNumberDecoder.BLOCK_LENGTH;
+
+    static final int NO_META_DATA = -1;
+    static final int SIZE_OF_META_DATA_CHECKSUM = SIZE_OF_LONG;
 
     static final double SEQUENCE_NUMBER_RATIO = 0.9;
 

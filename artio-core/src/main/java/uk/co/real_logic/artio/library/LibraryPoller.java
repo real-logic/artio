@@ -258,10 +258,50 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             this, timeInMs() + timeoutInMs, headerEncoder);
     }
 
+    Reply<MetaDataStatus> writeMetaData(final long sessionId, final DirectBuffer buffer, final int offset, final int length)
+    {
+        return new WriteMetaDataReply(
+            this,
+            timeInMs() + configuration.replyTimeoutInMs(),
+            sessionId,
+            buffer,
+            offset,
+            length);
+    }
+
+    public void readMetaData(final long sessionId, final MetadataHandler handler)
+    {
+        new ReadMetaDataReply(
+            this, timeInMs() + configuration.replyTimeoutInMs(), sessionId, handler);
+    }
+
     void disableSession(final InternalSession session)
     {
         sessions = ArrayUtil.remove(sessions, session);
         session.disable();
+    }
+
+    long saveWriteMetaData(final long sessionId, final DirectBuffer buffer, final int offset, final int length, final long correlationId)
+    {
+        checkState();
+
+        return outboundPublication.saveWriteMetaData(
+            libraryId,
+            sessionId,
+            correlationId,
+            buffer,
+            offset,
+            length);
+    }
+
+    long saveReadMetaData(final long sessionId, final long correlationId)
+    {
+        checkState();
+
+        return outboundPublication.saveReadMetaData(
+            libraryId,
+            sessionId,
+            correlationId);
     }
 
     long saveReleaseSession(final Session session, final long correlationId)
@@ -1069,6 +1109,34 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
+    public Action onWriteMetaDataReply(final int libraryId, final long replyToId, final MetaDataStatus status)
+    {
+        final WriteMetaDataReply reply = (WriteMetaDataReply)correlationIdToReply.remove(replyToId);
+        if (reply != null)
+        {
+            reply.onComplete(status);
+        }
+
+        return CONTINUE;
+    }
+
+    public Action onReadMetaDataReply(
+        final int libraryId,
+        final long replyToId,
+        final MetaDataStatus status,
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int srcLength)
+    {
+        final ReadMetaDataReply reply = (ReadMetaDataReply)correlationIdToReply.remove(replyToId);
+        if (reply != null)
+        {
+            reply.onComplete(status, srcBuffer, srcOffset, srcLength);
+        }
+
+        return CONTINUE;
+    }
+
     public Action onEngineClose(final int libraryId)
     {
         if (libraryId == this.libraryId)
@@ -1407,5 +1475,4 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             state = CLOSED;
         }
     }
-
 }
