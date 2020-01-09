@@ -86,7 +86,7 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + WriteMetaDataReplyEncoder.BLOCK_LENGTH;
     private static final int READ_META_DATA_LENGTH =
         HEADER_LENGTH + ReadMetaDataEncoder.BLOCK_LENGTH;
-    private static final int READ_META_DATA_REPLy_LENGTH =
+    private static final int READ_META_DATA_REPLY_LENGTH =
         HEADER_LENGTH + ReadMetaDataReplyEncoder.BLOCK_LENGTH + ReadMetaDataReplyEncoder.metaDataHeaderLength();
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
@@ -1082,7 +1082,7 @@ public class GatewayPublication extends ClaimablePublication
         final int srcOffset,
         final int srcLength)
     {
-        final long position = claim(READ_META_DATA_REPLy_LENGTH + srcLength);
+        final long position = claim(READ_META_DATA_REPLY_LENGTH + srcLength);
         if (position < 0)
         {
             return position;

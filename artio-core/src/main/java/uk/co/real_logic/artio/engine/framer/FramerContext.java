@@ -84,9 +84,9 @@ public class FramerContext
         this.outboundPublication = outboundLibraryStreams.gatewayPublication(idleStrategy, "outboundPublication");
 
         sentSequenceNumberIndex = new SequenceNumberIndexReader(
-            configuration.sentSequenceNumberBuffer(), errorHandler);
+            configuration.sentSequenceNumberBuffer(), errorHandler, configuration.logFileDir());
         receivedSequenceNumberIndex = new SequenceNumberIndexReader(
-            configuration.receivedSequenceNumberBuffer(), errorHandler);
+            configuration.receivedSequenceNumberBuffer(), errorHandler, null);
 
         gatewaySessions = new GatewaySessions(
             epochClock,

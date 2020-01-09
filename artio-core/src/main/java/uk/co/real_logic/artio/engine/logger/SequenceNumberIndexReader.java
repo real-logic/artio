@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
@@ -25,6 +26,7 @@ import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -36,7 +38,7 @@ import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.BLOCK_LENGTH;
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
-public class SequenceNumberIndexReader
+public class SequenceNumberIndexReader implements AutoCloseable
 {
     private final MessageHeaderDecoder fileHeaderDecoder = new MessageHeaderDecoder();
     private final LastKnownSequenceNumberDecoder lastKnownDecoder = new LastKnownSequenceNumberDecoder();
@@ -47,7 +49,10 @@ public class SequenceNumberIndexReader
     private final RandomAccessFile metaDataFile;
     private final CRC32 checksum = new CRC32();
 
-    public SequenceNumberIndexReader(final AtomicBuffer inMemoryBuffer, final ErrorHandler errorHandler)
+    public SequenceNumberIndexReader(
+        final AtomicBuffer inMemoryBuffer,
+        final ErrorHandler errorHandler,
+        final String metaDataDir)
     {
         this.inMemoryBuffer = inMemoryBuffer;
         this.errorHandler = errorHandler;
@@ -55,21 +60,25 @@ public class SequenceNumberIndexReader
         sectorFramer = new SectorFramer(positionTableOffset);
         validateBuffer();
         positions = new IndexedPositionReader(positionsBuffer(inMemoryBuffer, positionTableOffset));
-        metaDataFile = openMetaDataFile();
+        metaDataFile = openMetaDataFile(metaDataDir);
     }
 
-    private RandomAccessFile openMetaDataFile()
+    private RandomAccessFile openMetaDataFile(final String metaDataDir)
     {
-        // TODO: better file naming
-        try
+        if (metaDataDir != null)
         {
-            return new RandomAccessFile("sessionMetaData", "r");
+            final File metaDataFile = metaDataFile(metaDataDir);
+
+            try
+            {
+                return new RandomAccessFile(metaDataFile, "r");
+            }
+            catch (final FileNotFoundException e)
+            {
+                LangUtil.rethrowUnchecked(e);
+            }
         }
-        catch (FileNotFoundException e)
-        {
-            LangUtil.rethrowUnchecked(e);
-            return null;
-        }
+        return null;
     }
 
     public int lastKnownSequenceNumber(final long sessionId)
@@ -110,6 +119,11 @@ public class SequenceNumberIndexReader
 
     public MetaDataStatus readMetaData(final long sessionId, final DirectBuffer buffer)
     {
+        if (metaDataFile == null)
+        {
+            return MetaDataStatus.FILE_ERROR;
+        }
+
         if (lastKnownSequenceNumber(sessionId) == UNK_SESSION)
         {
             return MetaDataStatus.UNKNOWN_SESSION;
@@ -131,7 +145,7 @@ public class SequenceNumberIndexReader
             metaDataFile.read(metaDataValue);
 
             checksum.update(metaDataValue);
-            long actualChecksumValue = checksum.getValue();
+            final long actualChecksumValue = checksum.getValue();
             checksum.reset();
 
             if (checksumValue != actualChecksumValue)
@@ -149,10 +163,15 @@ public class SequenceNumberIndexReader
 
             return MetaDataStatus.OK;
         }
-        catch (IOException e)
+        catch (final IOException e)
         {
             errorHandler.onError(e);
             return MetaDataStatus.FILE_ERROR;
         }
+    }
+
+    public void close()
+    {
+        CloseHelper.close(metaDataFile);
     }
 }

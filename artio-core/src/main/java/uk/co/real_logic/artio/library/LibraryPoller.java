@@ -258,7 +258,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             this, timeInMs() + timeoutInMs, headerEncoder);
     }
 
-    Reply<MetaDataStatus> writeMetaData(final long sessionId, final DirectBuffer buffer, final int offset, final int length)
+    Reply<MetaDataStatus> writeMetaData(
+        final long sessionId, final DirectBuffer buffer, final int offset, final int length)
     {
         return new WriteMetaDataReply(
             this,
@@ -281,7 +282,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         session.disable();
     }
 
-    long saveWriteMetaData(final long sessionId, final DirectBuffer buffer, final int offset, final int length, final long correlationId)
+    long saveWriteMetaData(
+        final long sessionId, final DirectBuffer buffer, final int offset, final int length, final long correlationId)
     {
         checkState();
 

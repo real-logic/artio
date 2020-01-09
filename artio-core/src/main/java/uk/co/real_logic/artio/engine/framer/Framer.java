@@ -1667,12 +1667,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     }
 
     public Action onWriteMetaData(
-        int libraryId,
-        long sessionId,
-        long correlationId,
-        DirectBuffer srcBuffer,
-        int srcOffset,
-        int srcLength)
+        final int libraryId,
+        final long sessionId,
+        final long correlationId,
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int srcLength)
     {
         // Handled by the Sent SequenceNumberIndexWriter
 
@@ -1680,20 +1680,20 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     }
 
     public Action onReadMetaData(
-        int libraryId,
-        long sessionId,
-        long correlationId)
+        final int libraryId,
+        final long sessionId,
+        final long correlationId)
     {
         final DirectBuffer buffer = new UnsafeBuffer();
         final MetaDataStatus status = sentSequenceNumberIndex.readMetaData(sessionId, buffer);
 
         schedule(() -> inboundPublication.saveReadMetaDataReply(
-                libraryId,
-                correlationId,
-                status,
-                buffer,
-                0,
-                buffer.capacity()));
+            libraryId,
+            correlationId,
+            status,
+            buffer,
+            0,
+            buffer.capacity()));
 
         return CONTINUE;
     }
@@ -1708,13 +1708,17 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 inboundMessages,
                 receiverEndPoints,
                 senderEndPoints,
-                channelSupplier);
+                channelSupplier,
+                sentSequenceNumberIndex,
+                receivedSequenceNumberIndex);
         }
         else
         {
             closeAll(
                 inboundMessages,
-                channelSupplier);
+                channelSupplier,
+                sentSequenceNumberIndex,
+                receivedSequenceNumberIndex);
         }
     }
 

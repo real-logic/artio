@@ -48,8 +48,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
-import static uk.co.real_logic.artio.TestFixtures.launchJustMediaDriver;
+import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.engine.SectorFramer.SECTOR_SIZE;
 import static uk.co.real_logic.artio.engine.logger.ErrorHandlerVerifier.verify;
@@ -86,7 +85,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         deleteFiles();
 
         writer = newWriter(inMemoryBuffer);
-        reader = new SequenceNumberIndexReader(inMemoryBuffer, errorHandler);
+        reader = new SequenceNumberIndexReader(inMemoryBuffer, errorHandler, null);
     }
 
     @After
@@ -154,7 +153,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         final AtomicBuffer tableBuffer = newBuffer();
 
-        new SequenceNumberIndexReader(tableBuffer, errorHandler);
+        new SequenceNumberIndexReader(tableBuffer, errorHandler, null);
 
         verify(errorHandler, times(1), IllegalStateException.class);
     }
@@ -276,7 +275,7 @@ public class SequenceNumberIndexTest extends AbstractLogTest
         try (MappedFile mappedFile = newIndexFile())
         {
             final SequenceNumberIndexReader newReader = new SequenceNumberIndexReader(
-                mappedFile.buffer(), errorHandler);
+                mappedFile.buffer(), errorHandler, null);
 
             assertLastKnownSequenceNumberIs(SESSION_ID, SEQUENCE_NUMBER + requiredMessagesToRoll, newReader);
         }
@@ -317,14 +316,14 @@ public class SequenceNumberIndexTest extends AbstractLogTest
     {
         final AtomicBuffer inMemoryBuffer = newBuffer();
         newWriter(inMemoryBuffer).close();
-        return new SequenceNumberIndexReader(inMemoryBuffer, errorHandler);
+        return new SequenceNumberIndexReader(inMemoryBuffer, errorHandler, null);
     }
 
     private SequenceNumberIndexWriter newWriter(final AtomicBuffer inMemoryBuffer)
     {
         final MappedFile indexFile = newIndexFile();
         return new SequenceNumberIndexWriter(inMemoryBuffer, indexFile, errorHandler, STREAM_ID, recordingIdLookup,
-            DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS, clock);
+            DEFAULT_INDEX_FILE_STATE_FLUSH_TIMEOUT_IN_MS, clock, null);
     }
 
     private MappedFile newIndexFile()

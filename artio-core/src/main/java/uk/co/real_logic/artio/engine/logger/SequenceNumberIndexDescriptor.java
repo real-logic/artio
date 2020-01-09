@@ -44,8 +44,16 @@ final class SequenceNumberIndexDescriptor
 
     static final int NO_META_DATA = -1;
     static final int SIZE_OF_META_DATA_CHECKSUM = SIZE_OF_LONG;
+    static final long META_DATA_MAGIC_NUMBER = 0xBEEF;
+    static final int META_DATA_FILE_VERSION = 1;
+    static final int READABLE_META_DATA_FILE_VERSION = META_DATA_FILE_VERSION;
 
     static final double SEQUENCE_NUMBER_RATIO = 0.9;
+
+    public static File metaDataFile(final String logFileDir)
+    {
+        return new File(logFileDir + "/metadata");
+    }
 
     static AtomicBuffer positionsBuffer(final AtomicBuffer buffer, final int positionsOffset)
     {

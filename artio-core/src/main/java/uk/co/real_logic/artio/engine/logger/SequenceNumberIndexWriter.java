@@ -17,7 +17,10 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.logbuffer.Header;
 import io.aeron.protocol.DataHeaderFlyweight;
-import org.agrona.*;
+import org.agrona.CloseHelper;
+import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
+import org.agrona.LangUtil;
 import org.agrona.collections.CollectionUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
@@ -32,7 +35,6 @@ import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.file.Files;
@@ -109,7 +111,8 @@ public class SequenceNumberIndexWriter implements Index
         final int streamId,
         final RecordingIdLookup recordingIdLookup,
         final long indexFileStateFlushTimeoutInMs,
-        final EpochClock clock)
+        final EpochClock clock,
+        final String metaDataDir)
     {
         this.inMemoryBuffer = inMemoryBuffer;
         this.indexFile = indexFile;
@@ -141,7 +144,7 @@ public class SequenceNumberIndexWriter implements Index
                 indexedPositionsOffset,
                 "SequenceNumberIndex");
 
-            metaDataFile = openMetaDataFile();
+            metaDataFile = openMetaDataFile(metaDataDir);
         }
         catch (final Exception e)
         {
@@ -151,19 +154,30 @@ public class SequenceNumberIndexWriter implements Index
         }
     }
 
-    private RandomAccessFile openMetaDataFile()
+    private RandomAccessFile openMetaDataFile(final String metaDataDir)
     {
-        // TODO: better file naming
-        // TODO: initialise header
-        try
+        if (metaDataDir != null)
         {
-            return new RandomAccessFile("sessionMetaData", "rw");
+            final File metaDataFile = metaDataFile(metaDataDir);
+
+            try
+            {
+                final RandomAccessFile file = new RandomAccessFile(metaDataFile, "rw");
+                if (file.length() == 0)
+                {
+                    file.writeLong(META_DATA_MAGIC_NUMBER);
+                    file.writeInt(META_DATA_FILE_VERSION);
+                    file.getFD().sync();
+                }
+                return file;
+            }
+            catch (final IOException e)
+            {
+                LangUtil.rethrowUnchecked(e);
+            }
         }
-        catch (FileNotFoundException e)
-        {
-            LangUtil.rethrowUnchecked(e);
-            return null;
-        }
+
+        return null;
     }
 
     public void onFragment(
@@ -224,6 +238,7 @@ public class SequenceNumberIndexWriter implements Index
                 {
                     resetSequenceNumber.wrap(buffer, offset, actingBlockLength, version);
                     saveRecord(0, resetSequenceNumber.session());
+                    break;
                 }
 
                 case WriteMetaDataDecoder.TEMPLATE_ID:
@@ -234,58 +249,7 @@ public class SequenceNumberIndexWriter implements Index
                     final long sessionId = writeMetaData.session();
                     final long correlationId = writeMetaData.correlationId();
 
-                    if (framerContext == null)
-                    {
-                        writeMetaDataResponse(libraryId, correlationId, MetaDataStatus.FILE_ERROR);
-
-                        break;
-                    }
-
-                    final int sequenceNumberIndexFilePosition = (int)recordOffsets.get(sessionId);
-                    if (sequenceNumberIndexFilePosition == MISSING_RECORD)
-                    {
-                        writeMetaDataResponse(libraryId, correlationId, MetaDataStatus.UNKNOWN_SESSION);
-
-                        break;
-                    }
-
-                    final int metaDataLength = writeMetaData.metaDataLength();
-                    final byte[] metaDataValue = new byte[metaDataLength];
-                    writeMetaData.getMetaData(metaDataValue, 0, metaDataLength);
-                    checksum.update(metaDataValue);
-                    long checksumValue = checksum.getValue();
-                    checksum.reset();
-
-                    final int oldMetaDataPosition = readMetaData(sequenceNumberIndexFilePosition);
-                    try
-                    {
-                        if (oldMetaDataPosition == NO_META_DATA)
-                        {
-                            allocateMetaDataSlot(sequenceNumberIndexFilePosition, metaDataValue, checksumValue);
-                        }
-                        else
-                        {
-                            metaDataFile.seek(oldMetaDataPosition + SIZE_OF_META_DATA_CHECKSUM);
-                            final int oldMetaDataLength = metaDataFile.readInt();
-                            // Is there space to replace?
-                            if (metaDataLength <= oldMetaDataLength)
-                            {
-                                updateMetaDataFile(oldMetaDataPosition, checksumValue, metaDataValue);
-                            }
-                            else
-                            {
-                                allocateMetaDataSlot(sequenceNumberIndexFilePosition, metaDataValue, checksumValue);
-                            }
-                        }
-
-                        writeMetaDataResponse(libraryId, correlationId, MetaDataStatus.OK);
-                    }
-                    catch (IOException e)
-                    {
-                        errorHandler.onError(e);
-
-                        writeMetaDataResponse(libraryId, correlationId, MetaDataStatus.FILE_ERROR);
-                    }
+                    onWriteMetaData(libraryId, sessionId, correlationId);
                     break;
                 }
             }
@@ -297,12 +261,68 @@ public class SequenceNumberIndexWriter implements Index
         positions.indexedUpTo(aeronSessionId, recordingId, endPosition);
     }
 
+    private void onWriteMetaData(final int libraryId, final long sessionId, final long correlationId)
+    {
+        if (framerContext == null || metaDataFile == null)
+        {
+            writeMetaDataResponse(libraryId, correlationId, MetaDataStatus.FILE_ERROR);
+
+            return;
+        }
+
+        final int sequenceNumberIndexFilePosition = (int)recordOffsets.get(sessionId);
+        if (sequenceNumberIndexFilePosition == MISSING_RECORD)
+        {
+            writeMetaDataResponse(libraryId, correlationId, MetaDataStatus.UNKNOWN_SESSION);
+
+            return;
+        }
+
+        final int metaDataLength = writeMetaData.metaDataLength();
+        final byte[] metaDataValue = new byte[metaDataLength];
+        writeMetaData.getMetaData(metaDataValue, 0, metaDataLength);
+        checksum.update(metaDataValue);
+        final long checksumValue = checksum.getValue();
+        checksum.reset();
+
+        final int oldMetaDataPosition = readMetaData(sequenceNumberIndexFilePosition);
+        try
+        {
+            if (oldMetaDataPosition == NO_META_DATA)
+            {
+                allocateMetaDataSlot(sequenceNumberIndexFilePosition, metaDataValue, checksumValue);
+            }
+            else
+            {
+                metaDataFile.seek(oldMetaDataPosition + SIZE_OF_META_DATA_CHECKSUM);
+                final int oldMetaDataLength = metaDataFile.readInt();
+                // Is there space to replace?
+                if (metaDataLength <= oldMetaDataLength)
+                {
+                    updateMetaDataFile(oldMetaDataPosition, checksumValue, metaDataValue);
+                }
+                else
+                {
+                    allocateMetaDataSlot(sequenceNumberIndexFilePosition, metaDataValue, checksumValue);
+                }
+            }
+
+            writeMetaDataResponse(libraryId, correlationId, MetaDataStatus.OK);
+        }
+        catch (final IOException e)
+        {
+            errorHandler.onError(e);
+
+            writeMetaDataResponse(libraryId, correlationId, MetaDataStatus.FILE_ERROR);
+        }
+    }
+
     private void allocateMetaDataSlot(
         final int sequenceNumberIndexFilePosition,
         final byte[] metaDataValue,
         final long checksumValue) throws IOException
     {
-        final int metaDataFileInitialLength = (int) metaDataFile.length();
+        final int metaDataFileInitialLength = (int)metaDataFile.length();
         updateMetaDataFile(metaDataFileInitialLength, checksumValue, metaDataValue);
         updateMetaDataField(sequenceNumberIndexFilePosition, metaDataFileInitialLength);
         hasSavedRecordSinceFileUpdate = true;
@@ -315,6 +335,7 @@ public class SequenceNumberIndexWriter implements Index
         metaDataFile.writeLong(checksumValue);
         metaDataFile.writeInt(metaDataValue.length);
         metaDataFile.write(metaDataValue);
+        metaDataFile.getFD().sync();
     }
 
     private void writeMetaDataResponse(final int libraryId, final long correlationId, final MetaDataStatus status)
@@ -447,6 +468,17 @@ public class SequenceNumberIndexWriter implements Index
         {
             indexFile.close();
             writableFile.close();
+            if (metaDataFile != null)
+            {
+                try
+                {
+                    metaDataFile.close();
+                }
+                catch (final IOException e)
+                {
+                    errorHandler.onError(e);
+                }
+            }
         }
     }
 
