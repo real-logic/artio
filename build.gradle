@@ -34,9 +34,9 @@ def mockitoVersion = '3.2.4'
 def hdrHistogramVersion = '2.1.12'
 def jmhVersion = '1.22'
 
-def aeronVersion = '1.24.0'
-def agronaVersion = '1.1.0'
-def sbeVersion = '1.15.0'
+def aeronVersion = '1.25.0'
+def agronaVersion = '1.2.0'
+def sbeVersion = '1.16.0'
 def artioJavaVersion = JavaVersion.VERSION_1_8
 def artioGroup = 'uk.co.real-logic'
 
@@ -166,12 +166,12 @@ subprojects {
     }
 
     task javadocJar(type: Jar) {
-        archiveClassifier = 'javadoc'
+        archiveClassifier.set 'javadoc'
         from javadoc
     }
 
     task sourcesJar(type: Jar) {
-        archiveClassifier = 'sources'
+        archiveClassifier.set 'sources'
         from sourceSets.main.allSource
     }
 
@@ -184,8 +184,8 @@ subprojects {
     }
 
     task testJar(type: Jar, dependsOn: testClasses) {
-        archiveClassifier = 'tests'
-        archiveBaseName = "test-${project.archivesBaseName}"
+        archiveClassifier.set 'tests'
+        archiveBaseName.set "test-${project.archivesBaseName}"
         from sourceSets.test.output
     }
 
@@ -390,7 +390,7 @@ project(':artio-system-tests') {
 
     task benchmarks(dependsOn: perfClasses) {
         shadowJar {
-            archiveClassifier = "benchmarks"
+            archiveClassifier.set "benchmarks"
 
             from sourceSets.main.output
             from sourceSets.perf.output
