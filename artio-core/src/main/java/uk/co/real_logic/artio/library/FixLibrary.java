@@ -402,6 +402,25 @@ public class FixLibrary extends GatewayProcess
         return poller.followerSession(headerEncoder, timeoutInMs);
     }
 
+    /**
+     * NB: This is an experimental API and is subject to change or potentially removal.
+     *
+     * Write meta data associated with a session. Session meta-data is a sequence of bytes that application can
+     * associate with a session. It shares it's lifecycle with the current session - so whenever sequence numbers or
+     * seession ids are reset the old meta-data will be reset as well. If the session is persistent then the metadata
+     * persists over restarts.
+     *
+     * You might want to use session meta data to store information like ids for internal systems that correspond to
+     * FIX sessions.
+     *
+     * This is an asynchronous operation and the returned reply object should be checked for completion.
+     *
+     * @param sessionId the session id of the session that meta data is written to.
+     * @param buffer the buffer where the meta data to be written is stored.
+     * @param offset the offset within the buffer
+     * @param length the length of the data within the buffer.
+     * @return a Reply to indicate completion or an error code.
+     */
     public Reply<MetaDataStatus> writeMetaData(
         final long sessionId,
         final DirectBuffer buffer,
@@ -411,6 +430,14 @@ public class FixLibrary extends GatewayProcess
         return poller.writeMetaData(sessionId, buffer, offset, length);
     }
 
+    /**
+     * NB: This is an experimental API and is subject to change or potentially removal.
+     *
+     * Read the meta data associated with a session.
+     *
+     * @param sessionId the id of the session that meta data is read from.
+     * @param handler the callback that has the returned metadata.
+     */
     public void readMetaData(
         final long sessionId, final MetadataHandler handler)
     {
