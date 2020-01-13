@@ -284,6 +284,22 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         assertLastLogonEquals(4, 0);
     }
 
+    @Test
+    public void shouldReadOldMetaDataOverPersistentConnectionReconnect()
+    {
+        launch(this::nothing);
+        connectPersistingSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false);
+
+        writeMetaData();
+
+        assertThat(initiatingSession.startLogout(), greaterThan(0L));
+        assertSessionsDisconnected();
+
+        connectPersistingSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false);
+
+        readMetaData(acceptingSession.id());
+    }
+
     private void resetSequenceNumbers()
     {
         testSystem.awaitCompletedReplies(

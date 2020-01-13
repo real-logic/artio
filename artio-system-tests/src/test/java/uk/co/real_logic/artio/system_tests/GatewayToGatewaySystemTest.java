@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,14 +27,16 @@ import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
+import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
-import uk.co.real_logic.artio.library.MetadataHandler;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
 
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.List;
 import java.util.function.IntSupplier;
 
@@ -61,8 +62,6 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTest
 {
-    private static final long META_DATA_SESSION_ID = 1L;
-
     private static final String NEW_PASSWORD = "ABCDEF";
 
     private final FakeConnectHandler fakeConnectHandler = new FakeConnectHandler();
@@ -77,6 +76,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             .deleteLogFileDirOnStart(true);
         auth = new CapturingAuthenticationStrategy(acceptingConfig.messageValidationStrategy());
         acceptingConfig.authenticationStrategy(auth);
+        acceptingConfig.printErrorMessages(false);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
@@ -909,121 +909,147 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test(timeout = 10_000L)
     public void shouldReadWrittenSessionMetaData()
     {
-        final int value = 123;
-
         final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
-        writeBuffer.putInt(0, value);
+        writeBuffer.putInt(0, META_DATA_VALUE);
 
         writeMetaData(writeBuffer);
 
         final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
-        assertEquals(value, readBuffer.getInt(0));
+        assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
     }
 
     @Test(timeout = 10_000L)
     public void shouldUpdateWrittenSessionMetaDataFittingWithinSlot()
     {
-        final int value = 124;
-
         final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
 
-        writeBuffer.putInt(0, 123);
+        writeBuffer.putInt(0, META_DATA_WRONG_VALUE);
         writeMetaData(writeBuffer);
 
-        writeBuffer.putInt(0, value);
+        writeBuffer.putInt(0, META_DATA_VALUE);
         writeMetaData(writeBuffer);
 
         final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
-        assertEquals(value, readBuffer.getInt(0));
+        assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
     }
 
     @Test(timeout = 10_000L)
     public void shouldUpdateWrittenSessionMetaDataTooBigForOldSlot()
     {
-        final int value = 124;
-
         final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
 
-        writeBuffer.putInt(0, 123);
+        writeBuffer.putInt(0, META_DATA_WRONG_VALUE);
         writeMetaData(writeBuffer);
 
         final UnsafeBuffer bigWriteBuffer = new UnsafeBuffer(new byte[SIZE_OF_LONG]);
-        bigWriteBuffer.putLong(0, value);
+        bigWriteBuffer.putLong(0, META_DATA_VALUE);
         writeMetaData(bigWriteBuffer);
 
         final UnsafeBuffer readBuffer = readSuccessfulMetaData(bigWriteBuffer);
-        assertEquals(value, readBuffer.getInt(0));
+        assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
     }
 
     @Test(timeout = 10_000L)
     public void shouldReceiveReadErrorForUnwrittenSessionMetaData()
     {
-        final FakeMetadataHandler handler = readMetaData(1L);
-        assertEquals(MetaDataStatus.NO_META_DATA, handler.status());
+        assertNoMetaData();
     }
 
     @Test(timeout = 10_000L)
     public void shouldReceiveReadErrorForMetaDataWithUnknownSession()
     {
-        final FakeMetadataHandler handler = readMetaData(2L);
-        assertEquals(MetaDataStatus.UNKNOWN_SESSION, handler.status());
+        assertUnknownSessionMetaData(META_DATA_WRONG_SESSION_ID);
     }
 
     @Test(timeout = 10_000L)
     public void shouldReceiveWriteErrorForMetaDataWithUnknownSession()
     {
         final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
-        final Reply<?> reply = writeMetaData(writeBuffer, 2L);
+        final Reply<?> reply = writeMetaData(writeBuffer, META_DATA_WRONG_SESSION_ID);
         assertEquals(MetaDataStatus.UNKNOWN_SESSION, reply.resultIfPresent());
     }
 
-    private void writeMetaData(final UnsafeBuffer writeBuffer)
+    @Test(timeout = 10_000L)
+    public void shouldReceiveReadErrorForInvalidChecksum() throws IOException
     {
-        final Reply<MetaDataStatus> reply = writeMetaData(writeBuffer, META_DATA_SESSION_ID);
-        assertEquals(MetaDataStatus.OK, reply.resultIfPresent());
+        // File locking makes this test impossible
+        if (!SequenceNumberIndexWriter.RUNNING_ON_WINDOWS)
+        {
+            writeMetaData();
 
+            try (RandomAccessFile metaDataFile = new RandomAccessFile(
+                acceptingEngine.configuration().logFileDir() + "/metadata", "rw"))
+            {
+                metaDataFile.seek(SIZE_OF_LONG + SIZE_OF_INT);
+                final int invalidChecksum = 5;
+                metaDataFile.writeLong(invalidChecksum);
+            }
+
+            final FakeMetadataHandler handler = readMetaData(META_DATA_SESSION_ID);
+            assertEquals(MetaDataStatus.INVALID_CHECKSUM, handler.status());
+        }
     }
 
-    private Reply<MetaDataStatus> writeMetaData(final UnsafeBuffer writeBuffer, final long sessionId)
+    @Test(timeout = 10_000L)
+    public void shouldResetMetaDataWhenSequenceNumberResetsWithLogon()
     {
-        final Reply<MetaDataStatus> reply = acceptingLibrary.writeMetaData(
-            sessionId, writeBuffer, 0, writeBuffer.capacity());
+        writeMetaDataThenDisconnect();
 
-        testSystem.awaitCompletedReplies(reply);
-
-        return reply;
-    }
-
-    private UnsafeBuffer readSuccessfulMetaData(final UnsafeBuffer writeBuffer)
-    {
+        // Support reading meta data after logout, but before sequence number reset
         final FakeMetadataHandler handler = readMetaData(META_DATA_SESSION_ID);
         assertEquals(MetaDataStatus.OK, handler.status());
 
-        final UnsafeBuffer readBuffer = handler.buffer();
-        assertEquals(writeBuffer.capacity(), readBuffer.capacity());
-        return readBuffer;
+        connectSessions();
+
+        assertNoMetaData();
     }
 
-    private FakeMetadataHandler readMetaData(final long sessionId)
+    @Test(timeout = 10_000L)
+    public void shouldResetMetaDataWhenSequenceNumberResetsWhenSessionIdExplicitlyReset()
     {
-        final FakeMetadataHandler handler = new FakeMetadataHandler();
+        writeMetaDataThenDisconnect();
 
-        acceptingLibrary.readMetaData(sessionId, handler);
+        final Reply<?> reply = acceptingEngine.resetSequenceNumber(META_DATA_SESSION_ID);
+        testSystem.awaitCompletedReplies(reply);
 
-        Timing.assertEventuallyTrue("reading session meta data failed to terminate", () ->
-        {
-            testSystem.poll();
-
-            return handler.callbackReceived();
-        });
-
-        return handler;
+        assertNoMetaData();
     }
 
-    // TODO: deleted file
-    // TODO: wrong checksum
-    // TODO: sequence resets
-    // TODO: persistent over restarts
+    @Test(timeout = 10_000L)
+    public void shouldResetMetaDataWhenSequenceNumberResetsWithExplicitResetSessionIds()
+    {
+        writeMetaDataThenDisconnect();
+
+        final Reply<?> reply = acceptingEngine.resetSessionIds(null);
+        testSystem.awaitCompletedReplies(reply);
+
+        assertUnknownSessionMetaData(META_DATA_SESSION_ID);
+
+        connectSessions();
+        acquireAcceptingSession();
+
+        assertNoMetaData();
+    }
+
+    private void assertUnknownSessionMetaData(final long sessionId)
+    {
+        final FakeMetadataHandler handler = readMetaData(sessionId);
+        assertEquals(MetaDataStatus.UNKNOWN_SESSION, handler.status());
+    }
+
+    private void assertNoMetaData()
+    {
+        final FakeMetadataHandler handler = readMetaData(META_DATA_SESSION_ID);
+        assertEquals(MetaDataStatus.NO_META_DATA, handler.status());
+    }
+
+    private void writeMetaDataThenDisconnect()
+    {
+        writeMetaData();
+
+        acquireAcceptingSession();
+        disconnectSessions();
+    }
 
     private void assertArchiveDoesNotContainPassword()
     {
@@ -1178,39 +1204,4 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertEquals(compositeKey.remoteCompId(), sessionId.remoteCompId());
     }
 
-    private static class FakeMetadataHandler implements MetadataHandler
-    {
-        boolean callbackReceived = false;
-
-        private MetaDataStatus status;
-        private UnsafeBuffer buffer;
-
-        public void onMetaData(
-            final long sessionId,
-            final MetaDataStatus status,
-            final DirectBuffer buffer,
-            final int offset,
-            final int length)
-        {
-            this.buffer = new UnsafeBuffer(new byte[length]);
-            this.buffer.putBytes(0, buffer, offset, length);
-            this.status = status;
-            callbackReceived = true;
-        }
-
-        public boolean callbackReceived()
-        {
-            return callbackReceived;
-        }
-
-        public UnsafeBuffer buffer()
-        {
-            return buffer;
-        }
-
-        public MetaDataStatus status()
-        {
-            return status;
-        }
-    }
 }

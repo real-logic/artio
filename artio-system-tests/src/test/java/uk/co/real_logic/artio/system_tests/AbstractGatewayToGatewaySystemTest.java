@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.After;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.Reply.State;
@@ -28,6 +29,7 @@ import uk.co.real_logic.artio.engine.logger.FixArchiveScanner;
 import uk.co.real_logic.artio.engine.logger.FixMessageConsumer;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.SessionConfiguration;
+import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.session.Session;
@@ -36,6 +38,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static junit.framework.TestCase.assertTrue;
+import static org.agrona.BitUtil.SIZE_OF_INT;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
@@ -51,6 +54,11 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class AbstractGatewayToGatewaySystemTest
 {
+    static final int META_DATA_VALUE = 123;
+    static final int META_DATA_WRONG_VALUE = 124;
+    static final long META_DATA_SESSION_ID = 1L;
+    static final long META_DATA_WRONG_SESSION_ID = 2L;
+
     protected int port = unusedPort();
     protected int libraryAeronPort = unusedPort();
     protected ArchivingMediaDriver mediaDriver;
@@ -490,5 +498,54 @@ public class AbstractGatewayToGatewaySystemTest
                 DEFAULT_ARCHIVE_SCANNER_STREAM);
         }
         return messages;
+    }
+
+    void writeMetaData()
+    {
+        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
+        writeBuffer.putInt(0, META_DATA_VALUE);
+        writeMetaData(writeBuffer);
+    }
+
+    void writeMetaData(final UnsafeBuffer writeBuffer)
+    {
+        final Reply<MetaDataStatus> reply = writeMetaData(writeBuffer, META_DATA_SESSION_ID);
+        assertEquals(MetaDataStatus.OK, reply.resultIfPresent());
+    }
+
+    Reply<MetaDataStatus> writeMetaData(final UnsafeBuffer writeBuffer, final long sessionId)
+    {
+        final Reply<MetaDataStatus> reply = acceptingLibrary.writeMetaData(
+            sessionId, writeBuffer, 0, writeBuffer.capacity());
+
+        testSystem.awaitCompletedReplies(reply);
+
+        return reply;
+    }
+
+    UnsafeBuffer readSuccessfulMetaData(final UnsafeBuffer writeBuffer)
+    {
+        final FakeMetadataHandler handler = readMetaData(META_DATA_SESSION_ID);
+        assertEquals(MetaDataStatus.OK, handler.status());
+
+        final UnsafeBuffer readBuffer = handler.buffer();
+        assertEquals(writeBuffer.capacity(), readBuffer.capacity());
+        return readBuffer;
+    }
+
+    FakeMetadataHandler readMetaData(final long sessionId)
+    {
+        final FakeMetadataHandler handler = new FakeMetadataHandler();
+
+        acceptingLibrary.readMetaData(sessionId, handler);
+
+        Timing.assertEventuallyTrue("reading session meta data failed to terminate", () ->
+        {
+            testSystem.poll();
+
+            return handler.callbackReceived();
+        });
+
+        return handler;
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015=2016 Real Logic Limited.
+ * Copyright 2015=2016 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,10 +26,7 @@ import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.*;
 import java.util.zip.CRC32;
 
 import static uk.co.real_logic.artio.engine.SectorFramer.OUT_OF_SPACE;
