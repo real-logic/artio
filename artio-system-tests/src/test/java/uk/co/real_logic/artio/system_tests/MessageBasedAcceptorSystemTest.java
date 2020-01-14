@@ -41,7 +41,10 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.agrona.CloseHelper.close;
 import static org.junit.Assert.*;
+import static uk.co.real_logic.artio.SessionRejectReason.COMPID_PROBLEM;
 import static uk.co.real_logic.artio.TestFixtures.*;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.SENDER_COMP_ID;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.TEST_REQUEST_MESSAGE_TYPE_STR;
 import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.ENGINE;
 import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -308,6 +311,29 @@ public class MessageBasedAcceptorSystemTest
                 final LogoutDecoder logoutDecoder = connection.logoutAndAwaitReply();
                 assertEquals(4, logoutDecoder.header().msgSeqNum());
             }
+        }
+    }
+
+    @Test
+    public void shouldRejectMessageWithInvalidSenderAndTargetCompIds() throws IOException
+    {
+        setup(true, true);
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+
+            final TestRequestEncoder testRequestEncoder = new TestRequestEncoder();
+            connection.setupHeader(testRequestEncoder.header(), connection.acquireMsgSeqNum(), false);
+            testRequestEncoder.header().senderCompID("Wrong").targetCompID("Values");
+            testRequestEncoder.testReqID("ABC");
+            connection.send(testRequestEncoder);
+
+            final RejectDecoder rejectDecoder = connection.readMessage(new RejectDecoder());
+            assertEquals(2, rejectDecoder.refSeqNum());
+            assertEquals(TEST_REQUEST_MESSAGE_TYPE_STR, rejectDecoder.refMsgTypeAsString());
+            assertEquals(COMPID_PROBLEM, rejectDecoder.sessionRejectReasonAsEnum());
+            assertEquals(SENDER_COMP_ID, rejectDecoder.refTagID());
         }
     }
 

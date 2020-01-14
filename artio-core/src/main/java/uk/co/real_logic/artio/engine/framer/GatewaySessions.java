@@ -28,10 +28,7 @@ import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.ByteBufferUtil;
-import uk.co.real_logic.artio.engine.FixEngine;
-import uk.co.real_logic.artio.engine.HeaderSetup;
-import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -70,6 +67,7 @@ class GatewaySessions
     private final long sendingTimeWindowInMs;
     private final long reasonableTransmissionTimeInMs;
     private final boolean logAllMessages;
+    private final boolean validateCompIdsOnEveryMessage;
     private final SessionContexts sessionContexts;
     private final SessionPersistenceStrategy sessionPersistenceStrategy;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
@@ -86,12 +84,7 @@ class GatewaySessions
         final SessionIdStrategy sessionIdStrategy,
         final SessionCustomisationStrategy customisationStrategy,
         final FixCounters fixCounters,
-        final AuthenticationStrategy authenticationStrategy,
-        final MessageValidationStrategy validationStrategy,
-        final int sessionBufferSize,
-        final long sendingTimeWindowInMs,
-        final long reasonableTransmissionTimeInMs,
-        final boolean logAllMessages,
+        final EngineConfiguration configuration,
         final ErrorHandler errorHandler,
         final SessionContexts sessionContexts,
         final SessionPersistenceStrategy sessionPersistenceStrategy,
@@ -103,12 +96,13 @@ class GatewaySessions
         this.sessionIdStrategy = sessionIdStrategy;
         this.customisationStrategy = customisationStrategy;
         this.fixCounters = fixCounters;
-        this.authenticationStrategy = authenticationStrategy;
-        this.validationStrategy = validationStrategy;
-        this.sessionBufferSize = sessionBufferSize;
-        this.sendingTimeWindowInMs = sendingTimeWindowInMs;
-        this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
-        this.logAllMessages = logAllMessages;
+        this.authenticationStrategy = configuration.authenticationStrategy();
+        this.validationStrategy = configuration.messageValidationStrategy();
+        this.sessionBufferSize = configuration.sessionBufferSize();
+        this.sendingTimeWindowInMs = configuration.sendingTimeWindowInMs();
+        this.reasonableTransmissionTimeInMs = configuration.reasonableTransmissionTimeInMs();
+        this.logAllMessages = configuration.logAllMessages();
+        this.validateCompIdsOnEveryMessage = configuration.validateCompIdsOnEveryMessage();
         this.errorHandler = errorHandler;
         this.sessionContexts = sessionContexts;
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
@@ -190,7 +184,8 @@ class GatewaySessions
             session,
             validationStrategy,
             errorHandler,
-            dictionary);
+            dictionary,
+            validateCompIdsOnEveryMessage);
 
         if (!sessions.contains(gatewaySession))
         {
