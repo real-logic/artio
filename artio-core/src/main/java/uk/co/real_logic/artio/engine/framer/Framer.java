@@ -149,7 +149,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final RecordingCoordinator recordingCoordinator;
     private final PositionSender nonLoggingPositionSender;
 
-    private final SessionHeaderDecoder acceptorHeaderDecoder;
+    private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final boolean soleLibraryMode;
 
@@ -211,7 +211,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.finalImagePositions = finalImagePositions;
         this.soleLibraryMode = configuration.initialAcceptedSessionOwner() == SOLE_LIBRARY;
 
-        acceptorHeaderDecoder = configuration.acceptorfixDictionary().makeHeaderDecoder();
+        acceptorFixDictionaryLookup = new AcceptorFixDictionaryLookup(
+            configuration.acceptorfixDictionary(),
+            configuration.acceptorFixDictionaryOverrides());
 
         receiverEndPoints = new ReceiverEndPoints(errorHandler);
 
@@ -530,7 +532,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             configuration.acceptedSessionResendRequestChunkSize(),
             configuration.acceptedSessionSendRedundantResendRequests(),
             configuration.acceptedEnableLastMsgSeqNumProcessed(),
-            configuration.acceptorfixDictionary());
+            null);
 
         gatewaySession.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
 
@@ -1314,6 +1316,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int srcLength)
     {
         asciiBuffer.wrap(srcBuffer);
+        final SessionHeaderDecoder acceptorHeaderDecoder = acceptorFixDictionaryLookup.lookupHeaderDecoder(
+            asciiBuffer, srcOffset, srcLength);
+        acceptorHeaderDecoder.reset();
         acceptorHeaderDecoder.decode(asciiBuffer, srcOffset, srcLength);
 
         final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(acceptorHeaderDecoder);
@@ -2000,5 +2005,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
             return position;
         }
+    }
+
+    public AcceptorFixDictionaryLookup acceptorFixDictionaryLookup()
+    {
+        return acceptorFixDictionaryLookup;
+    }
+
+    public boolean soleLibraryMode()
+    {
+        return soleLibraryMode;
     }
 }

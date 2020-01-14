@@ -73,7 +73,7 @@ class EndPointFactory
             libraryId,
             gatewaySessions,
             configuration.clock(),
-            configuration.acceptorfixDictionary());
+            framer.acceptorFixDictionaryLookup());
     }
 
     SenderEndPoint senderEndPoint(

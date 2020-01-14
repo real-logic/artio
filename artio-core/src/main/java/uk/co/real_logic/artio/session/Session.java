@@ -25,6 +25,7 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
@@ -120,11 +121,12 @@ public class Session implements AutoCloseable
     private final AtomicCounter sentMsgSeqNo;
     private final long reasonableTransmissionTimeInMs;
     private final boolean enableLastMsgSeqNumProcessed;
-    private final String beginString;
     private final SessionCustomisationStrategy customisationStrategy;
 
     private CompositeKey sessionKey;
     private SessionState state;
+    private String beginString;
+
     // Used to trigger a disconnect if we don't receive a resend within expected timeout
     private boolean awaitingResend = INITIAL_AWAITING_RESEND;
     // Equivalent of receivedMsgSeqNo for resent messages
@@ -179,7 +181,6 @@ public class Session implements AutoCloseable
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
-        final String beginString,
         final SessionCustomisationStrategy customisationStrategy)
     {
         this.customisationStrategy = customisationStrategy;
@@ -189,7 +190,6 @@ public class Session implements AutoCloseable
         Verify.notNull(publication, "publication");
         Verify.notNull(receivedMsgSeqNo, "received MsgSeqNo counter");
         Verify.notNull(sentMsgSeqNo, "sent MsgSeqNo counter");
-        Verify.notNull(beginString, "beginString");
 
         this.epochClock = epochClock;
         this.proxy = proxy;
@@ -204,7 +204,6 @@ public class Session implements AutoCloseable
         this.lastSentMsgSeqNum = initialSentSequenceNumber - 1;
         this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
-        this.beginString = beginString;
         this.asciiBuffer = asciiBuffer;
 
         state(state);
@@ -1770,4 +1769,14 @@ public class Session implements AutoCloseable
         this.awaitingHeartbeat = awaitingHeartbeat;
     }
 
+    void fixDictionary(final FixDictionary fixDictionary)
+    {
+        proxy.fixDictionary(fixDictionary);
+        this.beginString = fixDictionary.beginString();
+    }
+
+    public String beginString()
+    {
+        return beginString;
+    }
 }

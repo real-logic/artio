@@ -37,11 +37,13 @@ public class SessionParserTest
     private MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId("das");
 
     private SessionParser parser = new SessionParser(
-        mockSession, validationStrategy, null, FixDictionary.of(FixDictionary.findDefault()), false);
+        mockSession, validationStrategy, null, false);
 
     @Before
     public void setUp()
     {
+        parser.fixDictionary(FixDictionary.of(FixDictionary.findDefault()));
+
         when(mockAuthenticationStrategy.authenticate(any(LogonDecoder.class))).thenReturn(true);
         when(mockSession.onBeginString(any(), anyInt(), anyBoolean())).thenReturn(true);
     }

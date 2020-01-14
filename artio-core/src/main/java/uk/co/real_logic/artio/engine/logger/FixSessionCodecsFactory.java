@@ -34,8 +34,8 @@ public class FixSessionCodecsFactory implements ControlledFragmentHandler
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final ManageSessionDecoder manageSession = new ManageSessionDecoder();
 
-    private final Map<String, FixSessionCodecs> fixDictionaryClassToIndex = new HashMap<>();
-    private final Long2ObjectHashMap<FixSessionCodecs> sessionIdToFixDictionaryIndex = new Long2ObjectHashMap<>();
+    private final Map<String, FixReplayerCodecs> fixDictionaryClassToIndex = new HashMap<>();
+    private final Long2ObjectHashMap<FixReplayerCodecs> sessionIdToFixDictionaryIndex = new Long2ObjectHashMap<>();
 
     public Action onFragment(
         final DirectBuffer buffer, final int offset, final int length, final Header header)
@@ -68,17 +68,17 @@ public class FixSessionCodecsFactory implements ControlledFragmentHandler
 
     private void onDictionary(final long sessionId, final String fixDictionaryClassName)
     {
-        final FixSessionCodecs fixSessionCodecs = fixDictionaryClassToIndex.computeIfAbsent(fixDictionaryClassName,
-            fixDictionaryName -> new FixSessionCodecs(FixDictionary.find(fixDictionaryName)));
-        final FixSessionCodecs previousIndex = sessionIdToFixDictionaryIndex.get(sessionId);
+        final FixReplayerCodecs fixReplayerCodecs = fixDictionaryClassToIndex.computeIfAbsent(fixDictionaryClassName,
+            fixDictionaryName -> new FixReplayerCodecs(FixDictionary.find(fixDictionaryName)));
+        final FixReplayerCodecs previousIndex = sessionIdToFixDictionaryIndex.get(sessionId);
         // NB: this could potentially changes over time.
-        if (previousIndex != fixSessionCodecs)
+        if (previousIndex != fixReplayerCodecs)
         {
-            sessionIdToFixDictionaryIndex.put(sessionId, fixSessionCodecs);
+            sessionIdToFixDictionaryIndex.put(sessionId, fixReplayerCodecs);
         }
     }
 
-    FixSessionCodecs get(final long sessionId)
+    FixReplayerCodecs get(final long sessionId)
     {
         return sessionIdToFixDictionaryIndex.get(sessionId);
     }

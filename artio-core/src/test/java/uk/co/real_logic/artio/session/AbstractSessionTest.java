@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.session;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -29,6 +30,7 @@ import uk.co.real_logic.artio.builder.TestRequestEncoder;
 import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
 import uk.co.real_logic.artio.decoder.ExampleMessageDecoder;
 import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.SessionState;
@@ -108,6 +110,17 @@ public abstract class AbstractSessionTest
 
         when(sessionProxy.sendResendRequest(anyInt(), anyInt(), anyInt(), eq(SEQUENCE_INDEX), anyInt()))
             .thenReturn(POSITION);
+    }
+
+    FixDictionary makeDictionary()
+    {
+        return FixDictionary.of(FixDictionary.findDefault());
+    }
+
+    @Before
+    public void shouldSetupDictionary()
+    {
+        verify(sessionProxy).fixDictionary(any());
     }
 
     @Test

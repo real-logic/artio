@@ -140,8 +140,6 @@ class GatewaySessions
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
         final MutableAsciiBuffer asciiBuffer = new MutableAsciiBuffer(new byte[sessionBufferSize]);
-        final FixDictionary dictionary = gatewaySession.fixDictionary();
-        final String beginString = dictionary.beginString();
 
         final SessionProxy proxy = new DirectSessionProxy(
             sessionBufferSize,
@@ -151,7 +149,6 @@ class GatewaySessions
             epochClock,
             connectionId,
             FixEngine.ENGINE_LIBRARY_ID,
-            dictionary,
             errorHandler);
 
         final InternalSession session = new InternalSession(
@@ -172,7 +169,6 @@ class GatewaySessions
             reasonableTransmissionTimeInMs,
             asciiBuffer,
             gatewaySession.enableLastMsgSeqNumProcessed(),
-            beginString,
             customisationStrategy);
 
         session.awaitingResend(awaitingResend);
@@ -184,7 +180,6 @@ class GatewaySessions
             session,
             validationStrategy,
             errorHandler,
-            dictionary,
             validateCompIdsOnEveryMessage);
 
         if (!sessions.contains(gatewaySession))
@@ -197,6 +192,7 @@ class GatewaySessions
         DebugLogger.log(FIX_CONNECTION, "Gateway Acquired Session %d%n", connectionId);
         if (sessionKey != null)
         {
+            gatewaySession.updateSessionDictionary();
             gatewaySession.onLogon(username, password, heartbeatIntervalInS);
             session.initialLastReceivedMsgSeqNum(lastReceivedSequenceNumber);
         }
@@ -320,7 +316,7 @@ class GatewaySessions
 
     // We put the gateway session in our list of sessions to poll in order to check engine level timeouts,
     // But we aren't actually acquiring the session.
-    public void track(final GatewaySession gatewaySession)
+    void track(final GatewaySession gatewaySession)
     {
         sessions.add(gatewaySession);
     }

@@ -91,9 +91,9 @@ public class GapFiller implements ProtocolHandler, Agent
         if (messageType == RESEND_REQUEST_MESSAGE_TYPE && status == MessageStatus.OK)
         {
             decoderBuffer.wrap(buffer);
-            final FixSessionCodecs fixSessionCodecs = fixSessionCodecsFactory.get(sessionId);
-            final AbstractResendRequestDecoder resendRequest = fixSessionCodecs.resendRequest();
-            final GapFillEncoder encoder = fixSessionCodecs.gapFillEncoder();
+            final FixReplayerCodecs fixReplayerCodecs = fixSessionCodecsFactory.get(sessionId);
+            final AbstractResendRequestDecoder resendRequest = fixReplayerCodecs.resendRequest();
+            final GapFillEncoder encoder = fixReplayerCodecs.gapFillEncoder();
 
             resendRequest.decode(decoderBuffer, offset, length);
 

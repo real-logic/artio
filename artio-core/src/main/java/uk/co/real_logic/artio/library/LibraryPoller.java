@@ -1304,7 +1304,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
         final SessionParser parser = new SessionParser(
-            session, validationStrategy, null, fixDictionary, configuration.validateCompIdsOnEveryMessage());
+            session, validationStrategy, null, configuration.validateCompIdsOnEveryMessage());
+        parser.fixDictionary(fixDictionary);
         final SessionSubscriber subscriber = new SessionSubscriber(
             parser,
             session,
@@ -1331,7 +1332,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final GatewayPublication publication = transport.outboundPublication();
 
         final MutableAsciiBuffer asciiBuffer = sessionBuffer();
-        final SessionProxy sessionProxy = sessionProxy(connectionId, fixDictionary);
+        final SessionProxy sessionProxy = sessionProxy(connectionId);
         final int initialReceivedSequenceNumber = initiatorNewSequenceNumber(
             sessionConfiguration, SessionConfiguration::initialReceivedSequenceNumber, lastReceivedSequenceNumber);
         final int initialSentSequenceNumber = initiatorNewSequenceNumber(
@@ -1355,9 +1356,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             configuration.reasonableTransmissionTimeInMs(),
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
-            fixDictionary.beginString(),
             configuration.sessionCustomisationStrategy());
-
+        session.fixDictionary(fixDictionary);
         session.initialLastReceivedMsgSeqNum(initialReceivedSequenceNumber - 1);
 
         return session;
@@ -1416,7 +1416,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             heartbeatIntervalInS,
             connectionId,
             epochClock,
-            sessionProxy(connectionId, fixDictionary),
+            sessionProxy(connectionId),
             publication,
             sessionIdStrategy,
             sendingTimeWindow,
@@ -1429,13 +1429,13 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             configuration.reasonableTransmissionTimeInMs(),
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
-            fixDictionary.beginString(),
             configuration.sessionCustomisationStrategy());
+        session.fixDictionary(fixDictionary);
         session.address(host, port);
         return session;
     }
 
-    private SessionProxy sessionProxy(final long connectionId, final FixDictionary fixDictionary)
+    private SessionProxy sessionProxy(final long connectionId)
     {
         return configuration.sessionProxyFactory().make(
             configuration.sessionBufferSize(),
@@ -1445,7 +1445,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             new SystemEpochClock(),
             connectionId,
             libraryId,
-            fixDictionary,
             LangUtil::rethrowUnchecked);
     }
 

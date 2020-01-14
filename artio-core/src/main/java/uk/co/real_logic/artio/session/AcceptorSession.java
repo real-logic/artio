@@ -40,7 +40,6 @@ public class AcceptorSession extends InternalSession
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
-        final String beginString,
         final SessionCustomisationStrategy customisationStrategy)
     {
         super(
@@ -60,7 +59,6 @@ public class AcceptorSession extends InternalSession
             reasonableTransmissionTimeInMs,
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
-            beginString,
             customisationStrategy);
     }
 }

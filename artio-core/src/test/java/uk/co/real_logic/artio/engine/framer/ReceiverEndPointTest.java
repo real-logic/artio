@@ -39,6 +39,7 @@ import uk.co.real_logic.artio.session.SessionIdStrategy;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.util.HashMap;
 import java.util.function.ToIntFunction;
 
 import static io.aeron.Publication.BACK_PRESSURED;
@@ -146,7 +147,7 @@ public class ReceiverEndPointTest
             messagesRead, framer, errorHandler, LIBRARY_ID,
             mockGatewaySessions,
             mockClock,
-            FixDictionary.of(FixDictionary.findDefault()));
+            new AcceptorFixDictionaryLookup(FixDictionary.of(FixDictionary.findDefault()), new HashMap<>()));
         endPoint.gatewaySession(gatewaySession);
     }
 

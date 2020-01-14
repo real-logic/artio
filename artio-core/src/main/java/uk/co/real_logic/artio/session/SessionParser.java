@@ -49,13 +49,14 @@ public class SessionParser
 {
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final UtcTimestampDecoder timestampDecoder = new UtcTimestampDecoder();
-    private final AbstractLogonDecoder logon;
-    private final AbstractLogoutDecoder logout;
-    private final AbstractRejectDecoder reject;
-    private final AbstractTestRequestDecoder testRequest;
-    private final SessionHeaderDecoder header;
-    private final AbstractSequenceResetDecoder sequenceReset;
-    private final AbstractHeartbeatDecoder heartbeat;
+
+    private AbstractLogonDecoder logon;
+    private AbstractLogoutDecoder logout;
+    private AbstractRejectDecoder reject;
+    private AbstractTestRequestDecoder testRequest;
+    private SessionHeaderDecoder header;
+    private AbstractSequenceResetDecoder sequenceReset;
+    private AbstractHeartbeatDecoder heartbeat;
 
     private final boolean validateCompIdsOnEveryMessage;
     private char[] firstSenderCompId;
@@ -73,13 +74,17 @@ public class SessionParser
         final Session session,
         final MessageValidationStrategy validationStrategy,
         final ErrorHandler errorHandler, // nullable
-        final FixDictionary fixDictionary,
         final boolean validateCompIdsOnEveryMessage)
     {
         this.session = session;
         this.validationStrategy = validationStrategy;
         this.errorHandler = errorHandler;
 
+        this.validateCompIdsOnEveryMessage = validateCompIdsOnEveryMessage;
+    }
+
+    public void fixDictionary(final FixDictionary fixDictionary)
+    {
         logon = fixDictionary.makeLogonDecoder();
         logout = fixDictionary.makeLogoutDecoder();
         reject = fixDictionary.makeRejectDecoder();
@@ -87,7 +92,6 @@ public class SessionParser
         header = fixDictionary.makeHeaderDecoder();
         sequenceReset = fixDictionary.makeSequenceResetDecoder();
         heartbeat = fixDictionary.makeHeartbeatDecoder();
-        this.validateCompIdsOnEveryMessage = validateCompIdsOnEveryMessage;
     }
 
     public static String username(final AbstractLogonDecoder logon)

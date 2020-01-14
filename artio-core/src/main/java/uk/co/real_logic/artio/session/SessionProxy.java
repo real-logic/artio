@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.session;
 
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
@@ -26,6 +27,8 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
  */
 public interface SessionProxy
 {
+    void fixDictionary(FixDictionary dictionary);
+
     void setupSession(long sessionId, CompositeKey sessionKey);
 
     long sendResendRequest(

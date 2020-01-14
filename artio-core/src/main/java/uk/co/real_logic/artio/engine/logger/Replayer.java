@@ -142,7 +142,7 @@ public class Replayer implements ProtocolHandler, Agent
 
             asciiBuffer.wrap(srcBuffer);
 
-            final FixSessionCodecs sessionCodecs = fixSessionCodecsFactory.get(sessionId);
+            final FixReplayerCodecs sessionCodecs = fixSessionCodecsFactory.get(sessionId);
             final AbstractResendRequestDecoder resendRequest = sessionCodecs.resendRequest();
             resendRequest.reset();
             resendRequest.decode(asciiBuffer, srcOffset, limit);

@@ -243,7 +243,6 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         final EpochClock clock,
         final long connectionId,
         final int libraryId,
-        final FixDictionary fixDictionary,
         final ErrorHandler errorHandler)
     {
         sessionProxyRequests++;
@@ -266,6 +265,10 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         private int sequenceNumberAdjustment = 0;
 
         private boolean seqNumResetRequested = false;
+
+        public void fixDictionary(final FixDictionary dictionary)
+        {
+        }
 
         public void setupSession(final long sessionId, final CompositeKey sessionKey)
         {
