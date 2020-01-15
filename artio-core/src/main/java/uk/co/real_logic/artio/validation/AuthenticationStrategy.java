@@ -45,7 +45,8 @@ public interface AuthenticationStrategy
      * NB: if you're implementing this method then you shouldn't implement the {@link #authenticate(AbstractLogonDecoder)}
      * method.
      *
-     * @param logon the logon message to authenticate.
+     * @param logon the logon message to authenticate. This is an object that gets allocated just to handle the logon
+     *              message and is safe to use within your own code without copying.
      * @param authProxy the proxy to notify when you're ready to authenticate.
      */
     default void authenticateAsync(AbstractLogonDecoder logon, AuthenticationProxy authProxy)
