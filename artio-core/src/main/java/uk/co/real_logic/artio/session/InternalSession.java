@@ -193,4 +193,9 @@ public class InternalSession extends Session
     {
         super.fixDictionary(fixDictionary);
     }
+
+    public void setupSession(final long sessionId, final CompositeKey sessionKey)
+    {
+        super.setupSession(sessionId, sessionKey);
+    }
 }

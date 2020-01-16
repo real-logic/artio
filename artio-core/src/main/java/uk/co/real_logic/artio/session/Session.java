@@ -643,17 +643,68 @@ public class Session implements AutoCloseable
         receivedMsgSeqNo.close();
     }
 
-    // ---------- Event Handlers & Logic ----------
-
-    Action onInvalidFixDisconnect()
-    {
-        return Pressure.apply(requestDisconnect(DisconnectReason.INVALID_FIX_MESSAGE));
-    }
 
     public void onDisconnect()
     {
         logoutRejectReason = NO_LOGOUT_REJECT_REASON;
         state(DISCONNECTED);
+    }
+
+    // Also checks the sequence index
+    public Session lastReceivedMsgSeqNum(final int lastReceivedMsgSeqNum)
+    {
+        if (this.lastReceivedMsgSeqNum > lastReceivedMsgSeqNum)
+        {
+            nextSequenceIndex();
+        }
+
+        lastReceivedMsgSeqNumOnly(lastReceivedMsgSeqNum);
+
+        return this;
+    }
+
+    public long logonTime()
+    {
+        return this.logonTime;
+    }
+
+    public boolean hasLogonTime()
+    {
+        return logonTime != NO_LOGON_TIME;
+    }
+
+    public int lastSentMsgSeqNum(final int lastSentMsgSeqNum)
+    {
+        this.lastSentMsgSeqNum = lastSentMsgSeqNum;
+        sentMsgSeqNo.setOrdered(lastSentMsgSeqNum);
+        incNextHeartbeatTime();
+
+        return lastSentMsgSeqNum;
+    }
+
+    public String toString()
+    {
+        return getClass().getSimpleName() + "{" +
+            "connectionId=" + connectionId +
+            ", sessionId=" + id +
+            ", state=" + state +
+            ", sequenceIndex=" + sequenceIndex +
+            ", lastReceivedMsgSeqNum=" + lastReceivedMsgSeqNum +
+            ", lastSentMsgSeqNum=" + lastSentMsgSeqNum +
+            '}';
+    }
+
+    public String beginString()
+    {
+        return beginString;
+    }
+
+    // ---------- END OF PUBLIC API ----------
+
+    // ---------- Event Handlers & Logic ----------
+    Action onInvalidFixDisconnect()
+    {
+        return Pressure.apply(requestDisconnect(DisconnectReason.INVALID_FIX_MESSAGE));
     }
 
     private void lastSentMsgSeqNum(final int sentSeqNum, final long position)
@@ -1117,7 +1168,7 @@ public class Session implements AutoCloseable
         }
     }
 
-    public void setupSession(final long sessionId, final CompositeKey sessionKey)
+    void setupSession(final long sessionId, final CompositeKey sessionKey)
     {
         id(sessionId);
         this.sessionKey = sessionKey;
@@ -1427,7 +1478,7 @@ public class Session implements AutoCloseable
         return this;
     }
 
-    public Session id(final long id)
+    Session id(final long id)
     {
         this.id = id;
         return this;
@@ -1436,19 +1487,6 @@ public class Session implements AutoCloseable
     protected long time()
     {
         return epochClock.time();
-    }
-
-    // Also checks the sequence index
-    public Session lastReceivedMsgSeqNum(final int lastReceivedMsgSeqNum)
-    {
-        if (this.lastReceivedMsgSeqNum > lastReceivedMsgSeqNum)
-        {
-            nextSequenceIndex();
-        }
-
-        lastReceivedMsgSeqNumOnly(lastReceivedMsgSeqNum);
-
-        return this;
     }
 
     // Does not check the sequence index
@@ -1468,29 +1506,10 @@ public class Session implements AutoCloseable
         return lastSentMsgSeqNum + 1;
     }
 
-    public int lastSentMsgSeqNum(final int lastSentMsgSeqNum)
-    {
-        this.lastSentMsgSeqNum = lastSentMsgSeqNum;
-        sentMsgSeqNo.setOrdered(lastSentMsgSeqNum);
-        incNextHeartbeatTime();
-
-        return lastSentMsgSeqNum;
-    }
-
     private void incReceivedSeqNum()
     {
         lastReceivedMsgSeqNum++;
         receivedMsgSeqNo.increment();
-    }
-
-    public long logonTime()
-    {
-        return this.logonTime;
-    }
-
-    public boolean hasLogonTime()
-    {
-        return logonTime != NO_LOGON_TIME;
     }
 
     Action onInvalidMessage(
@@ -1546,18 +1565,6 @@ public class Session implements AutoCloseable
             INVALID_MSGTYPE.representation(),
             sequenceIndex(),
             lastMsgSeqNumProcessed));
-    }
-
-    public String toString()
-    {
-        return getClass().getSimpleName() + "{" +
-               "connectionId=" + connectionId +
-               ", sessionId=" + id +
-               ", state=" + state +
-               ", sequenceIndex=" + sequenceIndex +
-               ", lastReceivedMsgSeqNum=" + lastReceivedMsgSeqNum +
-               ", lastSentMsgSeqNum=" + lastSentMsgSeqNum +
-               '}';
     }
 
     void disable()
@@ -1773,10 +1780,5 @@ public class Session implements AutoCloseable
     {
         proxy.fixDictionary(fixDictionary);
         this.beginString = fixDictionary.beginString();
-    }
-
-    public String beginString()
-    {
-        return beginString;
     }
 }
