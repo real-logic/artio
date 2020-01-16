@@ -608,7 +608,7 @@ class GatewaySessions
                 return;
             }
 
-            sessionContext.onLogon(resetSeqNum);
+            sessionContext.onLogon(resetSeqNum, epochClock.time());
             session.initialResetSeqNum(resetSeqNum);
             session.onLogon(
                 sessionContext.sessionId(),

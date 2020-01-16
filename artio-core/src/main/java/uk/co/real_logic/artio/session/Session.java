@@ -86,6 +86,7 @@ public class Session implements AutoCloseable
 {
     public static final long UNKNOWN = -1;
     public static final long NO_LOGON_TIME = -1;
+    public static final long NO_LAST_SEQUENCE_RESET_TIME = NO_LOGON_TIME;
 
     static final short ACTIVE_VALUE = 3;
     static final short LOGGING_OUT_VALUE = 5;

@@ -200,6 +200,7 @@ public class FramerTest
         when(sessionContexts.onLogon(any())).thenReturn(new SessionContext(SESSION_ID,
             SessionContext.UNKNOWN_SEQUENCE_INDEX,
             Session.NO_LOGON_TIME,
+            System.currentTimeMillis(),
             sessionContexts,
             0));
     }
