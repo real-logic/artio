@@ -403,8 +403,6 @@ public class FixLibrary extends GatewayProcess
     }
 
     /**
-     * NB: This is an experimental API and is subject to change or potentially removal.
-     *
      * Write meta data associated with a session. Session meta-data is a sequence of bytes that application can
      * associate with a session. It shares it's lifecycle with the current session - so whenever sequence numbers or
      * seession ids are reset the old meta-data will be reset as well. If the session is persistent then the metadata
@@ -431,8 +429,6 @@ public class FixLibrary extends GatewayProcess
     }
 
     /**
-     * NB: This is an experimental API and is subject to change or potentially removal.
-     *
      * Read the meta data associated with a session.
      *
      * @param sessionId the id of the session that meta data is read from.
