@@ -20,10 +20,7 @@ import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
-import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
-import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
-import uk.co.real_logic.artio.builder.ResendRequestEncoder;
-import uk.co.real_logic.artio.builder.UserRequestEncoder;
+import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
@@ -914,6 +911,22 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         writeBuffer.putInt(0, META_DATA_VALUE);
 
         writeMetaData(writeBuffer);
+
+        final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
+        assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldReadWrittenSessionSendMetaData()
+    {
+        acquireAcceptingSession();
+
+        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
+        writeBuffer.putInt(0, META_DATA_VALUE);
+
+        final TestRequestEncoder testRequest = new TestRequestEncoder();
+        testRequest.testReqID(testReqId());
+        assertThat(acceptingSession.send(testRequest, writeBuffer), greaterThan(0L));
 
         final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
         assertEquals(META_DATA_VALUE, readBuffer.getInt(0));

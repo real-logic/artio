@@ -42,6 +42,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.fields.RejectReason.*;
@@ -51,7 +52,6 @@ import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionState.*;
 import static uk.co.real_logic.artio.session.DirectSessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
 import static uk.co.real_logic.artio.session.InternalSession.*;
-import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound.
@@ -488,6 +488,21 @@ public class Session implements AutoCloseable
      */
     public long send(final Encoder encoder)
     {
+        return send(encoder, null);
+    }
+
+    /**
+     * Send a message on this session.
+     *
+     * @param encoder the encoder of the message to be sent
+     * @param metaDataBuffer the metadata to associate with this message.
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     * @throws IndexOutOfBoundsException if the encoded message is too large, if this happens consider
+     *                                   increasing {@link CommonConfiguration#sessionBufferSize(int)}
+     */
+    public long send(final Encoder encoder, final DirectBuffer metaDataBuffer)
+    {
         validateCanSendMessage();
 
         final int sentSeqNum = prepare(encoder.header());
@@ -496,7 +511,7 @@ public class Session implements AutoCloseable
         final int length = Encoder.length(result);
         final int offset = Encoder.offset(result);
 
-        return send(asciiBuffer, offset, length, sentSeqNum, encoder.messageType());
+        return send(asciiBuffer, offset, length, sentSeqNum, encoder.messageType(), metaDataBuffer);
     }
 
     /**
@@ -513,10 +528,34 @@ public class Session implements AutoCloseable
     public long send(
         final DirectBuffer messageBuffer, final int offset, final int length, final int seqNum, final long messageType)
     {
+        return send(messageBuffer, offset, length, seqNum, messageType, null);
+    }
+
+    /**
+     * Send a message on this session.
+     *
+     * @param messageBuffer the buffer with the FIX message in to send
+     * @param offset the offset within the messageBuffer where the message starts
+     * @param length the length of the message within the messageBuffer
+     * @param seqNum the sequence number of the sent message
+     * @param messageType the long encoded message type.
+     * @param metaDataBuffer the metadata to associate with this message.
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     */
+    public long send(
+        final DirectBuffer messageBuffer,
+        final int offset,
+        final int length,
+        final int seqNum,
+        final long messageType,
+        final DirectBuffer metaDataBuffer)
+    {
         validateCanSendMessage();
 
         final long position = publication.saveMessage(
-            messageBuffer, offset, length, libraryId, messageType, id(), sequenceIndex(), connectionId, OK, seqNum);
+            messageBuffer, offset, length, libraryId, messageType, id(), sequenceIndex(), connectionId, OK, seqNum,
+            metaDataBuffer);
 
         if (position > 0)
         {

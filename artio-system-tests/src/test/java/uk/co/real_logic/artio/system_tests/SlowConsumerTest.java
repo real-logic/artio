@@ -52,7 +52,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class SlowConsumerTest
 {
-    private static final int BUFFER_CAPACITY = 8 * 1024;
+    private static final int BUFFER_CAPACITY = 16 * 1024;
     private static final int TEST_TIMEOUT = 20_000;
 
     private int port = unusedPort();
@@ -117,6 +117,8 @@ public class SlowConsumerTest
     {
         final SessionInfo sessionInfo = sessionBecomesSlow();
         socket.configureBlocking(false);
+
+        testSystem.poll();
 
         // Get out of slow state
         while (sessionInfo.bytesInBuffer() > 0 || handler.isSlow(session))

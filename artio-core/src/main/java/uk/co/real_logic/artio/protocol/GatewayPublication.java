@@ -20,6 +20,7 @@ import io.aeron.logbuffer.BufferClaim;
 import org.agrona.DirectBuffer;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
@@ -40,17 +41,20 @@ import static uk.co.real_logic.artio.DebugLogger.logSbeMessage;
 import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.messages.ErrorDecoder.messageHeaderLength;
 import static uk.co.real_logic.artio.messages.ErrorEncoder.BLOCK_LENGTH;
+import static uk.co.real_logic.artio.messages.FixMessageEncoder.metaDataHeaderLength;
 
 /**
  * A proxy for publishing messages fix related messages
  */
 public class GatewayPublication extends ClaimablePublication
 {
-    public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
+    public static final int FRAME_SIZE = FixMessageEncoder.BLOCK_LENGTH + FixMessageDecoder.metaDataHeaderLength() +
+        FixMessageDecoder.bodyHeaderLength();
 
     private static final int FRAMED_MESSAGE_SIZE = MessageHeaderEncoder.ENCODED_LENGTH + FRAME_SIZE;
 
     private static final byte[] NO_BYTES = {};
+    private static final DirectBuffer NO_METADATA = new UnsafeBuffer(NO_BYTES);
 
     private static final int HEARTBEAT_LENGTH = HEADER_LENGTH + ApplicationHeartbeatEncoder.BLOCK_LENGTH;
     private static final int LIBRARY_CONNECT_LENGTH =
@@ -173,10 +177,70 @@ public class GatewayPublication extends ClaimablePublication
         final long connectionId,
         final MessageStatus status,
         final int sequenceNumber,
+        final DirectBuffer metaDataBuffer)
+    {
+        return saveMessage(
+            srcBuffer,
+            srcOffset,
+            srcLength,
+            libraryId,
+            messageType,
+            sessionId,
+            sequenceIndex,
+            connectionId,
+            status,
+            sequenceNumber,
+            clock.time(),
+            metaDataBuffer);
+    }
+
+    public long saveMessage(
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int srcLength,
+        final int libraryId,
+        final long messageType,
+        final long sessionId,
+        final int sequenceIndex,
+        final long connectionId,
+        final MessageStatus status,
+        final int sequenceNumber,
         final long timestamp)
     {
+        return saveMessage(
+            srcBuffer,
+            srcOffset,
+            srcLength,
+            libraryId,
+            messageType,
+            sessionId,
+            sequenceIndex,
+            connectionId,
+            status,
+            sequenceNumber,
+            timestamp,
+            null);
+    }
+
+    public long saveMessage(
+        final DirectBuffer srcBuffer,
+        final int srcOffset,
+        final int srcLength,
+        final int libraryId,
+        final long messageType,
+        final long sessionId,
+        final int sequenceIndex,
+        final long connectionId,
+        final MessageStatus status,
+        final int sequenceNumber,
+        final long timestamp,
+        final DirectBuffer srcMetaDataBuffer)
+    {
+        final DirectBuffer metaDataBuffer = srcMetaDataBuffer == null ? NO_METADATA : srcMetaDataBuffer;
+        final int metaDataLength = metaDataBuffer.capacity();
+
         final BufferClaim bufferClaim = this.bufferClaim;
-        final int framedLength = FRAMED_MESSAGE_SIZE + srcLength;
+        final int framedLength = FRAMED_MESSAGE_SIZE + srcLength + metaDataLength;
         final boolean fragmented = framedLength > maxPayloadLength;
         final int claimLength = fragmented ? maxPayloadLength : framedLength;
         int srcFragmentLength = fragmented ? maxInitialBodyLength : srcLength;
@@ -231,6 +295,7 @@ public class GatewayPublication extends ClaimablePublication
             .timestamp(timestamp)
             .status(status)
             .sequenceNumber(sequenceNumber)
+            .putMetaData(metaDataBuffer, 0, metaDataLength)
             .putBody(srcBuffer, srcFragmentOffset, srcFragmentLength);
 
         if (!fragmented)
@@ -239,7 +304,7 @@ public class GatewayPublication extends ClaimablePublication
         }
         else
         {
-            putBodyLength(srcLength, offset, destBuffer);
+            putBodyLength(srcLength, offset, metaDataLength, destBuffer);
 
             bufferClaim.flags((byte)BEGIN_FLAG).commit();
 
@@ -268,9 +333,11 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
-    private void putBodyLength(final int srcLength, final int offset, final MutableDirectBuffer destBuffer)
+    private void putBodyLength(
+        final int srcLength, final int offset, final int metaDataLength, final MutableDirectBuffer destBuffer)
     {
-        destBuffer.putShort(offset + FixMessageEncoder.BLOCK_LENGTH, (short)srcLength, LITTLE_ENDIAN);
+        final int position = offset + FixMessageEncoder.BLOCK_LENGTH + metaDataHeaderLength() + metaDataLength;
+        destBuffer.putShort(position, (short)srcLength, LITTLE_ENDIAN);
     }
 
     public long saveManageSession(

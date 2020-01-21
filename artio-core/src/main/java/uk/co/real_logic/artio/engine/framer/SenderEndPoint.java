@@ -148,7 +148,8 @@ class SenderEndPoint
         final int offsetAfterHeader = offset - FRAME_SIZE;
         final int length = bodyLength + FRAME_SIZE;
 
-        return attemptSlowMessage(buffer, offsetAfterHeader, length, position, bodyLength, timeInMs, replayTracker);
+        return attemptSlowMessage(buffer, offsetAfterHeader, length, position, bodyLength, timeInMs, replayTracker,
+            0); // TODO
     }
 
     private void attemptFramedMessage(
@@ -283,7 +284,8 @@ class SenderEndPoint
         final long position,
         final int bodyLength,
         final int libraryId,
-        final long timeInMs)
+        final long timeInMs,
+        final int metaDataLength)
     {
         if (isWrongLibraryId(libraryId))
         {
@@ -297,7 +299,7 @@ class SenderEndPoint
         }
 
         return attemptSlowMessage(
-            directBuffer, offsetAfterHeader, length, position, bodyLength, timeInMs, outboundTracker);
+            directBuffer, offsetAfterHeader, length, position, bodyLength, timeInMs, outboundTracker, metaDataLength);
     }
 
     private Action attemptSlowMessage(
@@ -307,7 +309,8 @@ class SenderEndPoint
         final long position,
         final int bodyLength,
         final long timeInMs,
-        final StreamTracker tracker)
+        final StreamTracker tracker,
+        final int metaDataLength)
     {
         if (!isSlowConsumer())
         {
@@ -353,7 +356,7 @@ class SenderEndPoint
                 bytesPreviouslySent = bodyLength - remainingLength;
             }
 
-            final int dataOffset = offsetAfterHeader + FRAME_SIZE + bytesPreviouslySent;
+            final int dataOffset = offsetAfterHeader + FRAME_SIZE + metaDataLength + bytesPreviouslySent;
             final ByteBuffer buffer = directBuffer.byteBuffer();
 
             ByteBufferUtil.limit(buffer, dataOffset + remainingLength);

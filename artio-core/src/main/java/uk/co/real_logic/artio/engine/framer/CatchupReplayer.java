@@ -46,6 +46,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.LogTag.CATCHUP;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.HEARTBEAT_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
+import static uk.co.real_logic.artio.messages.FixMessageDecoder.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.CATCHUP_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.MISSING_MESSAGES;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
@@ -172,21 +173,25 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final int srcLength,
         final Header header)
     {
-        final int messageLength = srcLength - FRAME_LENGTH;
-        final int messageOffset = srcOffset + FRAME_LENGTH;
-
         messageHeaderDecoder.wrap(srcBuffer, srcOffset);
 
+        final int version = messageHeaderDecoder.version();
         messageDecoder.wrap(
             srcBuffer,
             srcOffset + MessageHeaderDecoder.ENCODED_LENGTH,
             messageHeaderDecoder.blockLength(),
-            messageHeaderDecoder.version());
+            version);
+
+        final long messageType = MessageTypeExtractor.getMessageType(messageDecoder);
+
+        final int metaDataLength = messageDecoder.skipMetaData();
+        final int metaDataAdjustment = version >= metaDataSinceVersion() ? metaDataLength + metaDataHeaderLength() : 0;
+
+        final int messageLength = messageDecoder.bodyLength();
+        final int messageOffset = messageDecoder.limit() + bodyHeaderLength();
 
         asciiBuffer.wrap(srcBuffer, messageOffset, messageLength);
         headerDecoder.decode(asciiBuffer, 0, messageLength);
-
-        final long messageType = MessageTypeExtractor.getMessageType(messageDecoder);
 
         if (messageType == HEARTBEAT_MESSAGE_TYPE)
         {
@@ -207,7 +212,8 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 }
             }
 
-            return processNormalMessage(srcBuffer, srcOffset, srcLength, messageLength, messageOffset);
+            return processNormalMessage(
+                srcBuffer, srcOffset, srcLength, messageLength, messageOffset, metaDataAdjustment);
         }
     }
 
@@ -273,10 +279,11 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final int srcOffset,
         final int srcLength,
         final int messageLength,
-        final int messageOffset)
+        final int messageOffset,
+        final int metaDataAdjustment)
     {
         final Action action = possDupEnabler.enablePossDupFlag(
-            srcBuffer, messageOffset, messageLength, srcOffset, srcLength);
+            srcBuffer, messageOffset, messageLength, srcOffset, srcLength, metaDataAdjustment);
         if (action == CONTINUE)
         {
             // store the point to continue from if an abort happens.

@@ -21,6 +21,9 @@ import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 
+import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataHeaderLength;
+import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataSinceVersion;
+
 class LogEntryHandler implements FragmentHandler
 {
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
@@ -41,7 +44,14 @@ class LogEntryHandler implements FragmentHandler
         {
             offset += MessageHeaderDecoder.ENCODED_LENGTH;
 
-            fixMessage.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
+            final int version = messageHeader.version();
+            fixMessage.wrap(buffer, offset, messageHeader.blockLength(), version);
+
+            if (version >= metaDataSinceVersion())
+            {
+                offset += metaDataHeaderLength() + fixMessage.metaDataLength();
+                fixMessage.skipMetaData();
+            }
 
             handler.onMessage(fixMessage, buffer, offset, length, header);
         }

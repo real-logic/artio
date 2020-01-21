@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="5"
+                   version="6"
                    semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -175,7 +175,7 @@
             <validValue name="LIBRARY_NOTIFICATION">1</validValue>
         </enum>
 
-        <enum name="MetaDataStatus" encodingType="uint8">
+        <enum name="MetaDataStatus" encodingType="uint8" sinceVersion="5">
             <validValue name="OK">0</validValue>
             <validValue name="UNKNOWN_SESSION">1</validValue>
             <validValue name="FILE_ERROR">2</validValue>
@@ -309,7 +309,7 @@
         <field name="enableLastMsgSeqNumProcessed" id="25" type="Bool" />
         <field name="logonReceivedSequenceNumber" id="33" type="int32" sinceVersion="4"/>
         <field name="logonSequenceIndex" id="34" type="SequenceIndex" sinceVersion="4"/>
-        <field name="metaDataStatus" id="35" type="MetaDataStatus"/>
+        <field name="metaDataStatus" id="35" type="MetaDataStatus" sinceVersion="5"/>
 
         <!-- State modified by the Session itself -->
         <field name="awaitingResend" id="21" type="AwaitingResend" />
@@ -412,6 +412,7 @@
         <!-- only visible outbound -->
         <field name="sequenceNumber" id="9" type="int32" />
         <field name="messageType" id="11" type="MessageType" presence="optional" sinceVersion="3"/>
+        <data name="metaData" id="12" type="Utf8String"  sinceVersion="6"/>
         <data name="body" id="10" type="AsciiString"/>
     </sbe:message>
 
