@@ -36,6 +36,7 @@ import uk.co.real_logic.artio.session.Session;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.List;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.IntSupplier;
 
 import static org.agrona.BitUtil.SIZE_OF_INT;
@@ -928,8 +929,13 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         testRequest.testReqID(testReqId());
         assertThat(acceptingSession.send(testRequest, writeBuffer), greaterThan(0L));
 
-        final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
-        assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
+        assertEventuallyTrue("Failed to read meta data", () ->
+        {
+            final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
+            assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
+
+            LockSupport.parkNanos(10_000L);
+        });
     }
 
     @Test(timeout = 10_000L)
