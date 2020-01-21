@@ -127,6 +127,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final LibraryTransport transport;
     private final FixLibrary fixLibrary;
     private final Runnable onDisconnectFunc = this::onDisconnect;
+    private final SessionAcquiredInfo sessionAcquiredInfo = new SessionAcquiredInfo();
 
     /**
      * Correlation Id is initialised to a random number to reduce the chance of correlation id collision.
@@ -778,7 +779,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final String address,
         final String username,
         final String password,
-        final Class<? extends FixDictionary> fixDictionaryType)
+        final Class<? extends FixDictionary> fixDictionaryType,
+        final MetaDataStatus metaDataStatus,
+        final DirectBuffer metaDataBuffer,
+        final int metaDataOffset,
+        final int metaDataLength)
     {
         if (state == CONNECTED)
         {
@@ -802,14 +807,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             {
                 if (sessionStatus == SessionStatus.SESSION_HANDOVER)
                 {
+                    sessionAcquiredInfo.wrap(
+                        slowStatus, metaDataStatus, metaDataBuffer, metaDataOffset, metaDataLength);
                     onHandoverSession(
                         libraryId,
                         connectionId,
                         sessionId,
-                        lastSentSeqNum,
-                        lastRecvSeqNum,
+                        lastSentSeqNum, lastRecvSeqNum,
                         logonTime,
-                        slowStatus,
                         connectionType,
                         sessionState,
                         heartbeatIntervalInS,
@@ -824,12 +829,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                         lastResendChunkMsgSeqNum,
                         endOfResendRequestRange,
                         awaitingHeartbeat,
-                        localCompId,
-                        localSubId,
-                        localLocationId,
-                        remoteCompId,
-                        remoteSubId,
-                        remoteLocationId,
+                        localCompId, localSubId, localLocationId,
+                        remoteCompId, remoteSubId, remoteLocationId,
                         address,
                         username,
                         password,
@@ -862,7 +863,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int lastSentSeqNum,
         final int lastRecvSeqNum,
         final long logonTime,
-        final SlowStatus slowStatus,
         final ConnectionType connectionType,
         final SessionState sessionState,
         final int heartbeatIntervalInS,
@@ -943,7 +943,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         session.endOfResendRequestRange(endOfResendRequestRange);
         session.awaitingHeartbeat(awaitingHeartbeat);
 
-        createSessionSubscriber(connection, session, reply, slowStatus, fixDictionary);
+        createSessionSubscriber(connection, session, reply, fixDictionary);
         insertSession(session, connectionType, sessionState);
 
         DebugLogger.log(GATEWAY_MESSAGE,
@@ -1299,7 +1299,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long connectionId,
         final InternalSession session,
         final InitiateSessionReply reply,
-        final SlowStatus slowStatus,
         final FixDictionary fixDictionary)
     {
         final MessageValidationStrategy validationStrategy = configuration.messageValidationStrategy();
@@ -1312,8 +1311,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             receiveTimer,
             sessionTimer);
         subscriber.reply(reply);
-        subscriber.handler(configuration.sessionAcquireHandler()
-            .onSessionAcquired(session, SlowStatus.SLOW == slowStatus));
+        subscriber.handler(configuration.sessionAcquireHandler().onSessionAcquired(session, sessionAcquiredInfo));
 
         connectionIdToSession.put(connectionId, subscriber);
     }

@@ -67,7 +67,7 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + SlowStatusNotificationEncoder.BLOCK_LENGTH;
     private static final byte MIDDLE_FLAG = 0;
     private static final int MANAGE_SESSION_BLOCK_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
-        ManageSessionEncoder.BLOCK_LENGTH + ManageSessionEncoder.localCompIdHeaderLength() * 10;
+        ManageSessionEncoder.BLOCK_LENGTH + ManageSessionEncoder.localCompIdHeaderLength() * 11;
     private static final int INITIATE_CONNECTION_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
         InitiateConnectionEncoder.BLOCK_LENGTH + InitiateConnectionDecoder.hostHeaderLength() * 10;
     private static final int CONTROL_NOTIFICATION_LENGTH = HEADER_LENGTH + ControlNotificationEncoder.BLOCK_LENGTH +
@@ -307,7 +307,9 @@ public class GatewayPublication extends ClaimablePublication
         final String address,
         final String username,
         final String password,
-        final Class<? extends FixDictionary> fixDictionary)
+        final Class<? extends FixDictionary> fixDictionary,
+        final MetaDataStatus metaDataStatus,
+        final DirectBuffer metaData)
     {
         final byte[] localCompIdBytes = bytes(localCompId);
         final byte[] localSubIdBytes = bytes(localSubId);
@@ -324,7 +326,8 @@ public class GatewayPublication extends ClaimablePublication
             MANAGE_SESSION_BLOCK_LENGTH + localCompIdBytes.length + localSubIdBytes.length +
             localLocationIdBytes.length + remoteCompIdBytes.length + remoteSubIdBytes.length +
             remoteLocationIdBytes.length + addressBytes.length + usernameBytes.length + passwordBytes.length +
-            fixDictionaryBytes.length);
+            fixDictionaryBytes.length +
+            metaData.capacity());
 
         if (position < 0)
         {
@@ -359,6 +362,7 @@ public class GatewayPublication extends ClaimablePublication
             .awaitingHeartbeat(toBool(awaitingHeartbeat))
             .logonReceivedSequenceNumber(logonReceivedSequenceNumber)
             .logonSequenceIndex(logonSequenceIndex)
+            .metaDataStatus(metaDataStatus)
             .putLocalCompId(localCompIdBytes, 0, localCompIdBytes.length)
             .putLocalSubId(localSubIdBytes, 0, localSubIdBytes.length)
             .putLocalLocationId(localLocationIdBytes, 0, localLocationIdBytes.length)
@@ -368,7 +372,8 @@ public class GatewayPublication extends ClaimablePublication
             .putAddress(addressBytes, 0, addressBytes.length)
             .putUsername(usernameBytes, 0, usernameBytes.length)
             .putPassword(passwordBytes, 0, passwordBytes.length)
-            .putFixDictionary(fixDictionaryBytes, 0, fixDictionaryBytes.length);
+            .putFixDictionary(fixDictionaryBytes, 0, fixDictionaryBytes.length)
+            .putMetaData(metaData, 0, metaData.capacity());
 
         bufferClaim.commit();
 

@@ -48,7 +48,7 @@ public class ExchangeAgent implements Agent
         // that receives messages for new sessions
         configuration
             .libraryConnectHandler(new LoggingLibraryConnectHandler())
-            .sessionAcquireHandler(this::onAcquire)
+            .sessionAcquireHandler((session, acquiredInfo) -> onAcquire(session))
             .sessionExistsHandler(new AcquiringSessionExistsHandler(true))
             .libraryAeronChannels(singletonList(IPC_CHANNEL));
 
@@ -57,7 +57,7 @@ public class ExchangeAgent implements Agent
         System.out.println("Connecting library");
     }
 
-    private SessionHandler onAcquire(final Session session, final boolean isSlow)
+    private SessionHandler onAcquire(final Session session)
     {
         System.out.println(session.compositeKey() + " logged in");
         return new ExchangeSessionHandler(session);

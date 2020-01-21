@@ -26,5 +26,13 @@ import uk.co.real_logic.artio.session.Session;
 @FunctionalInterface
 public interface SessionAcquireHandler
 {
-    SessionHandler onSessionAcquired(Session session, boolean isSlow);
+    /**
+     * Callback invoked when a new session comes under the control of
+     *  * the library interface that its associated with.
+     *
+     * @param session the session object that has been acquired.
+     * @param acquiredInfo the information associated with this session
+     * @return the {@link SessionHandler} that will receive messages associated with this Session.
+     */
+    SessionHandler onSessionAcquired(Session session, SessionAcquiredInfo acquiredInfo);
 }

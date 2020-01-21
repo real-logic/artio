@@ -368,7 +368,11 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.address(),
             manageSession.username(),
             manageSession.password(),
-            FixDictionary.find(manageSession.fixDictionary()));
+            FixDictionary.find(manageSession.fixDictionary()),
+            manageSession.metaDataStatus(),
+            buffer,
+            manageSession.limit() + ManageSessionDecoder.metaDataHeaderLength(),
+            manageSession.metaDataLength());
     }
 
     private Action onEndOfDay(

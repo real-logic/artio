@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
@@ -916,6 +917,29 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
         assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldReceiveSessionMetaDataWhenSessionAcquired()
+    {
+        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
+        writeBuffer.putInt(0, META_DATA_VALUE);
+        writeMetaData(writeBuffer);
+
+        acquireAcceptingSession();
+        assertEquals(MetaDataStatus.OK, acceptingHandler.lastSessionMetaDataStatus());
+        final DirectBuffer readBuffer = acceptingHandler.lastSessionMetaData();
+        assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
+        assertEquals(SIZE_OF_INT, readBuffer.capacity());
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldNotReceiveSessionMetaDataWhenSessionAcquiredWithNoMetaData()
+    {
+        acquireAcceptingSession();
+        assertEquals(MetaDataStatus.NO_META_DATA, acceptingHandler.lastSessionMetaDataStatus());
+        final DirectBuffer readBuffer = acceptingHandler.lastSessionMetaData();
+        assertEquals(0, readBuffer.capacity());
     }
 
     @Test(timeout = 10_000L)

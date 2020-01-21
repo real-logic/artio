@@ -205,6 +205,10 @@ public class AbstractGatewayToGatewaySystemTest
 
         final Session session = reply.resultIfPresent();
 
+        if (reply.error() != null)
+        {
+            reply.error().printStackTrace();
+        }
         assertEquals(reply.toString(), State.COMPLETED, reply.state());
         assertConnected(session);
 

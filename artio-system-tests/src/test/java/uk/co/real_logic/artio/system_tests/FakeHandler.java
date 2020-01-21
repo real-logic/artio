@@ -18,10 +18,12 @@ package uk.co.real_logic.artio.system_tests;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.ExpandableArrayBuffer;
+import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.library.*;
 import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.otf.OtfParser;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -45,6 +47,8 @@ public class FakeHandler
     private boolean hasDisconnected = false;
     private long sentPosition;
     private boolean lastSessionWasSlow;
+    private UnsafeBuffer lastSessionMetaData;
+    private MetaDataStatus lastSessionMetaDataStatus;
 
     private final ExpandableArrayBuffer lastMessageBuffer = new ExpandableArrayBuffer();
     private final MutableAsciiBuffer lastMessage = new MutableAsciiBuffer(lastMessageBuffer);
@@ -126,12 +130,17 @@ public class FakeHandler
     {
     }
 
-    public SessionHandler onSessionAcquired(final Session session, final boolean isSlow)
+    public SessionHandler onSessionAcquired(final Session session, final SessionAcquiredInfo acquiredInfo)
     {
         assertNotEquals(Session.UNKNOWN, session.id());
         sessions.add(session);
         this.lastSession = session;
-        this.lastSessionWasSlow = isSlow;
+        this.lastSessionWasSlow = acquiredInfo.isSlow();
+
+        final DirectBuffer metaDataBuffer = acquiredInfo.metaDataBuffer();
+        this.lastSessionMetaDataStatus = acquiredInfo.metaDataStatus();
+        this.lastSessionMetaData = new UnsafeBuffer(new byte[metaDataBuffer.capacity()]);
+        this.lastSessionMetaData.putBytes(0, metaDataBuffer, 0, metaDataBuffer.capacity());
         return this;
     }
 
@@ -269,4 +278,13 @@ public class FakeHandler
         return lastSessionWasSlow;
     }
 
+    public DirectBuffer lastSessionMetaData()
+    {
+        return lastSessionMetaData;
+    }
+
+    public MetaDataStatus lastSessionMetaDataStatus()
+    {
+        return lastSessionMetaDataStatus;
+    }
 }

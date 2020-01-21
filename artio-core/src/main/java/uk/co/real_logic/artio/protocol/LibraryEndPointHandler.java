@@ -73,7 +73,11 @@ public interface LibraryEndPointHandler
         String address,
         String username,
         String password,
-        Class<? extends FixDictionary> fixDictionary);
+        Class<? extends FixDictionary> fixDictionary,
+        MetaDataStatus metaDataStatus,
+        DirectBuffer metaDataBuffer,
+        int metaDataOffset,
+        int metaDataLength);
 
     Action onFollowerSessionReply(int libraryId, long replyToId, long session);
 

@@ -309,6 +309,7 @@
         <field name="enableLastMsgSeqNumProcessed" id="25" type="Bool" />
         <field name="logonReceivedSequenceNumber" id="33" type="int32" sinceVersion="4"/>
         <field name="logonSequenceIndex" id="34" type="SequenceIndex" sinceVersion="4"/>
+        <field name="metaDataStatus" id="35" type="MetaDataStatus"/>
 
         <!-- State modified by the Session itself -->
         <field name="awaitingResend" id="21" type="AwaitingResend" />
@@ -327,7 +328,7 @@
         <data name="username" id="26" type="Utf8String"/>
         <data name="password" id="27" type="Utf8String"/>
         <data name="fixDictionary" id="32" type="Utf8String"/>
-
+        <data name="metaData" id="36" type="Utf8String"/>
     </sbe:message>
 
     <sbe:message name="Error" id="13" description="An error has occurred">

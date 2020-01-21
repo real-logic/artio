@@ -28,6 +28,7 @@ import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.library.SessionAcquiredInfo;
 import uk.co.real_logic.artio.library.SessionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -54,15 +55,14 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
     private SessionWriter acceptingSessionWriter = null;
     private FakeHandler acceptingHandler = new FakeHandler(acceptingOtfAcceptor)
     {
-        @Override
-        public SessionHandler onSessionAcquired(final Session session, final boolean isSlow)
+        public SessionHandler onSessionAcquired(final Session session, final SessionAcquiredInfo acquiredInfo)
         {
             acceptingSessionWriter = acceptingLibrary.sessionWriter(
                 session.id(),
                 session.connectionId(),
                 session.sequenceIndex());
 
-            return super.onSessionAcquired(session, isSlow);
+            return super.onSessionAcquired(session, acquiredInfo);
         }
     };
 

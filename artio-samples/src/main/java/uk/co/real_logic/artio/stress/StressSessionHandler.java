@@ -32,7 +32,7 @@ public class StressSessionHandler implements SessionHandler
     private final AsciiBuffer string = new MutableAsciiBuffer();
     private final Printer printer = new PrinterImpl();
 
-    public StressSessionHandler(final Session session, final boolean isSlow)
+    public StressSessionHandler(final Session session)
     {
     }
 
