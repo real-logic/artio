@@ -82,8 +82,8 @@ public class SequenceNumberIndexWriter implements Index
     private final CRC32 checksum = new CRC32();
     private final List<WriteMetaDataResponse> responsesToResend = new ArrayList<>();
     private final Predicate<WriteMetaDataResponse> sendResponseFunc = this::sendResponse;
+    private final RandomAccessFile metaDataFile;
     private byte[] metaDataWriteBuffer = new byte[0];
-    private RandomAccessFile metaDataFile;
 
     private final SequenceNumberExtractor sequenceNumberExtractor;
     private FramerContext framerContext;
@@ -175,9 +175,7 @@ public class SequenceNumberIndexWriter implements Index
             file = new RandomAccessFile(metaDataLocation, "rw");
             if (file.length() == 0)
             {
-                file.writeLong(META_DATA_MAGIC_NUMBER);
-                file.writeInt(META_DATA_FILE_VERSION);
-                file.getFD().sync();
+                writeMetaDataFileHeader(file);
             }
             else
             {
@@ -206,6 +204,13 @@ public class SequenceNumberIndexWriter implements Index
         }
 
         return null;
+    }
+
+    private void writeMetaDataFileHeader(final RandomAccessFile file) throws IOException
+    {
+        file.writeLong(META_DATA_MAGIC_NUMBER);
+        file.writeInt(META_DATA_FILE_VERSION);
+        file.getFD().sync();
     }
 
     public void onFragment(
@@ -459,9 +464,9 @@ public class SequenceNumberIndexWriter implements Index
         {
             try
             {
-                metaDataFile.close();
-                Files.delete(metaDataLocation.toPath());
-                metaDataFile = openMetaDataFile(metaDataLocation);
+                metaDataFile.seek(0);
+                metaDataFile.setLength(META_DATA_FILE_HEADER_LENGTH);
+                writeMetaDataFileHeader(metaDataFile);
             }
             catch (final IOException e)
             {
@@ -564,6 +569,7 @@ public class SequenceNumberIndexWriter implements Index
         {
             indexFile.close();
             writableFile.close();
+
             if (metaDataFile != null)
             {
                 try

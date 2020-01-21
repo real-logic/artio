@@ -155,7 +155,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
     @Test
     public void shouldReplayMessageBeforeARestart()
     {
-        launchMediaDriverWithDirs();
+        mediaDriver = TestFixtures.launchMediaDriver();
 
         // 1. setup a session
         launch(AUTOMATIC_INITIAL_SEQUENCE_NUMBER);
@@ -182,6 +182,7 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
             CloseHelper.close(initiatingEngine);
             CloseHelper.close(acceptingEngine);
         }
+
         clearMessages();
         if (shutdownCleanly)
         {
