@@ -105,12 +105,17 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
     }
 
     Action onSlowReplayMessage(
-        final long connectionId, final DirectBuffer buffer, final int offset, final int length, final long position)
+        final long connectionId,
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final long position,
+        final int metaDataLength)
     {
         final SenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
-            return endPoint.onSlowReplayMessage(buffer, offset, length, timeInMs, position);
+            return endPoint.onSlowReplayMessage(buffer, offset, length, timeInMs, position, metaDataLength);
         }
         else
         {

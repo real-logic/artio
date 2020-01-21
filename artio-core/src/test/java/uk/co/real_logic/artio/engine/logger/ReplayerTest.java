@@ -790,7 +790,7 @@ public class ReplayerTest extends AbstractLogTest
         final int offset = Encoder.offset(result);
         final Action action = replayer.onMessage(
             buffer, offset, length,
-            LIBRARY_ID, connectionId, sessionId, SEQUENCE_INDEX, messageType, 0L, OK, 0, 0L);
+            LIBRARY_ID, connectionId, sessionId, SEQUENCE_INDEX, messageType, 0L, OK, 0, 0L, 0);
         assertEquals(expectedAction, action);
     }
 

@@ -138,18 +138,20 @@ class SenderEndPoint
         final int offset,
         final int bodyLength,
         final long timeInMs,
-        final long position)
+        final long position,
+        final int metaDataLength)
     {
         if (!outboundTracker.partiallySentMessage)
         {
             replayPaused = true;
         }
 
-        final int offsetAfterHeader = offset - FRAME_SIZE;
-        final int length = bodyLength + FRAME_SIZE;
+        final int totalFrameSize = FRAME_SIZE + metaDataLength;
+        final int offsetAfterHeader = offset - totalFrameSize;
+        final int length = bodyLength + totalFrameSize;
 
         return attemptSlowMessage(buffer, offsetAfterHeader, length, position, bodyLength, timeInMs, replayTracker,
-            0); // TODO
+            metaDataLength);
     }
 
     private void attemptFramedMessage(

@@ -979,7 +979,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long timestamp,
         final MessageStatus status,
         final int sequenceNumber,
-        final long position)
+        final long position,
+        final int metaDataLength)
     {
         if (libraryId == this.libraryId)
         {

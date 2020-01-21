@@ -131,7 +131,8 @@ public class Replayer implements ProtocolHandler, Agent
         final long timestamp,
         final MessageStatus status,
         final int sequenceNumber,
-        final long position)
+        final long position,
+        final int metaDataLength)
     {
         if (messageType == SessionConstants.RESEND_REQUEST_MESSAGE_TYPE && status == OK)
         {

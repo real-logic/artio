@@ -131,6 +131,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
             messageFrame.timestamp(),
             messageFrame.status(),
             messageFrame.sequenceNumber(),
-            position);
+            position,
+            metaDataLength);
     }
 }

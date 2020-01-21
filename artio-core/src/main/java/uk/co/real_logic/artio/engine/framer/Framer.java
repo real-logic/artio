@@ -256,7 +256,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 final long timestamp,
                 final MessageStatus status,
                 final int sequenceNumber,
-                final long position)
+                final long position,
+                final int metaDataLength)
             {
                 return senderEndPoints.onReplayMessage(connectionId, buffer, offset, length, position);
             }
@@ -285,9 +286,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 final long timestamp,
                 final MessageStatus status,
                 final int sequenceNumber,
-                final long position)
+                final long position,
+                final int metaDataLength)
             {
-                return senderEndPoints.onSlowReplayMessage(connectionId, buffer, offset, length, position);
+                return senderEndPoints.onSlowReplayMessage(
+                    connectionId, buffer, offset, length, position, metaDataLength);
             }
 
             public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
@@ -918,7 +921,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final long timestamp,
         final MessageStatus status,
         final int sequenceNumber,
-        final long position)
+        final long position,
+        final int metaDataLength)
     {
         final long now = outboundTimer.recordSince(timestamp);
 

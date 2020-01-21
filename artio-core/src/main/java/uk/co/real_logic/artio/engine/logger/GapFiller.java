@@ -86,7 +86,8 @@ public class GapFiller implements ProtocolHandler, Agent
         final long timestamp,
         final MessageStatus status,
         final int sequenceNumber,
-        final long position)
+        final long position,
+        final int metaDataLength)
     {
         if (messageType == RESEND_REQUEST_MESSAGE_TYPE && status == MessageStatus.OK)
         {
