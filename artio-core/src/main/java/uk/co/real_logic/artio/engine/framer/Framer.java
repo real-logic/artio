@@ -780,7 +780,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             DebugLogger.log(FIX_CONNECTION,
                 "Initiating session %s from library %s%n", sessionContext.sessionId(), library.libraryId());
             final long connectionId = newConnectionId();
-            sessionContext.onLogon(resetSequenceNumber || sequenceNumberType == TRANSIENT);
+            sessionContext.onLogon(resetSequenceNumber || sequenceNumberType == TRANSIENT, epochClock.time());
             final long sessionId = sessionContext.sessionId();
             final GatewaySession gatewaySession = setupConnection(
                 channel,

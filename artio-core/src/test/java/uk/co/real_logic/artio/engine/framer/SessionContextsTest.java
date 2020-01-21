@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited.
+ * Copyright 2015-2020 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,7 @@ public class SessionContextsTest
 {
     private static final int BUFFER_SIZE = 8 * 1024;
 
+    private long time = System.currentTimeMillis();
     private ErrorHandler errorHandler = mock(ErrorHandler.class);
     private AtomicBuffer buffer = new UnsafeBuffer(ByteBuffer.allocate(BUFFER_SIZE));
     private MappedFile mappedFile = mock(MappedFile.class);
@@ -87,12 +88,18 @@ public class SessionContextsTest
         final SessionContext bContext = sessionContexts.onLogon(bSession);
         final SessionContext aContext = sessionContexts.onLogon(aSession);
 
-        bContext.onSequenceReset();
-        aContext.onSequenceReset();
+        bContext.onSequenceReset(time);
+        aContext.onSequenceReset(time);
 
         final SessionContexts sessionContextsAfterRestart = newSessionContexts(buffer);
-        assertValuesEqual(aContext, sessionContextsAfterRestart.onLogon(aSession));
-        assertValuesEqual(bContext, sessionContextsAfterRestart.onLogon(bSession));
+        final SessionContext reloadedAContext = sessionContextsAfterRestart.onLogon(aSession);
+        final SessionContext reloadedBContext = sessionContextsAfterRestart.onLogon(bSession);
+
+        assertValuesEqual(aContext, reloadedAContext);
+        assertValuesEqual(bContext, reloadedBContext);
+
+        assertEquals(time, reloadedAContext.lastSequenceResetTime());
+        assertEquals(time, reloadedBContext.lastSequenceResetTime());
     }
 
     @Test
@@ -133,7 +140,7 @@ public class SessionContextsTest
     @Test
     public void wrapsOverSectorBoundaries()
     {
-        final int requiredNumberOfWritesToSpanSector = 232;
+        final int requiredNumberOfWritesToSpanSector = 174;
 
         final List<CompositeKey> keys = IntStream
             .range(0, requiredNumberOfWritesToSpanSector)
@@ -143,12 +150,12 @@ public class SessionContextsTest
         final List<SessionContext> contexts = keys
             .stream()
             .map(sessionContexts::onLogon)
-            .peek(SessionContext::onSequenceReset)
+            .peek(sessionContext -> sessionContext.onSequenceReset(time))
             .collect(toList());
 
         // Test an update of something not at the tail of the buffer.
         final SessionContext firstContext = contexts.get(0);
-        firstContext.onSequenceReset();
+        firstContext.onSequenceReset(time);
 
         final SessionContexts contextsAfterRestart = newSessionContexts(buffer);
         IntStream

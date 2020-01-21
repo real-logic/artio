@@ -30,8 +30,6 @@ import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.storage.messages.SessionIdDecoder;
 import uk.co.real_logic.artio.storage.messages.SessionIdEncoder;
-import uk.co.real_logic.artio.util.AsciiBuffer;
-import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -57,10 +55,16 @@ public class SessionContexts
     static final SessionContext DUPLICATE_SESSION = new SessionContext(-3,
         -3,
         Session.NO_LOGON_TIME,
+        Session.NO_LAST_SEQUENCE_RESET_TIME,
         null,
         OUT_OF_SPACE);
     static final SessionContext UNKNOWN_SESSION = new SessionContext(
-        Session.UNKNOWN, (int)Session.UNKNOWN, Session.NO_LOGON_TIME, null, OUT_OF_SPACE);
+        Session.UNKNOWN,
+        (int)Session.UNKNOWN,
+        Session.NO_LOGON_TIME,
+        Session.NO_LAST_SEQUENCE_RESET_TIME,
+        null,
+        OUT_OF_SPACE);
     static final long LOWEST_VALID_SESSION_ID = 1L;
 
     private static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
@@ -71,7 +75,6 @@ public class SessionContexts
     private final MessageHeaderDecoder headerDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder headerEncoder = new MessageHeaderEncoder();
     private final SessionIdEncoder sessionIdEncoder = new SessionIdEncoder();
-    private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final int actingBlockLength = sessionIdEncoder.sbeBlockLength();
     private final int actingVersion = sessionIdEncoder.sbeSchemaVersion();
 
@@ -139,6 +142,7 @@ public class SessionContexts
             }
             final int sequenceIndex = sessionIdDecoder.sequenceIndex();
             final long logonTime = sessionIdDecoder.logonTime();
+            final long lastSequenceResetTime = sessionIdDecoder.lastSequenceResetTime();
             final int compositeKeyLength = sessionIdDecoder.compositeKeyLength();
             final CompositeKey compositeKey = idStrategy.load(
                 buffer, filePosition + BLOCK_LENGTH, compositeKeyLength);
@@ -148,7 +152,8 @@ public class SessionContexts
             }
 
             compositeToContext.put(compositeKey,
-                new SessionContext(sessionId, sequenceIndex, logonTime, this, filePosition));
+                new SessionContext(
+                sessionId, sequenceIndex, logonTime, lastSequenceResetTime, this, filePosition));
             counter = Math.max(counter, sessionId + 1);
 
             filePosition += BLOCK_LENGTH + compositeKeyLength;
@@ -243,7 +248,13 @@ public class SessionContexts
                 "Unable to save record session id %d for %s, because the buffer is too small",
                 sessionId,
                 compositeKey)));
-            return new SessionContext(sessionId, sequenceIndex, Session.NO_LOGON_TIME, this, OUT_OF_SPACE);
+            return new SessionContext(
+                sessionId,
+                sequenceIndex,
+                Session.NO_LOGON_TIME,
+                Session.NO_LAST_SEQUENCE_RESET_TIME,
+                this,
+                OUT_OF_SPACE);
         }
         else
         {
@@ -274,17 +285,26 @@ public class SessionContexts
                 }
             }
 
-            return new SessionContext(sessionId, sequenceIndex, Session.NO_LOGON_TIME, this, keyPosition);
+            return new SessionContext(
+                sessionId,
+                sequenceIndex,
+                Session.NO_LOGON_TIME,
+                Session.NO_LAST_SEQUENCE_RESET_TIME,
+                this,
+                keyPosition);
         }
     }
 
-    void sequenceReset(final long sessionId)
+    void sequenceReset(final long sessionId, final long resetTime)
     {
-        compositeToContext
-            .values()
-            .stream()
-            .filter(context -> context.sessionId() == sessionId)
-            .forEach(SessionContext::onSequenceReset);
+        for (final SessionContext context : compositeToContext.values())
+        {
+            if (context.sessionId() == sessionId)
+            {
+                context.onSequenceReset(resetTime);
+                return;
+            }
+        }
     }
 
     // TODO: optimisation, more efficient checksumming, only checksum new data
@@ -326,12 +346,17 @@ public class SessionContexts
         initialiseBuffer();
     }
 
-    void updateSavedData(final int filePosition, final int sequenceIndex, final long logonTime)
+    void updateSavedData(
+        final int filePosition,
+        final int sequenceIndex,
+        final long logonTime,
+        final long lastSequenceResetTime)
     {
         sessionIdEncoder
             .wrap(buffer, filePosition)
             .sequenceIndex(sequenceIndex)
-            .logonTime(logonTime);
+            .logonTime(logonTime)
+            .lastSequenceResetTime(lastSequenceResetTime);
 
         final int start = nextSectorStart(filePosition) - SECTOR_SIZE;
         final int checksumOffset = start + SECTOR_DATA_LENGTH;
