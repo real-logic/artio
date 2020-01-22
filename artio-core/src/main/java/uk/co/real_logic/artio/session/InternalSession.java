@@ -27,7 +27,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 /**
  * Exposes Session methods to internal APIs that we don't want to expose to the outside world
  */
-public class InternalSession extends Session
+public class InternalSession extends Session implements AutoCloseable
 {
     // Default initialised values used by both the Session and also the manage session handover.
     public static final boolean INITIAL_AWAITING_RESEND = false;
@@ -205,5 +205,10 @@ public class InternalSession extends Session
     public void setupSession(final long sessionId, final CompositeKey sessionKey)
     {
         super.setupSession(sessionId, sessionKey);
+    }
+
+    public void close()
+    {
+        super.close();
     }
 }

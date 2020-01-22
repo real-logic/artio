@@ -135,9 +135,6 @@ public class AbstractGatewayToGatewaySystemTest
         logoutAcceptingSession();
 
         assertSessionsDisconnected();
-
-        acceptingSession.close();
-        initiatingSession.close();
     }
 
     void logoutAcceptingSession()

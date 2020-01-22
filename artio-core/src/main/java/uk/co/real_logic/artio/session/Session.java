@@ -83,7 +83,7 @@ import static uk.co.real_logic.artio.session.InternalSession.*;
  * <p>
  * Manual disable: * -&gt; DISABLED
  */
-public class Session implements AutoCloseable
+public class Session
 {
     public static final long UNKNOWN = -1;
     public static final long UNKNOWN_TIME = -1;
@@ -677,17 +677,6 @@ public class Session implements AutoCloseable
         return sequenceIndex;
     }
 
-    /**
-     * Close the session object and release its resources.
-     * <p>
-     * API users should never have to call this method.
-     */
-    public void close()
-    {
-        sentMsgSeqNo.close();
-        receivedMsgSeqNo.close();
-    }
-
     public void onDisconnect()
     {
         logoutRejectReason = NO_LOGOUT_REJECT_REASON;
@@ -729,11 +718,6 @@ public class Session implements AutoCloseable
     public long lastSequenceResetTime()
     {
         return lastSequenceResetTime;
-    }
-
-    public boolean hasLastLogonTime()
-    {
-        return lastLogonTime != UNKNOWN_TIME;
     }
 
     public int lastSentMsgSeqNum(final int lastSentMsgSeqNum)
@@ -1853,5 +1837,16 @@ public class Session implements AutoCloseable
     {
         proxy.fixDictionary(fixDictionary);
         this.beginString = fixDictionary.beginString();
+    }
+
+    /**
+     * Close the session object and release its resources.
+     * <p>
+     * API users should never have to call this method.
+     */
+    void close()
+    {
+        sentMsgSeqNo.close();
+        receivedMsgSeqNo.close();
     }
 }
