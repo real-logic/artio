@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.session;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -39,6 +40,7 @@ public class InternalSession extends Session
         final int heartbeatIntervalInS,
         final long connectionId,
         final EpochClock epochClock,
+        final Clock clock,
         final SessionState state,
         final SessionProxy proxy,
         final GatewayPublication publication,
@@ -58,6 +60,7 @@ public class InternalSession extends Session
             heartbeatIntervalInS,
             connectionId,
             epochClock,
+            clock,
             state,
             proxy,
             publication,
@@ -109,9 +112,9 @@ public class InternalSession extends Session
         super.password(password);
     }
 
-    public void logonTime(final long logonTime)
+    public void lastLogonTime(final long logonTime)
     {
-        super.logonTime(logonTime);
+        super.lastLogonTime(logonTime);
     }
 
     public void awaitingResend(final boolean awaitingResend)
@@ -162,6 +165,11 @@ public class InternalSession extends Session
     public void lastResendChunkMsgSeqNum(final int lastResendChunkMsgSeqNum)
     {
         super.lastResendChunkMsgSeqNum(lastResendChunkMsgSeqNum);
+    }
+
+    public void lastSequenceResetTime(final long lastSequenceResetTime)
+    {
+        super.lastSequenceResetTime(lastSequenceResetTime);
     }
 
     public void endOfResendRequestRange(final int endOfResendRequestRange)

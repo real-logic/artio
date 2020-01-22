@@ -346,7 +346,6 @@ public class GatewayPublication extends ClaimablePublication
         final long session,
         final int lastSentSequenceNumber,
         final int lastReceivedSequenceNumber,
-        final long logonTime,
         final SessionStatus sessionStatus,
         final SlowStatus slowStatus,
         final ConnectionType connectionType,
@@ -365,6 +364,8 @@ public class GatewayPublication extends ClaimablePublication
         final boolean awaitingHeartbeat,
         final int logonReceivedSequenceNumber,
         final int logonSequenceIndex,
+        final long lastLogonTime,
+        final long lastSequenceResetTime,
         final String localCompId,
         final String localSubId,
         final String localLocationId,
@@ -410,7 +411,6 @@ public class GatewayPublication extends ClaimablePublication
             .session(session)
             .lastSentSequenceNumber(lastSentSequenceNumber)
             .lastReceivedSequenceNumber(lastReceivedSequenceNumber)
-            .logonTime(logonTime)
             .sessionStatus(sessionStatus)
             .slowStatus(slowStatus)
             .connectionType(connectionType)
@@ -429,6 +429,8 @@ public class GatewayPublication extends ClaimablePublication
             .awaitingHeartbeat(toBool(awaitingHeartbeat))
             .logonReceivedSequenceNumber(logonReceivedSequenceNumber)
             .logonSequenceIndex(logonSequenceIndex)
+            .lastLogonTime(lastLogonTime)
+            .lastSequenceResetTime(lastSequenceResetTime)
             .metaDataStatus(metaDataStatus)
             .putLocalCompId(localCompIdBytes, 0, localCompIdBytes.length)
             .putLocalSubId(localSubIdBytes, 0, localSubIdBytes.length)

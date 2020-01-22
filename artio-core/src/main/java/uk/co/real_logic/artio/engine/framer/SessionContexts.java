@@ -54,15 +54,15 @@ public class SessionContexts
 
     static final SessionContext DUPLICATE_SESSION = new SessionContext(-3,
         -3,
-        Session.NO_LOGON_TIME,
-        Session.NO_LAST_SEQUENCE_RESET_TIME,
+        Session.UNKNOWN_TIME,
+        Session.UNKNOWN_TIME,
         null,
         OUT_OF_SPACE);
     static final SessionContext UNKNOWN_SESSION = new SessionContext(
         Session.UNKNOWN,
         (int)Session.UNKNOWN,
-        Session.NO_LOGON_TIME,
-        Session.NO_LAST_SEQUENCE_RESET_TIME,
+        Session.UNKNOWN_TIME,
+        Session.UNKNOWN_TIME,
         null,
         OUT_OF_SPACE);
     static final long LOWEST_VALID_SESSION_ID = 1L;
@@ -251,8 +251,8 @@ public class SessionContexts
             return new SessionContext(
                 sessionId,
                 sequenceIndex,
-                Session.NO_LOGON_TIME,
-                Session.NO_LAST_SEQUENCE_RESET_TIME,
+                Session.UNKNOWN_TIME,
+                Session.UNKNOWN_TIME,
                 this,
                 OUT_OF_SPACE);
         }
@@ -273,7 +273,7 @@ public class SessionContexts
                         .wrap(buffer, filePosition)
                         .sessionId(sessionId)
                         .sequenceIndex(sequenceIndex)
-                        .logonTime(Session.NO_LOGON_TIME)
+                        .logonTime(Session.UNKNOWN_TIME)
                         .compositeKeyLength(compositeKeyLength);
                     filePosition += BLOCK_LENGTH;
 
@@ -288,8 +288,8 @@ public class SessionContexts
             return new SessionContext(
                 sessionId,
                 sequenceIndex,
-                Session.NO_LOGON_TIME,
-                Session.NO_LAST_SEQUENCE_RESET_TIME,
+                Session.UNKNOWN_TIME,
+                Session.UNKNOWN_TIME,
                 this,
                 keyPosition);
         }

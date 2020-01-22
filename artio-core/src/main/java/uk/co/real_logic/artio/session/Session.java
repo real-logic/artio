@@ -20,6 +20,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.Verify;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.CommonConfiguration;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
@@ -85,8 +86,7 @@ import static uk.co.real_logic.artio.session.InternalSession.*;
 public class Session implements AutoCloseable
 {
     public static final long UNKNOWN = -1;
-    public static final long NO_LOGON_TIME = -1;
-    public static final long NO_LAST_SEQUENCE_RESET_TIME = NO_LOGON_TIME;
+    public static final long UNKNOWN_TIME = -1;
 
     static final short ACTIVE_VALUE = 3;
     static final short LOGGING_OUT_VALUE = 5;
@@ -117,6 +117,7 @@ public class Session implements AutoCloseable
     protected final SessionProxy proxy;
 
     private final EpochClock epochClock;
+    private final Clock clock;
     private final long sendingTimeWindowInMs;
     private final AtomicCounter receivedMsgSeqNo;
     private final AtomicCounter sentMsgSeqNo;
@@ -154,7 +155,8 @@ public class Session implements AutoCloseable
     private String password;
     private String connectedHost;
     private int connectedPort;
-    private long logonTime = NO_LOGON_TIME;
+    private long lastLogonTime = UNKNOWN_TIME;
+    private long lastSequenceResetTime = UNKNOWN_TIME;
     private boolean closedResendInterval;
     private int resendRequestChunkSize;
     private boolean sendRedundantResendRequests;
@@ -169,6 +171,7 @@ public class Session implements AutoCloseable
         final int heartbeatIntervalInS,
         final long connectionId,
         final EpochClock epochClock,
+        final Clock clock,
         final SessionState state,
         final SessionProxy proxy,
         final GatewayPublication publication,
@@ -184,6 +187,7 @@ public class Session implements AutoCloseable
         final boolean enableLastMsgSeqNumProcessed,
         final SessionCustomisationStrategy customisationStrategy)
     {
+        this.clock = clock;
         this.customisationStrategy = customisationStrategy;
         Verify.notNull(epochClock, "clock");
         Verify.notNull(state, "session state");
@@ -592,7 +596,7 @@ public class Session implements AutoCloseable
     public long sendSequenceReset(
         final int nextSentMessageSequenceNumber)
     {
-        nextSequenceIndex();
+        nextSequenceIndex(clock.time());
         final long position = proxy.sendSequenceReset(
             lastSentMsgSeqNum, nextSentMessageSequenceNumber, sequenceIndex(), lastMsgSeqNumProcessed);
         lastSentMsgSeqNum(nextSentMessageSequenceNumber - 1, position);
@@ -619,9 +623,10 @@ public class Session implements AutoCloseable
         return position;
     }
 
-    private void nextSequenceIndex()
+    private void nextSequenceIndex(final long messageTime)
     {
         sequenceIndex++;
+        lastSequenceResetTime(messageTime);
     }
 
     /**
@@ -636,7 +641,7 @@ public class Session implements AutoCloseable
     {
         final int sentSeqNum = 1;
         final int heartbeatIntervalInS = (int)MILLISECONDS.toSeconds(heartbeatIntervalInMs);
-        nextSequenceIndex();
+        nextSequenceIndex(clock.time());
         final long position = proxy.sendLogon(
             sentSeqNum,
             heartbeatIntervalInS,
@@ -683,7 +688,6 @@ public class Session implements AutoCloseable
         receivedMsgSeqNo.close();
     }
 
-
     public void onDisconnect()
     {
         logoutRejectReason = NO_LOGOUT_REJECT_REASON;
@@ -695,7 +699,7 @@ public class Session implements AutoCloseable
     {
         if (this.lastReceivedMsgSeqNum > lastReceivedMsgSeqNum)
         {
-            nextSequenceIndex();
+            nextSequenceIndex(clock.time());
         }
 
         lastReceivedMsgSeqNumOnly(lastReceivedMsgSeqNum);
@@ -703,14 +707,33 @@ public class Session implements AutoCloseable
         return this;
     }
 
-    public long logonTime()
+    /**
+     * This returns the time of the last received logon message for the current session. The source
+     * of time here is configured from your {@link CommonConfiguration#clock(Clock)}.
+     * This defaults to nanoseconds but it can be any precision that you configure.
+     *
+     * @return the time of the last received logon message for the current session.
+     */
+    public long lastLogonTime()
     {
-        return this.logonTime;
+        return lastLogonTime;
     }
 
-    public boolean hasLogonTime()
+    /**
+     * This returns the time of the last sequence number reset. The source
+     * of time here is configured from your {@link CommonConfiguration#clock(Clock)}.
+     * This defaults to nanoseconds but it can be any precision that you configure.
+     *
+     * @return the time of the last sequence number reset.
+     */
+    public long lastSequenceResetTime()
     {
-        return logonTime != NO_LOGON_TIME;
+        return lastSequenceResetTime;
+    }
+
+    public boolean hasLastLogonTime()
+    {
+        return lastLogonTime != UNKNOWN_TIME;
     }
 
     public int lastSentMsgSeqNum(final int lastSentMsgSeqNum)
@@ -1057,7 +1080,7 @@ public class Session implements AutoCloseable
             return action;
         }
 
-        final long logonTime = sendingTime(sendingTime, origSendingTime);
+        final long logonTime = clock.time();
 
         if (resetSeqNumFlag)
         {
@@ -1078,7 +1101,14 @@ public class Session implements AutoCloseable
                 }
 
                 // Don't configure this session as active until successful outbound publication
-                setupCompleteLogonState(logonTime, heartbeatInterval, msgSeqNum, username, password, time());
+                setupCompleteLogonState(logonTime, heartbeatInterval, username, password, time());
+                // If this is the first logon message this session has received, even if sequence
+                // index doesn't need incrementing we need to track the lastSequenceResetTime.
+                // Other cases handled by nextSequenceIndex()
+                if (lastReceivedMsgSeqNum == 0)
+                {
+                    lastSequenceResetTime = logonTime;
+                }
                 lastReceivedMsgSeqNum(msgSeqNum);
 
                 return CONTINUE;
@@ -1102,7 +1132,7 @@ public class Session implements AutoCloseable
                 }
                 else
                 {
-                    setupCompleteLogonState(logonTime, heartbeatInterval, msgSeqNum, username, password, time());
+                    setupCompleteLogonState(logonTime, heartbeatInterval, username, password, time());
                     action = requestResend(expectedMsgSeqNo, msgSeqNum);
 
                     return action;
@@ -1155,6 +1185,8 @@ public class Session implements AutoCloseable
 
             lastSentMsgSeqNum(INITIAL_SEQUENCE_NUMBER);
             lastReceivedMsgSeqNum(msgSeqNo);
+            lastLogonTime(logonTime);
+            lastSequenceResetTime = logonTime;
         }
         else
         {
@@ -1167,21 +1199,6 @@ public class Session implements AutoCloseable
         return CONTINUE;
     }
 
-    private void setupCompleteLogonState(
-        final long logonTime,
-        final int heartbeatInterval,
-        final int msgSeqNum,
-        final String username,
-        final String password,
-        final long currentTime)
-    {
-        if (msgSeqNum == INITIAL_SEQUENCE_NUMBER)
-        {
-            logonTime(logonTime);
-        }
-        setupLogonState(heartbeatInterval, username, password, currentTime);
-    }
-
     private void setupCompleteLogonStateReset(
         final long logonTime,
         final int heartbeatInterval,
@@ -1189,7 +1206,18 @@ public class Session implements AutoCloseable
         final String password,
         final long currentTime)
     {
-        logonTime(logonTime);
+        setupCompleteLogonState(logonTime, heartbeatInterval, username, password, currentTime);
+        lastSequenceResetTime = logonTime;
+    }
+
+    private void setupCompleteLogonState(
+        final long logonTime,
+        final int heartbeatInterval,
+        final String username,
+        final String password,
+        final long currentTime)
+    {
+        lastLogonTime(logonTime);
         setupLogonState(heartbeatInterval, username, password, currentTime);
     }
 
@@ -1552,6 +1580,11 @@ public class Session implements AutoCloseable
         receivedMsgSeqNo.increment();
     }
 
+    void lastSequenceResetTime(final long lastSequenceResetTime)
+    {
+        this.lastSequenceResetTime = lastSequenceResetTime;
+    }
+
     Action onInvalidMessage(
         final int refSeqNum,
         final int refTagId,
@@ -1737,9 +1770,9 @@ public class Session implements AutoCloseable
         this.password = password;
     }
 
-    void logonTime(final long logonTime)
+    void lastLogonTime(final long logonTime)
     {
-        this.logonTime = logonTime;
+        this.lastLogonTime = logonTime;
     }
 
     void awaitingResend(final boolean awaitingResend)

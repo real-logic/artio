@@ -39,8 +39,7 @@ import java.util.List;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.IntSupplier;
 
-import static org.agrona.BitUtil.SIZE_OF_INT;
-import static org.agrona.BitUtil.SIZE_OF_LONG;
+import static org.agrona.BitUtil.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
@@ -93,6 +92,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     public void messagesCanBeSentFromInitiatorToAcceptor()
     {
         assertLastLogonEquals(1, 0);
+        assertConnectTimes(initiatingSession);
 
         messagesCanBeExchanged();
 
@@ -104,6 +104,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
         assertLastLogonEquals(1, 0);
+        assertConnectTimes(acceptingSession);
 
         messagesCanBeExchanged();
 
@@ -729,14 +730,42 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         messagesCanBeExchanged();
 
+        resetSequenceNumbersViaEngineApi();
+    }
+
+    @Test
+    public void shouldResetSequenceNumbersOfLibraryManagedSessions()
+    {
+        messagesCanBeExchanged();
+
+        acquireAcceptingSession();
+
+        testSystem.awaitReceivedSequenceNumber(acceptingSession, 2);
+
+        assertAccSeqNum(2, 2, 0);
+
+        final TimeRange timeRange = resetSequenceNumbersViaEngineApi();
+
+        testSystem.awaitReceivedSequenceNumber(acceptingSession, 1);
+        assertAccSeqNum(1, 1, 1);
+        timeRange.assertWithinRange(acceptingSession.lastSequenceResetTime());
+    }
+
+    private TimeRange resetSequenceNumbersViaEngineApi()
+    {
         assertInitSeqNum(2, 2, 0);
 
         final long sessionId = lookupSessionId(ACCEPTOR_ID, INITIATOR_ID, acceptingEngine).resultIfPresent();
 
+        final TimeRange timeRange = new TimeRange();
         final Reply<?> resetSequenceNumber = resetSequenceNumber(sessionId);
         replyCompleted(resetSequenceNumber);
+        timeRange.end();
 
         assertInitSeqNum(1, 1, 1);
+        timeRange.assertWithinRange(initiatingSession.lastSequenceResetTime());
+
+        return timeRange;
     }
 
     @Test
@@ -752,29 +781,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertTrue(message, message.contains("Unknown sessionId: 400"));
 
         assertInitSeqNum(2, 2, 0);
-    }
-
-    @Test
-    public void shouldResetSequenceNumbersOfLibraryManagedSessions()
-    {
-        messagesCanBeExchanged();
-
-        acquireAcceptingSession();
-
-        testSystem.awaitReceivedSequenceNumber(acceptingSession, 2);
-
-        assertInitSeqNum(2, 2, 0);
-        assertAccSeqNum(2, 2, 0);
-
-        final long sessionId = lookupSessionId(ACCEPTOR_ID, INITIATOR_ID, acceptingEngine).resultIfPresent();
-
-        final Reply<?> resetSequenceNumber = resetSequenceNumber(sessionId);
-        replyCompleted(resetSequenceNumber);
-
-        testSystem.awaitReceivedSequenceNumber(acceptingSession, 1);
-
-        assertInitSeqNum(1, 1, 1);
-        assertAccSeqNum(1, 1, 1);
     }
 
     private Reply<?> resetSequenceNumber(final long sessionId)

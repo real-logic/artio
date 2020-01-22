@@ -77,6 +77,8 @@ public class AbstractGatewayToGatewaySystemTest
     FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
     FakeHandler initiatingHandler = new FakeHandler(initiatingOtfAcceptor);
 
+    TimeRange connectTimeRange;
+
     @After
     public void close()
     {
@@ -190,8 +192,10 @@ public class AbstractGatewayToGatewaySystemTest
 
     void connectSessions()
     {
+        connectTimeRange = new TimeRange();
         final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
         completeConnectInitiatingSession(reply);
+        connectTimeRange.end();
     }
 
     void completeConnectInitiatingSession(final Reply<Session> reply)
@@ -480,6 +484,15 @@ public class AbstractGatewayToGatewaySystemTest
     {
         assertEquals(lastLogonReceivedSequenceNumber, acceptingHandler.lastLogonReceivedSequenceNumber());
         assertEquals(lastLogonSequenceIndex, acceptingHandler.lastLogonSequenceIndex());
+    }
+
+    void assertConnectTimes(final Session session)
+    {
+        final long lastLogonTime = session.lastLogonTime();
+        final long lastSequenceResetTime = session.lastSequenceResetTime();
+        connectTimeRange.assertWithinRange(lastLogonTime);
+        assertEquals("lastSequenceResetTime was not the same as lastLogonTime",
+            lastLogonTime, lastSequenceResetTime);
     }
 
     List<String> getMessagesFromArchive(final EngineConfiguration configuration, final int queryStreamId)

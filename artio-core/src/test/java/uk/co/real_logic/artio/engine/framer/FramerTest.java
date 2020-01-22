@@ -168,7 +168,7 @@ public class FramerTest
         when(gatewaySession.session()).thenReturn(session);
         when(gatewaySession.fixDictionary()).thenReturn(FixDictionary.of(FixDictionary.findDefault()));
 
-        when(session.logonTime()).thenReturn(-1L);
+        when(session.lastLogonTime()).thenReturn(-1L);
         when(session.compositeKey()).thenReturn(sessionKey);
 
         framer = new Framer(
@@ -200,7 +200,7 @@ public class FramerTest
 
         when(sessionContexts.onLogon(any())).thenReturn(new SessionContext(SESSION_ID,
             SessionContext.UNKNOWN_SEQUENCE_INDEX,
-            Session.NO_LOGON_TIME,
+            Session.UNKNOWN_TIME,
             System.currentTimeMillis(),
             sessionContexts,
             0));
@@ -525,7 +525,6 @@ public class FramerTest
             anyLong(),
             anyInt(),
             anyInt(),
-            anyLong(),
             any(),
             any(),
             any(),
@@ -544,6 +543,8 @@ public class FramerTest
             anyBoolean(),
             anyInt(),
             anyInt(),
+            anyLong(),
+            anyLong(),
             any(),
             any(),
             any(),
@@ -572,7 +573,6 @@ public class FramerTest
             anyLong(),
             anyInt(),
             anyInt(),
-            anyLong(),
             any(),
             any(),
             any(),
@@ -591,6 +591,8 @@ public class FramerTest
             anyBoolean(),
             anyInt(),
             anyInt(),
+            anyLong(),
+            anyLong(),
             any(),
             any(),
             any(),
@@ -764,7 +766,6 @@ public class FramerTest
             anyLong(),
             anyInt(),
             anyInt(),
-            anyLong(),
             any(),
             any(),
             any(),
@@ -783,6 +784,8 @@ public class FramerTest
             anyBoolean(),
             anyInt(),
             anyInt(),
+            anyLong(),
+            anyLong(),
             any(),
             any(),
             any(),
@@ -900,7 +903,6 @@ public class FramerTest
             anyLong(),
             anyInt(),
             anyInt(),
-            anyLong(),
             eq(SessionStatus.SESSION_HANDOVER),
             eq(SlowStatus.NOT_SLOW),
             eq(INITIATOR),
@@ -919,6 +921,8 @@ public class FramerTest
             anyBoolean(),
             anyInt(),
             anyInt(),
+            anyLong(),
+            anyLong(),
             any(),
             any(),
             any(),
@@ -940,7 +944,6 @@ public class FramerTest
             anyLong(),
             anyInt(),
             anyInt(),
-            anyLong(),
             eq(status),
             any(),
             any(),
@@ -959,6 +962,8 @@ public class FramerTest
             anyBoolean(),
             anyInt(),
             anyInt(),
+            anyLong(),
+            anyLong(),
             any(),
             any(),
             any(),

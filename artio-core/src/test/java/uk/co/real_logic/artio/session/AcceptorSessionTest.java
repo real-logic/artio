@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.session;
 
 import org.junit.Test;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static org.junit.Assert.assertEquals;
@@ -37,6 +38,7 @@ public class AcceptorSessionTest extends AbstractSessionTest
             HEARTBEAT_INTERVAL,
             CONNECTION_ID,
             fakeClock,
+            Clock.systemNanoTime(),
             sessionProxy,
             mockPublication,
             idStrategy,

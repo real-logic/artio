@@ -67,8 +67,8 @@ class SessionContext
     void updateFrom(final Session session)
     {
         sequenceIndex = session.sequenceIndex();
-        logonTime = session.logonTime();
-        // TODO: lastSequenceResetTime = session.lastSequenceResetTime();
+        logonTime = session.lastLogonTime();
+        lastSequenceResetTime = session.lastSequenceResetTime();
     }
 
     void onLogon(final boolean resetSeqNum, final long time)

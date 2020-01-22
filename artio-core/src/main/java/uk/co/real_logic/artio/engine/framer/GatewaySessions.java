@@ -20,6 +20,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.FixGatewayException;
@@ -72,6 +73,7 @@ class GatewaySessions
     private final SessionPersistenceStrategy sessionPersistenceStrategy;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
+    private final Clock clock;
 
     private ErrorHandler errorHandler;
 
@@ -103,6 +105,7 @@ class GatewaySessions
         this.reasonableTransmissionTimeInMs = configuration.reasonableTransmissionTimeInMs();
         this.logAllMessages = configuration.logAllMessages();
         this.validateCompIdsOnEveryMessage = configuration.validateCompIdsOnEveryMessage();
+        this.clock = configuration.clock();
         this.errorHandler = errorHandler;
         this.sessionContexts = sessionContexts;
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
@@ -155,6 +158,7 @@ class GatewaySessions
             heartbeatIntervalInS,
             connectionId,
             epochClock,
+            clock,
             state,
             proxy,
             outboundPublication,
@@ -608,7 +612,8 @@ class GatewaySessions
                 return;
             }
 
-            sessionContext.onLogon(resetSeqNum, epochClock.time());
+            final long logonTime = clock.time();
+            sessionContext.onLogon(resetSeqNum, logonTime);
             session.initialResetSeqNum(resetSeqNum);
             session.onLogon(
                 sessionContext.sessionId(),
@@ -618,6 +623,7 @@ class GatewaySessions
                 password,
                 logon.heartBtInt(),
                 header.msgSeqNum());
+            session.lastLogonTime(logonTime);
 
             // See Framer.handoverNewConnectionToLibrary for sole library mode equivalent
             if (resetSeqNum)

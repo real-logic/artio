@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="6"
+                   version="7"
                    semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -295,7 +295,6 @@
         <field name="session" id="3" type="FixSessionId"/>
         <field name="lastSentSequenceNumber" id="4" type="int32"/>
         <field name="lastReceivedSequenceNumber" id="5" type="int32"/>
-        <field name="logonTime" id="6" type="Timestamp" />
         <field name="sessionStatus" id="7" type="SessionStatus"/>
         <field name="slowStatus" id="8" type="SlowStatus"/>
         <field name="connectionType" id="9" type="ConnectionType"/>
@@ -317,6 +316,8 @@
         <field name="lastResendChunkMsgSeqNum" id="29" type="int32" presence="optional" sinceVersion="1" />
         <field name="endOfResendRequestRange" id="30" type="int32" presence="optional" sinceVersion="1" />
         <field name="awaitingHeartbeat" id="31" type="Bool" presence="optional" sinceVersion="1" />
+        <field name="lastLogonTime" id="6" type="Timestamp" />
+        <field name="lastSequenceResetTime" id="37" type="Timestamp" presence="optional" sinceVersion="7"/>
 
         <data name="localCompId" id="14" type="Utf8String"/>
         <data name="localSubId" id="15" type="Utf8String"/>

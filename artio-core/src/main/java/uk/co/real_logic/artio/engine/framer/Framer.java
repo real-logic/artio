@@ -1398,7 +1398,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             gatewaySession.sessionId(),
             lastSentSeqNum,
             lastReceivedSeqNum,
-            session.logonTime(),
             sessionstatus,
             gatewaySession.slowStatus(),
             gatewaySession.connectionType(),
@@ -1417,6 +1416,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             session.awaitingHeartbeat(),
             gatewaySession.logonReceivedSequenceNumber(),
             gatewaySession.logonSequenceIndex(),
+            session.lastLogonTime(),
+            session.lastSequenceResetTime(),
             compositeKey.localCompId(),
             compositeKey.localSubId(),
             compositeKey.localLocationId(),
@@ -1941,6 +1942,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             else
             {
                 noMetaData();
+                gatewaySession.lastLogonWasSequenceReset();
 
                 work(this::onLogon, this::saveManageSession);
             }
@@ -1953,7 +1955,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 lastSentSequenceNumber = 0;
                 lastReceivedSequenceNumber = 0;
                 noMetaData();
-                return 0;
+                gatewaySession.lastLogonWasSequenceReset();
+                return COMPLETE;
             }
 
             if (sentIndexedPosition(aeronSessionId, requiredPosition))
@@ -1967,6 +1970,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 {
                     lastSentSequenceNumber = adjustLastSequenceNumber(lastSentSequenceNumber);
                     lastReceivedSequenceNumber = adjustLastSequenceNumber(lastReceivedSequenceNumber);
+                    if (lastReceivedSequenceNumber == 0)
+                    {
+                        gatewaySession.lastLogonWasSequenceReset();
+                    }
                 }
 
                 metaDataBuffer = new UnsafeBuffer();
@@ -2006,7 +2013,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 sessionId,
                 lastSentSequenceNumber,
                 lastReceivedSequenceNumber,
-                Session.NO_LOGON_TIME,
                 SessionStatus.SESSION_HANDOVER,
                 SlowStatus.NOT_SLOW,
                 connectionType,
@@ -2025,6 +2031,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 InternalSession.INITIAL_AWAITING_HEARTBEAT,
                 gatewaySession.logonReceivedSequenceNumber(),
                 gatewaySession.logonSequenceIndex(),
+                gatewaySession.lastLogonTime(),
+                gatewaySession.lastSequenceResetTime(),
                 senderCompId,
                 senderSubId,
                 senderLocationId,

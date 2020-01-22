@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.session;
 
 import org.junit.Test;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
@@ -35,6 +36,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
         session = new InitiatorSession(HEARTBEAT_INTERVAL,
             CONNECTION_ID,
             fakeClock,
+            Clock.systemNanoTime(),
             sessionProxy,
             mockPublication,
             idStrategy,
@@ -145,7 +147,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
 
     private void assertHasLogonTime()
     {
-        assertTrue(session().hasLogonTime());
+        assertTrue(session().hasLastLogonTime());
     }
 
 }

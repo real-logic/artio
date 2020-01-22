@@ -63,6 +63,11 @@ class GatewaySession implements SessionInfo
     private boolean hasStartedAuthentication = false;
     private int logonReceivedSequenceNumber;
     private int logonSequenceIndex;
+    // lastLogonTime is set when the logon message is processed
+    // when we process the logon, the lastSequenceResetTime is set if it does reset the sequence.
+    // Otherwise this is updated when we handover the session.
+    private long lastSequenceResetTime = Session.UNKNOWN_TIME;
+    private long lastLogonTime = Session.UNKNOWN_TIME;
 
     GatewaySession(
         final long connectionId,
@@ -281,8 +286,14 @@ class GatewaySession implements SessionInfo
         if (session != null)
         {
             session.lastSentMsgSeqNum(adjustLastSequenceNumber(retrievedSentSequenceNumber));
-            session.initialLastReceivedMsgSeqNum(adjustLastSequenceNumber(retrievedReceivedSequenceNumber));
+            final int lastReceivedMsgSeqNum = adjustLastSequenceNumber(retrievedReceivedSequenceNumber);
+            session.initialLastReceivedMsgSeqNum(lastReceivedMsgSeqNum);
         }
+    }
+
+    void lastLogonWasSequenceReset()
+    {
+        lastSequenceResetTime = lastLogonTime;
     }
 
     static int adjustLastSequenceNumber(final int lastSequenceNumber)
@@ -387,5 +398,20 @@ class GatewaySession implements SessionInfo
     {
         session.fixDictionary(fixDictionary);
         sessionParser.fixDictionary(fixDictionary);
+    }
+
+    long lastSequenceResetTime()
+    {
+        return lastSequenceResetTime;
+    }
+
+    long lastLogonTime()
+    {
+        return lastLogonTime;
+    }
+
+    void lastLogonTime(final long logonTime)
+    {
+        this.lastLogonTime = logonTime;
     }
 }
