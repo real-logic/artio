@@ -1530,10 +1530,9 @@ public class Session
         return this;
     }
 
-    Session id(final long id)
+    void id(final long id)
     {
         this.id = id;
-        return this;
     }
 
     protected long time()
