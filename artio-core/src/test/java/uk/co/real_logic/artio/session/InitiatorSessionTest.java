@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 package uk.co.real_logic.artio.session;
 
 import org.junit.Test;
-import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_SESSION_BUFFER_SIZE;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
 import static uk.co.real_logic.artio.messages.SessionState.*;
@@ -49,8 +49,8 @@ public class InitiatorSessionTest extends AbstractSessionTest
             DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
             new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]),
             false,
-            Constants.VERSION,
             SessionCustomisationStrategy.none());
+        session.fixDictionary(makeDictionary());
         session.logonListener(mockLogonListener);
     }
 

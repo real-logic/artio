@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.library;
 
 import io.aeron.Aeron;
 import io.aeron.exceptions.ConductorServiceTimeoutException;
+import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.IoUtil;
 import org.agrona.concurrent.IdleStrategy;
@@ -26,6 +27,7 @@ import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.GatewayProcess;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionWriter;
@@ -398,6 +400,44 @@ public class FixLibrary extends GatewayProcess
         final SessionHeaderEncoder headerEncoder, final long timeoutInMs)
     {
         return poller.followerSession(headerEncoder, timeoutInMs);
+    }
+
+    /**
+     * Write meta data associated with a session. Session meta-data is a sequence of bytes that application can
+     * associate with a session. It shares it's lifecycle with the current session - so whenever sequence numbers or
+     * seession ids are reset the old meta-data will be reset as well. If the session is persistent then the metadata
+     * persists over restarts.
+     *
+     * You might want to use session meta data to store information like ids for internal systems that correspond to
+     * FIX sessions.
+     *
+     * This is an asynchronous operation and the returned reply object should be checked for completion.
+     *
+     * @param sessionId the session id of the session that meta data is written to.
+     * @param buffer the buffer where the meta data to be written is stored.
+     * @param offset the offset within the buffer
+     * @param length the length of the data within the buffer.
+     * @return a Reply to indicate completion or an error code.
+     */
+    public Reply<MetaDataStatus> writeMetaData(
+        final long sessionId,
+        final DirectBuffer buffer,
+        final int offset,
+        final int length)
+    {
+        return poller.writeMetaData(sessionId, buffer, offset, length);
+    }
+
+    /**
+     * Read the meta data associated with a session.
+     *
+     * @param sessionId the id of the session that meta data is read from.
+     * @param handler the callback that has the returned metadata.
+     */
+    public void readMetaData(
+        final long sessionId, final MetadataHandler handler)
+    {
+        poller.readMetaData(sessionId, handler);
     }
 
     public String currentAeronChannel()

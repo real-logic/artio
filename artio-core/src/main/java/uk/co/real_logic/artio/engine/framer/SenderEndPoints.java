@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,12 +105,17 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
     }
 
     Action onSlowReplayMessage(
-        final long connectionId, final DirectBuffer buffer, final int offset, final int length, final long position)
+        final long connectionId,
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final long position,
+        final int metaDataLength)
     {
         final SenderEndPoint endPoint = connectionIdToSenderEndpoint.get(connectionId);
         if (endPoint != null)
         {
-            return endPoint.onSlowReplayMessage(buffer, offset, length, timeInMs, position);
+            return endPoint.onSlowReplayMessage(buffer, offset, length, timeInMs, position, metaDataLength);
         }
         else
         {
@@ -148,16 +153,20 @@ class SenderEndPoints implements AutoCloseable, ControlledFragmentHandler
         if (messageHeader.templateId() == FixMessageDecoder.TEMPLATE_ID)
         {
             offset += HEADER_LENGTH;
-            fixMessage.wrap(buffer, offset, messageHeader.blockLength(), messageHeader.version());
+            final int version = messageHeader.version();
+            fixMessage.wrap(buffer, offset, messageHeader.blockLength(), version);
             final long connectionId = fixMessage.connection();
 
             final SenderEndPoint senderEndPoint = connectionIdToSenderEndpoint.get(connectionId);
             if (senderEndPoint != null)
             {
+                final int metaDataLength = fixMessage.skipMetaData();
+
                 final int bodyLength = fixMessage.bodyLength();
                 final int libraryId = fixMessage.libraryId();
                 return senderEndPoint.onSlowOutboundMessage(
-                    buffer, offset, length - HEADER_LENGTH, position, bodyLength, libraryId, timeInMs);
+                    buffer, offset, length - HEADER_LENGTH, position, bodyLength, libraryId, timeInMs,
+                    metaDataLength);
             }
         }
 

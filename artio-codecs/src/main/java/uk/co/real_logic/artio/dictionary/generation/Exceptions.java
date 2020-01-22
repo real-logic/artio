@@ -1,5 +1,5 @@
 /*
- * Copyright 2013 Real Logic Ltd.
+ * Copyright 2013 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package uk.co.real_logic.artio.dictionary.generation;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.Agent;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -110,5 +112,15 @@ public final class Exceptions
         final String msg = ex.getMessage();
         return msg.contains("Connection reset by peer") ||
                msg.contains("An established connection was aborted");
+    }
+
+    public static String toString(final Throwable throwable)
+    {
+        final ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (PrintStream printStream = new PrintStream(bytes))
+        {
+            throwable.printStackTrace(printStream);
+            return bytes.toString();
+        }
     }
 }

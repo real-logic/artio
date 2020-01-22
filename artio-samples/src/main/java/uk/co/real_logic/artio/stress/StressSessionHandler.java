@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,7 +32,7 @@ public class StressSessionHandler implements SessionHandler
     private final AsciiBuffer string = new MutableAsciiBuffer();
     private final Printer printer = new PrinterImpl();
 
-    public StressSessionHandler(final Session session, final boolean isSlow)
+    public StressSessionHandler(final Session session)
     {
     }
 

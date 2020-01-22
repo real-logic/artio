@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,8 +76,6 @@ class ReceiverEndPoint
 
     private static final int UNKNOWN_INDEX_BACKPRESSURED = -2;
 
-    private final AbstractLogonDecoder acceptorLogon;
-
     private final TcpChannel channel;
     private final GatewayPublication publication;
     private final long connectionId;
@@ -90,6 +88,7 @@ class ReceiverEndPoint
     private final ByteBuffer byteBuffer;
     private final GatewaySessions gatewaySessions;
     private final Clock clock;
+    private final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup;
 
     private int libraryId;
     private GatewaySession gatewaySession;
@@ -120,7 +119,7 @@ class ReceiverEndPoint
         final int libraryId,
         final GatewaySessions gatewaySessions,
         final Clock clock,
-        final FixDictionary acceptorFixDictionary)
+        final AcceptorFixDictionaryLookup acceptorFixDictionaryLookup)
     {
         Objects.requireNonNull(publication, "publication");
         Objects.requireNonNull(sessionContexts, "sessionContexts");
@@ -139,7 +138,7 @@ class ReceiverEndPoint
         this.libraryId = libraryId;
         this.gatewaySessions = gatewaySessions;
         this.clock = clock;
-        this.acceptorLogon = acceptorFixDictionary.makeLogonDecoder();
+        this.acceptorFixDictionaryLookup = acceptorFixDictionaryLookup;
 
         byteBuffer = ByteBuffer.allocateDirect(bufferSize);
         buffer = new MutableAsciiBuffer(byteBuffer);
@@ -474,14 +473,22 @@ class ReceiverEndPoint
 
         if (messageType == LOGON_MESSAGE_TYPE)
         {
-            acceptorLogon.decode(buffer, offset, length);
+            final FixDictionary fixDictionary = acceptorFixDictionaryLookup.lookup(buffer, offset, length);
+            final AbstractLogonDecoder logonDecoder = fixDictionary.makeLogonDecoder();
+            gatewaySession.fixDictionary(fixDictionary);
+            if (!framer.soleLibraryMode())
+            {
+                gatewaySession.updateSessionDictionary();
+            }
+
+            logonDecoder.decode(buffer, offset, length);
 
             pendingAcceptorLogonMsgOffset = offset;
             pendingAcceptorLogonMsgLength = length;
 
             hasNotifiedFramerOfLogonMessageReceived = false;
             pendingAcceptorLogon = gatewaySessions.authenticate(
-                acceptorLogon, connectionId(), gatewaySession, channel);
+                logonDecoder, connectionId(), gatewaySession, channel);
         }
         else
         {

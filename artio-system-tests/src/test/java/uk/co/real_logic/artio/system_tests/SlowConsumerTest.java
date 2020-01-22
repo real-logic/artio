@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,7 @@ import java.nio.channels.SocketChannel;
 import java.util.List;
 
 import static org.agrona.CloseHelper.close;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
@@ -51,7 +52,7 @@ import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class SlowConsumerTest
 {
-    private static final int BUFFER_CAPACITY = 8 * 1024;
+    private static final int BUFFER_CAPACITY = 16 * 1024;
     private static final int TEST_TIMEOUT = 20_000;
 
     private int port = unusedPort();
@@ -87,13 +88,19 @@ public class SlowConsumerTest
             testSystem.poll();
         }
 
-        assertNotSlow(session);
-        // startStepping();
+        assertNotSlow();
+
+        boolean hasBecomeSlow = false;
 
         while (socketIsConnected())
         {
             if (session.canSendMessage())
             {
+                if (handler.isSlow(session))
+                {
+                    hasBecomeSlow = true;
+                }
+
                 session.send(testRequest);
             }
 
@@ -102,7 +109,7 @@ public class SlowConsumerTest
 
         bytesInBufferAtLeast(sessionInfo, senderMaxBytesInBuffer);
 
-        // stopStepping();
+        assertTrue(hasBecomeSlow);
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -110,6 +117,8 @@ public class SlowConsumerTest
     {
         final SessionInfo sessionInfo = sessionBecomesSlow();
         socket.configureBlocking(false);
+
+        testSystem.poll();
 
         // Get out of slow state
         while (sessionInfo.bytesInBuffer() > 0 || handler.isSlow(session))
@@ -127,8 +136,7 @@ public class SlowConsumerTest
             testSystem.poll();
         }
 
-        assertNotSlow(session);
-        // stopStepping();
+        assertNotSlow();
 
         assertEquals(ACTIVE, session.state());
         assertTrue(socketIsConnected());
@@ -138,8 +146,6 @@ public class SlowConsumerTest
     public void shouldNotifyLibraryOfSlowConnectionWhenAcquired() throws IOException
     {
         sessionBecomesSlow();
-
-        // stopStepping();
 
         assertEquals(SessionReplyStatus.OK, releaseToGateway(library, session, testSystem));
 
@@ -158,9 +164,7 @@ public class SlowConsumerTest
         session = acquireSession(handler, library, sessionId, testSystem);
         final SessionInfo sessionInfo = getSessionInfo();
 
-        assertNotSlow(session);
-
-        // startStepping();
+        assertNotSlow();
 
         // Get into a slow state
         while (sessionInfo.bytesInBuffer() == 0 || !handler.isSlow(session))
@@ -173,11 +177,16 @@ public class SlowConsumerTest
             testSystem.poll();
         }
 
-        assertTrue(handler.isSlow(session));
+        assertIsSlow();
         return sessionInfo;
     }
 
-    private void assertNotSlow(final Session session)
+    private void assertIsSlow()
+    {
+        assertTrue(handler.isSlow(session));
+    }
+
+    private void assertNotSlow()
     {
         assertFalse(handler.isSlow(session));
     }

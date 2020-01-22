@@ -2,7 +2,7 @@
 <sbe:messageSchema xmlns:sbe="http://fixprotocol.io/2016/sbe"
                    package="uk.co.real_logic.artio.messages"
                    id="666"
-                   version="4"
+                   version="6"
                    semanticVersion="0.2"
                    description="Internal messaging format used by the FIX Gateway"
                    byteOrder="littleEndian">
@@ -174,6 +174,14 @@
             <validValue name="SESSION_HANDOVER">0</validValue>
             <validValue name="LIBRARY_NOTIFICATION">1</validValue>
         </enum>
+
+        <enum name="MetaDataStatus" encodingType="uint8" sinceVersion="5">
+            <validValue name="OK">0</validValue>
+            <validValue name="UNKNOWN_SESSION">1</validValue>
+            <validValue name="FILE_ERROR">2</validValue>
+            <validValue name="INVALID_CHECKSUM">3</validValue>
+            <validValue name="NO_META_DATA">4</validValue>
+        </enum>
     </types>
 
     <!-- Messages From Library To Engine -->
@@ -253,6 +261,19 @@
         <data name="header" id="3" type="AsciiString"/>
     </sbe:message>
 
+    <sbe:message name="WriteMetaData" id="37" description="" sinceVersion="5">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="session" id="2" type="FixSessionId"/>
+        <field name="correlationId" id="3" type="CorrelationId"/>
+        <data name="metaData" id="4" type="Utf8String"/>
+    </sbe:message>
+
+    <sbe:message name="ReadMetaData" id="51" description="" sinceVersion="5">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="session" id="2" type="FixSessionId"/>
+        <field name="correlationId" id="3" type="CorrelationId"/>
+    </sbe:message>
+
     <!-- Messages From Engine To Library -->
     <sbe:message name="Disconnect" id="7" description="A connection has disconnected">
         <field name="libraryId" id="1" type="LibraryId"/>
@@ -288,6 +309,7 @@
         <field name="enableLastMsgSeqNumProcessed" id="25" type="Bool" />
         <field name="logonReceivedSequenceNumber" id="33" type="int32" sinceVersion="4"/>
         <field name="logonSequenceIndex" id="34" type="SequenceIndex" sinceVersion="4"/>
+        <field name="metaDataStatus" id="35" type="MetaDataStatus" sinceVersion="5"/>
 
         <!-- State modified by the Session itself -->
         <field name="awaitingResend" id="21" type="AwaitingResend" />
@@ -306,7 +328,7 @@
         <data name="username" id="26" type="Utf8String"/>
         <data name="password" id="27" type="Utf8String"/>
         <data name="fixDictionary" id="32" type="Utf8String"/>
-
+        <data name="metaData" id="36" type="Utf8String"/>
     </sbe:message>
 
     <sbe:message name="Error" id="13" description="An error has occurred">
@@ -364,6 +386,19 @@
         <field name="libraryId" id="1" type="LibraryId"/>
     </sbe:message>
 
+    <sbe:message name="WriteMetaDataReply" id="50" description="" sinceVersion="5">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="replyToId" id="2" type="CorrelationId"/>
+        <field name="status" id="3" type="MetaDataStatus"/>
+    </sbe:message>
+
+    <sbe:message name="ReadMetaDataReply" id="52" description="" sinceVersion="5">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="replyToId" id="2" type="CorrelationId"/>
+        <field name="status" id="3" type="MetaDataStatus"/>
+        <data name="metaData" id="4" type="Utf8String"/>
+    </sbe:message>
+
     <!-- Messages In Either Direction -->
     <sbe:message name="FixMessage" id="1" description="A framed FIX message">
         <field deprecated="3" name="deprecatedMessageType" id="1" type="DeprecatedMessageType"/>
@@ -377,6 +412,7 @@
         <!-- only visible outbound -->
         <field name="sequenceNumber" id="9" type="int32" />
         <field name="messageType" id="11" type="MessageType" presence="optional" sinceVersion="3"/>
+        <data name="metaData" id="12" type="Utf8String"  sinceVersion="6"/>
         <data name="body" id="10" type="AsciiString"/>
     </sbe:message>
 

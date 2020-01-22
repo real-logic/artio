@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,11 +115,13 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
         final long position)
     {
         messageFrame.wrap(buffer, offset, blockLength, version);
+        final int metaDataLength = messageFrame.skipMetaData();
+
         final int messageLength = messageFrame.bodyLength();
         final long messageType = MessageTypeExtractor.getMessageType(messageFrame);
         return protocolHandler.onMessage(
             buffer,
-            offset + FRAME_SIZE,
+            offset + FRAME_SIZE + metaDataLength,
             messageLength,
             messageFrame.libraryId(),
             messageFrame.connection(),
@@ -129,6 +131,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
             messageFrame.timestamp(),
             messageFrame.status(),
             messageFrame.sequenceNumber(),
-            position);
+            position,
+            metaDataLength);
     }
 }

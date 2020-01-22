@@ -19,8 +19,8 @@ import uk.co.real_logic.artio.dictionary.FixDictionary;
 
 public class FakeFixSessionCodecsFactory extends FixSessionCodecsFactory
 {
-    FixSessionCodecs get(final long sessionId)
+    FixReplayerCodecs get(final long sessionId)
     {
-        return new FixSessionCodecs(FixDictionary.findDefault());
+        return new FixReplayerCodecs(FixDictionary.findDefault());
     }
 }

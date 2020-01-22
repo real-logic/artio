@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.Reply;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
@@ -30,8 +31,10 @@ import uk.co.real_logic.artio.session.Session;
 import java.io.File;
 
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static uk.co.real_logic.artio.Reply.State.ERRORED;
 import static uk.co.real_logic.artio.Reply.State.TIMED_OUT;
 import static uk.co.real_logic.artio.TestFixtures.*;
@@ -106,6 +109,9 @@ public class LibraryAndGatewayRandomTimeoutTest
 
     private void launchEngine()
     {
-        initiatingEngine = launchInitiatingEngine(aeronPort);
+        final EngineConfiguration initiatingConfig = initiatingConfig(aeronPort);
+        initiatingConfig.printErrorMessages(false);
+        initiatingConfig.deleteLogFileDirOnStart(true);
+        initiatingEngine = FixEngine.launch(initiatingConfig);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -89,4 +89,17 @@ public interface EngineEndPointHandler
         DirectBuffer srcBuffer,
         int srcOffset,
         int srcLength);
+
+    Action onWriteMetaData(
+        int libraryId,
+        long sessionId,
+        long correlationId,
+        DirectBuffer srcBuffer,
+        int srcOffset,
+        int srcLength);
+
+    Action onReadMetaData(
+        int libraryId,
+        long sessionId,
+        long correlationId);
 }

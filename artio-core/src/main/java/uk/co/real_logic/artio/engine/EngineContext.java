@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.StreamInformation;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
+import uk.co.real_logic.artio.engine.framer.FramerContext;
 import uk.co.real_logic.artio.engine.logger.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.Streams;
@@ -92,8 +93,8 @@ public class EngineContext implements AutoCloseable
                 configuration.outboundLibraryStream(),
                 recordingCoordinator.outboundRecordingIdLookup(),
                 configuration.indexFileStateFlushTimeoutInMs(),
-                epochClock
-            );
+                epochClock,
+                configuration.logFileDir());
             receivedSequenceNumberIndex = new SequenceNumberIndexWriter(
                 configuration.receivedSequenceNumberBuffer(),
                 configuration.receivedSequenceNumberIndex(),
@@ -101,8 +102,8 @@ public class EngineContext implements AutoCloseable
                 configuration.inboundLibraryStream(),
                 recordingCoordinator.inboundRecordingIdLookup(),
                 configuration.indexFileStateFlushTimeoutInMs(),
-                epochClock
-            );
+                epochClock,
+                null);
 
             newStreams();
             newArchivingAgent();
@@ -239,7 +240,8 @@ public class EngineContext implements AutoCloseable
             outboundLibraryCompletionPosition,
             aeronArchive,
             errorHandler,
-            configuration.archiveReplayStream(), configuration.gracefulShutdown());
+            configuration.archiveReplayStream(),
+            configuration.gracefulShutdown());
     }
 
     private void newArchivingAgent()
@@ -342,5 +344,10 @@ public class EngineContext implements AutoCloseable
             Exceptions.closeAll(
                 sentSequenceNumberIndex, receivedSequenceNumberIndex);
         }
+    }
+
+    public void framerContext(final FramerContext framerContext)
+    {
+        sentSequenceNumberIndex.framerContext(framerContext);
     }
 }

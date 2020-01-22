@@ -18,13 +18,13 @@ package uk.co.real_logic.artio.engine.logger;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 
-class FixSessionCodecs
+class FixReplayerCodecs
 {
     private final FixDictionary dictionary;
     private final AbstractResendRequestDecoder resendRequest;
     private GapFillEncoder gapFillEncoder;
 
-    FixSessionCodecs(final Class<? extends FixDictionary> fixDictionaryType)
+    FixReplayerCodecs(final Class<? extends FixDictionary> fixDictionaryType)
     {
         dictionary = FixDictionary.of(fixDictionaryType);
         resendRequest = dictionary.makeResendRequestDecoder();

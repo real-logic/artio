@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,24 +15,17 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
-import java.util.ArrayList;
-import java.util.Set;
-
+import io.aeron.ExclusivePublication;
+import io.aeron.Subscription;
+import io.aeron.logbuffer.BufferClaim;
+import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.Agent;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
-
-import static org.agrona.collections.ArrayListUtil.fastUnorderedRemove;
-
-
-import io.aeron.ExclusivePublication;
-import io.aeron.Subscription;
-import io.aeron.logbuffer.BufferClaim;
-import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.decoder.AbstractResendRequestDecoder;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
@@ -48,8 +41,12 @@ import uk.co.real_logic.artio.protocol.ProtocolSubscription;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
+import java.util.ArrayList;
+import java.util.Set;
+
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.COMMIT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
+import static org.agrona.collections.ArrayListUtil.fastUnorderedRemove;
 import static uk.co.real_logic.artio.LogTag.REPLAY;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
@@ -64,7 +61,7 @@ public class Replayer implements ProtocolHandler, Agent
 {
     static final int MESSAGE_FRAME_BLOCK_LENGTH =
         MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + FixMessageDecoder.bodyHeaderLength();
-    static final int SIZE_OF_LENGTH_FIELD = 2;
+    static final int SIZE_OF_LENGTH_FIELD = FixMessageDecoder.bodyHeaderLength();
     static final int MOST_RECENT_MESSAGE = 0;
     private static final int POLL_LIMIT = 10;
 
@@ -134,7 +131,8 @@ public class Replayer implements ProtocolHandler, Agent
         final long timestamp,
         final MessageStatus status,
         final int sequenceNumber,
-        final long position)
+        final long position,
+        final int metaDataLength)
     {
         if (messageType == SessionConstants.RESEND_REQUEST_MESSAGE_TYPE && status == OK)
         {
@@ -142,7 +140,7 @@ public class Replayer implements ProtocolHandler, Agent
 
             asciiBuffer.wrap(srcBuffer);
 
-            final FixSessionCodecs sessionCodecs = fixSessionCodecsFactory.get(sessionId);
+            final FixReplayerCodecs sessionCodecs = fixSessionCodecsFactory.get(sessionId);
             final AbstractResendRequestDecoder resendRequest = sessionCodecs.resendRequest();
             resendRequest.reset();
             resendRequest.decode(asciiBuffer, srcOffset, limit);

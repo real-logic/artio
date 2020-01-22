@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,9 +42,9 @@ class GatewaySession implements SessionInfo
     private final int resendRequestChunkSize;
     private final boolean sendRedundantResendRequests;
     private final boolean enableLastMsgSeqNumProcessed;
-    private final FixDictionary fixDictionary;
     private final long authenticationTimeoutInMs;
 
+    private FixDictionary fixDictionary;
     private ReceiverEndPoint receiverEndPoint;
     private SenderEndPoint senderEndPoint;
 
@@ -368,6 +368,11 @@ class GatewaySession implements SessionInfo
         return fixDictionary;
     }
 
+    void fixDictionary(final FixDictionary fixDictionary)
+    {
+        this.fixDictionary = fixDictionary;
+    }
+
     public int logonReceivedSequenceNumber()
     {
         return logonReceivedSequenceNumber;
@@ -376,5 +381,11 @@ class GatewaySession implements SessionInfo
     public int logonSequenceIndex()
     {
         return logonSequenceIndex;
+    }
+
+    void updateSessionDictionary()
+    {
+        session.fixDictionary(fixDictionary);
+        sessionParser.fixDictionary(fixDictionary);
     }
 }

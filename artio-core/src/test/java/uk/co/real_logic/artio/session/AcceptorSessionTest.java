@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 package uk.co.real_logic.artio.session;
 
 import org.junit.Test;
-import uk.co.real_logic.artio.Constants;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static org.junit.Assert.assertEquals;
@@ -25,8 +24,8 @@ import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_SESSION_BUFFER_
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS;
 import static uk.co.real_logic.artio.library.SessionConfiguration.DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED;
 import static uk.co.real_logic.artio.messages.SessionState.*;
-import static uk.co.real_logic.artio.session.Session.ACTIVE_VALUE;
 import static uk.co.real_logic.artio.session.DirectSessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
+import static uk.co.real_logic.artio.session.Session.ACTIVE_VALUE;
 
 public class AcceptorSessionTest extends AbstractSessionTest
 {
@@ -34,7 +33,8 @@ public class AcceptorSessionTest extends AbstractSessionTest
 
     private AcceptorSession newAcceptorSession()
     {
-        final AcceptorSession acceptorSession = new AcceptorSession(HEARTBEAT_INTERVAL,
+        final AcceptorSession acceptorSession = new AcceptorSession(
+            HEARTBEAT_INTERVAL,
             CONNECTION_ID,
             fakeClock,
             sessionProxy,
@@ -50,8 +50,8 @@ public class AcceptorSessionTest extends AbstractSessionTest
             DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_MS,
             new MutableAsciiBuffer(new byte[DEFAULT_SESSION_BUFFER_SIZE]),
             DEFAULT_ENABLE_LAST_MSG_SEQ_NUM_PROCESSED,
-            Constants.VERSION,
             SessionCustomisationStrategy.none());
+        acceptorSession.fixDictionary(makeDictionary());
         acceptorSession.logonListener(mockLogonListener);
         return acceptorSession;
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,7 +99,7 @@ public final class FixBenchmarkServer
 
         return configuration
             .libraryAeronChannels(singletonList(AERON_CHANNEL))
-            .sessionAcquireHandler((session, isSlow) -> new BenchmarkSessionHandler())
+            .sessionAcquireHandler((session, acquiredInfo) -> new BenchmarkSessionHandler())
             .sessionExistsHandler(new AcquiringSessionExistsHandler(true));
     }
 

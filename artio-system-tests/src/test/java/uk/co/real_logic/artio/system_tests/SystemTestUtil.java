@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,9 +45,11 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_REPLY_TIMEOUT_IN_MS;
 import static uk.co.real_logic.artio.CommonConfiguration.optimalTmpDirName;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
@@ -117,7 +119,6 @@ public final class SystemTestUtil
         assertEventuallyTrue("Session not connected", session::isConnected);
 
         final AbstractTestRequestEncoder testRequest = fixDictionary.makeTestRequestEncoder();
-        //final TestRequestEncoder testRequest = new TestRequestEncoder();
         testRequest.testReqID(testReqID);
 
         final long position = session.send(testRequest);
@@ -133,7 +134,7 @@ public final class SystemTestUtil
             {
                 testSystem.poll();
                 return acceptor
-                    .hasReceivedMessage("1")
+                    .receivedMessage("1")
                     .anyMatch((msg) -> testReqId.equals(msg.testReqId()));
             });
     }
@@ -445,7 +446,7 @@ public final class SystemTestUtil
                 testSystem.poll();
 
                 return acceptor
-                    .hasReceivedMessage("0")
+                    .receivedMessage("0")
                     .anyMatch((message) -> testReqId.equals(message.get(Constants.TEST_REQ_ID)));
             });
     }

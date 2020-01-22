@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.library.SessionAcquiredInfo;
 import uk.co.real_logic.artio.library.SessionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -37,6 +38,7 @@ import java.util.List;
 
 import static java.util.Arrays.asList;
 import static java.util.Objects.requireNonNull;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
@@ -53,15 +55,14 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
     private SessionWriter acceptingSessionWriter = null;
     private FakeHandler acceptingHandler = new FakeHandler(acceptingOtfAcceptor)
     {
-        @Override
-        public SessionHandler onSessionAcquired(final Session session, final boolean isSlow)
+        public SessionHandler onSessionAcquired(final Session session, final SessionAcquiredInfo acquiredInfo)
         {
             acceptingSessionWriter = acceptingLibrary.sessionWriter(
                 session.id(),
                 session.connectionId(),
                 session.sequenceIndex());
 
-            return super.onSessionAcquired(session, isSlow);
+            return super.onSessionAcquired(session, acquiredInfo);
         }
     };
 
@@ -163,7 +164,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         final FixMessage receivedNewOrderSingle = withTimeout("Unable to find NOS", () ->
         {
             testSystem.poll();
-            return initiatingOtfAcceptor.hasReceivedMessage("D").findFirst();
+            return initiatingOtfAcceptor.receivedMessage("D").findFirst();
         }, DEFAULT_TIMEOUT_IN_MS);
         assertEquals(newOrderSingleSeqNum, receivedNewOrderSingle.messageSequenceNumber());
         assertEquals(lastReceivedMsgSeqNum, initiatingSession.lastReceivedMsgSeqNum());
@@ -242,7 +243,6 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         final EpochClock clock,
         final long connectionId,
         final int libraryId,
-        final FixDictionary fixDictionary,
         final ErrorHandler errorHandler)
     {
         sessionProxyRequests++;
@@ -265,6 +265,10 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         private int sequenceNumberAdjustment = 0;
 
         private boolean seqNumResetRequested = false;
+
+        public void fixDictionary(final FixDictionary dictionary)
+        {
+        }
 
         public void setupSession(final long sessionId, final CompositeKey sessionKey)
         {

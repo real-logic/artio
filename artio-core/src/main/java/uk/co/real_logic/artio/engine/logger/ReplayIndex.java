@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,6 +38,7 @@ import static io.aeron.logbuffer.FrameDescriptor.*;
 import static org.agrona.UnsafeAccess.UNSAFE;
 import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.engine.logger.ReplayIndexDescriptor.*;
+import static uk.co.real_logic.artio.messages.FixMessageDecoder.*;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 
 /**
@@ -130,10 +131,17 @@ public class ReplayIndex implements Index
                 final int actingBlockLength = frameHeaderDecoder.blockLength();
                 offset += frameHeaderDecoder.encodedLength();
 
-                messageFrame.wrap(srcBuffer, offset, actingBlockLength, frameHeaderDecoder.version());
+                final int version = frameHeaderDecoder.version();
+                messageFrame.wrap(srcBuffer, offset, actingBlockLength, version);
                 if (messageFrame.status() == OK)
                 {
-                    offset += actingBlockLength + 2;
+                    offset += actingBlockLength;
+                    if (version >= metaDataSinceVersion())
+                    {
+                        offset += metaDataHeaderLength() + messageFrame.metaDataLength();
+                        messageFrame.skipMetaData();
+                    }
+                    offset += bodyHeaderLength();
 
                     final long fixSessionId = messageFrame.session();
                     final int sequenceNumber = sequenceNumberExtractor.extract(

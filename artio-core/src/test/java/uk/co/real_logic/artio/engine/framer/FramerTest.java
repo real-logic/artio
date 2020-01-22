@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ import io.aeron.Image;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import io.aeron.logbuffer.Header;
+import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.AgentInvoker;
@@ -62,6 +63,7 @@ import static io.aeron.Publication.BACK_PRESSURED;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -199,6 +201,7 @@ public class FramerTest
         when(sessionContexts.onLogon(any())).thenReturn(new SessionContext(SESSION_ID,
             SessionContext.UNKNOWN_SEQUENCE_INDEX,
             Session.NO_LOGON_TIME,
+            System.currentTimeMillis(),
             sessionContexts,
             0));
     }
@@ -550,7 +553,9 @@ public class FramerTest
             any(),
             any(),
             any(),
-            any())).thenReturn(BACK_PRESSURED, POSITION);
+            any(),
+            any(),
+            any(DirectBuffer.class))).thenReturn(BACK_PRESSURED, POSITION);
 
         aClientConnects();
 
@@ -595,7 +600,9 @@ public class FramerTest
             any(),
             any(),
             any(),
-            any());
+            any(),
+            any(),
+            any(DirectBuffer.class));
         saveRequestSessionReply();
 
         neverSavesUnknownSession();
@@ -785,7 +792,9 @@ public class FramerTest
             any(),
             any(),
             any(),
-            any())).thenReturn(BACK_PRESSURED, POSITION);
+            any(),
+            any(),
+            any(DirectBuffer.class))).thenReturn(BACK_PRESSURED, POSITION);
     }
 
     private void verifySessionsAcquired(final SessionState state)
@@ -919,7 +928,9 @@ public class FramerTest
             any(),
             any(),
             any(),
-            any());
+            any(),
+            any(),
+            any(DirectBuffer.class));
     }
 
     private void verifySessionExistsSaved(final VerificationMode times, final SessionStatus status)
@@ -957,7 +968,9 @@ public class FramerTest
             any(),
             any(),
             any(),
-            any());
+            any(),
+            any(),
+            any(DirectBuffer.class));
     }
 
     private void aClientSendsData() throws IOException

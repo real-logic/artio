@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.function.Consumer;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
@@ -64,7 +65,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
     private Consumer<Reply<Session>> onInitiateReply = reply ->
     {
-        assertEquals("Repy failed: " + reply, Reply.State.COMPLETED, reply.state());
+        assertEquals("Reply failed: " + reply, Reply.State.COMPLETED, reply.state());
         initiatingSession = reply.resultIfPresent();
         assertConnected(initiatingSession);
     };
@@ -149,7 +150,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         // Test that we don't accidentally send another resend request
         // Reproduction of reported bug
         Timing.assertEventuallyTrue("", () -> testSystem.poll(), 100);
-        assertEquals(1, initiatingOtfAcceptor.hasReceivedMessage(RESEND_REQUEST_MESSAGE_AS_STR).count());
+        assertEquals(1, initiatingOtfAcceptor.receivedMessage(RESEND_REQUEST_MESSAGE_AS_STR).count());
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -281,6 +282,22 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         // 5: logon, test-req/heartbeat, logout. logon 2, test-req/heartbeat 2
         assertSequenceFromInitToAcceptAt(5, 5);
         assertLastLogonEquals(4, 0);
+    }
+
+    @Test
+    public void shouldReadOldMetaDataOverPersistentConnectionReconnect()
+    {
+        launch(this::nothing);
+        connectPersistingSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false);
+
+        writeMetaData();
+
+        assertThat(initiatingSession.startLogout(), greaterThan(0L));
+        assertSessionsDisconnected();
+
+        connectPersistingSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false);
+
+        readMetaData(acceptingSession.id());
     }
 
     private void resetSequenceNumbers()

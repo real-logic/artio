@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,11 +37,13 @@ public class SessionParserTest
     private MessageValidationStrategy validationStrategy = MessageValidationStrategy.targetCompId("das");
 
     private SessionParser parser = new SessionParser(
-        mockSession, validationStrategy, null, FixDictionary.of(FixDictionary.findDefault()));
+        mockSession, validationStrategy, null, false);
 
     @Before
     public void setUp()
     {
+        parser.fixDictionary(FixDictionary.of(FixDictionary.findDefault()));
+
         when(mockAuthenticationStrategy.authenticate(any(LogonDecoder.class))).thenReturn(true);
         when(mockSession.onBeginString(any(), anyInt(), anyBoolean())).thenReturn(true);
     }

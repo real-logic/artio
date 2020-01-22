@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
@@ -41,6 +42,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_DISABLED;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_INT;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 import static uk.co.real_logic.artio.fields.RejectReason.*;
@@ -50,7 +52,6 @@ import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionState.*;
 import static uk.co.real_logic.artio.session.DirectSessionProxy.NO_LAST_MSG_SEQ_NUM_PROCESSED;
 import static uk.co.real_logic.artio.session.InternalSession.*;
-import static uk.co.real_logic.artio.dictionary.SessionConstants.*;
 
 /**
  * Stores information about the current state of a session - no matter whether outbound or inbound.
@@ -85,6 +86,7 @@ public class Session implements AutoCloseable
 {
     public static final long UNKNOWN = -1;
     public static final long NO_LOGON_TIME = -1;
+    public static final long NO_LAST_SEQUENCE_RESET_TIME = NO_LOGON_TIME;
 
     static final short ACTIVE_VALUE = 3;
     static final short LOGGING_OUT_VALUE = 5;
@@ -120,11 +122,12 @@ public class Session implements AutoCloseable
     private final AtomicCounter sentMsgSeqNo;
     private final long reasonableTransmissionTimeInMs;
     private final boolean enableLastMsgSeqNumProcessed;
-    private final String beginString;
     private final SessionCustomisationStrategy customisationStrategy;
 
     private CompositeKey sessionKey;
     private SessionState state;
+    private String beginString;
+
     // Used to trigger a disconnect if we don't receive a resend within expected timeout
     private boolean awaitingResend = INITIAL_AWAITING_RESEND;
     // Equivalent of receivedMsgSeqNo for resent messages
@@ -179,7 +182,6 @@ public class Session implements AutoCloseable
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
-        final String beginString,
         final SessionCustomisationStrategy customisationStrategy)
     {
         this.customisationStrategy = customisationStrategy;
@@ -189,7 +191,6 @@ public class Session implements AutoCloseable
         Verify.notNull(publication, "publication");
         Verify.notNull(receivedMsgSeqNo, "received MsgSeqNo counter");
         Verify.notNull(sentMsgSeqNo, "sent MsgSeqNo counter");
-        Verify.notNull(beginString, "beginString");
 
         this.epochClock = epochClock;
         this.proxy = proxy;
@@ -204,7 +205,6 @@ public class Session implements AutoCloseable
         this.lastSentMsgSeqNum = initialSentSequenceNumber - 1;
         this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
-        this.beginString = beginString;
         this.asciiBuffer = asciiBuffer;
 
         state(state);
@@ -488,6 +488,21 @@ public class Session implements AutoCloseable
      */
     public long send(final Encoder encoder)
     {
+        return send(encoder, null);
+    }
+
+    /**
+     * Send a message on this session.
+     *
+     * @param encoder the encoder of the message to be sent
+     * @param metaDataBuffer the metadata to associate with this message.
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     * @throws IndexOutOfBoundsException if the encoded message is too large, if this happens consider
+     *                                   increasing {@link CommonConfiguration#sessionBufferSize(int)}
+     */
+    public long send(final Encoder encoder, final DirectBuffer metaDataBuffer)
+    {
         validateCanSendMessage();
 
         final int sentSeqNum = prepare(encoder.header());
@@ -496,7 +511,7 @@ public class Session implements AutoCloseable
         final int length = Encoder.length(result);
         final int offset = Encoder.offset(result);
 
-        return send(asciiBuffer, offset, length, sentSeqNum, encoder.messageType());
+        return send(asciiBuffer, offset, length, sentSeqNum, encoder.messageType(), metaDataBuffer);
     }
 
     /**
@@ -513,10 +528,34 @@ public class Session implements AutoCloseable
     public long send(
         final DirectBuffer messageBuffer, final int offset, final int length, final int seqNum, final long messageType)
     {
+        return send(messageBuffer, offset, length, seqNum, messageType, null);
+    }
+
+    /**
+     * Send a message on this session.
+     *
+     * @param messageBuffer the buffer with the FIX message in to send
+     * @param offset the offset within the messageBuffer where the message starts
+     * @param length the length of the message within the messageBuffer
+     * @param seqNum the sequence number of the sent message
+     * @param messageType the long encoded message type.
+     * @param metaDataBuffer the metadata to associate with this message.
+     * @return the position in the stream that corresponds to the end of this message or a negative
+     * number indicating an error status.
+     */
+    public long send(
+        final DirectBuffer messageBuffer,
+        final int offset,
+        final int length,
+        final int seqNum,
+        final long messageType,
+        final DirectBuffer metaDataBuffer)
+    {
         validateCanSendMessage();
 
         final long position = publication.saveMessage(
-            messageBuffer, offset, length, libraryId, messageType, id(), sequenceIndex(), connectionId, OK, seqNum);
+            messageBuffer, offset, length, libraryId, messageType, id(), sequenceIndex(), connectionId, OK, seqNum,
+            metaDataBuffer);
 
         if (position > 0)
         {
@@ -644,17 +683,68 @@ public class Session implements AutoCloseable
         receivedMsgSeqNo.close();
     }
 
-    // ---------- Event Handlers & Logic ----------
-
-    Action onInvalidFixDisconnect()
-    {
-        return Pressure.apply(requestDisconnect(DisconnectReason.INVALID_FIX_MESSAGE));
-    }
 
     public void onDisconnect()
     {
         logoutRejectReason = NO_LOGOUT_REJECT_REASON;
         state(DISCONNECTED);
+    }
+
+    // Also checks the sequence index
+    public Session lastReceivedMsgSeqNum(final int lastReceivedMsgSeqNum)
+    {
+        if (this.lastReceivedMsgSeqNum > lastReceivedMsgSeqNum)
+        {
+            nextSequenceIndex();
+        }
+
+        lastReceivedMsgSeqNumOnly(lastReceivedMsgSeqNum);
+
+        return this;
+    }
+
+    public long logonTime()
+    {
+        return this.logonTime;
+    }
+
+    public boolean hasLogonTime()
+    {
+        return logonTime != NO_LOGON_TIME;
+    }
+
+    public int lastSentMsgSeqNum(final int lastSentMsgSeqNum)
+    {
+        this.lastSentMsgSeqNum = lastSentMsgSeqNum;
+        sentMsgSeqNo.setOrdered(lastSentMsgSeqNum);
+        incNextHeartbeatTime();
+
+        return lastSentMsgSeqNum;
+    }
+
+    public String toString()
+    {
+        return getClass().getSimpleName() + "{" +
+            "connectionId=" + connectionId +
+            ", sessionId=" + id +
+            ", state=" + state +
+            ", sequenceIndex=" + sequenceIndex +
+            ", lastReceivedMsgSeqNum=" + lastReceivedMsgSeqNum +
+            ", lastSentMsgSeqNum=" + lastSentMsgSeqNum +
+            '}';
+    }
+
+    public String beginString()
+    {
+        return beginString;
+    }
+
+    // ---------- END OF PUBLIC API ----------
+
+    // ---------- Event Handlers & Logic ----------
+    Action onInvalidFixDisconnect()
+    {
+        return Pressure.apply(requestDisconnect(DisconnectReason.INVALID_FIX_MESSAGE));
     }
 
     private void lastSentMsgSeqNum(final int sentSeqNum, final long position)
@@ -1118,7 +1208,7 @@ public class Session implements AutoCloseable
         }
     }
 
-    public void setupSession(final long sessionId, final CompositeKey sessionKey)
+    void setupSession(final long sessionId, final CompositeKey sessionKey)
     {
         id(sessionId);
         this.sessionKey = sessionKey;
@@ -1428,7 +1518,7 @@ public class Session implements AutoCloseable
         return this;
     }
 
-    public Session id(final long id)
+    Session id(final long id)
     {
         this.id = id;
         return this;
@@ -1437,19 +1527,6 @@ public class Session implements AutoCloseable
     protected long time()
     {
         return epochClock.time();
-    }
-
-    // Also checks the sequence index
-    public Session lastReceivedMsgSeqNum(final int lastReceivedMsgSeqNum)
-    {
-        if (this.lastReceivedMsgSeqNum > lastReceivedMsgSeqNum)
-        {
-            nextSequenceIndex();
-        }
-
-        lastReceivedMsgSeqNumOnly(lastReceivedMsgSeqNum);
-
-        return this;
     }
 
     // Does not check the sequence index
@@ -1469,29 +1546,10 @@ public class Session implements AutoCloseable
         return lastSentMsgSeqNum + 1;
     }
 
-    public int lastSentMsgSeqNum(final int lastSentMsgSeqNum)
-    {
-        this.lastSentMsgSeqNum = lastSentMsgSeqNum;
-        sentMsgSeqNo.setOrdered(lastSentMsgSeqNum);
-        incNextHeartbeatTime();
-
-        return lastSentMsgSeqNum;
-    }
-
     private void incReceivedSeqNum()
     {
         lastReceivedMsgSeqNum++;
         receivedMsgSeqNo.increment();
-    }
-
-    public long logonTime()
-    {
-        return this.logonTime;
-    }
-
-    public boolean hasLogonTime()
-    {
-        return logonTime != NO_LOGON_TIME;
     }
 
     Action onInvalidMessage(
@@ -1547,18 +1605,6 @@ public class Session implements AutoCloseable
             INVALID_MSGTYPE.representation(),
             sequenceIndex(),
             lastMsgSeqNumProcessed));
-    }
-
-    public String toString()
-    {
-        return getClass().getSimpleName() + "{" +
-               "connectionId=" + connectionId +
-               ", sessionId=" + id +
-               ", state=" + state +
-               ", sequenceIndex=" + sequenceIndex +
-               ", lastReceivedMsgSeqNum=" + lastReceivedMsgSeqNum +
-               ", lastSentMsgSeqNum=" + lastSentMsgSeqNum +
-               '}';
     }
 
     void disable()
@@ -1770,4 +1816,9 @@ public class Session implements AutoCloseable
         this.awaitingHeartbeat = awaitingHeartbeat;
     }
 
+    void fixDictionary(final FixDictionary fixDictionary)
+    {
+        proxy.fixDictionary(fixDictionary);
+        this.beginString = fixDictionary.beginString();
+    }
 }

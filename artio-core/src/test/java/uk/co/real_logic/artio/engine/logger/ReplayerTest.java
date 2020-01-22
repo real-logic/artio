@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,6 +51,7 @@ import java.util.regex.Pattern;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -59,6 +60,7 @@ import static uk.co.real_logic.artio.decoder.ExampleMessageDecoder.MESSAGE_TYPE;
 import static uk.co.real_logic.artio.engine.PossDupEnabler.ORIG_SENDING_TIME_PREFIX_AS_STR;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MOST_RECENT_MESSAGE;
+import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataHeaderLength;
 import static uk.co.real_logic.artio.messages.MessageStatus.OK;
 import static uk.co.real_logic.artio.util.CustomMatchers.sequenceEqualsAscii;
 
@@ -418,7 +420,7 @@ public class ReplayerTest extends AbstractLogTest
         final long result = bufferHasResendRequest(endSeqNo);
         onMessage(ResendRequestDecoder.MESSAGE_TYPE, result, COMMIT);
 
-        // Processes the backpressured try claim
+        // Processes the back pressured try claim
         replayer.doWork();
 
         verifyClaim();
@@ -437,7 +439,7 @@ public class ReplayerTest extends AbstractLogTest
     }
 
     @Test
-    public void shouldGapFillMissingMesages()
+    public void shouldGapFillMissingMessages()
     {
         final int endSeqNo = endSeqNoForTwoMessages();
 
@@ -454,7 +456,7 @@ public class ReplayerTest extends AbstractLogTest
     }
 
     @Test
-    public void shouldGapFillMissingMesagesWhenBackPressured()
+    public void shouldGapFillMissingMessagesWhenBackPressured()
     {
         final int endSeqNo = endSeqNoForTwoMessages();
 
@@ -478,7 +480,7 @@ public class ReplayerTest extends AbstractLogTest
     }
 
     @Test
-    public void shouldGapFillMissingMesagesFollowedByApplicationMessage()
+    public void shouldGapFillMissingMessagesFollowedByApplicationMessage()
     {
         final int endSeqNo = endSeqNoForTwoMessages();
 
@@ -717,8 +719,9 @@ public class ReplayerTest extends AbstractLogTest
         final int msgSeqNum,
         final int newSeqNo)
     {
-        final int offset = offset() + MESSAGE_FRAME_BLOCK_LENGTH;
-        final int length = claimedLength - MESSAGE_FRAME_BLOCK_LENGTH;
+        final int messageFrameBlockLength = MESSAGE_FRAME_BLOCK_LENGTH + metaDataHeaderLength();
+        final int offset = offset() + messageFrameBlockLength;
+        final int length = claimedLength - messageFrameBlockLength;
         final String message = resultAsciiBuffer.getAscii(offset, length);
         final SequenceResetDecoder sequenceReset = new SequenceResetDecoder();
         sequenceReset.decode(resultAsciiBuffer, offset, length);
@@ -787,7 +790,7 @@ public class ReplayerTest extends AbstractLogTest
         final int offset = Encoder.offset(result);
         final Action action = replayer.onMessage(
             buffer, offset, length,
-            LIBRARY_ID, connectionId, sessionId, SEQUENCE_INDEX, messageType, 0L, OK, 0, 0L);
+            LIBRARY_ID, connectionId, sessionId, SEQUENCE_INDEX, messageType, 0L, OK, 0, 0L, 0);
         assertEquals(expectedAction, action);
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,7 @@ import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static uk.co.real_logic.artio.fields.LocalMktDateDecoderValidCasesTest.toLocalDay;
 import static uk.co.real_logic.artio.util.CustomMatchers.sequenceEqualsAscii;
 

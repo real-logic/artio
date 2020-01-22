@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ import uk.co.real_logic.artio.session.SessionIdStrategy;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.util.HashMap;
 import java.util.function.ToIntFunction;
 
 import static io.aeron.Publication.BACK_PRESSURED;
@@ -146,7 +147,7 @@ public class ReceiverEndPointTest
             messagesRead, framer, errorHandler, LIBRARY_ID,
             mockGatewaySessions,
             mockClock,
-            FixDictionary.of(FixDictionary.findDefault()));
+            new AcceptorFixDictionaryLookup(FixDictionary.of(FixDictionary.findDefault()), new HashMap<>()));
         endPoint.gatewaySession(gatewaySession);
     }
 

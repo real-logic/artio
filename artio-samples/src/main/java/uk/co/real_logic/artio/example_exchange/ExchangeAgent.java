@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ public class ExchangeAgent implements Agent
         // that receives messages for new sessions
         configuration
             .libraryConnectHandler(new LoggingLibraryConnectHandler())
-            .sessionAcquireHandler(this::onAcquire)
+            .sessionAcquireHandler((session, acquiredInfo) -> onAcquire(session))
             .sessionExistsHandler(new AcquiringSessionExistsHandler(true))
             .libraryAeronChannels(singletonList(IPC_CHANNEL));
 
@@ -57,7 +57,7 @@ public class ExchangeAgent implements Agent
         System.out.println("Connecting library");
     }
 
-    private SessionHandler onAcquire(final Session session, final boolean isSlow)
+    private SessionHandler onAcquire(final Session session)
     {
         System.out.println(session.compositeKey() + " logged in");
         return new ExchangeSessionHandler(session);

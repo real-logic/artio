@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,9 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 public final class EngineProtocolSubscription implements ControlledFragmentHandler
 {
     private static final int FOLLOWER_SESSION_REQUEST_LENGTH =
-        FollowerSessionRequestEncoder.BLOCK_LENGTH + FollowerSessionRequestEncoder.headerHeaderLength();
+        FollowerSessionRequestDecoder.BLOCK_LENGTH + FollowerSessionRequestDecoder.headerHeaderLength();
+    private static final int WRITE_META_DATA_DATA_LENGTH =
+        WriteMetaDataDecoder.BLOCK_LENGTH + WriteMetaDataDecoder.metaDataHeaderLength();
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final InitiateConnectionDecoder initiateConnection = new InitiateConnectionDecoder();
@@ -37,6 +39,8 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
     private final ReleaseSessionDecoder releaseSession = new ReleaseSessionDecoder();
     private final RequestSessionDecoder requestSession = new RequestSessionDecoder();
     private final FollowerSessionRequestDecoder followerSessionRequest = new FollowerSessionRequestDecoder();
+    private final WriteMetaDataDecoder writeMetaData = new WriteMetaDataDecoder();
+    private final ReadMetaDataDecoder readMetaData = new ReadMetaDataDecoder();
 
     private final EngineEndPointHandler handler;
 
@@ -94,6 +98,16 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             case FollowerSessionRequestDecoder.TEMPLATE_ID:
             {
                 return onFollowerSessionRequest(buffer, offset, blockLength, version, header);
+            }
+
+            case WriteMetaDataDecoder.TEMPLATE_ID:
+            {
+                return onWriteMetaData(buffer, offset, blockLength, version, header);
+            }
+
+            case ReadMetaDataDecoder.TEMPLATE_ID:
+            {
+                return onReadMetaData(buffer, offset, blockLength, version, header);
             }
         }
 
@@ -285,4 +299,50 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             offset + FOLLOWER_SESSION_REQUEST_LENGTH,
             messageLength);
     }
+
+    private Action onWriteMetaData(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final Header header)
+    {
+        writeMetaData.wrap(buffer, offset, blockLength, version);
+        final int libraryId = writeMetaData.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        if (action != null)
+        {
+            return action; // Continue processing messages, but not this message.
+        }
+        final int metaDataLength = writeMetaData.metaDataLength();
+        return handler.onWriteMetaData(
+            libraryId,
+            writeMetaData.session(),
+            writeMetaData.correlationId(),
+            buffer,
+            offset + WRITE_META_DATA_DATA_LENGTH,
+            metaDataLength);
+    }
+
+    private Action onReadMetaData(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final Header header)
+    {
+        readMetaData.wrap(buffer, offset, blockLength, version);
+        final int libraryId = readMetaData.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        if (action != null)
+        {
+            return action; // Continue processing messages, but not this message.
+        }
+        return handler.onReadMetaData(
+            libraryId,
+            readMetaData.session(),
+            readMetaData.correlationId());
+    }
+
+
 }

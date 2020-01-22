@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +17,7 @@ package uk.co.real_logic.artio.system_tests;
 
 import io.aeron.archive.ArchivingMediaDriver;
 import org.junit.After;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.Timing;
 import uk.co.real_logic.artio.builder.Encoder;
@@ -27,11 +25,13 @@ import uk.co.real_logic.artio.builder.LogonEncoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.builder.TestRequestEncoder;
 import uk.co.real_logic.artio.decoder.LogonDecoder;
+import uk.co.real_logic.artio.decoder.LogoutDecoder;
 import uk.co.real_logic.artio.decoder.RejectDecoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner;
 import uk.co.real_logic.artio.library.FixLibrary;
+import uk.co.real_logic.artio.session.Session;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -41,7 +41,10 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.agrona.CloseHelper.close;
 import static org.junit.Assert.*;
+import static uk.co.real_logic.artio.SessionRejectReason.COMPID_PROBLEM;
 import static uk.co.real_logic.artio.TestFixtures.*;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.SENDER_COMP_ID;
+import static uk.co.real_logic.artio.dictionary.SessionConstants.TEST_REQUEST_MESSAGE_TYPE_STR;
 import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.ENGINE;
 import static uk.co.real_logic.artio.engine.InitialAcceptedSessionOwner.SOLE_LIBRARY;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
@@ -50,9 +53,6 @@ import static uk.co.real_logic.artio.validation.PersistenceLevel.TRANSIENT_SEQUE
 
 public class MessageBasedAcceptorSystemTest
 {
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
-
     private int port = unusedPort();
 
     private ArchivingMediaDriver mediaDriver;
@@ -149,7 +149,7 @@ public class MessageBasedAcceptorSystemTest
     {
         setup(true, true);
 
-        try (FixConnection connection = FixConnection.initiate(port))
+        try (FixConnection ignore = FixConnection.initiate(port))
         {
             close(engine);
         }
@@ -160,7 +160,7 @@ public class MessageBasedAcceptorSystemTest
     {
         setup(true, true);
 
-        try (FixConnection connection = FixConnection.initiate(port))
+        try (FixConnection ignore = FixConnection.initiate(port))
         {
         }
 
@@ -178,7 +178,7 @@ public class MessageBasedAcceptorSystemTest
 
         completeBind();
 
-        try (FixConnection connection = FixConnection.initiate(port))
+        try (FixConnection ignore = FixConnection.initiate(port))
         {
         }
     }
@@ -190,7 +190,7 @@ public class MessageBasedAcceptorSystemTest
 
         completeBind();
 
-        try (FixConnection connection = FixConnection.initiate(port))
+        try (FixConnection ignore = FixConnection.initiate(port))
         {
         }
 
@@ -198,7 +198,7 @@ public class MessageBasedAcceptorSystemTest
         completeBind();
         completeBind();
 
-        try (FixConnection connection = FixConnection.initiate(port))
+        try (FixConnection ignore = FixConnection.initiate(port))
         {
         }
     }
@@ -258,6 +258,85 @@ public class MessageBasedAcceptorSystemTest
         shouldDisconnectConnectionWithNoLogon(SOLE_LIBRARY);
     }
 
+    @Test
+    public void shouldSupportRapidLogonAndLogoutOperations() throws IOException
+    {
+        setup(false, true, true, ENGINE);
+
+        final FakeOtfAcceptor otfAcceptor = new FakeOtfAcceptor();
+        final FakeHandler handler = new FakeHandler(otfAcceptor);
+        final TestSystem testSystem = new TestSystem();
+        final Session session;
+
+        try (FixLibrary library = testSystem.connect(acceptingLibraryConfig(handler)))
+        {
+            try (FixConnection connection = FixConnection.initiate(port))
+            {
+                connection.logon(false);
+
+                handler.awaitSessionId(testSystem::poll);
+
+                final long sessionId = handler.awaitSessionId(testSystem::poll);
+                handler.clearSessionExistsInfos();
+                session = acquireSession(handler, library, sessionId, testSystem);
+                assertNotNull(session);
+
+                connection.readLogonReply();
+
+                connection.logout();
+            }
+
+            try (FixConnection connection = FixConnection.initiate(port))
+            {
+                // The previous connection hasn't yet been detected as it's still active.
+                assertTrue(session.isActive());
+
+                connection.msgSeqNum(3);
+
+                connection.logon(false);
+
+                // During this loop the logout message for the disconnected connection is sent,
+                // But not received by the new connection.
+                Timing.assertEventuallyTrue("Library has disconnected old session", () ->
+                {
+                    testSystem.poll();
+
+                    return !handler.sessions().contains(session);
+                });
+
+                // Use sequence number 3 to ensure that we're getting a logon reply
+                final LogonDecoder logonReply = connection.readLogonReply();
+                assertEquals(3, logonReply.header().msgSeqNum());
+
+                final LogoutDecoder logoutDecoder = connection.logoutAndAwaitReply();
+                assertEquals(4, logoutDecoder.header().msgSeqNum());
+            }
+        }
+    }
+
+    @Test
+    public void shouldRejectMessageWithInvalidSenderAndTargetCompIds() throws IOException
+    {
+        setup(true, true);
+
+        try (FixConnection connection = FixConnection.initiate(port))
+        {
+            logon(connection);
+
+            final TestRequestEncoder testRequestEncoder = new TestRequestEncoder();
+            connection.setupHeader(testRequestEncoder.header(), connection.acquireMsgSeqNum(), false);
+            testRequestEncoder.header().senderCompID("Wrong").targetCompID("Values");
+            testRequestEncoder.testReqID("ABC");
+            connection.send(testRequestEncoder);
+
+            final RejectDecoder rejectDecoder = connection.readMessage(new RejectDecoder());
+            assertEquals(2, rejectDecoder.refSeqNum());
+            assertEquals(TEST_REQUEST_MESSAGE_TYPE_STR, rejectDecoder.refMsgTypeAsString());
+            assertEquals(COMPID_PROBLEM, rejectDecoder.sessionRejectReasonAsEnum());
+            assertEquals(SENDER_COMP_ID, rejectDecoder.refTagID());
+        }
+    }
+
     private void shouldDisconnectConnectionWithNoLogon(final InitialAcceptedSessionOwner initialAcceptedSessionOwner)
         throws IOException
     {
@@ -299,8 +378,16 @@ public class MessageBasedAcceptorSystemTest
 
     private void cannotConnect() throws IOException
     {
-        thrown.expect(ConnectException.class);
-        FixConnection.initiate(port);
+        try
+        {
+            FixConnection.initiate(port);
+        }
+        catch (final ConnectException ignore)
+        {
+            return;
+        }
+
+        fail("expected ConnectException");
     }
 
     private void sendInvalidLogon(final FixConnection connection)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,7 +45,8 @@ public interface AuthenticationStrategy
      * NB: if you're implementing this method then you shouldn't implement the {@link #authenticate(AbstractLogonDecoder)}
      * method.
      *
-     * @param logon the logon message to authenticate.
+     * @param logon the logon message to authenticate. This is an object that gets allocated just to handle the logon
+     *              message and is safe to use within your own code without copying.
      * @param authProxy the proxy to notify when you're ready to authenticate.
      */
     default void authenticateAsync(AbstractLogonDecoder logon, AuthenticationProxy authProxy)

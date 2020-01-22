@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -443,7 +443,7 @@ public class SenderEndPointTest
 
     private void onSlowReplayMessage(final long timeInMs, final long position)
     {
-        endPoint.onSlowReplayMessage(buffer, 0, BODY_LENGTH, timeInMs, position);
+        endPoint.onSlowReplayMessage(buffer, 0, BODY_LENGTH, timeInMs, position, 0);
     }
 
     private void verifySlowConsumerDisconnect(final VerificationMode times)
@@ -488,7 +488,8 @@ public class SenderEndPointTest
             POSITION,
             BODY_LENGTH,
             LIBRARY_ID,
-            timeInMs);
+            timeInMs,
+            0);
         assertEquals(CONTINUE, action);
     }
 

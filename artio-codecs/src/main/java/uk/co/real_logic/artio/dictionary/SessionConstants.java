@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,9 +34,13 @@ public final class SessionConstants
     public static final int NEW_SEQ_NO = 36;
     public static final int POSS_DUP_FLAG = 43;
     public static final int SENDER_COMP_ID = 49;
+    public static final int SENDER_SUB_ID = 50;
     public static final int SENDING_TIME = 52;
-    public static final int ORIG_SENDING_TIME = 122;
     public static final int TARGET_COMP_ID = 56;
+    public static final int TARGET_SUB_ID = 57;
+    public static final int ORIG_SENDING_TIME = 122;
+    public static final int SENDER_LOCATION_ID = 142;
+    public static final int TARGET_LOCATION_ID = 143;
     public static final int PASSWORD = 554;
     public static final int NEW_PASSWORD = 925;
 

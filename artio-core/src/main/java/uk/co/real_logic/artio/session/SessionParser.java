@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,11 +25,15 @@ import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.decoder.*;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.dictionary.SessionConstants;
+import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
+import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampDecoder;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
+
+import java.util.Arrays;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.builder.Validation.CODEC_VALIDATION_ENABLED;
@@ -45,13 +49,22 @@ public class SessionParser
 {
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
     private final UtcTimestampDecoder timestampDecoder = new UtcTimestampDecoder();
-    private final AbstractLogonDecoder logon;
-    private final AbstractLogoutDecoder logout;
-    private final AbstractRejectDecoder reject;
-    private final AbstractTestRequestDecoder testRequest;
-    private final SessionHeaderDecoder header;
-    private final AbstractSequenceResetDecoder sequenceReset;
-    private final AbstractHeartbeatDecoder heartbeat;
+
+    private AbstractLogonDecoder logon;
+    private AbstractLogoutDecoder logout;
+    private AbstractRejectDecoder reject;
+    private AbstractTestRequestDecoder testRequest;
+    private SessionHeaderDecoder header;
+    private AbstractSequenceResetDecoder sequenceReset;
+    private AbstractHeartbeatDecoder heartbeat;
+
+    private final boolean validateCompIdsOnEveryMessage;
+    private char[] firstSenderCompId;
+    private char[] firstSenderSubId;
+    private char[] firstSenderLocationId;
+    private char[] firstTargetCompId;
+    private char[] firstTargetSubId;
+    private char[] firstTargetLocationId;
 
     private final Session session;
     private final MessageValidationStrategy validationStrategy;
@@ -61,12 +74,17 @@ public class SessionParser
         final Session session,
         final MessageValidationStrategy validationStrategy,
         final ErrorHandler errorHandler, // nullable
-        final FixDictionary fixDictionary)
+        final boolean validateCompIdsOnEveryMessage)
     {
         this.session = session;
         this.validationStrategy = validationStrategy;
         this.errorHandler = errorHandler;
 
+        this.validateCompIdsOnEveryMessage = validateCompIdsOnEveryMessage;
+    }
+
+    public void fixDictionary(final FixDictionary fixDictionary)
+    {
         logon = fixDictionary.makeLogonDecoder();
         logout = fixDictionary.makeLogoutDecoder();
         reject = fixDictionary.makeRejectDecoder();
@@ -419,6 +437,11 @@ public class SessionParser
             final String password = password(logon);
             final boolean possDup = isPossDup(header);
 
+            if (validateCompIdsOnEveryMessage)
+            {
+                initialiseFirstIds(header);
+            }
+
             return session.onLogon(
                 logon.heartBtInt(),
                 header.msgSeqNum(),
@@ -429,6 +452,28 @@ public class SessionParser
                 isPossDupOrResend(possDup, header),
                 resetSeqNumFlag(logon),
                 possDup);
+        }
+    }
+
+    private void initialiseFirstIds(final SessionHeaderDecoder header)
+    {
+        firstSenderCompId = Arrays.copyOf(header.senderCompID(), header.senderCompIDLength());
+        firstTargetCompId = Arrays.copyOf(header.targetCompID(), header.targetCompIDLength());
+        if (header.hasSenderSubID())
+        {
+            firstSenderSubId = Arrays.copyOf(header.senderSubID(), header.senderSubIDLength());
+        }
+        if (header.hasSenderLocationID())
+        {
+            firstSenderLocationId = Arrays.copyOf(header.senderLocationID(), header.senderLocationIDLength());
+        }
+        if (header.hasTargetSubID())
+        {
+            firstTargetSubId = Arrays.copyOf(header.targetSubID(), header.targetSubIDLength());
+        }
+        if (header.hasTargetLocationID())
+        {
+            firstTargetLocationId = Arrays.copyOf(header.targetLocationID(), header.targetLocationIDLength());
         }
     }
 
@@ -464,36 +509,112 @@ public class SessionParser
 
     private boolean validateHeader(final SessionHeaderDecoder header)
     {
+        // Validate begin string
         if (!session.onBeginString(header.beginString(), header.beginStringLength(), false))
         {
             return false;
         }
 
-        boolean validated;
-        try
+        boolean validated = true;
+        int rejectReason = RejectReason.OTHER.representation();
+
+        int invalidTagId = validateCompIds(header);
+        if (invalidTagId != 0)
         {
-            validated = validationStrategy.validate(header);
-        }
-        catch (final Throwable throwable)
-        {
-            onStrategyError("validation", throwable, header.toString());
             validated = false;
+            rejectReason = RejectReason.COMPID_PROBLEM.representation();
+        }
+
+        // Apply validation strategy
+        if (validated)
+        {
+            try
+            {
+                validated = validationStrategy.validate(header);
+                if (!validated)
+                {
+                    rejectReason = validationStrategy.rejectReason();
+                    invalidTagId = validationStrategy.invalidTagId();
+                }
+            }
+            catch (final Throwable throwable)
+            {
+                onStrategyError("validation", throwable, header.toString());
+                validated = false;
+            }
         }
 
         if (!validated)
         {
             session.onInvalidMessage(
                 header.msgSeqNum(),
-                validationStrategy.invalidTagId(),
+                invalidTagId,
                 header.msgType(),
                 header.msgTypeLength(),
-                validationStrategy.rejectReason());
-            session.logoutRejectReason(validationStrategy.rejectReason());
+                rejectReason);
+            session.logoutRejectReason(rejectReason);
             session.startLogout();
             return false;
         }
 
         return true;
+    }
+
+    private int validateCompIds(final SessionHeaderDecoder header)
+    {
+        if (!validateCompIdsOnEveryMessage)
+        {
+            return 0;
+        }
+
+        // Case can happen when switching control of the Session between Library and Engine.
+        if (firstSenderCompId == null)
+        {
+            initialiseFirstIds(header);
+            return 0;
+        }
+
+        if (!CodecUtil.equals(firstSenderCompId, header.senderCompID(), header.senderCompIDLength()))
+        {
+            return SENDER_COMP_ID;
+        }
+
+        if (!CodecUtil.equals(firstTargetCompId, header.targetCompID(), header.targetCompIDLength()))
+        {
+            return TARGET_COMP_ID;
+        }
+
+        // Optional cases are a bit goofy on account of getters throwing if the has method returns false.
+
+        final boolean hasSenderSubID = header.hasSenderSubID();
+        if (!(firstSenderSubId == null ? !hasSenderSubID : hasSenderSubID &&
+            CodecUtil.equals(firstSenderSubId, header.senderSubID(), header.senderSubIDLength())))
+        {
+            return SENDER_SUB_ID;
+        }
+
+        final boolean hasSenderLocationID = header.hasSenderLocationID();
+        if (!(firstSenderLocationId == null ? !hasSenderLocationID : hasSenderLocationID &&
+            CodecUtil.equals(firstSenderLocationId, header.senderLocationID(), header.senderLocationIDLength())))
+        {
+            return SENDER_LOCATION_ID;
+        }
+
+        final boolean hasTargetSubID = header.hasTargetSubID();
+        if (!(firstTargetSubId == null ? !hasTargetSubID : hasTargetSubID &&
+            CodecUtil.equals(firstTargetSubId, header.targetSubID(), header.targetSubIDLength())))
+        {
+            return TARGET_SUB_ID;
+        }
+
+        final boolean hasTargetLocationID = header.hasTargetLocationID();
+        if (!(firstTargetLocationId == null ? !hasTargetLocationID : hasTargetLocationID &&
+            CodecUtil.equals(firstTargetLocationId, header.targetLocationID(), header.targetLocationIDLength())))
+        {
+            return TARGET_LOCATION_ID;
+        }
+
+        return 0;
     }
 
     private Action onCodecInvalidMessage(

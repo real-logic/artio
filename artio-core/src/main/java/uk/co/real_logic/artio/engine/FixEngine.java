@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -277,6 +277,8 @@ public final class FixEngine extends GatewayProcess
             timers,
             aeron.conductorAgentInvoker(),
             recordingCoordinator);
+
+        engineContext.framerContext(framerContext);
     }
 
     private Image replayImage(final String name, final int replaySessionId)

@@ -8,7 +8,7 @@ stack: jdk 8
 build: off
 
 test_script:
-- ./gradlew
+- ./gradlew -Dfix.core.debug=FIX_TEST
 
 after_test:
   - sh: |

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.TestFixtures;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.LowResourceEngineScheduler;
 import uk.co.real_logic.artio.library.SessionConfiguration;
@@ -46,7 +47,10 @@ public class MultipleAddressSystemTest extends AbstractGatewayToGatewaySystemTes
                 .scheduler(new LowResourceEngineScheduler())
                 .deleteLogFileDirOnStart(true));
 
-        initiatingEngine = launchInitiatingEngine(libraryAeronPort);
+        final EngineConfiguration initiatingConfig = initiatingConfig(libraryAeronPort);
+        initiatingConfig.deleteLogFileDirOnStart(true);
+        initiatingConfig.printErrorMessages(false);
+        initiatingEngine = FixEngine.launch(initiatingConfig);
 
         initiatingLibrary = newInitiatingLibrary(libraryAeronPort, initiatingHandler);
         testSystem = new TestSystem(initiatingLibrary);

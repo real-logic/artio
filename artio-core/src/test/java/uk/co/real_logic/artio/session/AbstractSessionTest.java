@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.session;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
+import org.junit.Before;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
@@ -29,6 +30,7 @@ import uk.co.real_logic.artio.builder.TestRequestEncoder;
 import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
 import uk.co.real_logic.artio.decoder.ExampleMessageDecoder;
 import uk.co.real_logic.artio.decoder.SequenceResetDecoder;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.SessionState;
@@ -40,6 +42,7 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.junit.Assert.*;
@@ -64,7 +67,6 @@ public abstract class AbstractSessionTest
     static final long CONNECTION_ID = 3L;
     static final int HEARTBEAT_INTERVAL = 2;
     static final int SESSION_TIMEOUT = HEARTBEAT_INTERVAL + DEFAULT_REASONABLE_TRANSMISSION_TIME_IN_S;
-    static final CompositeKey SESSION_KEY = mock(CompositeKey.class);
     static final int LIBRARY_ID = 4;
     static final int SEQUENCE_INDEX = 0;
 
@@ -104,10 +106,22 @@ public abstract class AbstractSessionTest
             anyInt(),
             anyLong(),
             any(),
-            anyInt())).thenReturn(POSITION);
+            anyInt(),
+            eq((DirectBuffer)null))).thenReturn(POSITION);
 
         when(sessionProxy.sendResendRequest(anyInt(), anyInt(), anyInt(), eq(SEQUENCE_INDEX), anyInt()))
             .thenReturn(POSITION);
+    }
+
+    FixDictionary makeDictionary()
+    {
+        return FixDictionary.of(FixDictionary.findDefault());
+    }
+
+    @Before
+    public void shouldSetupDictionary()
+    {
+        verify(sessionProxy).fixDictionary(any());
     }
 
     @Test

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -268,13 +268,15 @@ final class FixConnection implements AutoCloseable
         CloseHelper.close(socket);
     }
 
-    void logoutAndAwaitReply()
+    LogoutDecoder logoutAndAwaitReply()
     {
         logout();
 
         final LogoutDecoder logout = readMessage(new LogoutDecoder());
 
         assertFalse(logout.textAsString(), logout.hasText());
+
+        return logout;
     }
 
     public void sendExecutionReport(final int msgSeqNum, final boolean possDupFlag)

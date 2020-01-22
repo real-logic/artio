@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -189,7 +189,7 @@ public class FixArchiveScanner implements AutoCloseable
         return archiveLocations;
     }
 
-    class ArchiveLocation
+    static class ArchiveLocation
     {
         final long recordingId;
         final long startPosition;

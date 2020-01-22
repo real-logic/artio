@@ -185,7 +185,7 @@ public class Buyer implements LibraryConnectHandler, SessionHandler, SessionAcqu
     {
     }
 
-    public SessionHandler onSessionAcquired(final Session session, final boolean isSlow)
+    public SessionHandler onSessionAcquired(final Session session, final SessionAcquiredInfo isSlow)
     {
         return this;
     }

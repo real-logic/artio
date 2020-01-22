@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd., Monotonic Ltd.
+ * Copyright 2015-2020 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ public class GapFillerTest extends AbstractLogTest
         gapFiller.onMessage(
             buffer, encodedOffset, encodedLength,
             LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX,
-            ResendRequestDecoder.MESSAGE_TYPE, 0L, OK, 0, 0L);
+            ResendRequestDecoder.MESSAGE_TYPE, 0L, OK, 0, 0L, 0);
 
         final ArgumentCaptor<DirectBuffer> bufferCaptor = ArgumentCaptor.forClass(DirectBuffer.class);
         final ArgumentCaptor<Integer> lengthCaptor = ArgumentCaptor.forClass(int.class);

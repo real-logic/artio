@@ -32,9 +32,9 @@ import java.util.stream.Stream;
 
 import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;

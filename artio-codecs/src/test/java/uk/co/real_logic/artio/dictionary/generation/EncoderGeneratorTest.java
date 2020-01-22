@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd., Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited., Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,8 @@ import org.agrona.AsciiSequenceView;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.StringWriterOutputManager;
-import org.hamcrest.Matchers;
-import org.junit.Assert;
 import org.junit.BeforeClass;
-import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import uk.co.real_logic.artio.EncodingException;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.fields.DecimalFloat;
@@ -38,6 +34,7 @@ import java.util.Map;
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
 import static org.agrona.generation.CompilerUtil.compileInMemory;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
@@ -52,10 +49,7 @@ public class EncoderGeneratorTest
     private static Class<?> otherMessage;
     private static Class<?> heartbeatWithoutValidation;
 
-    @Rule
-    public ExpectedException thrown = ExpectedException.none();
     private MutableAsciiBuffer buffer = new MutableAsciiBuffer(new byte[8 * 1024]);
-
 
     @BeforeClass
     public static void generate() throws Exception
@@ -179,7 +173,7 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void offsetAndLengthbyteArraySettersWriteFields() throws Exception
+    public void offsetAndLengthByteArraySettersWriteFields() throws Exception
     {
         final Encoder encoder = newHeartbeat();
 
@@ -275,12 +269,14 @@ public class EncoderGeneratorTest
     public void stringSettersByEnumThrowForUnknownValue() throws Exception
     {
         final Object encoder = heartbeat.getConstructor().newInstance();
-        thrown.expectCause(Matchers.any(EncodingException.class));
-        setEnum(encoder,
-            ON_BEHALF_OF_COMP_ID,
-            PARENT_PACKAGE + ".OnBehalfOfCompID",
-            "ARTIO_UNKNOWN"
-        );
+        assertThrows(EncodingException.class, () ->
+        {
+            setEnum(encoder,
+                ON_BEHALF_OF_COMP_ID,
+                PARENT_PACKAGE + ".OnBehalfOfCompID",
+                "ARTIO_UNKNOWN"
+            );
+        });
     }
 
     @Test
@@ -314,8 +310,10 @@ public class EncoderGeneratorTest
     public void intSettersByEnumThrowForUnknownValue() throws Exception
     {
         final Object encoder = heartbeat.getConstructor().newInstance();
-        thrown.expectCause(Matchers.any(EncodingException.class));
-        setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "ARTIO_UNKNOWN");
+        assertThrows(EncodingException.class, () ->
+        {
+            setEnum(encoder, INT_FIELD, PARENT_PACKAGE + ".IntField", "ARTIO_UNKNOWN");
+        });
     }
 
     @Test
@@ -327,7 +325,7 @@ public class EncoderGeneratorTest
 
         setFloat(encoder, FLOAT_FIELD, value);
 
-        Assert.assertEquals(value, getField(encoder, FLOAT_FIELD));
+        assertEquals(value, getField(encoder, FLOAT_FIELD));
     }
 
     @Test

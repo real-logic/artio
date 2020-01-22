@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +20,8 @@ import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static java.nio.charset.StandardCharsets.US_ASCII;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.assertThat;
 
 public class DecimalFloatTest
 {

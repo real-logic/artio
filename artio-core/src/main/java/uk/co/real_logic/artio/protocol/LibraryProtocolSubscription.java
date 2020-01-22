@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,11 +26,16 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 
 public final class LibraryProtocolSubscription implements ControlledFragmentHandler
 {
+    private static final int READ_META_DATA_META_DATA_PREFIX =
+        ReadMetaDataReplyDecoder.BLOCK_LENGTH + ReadMetaDataReplyDecoder.metaDataHeaderLength();
+
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final ErrorDecoder error = new ErrorDecoder();
     private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
     private final ReleaseSessionReplyDecoder releaseSessionReply = new ReleaseSessionReplyDecoder();
     private final RequestSessionReplyDecoder requestSessionReply = new RequestSessionReplyDecoder();
+    private final WriteMetaDataReplyDecoder writeMetaDataReply = new WriteMetaDataReplyDecoder();
+    private final ReadMetaDataReplyDecoder readMetaDataReply = new ReadMetaDataReplyDecoder();
     private final NewSentPositionDecoder newSentPosition = new NewSentPositionDecoder();
     private final ControlNotificationDecoder controlNotification = new ControlNotificationDecoder();
     private final SlowStatusNotificationDecoder slowStatusNotification = new SlowStatusNotificationDecoder();
@@ -106,6 +111,16 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             case FollowerSessionReplyDecoder.TEMPLATE_ID:
             {
                 return onFollowerSessionReply(buffer, offset, blockLength, version);
+            }
+
+            case WriteMetaDataReplyDecoder.TEMPLATE_ID:
+            {
+                return onWriteMetaDataReply(buffer, offset, blockLength, version);
+            }
+
+            case ReadMetaDataReplyDecoder.TEMPLATE_ID:
+            {
+                return onReadMetaDataReply(buffer, offset, blockLength, version);
             }
 
             case EndOfDayDecoder.TEMPLATE_ID:
@@ -239,6 +254,43 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             requestSessionReply.status());
     }
 
+    private Action onWriteMetaDataReply(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        writeMetaDataReply.wrap(buffer, offset, blockLength, version);
+        final int libraryId = writeMetaDataReply.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
+
+        return handler.onWriteMetaDataReply(
+            libraryId,
+            writeMetaDataReply.replyToId(),
+            writeMetaDataReply.status());
+    }
+
+    private Action onReadMetaDataReply(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        readMetaDataReply.wrap(buffer, offset, blockLength, version);
+        final int libraryId = readMetaDataReply.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
+
+        return handler.onReadMetaDataReply(
+            libraryId,
+            readMetaDataReply.replyToId(),
+            readMetaDataReply.status(),
+            buffer,
+            offset + READ_META_DATA_META_DATA_PREFIX,
+            readMetaDataReply.metaDataLength());
+    }
+
     private Action onError(
         final DirectBuffer buffer, final int offset, final int blockLength, final int version)
     {
@@ -316,7 +368,11 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             manageSession.address(),
             manageSession.username(),
             manageSession.password(),
-            FixDictionary.find(manageSession.fixDictionary()));
+            FixDictionary.find(manageSession.fixDictionary()),
+            manageSession.metaDataStatus(),
+            buffer,
+            manageSession.limit() + ManageSessionDecoder.metaDataHeaderLength(),
+            manageSession.metaDataLength());
     }
 
     private Action onEndOfDay(

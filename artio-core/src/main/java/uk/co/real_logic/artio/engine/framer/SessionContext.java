@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,46 +33,51 @@ class SessionContext
     private int sequenceIndex;
 
     private long logonTime;
+    private long lastSequenceResetTime;
 
     SessionContext(
         final long sessionId,
         final int sequenceIndex,
         final long logonTime,
+        final long lastSequenceResetTime,
         final SessionContexts sessionContexts,
         final int filePosition)
     {
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
         this.logonTime = logonTime;
+        this.lastSequenceResetTime = lastSequenceResetTime;
         this.sessionContexts = sessionContexts;
         this.filePosition = filePosition;
     }
 
-    void onSequenceReset()
+    void onSequenceReset(final long resetTime)
     {
+        lastSequenceResetTime = resetTime;
         sequenceIndex++;
-        sessionContexts.updateSavedData(filePosition, sequenceIndex, logonTime);
+        sessionContexts.updateSavedData(filePosition, sequenceIndex, logonTime, resetTime);
     }
 
     void updateAndSaveFrom(final Session session)
     {
         updateFrom(session);
-        sessionContexts.updateSavedData(filePosition, sequenceIndex, logonTime);
+        sessionContexts.updateSavedData(filePosition, sequenceIndex, logonTime, lastSequenceResetTime);
     }
 
     void updateFrom(final Session session)
     {
         sequenceIndex = session.sequenceIndex();
         logonTime = session.logonTime();
+        // TODO: lastSequenceResetTime = session.lastSequenceResetTime();
     }
 
-    void onLogon(final boolean resetSeqNum)
+    void onLogon(final boolean resetSeqNum, final long time)
     {
         // increment if we're going to reset the sequence number or if it's persistent
         // sequence numbers and it's the first time we're logging on.
         if (resetSeqNum || sequenceIndex == SessionContext.UNKNOWN_SEQUENCE_INDEX)
         {
-            onSequenceReset();
+            onSequenceReset(time);
         }
     }
 
@@ -84,6 +89,11 @@ class SessionContext
     long sessionId()
     {
         return sessionId;
+    }
+
+    public long lastSequenceResetTime()
+    {
+        return lastSequenceResetTime;
     }
 
     public boolean equals(final Object o)

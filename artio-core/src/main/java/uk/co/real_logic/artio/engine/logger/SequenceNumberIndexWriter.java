@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd., Monotonic Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,26 +20,37 @@ import io.aeron.protocol.DataHeaderFlyweight;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
+import org.agrona.LangUtil;
+import org.agrona.collections.CollectionUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.EpochClock;
+import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.ChecksumFramer;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
+import uk.co.real_logic.artio.engine.framer.FramerContext;
+import uk.co.real_logic.artio.engine.framer.WriteMetaDataResponse;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Predicate;
+import java.util.zip.CRC32;
 
 import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
 import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
+import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataSinceVersion;
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
 /**
@@ -48,15 +59,17 @@ import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEnc
  */
 public class SequenceNumberIndexWriter implements Index
 {
-    private static final boolean RUNNING_ON_WINDOWS = System.getProperty("os.name").startsWith("Windows");
+    public static final boolean RUNNING_ON_WINDOWS = System.getProperty("os.name").startsWith("Windows");
 
     private static final long MISSING_RECORD = -1L;
     private static final long UNINITIALISED = -1;
-    static final int SEQUENCE_NUMBER_OFFSET = 8;
+    static final int SEQUENCE_NUMBER_OFFSET = LastKnownSequenceNumberEncoder.sequenceNumberEncodingOffset();
+    static final int META_DATA_OFFSET = LastKnownSequenceNumberEncoder.metaDataPositionEncodingOffset();
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final ResetSequenceNumberDecoder resetSequenceNumber = new ResetSequenceNumberDecoder();
+    private final WriteMetaDataDecoder writeMetaData = new WriteMetaDataDecoder();
 
     private final MessageHeaderDecoder fileHeaderDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder fileHeaderEncoder = new MessageHeaderEncoder();
@@ -64,7 +77,16 @@ public class SequenceNumberIndexWriter implements Index
     private final LastKnownSequenceNumberDecoder lastKnownDecoder = new LastKnownSequenceNumberDecoder();
     private final Long2LongHashMap recordOffsets = new Long2LongHashMap(MISSING_RECORD);
 
+    // Meta data state
+    private final File metaDataLocation;
+    private final CRC32 checksum = new CRC32();
+    private final List<WriteMetaDataResponse> responsesToResend = new ArrayList<>();
+    private final Predicate<WriteMetaDataResponse> sendResponseFunc = this::sendResponse;
+    private final RandomAccessFile metaDataFile;
+    private byte[] metaDataWriteBuffer = new byte[0];
+
     private final SequenceNumberExtractor sequenceNumberExtractor;
+    private FramerContext framerContext;
     private final ChecksumFramer checksumFramer;
     private final AtomicBuffer inMemoryBuffer;
     private final ErrorHandler errorHandler;
@@ -93,7 +115,8 @@ public class SequenceNumberIndexWriter implements Index
         final int streamId,
         final RecordingIdLookup recordingIdLookup,
         final long indexFileStateFlushTimeoutInMs,
-        final EpochClock clock)
+        final EpochClock clock,
+        final String metaDataDir)
     {
         this.inMemoryBuffer = inMemoryBuffer;
         this.indexFile = indexFile;
@@ -124,6 +147,17 @@ public class SequenceNumberIndexWriter implements Index
                 errorHandler,
                 indexedPositionsOffset,
                 "SequenceNumberIndex");
+
+            if (metaDataDir != null)
+            {
+                metaDataLocation = metaDataFile(metaDataDir);
+                metaDataFile = openMetaDataFile(metaDataLocation);
+            }
+            else
+            {
+                metaDataLocation = null;
+                metaDataFile = null;
+            }
         }
         catch (final Exception e)
         {
@@ -131,6 +165,52 @@ public class SequenceNumberIndexWriter implements Index
             indexFile.close();
             throw e;
         }
+    }
+
+    private RandomAccessFile openMetaDataFile(final File metaDataLocation)
+    {
+        RandomAccessFile file = null;
+        try
+        {
+            file = new RandomAccessFile(metaDataLocation, "rw");
+            if (file.length() == 0)
+            {
+                writeMetaDataFileHeader(file);
+            }
+            else
+            {
+                final long magicNumber = file.readLong();
+                final int fileVersion = file.readInt();
+
+                if (magicNumber != META_DATA_MAGIC_NUMBER)
+                {
+                    throw new IllegalStateException("Invalid magic number in metadata file: " + magicNumber);
+                }
+
+                if (fileVersion < READABLE_META_DATA_FILE_VERSION)
+                {
+                    throw new IllegalStateException("Unreadable metadata file version: " + fileVersion);
+                }
+            }
+            return file;
+        }
+        catch (final IOException | IllegalStateException e)
+        {
+            if (file != null)
+            {
+                Exceptions.suppressingClose(file, e);
+            }
+            LangUtil.rethrowUnchecked(e);
+        }
+
+        return null;
+    }
+
+    private void writeMetaDataFileHeader(final RandomAccessFile file) throws IOException
+    {
+        file.writeLong(META_DATA_MAGIC_NUMBER);
+        file.writeInt(META_DATA_FILE_VERSION);
+        file.getFD().sync();
     }
 
     public void onFragment(
@@ -161,22 +241,9 @@ public class SequenceNumberIndexWriter implements Index
             {
                 case FixMessageEncoder.TEMPLATE_ID:
                 {
-                    messageFrame.wrap(buffer, offset, actingBlockLength, version);
-
-                    if (messageFrame.status() != MessageStatus.OK)
+                    if (!onFixMessage(buffer, offset, actingBlockLength, version))
                     {
                         return;
-                    }
-
-                    offset += actingBlockLength + 2;
-
-                    final long sessionId = messageFrame.session();
-
-                    final int msgSeqNum = sequenceNumberExtractor.extract(
-                        buffer, offset, messageFrame.bodyLength());
-                    if (msgSeqNum != NO_SEQUENCE_NUMBER)
-                    {
-                        saveRecord(msgSeqNum, sessionId);
                     }
                     break;
                 }
@@ -191,6 +258,19 @@ public class SequenceNumberIndexWriter implements Index
                 {
                     resetSequenceNumber.wrap(buffer, offset, actingBlockLength, version);
                     saveRecord(0, resetSequenceNumber.session());
+                    break;
+                }
+
+                case WriteMetaDataDecoder.TEMPLATE_ID:
+                {
+                    writeMetaData.wrap(buffer, offset, actingBlockLength, version);
+
+                    final int libraryId = writeMetaData.libraryId();
+                    final long sessionId = writeMetaData.session();
+                    final long correlationId = writeMetaData.correlationId();
+
+                    onWriteMetaData(libraryId, sessionId, correlationId);
+                    break;
                 }
             }
         }
@@ -199,6 +279,154 @@ public class SequenceNumberIndexWriter implements Index
 
         final long recordingId = recordingIdLookup.getRecordingId(aeronSessionId);
         positions.indexedUpTo(aeronSessionId, recordingId, endPosition);
+    }
+
+    private boolean onFixMessage(
+        final DirectBuffer buffer, final int start, final int actingBlockLength, final int version)
+    {
+        int offset = start;
+
+        messageFrame.wrap(buffer, offset, actingBlockLength, version);
+
+        if (messageFrame.status() != MessageStatus.OK)
+        {
+            return false;
+        }
+
+        offset += actingBlockLength;
+
+        final int metaDataLength;
+        if (version >= metaDataSinceVersion())
+        {
+            metaDataLength = messageFrame.metaDataLength();
+            resizeMetaDataBuffer(metaDataLength);
+            messageFrame.getMetaData(metaDataWriteBuffer, 0, metaDataLength);
+
+            offset += FixMessageDecoder.metaDataHeaderLength() + metaDataLength;
+        }
+        else
+        {
+            metaDataLength = 0;
+        }
+
+        offset += FixMessageDecoder.bodyHeaderLength();
+        final long sessionId = messageFrame.session();
+
+        final int msgSeqNum = sequenceNumberExtractor.extract(
+            buffer, offset, messageFrame.bodyLength());
+        if (msgSeqNum != NO_SEQUENCE_NUMBER)
+        {
+            final int position = saveRecord(msgSeqNum, sessionId);
+            if (metaDataLength > 0 && position > 0)
+            {
+                writeMetaDataToFile(position, metaDataWriteBuffer, metaDataLength);
+            }
+        }
+        return true;
+    }
+
+    private void resizeMetaDataBuffer(final int metaDataLength)
+    {
+        if (metaDataWriteBuffer.length < metaDataLength)
+        {
+            metaDataWriteBuffer = new byte[metaDataLength];
+        }
+    }
+
+    private void onWriteMetaData(final int libraryId, final long sessionId, final long correlationId)
+    {
+        if (framerContext == null || metaDataFile == null)
+        {
+            writeMetaDataResponse(libraryId, correlationId, MetaDataStatus.FILE_ERROR);
+
+            return;
+        }
+
+        final int sequenceNumberIndexFilePosition = (int)recordOffsets.get(sessionId);
+        if (sequenceNumberIndexFilePosition == MISSING_RECORD)
+        {
+            writeMetaDataResponse(libraryId, correlationId, MetaDataStatus.UNKNOWN_SESSION);
+
+            return;
+        }
+
+
+        final int metaDataLength = writeMetaData.metaDataLength();
+        resizeMetaDataBuffer(metaDataLength);
+        writeMetaData.getMetaData(metaDataWriteBuffer, 0, metaDataLength);
+
+        final MetaDataStatus status = writeMetaDataToFile(
+            sequenceNumberIndexFilePosition, metaDataWriteBuffer, metaDataLength);
+        writeMetaDataResponse(libraryId, correlationId, status);
+    }
+
+    private MetaDataStatus writeMetaDataToFile(
+        final int sequenceNumberIndexFilePosition, final byte[] metaDataValue, final int metaDataLength)
+    {
+        checksum.update(metaDataValue, 0, metaDataLength);
+        final long checksumValue = checksum.getValue();
+        checksum.reset();
+
+        final int oldMetaDataPosition = getMetaData(sequenceNumberIndexFilePosition);
+        try
+        {
+            if (oldMetaDataPosition == NO_META_DATA)
+            {
+                allocateMetaDataSlot(sequenceNumberIndexFilePosition, metaDataValue, checksumValue);
+            }
+            else
+            {
+                metaDataFile.seek(oldMetaDataPosition + SIZE_OF_META_DATA_CHECKSUM);
+                final int oldMetaDataLength = metaDataFile.readInt();
+                // Is there space to replace?
+                if (metaDataLength <= oldMetaDataLength)
+                {
+                    updateMetaDataFile(oldMetaDataPosition, checksumValue, metaDataValue);
+                }
+                else
+                {
+                    allocateMetaDataSlot(sequenceNumberIndexFilePosition, metaDataValue, checksumValue);
+                }
+            }
+
+            return MetaDataStatus.OK;
+        }
+        catch (final IOException e)
+        {
+            errorHandler.onError(e);
+
+            return MetaDataStatus.FILE_ERROR;
+        }
+    }
+
+    private void allocateMetaDataSlot(
+        final int sequenceNumberIndexFilePosition,
+        final byte[] metaDataValue,
+        final long checksumValue) throws IOException
+    {
+        final int metaDataFileInitialLength = (int)metaDataFile.length();
+        updateMetaDataFile(metaDataFileInitialLength, checksumValue, metaDataValue);
+        putMetaDataField(sequenceNumberIndexFilePosition, metaDataFileInitialLength);
+        hasSavedRecordSinceFileUpdate = true;
+    }
+
+    private void updateMetaDataFile(
+        final int position, final long checksumValue, final byte[] metaDataValue) throws IOException
+    {
+        metaDataFile.seek(position);
+        metaDataFile.writeLong(checksumValue);
+        metaDataFile.writeInt(metaDataValue.length);
+        metaDataFile.write(metaDataValue);
+        metaDataFile.getFD().sync();
+    }
+
+    private void writeMetaDataResponse(final int libraryId, final long correlationId, final MetaDataStatus status)
+    {
+        final WriteMetaDataResponse response = new WriteMetaDataResponse(libraryId, correlationId, status);
+        if (!sendResponse(response))
+        {
+            responsesToResend.add(response);
+        }
     }
 
     @Override
@@ -214,13 +442,37 @@ public class SequenceNumberIndexWriter implements Index
             }
         }
 
-        return 0;
+        return CollectionUtil.removeIf(responsesToResend, sendResponseFunc);
+    }
+
+    private boolean sendResponse(final WriteMetaDataResponse response)
+    {
+        return framerContext.offer(response);
     }
 
     void resetSequenceNumbers()
     {
         inMemoryBuffer.setMemory(0, indexedPositionsOffset, (byte)0);
         initialiseBlankBuffer();
+        recordOffsets.clear();
+        resetMetaDataFile();
+    }
+
+    private void resetMetaDataFile()
+    {
+        if (metaDataLocation != null)
+        {
+            try
+            {
+                metaDataFile.seek(0);
+                metaDataFile.setLength(META_DATA_FILE_HEADER_LENGTH);
+                writeMetaDataFileHeader(metaDataFile);
+            }
+            catch (final IOException e)
+            {
+                errorHandler.onError(e);
+            }
+        }
     }
 
     private void checkTermRoll(final DirectBuffer buffer, final int offset, final long endPosition, final int length)
@@ -317,6 +569,18 @@ public class SequenceNumberIndexWriter implements Index
         {
             indexFile.close();
             writableFile.close();
+
+            if (metaDataFile != null)
+            {
+                try
+                {
+                    metaDataFile.close();
+                }
+                catch (final IOException e)
+                {
+                    errorHandler.onError(e);
+                }
+            }
         }
     }
 
@@ -326,7 +590,7 @@ public class SequenceNumberIndexWriter implements Index
         new IndexedPositionReader(positions.buffer()).readLastPosition(consumer);
     }
 
-    private void saveRecord(final int newSequenceNumber, final long sessionId)
+    private int saveRecord(final int newSequenceNumber, final long sessionId)
     {
         int position = (int)recordOffsets.get(sessionId);
         if (position == MISSING_RECORD)
@@ -339,7 +603,7 @@ public class SequenceNumberIndexWriter implements Index
                 {
                     errorHandler.onError(new IllegalStateException(
                         "Sequence Number Index out of space, can't claim slot for " + sessionId));
-                    return;
+                    return position;
                 }
 
                 lastKnownDecoder.wrap(inMemoryBuffer, position, RECORD_SIZE, SCHEMA_VERSION);
@@ -347,13 +611,12 @@ public class SequenceNumberIndexWriter implements Index
                 {
                     createNewRecord(newSequenceNumber, sessionId, position);
                     hasSavedRecordSinceFileUpdate = true;
-                    return;
+                    return position;
                 }
                 else if (lastKnownDecoder.sessionId() == sessionId)
                 {
-                    updateSequenceNumber(position, newSequenceNumber);
-                    hasSavedRecordSinceFileUpdate = true;
-                    return;
+                    updateSequenceNumber(newSequenceNumber, position);
+                    return position;
                 }
 
                 position += RECORD_SIZE;
@@ -361,9 +624,35 @@ public class SequenceNumberIndexWriter implements Index
         }
         else
         {
-            updateSequenceNumber(position, newSequenceNumber);
-            hasSavedRecordSinceFileUpdate = true;
+            updateSequenceNumber(newSequenceNumber, position);
+            return position;
         }
+    }
+
+    private void updateSequenceNumber(final int newSequenceNumber, final int position)
+    {
+        final int oldSequenceNumber = getSequenceNumber(position);
+        putSequenceNumber(position, newSequenceNumber);
+        // When sequence number resets then old metadata has expired
+        if (oldSequenceNumber > newSequenceNumber)
+        {
+            final int oldMetaDataPosition = getMetaData(position);
+            if (oldMetaDataPosition != NO_META_DATA)
+            {
+                putMetaDataField(position, NO_META_DATA);
+                try
+                {
+                    metaDataFile.seek(oldMetaDataPosition + SIZE_OF_META_DATA_CHECKSUM);
+                    final int metaDataLength = metaDataFile.readInt();
+                    updateMetaDataFile(oldMetaDataPosition, 0, new byte[metaDataLength]);
+                }
+                catch (final IOException e)
+                {
+                    errorHandler.onError(e);
+                }
+            }
+        }
+        hasSavedRecordSinceFileUpdate = true;
     }
 
     private void createNewRecord(
@@ -375,7 +664,8 @@ public class SequenceNumberIndexWriter implements Index
         lastKnownEncoder
             .wrap(inMemoryBuffer, position)
             .sessionId(sessionId);
-        updateSequenceNumber(position, sequenceNumber);
+        putSequenceNumber(position, sequenceNumber);
+        putMetaDataField(position, NO_META_DATA);
     }
 
     private void initialiseBuffer()
@@ -458,10 +748,33 @@ public class SequenceNumberIndexWriter implements Index
         inMemoryBuffer.putBytes(0, fileBuffer, 0, fileCapacity);
     }
 
-    private void updateSequenceNumber(
+    private void putSequenceNumber(
         final int recordOffset,
         final int value)
     {
         inMemoryBuffer.putIntOrdered(recordOffset + SEQUENCE_NUMBER_OFFSET, value);
+    }
+
+    private int getSequenceNumber(final int recordOffset)
+    {
+        return inMemoryBuffer.getIntVolatile(recordOffset + SEQUENCE_NUMBER_OFFSET);
+    }
+
+    private void putMetaDataField(
+        final int recordOffset,
+        final int value)
+    {
+        inMemoryBuffer.putIntOrdered(recordOffset + META_DATA_OFFSET, value);
+    }
+
+    private int getMetaData(
+        final int recordOffset)
+    {
+        return inMemoryBuffer.getIntVolatile(recordOffset + META_DATA_OFFSET);
+    }
+
+    public void framerContext(final FramerContext framerContext)
+    {
+        this.framerContext = framerContext;
     }
 }

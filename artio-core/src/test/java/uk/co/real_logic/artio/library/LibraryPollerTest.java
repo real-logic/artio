@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.library;
 
 import io.aeron.Subscription;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,6 +29,7 @@ import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
+import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.SessionStatus;
 import uk.co.real_logic.artio.messages.SlowStatus;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -90,7 +92,7 @@ public class LibraryPollerTest
         when(counters.receivedMsgSeqNo(anyLong())).thenReturn(mock(AtomicCounter.class));
         when(counters.sentMsgSeqNo(anyLong())).thenReturn(mock(AtomicCounter.class));
 
-        when(sessionAcquireHandler.onSessionAcquired(session.capture(), anyBoolean())).thenReturn(sessionHandler);
+        when(sessionAcquireHandler.onSessionAcquired(session.capture(), any())).thenReturn(sessionHandler);
     }
 
     @Test
@@ -380,8 +382,11 @@ public class LibraryPollerTest
             "", address,
             "",
             "",
-            FixDictionary.findDefault()
-        );
+            FixDictionary.findDefault(),
+            MetaDataStatus.NO_META_DATA,
+            new UnsafeBuffer(new byte[0]),
+            0,
+            0);
     }
 
     private SessionsDecoder hasOtherSessionId()

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2018 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.session;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -51,7 +52,6 @@ public class InternalSession extends Session
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
-        final String beginString,
         final SessionCustomisationStrategy customisationStrategy)
     {
         super(
@@ -71,7 +71,6 @@ public class InternalSession extends Session
             reasonableTransmissionTimeInMs,
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
-            beginString,
             customisationStrategy);
     }
 
@@ -190,4 +189,13 @@ public class InternalSession extends Session
         return super.lastResentMsgSeqNo();
     }
 
+    public void fixDictionary(final FixDictionary fixDictionary)
+    {
+        super.fixDictionary(fixDictionary);
+    }
+
+    public void setupSession(final long sessionId, final CompositeKey sessionKey)
+    {
+        super.setupSession(sessionId, sessionKey);
+    }
 }

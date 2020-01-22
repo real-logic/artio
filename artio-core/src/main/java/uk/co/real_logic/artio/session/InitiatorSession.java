@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,6 @@ public class InitiatorSession extends InternalSession
         final long reasonableTransmissionTimeInMs,
         final MutableAsciiBuffer asciiBuffer,
         final boolean enableLastMsgSeqNumProcessed,
-        final String beginString,
         final SessionCustomisationStrategy customisationStrategy)
     {
         super(
@@ -64,7 +63,6 @@ public class InitiatorSession extends InternalSession
             reasonableTransmissionTimeInMs,
             asciiBuffer,
             enableLastMsgSeqNumProcessed,
-            beginString,
             customisationStrategy);
         this.resetSeqNum = resetSeqNum;
     }

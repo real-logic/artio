@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2017 Real Logic Ltd.
+ * Copyright 2015-2020 Real Logic Limited.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
 import static uk.co.real_logic.artio.FixMatchers.isConnected;
 import static uk.co.real_logic.artio.Reply.State.COMPLETED;
 import static uk.co.real_logic.artio.Timing.DEFAULT_TIMEOUT_IN_MS;
@@ -140,7 +140,7 @@ public class TestSystem
         {
             poll();
 
-            return otfAcceptor.hasReceivedMessage(messageType).findFirst();
+            return otfAcceptor.receivedMessage(messageType).findFirst();
         },
         Timing.DEFAULT_TIMEOUT_IN_MS);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2019 Real Logic Ltd, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.session;
 
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 
@@ -26,6 +27,8 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
  */
 public interface SessionProxy
 {
+    void fixDictionary(FixDictionary dictionary);
+
     void setupSession(long sessionId, CompositeKey sessionKey);
 
     long sendResendRequest(
