@@ -1107,7 +1107,7 @@ public class Session implements AutoCloseable
                 // Other cases handled by nextSequenceIndex()
                 if (lastReceivedMsgSeqNum == 0)
                 {
-                    lastSequenceResetTime = logonTime;
+                    lastSequenceResetTime(logonTime);
                 }
                 lastReceivedMsgSeqNum(msgSeqNum);
 
@@ -1186,7 +1186,7 @@ public class Session implements AutoCloseable
             lastSentMsgSeqNum(INITIAL_SEQUENCE_NUMBER);
             lastReceivedMsgSeqNum(msgSeqNo);
             lastLogonTime(logonTime);
-            lastSequenceResetTime = logonTime;
+            lastSequenceResetTime(logonTime);
         }
         else
         {
@@ -1207,7 +1207,7 @@ public class Session implements AutoCloseable
         final long currentTime)
     {
         setupCompleteLogonState(logonTime, heartbeatInterval, username, password, currentTime);
-        lastSequenceResetTime = logonTime;
+        lastSequenceResetTime(logonTime);
     }
 
     private void setupCompleteLogonState(

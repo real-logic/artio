@@ -371,6 +371,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, OK);
 
         assertSequenceIndicesAre(0);
+        assertConnectTimes(initiatingSession);
     }
 
     @Test
@@ -390,6 +391,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, OK);
 
         assertSequenceIndicesAre(0);
+        assertConnectTimes(acceptingSession);
     }
 
     @Test
@@ -429,6 +431,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             sessionId, lastReceivedMsgSeqNum, sequenceIndex,
             expectedStatus);
 
+        assertConnectTimes(initiatingSession);
+
         if (expectedStatus == OK)
         {
             final FixMessage replayedExampleMessage = acceptingOtfAcceptor.messages().get(1);
@@ -441,6 +445,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         acceptingSession = acceptingHandler.lastSession();
         acceptingHandler.resetSession();
+        assertConnectTimes(acceptingSession);
 
         // Send messages both ways to ensure that the session is setup
         messagesCanBeExchanged(acceptingSession, acceptingOtfAcceptor);
