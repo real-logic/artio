@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited.
+ * Copyright 2015-2020 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +29,35 @@ public interface FixMessagePredicate
 
     default FixMessagePredicate and(final FixMessagePredicate other)
     {
-        return (message) -> test(message) && other.test(message);
+        return (message) ->
+        {
+            final int limit = message.limit();
+
+            if (!test(message))
+            {
+                return false;
+            }
+
+            message.limit(limit);
+
+            return other.test(message);
+        };
     }
 
     default FixMessagePredicate or(final FixMessagePredicate other)
     {
-        return (message) -> test(message) || other.test(message);
+        return (message) ->
+        {
+            final int limit = message.limit();
+
+            if (test(message))
+            {
+                return true;
+            }
+
+            message.limit(limit);
+
+            return other.test(message);
+        };
     }
 }
