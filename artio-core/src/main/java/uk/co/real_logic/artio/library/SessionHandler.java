@@ -80,7 +80,6 @@ public interface SessionHandler
 
     /**
      * Invoked When a client resets a session to the initial sequence number via a logon whilst still connected.
-     * This is only called if there is actually a logon time available.
      *
      * @param session The session that has just started.
      */

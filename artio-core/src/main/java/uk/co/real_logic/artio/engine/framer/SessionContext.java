@@ -32,20 +32,20 @@ class SessionContext
     // session or not.
     private int sequenceIndex;
 
-    private long logonTime;
+    private long lastLogonTime;
     private long lastSequenceResetTime;
 
     SessionContext(
         final long sessionId,
         final int sequenceIndex,
-        final long logonTime,
+        final long lastLogonTime,
         final long lastSequenceResetTime,
         final SessionContexts sessionContexts,
         final int filePosition)
     {
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
-        this.logonTime = logonTime;
+        this.lastLogonTime = lastLogonTime;
         this.lastSequenceResetTime = lastSequenceResetTime;
         this.sessionContexts = sessionContexts;
         this.filePosition = filePosition;
@@ -55,29 +55,40 @@ class SessionContext
     {
         lastSequenceResetTime = resetTime;
         sequenceIndex++;
-        sessionContexts.updateSavedData(filePosition, sequenceIndex, logonTime, resetTime);
+        save();
     }
 
     void updateAndSaveFrom(final Session session)
     {
         updateFrom(session);
-        sessionContexts.updateSavedData(filePosition, sequenceIndex, logonTime, lastSequenceResetTime);
+        save();
+    }
+
+    private void save()
+    {
+        sessionContexts.updateSavedData(filePosition, sequenceIndex, lastLogonTime, lastSequenceResetTime);
     }
 
     void updateFrom(final Session session)
     {
         sequenceIndex = session.sequenceIndex();
-        logonTime = session.lastLogonTime();
+        lastLogonTime = session.lastLogonTime();
         lastSequenceResetTime = session.lastSequenceResetTime();
     }
 
     void onLogon(final boolean resetSeqNum, final long time)
     {
+        lastLogonTime = time;
         // increment if we're going to reset the sequence number or if it's persistent
         // sequence numbers and it's the first time we're logging on.
         if (resetSeqNum || sequenceIndex == SessionContext.UNKNOWN_SEQUENCE_INDEX)
         {
             onSequenceReset(time);
+        }
+        else
+        {
+            // onSequenceReset also saves.
+            save();
         }
     }
 
@@ -94,6 +105,11 @@ class SessionContext
     public long lastSequenceResetTime()
     {
         return lastSequenceResetTime;
+    }
+
+    public long lastLogonTime()
+    {
+        return lastLogonTime;
     }
 
     public boolean equals(final Object o)

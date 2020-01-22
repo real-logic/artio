@@ -45,6 +45,7 @@ import java.util.*;
 import java.util.function.Function;
 
 import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
+import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.DUPLICATE_SESSION;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.UNKNOWN_SESSION;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.resetSequenceNumbersUponLogon;
@@ -75,6 +76,8 @@ class GatewaySessions
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
     private final Clock clock;
 
+    // Initialised after logon processed.
+    private SessionContext sessionContext;
     private ErrorHandler errorHandler;
 
     private final Function<FixDictionary, UserRequestExtractor> newUserRequestExtractor =
@@ -300,7 +303,10 @@ class GatewaySessions
         final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
         final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
         gatewaySession.acceptorSequenceNumbers(lastSentSequenceNumber, lastReceivedSequenceNumber);
-
+        if (lastReceivedSequenceNumber != UNK_SESSION)
+        {
+            gatewaySession.lastSequenceResetTime(sessionContext.lastSequenceResetTime());
+        }
         return true;
     }
 
@@ -604,7 +610,7 @@ class GatewaySessions
 
             final SessionHeaderDecoder header = logon.header();
             final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(header);
-            final SessionContext sessionContext = sessionContexts.onLogon(compositeKey);
+            sessionContext = sessionContexts.onLogon(compositeKey);
 
             if (sessionContext == DUPLICATE_SESSION)
             {
@@ -628,7 +634,8 @@ class GatewaySessions
             // See Framer.handoverNewConnectionToLibrary for sole library mode equivalent
             if (resetSeqNum)
             {
-                session.acceptorSequenceNumbers(SessionInfo.UNK_SESSION, SessionInfo.UNK_SESSION);
+                session.acceptorSequenceNumbers(UNK_SESSION, UNK_SESSION);
+                session.lastLogonWasSequenceReset();
                 state = AuthenticationState.ACCEPTED;
             }
             else

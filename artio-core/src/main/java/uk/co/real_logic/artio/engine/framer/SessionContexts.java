@@ -141,7 +141,7 @@ public class SessionContexts
                 }
             }
             final int sequenceIndex = sessionIdDecoder.sequenceIndex();
-            final long logonTime = sessionIdDecoder.logonTime();
+            final long lastLogonTime = sessionIdDecoder.logonTime();
             final long lastSequenceResetTime = sessionIdDecoder.lastSequenceResetTime();
             final int compositeKeyLength = sessionIdDecoder.compositeKeyLength();
             final CompositeKey compositeKey = idStrategy.load(
@@ -153,7 +153,7 @@ public class SessionContexts
 
             compositeToContext.put(compositeKey,
                 new SessionContext(
-                sessionId, sequenceIndex, logonTime, lastSequenceResetTime, this, filePosition));
+                sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this, filePosition));
             counter = Math.max(counter, sessionId + 1);
 
             filePosition += BLOCK_LENGTH + compositeKeyLength;

@@ -147,7 +147,7 @@ public class SlowConsumerTest
     {
         sessionBecomesSlow();
 
-        assertEquals(SessionReplyStatus.OK, releaseToGateway(library, session, testSystem));
+        assertEquals(SessionReplyStatus.OK, releaseToEngine(library, session, testSystem));
 
         session = acquireSession(handler, library, session.id(), testSystem);
 

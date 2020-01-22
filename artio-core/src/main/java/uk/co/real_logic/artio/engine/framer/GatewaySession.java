@@ -293,7 +293,7 @@ class GatewaySession implements SessionInfo
 
     void lastLogonWasSequenceReset()
     {
-        lastSequenceResetTime = lastLogonTime;
+        lastSequenceResetTime(lastLogonTime);
     }
 
     static int adjustLastSequenceNumber(final int lastSequenceNumber)
@@ -405,13 +405,26 @@ class GatewaySession implements SessionInfo
         return lastSequenceResetTime;
     }
 
+    void lastSequenceResetTime(final long lastSequenceResetTime)
+    {
+        this.lastSequenceResetTime = lastSequenceResetTime;
+        if (session != null)
+        {
+            session.lastSequenceResetTime(lastSequenceResetTime);
+        }
+    }
+
     long lastLogonTime()
     {
         return lastLogonTime;
     }
 
-    void lastLogonTime(final long logonTime)
+    void lastLogonTime(final long lastLogonTime)
     {
-        this.lastLogonTime = logonTime;
+        this.lastLogonTime = lastLogonTime;
+        if (session != null)
+        {
+            session.lastLogonTime(lastLogonTime);
+        }
     }
 }

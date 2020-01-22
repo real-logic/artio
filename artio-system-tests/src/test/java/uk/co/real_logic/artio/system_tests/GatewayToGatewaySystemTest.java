@@ -92,7 +92,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     public void messagesCanBeSentFromInitiatorToAcceptor()
     {
         assertLastLogonEquals(1, 0);
-        assertConnectTimes(initiatingSession);
+        assertSequenceResetTimeAtLatestLogon(initiatingSession);
 
         messagesCanBeExchanged();
 
@@ -104,7 +104,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
         assertLastLogonEquals(1, 0);
-        assertConnectTimes(acceptingSession);
+        assertSequenceResetTimeAtLatestLogon(acceptingSession);
 
         messagesCanBeExchanged();
 
@@ -312,6 +312,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         clearMessages();
 
         wireSessions();
+        assertSequenceResetTimeAtLatestLogon(initiatingSession);
+        assertSequenceResetTimeAtLatestLogon(acceptingSession);
 
         assertSequenceFromInitToAcceptAt(1, 1);
 
@@ -362,7 +364,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final long sessionId = initiatingSession.id();
 
-        releaseToGateway(initiatingLibrary, initiatingSession, testSystem);
+        releaseToEngine(initiatingLibrary, initiatingSession, testSystem);
 
         libraryNotifiedThatGatewayOwnsSession(initiatingHandler, sessionId);
 
@@ -371,7 +373,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, OK);
 
         assertSequenceIndicesAre(0);
-        assertConnectTimes(initiatingSession);
+        assertSequenceResetTimeAtLatestLogon(initiatingSession);
     }
 
     @Test
@@ -382,7 +384,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final long sessionId = acceptingSession.id();
         acceptingHandler.clearSessionExistsInfos();
 
-        releaseToGateway(acceptingLibrary, acceptingSession, testSystem);
+        releaseToEngine(acceptingLibrary, acceptingSession, testSystem);
 
         libraryNotifiedThatGatewayOwnsSession(acceptingHandler, sessionId);
 
@@ -391,7 +393,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, OK);
 
         assertSequenceIndicesAre(0);
-        assertConnectTimes(acceptingSession);
+        assertSequenceResetTimeAtLatestLogon(acceptingSession);
     }
 
     @Test
@@ -431,7 +433,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             sessionId, lastReceivedMsgSeqNum, sequenceIndex,
             expectedStatus);
 
-        assertConnectTimes(initiatingSession);
+        assertSequenceResetTimeAtLatestLogon(initiatingSession);
 
         if (expectedStatus == OK)
         {
@@ -445,7 +447,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         acceptingSession = acceptingHandler.lastSession();
         acceptingHandler.resetSession();
-        assertConnectTimes(acceptingSession);
+        assertSequenceResetTimeAtLatestLogon(acceptingSession);
 
         // Send messages both ways to ensure that the session is setup
         messagesCanBeExchanged(acceptingSession, acceptingOtfAcceptor);

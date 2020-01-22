@@ -61,6 +61,6 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
         assertFalse("should not receive session exists callback in sole library mode",
             acceptingHandler.hasSeenSession());
 
-        assertConnectTimes(acceptingSession);
+        assertSequenceResetTimeAtLatestLogon(acceptingSession);
     }
 }

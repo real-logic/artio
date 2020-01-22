@@ -189,7 +189,7 @@ public final class SystemTestUtil
             });
     }
 
-    static SessionReplyStatus releaseToGateway(
+    static SessionReplyStatus releaseToEngine(
         final FixLibrary library, final Session session, final TestSystem testSystem)
     {
         final Reply<SessionReplyStatus> reply = testSystem.awaitReply(

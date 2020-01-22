@@ -28,6 +28,7 @@ import org.agrona.collections.Int2ObjectHashMap;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.collections.Long2LongHashMap.KeyIterator;
 import org.agrona.concurrent.*;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LivenessDetector;
 import uk.co.real_logic.artio.Pressure;
@@ -107,6 +108,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private final TcpChannelSupplier channelSupplier;
     private final EpochClock epochClock;
+    private final Clock clock;
     private final Timer outboundTimer;
     private final Timer sendTimer;
 
@@ -190,6 +192,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final RecordingCoordinator recordingCoordinator)
     {
         this.epochClock = epochClock;
+        this.clock = configuration.clock();
         this.outboundTimer = outboundTimer;
         this.sendTimer = sendTimer;
         this.configuration = configuration;
@@ -788,7 +791,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             DebugLogger.log(FIX_CONNECTION,
                 "Initiating session %s from library %s%n", sessionContext.sessionId(), library.libraryId());
             final long connectionId = newConnectionId();
-            sessionContext.onLogon(resetSequenceNumber || sequenceNumberType == TRANSIENT, epochClock.time());
+            sessionContext.onLogon(resetSequenceNumber || sequenceNumberType == TRANSIENT, clock.time());
             final long sessionId = sessionContext.sessionId();
             final GatewaySession gatewaySession = setupConnection(
                 channel,
@@ -802,6 +805,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 sendRedundantResendRequests,
                 enableLastMsgSeqNumProcessed,
                 FixDictionary.of(fixDictionary));
+            gatewaySession.lastSequenceResetTime(sessionContext.lastSequenceResetTime());
+            gatewaySession.lastLogonTime(sessionContext.lastLogonTime());
             library.addSession(gatewaySession);
 
             handoverNewConnectionToLibrary(
@@ -1973,6 +1978,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     if (lastReceivedSequenceNumber == 0)
                     {
                         gatewaySession.lastLogonWasSequenceReset();
+                    }
+                    else
+                    {
+                        gatewaySession.lastSequenceResetTime(sessionContext.lastSequenceResetTime());
                     }
                 }
 

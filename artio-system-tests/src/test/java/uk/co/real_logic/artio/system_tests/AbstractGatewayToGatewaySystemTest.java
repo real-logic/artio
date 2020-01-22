@@ -375,7 +375,7 @@ public class AbstractGatewayToGatewaySystemTest
         final long connectionId = session.connectionId();
         final long sessionId = session.id();
 
-        final SessionReplyStatus status = releaseToGateway(library, session, testSystem);
+        final SessionReplyStatus status = releaseToEngine(library, session, testSystem);
 
         assertEquals(OK, status);
         assertEquals(SessionState.DISABLED, session.state());
@@ -421,7 +421,7 @@ public class AbstractGatewayToGatewaySystemTest
         final int lastReceivedMsgSeqNum = session.lastReceivedMsgSeqNum();
         final int sequenceIndex = session.sequenceIndex();
 
-        releaseToGateway(library, session, testSystem);
+        releaseToEngine(library, session, testSystem);
 
         messagesCanBeExchanged(otherSession, otherAcceptor);
 
@@ -453,8 +453,10 @@ public class AbstractGatewayToGatewaySystemTest
             .resetSeqNum(resetSeqNum)
             .build();
 
+        connectTimeRange = new TimeRange();
         final Reply<Session> reply = initiatingLibrary.initiate(config);
         testSystem.awaitReply(reply);
+        connectTimeRange.end();
         return reply;
     }
 
@@ -486,7 +488,7 @@ public class AbstractGatewayToGatewaySystemTest
         assertEquals(lastLogonSequenceIndex, acceptingHandler.lastLogonSequenceIndex());
     }
 
-    void assertConnectTimes(final Session session)
+    void assertSequenceResetTimeAtLatestLogon(final Session session)
     {
         final long lastLogonTime = session.lastLogonTime();
         final long lastSequenceResetTime = session.lastSequenceResetTime();
