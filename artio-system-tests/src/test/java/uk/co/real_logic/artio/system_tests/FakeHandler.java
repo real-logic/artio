@@ -88,10 +88,13 @@ public class FakeHandler
         final int sequenceIndex,
         final long messageType,
         final long timestampInNs,
-        final long position)
+        final long position,
+        final OnMessageInfo messageInfo)
     {
         parser.onMessage(buffer, offset, length);
-        acceptor.lastReceivedMessage().sequenceIndex(sequenceIndex);
+        final FixMessage parsedMessage = acceptor.lastReceivedMessage();
+        parsedMessage.sequenceIndex(sequenceIndex);
+        parsedMessage.status(messageInfo.status());
         acceptor.forSession(session);
 
         if (copyMessages)

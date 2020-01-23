@@ -40,7 +40,8 @@ import java.util.List;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.IntSupplier;
 
-import static org.agrona.BitUtil.*;
+import static org.agrona.BitUtil.SIZE_OF_INT;
+import static org.agrona.BitUtil.SIZE_OF_LONG;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
@@ -52,6 +53,7 @@ import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
+import static uk.co.real_logic.artio.messages.MessageStatus.CATCHUP_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
 import static uk.co.real_logic.artio.messages.SessionState.DISABLED;
@@ -444,6 +446,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             assertEquals(0, replayedExampleMessage.sequenceIndex());
             assertEquals("Y", replayedExampleMessage.possDup());
             assertEquals(testReqID, replayedExampleMessage.testReqId());
+            assertEquals(CATCHUP_REPLAY, replayedExampleMessage.status());
         }
 
         acceptingSession = acceptingHandler.lastSession();
@@ -1103,6 +1106,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final FixMessage testRequest =
             acceptingOtfAcceptor.receivedMessage(TEST_REQUEST_MESSAGE_AS_STR).findFirst().get();
         assertEquals("Y", testRequest.possDup());
+        assertEquals(CATCHUP_REPLAY, testRequest.status());
     }
 
     @Test

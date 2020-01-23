@@ -29,6 +29,7 @@ import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_LOGON;
 
 class SessionSubscriber implements AutoCloseable, SessionProcessHandler
 {
+    private final OnMessageInfo info = new OnMessageInfo();
     private final SessionParser parser;
     private final InternalSession session;
     private final Timer receiveTimer;
@@ -68,6 +69,9 @@ class SessionSubscriber implements AutoCloseable, SessionProcessHandler
     {
         final long now = receiveTimer.recordSince(timestamp);
 
+        final OnMessageInfo info = this.info;
+        info.status(status);
+
         try
         {
             switch (status)
@@ -86,7 +90,8 @@ class SessionSubscriber implements AutoCloseable, SessionProcessHandler
                             sequenceIndex,
                             messageType,
                             timestamp,
-                            position);
+                            position,
+                            info);
 
                         if (handlerAction != ABORT)
                         {
@@ -113,7 +118,8 @@ class SessionSubscriber implements AutoCloseable, SessionProcessHandler
                             sequenceIndex,
                             messageType,
                             timestamp,
-                            position);
+                            position,
+                            info);
 
                         if (handlerAction == ABORT)
                         {
@@ -137,7 +143,8 @@ class SessionSubscriber implements AutoCloseable, SessionProcessHandler
                         sequenceIndex,
                         messageType,
                         timestamp,
-                        position);
+                        position,
+                        info);
 
                 default:
                     return CONTINUE;

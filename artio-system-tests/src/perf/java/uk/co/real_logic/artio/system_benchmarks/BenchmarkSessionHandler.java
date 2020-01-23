@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.system_benchmarks;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.library.SessionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.session.Session;
@@ -34,7 +35,8 @@ public final class BenchmarkSessionHandler implements SessionHandler
         final int sequenceIndex,
         final long messageType,
         final long timestampInNs,
-        final long position)
+        final long position,
+        final OnMessageInfo messageInfo)
     {
         return CONTINUE;
     }

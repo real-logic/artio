@@ -38,6 +38,7 @@ public interface SessionHandler
      * @param messageType the FIX msgType field, encoded as an int.
      * @param timestampInNs the time of the message in nanoseconds.
      * @param position the position in the Aeron stream at the end of the message.
+     * @param messageInfo additional information about the message.
      * @return an action to indicate the correct back pressure behaviour.
      */
     Action onMessage(
@@ -49,7 +50,8 @@ public interface SessionHandler
         int sequenceIndex,
         long messageType,
         long timestampInNs,
-        long position);
+        long position,
+        OnMessageInfo messageInfo);
 
     /**
      * This session has timed out on this library. It is still connected, but will
