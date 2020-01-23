@@ -54,7 +54,7 @@ public class InitiatorSessionTest extends AbstractSessionTest
             false,
             SessionCustomisationStrategy.none());
         session.fixDictionary(makeDictionary());
-        session.logonListener(mockLogonListener);
+        session.sessionProcessHandler(mockLogonListener);
     }
 
     @Test

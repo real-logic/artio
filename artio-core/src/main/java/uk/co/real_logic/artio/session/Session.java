@@ -20,10 +20,7 @@ import org.agrona.DirectBuffer;
 import org.agrona.Verify;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
-import uk.co.real_logic.artio.Clock;
-import uk.co.real_logic.artio.CommonConfiguration;
-import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.Pressure;
+import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
@@ -31,6 +28,7 @@ import uk.co.real_logic.artio.dictionary.generation.CodecUtil;
 import uk.co.real_logic.artio.fields.RejectReason;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -163,7 +161,7 @@ public class Session
 
     private boolean incorrectBeginString = false;
 
-    private SessionLogonListener logonListener;
+    private SessionProcessHandler sessionProcessHandler;
 
     private int logoutRejectReason = NO_LOGOUT_REJECT_REASON;
 
@@ -746,6 +744,22 @@ public class Session
         return beginString;
     }
 
+    public Reply<ReplayMessagesStatus> replayReceivedMessages(
+        final int replayFromSequenceNumber,
+        final int replayFromSequenceIndex,
+        final int replayToSequenceNumber,
+        final int replayToSequenceIndex,
+        final long timeout)
+    {
+        return sessionProcessHandler.replayReceivedMessages(
+            id,
+            replayFromSequenceNumber,
+            replayFromSequenceIndex,
+            replayToSequenceNumber,
+            replayToSequenceIndex,
+            timeout);
+    }
+
     // ---------- END OF PUBLIC API ----------
 
     // ---------- Event Handlers & Logic ----------
@@ -1214,9 +1228,9 @@ public class Session
         username(username);
         password(password);
 
-        if (logonListener != null)
+        if (sessionProcessHandler != null)
         {
-            logonListener.onLogon(this);
+            sessionProcessHandler.onLogon(this);
         }
     }
 
@@ -1727,9 +1741,9 @@ public class Session
         return UNKNOWN == origSendingTime ? sendingTime : origSendingTime;
     }
 
-    void logonListener(final SessionLogonListener logonListener)
+    void sessionProcessHandler(final SessionProcessHandler sessionProcessHandler)
     {
-        this.logonListener = logonListener;
+        this.sessionProcessHandler = sessionProcessHandler;
     }
 
     void logoutRejectReason(final int logoutRejectReason)

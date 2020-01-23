@@ -92,9 +92,9 @@ public class InternalSession extends Session implements AutoCloseable
         super.libraryConnected(libraryConnected);
     }
 
-    public void logonListener(final SessionLogonListener logonListener)
+    public void sessionProcessHandler(final SessionProcessHandler sessionProcessHandler)
     {
-        super.logonListener(logonListener);
+        super.sessionProcessHandler(sessionProcessHandler);
     }
 
     public void address(final String connectedHost, final int connectedPort)

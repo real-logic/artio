@@ -93,4 +93,6 @@ public interface LibraryEndPointHandler
         DirectBuffer srcBuffer,
         int srcOffset,
         int srcLength);
+
+    Action onReplayMessagesReply(int libraryId, long replyToId, ReplayMessagesStatus status);
 }

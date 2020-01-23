@@ -29,6 +29,7 @@ import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
+import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
@@ -1085,6 +1086,37 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acquireAcceptingSession();
 
         assertNoMetaData();
+    }
+
+    @Test
+    public void shouldReplayReceivedMessagesForSession()
+    {
+        acquireAcceptingSession();
+        messagesCanBeExchanged();
+
+        clearMessages();
+
+        final Reply<ReplayMessagesStatus> reply = acceptingSession.replayReceivedMessages(
+            1, 0, 2, 0, 5_000L);
+        testSystem.awaitCompletedReplies(reply);
+
+        final FixMessage testRequest =
+            acceptingOtfAcceptor.receivedMessage(TEST_REQUEST_MESSAGE_AS_STR).findFirst().get();
+        assertEquals("Y", testRequest.possDup());
+    }
+
+    @Test
+    public void shouldNotifyOfMissingMessagesForReplayReceivedMessages()
+    {
+        acquireAcceptingSession();
+
+        clearMessages();
+
+        final Reply<ReplayMessagesStatus> reply = acceptingSession.replayReceivedMessages(
+            1, 100, 2, 100, 5_000L);
+        testSystem.awaitCompletedReplies(reply);
+
+        assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
     }
 
     private void assertUnknownSessionMetaData(final long sessionId)

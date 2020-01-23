@@ -92,6 +92,10 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + ReadMetaDataEncoder.BLOCK_LENGTH;
     private static final int READ_META_DATA_REPLY_LENGTH =
         HEADER_LENGTH + ReadMetaDataReplyEncoder.BLOCK_LENGTH + ReadMetaDataReplyEncoder.metaDataHeaderLength();
+    private static final int REPLAY_MESSAGES_LENGTH =
+        HEADER_LENGTH + ReplayMessagesEncoder.BLOCK_LENGTH;
+    private static final int REPLAY_MESSAGES_REPLY_LENGTH =
+        HEADER_LENGTH + ReplayMessagesReplyEncoder.BLOCK_LENGTH;
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -122,6 +126,8 @@ public class GatewayPublication extends ClaimablePublication
     private final WriteMetaDataReplyEncoder writeMetaDataReply = new WriteMetaDataReplyEncoder();
     private final ReadMetaDataEncoder readMetaData = new ReadMetaDataEncoder();
     private final ReadMetaDataReplyEncoder readMetaDataReply = new ReadMetaDataReplyEncoder();
+    private final ReplayMessagesEncoder replayMessages = new ReplayMessagesEncoder();
+    private final ReplayMessagesReplyEncoder replayMessagesReply = new ReplayMessagesReplyEncoder();
 
     private final Clock clock;
     private final int maxPayloadLength;
@@ -1175,6 +1181,68 @@ public class GatewayPublication extends ClaimablePublication
         bufferClaim.commit();
 
         logSbeMessage(GATEWAY_MESSAGE, readMetaDataReply);
+
+        return position;
+    }
+
+    public long saveReplayMessages(
+        final int libraryId,
+        final long sessionId,
+        final long correlationId,
+        final int replayFromSequenceNumber,
+        final int replayFromSequenceIndex,
+        final int replayToSequenceNumber,
+        final int replayToSequenceIndex,
+        final long latestReplyArrivalTimeInMs)
+    {
+        final long position = claim(REPLAY_MESSAGES_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        replayMessages
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .session(sessionId)
+            .correlationId(correlationId)
+            .replayFromSequenceNumber(replayFromSequenceNumber)
+            .replayFromSequenceIndex(replayFromSequenceIndex)
+            .replayToSequenceNumber(replayToSequenceNumber)
+            .replayToSequenceIndex(replayToSequenceIndex)
+            .latestReplyArrivalTimeInMs(latestReplyArrivalTimeInMs);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, replayMessages);
+
+        return position;
+    }
+
+    public long saveReplayMessagesReply(
+        final int libraryId, final long replyToId, final ReplayMessagesStatus status)
+    {
+        final long position = claim(REPLAY_MESSAGES_REPLY_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        replayMessagesReply
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .replyToId(replyToId)
+            .status(status);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, replayMessagesReply);
 
         return position;
     }

@@ -44,6 +44,7 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
     private final ManageSessionDecoder manageSession = new ManageSessionDecoder();
     private final FollowerSessionReplyDecoder followerSessionReply = new FollowerSessionReplyDecoder();
     private final EndOfDayDecoder endOfDay = new EndOfDayDecoder();
+    private final ReplayMessagesReplyDecoder replayMessagesReply = new ReplayMessagesReplyDecoder();
 
     private final LibraryEndPointHandler handler;
 
@@ -126,6 +127,11 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             case EndOfDayDecoder.TEMPLATE_ID:
             {
                 return onEndOfDay(buffer, offset, blockLength, version);
+            }
+
+            case ReplayMessagesReplyDecoder.TEMPLATE_ID:
+            {
+                return onReplayMessagesReply(buffer, offset, blockLength, version);
             }
         }
 
@@ -289,6 +295,23 @@ public final class LibraryProtocolSubscription implements ControlledFragmentHand
             buffer,
             offset + READ_META_DATA_META_DATA_PREFIX,
             readMetaDataReply.metaDataLength());
+    }
+
+    private Action onReplayMessagesReply(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        replayMessagesReply.wrap(buffer, offset, blockLength, version);
+        final int libraryId = replayMessagesReply.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId);
+        if (action == ABORT)
+        {
+            return action;
+        }
+
+        return handler.onReplayMessagesReply(
+            libraryId,
+            replayMessagesReply.replyToId(),
+            replayMessagesReply.status());
     }
 
     private Action onError(

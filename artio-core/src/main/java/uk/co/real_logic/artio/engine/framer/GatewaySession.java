@@ -18,9 +18,11 @@ package uk.co.real_logic.artio.engine.framer;
 import org.agrona.CloseHelper;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.messages.ConnectionType;
+import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SlowStatus;
 import uk.co.real_logic.artio.session.*;
 
@@ -30,7 +32,7 @@ import static uk.co.real_logic.artio.LogTag.FIX_MESSAGE;
 import static uk.co.real_logic.artio.LogTag.GATEWAY_MESSAGE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 
-class GatewaySession implements SessionInfo
+class GatewaySession implements SessionInfo, SessionProcessHandler
 {
     private static final int NO_TIMEOUT = -1;
 
@@ -58,7 +60,6 @@ class GatewaySession implements SessionInfo
     private long disconnectTimeInMs = NO_TIMEOUT;
 
     private Consumer<GatewaySession> onGatewaySessionLogon;
-    private SessionLogonListener logonListener = this::onSessionLogon;
     private boolean initialResetSeqNum;
     private boolean hasStartedAuthentication = false;
     private int logonReceivedSequenceNumber;
@@ -129,7 +130,7 @@ class GatewaySession implements SessionInfo
     {
         this.sessionParser = sessionParser;
         this.session = session;
-        this.session.logonListener(logonListener);
+        this.session.sessionProcessHandler(this);
         receiverEndPoint.libraryId(ENGINE_LIBRARY_ID);
         senderEndPoint.libraryId(ENGINE_LIBRARY_ID, blockablePosition);
     }
@@ -142,7 +143,7 @@ class GatewaySession implements SessionInfo
         setManagementTo(libraryId, blockablePosition);
 
         sessionParser = null;
-        session.logonListener(null);
+        session.sessionProcessHandler(null);
         context.updateAndSaveFrom(session);
         session.close();
         session = null;
@@ -200,10 +201,21 @@ class GatewaySession implements SessionInfo
         disconnectTimeInMs = NO_TIMEOUT;
     }
 
-    private void onSessionLogon(final Session session)
+    public void onLogon(final Session session)
     {
         context.updateFrom(session);
         onGatewaySessionLogon.accept(this);
+    }
+
+    public Reply<ReplayMessagesStatus> replayReceivedMessages(
+        final long sessionId,
+        final int replayFromSequenceNumber,
+        final int replayFromSequenceIndex,
+        final int replayToSequenceNumber,
+        final int replayToSequenceIndex,
+        final long timeout)
+    {
+        throw new UnsupportedOperationException("Should never be invoked inside the Engine.");
     }
 
     InternalSession session()

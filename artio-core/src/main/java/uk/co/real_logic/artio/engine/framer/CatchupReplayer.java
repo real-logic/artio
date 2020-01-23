@@ -32,10 +32,7 @@ import uk.co.real_logic.artio.engine.logger.ReplayOperation;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
-import uk.co.real_logic.artio.messages.FixMessageDecoder;
-import uk.co.real_logic.artio.messages.FixMessageEncoder;
-import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
+import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -57,6 +54,74 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     public static final int FRAME_LENGTH =
         MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + FixMessageEncoder.bodyHeaderLength();
+
+    enum ReplayFor
+    {
+        REPLAY_MESSAGES
+        {
+            long sendOk(
+                final GatewayPublication publication,
+                final int libraryId,
+                final long correlationId,
+                final GatewaySession session)
+            {
+                return publication.saveReplayMessagesReply(
+                    libraryId, correlationId, ReplayMessagesStatus.OK);
+            }
+
+            long sendMissing(
+                final GatewayPublication publication,
+                final int libraryId,
+                final long correlationId,
+                final GatewaySession session)
+            {
+                return publication.saveReplayMessagesReply(
+                    libraryId, correlationId, ReplayMessagesStatus.MISSING_MESSAGES);
+            }
+        },
+        REQUEST_SESSION
+        {
+            long sendOk(
+                final GatewayPublication publication,
+                final int libraryId,
+                final long correlationId,
+                final GatewaySession session)
+            {
+                final long position = publication.saveRequestSessionReply(libraryId, OK, correlationId);
+                if (position > 0)
+                {
+                    session.play();
+                }
+                return position;
+            }
+
+            long sendMissing(
+                final GatewayPublication publication,
+                final int libraryId,
+                final long correlationId,
+                final GatewaySession session)
+            {
+                final long position = publication.saveRequestSessionReply(libraryId, MISSING_MESSAGES, correlationId);
+                if (position > 0)
+                {
+                    session.play();
+                }
+                return position;
+            }
+        };
+
+        abstract long sendOk(
+            GatewayPublication publication,
+            int libraryId,
+            long correlationId,
+            GatewaySession session);
+
+        abstract long sendMissing(
+            GatewayPublication publication,
+            int libraryId,
+            long correlationId,
+            GatewaySession session);
+    }
 
     private enum State
     {
@@ -84,12 +149,13 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final long correlationId;
     private final long connectionId;
     private final int libraryId;
-    private final int lastReceivedSeqNum;
-    private final int currentSequenceIndex;
+    private final int replayToSequenceNumber;
+    private final int replayToSequenceIndex;
     private final GatewaySession session;
     private final long catchupEndTimeInMs;
     private final long requiredPosition;
     private final SessionHeaderDecoder headerDecoder;
+    private final ReplayFor replayFor;
 
     private int replayFromSequenceNumber;
     private int replayFromSequenceIndex;
@@ -112,13 +178,14 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final long correlationId,
         final long connectionId,
         final int libraryId,
-        final int lastReceivedSeqNum,
-        final int currentSequenceIndex,
+        final int replayToSequenceNumber,
+        final int replayToSequenceIndex,
         final int replayFromSequenceNumber,
         final int replayFromSequenceIndex,
         final GatewaySession session,
-        final long catchupTimeout,
-        final EpochClock clock)
+        final EpochClock clock,
+        final long catchupEndTimeInMs,
+        final ReplayFor replayFor)
     {
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.inboundMessages = inboundMessages;
@@ -127,14 +194,15 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         this.correlationId = correlationId;
         this.connectionId = connectionId;
         this.libraryId = libraryId;
-        this.lastReceivedSeqNum = lastReceivedSeqNum;
-        this.currentSequenceIndex = currentSequenceIndex;
+        this.replayToSequenceNumber = replayToSequenceNumber;
+        this.replayToSequenceIndex = replayToSequenceIndex;
         this.replayFromSequenceNumber = replayFromSequenceNumber;
         this.replayFromSequenceIndex = replayFromSequenceIndex;
         this.session = session;
-        this.catchupEndTimeInMs = clock.time() + catchupTimeout;
+        this.catchupEndTimeInMs = catchupEndTimeInMs;
         this.requiredPosition = inboundPublication.position();
         this.headerDecoder = session.fixDictionary().makeHeaderDecoder();
+        this.replayFor = replayFor;
 
         possDupEnabler = new PossDupEnabler(
             bufferClaim,
@@ -295,8 +363,8 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     public long attempt()
     {
-        DebugLogger.log(CATCHUP, "Attempt replay for sessionId=%d%n",
-            session.sessionId());
+        DebugLogger.log(CATCHUP, "Attempt replay for sessionId=%d%n", session.sessionId());
+
         switch (state)
         {
             case AWAITING_INDEX:
@@ -326,15 +394,15 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
                 DebugLogger.log(CATCHUP,
                     "Querying for sessionId=%d, currently at (%d, %d)%n",
-                    session.sessionId(), lastReceivedSeqNum, currentSequenceIndex);
+                    session.sessionId(), replayToSequenceNumber, replayToSequenceIndex);
 
                 replayOperation = inboundMessages.query(
                     this,
                     session.sessionId(),
                     replayFromSequenceNumber,
                     replayFromSequenceIndex,
-                    lastReceivedSeqNum,
-                    currentSequenceIndex,
+                    replayToSequenceNumber,
+                    replayToSequenceIndex,
                     CATCHUP);
 
                 state = State.REPLAYING;
@@ -396,7 +464,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     private boolean hasMissingMessages()
     {
-        return replayFromSequenceIndex < currentSequenceIndex || replayFromSequenceNumber < lastReceivedSeqNum;
+        return replayFromSequenceIndex < replayToSequenceIndex || replayFromSequenceNumber < replayToSequenceNumber;
     }
 
     private boolean notLoggingInboundMessages()
@@ -409,7 +477,9 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final long correlationId,
         final GatewaySession session)
     {
-        return sendOk(publication, correlationId, session, libraryId);
+        DebugLogger.log(CATCHUP, "OK for sessionId=%d%n", session.sessionId());
+
+        return replayFor.sendOk(publication, libraryId, correlationId, session);
     }
 
     static long sendOk(
@@ -419,19 +489,16 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final int libraryId)
     {
         DebugLogger.log(CATCHUP, "OK for sessionId=%d%n", session.sessionId());
-        final long position = publication.saveRequestSessionReply(libraryId, OK, correlationId);
-        if (position >= 0)
-        {
-            session.play();
-        }
 
-        return position;
+        return ReplayFor.REQUEST_SESSION.sendOk(publication, libraryId, correlationId, session);
     }
 
     private long sendMissingMessages()
     {
         DebugLogger.log(CATCHUP, "Missing Messages for sessionId=%d%n", session.sessionId());
-        final long position = inboundPublication.saveRequestSessionReply(libraryId, MISSING_MESSAGES, correlationId);
+
+        final long position = replayFor.sendMissing(inboundPublication, libraryId, correlationId, session);
+
         if (position > 0)
         {
             errorHandler.onError(new IllegalStateException(String.format(
@@ -440,13 +507,11 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 session.sessionId(),
                 replayFromSequenceIndex,
                 replayFromSequenceNumber,
-                currentSequenceIndex,
-                lastReceivedSeqNum,
+                replayToSequenceIndex,
+                replayToSequenceNumber,
                 missingMessagesReason)));
 
             missingMessagesReason = null;
-
-            session.play();
         }
 
         return position;

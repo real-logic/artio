@@ -102,4 +102,14 @@ public interface EngineEndPointHandler
         int libraryId,
         long sessionId,
         long correlationId);
+
+    Action onReplayMessages(
+        int libraryId,
+        long sessionId,
+        long correlationId,
+        int replayFromSequenceNumber,
+        int replayFromSequenceIndex,
+        int replayToSequenceNumber,
+        int replayToSequenceIndex,
+        long latestReplyArrivalTimeInMs);
 }

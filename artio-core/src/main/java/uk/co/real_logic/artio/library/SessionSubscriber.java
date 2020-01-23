@@ -17,20 +17,23 @@ package uk.co.real_logic.artio.library;
 
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.DirectBuffer;
+import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.MessageStatus;
+import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.timing.Timer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.*;
 import static uk.co.real_logic.artio.messages.GatewayError.UNABLE_TO_LOGON;
 
-class SessionSubscriber implements AutoCloseable
+class SessionSubscriber implements AutoCloseable, SessionProcessHandler
 {
     private final SessionParser parser;
     private final InternalSession session;
     private final Timer receiveTimer;
     private final Timer sessionTimer;
+    private final LibraryPoller libraryPoller;
 
     private SessionHandler handler;
     private InitiateSessionReply initiateSessionReply;
@@ -40,13 +43,15 @@ class SessionSubscriber implements AutoCloseable
         final SessionParser parser,
         final InternalSession session,
         final Timer receiveTimer,
-        final Timer sessionTimer)
+        final Timer sessionTimer,
+        final LibraryPoller libraryPoller)
     {
         this.parser = parser;
         this.session = session;
         this.receiveTimer = receiveTimer;
         this.sessionTimer = sessionTimer;
-        this.session.logonListener(this::onSessionLogon);
+        this.libraryPoller = libraryPoller;
+        this.session.sessionProcessHandler(this);
     }
 
     Action onMessage(
@@ -160,7 +165,7 @@ class SessionSubscriber implements AutoCloseable
         return action;
     }
 
-    private void onSessionLogon(final Session session)
+    public void onLogon(final Session session)
     {
         handler.onSessionStart(session);
 
@@ -171,6 +176,24 @@ class SessionSubscriber implements AutoCloseable
             // lifetime of the Session
             initiateSessionReply = null;
         }
+    }
+
+    public Reply<ReplayMessagesStatus> replayReceivedMessages(
+        final long sessionId,
+        final int replayFromSequenceNumber,
+        final int replayFromSequenceIndex,
+        final int replayToSequenceNumber,
+        final int replayToSequenceIndex,
+        final long timeout)
+    {
+        return new ReplayMessagesReply(
+            libraryPoller,
+            libraryPoller.timeInMs() + timeout,
+            sessionId,
+            replayFromSequenceNumber,
+            replayFromSequenceIndex,
+            replayToSequenceNumber,
+            replayToSequenceIndex);
     }
 
     void onTimeout(final int libraryId)

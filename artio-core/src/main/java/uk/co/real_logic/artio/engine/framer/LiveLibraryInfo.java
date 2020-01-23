@@ -161,4 +161,19 @@ final class LiveLibraryInfo implements LibraryInfo
         return correlationIdToConnectingSession.remove(correlationId);
     }
 
+    GatewaySession lookupSessionById(final long sessionId)
+    {
+        final List<GatewaySession> sessions = this.allSessions;
+        final int size = sessions.size();
+        for (int i = 0; i < size; i++)
+        {
+            final GatewaySession session = sessions.get(i);
+            if (session.sessionId() == sessionId)
+            {
+                return session;
+            }
+        }
+
+        return null;
+    }
 }

@@ -182,6 +182,21 @@
             <validValue name="INVALID_CHECKSUM">3</validValue>
             <validValue name="NO_META_DATA">4</validValue>
         </enum>
+
+        <enum name="ReplayMessagesStatus" encodingType="uint8">
+            <validValue name="OK"
+                        description="Operation Succeeded">0</validValue>
+            <validValue name="SESSION_NOT_OWNED"
+                        description="Either your library doesn't own this session or the gateway doesn't know about the specified session">1</validValue>
+            <validValue name="UNKNOWN_LIBRARY"
+                        description="The gateway doesn't know about your library">2</validValue>
+            <validValue name="SEQUENCE_NUMBER_TOO_HIGH"
+                        description="Can't replay to that sequence number: haven't archived it yet">4</validValue>
+            <validValue name="MISSING_MESSAGES"
+                        description="We can't find the required number of messages in the log">5</validValue>
+            <validValue name="INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES"
+                        description="You've requested replay of messages, but EngineConfiguration has disabled required logging of messsages">6</validValue>
+        </enum>
     </types>
 
     <!-- Messages From Library To Engine -->
@@ -272,6 +287,18 @@
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="session" id="2" type="FixSessionId"/>
         <field name="correlationId" id="3" type="CorrelationId"/>
+    </sbe:message>
+
+    <sbe:message name="ReplayMessages" id="53"
+                 description="" sinceVersion="7">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="session" id="2" type="FixSessionId"/>
+        <field name="correlationId" id="3" type="CorrelationId"/>
+        <field name="replayFromSequenceNumber" id="4" type="int32"/>
+        <field name="replayFromSequenceIndex" id="5" type="SequenceIndex"/>
+        <field name="replayToSequenceNumber" id="6" type="int32"/>
+        <field name="replayToSequenceIndex" id="7" type="SequenceIndex"/>
+        <field name="latestReplyArrivalTimeInMs" id="8" type="Timestamp" />
     </sbe:message>
 
     <!-- Messages From Engine To Library -->
@@ -398,6 +425,12 @@
         <field name="replyToId" id="2" type="CorrelationId"/>
         <field name="status" id="3" type="MetaDataStatus"/>
         <data name="metaData" id="4" type="Utf8String"/>
+    </sbe:message>
+
+    <sbe:message name="ReplayMessagesReply" id="54" description="response to ReplayMessages" sinceVersion="7">
+        <field name="libraryId" id="1" type="LibraryId"/>
+        <field name="replyToId" id="2" type="CorrelationId"/>
+        <field name="status" id="3" type="ReplayMessagesStatus"/>
     </sbe:message>
 
     <!-- Messages In Either Direction -->

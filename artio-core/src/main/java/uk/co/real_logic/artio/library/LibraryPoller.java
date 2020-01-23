@@ -358,6 +358,28 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             correlationId);
     }
 
+    long saveReplayMessages(
+        final long sessionId,
+        final long correlationId,
+        final int replayFromSequenceNumber,
+        final int replayFromSequenceIndex,
+        final int replayToSequenceNumber,
+        final int replayToSequenceIndex,
+        final long latestReplyArrivalTimeInMs)
+    {
+        checkState();
+
+        return outboundPublication.saveReplayMessages(
+            libraryId,
+            sessionId,
+            correlationId,
+            replayFromSequenceNumber,
+            replayFromSequenceIndex,
+            replayToSequenceNumber,
+            replayToSequenceIndex,
+            latestReplyArrivalTimeInMs);
+    }
+
     void onInitiatorSessionTimeout(final long correlationId, final long connectionId)
     {
         checkState();
@@ -693,7 +715,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return total;
     }
 
-    private long timeInMs()
+    long timeInMs()
     {
         return epochClock.time();
     }
@@ -1115,6 +1137,17 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
+    public Action onReplayMessagesReply(final int libraryId, final long replyToId, final ReplayMessagesStatus status)
+    {
+        final ReplayMessagesReply reply = (ReplayMessagesReply)correlationIdToReply.remove(replyToId);
+        if (reply != null)
+        {
+            reply.onComplete(status);
+        }
+
+        return CONTINUE;
+    }
+
     public Action onWriteMetaDataReply(final int libraryId, final long replyToId, final MetaDataStatus status)
     {
         final WriteMetaDataReply reply = (WriteMetaDataReply)correlationIdToReply.remove(replyToId);
@@ -1313,7 +1346,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             parser,
             session,
             receiveTimer,
-            sessionTimer);
+            sessionTimer,
+            this);
         subscriber.reply(reply);
         subscriber.handler(configuration.sessionAcquireHandler().onSessionAcquired(session, sessionAcquiredInfo));
 

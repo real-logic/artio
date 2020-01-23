@@ -34,10 +34,7 @@ import uk.co.real_logic.artio.LivenessDetector;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.CompletionPosition;
-import uk.co.real_logic.artio.engine.EngineConfiguration;
-import uk.co.real_logic.artio.engine.PositionSender;
-import uk.co.real_logic.artio.engine.RecordingCoordinator;
+import uk.co.real_logic.artio.engine.*;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
@@ -1329,6 +1326,56 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         schedule(new UnitOfWork(continuations));
     }
 
+    public Action onReplayMessages(
+        final int libraryId,
+        final long sessionId,
+        final long correlationId,
+        final int replayFromSequenceNumber,
+        final int replayFromSequenceIndex,
+        final int replayToSequenceNumber,
+        final int replayToSequenceIndex,
+        final long latestReplyArrivalTimeInMs)
+    {
+        final LiveLibraryInfo libraryInfo = idToLibrary.get(libraryId);
+        if (libraryInfo == null)
+        {
+            return Pressure.apply(inboundPublication.saveReplayMessagesReply(
+                libraryId, correlationId, ReplayMessagesStatus.UNKNOWN_LIBRARY));
+        }
+
+        final GatewaySession gatewaySession = libraryInfo.lookupSessionById(sessionId);
+        if (gatewaySession == null)
+        {
+            return Pressure.apply(inboundPublication.saveReplayMessagesReply(
+                libraryId, correlationId, ReplayMessagesStatus.SESSION_NOT_OWNED));
+        }
+
+        if (!configuration.logInboundMessages())
+        {
+            return Pressure.apply(inboundPublication.saveReplayMessagesReply(
+                libraryId, correlationId, ReplayMessagesStatus.INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES));
+        }
+
+        schedule(new CatchupReplayer(
+            receivedSequenceNumberIndex,
+            inboundMessages,
+            inboundPublication,
+            errorHandler,
+            correlationId,
+            gatewaySession.connectionId(),
+            libraryId,
+            replayToSequenceNumber,
+            replayToSequenceIndex,
+            replayFromSequenceNumber,
+            replayFromSequenceIndex,
+            gatewaySession,
+            epochClock,
+            latestReplyArrivalTimeInMs,
+            CatchupReplayer.ReplayFor.REPLAY_MESSAGES));
+
+        return CONTINUE;
+    }
+
     public Action onFollowerSessionRequest(
         final int libraryId,
         final long correlationId,
@@ -1495,8 +1542,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 replayFromSequenceNumber,
                 replayFromSequenceIndex,
                 session,
-                catchupTimeout(),
-                epochClock));
+                epochClock,
+                catchupEndTimeInMs(),
+                CatchupReplayer.ReplayFor.REQUEST_SESSION));
         }
         else
         {
@@ -1504,9 +1552,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
     }
 
-    private long catchupTimeout()
+    private long catchupEndTimeInMs()
     {
-        return configuration.replyTimeoutInMs() / 2;
+        return epochClock.time() + (configuration.replyTimeoutInMs() / 2);
     }
 
     private long sequenceNumberTooHigh(final int libraryId, final long correlationId, final GatewaySession session)
