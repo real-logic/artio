@@ -903,6 +903,8 @@ public class Session
     {
         if (awaitingResend)
         {
+            incNextReceivedInboundMessageTime(time);
+
             if (msgSeqNum == endOfResendMsgSeqNum())
             {
                 awaitingResend = false;
