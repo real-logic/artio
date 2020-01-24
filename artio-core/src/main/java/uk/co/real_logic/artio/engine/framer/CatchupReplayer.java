@@ -15,7 +15,6 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
-import io.aeron.logbuffer.BufferClaim;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
@@ -23,11 +22,11 @@ import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.DebugLogger;
+import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.AbstractSequenceResetEncoder;
 import uk.co.real_logic.artio.builder.Encoder;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
-import uk.co.real_logic.artio.engine.PossDupEnabler;
 import uk.co.real_logic.artio.engine.logger.ReplayOperation;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
@@ -139,9 +138,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final FixMessageEncoder messageEncoder = new FixMessageEncoder();
 
     private final AsciiBuffer asciiBuffer = new MutableAsciiBuffer();
-    private final BufferClaim bufferClaim = new BufferClaim();
 
-    private final PossDupEnabler possDupEnabler;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
     private final ReplayQuery inboundMessages;
     private final GatewayPublication inboundPublication;
@@ -203,19 +200,9 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         this.requiredPosition = inboundPublication.position();
         this.headerDecoder = session.fixDictionary().makeHeaderDecoder();
         this.replayFor = replayFor;
-
-        possDupEnabler = new PossDupEnabler(
-            bufferClaim,
-            this::claimBuffer,
-            this::onPreCommit,
-            this::onIllegalState,
-            errorHandler,
-            clock,
-            inboundPublication.maxPayloadLength(),
-            CATCHUP);
     }
 
-    private void onPreCommit(final MutableDirectBuffer buffer, final int offset)
+    private void updateMessageHeader(final MutableDirectBuffer buffer, final int offset)
     {
         final int frameOffset = offset + MessageHeaderEncoder.ENCODED_LENGTH;
         messageEncoder
@@ -223,16 +210,6 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
             .connection(connectionId)
             .libraryId(libraryId)
             .status(CATCHUP_REPLAY);
-    }
-
-    private void onIllegalState(final String msg)
-    {
-        errorHandler.onError(new IllegalStateException(msg));
-    }
-
-    private boolean claimBuffer(final int length)
-    {
-        return inboundPublication.claim(length, bufferClaim) > 0;
     }
 
     public Action onFragment(
@@ -281,7 +258,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
             }
 
             return processNormalMessage(
-                srcBuffer, srcOffset, srcLength, messageLength, messageOffset, metaDataAdjustment);
+                srcBuffer, srcOffset, srcLength);
         }
     }
 
@@ -345,13 +322,11 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private Action processNormalMessage(
         final DirectBuffer srcBuffer,
         final int srcOffset,
-        final int srcLength,
-        final int messageLength,
-        final int messageOffset,
-        final int metaDataAdjustment)
+        final int srcLength)
     {
-        final Action action = possDupEnabler.enablePossDupFlag(
-            srcBuffer, messageOffset, messageLength, srcOffset, srcLength, metaDataAdjustment);
+        updateMessageHeader((MutableDirectBuffer)srcBuffer, srcOffset);
+
+        final Action action = Pressure.apply(inboundPublication.offer(srcBuffer, srcOffset, srcLength));
         if (action == CONTINUE)
         {
             // store the point to continue from if an abort happens.

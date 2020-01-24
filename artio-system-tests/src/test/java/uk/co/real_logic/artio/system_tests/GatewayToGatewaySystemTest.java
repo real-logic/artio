@@ -444,7 +444,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             assertEquals(Constants.EXAMPLE_MESSAGE_MESSAGE_AS_STR, replayedExampleMessage.msgType());
             assertThat(replayedExampleMessage, hasMessageSequenceNumber(2));
             assertEquals(0, replayedExampleMessage.sequenceIndex());
-            assertEquals("Y", replayedExampleMessage.possDup());
             assertEquals(testReqID, replayedExampleMessage.testReqId());
             assertEquals(CATCHUP_REPLAY, replayedExampleMessage.status());
         }
@@ -1105,7 +1104,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final FixMessage testRequest =
             acceptingOtfAcceptor.receivedMessage(TEST_REQUEST_MESSAGE_AS_STR).findFirst().get();
-        assertEquals("Y", testRequest.possDup());
         assertEquals(CATCHUP_REPLAY, testRequest.status());
     }
 
