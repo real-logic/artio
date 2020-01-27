@@ -20,7 +20,6 @@ import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
-import org.agrona.concurrent.EpochClock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.builder.AbstractSequenceResetEncoder;
@@ -180,7 +179,6 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final int replayFromSequenceNumber,
         final int replayFromSequenceIndex,
         final GatewaySession session,
-        final EpochClock clock,
         final long catchupEndTimeInMs,
         final ReplayFor replayFor)
     {

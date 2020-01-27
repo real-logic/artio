@@ -158,7 +158,10 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
 
     void play()
     {
-        receiverEndPoint.play();
+        if (receiverEndPoint != null)
+        {
+            receiverEndPoint.play();
+        }
     }
 
     int poll(final long timeInMs)

@@ -34,7 +34,10 @@ import uk.co.real_logic.artio.LivenessDetector;
 import uk.co.real_logic.artio.Pressure;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.*;
+import uk.co.real_logic.artio.engine.CompletionPosition;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.PositionSender;
+import uk.co.real_logic.artio.engine.RecordingCoordinator;
 import uk.co.real_logic.artio.engine.framer.SubscriptionSlowPeeker.LibrarySlowPeeker;
 import uk.co.real_logic.artio.engine.framer.TcpChannelSupplier.NewChannelHandler;
 import uk.co.real_logic.artio.engine.logger.ReplayQuery;
@@ -52,10 +55,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -1218,8 +1218,17 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final GatewaySession gatewaySession = gatewaySessions.releaseBySessionId(sessionId);
         if (gatewaySession == null)
         {
-            return Pressure.apply(inboundPublication.saveRequestSessionReply(
-                libraryId, SessionReplyStatus.UNKNOWN_SESSION, correlationId));
+            // Session is offline.
+            if (requestOfflineSession(
+                libraryId, sessionId, correlationId, replayFromSequenceIndex, replayFromSequenceNumber))
+            {
+                return CONTINUE;
+            }
+            else
+            {
+                return Pressure.apply(inboundPublication.saveRequestSessionReply(
+                    libraryId, SessionReplyStatus.UNKNOWN_SESSION, correlationId));
+            }
         }
 
         final InternalSession session = gatewaySession.session();
@@ -1281,6 +1290,163 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 lastRecvSeqNum);
 
             return CONTINUE;
+        }
+    }
+
+    private boolean requestOfflineSession(
+        final int libraryId,
+        final long sessionId,
+        final long correlationId,
+        final int replayFromSequenceIndex,
+        final int replayFromSequenceNumber)
+    {
+        final Map.Entry<CompositeKey, SessionContext> entry = sessionContexts.lookupById(sessionId);
+        if (entry == null)
+        {
+            return false;
+        }
+
+        schedule(new HandoverOfflineSession(
+            libraryId,
+            sessionId,
+            correlationId,
+            replayFromSequenceIndex,
+            replayFromSequenceNumber,
+            entry.getKey(),
+            entry.getValue()));
+
+        return true;
+    }
+
+    private final class HandoverOfflineSession extends UnitOfWork
+    {
+        private final DirectBuffer metaData = new UnsafeBuffer();
+
+        private final int libraryId;
+        private final long sessionId;
+        private final long correlationId;
+        private final CompositeKey compositeKey;
+        private final GatewaySession gatewaySession;
+        private final int aeronSessionId;
+        private final long requiredPosition;
+
+        private MetaDataStatus metaDataStatus;
+        private int lastSentSequenceNumber;
+        private int lastReceivedSequenceNumber;
+
+        private HandoverOfflineSession(
+            final int libraryId,
+            final long sessionId,
+            final long correlationId,
+            final int replayFromSequenceIndex,
+            final int replayFromSequenceNumber,
+            final CompositeKey compositeKey,
+            final SessionContext sessionContext)
+        {
+            super(new ArrayList<>());
+            this.libraryId = libraryId;
+            this.sessionId = sessionId;
+            this.correlationId = correlationId;
+            this.compositeKey = compositeKey;
+            this.aeronSessionId = outboundPublication.id();
+            this.requiredPosition = outboundPublication.position();
+
+            if (configuration.logInboundMessages())
+            {
+                // Create GatewaySession for offline session and associate it with the library
+                gatewaySession = new GatewaySession(
+                    NO_CONNECTION_ID,
+                    sessionContext,
+                    ":" + NO_CONNECTION_ID,
+                    ACCEPTOR, // TODO: do we need another type?
+                    compositeKey,
+                    null,
+                    null,
+                    null,
+                    configuration.acceptedSessionClosedResendInterval(),
+                    configuration.acceptedSessionResendRequestChunkSize(),
+                    configuration.acceptedSessionSendRedundantResendRequests(),
+                    configuration.acceptedEnableLastMsgSeqNumProcessed(),
+                    configuration.acceptorfixDictionary(), // TODO
+                    configuration.authenticationTimeoutInMs());
+                gatewaySession.lastSequenceResetTime(sessionContext.lastSequenceResetTime());
+                gatewaySession.lastLogonTime(sessionContext.lastLogonTime());
+
+                workList.add(this::checkLoggerUpToDate);
+                workList.add(this::saveManageSession);
+                catchupSession(
+                    workList,
+                    libraryId,
+                    NO_CONNECTION_ID,
+                    correlationId,
+                    replayFromSequenceNumber,
+                    replayFromSequenceIndex,
+                    gatewaySession,
+                    lastReceivedSequenceNumber);
+            }
+            else
+            {
+                gatewaySession = null;
+                // TODO: just error
+            }
+        }
+
+        private long checkLoggerUpToDate()
+        {
+            if (!sentIndexedPosition(aeronSessionId, requiredPosition))
+            {
+                return BACK_PRESSURED;
+            }
+
+            lastSentSequenceNumber = adjustLastSequenceNumber(
+                sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId));
+            lastReceivedSequenceNumber = adjustLastSequenceNumber(
+                receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId));
+            metaDataStatus = sentSequenceNumberIndex.readMetaData(sessionId, metaData);
+
+            return COMPLETE;
+        }
+
+        private long saveManageSession()
+        {
+            return inboundPublication.saveManageSession(
+                libraryId,
+                NO_CONNECTION_ID,
+                gatewaySession.sessionId(),
+                lastSentSequenceNumber,
+                lastReceivedSequenceNumber,
+                SessionStatus.SESSION_HANDOVER,
+                SlowStatus.NOT_SLOW,
+                gatewaySession.connectionType(),
+                SessionState.DISCONNECTED,
+                InternalSession.INITIAL_AWAITING_RESEND,
+                gatewaySession.heartbeatIntervalInS(),
+                gatewaySession.closedResendInterval(),
+                gatewaySession.resendRequestChunkSize(),
+                gatewaySession.sendRedundantResendRequests(),
+                gatewaySession.enableLastMsgSeqNumProcessed(),
+                correlationId,
+                gatewaySession.sequenceIndex(),
+                InternalSession.INITIAL_LAST_RESENT_MSG_SEQ_NO,
+                InternalSession.INITIAL_LAST_RESEND_CHUNK_MSG_SEQ_NUM,
+                InternalSession.INITIAL_END_OF_RESEND_REQUEST_RANGE,
+                InternalSession.INITIAL_AWAITING_HEARTBEAT,
+                gatewaySession.logonReceivedSequenceNumber(),
+                gatewaySession.logonSequenceIndex(),
+                gatewaySession.lastLogonTime(),
+                gatewaySession.lastSequenceResetTime(),
+                compositeKey.localCompId(),
+                compositeKey.localSubId(),
+                compositeKey.localLocationId(),
+                compositeKey.remoteCompId(),
+                compositeKey.remoteSubId(),
+                compositeKey.remoteLocationId(),
+                gatewaySession.address(),
+                gatewaySession.username(),
+                gatewaySession.password(),
+                gatewaySession.fixDictionary().getClass(),
+                metaDataStatus,
+                metaData);
         }
     }
 
@@ -1369,7 +1535,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             replayFromSequenceNumber,
             replayFromSequenceIndex,
             gatewaySession,
-            epochClock,
             latestReplyArrivalTimeInMs,
             CatchupReplayer.ReplayFor.REPLAY_MESSAGES));
 
@@ -1406,7 +1571,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final GatewaySession gatewaySession,
         final int lastSentSeqNum,
         final int lastReceivedSeqNum,
-        final SessionStatus logonstatus)
+        final SessionStatus sessionstatus)
     {
         final CompositeKey compositeKey = gatewaySession.sessionKey();
         if (compositeKey != null)
@@ -1419,7 +1584,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 gatewaySession,
                 lastSentSeqNum,
                 lastReceivedSeqNum,
-                logonstatus,
+                sessionstatus,
                 compositeKey,
                 connectionId,
                 session,
@@ -1542,7 +1707,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 replayFromSequenceNumber,
                 replayFromSequenceIndex,
                 session,
-                epochClock,
                 catchupEndTimeInMs(),
                 CatchupReplayer.ReplayFor.REQUEST_SESSION));
         }

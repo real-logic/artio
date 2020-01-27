@@ -31,6 +31,7 @@ import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
+import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
 
@@ -47,6 +48,7 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixMatchers.*;
+import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -229,7 +231,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acquireAcceptingSession();
 
         logoutAcceptingSession();
-
         assertSessionsDisconnected();
 
         assertSequenceIndicesAre(0);
@@ -1098,13 +1099,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         clearMessages();
 
-        final Reply<ReplayMessagesStatus> reply = acceptingSession.replayReceivedMessages(
-            1, 0, 2, 0, 5_000L);
-        testSystem.awaitCompletedReplies(reply);
-
-        final FixMessage testRequest =
-            acceptingOtfAcceptor.receivedMessage(TEST_REQUEST_MESSAGE_AS_STR).findFirst().get();
-        assertEquals(CATCHUP_REPLAY, testRequest.status());
+        assertReplayReceivedMessages();
     }
 
     @Test
@@ -1117,8 +1112,51 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final Reply<ReplayMessagesStatus> reply = acceptingSession.replayReceivedMessages(
             1, 100, 2, 100, 5_000L);
         testSystem.awaitCompletedReplies(reply);
-
         assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
+    }
+
+    @Test
+    public void shouldBeAbleToLookupOfflineSession()
+    {
+        acquireAcceptingSession();
+        messagesCanBeExchanged();
+        clearMessages();
+
+        logoutAcceptingSession();
+        assertSessionsDisconnected();
+
+        final long sessionId = acceptingSession.id();
+        final long lastSequenceResetTime = acceptingSession.lastSequenceResetTime();
+        final long lastLogonTime = acceptingSession.lastLogonTime();
+        acceptingSession = null;
+
+        assertNotEquals(lastSequenceResetTime, Session.UNKNOWN_TIME);
+        assertNotEquals(lastLogonTime, Session.UNKNOWN_TIME);
+
+        acquireAcceptingSession();
+
+        assertEquals(sessionId, acceptingSession.id());
+        assertEquals("", acceptingSession.connectedHost());
+        assertEquals(Session.UNKNOWN, acceptingSession.connectedPort());
+        assertEquals(NO_CONNECTION_ID, acceptingSession.connectionId());
+        assertEquals(SessionState.DISCONNECTED, acceptingSession.state());
+        assertEquals(lastSequenceResetTime, acceptingSession.lastSequenceResetTime());
+        assertEquals(lastLogonTime, acceptingSession.lastLogonTime());
+
+//        assertReplayReceivedMessages();
+        // TODO: write messages into the offline session storage
+        // TODO: reconnect the initiating session and redirect it
+    }
+
+    private void assertReplayReceivedMessages()
+    {
+        final Reply<ReplayMessagesStatus> reply = acceptingSession.replayReceivedMessages(
+            1, 0, 2, 0, 5_000L);
+        testSystem.awaitCompletedReplies(reply);
+
+        final FixMessage testRequest =
+            acceptingOtfAcceptor.receivedMessage(TEST_REQUEST_MESSAGE_AS_STR).findFirst().get();
+        assertEquals(CATCHUP_REPLAY, testRequest.status());
     }
 
     private void assertUnknownSessionMetaData(final long sessionId)

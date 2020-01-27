@@ -35,6 +35,7 @@ import java.io.File;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.function.Function;
 import java.util.zip.CRC32;
 
@@ -297,14 +298,25 @@ public class SessionContexts
 
     void sequenceReset(final long sessionId, final long resetTime)
     {
-        for (final SessionContext context : compositeToContext.values())
+        final Entry<CompositeKey, SessionContext> entry = lookupById(sessionId);
+        if (entry != null)
         {
-            if (context.sessionId() == sessionId)
+            final SessionContext context = entry.getValue();
+            context.onSequenceReset(resetTime);
+        }
+    }
+
+    Entry<CompositeKey, SessionContext> lookupById(final long sessionId)
+    {
+        for (final Entry<CompositeKey, SessionContext> entry : compositeToContext.entrySet())
+        {
+            if (entry.getValue().sessionId() == sessionId)
             {
-                context.onSequenceReset(resetTime);
-                return;
+                return entry;
             }
         }
+
+        return null;
     }
 
     // TODO: optimisation, more efficient checksumming, only checksum new data
@@ -382,6 +394,6 @@ public class SessionContexts
 
     boolean isKnownSessionId(final long sessionId)
     {
-        return compositeToContext.values().stream().anyMatch(context -> context.sessionId() == sessionId);
+        return lookupById(sessionId) != null;
     }
 }
