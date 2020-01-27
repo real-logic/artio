@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.protocol;
 
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.BufferClaim;
+import org.agrona.DirectBuffer;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.status.AtomicCounter;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
@@ -88,6 +89,11 @@ class ClaimablePublication implements AutoCloseable
         {
             return position;
         }
+    }
+
+    public long offer(final DirectBuffer buffer, final int offset, final int length)
+    {
+        return dataPublication.offer(buffer, offset, length);
     }
 
     public void close()

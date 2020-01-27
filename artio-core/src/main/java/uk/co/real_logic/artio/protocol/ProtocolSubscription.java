@@ -115,11 +115,13 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
         final long position)
     {
         messageFrame.wrap(buffer, offset, blockLength, version);
+        final int metaDataLength = messageFrame.skipMetaData();
+
         final int messageLength = messageFrame.bodyLength();
         final long messageType = MessageTypeExtractor.getMessageType(messageFrame);
         return protocolHandler.onMessage(
             buffer,
-            offset + FRAME_SIZE,
+            offset + FRAME_SIZE + metaDataLength,
             messageLength,
             messageFrame.libraryId(),
             messageFrame.connection(),
@@ -129,6 +131,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
             messageFrame.timestamp(),
             messageFrame.status(),
             messageFrame.sequenceNumber(),
-            position);
+            position,
+            metaDataLength);
     }
 }

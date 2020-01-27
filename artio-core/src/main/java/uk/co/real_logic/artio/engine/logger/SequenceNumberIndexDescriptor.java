@@ -22,6 +22,7 @@ import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
 
 import java.io.File;
 
+import static org.agrona.BitUtil.SIZE_OF_INT;
 import static org.agrona.BitUtil.SIZE_OF_LONG;
 import static uk.co.real_logic.artio.engine.SectorFramer.SECTOR_SIZE;
 import static uk.co.real_logic.artio.engine.SectorFramer.nextSectorStart;
@@ -47,6 +48,7 @@ final class SequenceNumberIndexDescriptor
     static final long META_DATA_MAGIC_NUMBER = 0xBEEF;
     static final int META_DATA_FILE_VERSION = 1;
     static final int READABLE_META_DATA_FILE_VERSION = META_DATA_FILE_VERSION;
+    static final int META_DATA_FILE_HEADER_LENGTH = SIZE_OF_LONG + SIZE_OF_INT;
 
     static final double SEQUENCE_NUMBER_RATIO = 0.9;
 

@@ -92,7 +92,7 @@ public final class SampleClient
                 final SleepingIdleStrategy idleStrategy = new SleepingIdleStrategy(100);
 
                 final LibraryConfiguration libraryConfiguration = new LibraryConfiguration()
-                    .sessionAcquireHandler(SampleClient::onConnect)
+                    .sessionAcquireHandler((session, acquiredInfo) -> onConnect(session))
                     .libraryAeronChannels(singletonList(aeronChannel));
 
                 libraryConfiguration.aeronContext()
@@ -143,7 +143,7 @@ public final class SampleClient
         System.exit(0);
     }
 
-    private static SessionHandler onConnect(final Session session, final boolean isSlow)
+    private static SessionHandler onConnect(final Session session)
     {
         return TEST_REQ_ID_FINDER;
     }

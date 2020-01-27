@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,18 +15,16 @@
  */
 package uk.co.real_logic.artio.engine.logger;
 
+import io.aeron.ExclusivePublication;
+import io.aeron.logbuffer.BufferClaim;
+import io.aeron.logbuffer.ControlledFragmentHandler;
+import io.aeron.logbuffer.Header;
 import org.agrona.DirectBuffer;
 import org.agrona.ErrorHandler;
 import org.agrona.MutableDirectBuffer;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.IdleStrategy;
-
-
-import io.aeron.ExclusivePublication;
-import io.aeron.logbuffer.BufferClaim;
-import io.aeron.logbuffer.ControlledFragmentHandler;
-import io.aeron.logbuffer.Header;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Pressure;
@@ -36,12 +34,7 @@ import uk.co.real_logic.artio.engine.ReplayHandler;
 import uk.co.real_logic.artio.engine.SenderSequenceNumbers;
 import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
-import uk.co.real_logic.artio.messages.FixMessageDecoder;
-import uk.co.real_logic.artio.messages.FixMessageEncoder;
-import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
-import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
-import uk.co.real_logic.artio.messages.MessageStatus;
-import uk.co.real_logic.artio.messages.ReplayCompleteEncoder;
+import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.AsciiBuffer;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -51,10 +44,13 @@ import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.dictionary.SessionConstants.SEQUENCE_RESET_MESSAGE_TYPE;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.engine.logger.Replayer.MESSAGE_FRAME_BLOCK_LENGTH;
+import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataHeaderLength;
+import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataSinceVersion;
 
 class ReplayerSession implements ControlledFragmentHandler
 {
     private static final int NONE = -1;
+    private static final byte[] NO_BYTES = new byte[0];
 
     private enum State
     {
@@ -193,15 +189,19 @@ class ReplayerSession implements ControlledFragmentHandler
         MESSAGE_HEADER.wrap(srcBuffer, srcOffset);
         final int actingBlockLength = MESSAGE_HEADER.blockLength();
         final int offset = srcOffset + MessageHeaderDecoder.ENCODED_LENGTH;
+        final int version = MESSAGE_HEADER.version();
 
         FIX_MESSAGE.wrap(
             srcBuffer,
             offset,
             actingBlockLength,
-            MESSAGE_HEADER.version());
+            version);
 
-        final int messageOffset = srcOffset + MESSAGE_FRAME_BLOCK_LENGTH;
-        final int messageLength = srcLength - MESSAGE_FRAME_BLOCK_LENGTH;
+        final int metaDataAdjustment = version >= metaDataSinceVersion() ?
+            metaDataHeaderLength() + FIX_MESSAGE.metaDataLength() : 0;
+        final int messageFrameBlockLength = MESSAGE_FRAME_BLOCK_LENGTH + metaDataAdjustment;
+        final int messageOffset = srcOffset + messageFrameBlockLength;
+        final int messageLength = srcLength - messageFrameBlockLength;
 
         final int msgSeqNum = sequenceNumberExtractor.extract(srcBuffer, messageOffset, messageLength);
         final long messageType = MessageTypeExtractor.getMessageType(FIX_MESSAGE);
@@ -238,7 +238,7 @@ class ReplayerSession implements ControlledFragmentHandler
             }
 
             final Action action = possDupEnabler.enablePossDupFlag(
-                srcBuffer, messageOffset, messageLength, srcOffset, srcLength);
+                srcBuffer, messageOffset, messageLength, srcOffset, srcLength, metaDataAdjustment);
             if (action != ABORT)
             {
                 lastSeqNo = msgSeqNum;
@@ -254,7 +254,7 @@ class ReplayerSession implements ControlledFragmentHandler
         final int gapFillLength = Encoder.length(result);
         final int gapFillOffset = Encoder.offset(result);
 
-        if (claimBuffer(MESSAGE_FRAME_BLOCK_LENGTH + gapFillLength))
+        if (claimBuffer(MESSAGE_FRAME_BLOCK_LENGTH + gapFillLength + metaDataHeaderLength()))
         {
             final int destOffset = bufferClaim.offset();
             final MutableDirectBuffer destBuffer = bufferClaim.buffer();
@@ -269,6 +269,7 @@ class ReplayerSession implements ControlledFragmentHandler
                 .connection(this.connectionId)
                 .timestamp(0)
                 .status(MessageStatus.OK)
+                .putMetaData(NO_BYTES, 0, 0)
                 .putBody(gapFillBuffer, gapFillOffset, gapFillLength);
 
             bufferClaim.commit();

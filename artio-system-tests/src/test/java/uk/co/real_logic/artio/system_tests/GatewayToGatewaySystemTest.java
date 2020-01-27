@@ -15,14 +15,12 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
+import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
-import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
-import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
-import uk.co.real_logic.artio.builder.ResendRequestEncoder;
-import uk.co.real_logic.artio.builder.UserRequestEncoder;
+import uk.co.real_logic.artio.builder.*;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
@@ -31,6 +29,7 @@ import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
+import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
@@ -38,6 +37,7 @@ import uk.co.real_logic.artio.session.Session;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.List;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.IntSupplier;
 
 import static org.agrona.BitUtil.SIZE_OF_INT;
@@ -53,6 +53,7 @@ import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
+import static uk.co.real_logic.artio.messages.MessageStatus.CATCHUP_REPLAY;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 import static uk.co.real_logic.artio.messages.SessionReplyStatus.SEQUENCE_NUMBER_TOO_HIGH;
 import static uk.co.real_logic.artio.messages.SessionState.DISABLED;
@@ -94,6 +95,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     public void messagesCanBeSentFromInitiatorToAcceptor()
     {
         assertLastLogonEquals(1, 0);
+        assertSequenceResetTimeAtLatestLogon(initiatingSession);
 
         messagesCanBeExchanged();
 
@@ -105,6 +107,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
         assertLastLogonEquals(1, 0);
+        assertSequenceResetTimeAtLatestLogon(acceptingSession);
 
         messagesCanBeExchanged();
 
@@ -312,6 +315,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         clearMessages();
 
         wireSessions();
+        assertSequenceResetTimeAtLatestLogon(initiatingSession);
+        assertSequenceResetTimeAtLatestLogon(acceptingSession);
 
         assertSequenceFromInitToAcceptAt(1, 1);
 
@@ -362,7 +367,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         final long sessionId = initiatingSession.id();
 
-        releaseToGateway(initiatingLibrary, initiatingSession, testSystem);
+        releaseToEngine(initiatingLibrary, initiatingSession, testSystem);
 
         libraryNotifiedThatGatewayOwnsSession(initiatingHandler, sessionId);
 
@@ -371,6 +376,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, OK);
 
         assertSequenceIndicesAre(0);
+        assertSequenceResetTimeAtLatestLogon(initiatingSession);
     }
 
     @Test
@@ -381,7 +387,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final long sessionId = acceptingSession.id();
         acceptingHandler.clearSessionExistsInfos();
 
-        releaseToGateway(acceptingLibrary, acceptingSession, testSystem);
+        releaseToEngine(acceptingLibrary, acceptingSession, testSystem);
 
         libraryNotifiedThatGatewayOwnsSession(acceptingHandler, sessionId);
 
@@ -390,6 +396,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, OK);
 
         assertSequenceIndicesAre(0);
+        assertSequenceResetTimeAtLatestLogon(acceptingSession);
     }
 
     @Test
@@ -429,18 +436,21 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             sessionId, lastReceivedMsgSeqNum, sequenceIndex,
             expectedStatus);
 
+        assertSequenceResetTimeAtLatestLogon(initiatingSession);
+
         if (expectedStatus == OK)
         {
             final FixMessage replayedExampleMessage = acceptingOtfAcceptor.messages().get(1);
             assertEquals(Constants.EXAMPLE_MESSAGE_MESSAGE_AS_STR, replayedExampleMessage.msgType());
             assertThat(replayedExampleMessage, hasMessageSequenceNumber(2));
             assertEquals(0, replayedExampleMessage.sequenceIndex());
-            assertEquals("Y", replayedExampleMessage.possDup());
             assertEquals(testReqID, replayedExampleMessage.testReqId());
+            assertEquals(CATCHUP_REPLAY, replayedExampleMessage.status());
         }
 
         acceptingSession = acceptingHandler.lastSession();
         acceptingHandler.resetSession();
+        assertSequenceResetTimeAtLatestLogon(acceptingSession);
 
         // Send messages both ways to ensure that the session is setup
         messagesCanBeExchanged(acceptingSession, acceptingOtfAcceptor);
@@ -730,14 +740,42 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         messagesCanBeExchanged();
 
+        resetSequenceNumbersViaEngineApi();
+    }
+
+    @Test
+    public void shouldResetSequenceNumbersOfLibraryManagedSessions()
+    {
+        messagesCanBeExchanged();
+
+        acquireAcceptingSession();
+
+        testSystem.awaitReceivedSequenceNumber(acceptingSession, 2);
+
+        assertAccSeqNum(2, 2, 0);
+
+        final TimeRange timeRange = resetSequenceNumbersViaEngineApi();
+
+        testSystem.awaitReceivedSequenceNumber(acceptingSession, 1);
+        assertAccSeqNum(1, 1, 1);
+        timeRange.assertWithinRange(acceptingSession.lastSequenceResetTime());
+    }
+
+    private TimeRange resetSequenceNumbersViaEngineApi()
+    {
         assertInitSeqNum(2, 2, 0);
 
         final long sessionId = lookupSessionId(ACCEPTOR_ID, INITIATOR_ID, acceptingEngine).resultIfPresent();
 
+        final TimeRange timeRange = new TimeRange();
         final Reply<?> resetSequenceNumber = resetSequenceNumber(sessionId);
         replyCompleted(resetSequenceNumber);
+        timeRange.end();
 
         assertInitSeqNum(1, 1, 1);
+        timeRange.assertWithinRange(initiatingSession.lastSequenceResetTime());
+
+        return timeRange;
     }
 
     @Test
@@ -753,29 +791,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertTrue(message, message.contains("Unknown sessionId: 400"));
 
         assertInitSeqNum(2, 2, 0);
-    }
-
-    @Test
-    public void shouldResetSequenceNumbersOfLibraryManagedSessions()
-    {
-        messagesCanBeExchanged();
-
-        acquireAcceptingSession();
-
-        testSystem.awaitReceivedSequenceNumber(acceptingSession, 2);
-
-        assertInitSeqNum(2, 2, 0);
-        assertAccSeqNum(2, 2, 0);
-
-        final long sessionId = lookupSessionId(ACCEPTOR_ID, INITIATOR_ID, acceptingEngine).resultIfPresent();
-
-        final Reply<?> resetSequenceNumber = resetSequenceNumber(sessionId);
-        replyCompleted(resetSequenceNumber);
-
-        testSystem.awaitReceivedSequenceNumber(acceptingSession, 1);
-
-        assertInitSeqNum(1, 1, 1);
-        assertAccSeqNum(1, 1, 1);
     }
 
     private Reply<?> resetSequenceNumber(final long sessionId)
@@ -919,6 +934,50 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test(timeout = 10_000L)
+    public void shouldReadWrittenSessionSendMetaData()
+    {
+        acquireAcceptingSession();
+
+        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
+        writeBuffer.putInt(0, META_DATA_VALUE);
+
+        final TestRequestEncoder testRequest = new TestRequestEncoder();
+        testRequest.testReqID(testReqId());
+        assertThat(acceptingSession.send(testRequest, writeBuffer), greaterThan(0L));
+
+        assertEventuallyTrue("Failed to read meta data", () ->
+        {
+            final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
+            assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
+
+            LockSupport.parkNanos(10_000L);
+        });
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldReceiveSessionMetaDataWhenSessionAcquired()
+    {
+        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
+        writeBuffer.putInt(0, META_DATA_VALUE);
+        writeMetaData(writeBuffer);
+
+        acquireAcceptingSession();
+        assertEquals(MetaDataStatus.OK, acceptingHandler.lastSessionMetaDataStatus());
+        final DirectBuffer readBuffer = acceptingHandler.lastSessionMetaData();
+        assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
+        assertEquals(SIZE_OF_INT, readBuffer.capacity());
+    }
+
+    @Test(timeout = 10_000L)
+    public void shouldNotReceiveSessionMetaDataWhenSessionAcquiredWithNoMetaData()
+    {
+        acquireAcceptingSession();
+        assertEquals(MetaDataStatus.NO_META_DATA, acceptingHandler.lastSessionMetaDataStatus());
+        final DirectBuffer readBuffer = acceptingHandler.lastSessionMetaData();
+        assertEquals(0, readBuffer.capacity());
+    }
+
+    @Test(timeout = 10_000L)
     public void shouldUpdateWrittenSessionMetaDataFittingWithinSlot()
     {
         final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
@@ -1029,6 +1088,37 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         acquireAcceptingSession();
 
         assertNoMetaData();
+    }
+
+    @Test
+    public void shouldReplayReceivedMessagesForSession()
+    {
+        acquireAcceptingSession();
+        messagesCanBeExchanged();
+
+        clearMessages();
+
+        final Reply<ReplayMessagesStatus> reply = acceptingSession.replayReceivedMessages(
+            1, 0, 2, 0, 5_000L);
+        testSystem.awaitCompletedReplies(reply);
+
+        final FixMessage testRequest =
+            acceptingOtfAcceptor.receivedMessage(TEST_REQUEST_MESSAGE_AS_STR).findFirst().get();
+        assertEquals(CATCHUP_REPLAY, testRequest.status());
+    }
+
+    @Test
+    public void shouldNotifyOfMissingMessagesForReplayReceivedMessages()
+    {
+        acquireAcceptingSession();
+
+        clearMessages();
+
+        final Reply<ReplayMessagesStatus> reply = acceptingSession.replayReceivedMessages(
+            1, 100, 2, 100, 5_000L);
+        testSystem.awaitCompletedReplies(reply);
+
+        assertThat(acceptingOtfAcceptor.messages(), hasSize(0));
     }
 
     private void assertUnknownSessionMetaData(final long sessionId)

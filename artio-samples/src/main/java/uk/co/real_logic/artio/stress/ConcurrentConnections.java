@@ -109,7 +109,7 @@ public final class ConcurrentConnections
 
         final LibraryConfiguration libraryConfiguration = new LibraryConfiguration();
         libraryConfiguration
-            .sessionAcquireHandler((session, isSlow) -> testReqIdFinder)
+            .sessionAcquireHandler((session, acquiredInfo) -> testReqIdFinder)
             .libraryAeronChannels(singletonList(aeronChannel));
 
         try (FixLibrary library = SampleUtil.blockingConnect(libraryConfiguration))

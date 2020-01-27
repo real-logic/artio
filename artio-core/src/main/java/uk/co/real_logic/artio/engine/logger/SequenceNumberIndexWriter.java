@@ -17,7 +17,10 @@ package uk.co.real_logic.artio.engine.logger;
 
 import io.aeron.logbuffer.Header;
 import io.aeron.protocol.DataHeaderFlyweight;
-import org.agrona.*;
+import org.agrona.CloseHelper;
+import org.agrona.DirectBuffer;
+import org.agrona.ErrorHandler;
+import org.agrona.LangUtil;
 import org.agrona.collections.CollectionUtil;
 import org.agrona.collections.Long2LongHashMap;
 import org.agrona.concurrent.AtomicBuffer;
@@ -47,6 +50,7 @@ import static io.aeron.protocol.DataHeaderFlyweight.BEGIN_FLAG;
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
 import static uk.co.real_logic.artio.engine.SequenceNumberExtractor.NO_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.engine.logger.SequenceNumberIndexDescriptor.*;
+import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataSinceVersion;
 import static uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder.SCHEMA_VERSION;
 
 /**
@@ -78,7 +82,8 @@ public class SequenceNumberIndexWriter implements Index
     private final CRC32 checksum = new CRC32();
     private final List<WriteMetaDataResponse> responsesToResend = new ArrayList<>();
     private final Predicate<WriteMetaDataResponse> sendResponseFunc = this::sendResponse;
-    private RandomAccessFile metaDataFile;
+    private final RandomAccessFile metaDataFile;
+    private byte[] metaDataWriteBuffer = new byte[0];
 
     private final SequenceNumberExtractor sequenceNumberExtractor;
     private FramerContext framerContext;
@@ -170,9 +175,7 @@ public class SequenceNumberIndexWriter implements Index
             file = new RandomAccessFile(metaDataLocation, "rw");
             if (file.length() == 0)
             {
-                file.writeLong(META_DATA_MAGIC_NUMBER);
-                file.writeInt(META_DATA_FILE_VERSION);
-                file.getFD().sync();
+                writeMetaDataFileHeader(file);
             }
             else
             {
@@ -203,6 +206,13 @@ public class SequenceNumberIndexWriter implements Index
         return null;
     }
 
+    private void writeMetaDataFileHeader(final RandomAccessFile file) throws IOException
+    {
+        file.writeLong(META_DATA_MAGIC_NUMBER);
+        file.writeInt(META_DATA_FILE_VERSION);
+        file.getFD().sync();
+    }
+
     public void onFragment(
         final DirectBuffer buffer,
         final int srcOffset,
@@ -231,22 +241,9 @@ public class SequenceNumberIndexWriter implements Index
             {
                 case FixMessageEncoder.TEMPLATE_ID:
                 {
-                    messageFrame.wrap(buffer, offset, actingBlockLength, version);
-
-                    if (messageFrame.status() != MessageStatus.OK)
+                    if (!onFixMessage(buffer, offset, actingBlockLength, version))
                     {
                         return;
-                    }
-
-                    offset += actingBlockLength + 2;
-
-                    final long sessionId = messageFrame.session();
-
-                    final int msgSeqNum = sequenceNumberExtractor.extract(
-                        buffer, offset, messageFrame.bodyLength());
-                    if (msgSeqNum != NO_SEQUENCE_NUMBER)
-                    {
-                        saveRecord(msgSeqNum, sessionId);
                     }
                     break;
                 }
@@ -284,6 +281,58 @@ public class SequenceNumberIndexWriter implements Index
         positions.indexedUpTo(aeronSessionId, recordingId, endPosition);
     }
 
+    private boolean onFixMessage(
+        final DirectBuffer buffer, final int start, final int actingBlockLength, final int version)
+    {
+        int offset = start;
+
+        messageFrame.wrap(buffer, offset, actingBlockLength, version);
+
+        if (messageFrame.status() != MessageStatus.OK)
+        {
+            return false;
+        }
+
+        offset += actingBlockLength;
+
+        final int metaDataLength;
+        if (version >= metaDataSinceVersion())
+        {
+            metaDataLength = messageFrame.metaDataLength();
+            resizeMetaDataBuffer(metaDataLength);
+            messageFrame.getMetaData(metaDataWriteBuffer, 0, metaDataLength);
+
+            offset += FixMessageDecoder.metaDataHeaderLength() + metaDataLength;
+        }
+        else
+        {
+            metaDataLength = 0;
+        }
+
+        offset += FixMessageDecoder.bodyHeaderLength();
+        final long sessionId = messageFrame.session();
+
+        final int msgSeqNum = sequenceNumberExtractor.extract(
+            buffer, offset, messageFrame.bodyLength());
+        if (msgSeqNum != NO_SEQUENCE_NUMBER)
+        {
+            final int position = saveRecord(msgSeqNum, sessionId);
+            if (metaDataLength > 0 && position > 0)
+            {
+                writeMetaDataToFile(position, metaDataWriteBuffer, metaDataLength);
+            }
+        }
+        return true;
+    }
+
+    private void resizeMetaDataBuffer(final int metaDataLength)
+    {
+        if (metaDataWriteBuffer.length < metaDataLength)
+        {
+            metaDataWriteBuffer = new byte[metaDataLength];
+        }
+    }
+
     private void onWriteMetaData(final int libraryId, final long sessionId, final long correlationId)
     {
         if (framerContext == null || metaDataFile == null)
@@ -301,10 +350,20 @@ public class SequenceNumberIndexWriter implements Index
             return;
         }
 
+
         final int metaDataLength = writeMetaData.metaDataLength();
-        final byte[] metaDataValue = new byte[metaDataLength];
-        writeMetaData.getMetaData(metaDataValue, 0, metaDataLength);
-        checksum.update(metaDataValue);
+        resizeMetaDataBuffer(metaDataLength);
+        writeMetaData.getMetaData(metaDataWriteBuffer, 0, metaDataLength);
+
+        final MetaDataStatus status = writeMetaDataToFile(
+            sequenceNumberIndexFilePosition, metaDataWriteBuffer, metaDataLength);
+        writeMetaDataResponse(libraryId, correlationId, status);
+    }
+
+    private MetaDataStatus writeMetaDataToFile(
+        final int sequenceNumberIndexFilePosition, final byte[] metaDataValue, final int metaDataLength)
+    {
+        checksum.update(metaDataValue, 0, metaDataLength);
         final long checksumValue = checksum.getValue();
         checksum.reset();
 
@@ -330,13 +389,13 @@ public class SequenceNumberIndexWriter implements Index
                 }
             }
 
-            writeMetaDataResponse(libraryId, correlationId, MetaDataStatus.OK);
+            return MetaDataStatus.OK;
         }
         catch (final IOException e)
         {
             errorHandler.onError(e);
 
-            writeMetaDataResponse(libraryId, correlationId, MetaDataStatus.FILE_ERROR);
+            return MetaDataStatus.FILE_ERROR;
         }
     }
 
@@ -405,9 +464,9 @@ public class SequenceNumberIndexWriter implements Index
         {
             try
             {
-                metaDataFile.close();
-                Files.delete(metaDataLocation.toPath());
-                metaDataFile = openMetaDataFile(metaDataLocation);
+                metaDataFile.seek(0);
+                metaDataFile.setLength(META_DATA_FILE_HEADER_LENGTH);
+                writeMetaDataFileHeader(metaDataFile);
             }
             catch (final IOException e)
             {
@@ -510,6 +569,7 @@ public class SequenceNumberIndexWriter implements Index
         {
             indexFile.close();
             writableFile.close();
+
             if (metaDataFile != null)
             {
                 try
@@ -530,7 +590,7 @@ public class SequenceNumberIndexWriter implements Index
         new IndexedPositionReader(positions.buffer()).readLastPosition(consumer);
     }
 
-    private void saveRecord(final int newSequenceNumber, final long sessionId)
+    private int saveRecord(final int newSequenceNumber, final long sessionId)
     {
         int position = (int)recordOffsets.get(sessionId);
         if (position == MISSING_RECORD)
@@ -543,7 +603,7 @@ public class SequenceNumberIndexWriter implements Index
                 {
                     errorHandler.onError(new IllegalStateException(
                         "Sequence Number Index out of space, can't claim slot for " + sessionId));
-                    return;
+                    return position;
                 }
 
                 lastKnownDecoder.wrap(inMemoryBuffer, position, RECORD_SIZE, SCHEMA_VERSION);
@@ -551,12 +611,12 @@ public class SequenceNumberIndexWriter implements Index
                 {
                     createNewRecord(newSequenceNumber, sessionId, position);
                     hasSavedRecordSinceFileUpdate = true;
-                    return;
+                    return position;
                 }
                 else if (lastKnownDecoder.sessionId() == sessionId)
                 {
                     updateSequenceNumber(newSequenceNumber, position);
-                    return;
+                    return position;
                 }
 
                 position += RECORD_SIZE;
@@ -565,6 +625,7 @@ public class SequenceNumberIndexWriter implements Index
         else
         {
             updateSequenceNumber(newSequenceNumber, position);
+            return position;
         }
     }
 

@@ -42,6 +42,7 @@ import static java.nio.ByteOrder.LITTLE_ENDIAN;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static uk.co.real_logic.artio.engine.PossDupFinder.NO_ENTRY;
 import static uk.co.real_logic.artio.engine.framer.CatchupReplayer.FRAME_LENGTH;
+import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataHeaderLength;
 import static uk.co.real_logic.artio.util.AsciiBuffer.SEPARATOR_LENGTH;
 import static uk.co.real_logic.artio.util.MutableAsciiBuffer.SEPARATOR;
 
@@ -97,7 +98,8 @@ public class PossDupEnabler
         final int messageOffset,
         final int messageLength,
         final int srcOffset,
-        final int srcLength)
+        final int srcLength,
+        final int metaDataAdjustment)
     {
         parser.onMessage(srcBuffer, messageOffset, messageLength);
         final int possDupSrcOffset = possDupFinder.possDupOffset();
@@ -131,7 +133,8 @@ public class PossDupEnabler
                     messageLength,
                     lengthDelta + lengthOfAddedFields,
                     newBodyLength,
-                    newLength))
+                    newLength,
+                    metaDataAdjustment))
                 {
                     return commit(true);
                 }
@@ -202,7 +205,7 @@ public class PossDupEnabler
 
     private Action commit(final boolean hasAlteredBodyLength)
     {
-        final int logLengthOffset = hasAlteredBodyLength ? FRAME_LENGTH : 0;
+        final int logLengthOffset = hasAlteredBodyLength ? FRAME_LENGTH + metaDataHeaderLength() : 0;
         if (isProcessingFragmentedMessage())
         {
             int fragmentOffset = FRAGMENTED_MESSAGE_BUFFER_OFFSET;
@@ -286,9 +289,9 @@ public class PossDupEnabler
         final int messageLength,
         final int totalLengthDelta,
         final int newBodyLength,
-        final int newLength)
+        final int newLength,
+        final int metaDataAdjustment)
     {
-
         final MutableDirectBuffer writeBuffer = writeBuffer();
         final int writeOffset = writeOffset();
 
@@ -327,7 +330,7 @@ public class PossDupEnabler
         // Update the sending time
         updateSendingTime(srcOffset);
 
-        updateFrameBodyLength(messageLength, writeBuffer, writeOffset, totalLengthDelta);
+        updateFrameBodyLength(messageLength, writeBuffer, writeOffset, totalLengthDelta, metaDataAdjustment);
         final int messageClaimOffset = srcToClaim(messageOffset, srcOffset, writeOffset);
         updateBodyLengthAndChecksum(
             srcOffset, messageClaimOffset, writeBuffer, writeOffset, newBodyLength, writeOffset + newLength);
@@ -348,10 +351,14 @@ public class PossDupEnabler
     }
 
     private void updateFrameBodyLength(
-        final int messageLength, final MutableDirectBuffer claimBuffer, final int claimOffset, final int lengthDelta)
+        final int messageLength,
+        final MutableDirectBuffer claimBuffer,
+        final int claimOffset,
+        final int lengthDelta,
+        final int metaDataAdjustment)
     {
         final int frameBodyLengthOffset =
-            claimOffset + MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH;
+            claimOffset + MessageHeaderDecoder.ENCODED_LENGTH + FixMessageDecoder.BLOCK_LENGTH + metaDataAdjustment;
         final short frameBodyLength = (short)(messageLength + lengthDelta);
         claimBuffer.putShort(frameBodyLengthOffset, frameBodyLength, LITTLE_ENDIAN);
     }

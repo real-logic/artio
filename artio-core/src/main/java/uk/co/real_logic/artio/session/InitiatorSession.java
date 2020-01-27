@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.session;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
@@ -29,7 +30,8 @@ public class InitiatorSession extends InternalSession
     public InitiatorSession(
         final int heartbeatInterval,
         final long connectionId,
-        final EpochClock clock,
+        final EpochClock epochClock,
+        final Clock clock,
         final SessionProxy proxy,
         final GatewayPublication publication,
         final SessionIdStrategy sessionIdStrategy,
@@ -49,6 +51,7 @@ public class InitiatorSession extends InternalSession
         super(
             heartbeatInterval,
             connectionId,
+            epochClock,
             clock,
             state,
             proxy,

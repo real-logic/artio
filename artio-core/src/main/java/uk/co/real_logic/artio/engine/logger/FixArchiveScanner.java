@@ -189,7 +189,7 @@ public class FixArchiveScanner implements AutoCloseable
         return archiveLocations;
     }
 
-    class ArchiveLocation
+    static class ArchiveLocation
     {
         final long recordingId;
         final long startPosition;

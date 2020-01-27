@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.library;
 
 import io.aeron.Subscription;
+import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.concurrent.status.AtomicCounter;
 import org.junit.Before;
 import org.junit.Test;
@@ -28,6 +29,7 @@ import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.framer.FakeEpochClock;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
+import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.SessionStatus;
 import uk.co.real_logic.artio.messages.SlowStatus;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -90,7 +92,7 @@ public class LibraryPollerTest
         when(counters.receivedMsgSeqNo(anyLong())).thenReturn(mock(AtomicCounter.class));
         when(counters.sentMsgSeqNo(anyLong())).thenReturn(mock(AtomicCounter.class));
 
-        when(sessionAcquireHandler.onSessionAcquired(session.capture(), anyBoolean())).thenReturn(sessionHandler);
+        when(sessionAcquireHandler.onSessionAcquired(session.capture(), any())).thenReturn(sessionHandler);
     }
 
     @Test
@@ -355,7 +357,6 @@ public class LibraryPollerTest
             sessionId,
             LAST_SENT_SEQUENCE_NUMBER,
             LAST_RECEIVED_SEQUENCE_NUMBER,
-            -1,
             SessionStatus.SESSION_HANDOVER,
             SlowStatus.NOT_SLOW,
             ACCEPTOR,
@@ -372,7 +373,9 @@ public class LibraryPollerTest
             InternalSession.INITIAL_LAST_RESEND_CHUNK_MSG_SEQ_NUM,
             InternalSession.INITIAL_END_OF_RESEND_REQUEST_RANGE,
             InternalSession.INITIAL_AWAITING_HEARTBEAT,
-            LAST_RECEIVED_SEQUENCE_NUMBER, SEQUENCE_INDEX, "ABC",
+            LAST_RECEIVED_SEQUENCE_NUMBER, SEQUENCE_INDEX,
+            Session.UNKNOWN_TIME, Session.UNKNOWN_TIME,
+            "ABC",
             "",
             "",
             "DEF",
@@ -380,8 +383,11 @@ public class LibraryPollerTest
             "", address,
             "",
             "",
-            FixDictionary.findDefault()
-        );
+            FixDictionary.findDefault(),
+            MetaDataStatus.NO_META_DATA,
+            new UnsafeBuffer(new byte[0]),
+            0,
+            0);
     }
 
     private SessionsDecoder hasOtherSessionId()

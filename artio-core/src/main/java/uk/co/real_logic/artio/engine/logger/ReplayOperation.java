@@ -278,6 +278,7 @@ public class ReplayOperation
 
                 if (DebugLogger.isEnabled(logTag))
                 {
+                    messageDecoder.skipMetaData();
                     DebugLogger.log(logTag, "Found Replay Message [%s]%n", messageDecoder.body());
                 }
 

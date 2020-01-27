@@ -41,6 +41,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
     private final FollowerSessionRequestDecoder followerSessionRequest = new FollowerSessionRequestDecoder();
     private final WriteMetaDataDecoder writeMetaData = new WriteMetaDataDecoder();
     private final ReadMetaDataDecoder readMetaData = new ReadMetaDataDecoder();
+    private final ReplayMessagesDecoder replayMessages = new ReplayMessagesDecoder();
 
     private final EngineEndPointHandler handler;
 
@@ -108,6 +109,11 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             case ReadMetaDataDecoder.TEMPLATE_ID:
             {
                 return onReadMetaData(buffer, offset, blockLength, version, header);
+            }
+
+            case ReplayMessagesDecoder.TEMPLATE_ID:
+            {
+                return onReplayMessages(buffer, offset, blockLength, version, header);
             }
         }
 
@@ -344,5 +350,29 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             readMetaData.correlationId());
     }
 
+    private Action onReplayMessages(
+        final DirectBuffer buffer,
+        final int offset,
+        final int blockLength,
+        final int version,
+        final Header header)
+    {
+        replayMessages.wrap(buffer, offset, blockLength, version);
+        final int libraryId = replayMessages.libraryId();
+        final Action action = handler.onApplicationHeartbeat(libraryId, header.sessionId());
+        if (action != null)
+        {
+            return action; // Continue processing messages, but not this message.
+        }
+        return handler.onReplayMessages(
+            libraryId,
+            replayMessages.session(),
+            replayMessages.correlationId(),
+            replayMessages.replayFromSequenceNumber(),
+            replayMessages.replayToSequenceIndex(),
+            replayMessages.replayToSequenceNumber(),
+            replayMessages.replayToSequenceIndex(),
+            replayMessages.latestReplyArrivalTimeInMs());
+    }
 
 }

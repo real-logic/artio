@@ -119,7 +119,6 @@ public final class SystemTestUtil
         assertEventuallyTrue("Session not connected", session::isConnected);
 
         final AbstractTestRequestEncoder testRequest = fixDictionary.makeTestRequestEncoder();
-        //final TestRequestEncoder testRequest = new TestRequestEncoder();
         testRequest.testReqID(testReqID);
 
         final long position = session.send(testRequest);
@@ -190,7 +189,7 @@ public final class SystemTestUtil
             });
     }
 
-    static SessionReplyStatus releaseToGateway(
+    static SessionReplyStatus releaseToEngine(
         final FixLibrary library, final Session session, final TestSystem testSystem)
     {
         final Reply<SessionReplyStatus> reply = testSystem.awaitReply(

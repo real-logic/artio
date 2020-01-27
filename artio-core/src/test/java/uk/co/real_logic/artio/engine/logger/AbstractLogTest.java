@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,7 @@ import static org.mockito.Mockito.*;
 import static uk.co.real_logic.artio.CommonConfiguration.DEFAULT_OUTBOUND_LIBRARY_STREAM;
 import static uk.co.real_logic.artio.TestFixtures.MESSAGE_BUFFER_SIZE_IN_BYTES;
 import static uk.co.real_logic.artio.engine.logger.Replayer.SIZE_OF_LENGTH_FIELD;
+import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataHeaderLength;
 
 public class AbstractLogTest
 {
@@ -63,7 +64,8 @@ public class AbstractLogTest
     private static final String RESEND_TARGET = "sender";
     static final String RESEND_TARGET_2 = "sender2";
     public static final int PREFIX_LENGTH =
-        MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + SIZE_OF_LENGTH_FIELD;
+        MessageHeaderEncoder.ENCODED_LENGTH + FixMessageEncoder.BLOCK_LENGTH + SIZE_OF_LENGTH_FIELD +
+        metaDataHeaderLength();
     public static final int BIG_BUFFER_LENGTH = MESSAGE_BUFFER_SIZE_IN_BYTES + 500;
 
     protected MessageHeaderEncoder header = new MessageHeaderEncoder();
@@ -164,6 +166,7 @@ public class AbstractLogTest
             .connection(CONNECTION_ID)
             .sequenceIndex(sequenceIndex)
             .libraryId(LIBRARY_ID)
+            .putMetaData(new byte[0], 0, 0)
             .putBody(asciiBuffer, 0, logEntryLength);
 
         offset += PREFIX_LENGTH;

@@ -53,7 +53,7 @@ public class GapFillerTest extends AbstractLogTest
         gapFiller.onMessage(
             buffer, encodedOffset, encodedLength,
             LIBRARY_ID, CONNECTION_ID, SESSION_ID, SEQUENCE_INDEX,
-            ResendRequestDecoder.MESSAGE_TYPE, 0L, OK, 0, 0L);
+            ResendRequestDecoder.MESSAGE_TYPE, 0L, OK, 0, 0L, 0);
 
         final ArgumentCaptor<DirectBuffer> bufferCaptor = ArgumentCaptor.forClass(DirectBuffer.class);
         final ArgumentCaptor<Integer> lengthCaptor = ArgumentCaptor.forClass(int.class);

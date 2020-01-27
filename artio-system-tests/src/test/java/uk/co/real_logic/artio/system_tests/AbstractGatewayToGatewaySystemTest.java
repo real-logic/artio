@@ -77,6 +77,8 @@ public class AbstractGatewayToGatewaySystemTest
     FakeOtfAcceptor initiatingOtfAcceptor = new FakeOtfAcceptor();
     FakeHandler initiatingHandler = new FakeHandler(initiatingOtfAcceptor);
 
+    TimeRange connectTimeRange;
+
     @After
     public void close()
     {
@@ -133,9 +135,6 @@ public class AbstractGatewayToGatewaySystemTest
         logoutAcceptingSession();
 
         assertSessionsDisconnected();
-
-        acceptingSession.close();
-        initiatingSession.close();
     }
 
     void logoutAcceptingSession()
@@ -190,8 +189,10 @@ public class AbstractGatewayToGatewaySystemTest
 
     void connectSessions()
     {
+        connectTimeRange = new TimeRange();
         final Reply<Session> reply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
         completeConnectInitiatingSession(reply);
+        connectTimeRange.end();
     }
 
     void completeConnectInitiatingSession(final Reply<Session> reply)
@@ -205,6 +206,10 @@ public class AbstractGatewayToGatewaySystemTest
 
         final Session session = reply.resultIfPresent();
 
+        if (reply.error() != null)
+        {
+            reply.error().printStackTrace();
+        }
         assertEquals(reply.toString(), State.COMPLETED, reply.state());
         assertConnected(session);
 
@@ -367,7 +372,7 @@ public class AbstractGatewayToGatewaySystemTest
         final long connectionId = session.connectionId();
         final long sessionId = session.id();
 
-        final SessionReplyStatus status = releaseToGateway(library, session, testSystem);
+        final SessionReplyStatus status = releaseToEngine(library, session, testSystem);
 
         assertEquals(OK, status);
         assertEquals(SessionState.DISABLED, session.state());
@@ -413,7 +418,7 @@ public class AbstractGatewayToGatewaySystemTest
         final int lastReceivedMsgSeqNum = session.lastReceivedMsgSeqNum();
         final int sequenceIndex = session.sequenceIndex();
 
-        releaseToGateway(library, session, testSystem);
+        releaseToEngine(library, session, testSystem);
 
         messagesCanBeExchanged(otherSession, otherAcceptor);
 
@@ -445,8 +450,10 @@ public class AbstractGatewayToGatewaySystemTest
             .resetSeqNum(resetSeqNum)
             .build();
 
+        connectTimeRange = new TimeRange();
         final Reply<Session> reply = initiatingLibrary.initiate(config);
         testSystem.awaitReply(reply);
+        connectTimeRange.end();
         return reply;
     }
 
@@ -476,6 +483,15 @@ public class AbstractGatewayToGatewaySystemTest
     {
         assertEquals(lastLogonReceivedSequenceNumber, acceptingHandler.lastLogonReceivedSequenceNumber());
         assertEquals(lastLogonSequenceIndex, acceptingHandler.lastLogonSequenceIndex());
+    }
+
+    void assertSequenceResetTimeAtLatestLogon(final Session session)
+    {
+        final long lastLogonTime = session.lastLogonTime();
+        final long lastSequenceResetTime = session.lastSequenceResetTime();
+        connectTimeRange.assertWithinRange(lastLogonTime);
+        assertEquals("lastSequenceResetTime was not the same as lastLogonTime",
+            lastLogonTime, lastSequenceResetTime);
     }
 
     List<String> getMessagesFromArchive(final EngineConfiguration configuration, final int queryStreamId)

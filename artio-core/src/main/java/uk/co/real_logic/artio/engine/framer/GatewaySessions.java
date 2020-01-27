@@ -20,6 +20,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.LangUtil;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.FixCounters;
 import uk.co.real_logic.artio.FixGatewayException;
@@ -44,6 +45,7 @@ import java.util.*;
 import java.util.function.Function;
 
 import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
+import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.DUPLICATE_SESSION;
 import static uk.co.real_logic.artio.engine.framer.SessionContexts.UNKNOWN_SESSION;
 import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.resetSequenceNumbersUponLogon;
@@ -72,7 +74,10 @@ class GatewaySessions
     private final SessionPersistenceStrategy sessionPersistenceStrategy;
     private final SequenceNumberIndexReader sentSequenceNumberIndex;
     private final SequenceNumberIndexReader receivedSequenceNumberIndex;
+    private final Clock clock;
 
+    // Initialised after logon processed.
+    private SessionContext sessionContext;
     private ErrorHandler errorHandler;
 
     private final Function<FixDictionary, UserRequestExtractor> newUserRequestExtractor =
@@ -103,6 +108,7 @@ class GatewaySessions
         this.reasonableTransmissionTimeInMs = configuration.reasonableTransmissionTimeInMs();
         this.logAllMessages = configuration.logAllMessages();
         this.validateCompIdsOnEveryMessage = configuration.validateCompIdsOnEveryMessage();
+        this.clock = configuration.clock();
         this.errorHandler = errorHandler;
         this.sessionContexts = sessionContexts;
         this.sessionPersistenceStrategy = sessionPersistenceStrategy;
@@ -155,6 +161,7 @@ class GatewaySessions
             heartbeatIntervalInS,
             connectionId,
             epochClock,
+            clock,
             state,
             proxy,
             outboundPublication,
@@ -296,7 +303,10 @@ class GatewaySessions
         final int lastSentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
         final int lastReceivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
         gatewaySession.acceptorSequenceNumbers(lastSentSequenceNumber, lastReceivedSequenceNumber);
-
+        if (lastReceivedSequenceNumber != UNK_SESSION)
+        {
+            gatewaySession.lastSequenceResetTime(sessionContext.lastSequenceResetTime());
+        }
         return true;
     }
 
@@ -600,7 +610,7 @@ class GatewaySessions
 
             final SessionHeaderDecoder header = logon.header();
             final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(header);
-            final SessionContext sessionContext = sessionContexts.onLogon(compositeKey);
+            sessionContext = sessionContexts.onLogon(compositeKey);
 
             if (sessionContext == DUPLICATE_SESSION)
             {
@@ -608,7 +618,8 @@ class GatewaySessions
                 return;
             }
 
-            sessionContext.onLogon(resetSeqNum, epochClock.time());
+            final long logonTime = clock.time();
+            sessionContext.onLogon(resetSeqNum, logonTime);
             session.initialResetSeqNum(resetSeqNum);
             session.onLogon(
                 sessionContext.sessionId(),
@@ -618,11 +629,13 @@ class GatewaySessions
                 password,
                 logon.heartBtInt(),
                 header.msgSeqNum());
+            session.lastLogonTime(logonTime);
 
             // See Framer.handoverNewConnectionToLibrary for sole library mode equivalent
             if (resetSeqNum)
             {
-                session.acceptorSequenceNumbers(SessionInfo.UNK_SESSION, SessionInfo.UNK_SESSION);
+                session.acceptorSequenceNumbers(UNK_SESSION, UNK_SESSION);
+                session.lastLogonWasSequenceReset();
                 state = AuthenticationState.ACCEPTED;
             }
             else

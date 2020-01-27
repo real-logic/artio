@@ -54,15 +54,15 @@ public class SessionContexts
 
     static final SessionContext DUPLICATE_SESSION = new SessionContext(-3,
         -3,
-        Session.NO_LOGON_TIME,
-        Session.NO_LAST_SEQUENCE_RESET_TIME,
+        Session.UNKNOWN_TIME,
+        Session.UNKNOWN_TIME,
         null,
         OUT_OF_SPACE);
     static final SessionContext UNKNOWN_SESSION = new SessionContext(
         Session.UNKNOWN,
         (int)Session.UNKNOWN,
-        Session.NO_LOGON_TIME,
-        Session.NO_LAST_SEQUENCE_RESET_TIME,
+        Session.UNKNOWN_TIME,
+        Session.UNKNOWN_TIME,
         null,
         OUT_OF_SPACE);
     static final long LOWEST_VALID_SESSION_ID = 1L;
@@ -141,7 +141,7 @@ public class SessionContexts
                 }
             }
             final int sequenceIndex = sessionIdDecoder.sequenceIndex();
-            final long logonTime = sessionIdDecoder.logonTime();
+            final long lastLogonTime = sessionIdDecoder.logonTime();
             final long lastSequenceResetTime = sessionIdDecoder.lastSequenceResetTime();
             final int compositeKeyLength = sessionIdDecoder.compositeKeyLength();
             final CompositeKey compositeKey = idStrategy.load(
@@ -153,7 +153,7 @@ public class SessionContexts
 
             compositeToContext.put(compositeKey,
                 new SessionContext(
-                sessionId, sequenceIndex, logonTime, lastSequenceResetTime, this, filePosition));
+                sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this, filePosition));
             counter = Math.max(counter, sessionId + 1);
 
             filePosition += BLOCK_LENGTH + compositeKeyLength;
@@ -251,8 +251,8 @@ public class SessionContexts
             return new SessionContext(
                 sessionId,
                 sequenceIndex,
-                Session.NO_LOGON_TIME,
-                Session.NO_LAST_SEQUENCE_RESET_TIME,
+                Session.UNKNOWN_TIME,
+                Session.UNKNOWN_TIME,
                 this,
                 OUT_OF_SPACE);
         }
@@ -273,7 +273,7 @@ public class SessionContexts
                         .wrap(buffer, filePosition)
                         .sessionId(sessionId)
                         .sequenceIndex(sequenceIndex)
-                        .logonTime(Session.NO_LOGON_TIME)
+                        .logonTime(Session.UNKNOWN_TIME)
                         .compositeKeyLength(compositeKeyLength);
                     filePosition += BLOCK_LENGTH;
 
@@ -288,8 +288,8 @@ public class SessionContexts
             return new SessionContext(
                 sessionId,
                 sequenceIndex,
-                Session.NO_LOGON_TIME,
-                Session.NO_LAST_SEQUENCE_RESET_TIME,
+                Session.UNKNOWN_TIME,
+                Session.UNKNOWN_TIME,
                 this,
                 keyPosition);
         }
