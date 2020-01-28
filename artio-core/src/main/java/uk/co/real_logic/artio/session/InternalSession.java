@@ -97,9 +97,18 @@ public class InternalSession extends Session implements AutoCloseable
         super.sessionProcessHandler(sessionProcessHandler);
     }
 
-    public void address(final String connectedHost, final int connectedPort)
+    public void address(final String address)
     {
-        super.address(connectedHost, connectedPort);
+        final int split = address.lastIndexOf(':');
+        final int start = address.startsWith("/") ? 1 : 0;
+        final String host = address.substring(start, split);
+        final int port = Integer.parseInt(address.substring(split + 1));
+        address(host, port);
+    }
+
+    public void address(final String host, final int port)
+    {
+        super.address(host, port);
     }
 
     public void username(final String username)
@@ -211,4 +220,21 @@ public class InternalSession extends Session implements AutoCloseable
     {
         super.close();
     }
+
+    public void onReconnect(
+        final long connectionId,
+        final SessionState sessionState,
+        final int heartbeatIntervalInS,
+        final int sequenceIndex,
+        final boolean enableLastMsgSeqNumProcessed,
+        final FixDictionary fixDictionary)
+    {
+        connectionId(connectionId);
+        state(sessionState);
+        heartbeatIntervalInS(heartbeatIntervalInS);
+        sequenceIndex(sequenceIndex);
+        enableLastMsgSeqNumProcessed(enableLastMsgSeqNumProcessed);
+        fixDictionary(fixDictionary);
+    }
+
 }

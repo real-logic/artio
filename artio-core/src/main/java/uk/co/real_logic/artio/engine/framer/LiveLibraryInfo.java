@@ -110,6 +110,11 @@ final class LiveLibraryInfo implements LibraryInfo
         return GatewaySessions.removeSessionByConnectionId(connectionId, allSessions);
     }
 
+    public void removeSession(final GatewaySession gatewaySession)
+    {
+        allSessions.remove(gatewaySession);
+    }
+
     void acquireAtPosition(final long libraryPosition)
     {
         acquireAtPosition = libraryPosition;

@@ -83,7 +83,6 @@ public class Session
 
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
 
-    protected final long connectionId;
     protected final SessionIdStrategy sessionIdStrategy;
     protected final GatewayPublication publication;
     protected final MutableAsciiBuffer asciiBuffer;
@@ -96,7 +95,6 @@ public class Session
     private final AtomicCounter receivedMsgSeqNo;
     private final AtomicCounter sentMsgSeqNo;
     private final long reasonableTransmissionTimeInMs;
-    private final boolean enableLastMsgSeqNumProcessed;
     private final SessionCustomisationStrategy customisationStrategy;
 
     private CompositeKey sessionKey;
@@ -114,6 +112,9 @@ public class Session
 
     private boolean awaitingHeartbeat = INITIAL_AWAITING_HEARTBEAT;
 
+    private boolean enableLastMsgSeqNumProcessed;
+
+    protected long connectionId;
     private long id = UNKNOWN;
     private int lastReceivedMsgSeqNum;
     private int lastMsgSeqNumProcessed;
@@ -1512,7 +1513,7 @@ public class Session
 
     // ---------- Setters ----------
 
-    private void heartbeatIntervalInS(final int heartbeatIntervalInS)
+    void heartbeatIntervalInS(final int heartbeatIntervalInS)
     {
         this.heartbeatIntervalInMs = SECONDS.toMillis((long)heartbeatIntervalInS);
 
@@ -1834,6 +1835,17 @@ public class Session
     {
         proxy.fixDictionary(fixDictionary);
         this.beginString = fixDictionary.beginString();
+    }
+
+    void connectionId(final long connectionId)
+    {
+        this.connectionId = connectionId;
+        proxy.connectionId(connectionId);
+    }
+
+    void enableLastMsgSeqNumProcessed(final boolean enableLastMsgSeqNumProcessed)
+    {
+        this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
     }
 
     /**

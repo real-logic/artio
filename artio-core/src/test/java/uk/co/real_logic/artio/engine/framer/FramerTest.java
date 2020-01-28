@@ -451,7 +451,7 @@ public class FramerTest
 
         awaitEndpointCreation();
 
-        framer.onLogonMessageReceived(gatewaySession);
+        framer.onLogonMessageReceived(gatewaySession, SESSION_ID);
 
         verifySessionsAcquired(CONNECTED);
     }

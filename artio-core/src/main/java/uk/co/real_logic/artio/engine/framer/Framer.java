@@ -1336,6 +1336,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             if (configuration.logInboundMessages())
             {
                 // Create GatewaySession for offline session and associate it with the library
+                final int libraryId = libraryInfo.libraryId();
                 gatewaySession = new GatewaySession(
                     NO_CONNECTION_ID,
                     sessionContext,
@@ -1353,13 +1354,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     configuration.authenticationTimeoutInMs());
                 gatewaySession.lastSequenceResetTime(sessionContext.lastSequenceResetTime());
                 gatewaySession.lastLogonTime(sessionContext.lastLogonTime());
+                gatewaySession.libraryId(libraryId);
                 libraryInfo.addSession(gatewaySession);
 
                 workList.add(this::checkLoggerUpToDate);
                 workList.add(this::saveManageSession);
                 catchupSession(
                     workList,
-                    libraryInfo.libraryId(),
+                    libraryId,
                     NO_CONNECTION_ID,
                     correlationId,
                     replayFromSequenceNumber,
@@ -1746,8 +1748,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
     }
 
-    void onLogonMessageReceived(final GatewaySession gatewaySession)
+    boolean onLogonMessageReceived(final GatewaySession gatewaySession, final long sessionId)
     {
+        if (checkOfflineSession(gatewaySession, sessionId))
+        {
+            return true;
+        }
+
         if (!soleLibraryMode)
         {
             gatewaySessions.acquire(
@@ -1761,21 +1768,57 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 null,
                 engineBlockablePosition);
         }
+
+        return false;
     }
 
-    void onGatewaySessionSetup(final GatewaySession gatewaySession)
+    private boolean checkOfflineSession(final GatewaySession gatewaySession, final long sessionId)
+    {
+        for (final LiveLibraryInfo library : idToLibrary.values())
+        {
+            final GatewaySession oldGatewaySession = library.lookupSessionById(sessionId);
+            if (oldGatewaySession != null)
+            {
+                gatewaySession.consumeOfflineSession(oldGatewaySession);
+                // the handover process will associate the new gateway session with the library
+                library.removeSession(gatewaySession);
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    void onGatewaySessionSetup(final GatewaySession gatewaySession, final boolean hasOfflineOwner)
     {
         if (gatewaySession.connectionType() == ACCEPTOR)
         {
+            // Hand over management of this new session to the sole library or it's existing offline owner.
+
+            LiveLibraryInfo libraryInfo = null;
+
             if (soleLibraryMode)
             {
-                // Hand over management of this new session to the sole library
                 if (idToLibrary.size() != 1)
                 {
                     logSoleLibraryError();
                 }
 
-                final LiveLibraryInfo libraryInfo = idToLibrary.values().iterator().next();
+                libraryInfo = idToLibrary.values().iterator().next();
+            }
+
+            if (hasOfflineOwner)
+            {
+                final int libraryId = gatewaySession.libraryId();
+                libraryInfo = idToLibrary.get(libraryId);
+                if (libraryInfo == null)
+                {
+                    logOfflineSessionLibrary(libraryId);
+                }
+            }
+
+            if (libraryInfo != null)
+            {
                 final CompositeKey sessionKey = gatewaySession.sessionKey();
                 final int libraryAeronSessionId = libraryInfo.aeronSessionId();
                 final long requiredPosition = librarySubscription.imageBySessionId(libraryAeronSessionId).position();
@@ -1813,6 +1856,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     ACCEPTOR);
             }
         }
+    }
+
+    private void logOfflineSessionLibrary(final int libraryId)
+    {
+        errorHandler.onError(new IllegalStateException(
+            "Error, offline session owned by non-existent library: " + libraryId));
     }
 
     private void logSoleLibraryError()

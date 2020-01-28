@@ -31,6 +31,8 @@ public interface SessionProxy
 
     void setupSession(long sessionId, CompositeKey sessionKey);
 
+    void connectionId(long connectionId);
+
     long sendResendRequest(
         int msgSeqNo,
         int beginSeqNo,

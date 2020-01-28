@@ -69,6 +69,7 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
     // Otherwise this is updated when we handover the session.
     private long lastSequenceResetTime = Session.UNKNOWN_TIME;
     private long lastLogonTime = Session.UNKNOWN_TIME;
+    private int libraryId;
 
     GatewaySession(
         final long connectionId,
@@ -151,6 +152,7 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
 
     void setManagementTo(final int libraryId, final BlockablePosition blockablePosition)
     {
+        libraryId(libraryId);
         receiverEndPoint.libraryId(libraryId);
         receiverEndPoint.pause();
         senderEndPoint.libraryId(libraryId, blockablePosition);
@@ -444,5 +446,20 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
         {
             session.lastLogonTime(lastLogonTime);
         }
+    }
+
+    public void libraryId(final int libraryId)
+    {
+        this.libraryId = libraryId;
+    }
+
+    public int libraryId()
+    {
+        return libraryId;
+    }
+
+    public void consumeOfflineSession(final GatewaySession oldGatewaySession)
+    {
+        libraryId(oldGatewaySession.libraryId());
     }
 }

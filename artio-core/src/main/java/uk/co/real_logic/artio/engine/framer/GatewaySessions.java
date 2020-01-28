@@ -199,7 +199,7 @@ class GatewaySessions
         gatewaySession.manage(sessionParser, session, engineBlockablePosition);
 
         final CompositeKey sessionKey = gatewaySession.sessionKey();
-        DebugLogger.log(FIX_CONNECTION, "Gateway Acquired Session %d%n", connectionId);
+        DebugLogger.log(FIX_CONNECTION, "Gateway Acquired Connection %d%n", connectionId);
         if (sessionKey != null)
         {
             gatewaySession.updateSessionDictionary();
@@ -629,7 +629,7 @@ class GatewaySessions
                 return;
             }
 
-            framer.onLogonMessageReceived(session);
+            final boolean hasOfflineOwner = framer.onLogonMessageReceived(session, sessionContext.sessionId());
 
             final long logonTime = clock.time();
             sessionContext.onLogon(resetSeqNum, logonTime);
@@ -659,7 +659,7 @@ class GatewaySessions
                 state = AuthenticationState.INDEXER_CATCHUP;
             }
 
-            framer.onGatewaySessionSetup(session);
+            framer.onGatewaySessionSetup(session, hasOfflineOwner);
         }
 
         public void reject()

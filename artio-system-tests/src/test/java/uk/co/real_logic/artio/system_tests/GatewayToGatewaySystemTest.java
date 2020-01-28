@@ -79,7 +79,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             .deleteLogFileDirOnStart(true);
         auth = new CapturingAuthenticationStrategy(acceptingConfig.messageValidationStrategy());
         acceptingConfig.authenticationStrategy(auth);
-        acceptingConfig.printErrorMessages(true);
+        acceptingConfig.printErrorMessages(false);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
@@ -1145,16 +1145,14 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertReplayReceivedMessages();
 
-        // TODO: reconnect the initiating session and redirect it
-
-        /*connectSessions();
+        connectSessions();
 
         assertEventuallyTrue("offline session is reconnected", () ->
         {
             testSystem.poll();
 
             return acceptingSession.state() == SessionState.ACTIVE;
-        });*/
+        });
     }
 
     private void assertReplayReceivedMessages()
