@@ -588,7 +588,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final boolean enableLastMsgSeqNumProcessed,
         final String username,
         final String password,
-        final Class<? extends FixDictionary> fixDictionary,
+        final Class<? extends FixDictionary> fixDictionaryClass,
         final int heartbeatIntervalInS,
         final long correlationId,
         final Header header)
@@ -616,7 +616,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             targetSubId,
             targetLocationId);
 
-        final SessionContext sessionContext = sessionContexts.onLogon(sessionKey);
+        final SessionContext sessionContext = sessionContexts.onLogon(
+            sessionKey, FixDictionary.of(fixDictionaryClass));
 
         if (sessionContext == SessionContexts.DUPLICATE_SESSION)
         {
@@ -668,7 +669,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                         enableLastMsgSeqNumProcessed,
                         username,
                         password,
-                        fixDictionary,
+                        fixDictionaryClass,
                         heartbeatIntervalInS,
                         correlationId,
                         header,
@@ -681,7 +682,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
         catch (final Exception ex)
         {
-            sessionContexts.onDisconnect(sessionContext.sessionId());
+            sessionContexts.onDisconnect(
+                sessionContext.sessionId());
             saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
 
             return CONTINUE;
@@ -755,7 +757,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final boolean enableLastMsgSeqNumProcessed,
         final String username,
         final String password,
-        final Class<? extends FixDictionary> fixDictionary,
+        final Class<? extends FixDictionary> fixDictionaryClass,
         final int heartbeatIntervalInS,
         final long correlationId,
         final Header header,
@@ -770,7 +772,9 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             DebugLogger.log(FIX_CONNECTION,
                 "Initiating session %s from library %s%n", sessionContext.sessionId(), library.libraryId());
             final long connectionId = newConnectionId();
-            sessionContext.onLogon(resetSequenceNumber || sequenceNumberType == TRANSIENT, clock.time());
+            final FixDictionary fixDictionary = FixDictionary.of(fixDictionaryClass);
+            sessionContext.onLogon(
+                resetSequenceNumber || sequenceNumberType == TRANSIENT, clock.time(), fixDictionary);
             final long sessionId = sessionContext.sessionId();
             final GatewaySession gatewaySession = setupConnection(
                 channel,
@@ -783,7 +787,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 resendRequestChunkSize,
                 sendRedundantResendRequests,
                 enableLastMsgSeqNumProcessed,
-                FixDictionary.of(fixDictionary));
+                fixDictionary);
             gatewaySession.lastSequenceResetTime(sessionContext.lastSequenceResetTime());
             gatewaySession.lastLogonTime(sessionContext.lastLogonTime());
             library.addSession(gatewaySession);
@@ -802,7 +806,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 enableLastMsgSeqNumProcessed,
                 username,
                 password,
-                fixDictionary,
+                fixDictionaryClass,
                 heartbeatIntervalInS,
                 correlationId,
                 library,
@@ -1350,7 +1354,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     configuration.acceptedSessionResendRequestChunkSize(),
                     configuration.acceptedSessionSendRedundantResendRequests(),
                     configuration.acceptedEnableLastMsgSeqNumProcessed(),
-                    configuration.acceptorfixDictionary(), // TODO
+                    sessionContext.lastFixDictionary(),
                     configuration.authenticationTimeoutInMs());
                 gatewaySession.lastSequenceResetTime(sessionContext.lastSequenceResetTime());
                 gatewaySession.lastLogonTime(sessionContext.lastLogonTime());
@@ -1534,13 +1538,14 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int srcLength)
     {
         asciiBuffer.wrap(srcBuffer);
-        final SessionHeaderDecoder acceptorHeaderDecoder = acceptorFixDictionaryLookup.lookupHeaderDecoder(
-            asciiBuffer, srcOffset, srcLength);
+        final FixDictionary fixDictionary = acceptorFixDictionaryLookup.lookup(asciiBuffer, srcOffset, srcLength);
+        final SessionHeaderDecoder acceptorHeaderDecoder =
+            acceptorFixDictionaryLookup.lookupHeaderDecoder(fixDictionary);
         acceptorHeaderDecoder.reset();
         acceptorHeaderDecoder.decode(asciiBuffer, srcOffset, srcLength);
 
         final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(acceptorHeaderDecoder);
-        final SessionContext sessionContext = sessionContexts.newSessionContext(compositeKey);
+        final SessionContext sessionContext = sessionContexts.newSessionContext(compositeKey, fixDictionary);
         final long sessionId = sessionContext.sessionId();
 
         schedule(() -> inboundPublication.saveFollowerSessionReply(
@@ -1789,7 +1794,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return false;
     }
 
-    void onGatewaySessionSetup(final GatewaySession gatewaySession, final boolean hasOfflineOwner)
+    void onGatewaySessionSetup(final GatewaySession gatewaySession, final boolean isOfflineReconnect)
     {
         if (gatewaySession.connectionType() == ACCEPTOR)
         {
@@ -1807,7 +1812,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 libraryInfo = idToLibrary.values().iterator().next();
             }
 
-            if (hasOfflineOwner)
+            if (isOfflineReconnect)
             {
                 final int libraryId = gatewaySession.libraryId();
                 libraryInfo = idToLibrary.get(libraryId);

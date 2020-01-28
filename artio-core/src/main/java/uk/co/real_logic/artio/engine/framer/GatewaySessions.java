@@ -621,7 +621,7 @@ class GatewaySessions
 
             final SessionHeaderDecoder header = logon.header();
             final CompositeKey compositeKey = sessionIdStrategy.onAcceptLogon(header);
-            sessionContext = sessionContexts.onLogon(compositeKey);
+            sessionContext = sessionContexts.onLogon(compositeKey, fixDictionary);
 
             if (sessionContext == DUPLICATE_SESSION)
             {
@@ -629,10 +629,10 @@ class GatewaySessions
                 return;
             }
 
-            final boolean hasOfflineOwner = framer.onLogonMessageReceived(session, sessionContext.sessionId());
+            final boolean isOfflineReconnect = framer.onLogonMessageReceived(session, sessionContext.sessionId());
 
             final long logonTime = clock.time();
-            sessionContext.onLogon(resetSeqNum, logonTime);
+            sessionContext.onLogon(resetSeqNum, logonTime, fixDictionary);
             session.initialResetSeqNum(resetSeqNum);
             session.fixDictionary(fixDictionary);
             session.updateSessionDictionary();
@@ -659,7 +659,7 @@ class GatewaySessions
                 state = AuthenticationState.INDEXER_CATCHUP;
             }
 
-            framer.onGatewaySessionSetup(session, hasOfflineOwner);
+            framer.onGatewaySessionSetup(session, isOfflineReconnect);
         }
 
         public void reject()

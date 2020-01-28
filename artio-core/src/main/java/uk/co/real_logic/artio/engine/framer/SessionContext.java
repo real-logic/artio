@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.engine.framer;
 
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.session.Session;
 
 /**
@@ -26,6 +27,7 @@ class SessionContext
 
     private final long sessionId;
     private final SessionContexts sessionContexts;
+
     private final int filePosition;
 
     // onSequenceReset() will be called upon logon or not depending upon whether this is a persistent
@@ -34,6 +36,7 @@ class SessionContext
 
     private long lastLogonTime;
     private long lastSequenceResetTime;
+    private FixDictionary lastFixDictionary;
 
     SessionContext(
         final long sessionId,
@@ -41,7 +44,8 @@ class SessionContext
         final long lastLogonTime,
         final long lastSequenceResetTime,
         final SessionContexts sessionContexts,
-        final int filePosition)
+        final int filePosition,
+        final FixDictionary lastFixDictionary)
     {
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
@@ -49,6 +53,7 @@ class SessionContext
         this.lastSequenceResetTime = lastSequenceResetTime;
         this.sessionContexts = sessionContexts;
         this.filePosition = filePosition;
+        this.lastFixDictionary = lastFixDictionary;
     }
 
     void onSequenceReset(final long resetTime)
@@ -66,7 +71,10 @@ class SessionContext
 
     private void save()
     {
-        sessionContexts.updateSavedData(filePosition, sequenceIndex, lastLogonTime, lastSequenceResetTime);
+        // NB: we deliberately don't update the fix dictionary as this can't change within
+        // a connection
+        sessionContexts.updateSavedData(
+            filePosition, sequenceIndex, lastLogonTime, lastSequenceResetTime);
     }
 
     void updateFrom(final Session session)
@@ -76,8 +84,9 @@ class SessionContext
         lastSequenceResetTime = session.lastSequenceResetTime();
     }
 
-    void onLogon(final boolean resetSeqNum, final long time)
+    void onLogon(final boolean resetSeqNum, final long time, final FixDictionary fixDictionary)
     {
+        lastFixDictionary = fixDictionary;
         lastLogonTime = time;
         // increment if we're going to reset the sequence number or if it's persistent
         // sequence numbers and it's the first time we're logging on.
@@ -110,6 +119,11 @@ class SessionContext
     public long lastLogonTime()
     {
         return lastLogonTime;
+    }
+
+    public FixDictionary lastFixDictionary()
+    {
+        return lastFixDictionary;
     }
 
     public boolean equals(final Object o)

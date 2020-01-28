@@ -122,6 +122,7 @@ public class FramerTest
     private final CompositeKey sessionKey = SessionIdStrategy
         .senderAndTarget()
         .onInitiateLogon("local", "", "", "remote", "", "");
+    private final FixDictionary fixDictionary = FixDictionary.of(FixDictionary.findDefault());
 
     private FinalImagePositions finalImagePositions = mock(FinalImagePositions.class);
 
@@ -166,7 +167,7 @@ public class FramerTest
         when(mockReceiverEndPoint.libraryId()).thenReturn(LIBRARY_ID);
 
         when(gatewaySession.session()).thenReturn(session);
-        when(gatewaySession.fixDictionary()).thenReturn(FixDictionary.of(FixDictionary.findDefault()));
+        when(gatewaySession.fixDictionary()).thenReturn(fixDictionary);
 
         when(session.lastLogonTime()).thenReturn(-1L);
         when(session.compositeKey()).thenReturn(sessionKey);
@@ -198,12 +199,13 @@ public class FramerTest
             mock(AgentInvoker.class),
             mock(RecordingCoordinator.class));
 
-        when(sessionContexts.onLogon(any())).thenReturn(new SessionContext(SESSION_ID,
+        when(sessionContexts.onLogon(any(), any(fixDictionary.getClass()))).thenReturn(new SessionContext(SESSION_ID,
             SessionContext.UNKNOWN_SEQUENCE_INDEX,
             Session.UNKNOWN_TIME,
             System.currentTimeMillis(),
             sessionContexts,
-            0));
+            0,
+            fixDictionary));
     }
 
     @After
@@ -340,7 +342,8 @@ public class FramerTest
 
         notifyLibraryOfConnection();
 
-        when(sessionContexts.onLogon(any())).thenReturn(SessionContexts.DUPLICATE_SESSION);
+        when(sessionContexts.onLogon(any(), any(fixDictionary.getClass())))
+            .thenReturn(SessionContexts.DUPLICATE_SESSION);
 
         // Don't wait for connection of duplicated session because it should not connect.
         libraryConnects();

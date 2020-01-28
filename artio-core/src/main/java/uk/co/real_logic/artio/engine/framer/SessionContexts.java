@@ -19,6 +19,7 @@ import org.agrona.ErrorHandler;
 import org.agrona.collections.LongHashSet;
 import org.agrona.concurrent.AtomicBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
+import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.engine.MappedFile;
 import uk.co.real_logic.artio.engine.SectorFramer;
@@ -36,7 +37,6 @@ import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.function.Function;
 import java.util.zip.CRC32;
 
 import static uk.co.real_logic.artio.engine.SectorFramer.*;
@@ -58,14 +58,16 @@ public class SessionContexts
         Session.UNKNOWN_TIME,
         Session.UNKNOWN_TIME,
         null,
-        OUT_OF_SPACE);
+        OUT_OF_SPACE,
+        null);
     static final SessionContext UNKNOWN_SESSION = new SessionContext(
         Session.UNKNOWN,
         (int)Session.UNKNOWN,
         Session.UNKNOWN_TIME,
         Session.UNKNOWN_TIME,
         null,
-        OUT_OF_SPACE);
+        OUT_OF_SPACE,
+        null);
     static final long LOWEST_VALID_SESSION_ID = 1L;
 
     private static final int HEADER_SIZE = MessageHeaderDecoder.ENCODED_LENGTH;
@@ -79,7 +81,6 @@ public class SessionContexts
     private final int actingBlockLength = sessionIdEncoder.sbeBlockLength();
     private final int actingVersion = sessionIdEncoder.sbeSchemaVersion();
 
-    private final Function<CompositeKey, SessionContext> onNewLogonFunc = this::onNewLogon;
     private final LongHashSet currentlyAuthenticatedSessionIds = new LongHashSet();
     private final Map<CompositeKey, SessionContext> compositeToContext = new HashMap<>();
 
@@ -145,8 +146,10 @@ public class SessionContexts
             final long lastLogonTime = sessionIdDecoder.logonTime();
             final long lastSequenceResetTime = sessionIdDecoder.lastSequenceResetTime();
             final int compositeKeyLength = sessionIdDecoder.compositeKeyLength();
+            final String lastFixDictionary = sessionIdDecoder.lastFixDictionary();
+            filePosition = sessionIdDecoder.limit();
             final CompositeKey compositeKey = idStrategy.load(
-                buffer, filePosition + BLOCK_LENGTH, compositeKeyLength);
+                buffer, filePosition, compositeKeyLength);
             if (compositeKey == null)
             {
                 return;
@@ -154,10 +157,11 @@ public class SessionContexts
 
             compositeToContext.put(compositeKey,
                 new SessionContext(
-                sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this, filePosition));
+                sessionId, sequenceIndex, lastLogonTime, lastSequenceResetTime, this, filePosition,
+                FixDictionary.of(FixDictionary.find(lastFixDictionary))));
             counter = Math.max(counter, sessionId + 1);
 
-            filePosition += BLOCK_LENGTH + compositeKeyLength;
+            filePosition += compositeKeyLength;
         }
     }
 
@@ -213,9 +217,9 @@ public class SessionContexts
         return sectorEnd;
     }
 
-    public SessionContext onLogon(final CompositeKey compositeKey)
+    public SessionContext onLogon(final CompositeKey compositeKey, final FixDictionary fixDictionary)
     {
-        final SessionContext sessionContext = newSessionContext(compositeKey);
+        final SessionContext sessionContext = newSessionContext(compositeKey, fixDictionary);
 
         if (!currentlyAuthenticatedSessionIds.add(sessionContext.sessionId()))
         {
@@ -225,22 +229,24 @@ public class SessionContexts
         return sessionContext;
     }
 
-    SessionContext newSessionContext(final CompositeKey compositeKey)
+    SessionContext newSessionContext(final CompositeKey compositeKey, final FixDictionary fixDictionary)
     {
-        return compositeToContext.computeIfAbsent(compositeKey, onNewLogonFunc);
+        return compositeToContext.computeIfAbsent(compositeKey, key -> onNewLogon(key, fixDictionary));
     }
 
-    private SessionContext onNewLogon(final CompositeKey compositeKey)
+    private SessionContext onNewLogon(final CompositeKey compositeKey, final FixDictionary fixDictionary)
     {
         final long sessionId = counter++;
-        return assignSessionId(compositeKey, sessionId, SessionContext.UNKNOWN_SEQUENCE_INDEX);
+        return assignSessionId(compositeKey, sessionId, SessionContext.UNKNOWN_SEQUENCE_INDEX, fixDictionary);
     }
 
     private SessionContext assignSessionId(
         final CompositeKey compositeKey,
         final long sessionId,
-        final int sequenceIndex)
+        final int sequenceIndex,
+        final FixDictionary fixDictionary)
     {
+        final String fixDictionaryName = fixDictionary.getClass().getName();
         int keyPosition = OUT_OF_SPACE;
         final int compositeKeyLength = idStrategy.save(compositeKey, compositeKeyBuffer, 0);
         if (compositeKeyLength == INSUFFICIENT_SPACE)
@@ -255,7 +261,8 @@ public class SessionContexts
                 Session.UNKNOWN_TIME,
                 Session.UNKNOWN_TIME,
                 this,
-                OUT_OF_SPACE);
+                OUT_OF_SPACE,
+                fixDictionary);
         }
         else
         {
@@ -275,8 +282,9 @@ public class SessionContexts
                         .sessionId(sessionId)
                         .sequenceIndex(sequenceIndex)
                         .logonTime(Session.UNKNOWN_TIME)
-                        .compositeKeyLength(compositeKeyLength);
-                    filePosition += BLOCK_LENGTH;
+                        .compositeKeyLength(compositeKeyLength)
+                        .lastFixDictionary(fixDictionaryName);
+                    filePosition = sessionIdEncoder.limit();
 
                     buffer.putBytes(filePosition, compositeKeyBuffer, 0, compositeKeyLength);
                     filePosition += compositeKeyLength;
@@ -292,7 +300,8 @@ public class SessionContexts
                 Session.UNKNOWN_TIME,
                 Session.UNKNOWN_TIME,
                 this,
-                keyPosition);
+                keyPosition,
+                fixDictionary);
         }
     }
 
