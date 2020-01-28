@@ -543,25 +543,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             null);
 
         gatewaySession.disconnectAt(timeInMs + configuration.noLogonDisconnectTimeoutInMs());
-
-        // In sole library mode we forward all connections to the sole library
-        if (soleLibraryMode)
-        {
-            gatewaySessions.track(gatewaySession);
-        }
-        else
-        {
-            gatewaySessions.acquire(
-                gatewaySession,
-                CONNECTED,
-                false,
-                configuration.defaultHeartbeatIntervalInS(),
-                UNK_SESSION,
-                UNK_SESSION,
-                null,
-                null,
-                engineBlockablePosition);
-        }
+        gatewaySessions.track(gatewaySession);
 
         final String address = channel.remoteAddress();
         // In this case the save connect is simply logged for posterities sake
@@ -1766,50 +1748,70 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     void onLogonMessageReceived(final GatewaySession gatewaySession)
     {
-        // Hand over management of this new session to the sole library
-        if (soleLibraryMode && gatewaySession.connectionType() == ACCEPTOR)
+        if (!soleLibraryMode)
         {
-            if (idToLibrary.size() != 1)
-            {
-                logSoleLibraryError();
-            }
-
-            final LiveLibraryInfo libraryInfo = idToLibrary.values().iterator().next();
-            final CompositeKey sessionKey = gatewaySession.sessionKey();
-            final int libraryAeronSessionId = libraryInfo.aeronSessionId();
-            final long requiredPosition = librarySubscription.imageBySessionId(libraryAeronSessionId).position();
-
-            final int libraryId = libraryInfo.libraryId();
-            gatewaySession.setManagementTo(libraryId, libraryInfo.librarySlowPeeker());
-            libraryInfo.addSession(gatewaySession);
-
-            handoverNewConnectionToLibrary(
-                libraryId,
-                sessionKey.localCompId(),
-                sessionKey.localSubId(),
-                sessionKey.localLocationId(),
-                sessionKey.remoteCompId(),
-                sessionKey.remoteSubId(),
-                sessionKey.remoteLocationId(),
-                gatewaySession.closedResendInterval(),
-                gatewaySession.resendRequestChunkSize(),
-                gatewaySession.sendRedundantResendRequests(),
-                gatewaySession.enableLastMsgSeqNumProcessed(),
-                gatewaySession.username(),
-                gatewaySession.password(),
-                gatewaySession.fixDictionary().getClass(),
-                gatewaySession.heartbeatIntervalInS(),
-                NO_CORRELATION_ID,
-                libraryInfo,
-                gatewaySession.context(),
-                sessionKey,
-                gatewaySession.connectionId(),
-                gatewaySession.sessionId(),
+            gatewaySessions.acquire(
                 gatewaySession,
-                libraryAeronSessionId,
-                requiredPosition,
-                gatewaySession.address(),
-                ACCEPTOR);
+                CONNECTED,
+                false,
+                configuration.defaultHeartbeatIntervalInS(),
+                UNK_SESSION,
+                UNK_SESSION,
+                null,
+                null,
+                engineBlockablePosition);
+        }
+    }
+
+    void onGatewaySessionSetup(final GatewaySession gatewaySession)
+    {
+        if (gatewaySession.connectionType() == ACCEPTOR)
+        {
+            if (soleLibraryMode)
+            {
+                // Hand over management of this new session to the sole library
+                if (idToLibrary.size() != 1)
+                {
+                    logSoleLibraryError();
+                }
+
+                final LiveLibraryInfo libraryInfo = idToLibrary.values().iterator().next();
+                final CompositeKey sessionKey = gatewaySession.sessionKey();
+                final int libraryAeronSessionId = libraryInfo.aeronSessionId();
+                final long requiredPosition = librarySubscription.imageBySessionId(libraryAeronSessionId).position();
+
+                final int libraryId = libraryInfo.libraryId();
+                gatewaySession.setManagementTo(libraryId, libraryInfo.librarySlowPeeker());
+                libraryInfo.addSession(gatewaySession);
+
+                handoverNewConnectionToLibrary(
+                    libraryId,
+                    sessionKey.localCompId(),
+                    sessionKey.localSubId(),
+                    sessionKey.localLocationId(),
+                    sessionKey.remoteCompId(),
+                    sessionKey.remoteSubId(),
+                    sessionKey.remoteLocationId(),
+                    gatewaySession.closedResendInterval(),
+                    gatewaySession.resendRequestChunkSize(),
+                    gatewaySession.sendRedundantResendRequests(),
+                    gatewaySession.enableLastMsgSeqNumProcessed(),
+                    gatewaySession.username(),
+                    gatewaySession.password(),
+                    gatewaySession.fixDictionary().getClass(),
+                    gatewaySession.heartbeatIntervalInS(),
+                    NO_CORRELATION_ID,
+                    libraryInfo,
+                    gatewaySession.context(),
+                    sessionKey,
+                    gatewaySession.connectionId(),
+                    gatewaySession.sessionId(),
+                    gatewaySession,
+                    libraryAeronSessionId,
+                    requiredPosition,
+                    gatewaySession.address(),
+                    ACCEPTOR);
+            }
         }
     }
 

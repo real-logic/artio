@@ -29,7 +29,10 @@ import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.decoder.AbstractLogonDecoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
-import uk.co.real_logic.artio.engine.*;
+import uk.co.real_logic.artio.engine.ByteBufferUtil;
+import uk.co.real_logic.artio.engine.EngineConfiguration;
+import uk.co.real_logic.artio.engine.FixEngine;
+import uk.co.real_logic.artio.engine.HeaderSetup;
 import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexReader;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.DisconnectReason;
@@ -282,12 +285,14 @@ class GatewaySessions
         final AbstractLogonDecoder logon,
         final long connectionId,
         final GatewaySession gatewaySession,
-        final TcpChannel channel)
+        final TcpChannel channel,
+        final FixDictionary fixDictionary,
+        final Framer framer)
     {
         gatewaySession.startAuthentication(epochClock.time());
 
         return new PendingAcceptorLogon(
-            sessionIdStrategy, gatewaySession, logon, connectionId, sessionContexts, channel);
+            sessionIdStrategy, gatewaySession, logon, connectionId, sessionContexts, channel, fixDictionary, framer);
     }
 
     private boolean lookupSequenceNumbers(final GatewaySession gatewaySession, final long requiredPosition)
@@ -351,6 +356,8 @@ class GatewaySessions
         private final AbstractLogonDecoder logon;
         private final SessionContexts sessionContexts;
         private final TcpChannel channel;
+        private final FixDictionary fixDictionary;
+        private final Framer framer;
         private final boolean resetSeqNum;
 
         private volatile AuthenticationState state = AuthenticationState.PENDING;
@@ -370,13 +377,17 @@ class GatewaySessions
             final AbstractLogonDecoder logon,
             final long connectionId,
             final SessionContexts sessionContexts,
-            final TcpChannel channel)
+            final TcpChannel channel,
+            final FixDictionary fixDictionary,
+            final Framer framer)
         {
             this.sessionIdStrategy = sessionIdStrategy;
             this.session = gatewaySession;
             this.logon = logon;
             this.sessionContexts = sessionContexts;
             this.channel = channel;
+            this.fixDictionary = fixDictionary;
+            this.framer = framer;
 
             final PersistenceLevel persistenceLevel = getPersistenceLevel(logon, connectionId);
             final boolean resetSeqNumFlag = logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
@@ -618,9 +629,13 @@ class GatewaySessions
                 return;
             }
 
+            framer.onLogonMessageReceived(session);
+
             final long logonTime = clock.time();
             sessionContext.onLogon(resetSeqNum, logonTime);
             session.initialResetSeqNum(resetSeqNum);
+            session.fixDictionary(fixDictionary);
+            session.updateSessionDictionary();
             session.onLogon(
                 sessionContext.sessionId(),
                 sessionContext,
@@ -643,6 +658,8 @@ class GatewaySessions
                 requiredPosition = outboundPublication.position();
                 state = AuthenticationState.INDEXER_CATCHUP;
             }
+
+            framer.onGatewaySessionSetup(session);
         }
 
         public void reject()

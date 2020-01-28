@@ -98,8 +98,7 @@ public class FramerContext
             sessionContexts,
             configuration.sessionPersistenceStrategy(),
             sentSequenceNumberIndex,
-            receivedSequenceNumberIndex
-        );
+            receivedSequenceNumberIndex);
 
         final EndPointFactory endPointFactory = new EndPointFactory(
             configuration,
@@ -108,8 +107,7 @@ public class FramerContext
             fixCounters,
             errorHandler,
             gatewaySessions,
-            engineContext.senderSequenceNumbers()
-        );
+            engineContext.senderSequenceNumbers());
 
         final FinalImagePositions finalImagePositions = new FinalImagePositions();
 
