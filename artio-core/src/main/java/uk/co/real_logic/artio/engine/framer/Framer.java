@@ -1220,7 +1220,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             // Session is offline.
             if (requestOfflineSession(
-                libraryId, sessionId, correlationId, replayFromSequenceIndex, replayFromSequenceNumber))
+                libraryInfo, sessionId, correlationId, replayFromSequenceIndex, replayFromSequenceNumber))
             {
                 return CONTINUE;
             }
@@ -1294,7 +1294,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     }
 
     private boolean requestOfflineSession(
-        final int libraryId,
+        final LiveLibraryInfo libraryInfo,
         final long sessionId,
         final long correlationId,
         final int replayFromSequenceIndex,
@@ -1307,7 +1307,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         schedule(new HandoverOfflineSession(
-            libraryId,
+            libraryInfo,
             sessionId,
             correlationId,
             replayFromSequenceIndex,
@@ -1322,7 +1322,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     {
         private final DirectBuffer metaData = new UnsafeBuffer();
 
-        private final int libraryId;
+        private final LiveLibraryInfo libraryInfo;
         private final long sessionId;
         private final long correlationId;
         private final CompositeKey compositeKey;
@@ -1335,7 +1335,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         private int lastReceivedSequenceNumber;
 
         private HandoverOfflineSession(
-            final int libraryId,
+            final LiveLibraryInfo libraryInfo,
             final long sessionId,
             final long correlationId,
             final int replayFromSequenceIndex,
@@ -1344,7 +1344,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             final SessionContext sessionContext)
         {
             super(new ArrayList<>());
-            this.libraryId = libraryId;
+            this.libraryInfo = libraryInfo;
             this.sessionId = sessionId;
             this.correlationId = correlationId;
             this.compositeKey = compositeKey;
@@ -1358,7 +1358,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     NO_CONNECTION_ID,
                     sessionContext,
                     ":" + NO_CONNECTION_ID,
-                    ACCEPTOR, // TODO: do we need another type?
+                    ACCEPTOR,
                     compositeKey,
                     null,
                     null,
@@ -1371,12 +1371,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                     configuration.authenticationTimeoutInMs());
                 gatewaySession.lastSequenceResetTime(sessionContext.lastSequenceResetTime());
                 gatewaySession.lastLogonTime(sessionContext.lastLogonTime());
+                libraryInfo.addSession(gatewaySession);
 
                 workList.add(this::checkLoggerUpToDate);
                 workList.add(this::saveManageSession);
                 catchupSession(
                     workList,
-                    libraryId,
+                    libraryInfo.libraryId(),
                     NO_CONNECTION_ID,
                     correlationId,
                     replayFromSequenceNumber,
@@ -1410,7 +1411,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         private long saveManageSession()
         {
             return inboundPublication.saveManageSession(
-                libraryId,
+                libraryInfo.libraryId(),
                 NO_CONNECTION_ID,
                 gatewaySession.sessionId(),
                 lastSentSequenceNumber,

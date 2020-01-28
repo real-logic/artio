@@ -411,8 +411,11 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
 
     void updateSessionDictionary()
     {
-        session.fixDictionary(fixDictionary);
-        sessionParser.fixDictionary(fixDictionary);
+        if (session != null)
+        {
+            session.fixDictionary(fixDictionary);
+            sessionParser.fixDictionary(fixDictionary);
+        }
     }
 
     long lastSequenceResetTime()

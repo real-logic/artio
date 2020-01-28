@@ -79,7 +79,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             .deleteLogFileDirOnStart(true);
         auth = new CapturingAuthenticationStrategy(acceptingConfig.messageValidationStrategy());
         acceptingConfig.authenticationStrategy(auth);
-        acceptingConfig.printErrorMessages(false);
+        acceptingConfig.printErrorMessages(true);
         acceptingEngine = FixEngine.launch(acceptingConfig);
 
         initiatingEngine = launchInitiatingEngine(libraryAeronPort);
@@ -1130,8 +1130,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         final long lastLogonTime = acceptingSession.lastLogonTime();
         acceptingSession = null;
 
-        assertNotEquals(lastSequenceResetTime, Session.UNKNOWN_TIME);
-        assertNotEquals(lastLogonTime, Session.UNKNOWN_TIME);
+        assertNotEquals(Session.UNKNOWN_TIME, lastSequenceResetTime);
+        assertNotEquals(Session.UNKNOWN_TIME, lastLogonTime);
 
         acquireAcceptingSession();
 
@@ -1143,9 +1143,18 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertEquals(lastSequenceResetTime, acceptingSession.lastSequenceResetTime());
         assertEquals(lastLogonTime, acceptingSession.lastLogonTime());
 
-//        assertReplayReceivedMessages();
-        // TODO: write messages into the offline session storage
+        assertReplayReceivedMessages();
+
         // TODO: reconnect the initiating session and redirect it
+
+        /*connectSessions();
+
+        assertEventuallyTrue("offline session is reconnected", () ->
+        {
+            testSystem.poll();
+
+            return acceptingSession.state() == SessionState.ACTIVE;
+        });*/
     }
 
     private void assertReplayReceivedMessages()
@@ -1154,8 +1163,10 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             1, 0, 2, 0, 5_000L);
         testSystem.awaitCompletedReplies(reply);
 
-        final FixMessage testRequest =
-            acceptingOtfAcceptor.receivedMessage(TEST_REQUEST_MESSAGE_AS_STR).findFirst().get();
+        final FixMessage testRequest = acceptingOtfAcceptor
+            .receivedMessage(TEST_REQUEST_MESSAGE_AS_STR)
+            .findFirst()
+            .get();
         assertEquals(CATCHUP_REPLAY, testRequest.status());
     }
 

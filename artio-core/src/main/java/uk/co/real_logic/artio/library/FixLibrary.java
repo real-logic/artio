@@ -340,6 +340,9 @@ public class FixLibrary extends GatewayProcess
      * If this library instance is unknown to the gateway, for example if its heartbeating
      * mechanism has timed out due to {@link #poll(int)} not being called often enough.
      *
+     * If you request a session that exists in the engine but which is not connected then an offline session will be
+     * returned. This is a session whose state is disconnected and has no connection id, connectedHost or connectedPort.
+     *
      * @param sessionId the id of the session to acquire.
      * @param resendFromSequenceNumber the last received message sequence number
      *                                   that you know about. You will get a stream

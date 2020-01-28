@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,30 +56,6 @@ import static uk.co.real_logic.artio.session.InternalSession.*;
  * Stores information about the current state of a session - no matter whether outbound or inbound.
  * <p>
  * Should only be accessed on a single thread.
- *
- * <h1>State Transitions</h1>
- * <p>
- * Successful Login: CONNECTED -&gt; ACTIVE
- * Login with high sequence number: CONNECTED -&gt; AWAITING_RESEND
- * Login with low sequence number: CONNECTED -&gt; DISCONNECTED
- * Login with wrong credentials: CONNECTED -&gt; DISCONNECTED or CONNECTED -&gt; DISABLED
- * depending on authentication plugin
- * <p>
- * Successful Hijack: * -&gt; ACTIVE (same as regular login)
- * Hijack with high sequence number: * -&gt; AWAITING_RESEND (same as regular login)
- * Hijack with low sequence number: requestDisconnect the hijacker and leave main system ACTIVE
- * Hijack with wrong credentials: requestDisconnect the hijacker and leave main system ACTIVE
- * <p>
- * Successful resend: AWAITING_RESEND -&gt; ACTIVE
- * <p>
- * Send test request: ACTIVE -&gt; ACTIVE - but alter the timeout for the next expected heartbeat.
- * Successful Heartbeat: ACTIVE -&gt; ACTIVE - updates the timeout time.
- * Heartbeat Timeout: ACTIVE -&gt; DISCONNECTED
- * <p>
- * Logout request: ACTIVE -&gt; AWAITING_LOGOUT
- * Logout acknowledgement: AWAITING_LOGOUT -&gt; DISCONNECTED
- * <p>
- * Manual disable: * -&gt; DISABLED
  */
 public class Session
 {
@@ -321,6 +297,8 @@ public class Session
     /**
      * Get the address of the remote host that your session is connected to.
      *
+     * If this is an offline session then this method will return <code>""</code>.
+     *
      * @return the address of the remote host that your session is connected to.
      * @see Session#connectedPort()
      */
@@ -332,6 +310,8 @@ public class Session
     /**
      * Get the id of the connection associated with this session. Sessions always
      * have a connection id.
+     *
+     * If this is an offline session then this method will return {@link GatewayProcess#NO_CONNECTION_ID}
      *
      * @return the id of the connection associated with this session.
      * @see Session#id()
@@ -366,6 +346,8 @@ public class Session
 
     /**
      * Get the port of the remote host that your session is connected to.
+     *
+     * If this is an offline session then this method will return {@link #UNKNOWN}
      *
      * @return the port of the remote host that your session is connected to.
      * @see Session#connectedHost()
