@@ -49,11 +49,16 @@ class SessionContext
     {
         this.sessionId = sessionId;
         this.sequenceIndex = sequenceIndex;
-        this.lastLogonTime = lastLogonTime;
+        lastLogonTime(lastLogonTime);
         this.lastSequenceResetTime = lastSequenceResetTime;
         this.sessionContexts = sessionContexts;
         this.filePosition = filePosition;
         this.lastFixDictionary = lastFixDictionary;
+    }
+
+    private void lastLogonTime(final long lastLogonTime)
+    {
+        this.lastLogonTime = lastLogonTime;
     }
 
     void onSequenceReset(final long resetTime)
@@ -80,14 +85,14 @@ class SessionContext
     void updateFrom(final Session session)
     {
         sequenceIndex = session.sequenceIndex();
-        lastLogonTime = session.lastLogonTime();
+        lastLogonTime(session.lastLogonTime());
         lastSequenceResetTime = session.lastSequenceResetTime();
     }
 
     void onLogon(final boolean resetSeqNum, final long time, final FixDictionary fixDictionary)
     {
         lastFixDictionary = fixDictionary;
-        lastLogonTime = time;
+        lastLogonTime(time);
         // increment if we're going to reset the sequence number or if it's persistent
         // sequence numbers and it's the first time we're logging on.
         if (resetSeqNum || sequenceIndex == SessionContext.UNKNOWN_SEQUENCE_INDEX)

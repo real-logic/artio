@@ -445,11 +445,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private boolean sentIndexedPosition(final int aeronSessionId, final long position)
     {
-        if (position <= 0)
-        {
-            return true;
-        }
-
         final long indexedPosition = sentSequenceNumberIndex.indexedPosition(aeronSessionId);
         return indexedPosition >= position;
     }
@@ -1415,7 +1410,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         private long checkLoggerUpToDate()
         {
-            if (!sentIndexedPosition(aeronSessionId, requiredPosition))
+            if (requiredPosition != 0 && !sentIndexedPosition(aeronSessionId, requiredPosition))
             {
                 return BACK_PRESSURED;
             }

@@ -168,6 +168,7 @@ public class FramerTest
 
         when(gatewaySession.session()).thenReturn(session);
         when(gatewaySession.fixDictionary()).thenReturn(fixDictionary);
+        when(gatewaySession.isOffline()).thenReturn(false);
 
         when(session.lastLogonTime()).thenReturn(-1L);
         when(session.compositeKey()).thenReturn(sessionKey);

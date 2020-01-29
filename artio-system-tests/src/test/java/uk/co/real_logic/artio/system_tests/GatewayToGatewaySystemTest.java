@@ -1137,11 +1137,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         acquireAcceptingSession();
 
-        assertEquals(sessionId, acceptingSession.id());
-        assertEquals("", acceptingSession.connectedHost());
-        assertEquals(Session.UNKNOWN, acceptingSession.connectedPort());
-        assertEquals(NO_CONNECTION_ID, acceptingSession.connectionId());
-        assertEquals(SessionState.DISCONNECTED, acceptingSession.state());
+        assertOfflineSession(sessionId, acceptingSession);
         assertEquals(lastSequenceResetTime, acceptingSession.lastSequenceResetTime());
         assertEquals(lastLogonTime, acceptingSession.lastLogonTime());
 
@@ -1155,6 +1151,15 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
             return acceptingSession.state() == SessionState.ACTIVE;
         });
+    }
+
+    private void assertOfflineSession(final long sessionId, final Session session)
+    {
+        assertEquals(sessionId, session.id());
+        assertEquals("", session.connectedHost());
+        assertEquals(Session.UNKNOWN, session.connectedPort());
+        assertEquals(NO_CONNECTION_ID, session.connectionId());
+        assertEquals(SessionState.DISCONNECTED, session.state());
     }
 
     @Test
@@ -1174,24 +1179,27 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void shouldNotInitiateASessionIfAnotherLibraryOwnsIt()
+    public void shouldNotAcquiredInitiatedOfflineSessionIfAnotherLibraryOwnsIt()
     {
+        final long sessionId = initiatingSession.id();
+
         logoutInitiatingSession();
         assertSessionDisconnected(initiatingSession);
+        acceptingHandler.clearSessionExistsInfos();
 
         try (FixLibrary initiatingLibrary2 = testSystem.connect(
             initiatingLibraryConfig(libraryAeronPort, initiatingHandler)))
         {
             assertTrue(initiatingLibrary.isConnected());
 
-            final SessionReplyStatus reply = requestSession(initiatingLibrary2, 1, testSystem);
+            final SessionReplyStatus reply = requestSession(initiatingLibrary2, sessionId, testSystem);
             assertEquals(OK, reply);
+            assertFalse(acceptingHandler.hasSeenSession());
             final Session offlineInitiatingSession = initiatingHandler.lastSession();
             assertNotSame(initiatingSession, offlineInitiatingSession);
-            assertEquals(SessionState.DISCONNECTED, offlineInitiatingSession.state());
-            assertEquals(1, offlineInitiatingSession.id());
+            assertOfflineSession(sessionId, offlineInitiatingSession);
 
-            final SessionReplyStatus failedReply = requestSession(initiatingLibrary, 1, testSystem);
+            final SessionReplyStatus failedReply = requestSession(initiatingLibrary, sessionId, testSystem);
             assertEquals(SessionReplyStatus.OTHER_SESSION_OWNER, failedReply);
         }
     }
