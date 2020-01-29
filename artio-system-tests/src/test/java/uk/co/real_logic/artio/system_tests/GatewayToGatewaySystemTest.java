@@ -1160,8 +1160,8 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     @Test
     public void engineShouldNotAcquireTimedOutOfflineSessions()
     {
-        acquireAcceptingSession();
-        disconnectSessions();
+        logoutInitiatingSession();
+        assertSessionDisconnected(initiatingSession);
 
         acquireAcceptingSession();
         assertEquals(SessionState.DISCONNECTED, acceptingSession.state());
@@ -1169,10 +1169,31 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         testSystem.remove(acceptingLibrary);
 
         final List<LibraryInfo> libraries = withTimeout("Library failed to timeout", () ->
-        {
-            return Optional.of(libraries(acceptingEngine, testSystem)).filter(infos -> infos.size() == 1);
-        }, 5_000);
+            Optional.of(libraries(acceptingEngine, testSystem)).filter(infos -> infos.size() == 1), 5_000);
         assertThat(libraries.get(0).sessions(), hasSize(0));
+    }
+
+    @Test
+    public void shouldNotInitiateASessionIfAnotherLibraryOwnsIt()
+    {
+        logoutInitiatingSession();
+        assertSessionDisconnected(initiatingSession);
+
+        try (FixLibrary initiatingLibrary2 = testSystem.connect(
+            initiatingLibraryConfig(libraryAeronPort, initiatingHandler)))
+        {
+            assertTrue(initiatingLibrary.isConnected());
+
+            final SessionReplyStatus reply = requestSession(initiatingLibrary2, 1, testSystem);
+            assertEquals(OK, reply);
+            final Session offlineInitiatingSession = initiatingHandler.lastSession();
+            assertNotSame(initiatingSession, offlineInitiatingSession);
+            assertEquals(SessionState.DISCONNECTED, offlineInitiatingSession.state());
+            assertEquals(1, offlineInitiatingSession.id());
+
+            final SessionReplyStatus failedReply = requestSession(initiatingLibrary, 1, testSystem);
+            assertEquals(SessionReplyStatus.OTHER_SESSION_OWNER, failedReply);
+        }
     }
 
     private void assertReplayReceivedMessages()

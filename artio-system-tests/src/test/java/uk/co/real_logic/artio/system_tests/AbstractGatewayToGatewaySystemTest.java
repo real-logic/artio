@@ -139,7 +139,17 @@ public class AbstractGatewayToGatewaySystemTest
 
     void logoutAcceptingSession()
     {
-        assertThat(acceptingSession.startLogout(), greaterThan(0L));
+        logoutSession(acceptingSession);
+    }
+
+    void logoutInitiatingSession()
+    {
+        logoutSession(initiatingSession);
+    }
+
+    private void logoutSession(final Session session)
+    {
+        assertThat(session.startLogout(), greaterThan(0L));
     }
 
     void assertSessionsDisconnected()

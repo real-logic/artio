@@ -302,6 +302,14 @@ public final class SystemTestUtil
     static SessionReplyStatus requestSession(
         final FixLibrary library,
         final long sessionId,
+        final TestSystem testSystem)
+    {
+        return requestSession(library, sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, testSystem);
+    }
+
+    static SessionReplyStatus requestSession(
+        final FixLibrary library,
+        final long sessionId,
         final int lastReceivedMsgSeqNum,
         final int sequenceIndex,
         final TestSystem testSystem)

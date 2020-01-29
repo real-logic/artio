@@ -445,6 +445,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
     private boolean sentIndexedPosition(final int aeronSessionId, final long position)
     {
+        if (position <= 0)
+        {
+            return true;
+        }
+
         final long indexedPosition = sentSequenceNumberIndex.indexedPosition(aeronSessionId);
         return indexedPosition >= position;
     }
@@ -1296,16 +1301,37 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             return false;
         }
 
-        schedule(new HandoverOfflineSession(
-            libraryInfo,
-            sessionId,
-            correlationId,
-            replayFromSequenceIndex,
-            replayFromSequenceNumber,
-            entry.getKey(),
-            entry.getValue()));
+        if (isOwnedSession(sessionId))
+        {
+            schedule(() -> inboundPublication.saveRequestSessionReply(
+                libraryInfo.libraryId(), OTHER_SESSION_OWNER, correlationId));
+        }
+        else
+        {
+            schedule(new HandoverOfflineSession(
+                libraryInfo,
+                sessionId,
+                correlationId,
+                replayFromSequenceIndex,
+                replayFromSequenceNumber,
+                entry.getKey(),
+                entry.getValue()));
+        }
 
         return true;
+    }
+
+    private boolean isOwnedSession(final long sessionId)
+    {
+        for (final LiveLibraryInfo library : idToLibrary.values())
+        {
+            if (library.lookupSessionById(sessionId) != null)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private final class HandoverOfflineSession extends UnitOfWork
@@ -1380,7 +1406,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             else
             {
                 gatewaySession = null;
-                // TODO: just error
+                errorHandler.onError(new IllegalStateException(
+                    "Cannot return an offline session when logging disabled"));
+                workList.add(() -> inboundPublication.saveRequestSessionReply(
+                    libraryInfo.libraryId(), INVALID_CONFIGURATION_NOT_LOGGING_MESSAGES, correlationId));
             }
         }
 
