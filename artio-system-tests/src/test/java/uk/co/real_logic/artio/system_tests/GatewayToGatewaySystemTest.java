@@ -38,6 +38,7 @@ import uk.co.real_logic.artio.session.Session;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.locks.LockSupport;
 import java.util.function.IntSupplier;
 
@@ -52,6 +53,7 @@ import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
+import static uk.co.real_logic.artio.Timing.withTimeout;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.FixLibrary.CURRENT_SEQUENCE;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
@@ -1153,6 +1155,24 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
             return acceptingSession.state() == SessionState.ACTIVE;
         });
+    }
+
+    @Test
+    public void engineShouldNotAcquireTimedOutOfflineSessions()
+    {
+        acquireAcceptingSession();
+        disconnectSessions();
+
+        acquireAcceptingSession();
+        assertEquals(SessionState.DISCONNECTED, acceptingSession.state());
+
+        testSystem.remove(acceptingLibrary);
+
+        final List<LibraryInfo> libraries = withTimeout("Library failed to timeout", () ->
+        {
+            return Optional.of(libraries(acceptingEngine, testSystem)).filter(infos -> infos.size() == 1);
+        }, 5_000);
+        assertThat(libraries.get(0).sessions(), hasSize(0));
     }
 
     private void assertReplayReceivedMessages()

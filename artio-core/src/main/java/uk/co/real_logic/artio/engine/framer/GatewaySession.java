@@ -462,4 +462,9 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
     {
         libraryId(oldGatewaySession.libraryId());
     }
+
+    public boolean isOffline()
+    {
+        return receiverEndPoint == null;
+    }
 }

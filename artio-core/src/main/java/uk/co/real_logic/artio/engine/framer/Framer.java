@@ -462,6 +462,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         for (int i = 0, size = sessions.size(); i < size; i++)
         {
             final GatewaySession session = sessions.get(i);
+            if (session.isOffline())
+            {
+                continue;
+            }
             final long sessionId = session.sessionId();
             final int sentSequenceNumber = sentSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
             final int receivedSequenceNumber = receivedSequenceNumberIndex.lastKnownSequenceNumber(sessionId);
