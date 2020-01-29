@@ -280,6 +280,10 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
             }
         }
 
+        public void connectionId(final long connectionId)
+        {
+        }
+
         public long sendResendRequest(
             final int msgSeqNo,
             final int beginSeqNo,

@@ -34,6 +34,7 @@ import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.fields.DecimalFloat;
 import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
+import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
@@ -76,7 +77,8 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
                 final int sequenceIndex,
                 final long messageType,
                 final long timestampInNs,
-                final long position)
+                final long position,
+                final OnMessageInfo messageInfo)
             {
                 asciiBuffer.wrap(buffer, offset, length);
 
@@ -92,7 +94,8 @@ public class PersistentSequenceNumberResendRequestSystemTest extends AbstractGat
                 }
 
                 return super.onMessage(
-                    buffer, offset, length, libraryId, session, sequenceIndex, messageType, timestampInNs, position);
+                    buffer, offset, length, libraryId, session, sequenceIndex, messageType, timestampInNs, position,
+                    messageInfo);
             }
 
             private Action fillOrder(final Session session)

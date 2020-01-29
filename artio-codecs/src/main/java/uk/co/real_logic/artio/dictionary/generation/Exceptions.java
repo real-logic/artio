@@ -103,6 +103,7 @@ public final class Exceptions
         }
         catch (final Exception ex)
         {
+            System.out.println(Thread.currentThread().getName());
             ex.printStackTrace(System.out);
         }
     }

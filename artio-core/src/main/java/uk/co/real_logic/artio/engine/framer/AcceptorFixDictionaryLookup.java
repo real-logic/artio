@@ -58,10 +58,8 @@ class AcceptorFixDictionaryLookup
     }
 
     SessionHeaderDecoder lookupHeaderDecoder(
-        final AsciiBuffer buffer, final int offset, final int length)
+        final FixDictionary dictionary)
     {
-        final FixDictionary dictionary = lookup(buffer, offset, length);
-
         // We pool the SessionHeaderDecoder
         return dictionaryToSessionHeader.computeIfAbsent(dictionary, FixDictionary::makeHeaderDecoder);
     }

@@ -45,7 +45,6 @@ public interface LibraryEndPointHandler
         long session,
         int lastSentSeqNum,
         int lastRecvSeqNum,
-        long logonTime,
         SessionStatus sessionStatus,
         SlowStatus slowStatus,
         ConnectionType connectionType,
@@ -64,6 +63,8 @@ public interface LibraryEndPointHandler
         boolean awaitingHeartbeat,
         int logonReceivedSequenceNumber,
         int logonSequenceIndex,
+        long lastLogonTime,
+        long lastSequenceResetTime,
         String localCompId,
         String localSubId,
         String localLocationId,
@@ -92,4 +93,6 @@ public interface LibraryEndPointHandler
         DirectBuffer srcBuffer,
         int srcOffset,
         int srcLength);
+
+    Action onReplayMessagesReply(int libraryId, long replyToId, ReplayMessagesStatus status);
 }

@@ -19,6 +19,7 @@ import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.builder.Printer;
 import uk.co.real_logic.artio.decoder.PrinterImpl;
+import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.library.SessionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.session.Session;
@@ -45,7 +46,8 @@ public class StressSessionHandler implements SessionHandler
         final int sequenceIndex,
         final long messageType,
         final long timestampInNs,
-        final long position)
+        final long position,
+        final OnMessageInfo messageInfo)
     {
         if (StressConfiguration.PRINT_EXCHANGE)
         {

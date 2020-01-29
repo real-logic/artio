@@ -100,7 +100,6 @@ class ReceiverEndPoint
     private boolean isPaused = false;
 
     private AcceptorLogonResult pendingAcceptorLogon;
-    private boolean hasNotifiedFramerOfLogonMessageReceived;
     private int pendingAcceptorLogonMsgOffset;
     private int pendingAcceptorLogonMsgLength;
     private long lastReadTimestamp;
@@ -201,12 +200,6 @@ class ReceiverEndPoint
         {
             if (pendingAcceptorLogon.isAccepted())
             {
-                if (!hasNotifiedFramerOfLogonMessageReceived)
-                {
-                    framer.onLogonMessageReceived(gatewaySession);
-                    hasNotifiedFramerOfLogonMessageReceived = true;
-                }
-
                 return sendInitialLoginMessage();
             }
             else
@@ -475,20 +468,14 @@ class ReceiverEndPoint
         {
             final FixDictionary fixDictionary = acceptorFixDictionaryLookup.lookup(buffer, offset, length);
             final AbstractLogonDecoder logonDecoder = fixDictionary.makeLogonDecoder();
-            gatewaySession.fixDictionary(fixDictionary);
-            if (!framer.soleLibraryMode())
-            {
-                gatewaySession.updateSessionDictionary();
-            }
 
             logonDecoder.decode(buffer, offset, length);
 
             pendingAcceptorLogonMsgOffset = offset;
             pendingAcceptorLogonMsgLength = length;
 
-            hasNotifiedFramerOfLogonMessageReceived = false;
             pendingAcceptorLogon = gatewaySessions.authenticate(
-                logonDecoder, connectionId(), gatewaySession, channel);
+                logonDecoder, connectionId(), gatewaySession, channel, fixDictionary, framer);
         }
         else
         {

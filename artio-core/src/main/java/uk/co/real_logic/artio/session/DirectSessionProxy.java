@@ -97,8 +97,8 @@ public class DirectSessionProxy implements SessionProxy
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionCustomisationStrategy customisationStrategy;
     private final EpochClock clock;
-    private final long connectionId;
     private final int libraryId;
+    private long connectionId;
     private long sessionId;
     private boolean libraryConnected = true;
     private boolean seqNumResetRequested = false;
@@ -157,6 +157,11 @@ public class DirectSessionProxy implements SessionProxy
             sessionIdStrategy.setupSession(sessionKey, header);
             customisationStrategy.configureHeader(header, sessionId);
         }
+    }
+
+    public void connectionId(final long connectionId)
+    {
+        this.connectionId = connectionId;
     }
 
     public long sendResendRequest(

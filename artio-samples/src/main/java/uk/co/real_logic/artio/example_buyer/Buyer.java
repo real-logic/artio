@@ -149,7 +149,8 @@ public class Buyer implements LibraryConnectHandler, SessionHandler, SessionAcqu
         final int sequenceIndex,
         final long messageType,
         final long timestampInNs,
-        final long position)
+        final long position,
+        final OnMessageInfo messageInfo)
     {
         if (messageType == ExecutionReportDecoder.MESSAGE_TYPE)
         {

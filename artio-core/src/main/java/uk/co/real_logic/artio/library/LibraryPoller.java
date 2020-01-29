@@ -358,6 +358,28 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             correlationId);
     }
 
+    long saveReplayMessages(
+        final long sessionId,
+        final long correlationId,
+        final int replayFromSequenceNumber,
+        final int replayFromSequenceIndex,
+        final int replayToSequenceNumber,
+        final int replayToSequenceIndex,
+        final long latestReplyArrivalTimeInMs)
+    {
+        checkState();
+
+        return outboundPublication.saveReplayMessages(
+            libraryId,
+            sessionId,
+            correlationId,
+            replayFromSequenceNumber,
+            replayFromSequenceIndex,
+            replayToSequenceNumber,
+            replayToSequenceIndex,
+            latestReplyArrivalTimeInMs);
+    }
+
     void onInitiatorSessionTimeout(final long correlationId, final long connectionId)
     {
         checkState();
@@ -693,7 +715,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return total;
     }
 
-    private long timeInMs()
+    long timeInMs()
     {
         return epochClock.time();
     }
@@ -751,7 +773,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final long sessionId,
         final int lastSentSeqNum,
         final int lastRecvSeqNum,
-        final long logonTime,
         final SessionStatus sessionStatus,
         final SlowStatus slowStatus,
         final ConnectionType connectionType,
@@ -770,6 +791,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final boolean awaitingHeartbeat,
         final int logonReceivedSequenceNumber,
         final int logonSequenceIndex,
+        final long lastLogonTime,
+        final long lastSequenceResetTime,
         final String localCompId,
         final String localSubId,
         final String localLocationId,
@@ -814,7 +837,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                         connectionId,
                         sessionId,
                         lastSentSeqNum, lastRecvSeqNum,
-                        logonTime,
                         connectionType,
                         sessionState,
                         heartbeatIntervalInS,
@@ -829,6 +851,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                         lastResendChunkMsgSeqNum,
                         endOfResendRequestRange,
                         awaitingHeartbeat,
+                        lastLogonTime, lastSequenceResetTime,
                         localCompId, localSubId, localLocationId,
                         remoteCompId, remoteSubId, remoteLocationId,
                         address,
@@ -858,11 +881,10 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private void onHandoverSession(
         final int libraryId,
-        final long connection,
+        final long connectionId,
         final long sessionId,
         final int lastSentSeqNum,
         final int lastRecvSeqNum,
-        final long logonTime,
         final ConnectionType connectionType,
         final SessionState sessionState,
         final int heartbeatIntervalInS,
@@ -877,6 +899,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final int lastResendChunkMsgSeqNum,
         final int endOfResendRequestRange,
         final boolean awaitingHeartbeat,
+        final long lastLogonTime,
+        final long lastSequenceResetTime,
         final String localCompId,
         final String localSubId,
         final String localLocationId,
@@ -888,36 +912,47 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final String password,
         final FixDictionary fixDictionary)
     {
-        final InternalSession session;
+        InternalSession session;
         InitiateSessionReply reply = null;
+
+        session = checkOfflineSessionReconnect(sessionId, connectionId, sessionState, heartbeatIntervalInS,
+            sequenceIndex, enableLastMsgSeqNumProcessed, fixDictionary);
+        final boolean isNewConnect = session == null;
 
         // From manageConnection - ie set up the session in this library.
         if (connectionType == INITIATOR)
         {
-            DebugLogger.log(FIX_CONNECTION, "Init Connect: %d, %d%n", connection, libraryId);
+            DebugLogger.log(FIX_CONNECTION, "Init Connect: %d, %d%n", connectionId, libraryId);
             final LibraryReply<?> task = correlationIdToReply.get(correlationId);
             final boolean isReply = task instanceof InitiateSessionReply;
             if (isReply)
             {
                 reply = (InitiateSessionReply)task;
-                reply.onTcpConnected(connection);
+                reply.onTcpConnected(connectionId);
             }
-            session = newInitiatorSession(
-                connection,
-                lastSentSeqNum,
-                lastRecvSeqNum,
-                sessionState,
-                isReply ? reply.configuration() : null,
-                sequenceIndex,
-                enableLastMsgSeqNumProcessed,
-                fixDictionary);
+            if (session == null)
+            {
+                // TODO: offline initiator state
+                session = newInitiatorSession(
+                    connectionId,
+                    lastSentSeqNum,
+                    lastRecvSeqNum,
+                    sessionState,
+                    isReply ? reply.configuration() : null,
+                    sequenceIndex,
+                    enableLastMsgSeqNumProcessed,
+                    fixDictionary);
+            }
         }
         else
         {
-            DebugLogger.log(FIX_CONNECTION, "Acct Connect: %d, %d%n", connection, libraryId);
-            session = acceptSession(
-                connection, address, sessionState, heartbeatIntervalInS, sequenceIndex,
-                enableLastMsgSeqNumProcessed, fixDictionary);
+            DebugLogger.log(FIX_CONNECTION, "Acct Connect: %d, %d%n", connectionId, libraryId);
+            if (session == null)
+            {
+                session = acceptSession(
+                    connectionId, address, sessionState, heartbeatIntervalInS, sequenceIndex,
+                    enableLastMsgSeqNumProcessed, fixDictionary);
+            }
             session.lastSentMsgSeqNum(lastSentSeqNum);
             session.initialLastReceivedMsgSeqNum(lastRecvSeqNum);
         }
@@ -933,7 +968,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         session.username(username);
         session.password(password);
         session.setupSession(sessionId, compositeKey);
-        session.logonTime(logonTime);
         session.closedResendInterval(closedResendInterval);
         session.resendRequestChunkSize(resendRequestChunkSize);
         session.sendRedundantResendRequests(sendRedundantResendRequests);
@@ -942,16 +976,50 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         session.lastResendChunkMsgSeqNum(lastResendChunkMsgSeqNum);
         session.endOfResendRequestRange(endOfResendRequestRange);
         session.awaitingHeartbeat(awaitingHeartbeat);
+        session.lastLogonTime(lastLogonTime);
+        session.lastSequenceResetTime(lastSequenceResetTime);
 
-        createSessionSubscriber(connection, session, reply, fixDictionary);
-        insertSession(session, connectionType, sessionState);
+        createSessionSubscriber(connectionId, session, reply, fixDictionary);
+        if (isNewConnect)
+        {
+            insertSession(session, connectionType, sessionState);
+        }
 
         DebugLogger.log(GATEWAY_MESSAGE,
             "onSessionExists: conn=%d, sess=%d, sentSeqNo=%d, recvSeqNo=%d%n",
-            connection,
+            connectionId,
             sessionId,
             lastSentSeqNum,
             lastRecvSeqNum);
+    }
+
+    private InternalSession checkOfflineSessionReconnect(
+        final long sessionId,
+        final long connectionId,
+        final SessionState sessionState,
+        final int heartbeatIntervalInS,
+        final int sequenceIndex,
+        final boolean enableLastMsgSeqNumProcessed,
+        final FixDictionary fixDictionary)
+    {
+        final InternalSession[] sessions = this.sessions;
+        for (final InternalSession session : sessions)
+        {
+            if (session.id() == sessionId)
+            {
+                DebugLogger.log(FIX_CONNECTION, "Reconnect: %d, %d, %d%n", connectionId, libraryId, sessionId);
+
+                session.onReconnect(
+                    connectionId,
+                    sessionState,
+                    heartbeatIntervalInS,
+                    sequenceIndex,
+                    enableLastMsgSeqNumProcessed,
+                    fixDictionary);
+                return session;
+            }
+        }
+        return null;
     }
 
     private void insertSession(
@@ -1107,6 +1175,17 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         if (reply != null)
         {
             reply.onComplete(followerSession(sessionId, NO_CONNECTION_ID, 0));
+        }
+
+        return CONTINUE;
+    }
+
+    public Action onReplayMessagesReply(final int libraryId, final long replyToId, final ReplayMessagesStatus status)
+    {
+        final ReplayMessagesReply reply = (ReplayMessagesReply)correlationIdToReply.remove(replyToId);
+        if (reply != null)
+        {
+            reply.onComplete(status);
         }
 
         return CONTINUE;
@@ -1310,7 +1389,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             parser,
             session,
             receiveTimer,
-            sessionTimer);
+            sessionTimer,
+            this);
         subscriber.reply(reply);
         subscriber.handler(configuration.sessionAcquireHandler().onSessionAcquired(session, sessionAcquiredInfo));
 
@@ -1341,6 +1421,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             defaultInterval,
             connectionId,
             epochClock,
+            configuration.clock(),
             sessionProxy,
             publication,
             sessionIdStrategy,
@@ -1406,15 +1487,12 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
         final MutableAsciiBuffer asciiBuffer = sessionBuffer();
-        final int split = address.lastIndexOf(':');
-        final int start = address.startsWith("/") ? 1 : 0;
-        final String host = address.substring(start, split);
-        final int port = Integer.parseInt(address.substring(split + 1));
 
         final InternalSession session = new AcceptorSession(
             heartbeatIntervalInS,
             connectionId,
             epochClock,
+            configuration.clock(),
             sessionProxy(connectionId),
             publication,
             sessionIdStrategy,
@@ -1430,7 +1508,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             enableLastMsgSeqNumProcessed,
             configuration.sessionCustomisationStrategy());
         session.fixDictionary(fixDictionary);
-        session.address(host, port);
+        session.address(address);
         return session;
     }
 

@@ -36,6 +36,7 @@ import static io.aeron.CommonContext.IPC_CHANNEL;
 import static java.util.Collections.singletonList;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.Assert.assertFalse;
 import static uk.co.real_logic.artio.TestFixtures.*;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
@@ -178,6 +179,31 @@ public class EngineAndLibraryIntegrationTest
         );
     }
 
+    @Test(timeout = 5_000L)
+    public void libraryShouldReconnectToEngine() throws InterruptedException
+    {
+        final int beyondTimeout = SHORT_TIMEOUT_IN_MS + 1;
+
+        library = connectLibrary();
+        awaitLibraryConnect(library);
+        assertNumActiveLibraries(1);
+
+        Thread.sleep(beyondTimeout);
+        assertEventuallyTrue("engine fails to timeout library", () -> libraries(engine).size() == 1);
+        // Poll until engine heartbeat messages are all read in order to force a library timeout
+        library.poll(10);
+
+        Thread.sleep(beyondTimeout);
+        testSystem.poll();
+        assertFalse("library still connected", library.isConnected());
+
+        assertEventuallyTrue("library reconnect fails", () ->
+        {
+            testSystem.poll();
+            return libraries(engine).size() == 2 && library.isConnected();
+        });
+    }
+
     @SafeVarargs
     private final void assertEventuallyHasLibraries(final Matcher<LibraryInfo>... libraryMatchers)
     {
@@ -200,7 +226,7 @@ public class EngineAndLibraryIntegrationTest
             .sessionAcquireHandler(sessionHandler)
             .libraryAeronChannels(singletonList(IPC_CHANNEL))
             .messageValidationStrategy(validationStrategy)
-            .replyTimeoutInMs(TIMEOUT_IN_MS);
+            .replyTimeoutInMs(SHORT_TIMEOUT_IN_MS);
 
         return testSystem.add(connect(config));
     }

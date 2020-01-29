@@ -20,6 +20,7 @@ import org.agrona.DirectBuffer;
 import uk.co.real_logic.artio.ValidationError;
 import uk.co.real_logic.artio.dictionary.LongDictionary;
 import uk.co.real_logic.artio.fields.AsciiFieldFlyweight;
+import uk.co.real_logic.artio.library.OnMessageInfo;
 import uk.co.real_logic.artio.library.SessionHandler;
 import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.otf.MessageControl;
@@ -50,7 +51,8 @@ public class TestReqIdFinder implements SessionHandler, OtfMessageAcceptor
         final int sequenceIndex,
         final long messageType,
         final long timestampInNs,
-        final long position)
+        final long position,
+        final OnMessageInfo messageInfo)
     {
         testReqId = null;
         parser.onMessage(buffer, offset, length);

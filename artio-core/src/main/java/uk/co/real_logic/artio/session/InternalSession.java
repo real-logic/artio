@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.session;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import org.agrona.concurrent.EpochClock;
 import org.agrona.concurrent.status.AtomicCounter;
+import uk.co.real_logic.artio.Clock;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
@@ -26,7 +27,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 /**
  * Exposes Session methods to internal APIs that we don't want to expose to the outside world
  */
-public class InternalSession extends Session
+public class InternalSession extends Session implements AutoCloseable
 {
     // Default initialised values used by both the Session and also the manage session handover.
     public static final boolean INITIAL_AWAITING_RESEND = false;
@@ -39,6 +40,7 @@ public class InternalSession extends Session
         final int heartbeatIntervalInS,
         final long connectionId,
         final EpochClock epochClock,
+        final Clock clock,
         final SessionState state,
         final SessionProxy proxy,
         final GatewayPublication publication,
@@ -58,6 +60,7 @@ public class InternalSession extends Session
             heartbeatIntervalInS,
             connectionId,
             epochClock,
+            clock,
             state,
             proxy,
             publication,
@@ -89,14 +92,23 @@ public class InternalSession extends Session
         super.libraryConnected(libraryConnected);
     }
 
-    public void logonListener(final SessionLogonListener logonListener)
+    public void sessionProcessHandler(final SessionProcessHandler sessionProcessHandler)
     {
-        super.logonListener(logonListener);
+        super.sessionProcessHandler(sessionProcessHandler);
     }
 
-    public void address(final String connectedHost, final int connectedPort)
+    public void address(final String address)
     {
-        super.address(connectedHost, connectedPort);
+        final int split = address.lastIndexOf(':');
+        final int start = address.startsWith("/") ? 1 : 0;
+        final String host = address.substring(start, split);
+        final int port = Integer.parseInt(address.substring(split + 1));
+        address(host, port);
+    }
+
+    public void address(final String host, final int port)
+    {
+        super.address(host, port);
     }
 
     public void username(final String username)
@@ -109,9 +121,9 @@ public class InternalSession extends Session
         super.password(password);
     }
 
-    public void logonTime(final long logonTime)
+    public void lastLogonTime(final long logonTime)
     {
-        super.logonTime(logonTime);
+        super.lastLogonTime(logonTime);
     }
 
     public void awaitingResend(final boolean awaitingResend)
@@ -164,6 +176,11 @@ public class InternalSession extends Session
         super.lastResendChunkMsgSeqNum(lastResendChunkMsgSeqNum);
     }
 
+    public void lastSequenceResetTime(final long lastSequenceResetTime)
+    {
+        super.lastSequenceResetTime(lastSequenceResetTime);
+    }
+
     public void endOfResendRequestRange(final int endOfResendRequestRange)
     {
         super.endOfResendRequestRange(endOfResendRequestRange);
@@ -198,4 +215,26 @@ public class InternalSession extends Session
     {
         super.setupSession(sessionId, sessionKey);
     }
+
+    public void close()
+    {
+        super.close();
+    }
+
+    public void onReconnect(
+        final long connectionId,
+        final SessionState sessionState,
+        final int heartbeatIntervalInS,
+        final int sequenceIndex,
+        final boolean enableLastMsgSeqNumProcessed,
+        final FixDictionary fixDictionary)
+    {
+        connectionId(connectionId);
+        state(sessionState);
+        heartbeatIntervalInS(heartbeatIntervalInS);
+        sequenceIndex(sequenceIndex);
+        enableLastMsgSeqNumProcessed(enableLastMsgSeqNumProcessed);
+        fixDictionary(fixDictionary);
+    }
+
 }

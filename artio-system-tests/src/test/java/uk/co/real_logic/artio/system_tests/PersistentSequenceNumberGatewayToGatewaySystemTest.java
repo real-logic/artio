@@ -76,6 +76,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     private boolean resetSequenceNumbersOnLogon = false;
     private boolean dirsDeleteOnStart = true;
 
+    private TimeRange firstConnectTimeRange;
+
     @Before
     public void setUp() throws IOException
     {
@@ -100,6 +102,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         assertSequenceIndicesAre(0);
         assertLastLogonEquals(4, 0);
+
+        assertSequenceResetBeforeLastLogon(initiatingSession);
+        assertSequenceResetBeforeLastLogon(acceptingSession);
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -182,6 +187,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         assertSequenceIndicesAre(0);
         assertLastLogonEquals(4, 0);
+
+        assertSequenceResetBeforeLastLogon(initiatingSession);
+        assertSequenceResetBeforeLastLogon(acceptingSession);
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -194,6 +202,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         // Different sessions themselves, so we start again at 0
         assertSequenceIndicesAre(0);
         assertLastLogonEquals(1, 0);
+
+        assertSequenceResetTimeAtLatestLogon(initiatingSession);
+        assertSequenceResetTimeAtLatestLogon(acceptingSession);
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -205,6 +216,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
 
         assertSequenceIndicesAre(1);
         assertLastLogonEquals(1, 1);
+
+        assertSequenceResetTimeAtLatestLogon(initiatingSession);
+        assertSequenceResetTimeAtLatestLogon(acceptingSession);
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -218,6 +232,9 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         initiatingOtfAcceptor.logonMessagesHaveSequenceNumbers(1);
         assertSequenceIndicesAre(1);
         assertLastLogonEquals(1, 1);
+
+        assertSequenceResetTimeAtLatestLogon(initiatingSession);
+        assertSequenceResetTimeAtLatestLogon(acceptingSession);
     }
 
     @Test(timeout = TEST_TIMEOUT)
@@ -373,6 +390,8 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         launch(this::nothing);
         connectPersistingSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, resetSequenceNumbersOnLogon);
         assertLastLogonEquals(1, 0);
+        assertSequenceResetTimeAtLatestLogon(initiatingSession);
+        assertSequenceResetTimeAtLatestLogon(acceptingSession);
 
         assertSequenceIndicesAre(0);
 
@@ -391,6 +410,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         close();
 
         duringRestart.run();
+        firstConnectTimeRange = connectTimeRange;
 
         launch(this.beforeReconnect);
         connectPersistingSessions(
@@ -473,5 +493,12 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         {
             acquireSession(sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY);
         }
+    }
+
+    private void assertSequenceResetBeforeLastLogon(final Session session)
+    {
+        firstConnectTimeRange.assertWithinRange(session.lastSequenceResetTime());
+        connectTimeRange.assertWithinRange(session.lastLogonTime());
+        assertNotEquals(session.lastLogonTime(), session.lastSequenceResetTime());
     }
 }

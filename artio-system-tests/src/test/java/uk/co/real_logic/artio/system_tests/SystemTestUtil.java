@@ -189,7 +189,7 @@ public final class SystemTestUtil
             });
     }
 
-    static SessionReplyStatus releaseToGateway(
+    static SessionReplyStatus releaseToEngine(
         final FixLibrary library, final Session session, final TestSystem testSystem)
     {
         final Reply<SessionReplyStatus> reply = testSystem.awaitReply(
@@ -297,6 +297,14 @@ public final class SystemTestUtil
             .messageValidationStrategy(validationStrategy);
 
         return validationStrategy;
+    }
+
+    static SessionReplyStatus requestSession(
+        final FixLibrary library,
+        final long sessionId,
+        final TestSystem testSystem)
+    {
+        return requestSession(library, sessionId, NO_MESSAGE_REPLAY, NO_MESSAGE_REPLAY, testSystem);
     }
 
     static SessionReplyStatus requestSession(
