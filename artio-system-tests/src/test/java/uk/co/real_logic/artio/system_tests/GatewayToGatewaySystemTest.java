@@ -17,6 +17,7 @@ package uk.co.real_logic.artio.system_tests;
 
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
+import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
@@ -1179,7 +1180,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void shouldNotAcquiredInitiatedOfflineSessionIfAnotherLibraryOwnsIt()
+    public void shouldNotAcquiredOrInitiateOfflineSessionIfAnotherLibraryOwnsIt()
     {
         final long sessionId = initiatingSession.id();
 
@@ -1199,8 +1200,12 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             assertNotSame(initiatingSession, offlineInitiatingSession);
             assertOfflineSession(sessionId, offlineInitiatingSession);
 
-            final SessionReplyStatus failedReply = requestSession(initiatingLibrary, sessionId, testSystem);
-            assertEquals(SessionReplyStatus.OTHER_SESSION_OWNER, failedReply);
+            final SessionReplyStatus failedStatus = requestSession(initiatingLibrary, sessionId, testSystem);
+            assertEquals(SessionReplyStatus.OTHER_SESSION_OWNER, failedStatus);
+
+            final Reply<Session> failedReply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
+            completeFailedSession(failedReply);
+            assertThat(failedReply.error().getMessage(), Matchers.containsString("DUPLICATE"));
         }
     }
 

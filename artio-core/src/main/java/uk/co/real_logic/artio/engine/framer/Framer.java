@@ -623,7 +623,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final SessionContext sessionContext = sessionContexts.onLogon(
             sessionKey, FixDictionary.of(fixDictionaryClass));
 
-        if (sessionContext == SessionContexts.DUPLICATE_SESSION)
+        if (sessionContext == SessionContexts.DUPLICATE_SESSION || isOwnedSession(sessionContext.sessionId()))
         {
             final long sessionId = sessionContexts.lookupSessionId(sessionKey);
             final int owningLibraryId = senderEndPoints.libraryLookup().applyAsInt(sessionId);
