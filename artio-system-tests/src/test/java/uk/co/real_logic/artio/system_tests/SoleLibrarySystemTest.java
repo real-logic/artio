@@ -63,4 +63,17 @@ public class SoleLibrarySystemTest extends AbstractGatewayToGatewaySystemTest
 
         assertSequenceResetTimeAtLatestLogon(acceptingSession);
     }
+
+    @Test
+    public void shouldSupportOfflineSessionsInSoleLibraryMode()
+    {
+        connectSessions();
+        acceptingSession = acceptingHandler.lastSession();
+        disconnectSessions();
+        final long sessionId = acceptingSession.id();
+
+        acceptingSession = acquireSession(acceptingHandler, acceptingLibrary, sessionId, testSystem);
+
+        assertOfflineSession(sessionId, acceptingSession);
+    }
 }

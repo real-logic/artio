@@ -49,7 +49,6 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
 import static uk.co.real_logic.artio.FixMatchers.*;
-import static uk.co.real_logic.artio.GatewayProcess.NO_CONNECTION_ID;
 import static uk.co.real_logic.artio.TestFixtures.largeTestReqId;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.Timing.assertEventuallyTrue;
@@ -1164,15 +1163,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
             return acceptingSession.state() == SessionState.ACTIVE;
         }, 3_000L);
-    }
-
-    private void assertOfflineSession(final long sessionId, final Session session)
-    {
-        assertEquals(sessionId, session.id());
-        assertEquals("", session.connectedHost());
-        assertEquals(Session.UNKNOWN, session.connectedPort());
-        assertEquals(NO_CONNECTION_ID, session.connectionId());
-        assertEquals(SessionState.DISCONNECTED, session.state());
     }
 
     @Test
