@@ -555,11 +555,15 @@ public class Session
     /**
      * Check if the session is in a state where it can send a message.
      *
+     * NB: an offline session can send messages whilst it is DISCONNECTED. These are stored into the archive. When a
+     * session reconnects it can read through sending a resend request.
+     *
      * @return true if the session is in a state where it can send a message, false otherwise.
      */
     public boolean canSendMessage()
     {
-        return state == ACTIVE;
+        final SessionState state = this.state;
+        return state == ACTIVE || state == DISCONNECTED;
     }
 
     /**

@@ -118,6 +118,12 @@ public final class SystemTestUtil
     {
         assertEventuallyTrue("Session not connected", session::isConnected);
 
+        return alwaysSendTestRequest(session, testReqID, fixDictionary);
+    }
+
+    static long alwaysSendTestRequest(
+        final Session session, final String testReqID, final FixDictionary fixDictionary)
+    {
         final AbstractTestRequestEncoder testRequest = fixDictionary.makeTestRequestEncoder();
         testRequest.testReqID(testReqID);
 

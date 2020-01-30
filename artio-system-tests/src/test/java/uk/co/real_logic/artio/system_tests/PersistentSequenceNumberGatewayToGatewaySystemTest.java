@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +18,7 @@ package uk.co.real_logic.artio.system_tests;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.artio.Constants;
-import uk.co.real_logic.artio.Reply;
-import uk.co.real_logic.artio.TestFixtures;
-import uk.co.real_logic.artio.Timing;
+import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -33,6 +30,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.function.Consumer;
 
+import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
@@ -267,7 +265,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     public void shouldPersistSequenceNumbersWithoutARestart()
     {
         launch(this::nothing);
-        connectPersistingSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false);
+        connectPersistingSessions();
 
         assertSequenceIndicesAre(0);
 
@@ -277,7 +275,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final long initiatedSessionId = initiatingSession.id();
         final long acceptingSessionId = acceptingSession.id();
 
-        assertThat(initiatingSession.startLogout(), greaterThan(0L));
+        logoutInitiatingSession();
         assertSessionsDisconnected();
         assertInitiatingSequenceIndexIs(0);
         assertAcceptingSessionHasSequenceIndex(0);
@@ -286,7 +284,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         initiatingSession = null;
         acceptingSession = null;
 
-        connectPersistingSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false);
+        connectPersistingSessions();
 
         assertEquals(initiatedSessionId, initiatingSession.id());
         assertEquals(acceptingSessionId, acceptingSession.id());
@@ -305,16 +303,51 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
     public void shouldReadOldMetaDataOverPersistentConnectionReconnect()
     {
         launch(this::nothing);
-        connectPersistingSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false);
+        connectPersistingSessions();
 
         writeMetaData();
 
-        assertThat(initiatingSession.startLogout(), greaterThan(0L));
+        logoutInitiatingSession();
         assertSessionsDisconnected();
 
-        connectPersistingSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false);
+        connectPersistingSessions();
 
         readMetaData(acceptingSession.id());
+    }
+
+    @Test
+    public void shouldStoreAndForwardMessagesSentWhilstOffline()
+    {
+        launch(this::nothing);
+        connectPersistingSessions();
+
+        disconnectSessions();
+
+        final long sessionId = acceptingSession.id();
+
+        clearMessages();
+        initiatingSession = null;
+        acceptingSession = null;
+
+        acquireAcceptingSession();
+        assertOfflineSession(sessionId, acceptingSession);
+
+        // Send a test execution report offline that can be replayed
+        final ReportFactory reportFactory = new ReportFactory();
+        assertEquals(CONTINUE, reportFactory.sendReport(acceptingSession, Side.BUY));
+
+        onAcquireSession = this::nothing;
+        connectPersistingSessions();
+
+        final FixMessage executionReport = testSystem.awaitMessageOf(
+            initiatingOtfAcceptor, EXECUTION_REPORT_MESSAGE_AS_STR);
+        assertEquals(ReportFactory.MSFT, executionReport.get(SYMBOL));
+        assertEquals("Y", executionReport.possDup());
+    }
+
+    private void connectPersistingSessions()
+    {
+        connectPersistingSessions(AUTOMATIC_INITIAL_SEQUENCE_NUMBER, false);
     }
 
     private void resetSequenceNumbers()
@@ -401,7 +434,7 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         final long initiatedSessionId = initiatingSession.id();
         final long acceptingSessionId = acceptingSession.id();
 
-        initiatingSession.startLogout();
+        logoutInitiatingSession();
         assertSessionsDisconnected();
 
         assertInitiatingSequenceIndexIs(0);

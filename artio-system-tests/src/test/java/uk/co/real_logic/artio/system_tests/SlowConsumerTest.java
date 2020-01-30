@@ -94,7 +94,7 @@ public class SlowConsumerTest
 
         while (socketIsConnected())
         {
-            if (session.canSendMessage())
+            if (session.isActive())
             {
                 if (handler.isSlow(session))
                 {
