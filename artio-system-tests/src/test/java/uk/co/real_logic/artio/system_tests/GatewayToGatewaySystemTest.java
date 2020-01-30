@@ -17,7 +17,6 @@ package uk.co.real_logic.artio.system_tests;
 
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
-import org.hamcrest.Matchers;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
@@ -353,7 +352,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
-        releaseSessionToEngine(initiatingSession, initiatingLibrary, initiatingEngine);
+        releaseSessionToEngineAndCheckCache(initiatingSession, initiatingLibrary, initiatingEngine, initiatingHandler);
     }
 
     @Test
@@ -361,7 +360,20 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     {
         acquireAcceptingSession();
 
-        releaseSessionToEngine(acceptingSession, acceptingLibrary, acceptingEngine);
+        releaseSessionToEngineAndCheckCache(acceptingSession, acceptingLibrary, acceptingEngine, acceptingHandler);
+    }
+
+    private void releaseSessionToEngineAndCheckCache(
+        final Session session, final FixLibrary library, final FixEngine engine, final FakeHandler handler)
+    {
+        releaseSessionToEngine(session, library, engine);
+        handler.resetSession();
+
+        final long sessionId = session.id();
+        assertEquals(OK, requestSession(library, sessionId, testSystem));
+
+        final Session reAcquiredSession = handler.lastSession();
+        assertSame(session, reAcquiredSession);
     }
 
     @Test
@@ -1151,7 +1163,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             testSystem.poll();
 
             return acceptingSession.state() == SessionState.ACTIVE;
-        });
+        }, 3_000L);
     }
 
     private void assertOfflineSession(final long sessionId, final Session session)
@@ -1180,7 +1192,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
     }
 
     @Test
-    public void shouldNotAcquiredOrInitiateOfflineSessionIfAnotherLibraryOwnsIt()
+    public void shouldNotAcquireOrInitiateOfflineSessionOwnedByAnotherLibrary()
     {
         final long sessionId = initiatingSession.id();
 
@@ -1205,7 +1217,7 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
             final Reply<Session> failedReply = initiate(initiatingLibrary, port, INITIATOR_ID, ACCEPTOR_ID);
             completeFailedSession(failedReply);
-            assertThat(failedReply.error().getMessage(), Matchers.containsString("DUPLICATE"));
+            assertThat(failedReply.error().getMessage(), containsString("DUPLICATE"));
         }
     }
 

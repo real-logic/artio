@@ -120,7 +120,7 @@ public class ExternallyControlledSystemTest extends AbstractGatewayToGatewaySyst
         awaitForwardingOfAcceptingSession();
         messagesCanBeExchanged();
 
-        assertEquals(2, sessionProxyRequests);
+        assertEquals(1, sessionProxyRequests);
         assertEquals(2, fakeSessionProxy.sentHeartbeats);
         assertEquals(2, fakeSessionProxy.sentLogons);
         assertEquals(0, fakeSessionProxy.sentResendRequests);

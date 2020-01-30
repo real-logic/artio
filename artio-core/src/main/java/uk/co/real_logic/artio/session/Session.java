@@ -1540,7 +1540,7 @@ public class Session
     }
 
     // Does not check the sequence index
-    private void lastReceivedMsgSeqNumOnly(final int value)
+    void lastReceivedMsgSeqNumOnly(final int value)
     {
         this.lastReceivedMsgSeqNum = value;
         receivedMsgSeqNo.setOrdered(value);

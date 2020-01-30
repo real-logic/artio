@@ -227,7 +227,8 @@ public class InternalSession extends Session implements AutoCloseable
         final int heartbeatIntervalInS,
         final int sequenceIndex,
         final boolean enableLastMsgSeqNumProcessed,
-        final FixDictionary fixDictionary)
+        final FixDictionary fixDictionary,
+        final String address)
     {
         connectionId(connectionId);
         state(sessionState);
@@ -235,6 +236,17 @@ public class InternalSession extends Session implements AutoCloseable
         sequenceIndex(sequenceIndex);
         enableLastMsgSeqNumProcessed(enableLastMsgSeqNumProcessed);
         fixDictionary(fixDictionary);
+        address(address);
     }
 
+    public void lastReceivedMsgSeqNumOnly(final int value)
+    {
+        super.lastReceivedMsgSeqNumOnly(value);
+    }
+
+    protected void finalize() throws Throwable
+    {
+        close();
+        super.finalize();
+    }
 }

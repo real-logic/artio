@@ -439,8 +439,6 @@ public class AbstractGatewayToGatewaySystemTest
         final List<Session> sessions = library.sessions();
         assertThat(sessions, hasSize(1));
 
-        final Session newSession = sessions.get(0);
-        assertNotSame(session, newSession);
         return lastReceivedMsgSeqNum;
     }
 
