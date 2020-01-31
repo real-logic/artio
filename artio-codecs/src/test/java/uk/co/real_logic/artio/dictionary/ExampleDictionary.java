@@ -129,7 +129,7 @@ public final class ExampleDictionary
         "  \"FloatField\": \"1.1\",\n" +
         "  \"BooleanField\": \"true\",\n" +
         "  \"DataFieldLength\": \"3\",\n" +
-        "  \"DataField\": \"[49, 50, 51]\",\n" +
+        "  \"DataField\": \"123\",\n" +
         "  \"SomeTimeField\": \"19700101-00:00:00.001\"";
 
     public static final String STRING_GROUP_TWO_ELEMENTS =
@@ -192,8 +192,8 @@ public final class ExampleDictionary
         "      \"ComponentGroupField\": \"2\",\n" +
         "      \"RequiredComponentGroupField\": \"20\",\n" +
         "    }\n" +
-        "    ]\n" +
-        "    \"EgNestedComponent\":  {\n" +
+        "    ],\n" +
+        "    \"EgNestedComponent\": {\n" +
         "      \"MessageName\": \"EgNestedComponent\",\n" +
         "    }\n" +
         "  }";
