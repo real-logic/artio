@@ -769,9 +769,11 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
 
         assertAccSeqNum(2, 2, 0);
 
-        final TimeRange timeRange = resetSequenceNumbersViaEngineApi();
-
+        final TimeRange timeRange = new TimeRange();
+        resetSequenceNumbersViaEngineApi();
         testSystem.awaitReceivedSequenceNumber(acceptingSession, 1);
+        timeRange.end();
+
         assertAccSeqNum(1, 1, 1);
         timeRange.assertWithinRange(acceptingSession.lastSequenceResetTime());
     }
