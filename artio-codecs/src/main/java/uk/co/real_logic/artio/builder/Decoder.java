@@ -55,4 +55,15 @@ public interface Decoder
     int rejectReason();
 
     SessionHeaderDecoder header();
+
+    /**
+     * Append a human readable representation to a {@link StringBuilder}. This provides the same representation as
+     * {@link #toString()} but in a more garbage-friendly approach.
+     *
+     * @param builder the builder to append to
+     * @return the builder for fluent usage
+     */
+    StringBuilder appendTo(StringBuilder builder);
+
+    StringBuilder appendTo(StringBuilder builder, int level);
 }

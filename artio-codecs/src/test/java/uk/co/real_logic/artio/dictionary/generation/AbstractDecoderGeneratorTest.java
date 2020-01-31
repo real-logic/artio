@@ -18,6 +18,7 @@ package uk.co.real_logic.artio.dictionary.generation;
 import org.agrona.AsciiSequenceView;
 import org.agrona.collections.IntHashSet;
 import org.agrona.generation.StringWriterOutputManager;
+import org.hamcrest.Matcher;
 import org.junit.Test;
 import uk.co.real_logic.artio.builder.Decoder;
 import uk.co.real_logic.artio.decoder.SessionHeaderDecoder;
@@ -388,21 +389,58 @@ public abstract class AbstractDecoderGeneratorTest
     }
 
     @Test
-    public void shouldGenerateHumanReadableToString() throws Exception
+    public void shouldToString() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(NO_OPTIONAL_MESSAGE);
 
-        assertThat(decoder.toString(), containsString(STRING_NO_OPTIONAL_MESSAGE_EXAMPLE));
+        assertToStringAndAppendToMatches(decoder, containsString(STRING_NO_OPTIONAL_MESSAGE_EXAMPLE));
 
         assertValid(decoder);
     }
 
     @Test
-    public void shouldIncludeOptionalFieldsInToString() throws Exception
+    public void shouldToStringIncludeOptionalFields() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(ENCODED_MESSAGE);
 
-        assertThat(decoder.toString(), containsString(STRING_ENCODED_MESSAGE_EXAMPLE));
+        assertToStringAndAppendToMatches(decoder, containsString(STRING_ENCODED_MESSAGE_EXAMPLE));
+    }
+
+    @Test
+    public void shouldToStringShorterStringsAfterLongerStrings() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_MESSAGE);
+
+        decode(SHORTER_STRING_MESSAGE, decoder);
+
+        assertToStringAndAppendToMatches(decoder, containsString("\"OnBehalfOfCompID\": \"ab\","));
+    }
+
+    @Test
+    public void shouldToStringComponent() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(COMPONENT_MESSAGE);
+
+        assertToStringAndAppendToMatches(decoder, containsString("  \"ComponentField\": \"2\""));
+    }
+
+    @Test
+    public void shouldToStringRepeatingGroups() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
+
+        assertToStringAndAppendToMatches(decoder, containsString(STRING_GROUP_TWO_ELEMENTS));
+    }
+
+    private void assertToStringAndAppendToMatches(final Decoder decoder, final Matcher<String> matcher)
+    {
+        assertThat(decoder.toString(), matcher);
+
+        final StringBuilder builder = new StringBuilder();
+        final StringBuilder newBuilder = decoder.appendTo(builder);
+        final String builderString = builder.toString();
+        assertThat(builderString, matcher);
+        assertSame(builder, newBuilder);
     }
 
     @Test
@@ -415,16 +453,6 @@ public abstract class AbstractDecoderGeneratorTest
         decode(SHORTER_STRING_MESSAGE, decoder);
 
         assertArrayEquals(AB, getOnBehalfOfCompId(decoder));
-    }
-
-    @Test
-    public void shouldToStringShorterStringsAfterLongerStrings() throws Exception
-    {
-        final Decoder decoder = decodeHeartbeat(DERIVED_FIELDS_MESSAGE);
-
-        decode(SHORTER_STRING_MESSAGE, decoder);
-
-        assertThat(decoder.toString(), containsString("\"OnBehalfOfCompID\": \"ab\","));
     }
 
     @Test
@@ -497,14 +525,6 @@ public abstract class AbstractDecoderGeneratorTest
     }
 
     @Test
-    public void shouldToStringRepeatingGroups() throws Exception
-    {
-        final Decoder decoder = decodeHeartbeat(REPEATING_GROUP_MESSAGE);
-
-        assertThat(decoder, hasToString(containsString(STRING_GROUP_TWO_ELEMENTS)));
-    }
-
-    @Test
     public void shouldDecodeComponents() throws Exception
     {
         final Decoder decoder = decodeHeartbeat(COMPONENT_MESSAGE);
@@ -530,15 +550,6 @@ public abstract class AbstractDecoderGeneratorTest
 
         assertValid(decoder);
     }
-
-    @Test
-    public void shouldGenerateComponentToString() throws Exception
-    {
-        final Decoder decoder = decodeHeartbeat(COMPONENT_MESSAGE);
-
-        assertThat(decoder.toString(), containsString("  \"ComponentField\": \"2\""));
-    }
-
     @Test
     public void shouldGenerateComponentInterface() throws Exception
     {

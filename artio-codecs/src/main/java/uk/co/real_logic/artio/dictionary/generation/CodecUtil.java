@@ -176,4 +176,29 @@ public final class CodecUtil
 
         return result;
     }
+
+    private static final char[] WHITESPACE = "                                                         ".toCharArray();
+
+    public static void indent(final StringBuilder builder, final int level)
+    {
+        builder.append(WHITESPACE, 0, 2 * level);
+    }
+
+    public static void appendData(final StringBuilder builder, final byte[] dataField, final int length)
+    {
+        for (int i = 0; i < length; i++)
+        {
+            builder.append((char)dataField[i]);
+        }
+    }
+
+    public static void appendBuffer(
+        final StringBuilder builder, final MutableDirectBuffer buffer, final int offset, final int length)
+    {
+        final int end = offset + length;
+        for (int i = offset; i < end; i++)
+        {
+            builder.append((char)buffer.getByte(i));
+        }
+    }
 }
