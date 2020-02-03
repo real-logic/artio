@@ -39,8 +39,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
+import static java.util.regex.Pattern.MULTILINE;
 import static java.util.stream.Collectors.joining;
 import static uk.co.real_logic.artio.dictionary.generation.AggregateType.*;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.importFor;
@@ -57,6 +59,7 @@ public abstract class Generator
     public static final String CODEC_VALIDATION_ENABLED = "CODEC_VALIDATION_ENABLED";
     public static final String CODEC_REJECT_UNKNOWN_FIELD_ENABLED = "CODEC_REJECT_UNKNOWN_FIELD_ENABLED";
     public static final String RUNTIME_REJECT_UNKNOWN_ENUM_VALUE_PROPERTY = "CODEC_REJECT_UNKNOWN_ENUM_VALUE_ENABLED";
+    public static final Pattern NEWLINE = Pattern.compile("^", MULTILINE);
     final String codecRejectUnknownEnumValueEnabled;
     public static final String MESSAGE_FIELDS = "messageFields";
 
@@ -518,7 +521,7 @@ public abstract class Generator
             final Field field = (Field)element;
             final String value = fieldAppendTo(field);
 
-            final String formatter = String.format(
+            final String fieldAppender = String.format(
                 "        indent(builder, level);\n" +
                 "        builder.append(\"\\\"%1$s\\\": \\\"\");\n" +
                 "        %2$s;\n" +
@@ -528,17 +531,20 @@ public abstract class Generator
 
             if (appendToChecksHasGetter(entry, field))
             {
+                final String indentedFieldAppender = NEWLINE
+                    .matcher(fieldAppender)
+                    .replaceAll("    ");
                 return String.format(
                     "        if (has%1$s())\n" +
-                    "        {\n" +
-                    "%2$s" +
-                    "        }\n",
+                        "        {\n" +
+                        "%2$s" +
+                        "        }\n",
                     name,
-                    formatter.replaceAll("^", "    "));
+                    indentedFieldAppender);
             }
             else
             {
-                return formatter;
+                return fieldAppender;
             }
         }
         else if (element instanceof Group)

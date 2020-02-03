@@ -181,7 +181,19 @@ public final class CodecUtil
 
     public static void indent(final StringBuilder builder, final int level)
     {
-        builder.append(WHITESPACE, 0, 2 * level);
+        final int numberOfSpaces = 2 * level;
+        final char[] whitespace = WHITESPACE;
+        if (numberOfSpaces > whitespace.length)
+        {
+            for (int i = 0; i < level; i++)
+            {
+                builder.append(whitespace, 0, 2);
+            }
+        }
+        else
+        {
+            builder.append(whitespace, 0, numberOfSpaces);
+        }
     }
 
     public static void appendData(final StringBuilder builder, final byte[] dataField, final int length)
