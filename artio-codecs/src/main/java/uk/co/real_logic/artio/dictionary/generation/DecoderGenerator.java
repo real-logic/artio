@@ -1593,6 +1593,18 @@ public class DecoderGenerator extends Generator
         return String.format("builder.append(%1$s(), 0, %1$sLength())", fieldName);
     }
 
+    protected String dataAppendTo(final Field field, final String fieldName)
+    {
+        final String lengthName = formatPropertyName(field.associatedLengthField().name());
+
+        if (flyweightsEnabled)
+        {
+            return String.format("appendData(builder, %1$s(), %2$s())", fieldName, lengthName);
+        }
+
+        return String.format("appendData(builder, %1$s, %2$s)", fieldName, lengthName);
+    }
+
     protected String timeAppendTo(final String fieldName)
     {
         if (flyweightsEnabled)
@@ -1601,11 +1613,6 @@ public class DecoderGenerator extends Generator
         }
 
         return String.format("appendData(builder, %1$s, %1$sLength)", fieldName);
-    }
-
-    protected String dataAppendTo(final String fieldName)
-    {
-        return timeAppendTo(fieldName);
     }
 
     protected boolean hasFlag(final Entry entry, final Field field)
@@ -1644,11 +1651,11 @@ public class DecoderGenerator extends Generator
         return String.format(
             "    if (has%2$s)\n" +
             "    {\n" +
-            "    indent(builder, level);\n"+
+            "    indent(builder, level);\n" +
             "    builder.append(\"\\\"%1$s\\\": [\\n\");\n" +
             "    for (final %3$s %4$s : %5$s.iterator())\n" +
             "    {\n" +
-            "        indent(builder, level);\n"+
+            "        indent(builder, level);\n" +
             "        %4$s.appendTo(builder, level + 1);" +
             "        if (%4$s.next() != null)\n" +
             "        {\n" +
@@ -1656,7 +1663,7 @@ public class DecoderGenerator extends Generator
             "        }\n" +
             "        builder.append('\\n');\n" +
             "    }\n" +
-            "    indent(builder, level);\n"+
+            "    indent(builder, level);\n" +
             "    builder.append(\"],\\n\");\n" +
             "    }\n",
             name,
@@ -1671,7 +1678,7 @@ public class DecoderGenerator extends Generator
         return resetByFlag(name);
     }
 
-    protected boolean toStringChecksHasGetter(final Entry entry, final Field field)
+    protected boolean appendToChecksHasGetter(final Entry entry, final Field field)
     {
         return hasFlag(entry, field);
     }

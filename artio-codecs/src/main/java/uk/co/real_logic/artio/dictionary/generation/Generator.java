@@ -526,7 +526,7 @@ public abstract class Generator
                 name,
                 value);
 
-            if (toStringChecksHasGetter(entry, field))
+            if (appendToChecksHasGetter(entry, field))
             {
                 return String.format(
                     "        if (has%1$s())\n" +
@@ -553,7 +553,7 @@ public abstract class Generator
         return "";
     }
 
-    protected abstract boolean toStringChecksHasGetter(Entry entry, Field field);
+    protected abstract boolean appendToChecksHasGetter(Entry entry, Field field);
 
     protected abstract String groupEntryAppendTo(Group element, String name);
 
@@ -598,7 +598,7 @@ public abstract class Generator
 
             case DATA:
             case XMLDATA:
-                return dataAppendTo(fieldName);
+                return dataAppendTo(field, fieldName);
 
             default:
                 if (flyweightsEnabled)
@@ -610,9 +610,9 @@ public abstract class Generator
         }
     }
 
-    protected abstract String timeAppendTo(final String fieldName);
+    protected abstract String timeAppendTo(String fieldName);
 
-    protected abstract String dataAppendTo(final String fieldName);
+    protected abstract String dataAppendTo(Field field, String fieldName);
 
     protected boolean isCheckSum(final Entry entry)
     {

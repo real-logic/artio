@@ -58,7 +58,7 @@ public interface Decoder
 
     /**
      * Append a human readable representation to a {@link StringBuilder}. This provides the same representation as
-     * {@link #toString()} but in a more garbage-friendly approach.
+     * {@link Object#toString()} but in a more garbage-friendly approach.
      *
      * @param builder the builder to append to
      * @return the builder for fluent usage

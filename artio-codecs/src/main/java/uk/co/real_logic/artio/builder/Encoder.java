@@ -58,4 +58,13 @@ public interface Encoder
     SessionHeaderEncoder header();
 
     void resetMessage();
+
+    /**
+     * Append a human readable representation to a {@link StringBuilder}. This provides the same representation as
+     * {@link Object#toString()} but in a more garbage-friendly approach.
+     *
+     * @param builder the builder to append to
+     * @return the builder for fluent usage
+     */
+    StringBuilder appendTo(StringBuilder builder);
 }

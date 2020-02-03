@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd.
+ * Copyright 2015-2020 Real Logic Limited, Adaptive Financial Consulting Ltd., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import static java.lang.reflect.Modifier.isAbstract;
 import static java.lang.reflect.Modifier.isPublic;
@@ -436,8 +437,14 @@ public abstract class AbstractDecoderGeneratorTest
     {
         assertThat(decoder.toString(), matcher);
 
+        assertAppendToMatches(decoder::appendTo, matcher);
+    }
+
+    static void assertAppendToMatches(
+        final Function<StringBuilder, StringBuilder> appendTo, final Matcher<String> matcher)
+    {
         final StringBuilder builder = new StringBuilder();
-        final StringBuilder newBuilder = decoder.appendTo(builder);
+        final StringBuilder newBuilder = appendTo.apply(builder);
         final String builderString = builder.toString();
         assertThat(builderString, matcher);
         assertSame(builder, newBuilder);
@@ -550,6 +557,7 @@ public abstract class AbstractDecoderGeneratorTest
 
         assertValid(decoder);
     }
+
     @Test
     public void shouldGenerateComponentInterface() throws Exception
     {

@@ -19,6 +19,7 @@ import org.agrona.AsciiSequenceView;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import org.agrona.generation.StringWriterOutputManager;
+import org.hamcrest.Matcher;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import uk.co.real_logic.artio.EncodingException;
@@ -38,6 +39,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.dictionary.ExampleDictionary.*;
+import static uk.co.real_logic.artio.dictionary.generation.AbstractDecoderGeneratorTest.assertAppendToMatches;
 import static uk.co.real_logic.artio.dictionary.generation.GenerationUtil.PARENT_PACKAGE;
 import static uk.co.real_logic.artio.util.Reflection.*;
 
@@ -476,19 +478,6 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void shouldToStringShorterStringsAfterLongerStrings() throws Exception
-    {
-        final Encoder encoder = newHeartbeat();
-
-        setRequiredFields(encoder);
-
-        setCharSequence(encoder, ON_BEHALF_OF_COMP_ID, "ab");
-
-        assertThat(encoder.toString(), containsString("ab"));
-        assertThat(encoder.toString(), not(containsString("abc")));
-    }
-
-    @Test
     public void shouldEncodeGroups() throws Exception
     {
         final Encoder encoder = newHeartbeat();
@@ -659,34 +648,6 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void shouldGenerateToStringForShorterGroups() throws Exception
-    {
-        final Encoder encoder = newHeartbeat();
-        setEgGroupToTwoElements(encoder);
-
-        setRequiredFields(encoder);
-        setEgGroupToOneElement(encoder);
-
-        assertThat(encoder, hasToString(containsString(STRING_GROUP_ONE_ELEMENT)));
-    }
-
-    @Test
-    public void shouldGenerateToStringForShorterGroupsAfterReset() throws Exception
-    {
-        final Encoder encoder = newHeartbeat();
-
-        setRequiredFields(encoder);
-        setEgGroupToTwoElements(encoder);
-
-        reset(encoder);
-
-        setRequiredFields(encoder);
-        setEgGroupToOneElement(encoder);
-
-        assertThat(encoder, hasToString(containsString(STRING_GROUP_ONE_ELEMENT)));
-    }
-
-    @Test
     public void shouldIgnoreUnnecessaryGroupNextCalls() throws Exception
     {
         final Encoder encoder = newHeartbeat();
@@ -845,16 +806,6 @@ public class EncoderGeneratorTest
     }
 
     @Test
-    public void shouldGenerateToStringForGroups() throws Exception
-    {
-        final Encoder encoder = newHeartbeat();
-        setRequiredFields(encoder);
-        setEgGroupToTwoElements(encoder);
-
-        assertThat(encoder, hasToString(containsString(STRING_GROUP_TWO_ELEMENTS)));
-    }
-
-    @Test
     public void shouldGenerateComponentClass() throws Exception
     {
         final Class<?> component = compileInMemory(COMPONENT_ENCODER, sources);
@@ -881,7 +832,65 @@ public class EncoderGeneratorTest
 
         setupComponent(encoder);
 
-        assertThat(encoder.toString(), containsString(COMPONENT_TO_STRING));
+        assertToStringAndAppendToMatches(encoder, containsString(COMPONENT_TO_STRING));
+    }
+
+    @Test
+    public void shouldGenerateToStringForGroups() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+        setRequiredFields(encoder);
+        setEgGroupToTwoElements(encoder);
+
+        assertToStringAndAppendToMatches(encoder, containsString(STRING_GROUP_TWO_ELEMENTS));
+    }
+
+    @Test
+    public void shouldGenerateToStringForShorterGroups() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+        setEgGroupToTwoElements(encoder);
+
+        setRequiredFields(encoder);
+        setEgGroupToOneElement(encoder);
+
+        assertToStringAndAppendToMatches(encoder, containsString(STRING_GROUP_ONE_ELEMENT));
+    }
+
+    @Test
+    public void shouldGenerateToStringForShorterGroupsAfterReset() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+
+        setRequiredFields(encoder);
+        setEgGroupToTwoElements(encoder);
+
+        reset(encoder);
+
+        setRequiredFields(encoder);
+        setEgGroupToOneElement(encoder);
+
+        assertToStringAndAppendToMatches(encoder, containsString(STRING_GROUP_ONE_ELEMENT));
+    }
+
+    @Test
+    public void shouldToStringShorterStringsAfterLongerStrings() throws Exception
+    {
+        final Encoder encoder = newHeartbeat();
+
+        setRequiredFields(encoder);
+
+        setCharSequence(encoder, ON_BEHALF_OF_COMP_ID, "ab");
+
+        assertToStringAndAppendToMatches(encoder, containsString("ab"));
+        assertToStringAndAppendToMatches(encoder, not(containsString("abc")));
+    }
+
+    private void assertToStringAndAppendToMatches(final Encoder encoder, final Matcher<String> matcher)
+    {
+        assertThat(encoder.toString(), matcher);
+
+        assertAppendToMatches(encoder::appendTo, matcher);
     }
 
     @Test

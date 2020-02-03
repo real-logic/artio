@@ -992,16 +992,17 @@ public class EncoderGenerator extends Generator
         return stringAppendTo(fieldName);
     }
 
-    protected String dataAppendTo(final String fieldName)
+    protected String dataAppendTo(final Field field, final String fieldName)
     {
-        return String.format("appendData(builder, %1$s, %1$sLength)", fieldName);
+        final String lengthName = formatPropertyName(field.associatedLengthField().name());
+        return String.format("appendData(builder, %1$s, %2$s)", fieldName, lengthName);
     }
 
     protected String componentAppendTo(final Component component)
     {
         final String name = component.name();
         return String.format(
-            "    indent(builder, level);\n"+
+            "    indent(builder, level);\n" +
             "    builder.append(\"\\\"%1$s\\\": \");\n" +
             "    %2$s.appendTo(builder, level + 1);\n" +
             "    builder.append(\"\\n\");\n",
@@ -1066,13 +1067,13 @@ public class EncoderGenerator extends Generator
         return String.format(
             "    if (has%2$s)\n" +
             "    {\n" +
-            "    indent(builder, level);\n"+
+            "    indent(builder, level);\n" +
             "    builder.append(\"\\\"%1$s\\\": [\\n\");\n" +
             "    final int %3$s = this.%3$s;\n" +
             "    %5$s %4$s = this.%4$s;\n" +
             "    for (int i = 0; i < %3$s; i++)\n" +
             "    {\n" +
-            "        indent(builder, level);\n"+
+            "        indent(builder, level);\n" +
             "        %4$s.appendTo(builder, level + 1);" +
             "        if (i < (%3$s - 1))\n" +
             "        {\n" +
@@ -1081,7 +1082,7 @@ public class EncoderGenerator extends Generator
             "        builder.append('\\n');\n" +
             "        %4$s = %4$s.next();\n" +
             "    }\n" +
-            "    indent(builder, level);\n"+
+            "    indent(builder, level);\n" +
             "    builder.append(\"],\\n\");\n" +
             "    }\n",
             name,
@@ -1089,9 +1090,6 @@ public class EncoderGenerator extends Generator
             formatPropertyName(numberField.name()),
             formatPropertyName(name),
             encoderClassName(name));
-            /*,
-            formatPropertyName(decoderClassName(name)),
-            iteratorFieldName(group));*/
     }
 
     protected String optionalReset(final Field field, final String name)
@@ -1099,7 +1097,7 @@ public class EncoderGenerator extends Generator
         return field.type().hasLengthField(false) ? resetLength(name) : resetByFlag(name);
     }
 
-    protected boolean toStringChecksHasGetter(final Entry entry, final Field field)
+    protected boolean appendToChecksHasGetter(final Entry entry, final Field field)
     {
         return hasFlag(entry, field) || field.type().hasLengthField(false);
     }

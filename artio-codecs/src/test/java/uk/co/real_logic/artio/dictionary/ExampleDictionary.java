@@ -178,7 +178,7 @@ public final class ExampleDictionary
         STRING_NO_OPTIONAL_MESSAGE_SUFFIX;
 
     public static final String COMPONENT_TO_STRING =
-        "  \"EgComponent\":  {\n" +
+        "  \"EgComponent\": {\n" +
         "    \"MessageName\": \"EgComponent\",\n" +
         "    \"ComponentField\": \"2\",\n" +
         "    \"ComponentGroupGroup\": [\n" +
