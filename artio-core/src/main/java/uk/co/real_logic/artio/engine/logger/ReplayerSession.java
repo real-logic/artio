@@ -36,6 +36,7 @@ import uk.co.real_logic.artio.engine.SequenceNumberExtractor;
 import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.AsciiBuffer;
+import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.ABORT;
@@ -49,6 +50,19 @@ import static uk.co.real_logic.artio.messages.FixMessageDecoder.metaDataSinceVer
 
 class ReplayerSession implements ControlledFragmentHandler
 {
+    static class Formatters
+    {
+        private final CharFormatter completeRecentFormatter = new CharFormatter(
+            "ReplayerSession: completeReplay-upToMostRecent replayedMessages=%s%n");
+        private final CharFormatter completeNotRecentFormatter = new CharFormatter(
+            "ReplayerSession: completeReplay-!upToMostRecent replayedMessages=%s " +
+            "endSeqNo=%s beginSeqNo=%s expectedCount=%s%n");
+        private final CharFormatter completeReplayGapfillFormatter = new CharFormatter(
+            "ReplayerSession: completeReplay-sendGapFill action=%s, replayedMessages=%s, " +
+            "beginGapFillSeqNum=%s, newSequenceNumber=%s%n");
+
+    }
+
     private static final int NONE = -1;
     private static final byte[] NO_BYTES = new byte[0];
 
@@ -81,6 +95,7 @@ class ReplayerSession implements ControlledFragmentHandler
     private final ReplayQuery replayQuery;
     private final ErrorHandler errorHandler;
     private final SequenceNumberExtractor sequenceNumberExtractor;
+    private final Formatters formatters;
 
     private int beginSeqNo;
     private int endSeqNo;
@@ -114,7 +129,8 @@ class ReplayerSession implements ControlledFragmentHandler
         final ReplayQuery replayQuery,
         final String message,
         final ErrorHandler errorHandler,
-        final GapFillEncoder gapFillEncoder)
+        final GapFillEncoder gapFillEncoder,
+        final Formatters formatters)
     {
         this.bufferClaim = bufferClaim;
         this.idleStrategy = idleStrategy;
@@ -133,6 +149,7 @@ class ReplayerSession implements ControlledFragmentHandler
         this.errorHandler = errorHandler;
         this.replayQuery = replayQuery;
         this.gapFillEncoder = gapFillEncoder;
+        this.formatters = formatters;
 
         sequenceNumberExtractor = new SequenceNumberExtractor(errorHandler);
 
@@ -274,7 +291,7 @@ class ReplayerSession implements ControlledFragmentHandler
 
             bufferClaim.commit();
 
-            DebugLogger.log(LogTag.FIX_MESSAGE, "Replayed: %s%n", gapFillBuffer, gapFillOffset, gapFillLength);
+            DebugLogger.log(LogTag.FIX_MESSAGE, "Replayed: ", gapFillBuffer, gapFillOffset, gapFillLength);
 
             this.beginGapFillSeqNum = NONE;
 
@@ -355,9 +372,8 @@ class ReplayerSession implements ControlledFragmentHandler
 
             DebugLogger.log(
                 REPLAY,
-                "ReplayerSession: completeReplay-sendGapFill action=%s, replayedMessages=%d, " +
-                "beginGapFillSeqNum=%d, newSequenceNumber=%d%n",
-                action,
+                formatters.completeReplayGapfillFormatter,
+                action.name(),
                 replayedMessages,
                 beginGapFillSeqNum,
                 newSequenceNumber);
@@ -375,8 +391,7 @@ class ReplayerSession implements ControlledFragmentHandler
                 final int expectedCount = endSeqNo - beginSeqNo + 1;
                 DebugLogger.log(
                     REPLAY,
-                    "ReplayerSession: completeReplay-!upToMostRecent replayedMessages=%d endSeqNo=%d " +
-                    "beginSeqNo=%d expectedCount=%d%n",
+                    formatters.completeNotRecentFormatter,
                     replayedMessages,
                     endSeqNo,
                     beginSeqNo,
@@ -400,10 +415,12 @@ class ReplayerSession implements ControlledFragmentHandler
             }
             else
             {
-                DebugLogger.log(
-                    REPLAY,
-                    "ReplayerSession: completeReplay-upToMostRecent replayedMessages=%d%n",
-                    replayedMessages);
+                if (DebugLogger.isEnabled(REPLAY))
+                {
+                    DebugLogger.log(
+                        REPLAY,
+                        formatters.completeRecentFormatter.clear().with(replayedMessages));
+                }
             }
         }
 

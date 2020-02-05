@@ -39,6 +39,7 @@ import uk.co.real_logic.artio.messages.MessageStatus;
 import uk.co.real_logic.artio.protocol.ProtocolHandler;
 import uk.co.real_logic.artio.protocol.ProtocolSubscription;
 import uk.co.real_logic.artio.util.AsciiBuffer;
+import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.util.ArrayList;
@@ -71,6 +72,9 @@ public class Replayer implements ProtocolHandler, Agent
     private final FixSessionCodecsFactory fixSessionCodecsFactory;
     private final ControlledFragmentHandler protocolSubscription;
     private final ArrayList<ReplayerSession> replayerSessions = new ArrayList<>();
+    private final CharFormatter receivedResendFormatter = new CharFormatter(
+        "Received Resend Request for range: [%s, %s]%n");
+    private final ReplayerSession.Formatters formatters = new ReplayerSession.Formatters();
 
     private final ReplayQuery replayQuery;
     private final ExclusivePublication publication;
@@ -149,7 +153,7 @@ public class Replayer implements ProtocolHandler, Agent
             final int endSeqNo = resendRequest.endSeqNo();
 
             DebugLogger.log(REPLAY,
-                "Received Resend Request for range: [%d, %d]%n",
+                receivedResendFormatter,
                 beginSeqNo,
                 endSeqNo);
 
@@ -187,7 +191,8 @@ public class Replayer implements ProtocolHandler, Agent
                 replayQuery,
                 message,
                 errorHandler,
-                encoder);
+                encoder,
+                formatters);
 
             replayerSession.query();
 

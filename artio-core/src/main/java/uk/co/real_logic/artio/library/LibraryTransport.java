@@ -49,7 +49,7 @@ class LibraryTransport
 
     void initStreams(final String aeronChannel)
     {
-        DebugLogger.log(LIBRARY_CONNECT, "Directed streams at %s%n", aeronChannel);
+        DebugLogger.log(LIBRARY_CONNECT, "Directed streams at ", aeronChannel);
 
         final Streams outboundLibraryStreams = new Streams(
             aeron,

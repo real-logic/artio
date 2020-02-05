@@ -16,12 +16,16 @@
 package uk.co.real_logic.artio.engine.logger;
 
 import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.LogTag;
+import uk.co.real_logic.artio.util.CharFormatter;
 
+import static uk.co.real_logic.artio.LogTag.INDEX;
 import static uk.co.real_logic.artio.dictionary.generation.CodecUtil.MISSING_LONG;
 
 public final class RecordingRange
 {
+    private static final ThreadLocal<CharFormatter> CURRENT_POSITION =
+        ThreadLocal.withInitial(() -> new CharFormatter("currentPosition == addPosition, %s%n"));
+
     final long recordingId;
     final long sessionId;
     long position = MISSING_LONG;
@@ -63,7 +67,10 @@ public final class RecordingRange
         }
         else
         {
-            DebugLogger.log(LogTag.INDEX, "currentPosition == addPosition, %d", currentPosition);
+            if (DebugLogger.isEnabled(INDEX))
+            {
+                DebugLogger.log(INDEX, CURRENT_POSITION.get().clear().with(currentPosition));
+            }
         }
     }
 

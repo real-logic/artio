@@ -50,6 +50,7 @@ import uk.co.real_logic.artio.session.Session;
 import uk.co.real_logic.artio.session.SessionIdStrategy;
 import uk.co.real_logic.artio.timing.Timer;
 import uk.co.real_logic.artio.util.AsciiBuffer;
+import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import java.io.File;
@@ -94,6 +95,21 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 {
 
     private static final DirectBuffer NULL_METADATA = new UnsafeBuffer(new byte[0]);
+
+    private final CharFormatter timingOutFormatter = new CharFormatter("Timing out connection to library %s%n");
+    private final CharFormatter libraryConnectedFormatter = new CharFormatter("Library %s - %s connected %n");
+    private final CharFormatter handingToLibraryFormatter = new CharFormatter(
+        "Handing control for session %s to library %s%n");
+    private final CharFormatter initiatingSessionFormatter = new CharFormatter(
+        "Initiating session %s from library %s%n");
+    private final CharFormatter applicationHeartbeatFormatter = new CharFormatter(
+        "Received Heartbeat from library %s at timeInMs %s%n");
+    private final CharFormatter acquiringSessionFormatter = new CharFormatter(
+        "Acquiring session %s from library %s%n");
+    private final CharFormatter releasingSessionFormatter = new CharFormatter(
+        "Releasing session %s with connectionId %s from library %s%n");
+    private final CharFormatter connectingFormatter = new CharFormatter(
+        "Connecting to %s:%s from library %s%n");
 
     private final RetryManager retryManager = new RetryManager();
     private final List<ResetSequenceNumberCommand> replies = new ArrayList<>();
@@ -146,6 +162,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ReplayQuery inboundMessages;
     private final ErrorHandler errorHandler;
     private final GatewayPublication outboundPublication;
+    private final CatchupReplayer.Formatters catchupReplayFormatters = new CatchupReplayer.Formatters();
     // Both connection id to library id maps
     private final Long2LongHashMap resendSlowStatus = new Long2LongHashMap(-1);
     private final Long2LongHashMap resendNotSlowStatus = new Long2LongHashMap(-1);
@@ -396,7 +413,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             total += library.poll(timeInMs);
             if (!library.isConnected())
             {
-                DebugLogger.log(LIBRARY_MANAGEMENT, "Timing out connection to library %s%n", library.libraryId());
+
+                if (DebugLogger.isEnabled(LIBRARY_MANAGEMENT))
+                {
+                    DebugLogger.log(LIBRARY_MANAGEMENT, timingOutFormatter.clear().with(library.libraryId()));
+                }
 
                 iterator.remove();
                 library.releaseSlowPeeker();
@@ -474,7 +495,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
             DebugLogger.log(
                 LIBRARY_MANAGEMENT,
-                "Acquiring session %s from library %s%n", session.sessionId(), library.libraryId());
+                acquiringSessionFormatter, session.sessionId(), library.libraryId());
 
             gatewaySessions.acquire(
                 session,
@@ -641,7 +662,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             DebugLogger.log(
                 FIX_CONNECTION,
-                "Connecting to %s:%d from library %d%n", host, port, libraryId);
+                connectingFormatter, host, port, libraryId);
 
             final InetSocketAddress address = new InetSocketAddress(host, port);
             final ConnectingSession connectingSession = new ConnectingSession(address, sessionContext.sessionId());
@@ -774,7 +795,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         try
         {
             DebugLogger.log(FIX_CONNECTION,
-                "Initiating session %s from library %s%n", sessionContext.sessionId(), library.libraryId());
+                initiatingSessionFormatter, sessionContext.sessionId(), library.libraryId());
             final long connectionId = newConnectionId();
             final FixDictionary fixDictionary = FixDictionary.of(fixDictionaryClass);
             sessionContext.onLogon(
@@ -1070,7 +1091,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 libraryId, libraryName, livenessDetector, aeronSessionId, librarySlowPeeker);
             idToLibrary.put(libraryId, library);
 
-            DebugLogger.log(LIBRARY_MANAGEMENT, "Library %s - %s connected %n", libraryId, libraryName);
+            DebugLogger.log(LIBRARY_MANAGEMENT, libraryConnectedFormatter, libraryId, libraryName);
 
             return COMPLETE;
         });
@@ -1102,7 +1123,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             final long timeInMs = epochClock.time();
             DebugLogger.log(
-                APPLICATION_HEARTBEAT, "Received Heartbeat from library %d at timeInMs %d%n", libraryId, timeInMs);
+                APPLICATION_HEARTBEAT, applicationHeartbeatFormatter, libraryId, timeInMs);
             library.onHeartbeat(timeInMs);
 
             return null;
@@ -1135,12 +1156,12 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (libraryInfo == null)
         {
             return Pressure.apply(inboundPublication.saveReleaseSessionReply(
-                libraryId, SessionReplyStatus.UNKNOWN_LIBRARY, correlationId));
+                SessionReplyStatus.UNKNOWN_LIBRARY, correlationId));
         }
 
         DebugLogger.log(
             LIBRARY_MANAGEMENT,
-            "Releasing session %s with connectionId %s from library %s%n",
+            releasingSessionFormatter,
             sessionId,
             connectionId,
             libraryId);
@@ -1150,10 +1171,10 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         if (session == null)
         {
             return Pressure.apply(inboundPublication.saveReleaseSessionReply(
-                libraryId, SessionReplyStatus.UNKNOWN_SESSION, correlationId));
+                SessionReplyStatus.UNKNOWN_SESSION, correlationId));
         }
 
-        final Action action = Pressure.apply(inboundPublication.saveReleaseSessionReply(libraryId, OK, correlationId));
+        final Action action = Pressure.apply(inboundPublication.saveReleaseSessionReply(OK, correlationId));
         if (action == ABORT)
         {
             libraryInfo.addSession(session);
@@ -1235,7 +1256,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         gatewaySession.handoverManagementTo(libraryId, libraryInfo.librarySlowPeeker());
         libraryInfo.addSession(gatewaySession);
 
-        DebugLogger.log(LIBRARY_MANAGEMENT, "Handing control for session %s to library %s%n", sessionId, libraryId);
+        DebugLogger.log(LIBRARY_MANAGEMENT, handingToLibraryFormatter, sessionId, libraryId);
 
         // Ensure that we've indexed up to this point in time.
         // If we don't do this then the indexer thread could receive a message sent from the Framer after
@@ -1553,7 +1574,8 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             replayFromSequenceIndex,
             gatewaySession,
             latestReplyArrivalTimeInMs,
-            CatchupReplayer.ReplayFor.REPLAY_MESSAGES));
+            CatchupReplayer.ReplayFor.REPLAY_MESSAGES,
+            catchupReplayFormatters));
 
         return CONTINUE;
     }
@@ -1726,11 +1748,13 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 replayFromSequenceIndex,
                 session,
                 catchupEndTimeInMs(),
-                CatchupReplayer.ReplayFor.REQUEST_SESSION));
+                CatchupReplayer.ReplayFor.REQUEST_SESSION,
+                catchupReplayFormatters));
         }
         else
         {
-            continuations.add(() -> CatchupReplayer.sendOk(inboundPublication, correlationId, session, libraryId));
+            continuations.add(() -> CatchupReplayer.sendOk(inboundPublication, correlationId, session, libraryId,
+                catchupReplayFormatters));
         }
     }
 

@@ -23,6 +23,7 @@ import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
 import uk.co.real_logic.artio.messages.DisconnectDecoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
+import uk.co.real_logic.artio.util.CharFormatter;
 
 import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 import static uk.co.real_logic.artio.LogTag.FIX_CONNECTION;
@@ -32,6 +33,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
 {
     private static final Action UNKNOWN_TEMPLATE = null;
 
+    private final CharFormatter disconnectFormatter = new CharFormatter("FixSubscription Disconnect: %s%n");
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
@@ -103,7 +105,11 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
     {
         disconnect.wrap(buffer, offset, blockLength, version);
         final long connectionId = disconnect.connection();
-        DebugLogger.log(FIX_CONNECTION, "FixSubscription Disconnect: %d%n", connectionId);
+        if (DebugLogger.isEnabled(FIX_CONNECTION))
+        {
+            DebugLogger.log(FIX_CONNECTION, disconnectFormatter.clear().with(connectionId));
+        }
+
         return protocolHandler.onDisconnect(disconnect.libraryId(), connectionId, disconnect.reason());
     }
 

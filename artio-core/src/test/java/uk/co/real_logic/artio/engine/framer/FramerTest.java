@@ -505,7 +505,7 @@ public class FramerTest
     {
         initiateConnection();
 
-        when(inboundPublication.saveReleaseSessionReply(LIBRARY_ID, OK, CORR_ID))
+        when(inboundPublication.saveReleaseSessionReply(OK, CORR_ID))
             .thenReturn(BACK_PRESSURED, POSITION);
 
         releaseConnection(ABORT);

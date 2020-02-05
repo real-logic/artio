@@ -39,6 +39,7 @@ import uk.co.real_logic.artio.messages.DisconnectReason;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.session.*;
+import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.*;
 
@@ -58,6 +59,8 @@ import static uk.co.real_logic.artio.validation.SessionPersistenceStrategy.reset
  */
 class GatewaySessions
 {
+    private final CharFormatter acquiredConnection =
+        new CharFormatter("Gateway Acquired Connection %s%n");
     private final List<GatewaySession> sessions = new ArrayList<>();
     private final Map<FixDictionary, UserRequestExtractor> dictionaryToUserRequestExtractor = new HashMap<>();
 
@@ -199,7 +202,10 @@ class GatewaySessions
         gatewaySession.manage(sessionParser, session, engineBlockablePosition);
 
         final CompositeKey sessionKey = gatewaySession.sessionKey();
-        DebugLogger.log(FIX_CONNECTION, "Gateway Acquired Connection %d%n", connectionId);
+        if (DebugLogger.isEnabled(FIX_CONNECTION))
+        {
+            DebugLogger.log(FIX_CONNECTION, acquiredConnection.clear().with(connectionId));
+        }
         if (sessionKey != null)
         {
             gatewaySession.updateSessionDictionary();

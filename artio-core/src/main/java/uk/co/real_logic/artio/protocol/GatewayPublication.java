@@ -820,7 +820,7 @@ public class GatewayPublication extends ClaimablePublication
         return awaitingResend ? AwaitingResend.YES : AwaitingResend.NO;
     }
 
-    public long saveReleaseSessionReply(final int libraryId, final SessionReplyStatus status, final long replyToId)
+    public long saveReleaseSessionReply(final SessionReplyStatus status, final long replyToId)
     {
         final long position = claim(RELEASE_SESSION_REPLY_LENGTH);
         if (position < 0)

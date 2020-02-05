@@ -32,6 +32,7 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.dictionary.generation.Exceptions;
 import uk.co.real_logic.artio.engine.CompletionPosition;
+import uk.co.real_logic.artio.util.CharFormatter;
 
 import java.util.List;
 
@@ -45,6 +46,11 @@ import static io.aeron.logbuffer.ControlledFragmentHandler.Action.CONTINUE;
 public class Indexer implements Agent, ControlledFragmentHandler
 {
     private static final int LIMIT = 20;
+
+    private final CharFormatter indexingFormatter = new CharFormatter(
+        "Indexing @ %s from [%s, %s]%n");
+    private final CharFormatter catchupFormatter = new CharFormatter(
+        "Catchup [%s]: recordingId = %s, recordingStopped @ %s, indexStopped @ %s%n");
 
     private final List<Index> indices;
     private final Subscription subscription;
@@ -95,7 +101,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
                     {
                         DebugLogger.log(
                             LogTag.INDEX,
-                            "Catchup [%s]: recordingId = %d, recordingStopped @ %d, indexStopped @ %d%n",
+                            catchupFormatter,
                             index.getName(),
                             recordingId,
                             recordingStoppedPosition,
@@ -150,7 +156,7 @@ public class Indexer implements Agent, ControlledFragmentHandler
         final long endPosition = header.position();
         DebugLogger.log(
             LogTag.INDEX,
-            "Indexing @ %d from [%d, %d]%n",
+            indexingFormatter,
             endPosition,
             streamId,
             aeronSessionId);

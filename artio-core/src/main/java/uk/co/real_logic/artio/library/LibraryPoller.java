@@ -37,6 +37,7 @@ import uk.co.real_logic.artio.protocol.*;
 import uk.co.real_logic.artio.session.*;
 import uk.co.real_logic.artio.timing.LibraryTimers;
 import uk.co.real_logic.artio.timing.Timer;
+import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
@@ -132,6 +133,23 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     private final FixLibrary fixLibrary;
     private final Runnable onDisconnectFunc = this::onDisconnect;
     private final SessionAcquiredInfo sessionAcquiredInfo = new SessionAcquiredInfo();
+
+    private final CharFormatter receivedFormatter = new CharFormatter("(%s) Received %s %n");
+    private final CharFormatter disconnectedFormatter = new CharFormatter("%s: Disconnected from [%s]%n");
+    private final CharFormatter connectedFormatter = new CharFormatter("%s: Connected to [%s]%n");
+    private final CharFormatter attemptConnectFormatter = new CharFormatter("%s: Attempting to connect to %s%n");
+    private final CharFormatter attemptNextFormatter = new CharFormatter(
+        "%s: Attempting connect to next engine (%s) in round-robin%n");
+    private final CharFormatter initiatorConnectFormatter = new CharFormatter("Init Connect: %s, %s%n");
+    private final CharFormatter acceptorConnectFormatter = new CharFormatter("Acct Connect: %s, %s%n");
+    private final CharFormatter controlNotificationFormatter = new CharFormatter(
+        "%s: Received Control Notification from engine at timeInMs %s%n");
+    private final CharFormatter applicationHeartbeatFormatter = new CharFormatter(
+        "%s: Received Heartbeat from engine at timeInMs %s%n");
+    private final CharFormatter reconnectFormatter = new CharFormatter("Reconnect: %s, %s, %s%n");
+    private final CharFormatter onDisconnectFormatter = new CharFormatter("%s: Library Disconnect %s, %s%n");
+    private final CharFormatter sessionExistsFormatter = new CharFormatter(
+        "onSessionExists: conn=%s, sess=%s, sentSeqNo=%s, recvSeqNo=%s%n");
 
     /**
      * Correlation Id is initialised to a random number to reduce the chance of correlation id collision.
@@ -520,7 +538,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             currentAeronChannel = configuration.libraryAeronChannels().get(0);
             DebugLogger.log(
                 LIBRARY_CONNECT,
-                "%d: Attempting to connect to %s%n",
+                attemptConnectFormatter,
                 libraryId,
                 currentAeronChannel);
 
@@ -581,7 +599,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             currentAeronChannel = aeronChannels.get(nextIndex);
             DebugLogger.log(
                 LIBRARY_CONNECT,
-                "%d: Attempting connect to next engine (%s) in round-robin%n",
+                attemptNextFormatter,
                 libraryId,
                 currentAeronChannel);
         }
@@ -648,7 +666,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         DebugLogger.log(
             LIBRARY_CONNECT,
-            "%d: Connected to [%s]%n",
+            connectedFormatter,
             libraryId,
             currentAeronChannel);
         configuration.libraryConnectHandler().onConnect(fixLibrary);
@@ -659,7 +677,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         DebugLogger.log(
             LIBRARY_CONNECT,
-            "%d: Disconnected from [%s]%n",
+            disconnectedFormatter,
             libraryId,
             currentAeronChannel);
         configuration.libraryConnectHandler().onDisconnect(fixLibrary);
@@ -926,7 +944,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         // From manageConnection - ie set up the session in this library.
         if (connectionType == INITIATOR)
         {
-            DebugLogger.log(FIX_CONNECTION, "Init Connect: %d, %d%n", connectionId, libraryId);
+            DebugLogger.log(FIX_CONNECTION, initiatorConnectFormatter, connectionId, libraryId);
             final LibraryReply<?> task = correlationIdToReply.get(correlationId);
             final boolean isReply = task instanceof InitiateSessionReply;
             if (isReply)
@@ -961,7 +979,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
         else
         {
-            DebugLogger.log(FIX_CONNECTION, "Acct Connect: %d, %d%n", connectionId, libraryId);
+            DebugLogger.log(FIX_CONNECTION, acceptorConnectFormatter, connectionId, libraryId);
             if (isNewConnect)
             {
                 session = acceptSession(
@@ -1011,7 +1029,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         }
 
         DebugLogger.log(GATEWAY_MESSAGE,
-            "onSessionExists: conn=%d, sess=%d, sentSeqNo=%d, recvSeqNo=%d%n",
+            sessionExistsFormatter,
             connectionId, sessionId, lastSentSeqNum, lastRecvSeqNum);
     }
 
@@ -1032,7 +1050,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         {
             if (session.id() == sessionId)
             {
-                DebugLogger.log(FIX_CONNECTION, "Reconnect: %d, %d, %d%n", connectionId, libraryId, sessionId);
+                DebugLogger.log(FIX_CONNECTION, reconnectFormatter, connectionId, libraryId, sessionId);
 
                 session.onReconnect(
                     connectionId,
@@ -1097,7 +1115,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
-            DebugLogger.log(FIX_MESSAGE, "(%d) Received %s %n", libraryId, buffer, offset, length);
+            DebugLogger.log(FIX_MESSAGE, receivedFormatter, libraryId, buffer, offset, length);
 
             final SessionSubscriber subscriber = connectionIdToSession.get(connectionId);
             if (subscriber != null)
@@ -1122,7 +1140,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     public Action onDisconnect(
         final int libraryId, final long connectionId, final DisconnectReason reason)
     {
-        DebugLogger.log(GATEWAY_MESSAGE, "%2$d: Library Disconnect %3$d, %1$s%n", reason, libraryId, connectionId);
+        DebugLogger.log(GATEWAY_MESSAGE, onDisconnectFormatter, libraryId, connectionId, reason.name());
         if (libraryId == this.libraryId)
         {
             final SessionSubscriber subscriber = connectionIdToSession.remove(connectionId);
@@ -1180,7 +1198,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         {
             final long timeInMs = timeInMs();
             DebugLogger.log(
-                APPLICATION_HEARTBEAT, "%d: Received Heartbeat from engine at timeInMs %d%n", libraryId, timeInMs);
+                APPLICATION_HEARTBEAT, applicationHeartbeatFormatter, libraryId, timeInMs);
             livenessDetector.onHeartbeat(timeInMs);
 
             if (!isConnected() && livenessDetector.isConnected())
@@ -1336,7 +1354,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             state = CONNECTED;
             DebugLogger.log(
                 LIBRARY_CONNECT,
-                "%d: Received Control Notification from engine at timeInMs %d%n",
+                controlNotificationFormatter,
                 libraryId,
                 timeInMs);
 

@@ -242,7 +242,7 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
     {
         if (sessionParser != null)
         {
-            DebugLogger.log(FIX_MESSAGE, "Gateway Received %s %n", buffer, offset, length);
+            DebugLogger.log(FIX_MESSAGE, "Gateway Received %s%n", buffer, offset, length);
 
             sessionParser.onMessage(buffer, offset, length, messageType, sessionId);
         }
@@ -260,7 +260,7 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
         {
             session.setupSession(sessionId, sessionKey);
             sessionParser.sequenceIndex(context.sequenceIndex());
-            DebugLogger.log(GATEWAY_MESSAGE, "Setup Session As: %s%n", sessionKey.localCompId());
+            DebugLogger.log(GATEWAY_MESSAGE, "Setup Session As: ", sessionKey.localCompId());
         }
         senderEndPoint.sessionId(sessionId);
     }

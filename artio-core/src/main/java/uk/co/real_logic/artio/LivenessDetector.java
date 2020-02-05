@@ -17,6 +17,7 @@ package uk.co.real_logic.artio;
 
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.protocol.NotConnectedException;
+import uk.co.real_logic.artio.util.CharFormatter;
 
 import static uk.co.real_logic.artio.LogTag.LIBRARY_CONNECT;
 
@@ -40,6 +41,8 @@ public final class LivenessDetector
     private final int libraryId;
     private final long replyTimeoutInMs;
     private final long sendIntervalInMs;
+    private final CharFormatter disconnectTriggered = new CharFormatter(
+        "%s: Disconnect triggered by a NotConnectedException (Stream CLOSED or MAX_POSITION_EXCEEDED)%n");
 
     private long latestNextReceiveTimeInMs;
     private long nextSendTimeInMs;
@@ -142,10 +145,10 @@ public final class LivenessDetector
         }
         catch (final NotConnectedException ex)
         {
-            DebugLogger.log(
-                LIBRARY_CONNECT,
-                "%d: Disconnect triggered by a NotConnectedException (Stream CLOSED or MAX_POSITION_EXCEEDED)%n",
-                libraryId);
+            if (DebugLogger.isEnabled(LIBRARY_CONNECT))
+            {
+                DebugLogger.log(LIBRARY_CONNECT, disconnectTriggered.clear().with(libraryId));
+            }
 
             disconnect();
         }

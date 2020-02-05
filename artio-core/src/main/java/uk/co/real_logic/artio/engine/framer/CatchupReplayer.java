@@ -33,6 +33,7 @@ import uk.co.real_logic.artio.fields.UtcTimestampEncoder;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.protocol.GatewayPublication;
 import uk.co.real_logic.artio.util.AsciiBuffer;
+import uk.co.real_logic.artio.util.CharFormatter;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
 import static io.aeron.Publication.BACK_PRESSURED;
@@ -48,6 +49,21 @@ import static uk.co.real_logic.artio.messages.SessionReplyStatus.OK;
 
 public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 {
+
+    public static class Formatters
+    {
+        private final CharFormatter attemptFormatter =
+            new CharFormatter("Attempt replay for sessionId=%s%n");
+        private final CharFormatter okFormatter =
+            new CharFormatter("OK for sessionId=%s%n");
+        private final CharFormatter missingFormatter =
+            new CharFormatter("Missing Messages for sessionId=%s%n");
+        private final CharFormatter awaitIndexFormatter = new CharFormatter(
+            "Awaiting index position: indexed=%s vs required=%s%n");
+        private final CharFormatter replayQueryingFormatter = new CharFormatter(
+            "Querying for sessionId=%s, currently at (%s, %s)%n");
+    }
+
     private static final int ENCODE_BUFFER_SIZE = 8 * 1024;
 
     public static final int FRAME_LENGTH =
@@ -152,6 +168,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
     private final long requiredPosition;
     private final SessionHeaderDecoder headerDecoder;
     private final ReplayFor replayFor;
+    private final Formatters formatters;
 
     private int replayFromSequenceNumber;
     private int replayFromSequenceIndex;
@@ -180,7 +197,8 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final int replayFromSequenceIndex,
         final GatewaySession session,
         final long catchupEndTimeInMs,
-        final ReplayFor replayFor)
+        final ReplayFor replayFor,
+        final Formatters formatters)
     {
         this.receivedSequenceNumberIndex = receivedSequenceNumberIndex;
         this.inboundMessages = inboundMessages;
@@ -198,6 +216,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         this.requiredPosition = inboundPublication.position();
         this.headerDecoder = session.fixDictionary().makeHeaderDecoder();
         this.replayFor = replayFor;
+        this.formatters = formatters;
     }
 
     private void updateMessageHeader(final MutableDirectBuffer buffer, final int offset)
@@ -336,7 +355,10 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
 
     public long attempt()
     {
-        DebugLogger.log(CATCHUP, "Attempt replay for sessionId=%d%n", session.sessionId());
+        if (DebugLogger.isEnabled(CATCHUP))
+        {
+            DebugLogger.log(CATCHUP, formatters.attemptFormatter.clear().with(session.sessionId()));
+        }
 
         switch (state)
         {
@@ -351,7 +373,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 else
                 {
                     DebugLogger.log(CATCHUP,
-                        "Awaiting index position: indexed=%d vs required=%d%n",
+                        formatters.awaitIndexFormatter,
                         indexedPosition,
                         requiredPosition);
                 }
@@ -366,7 +388,7 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
                 }
 
                 DebugLogger.log(CATCHUP,
-                    "Querying for sessionId=%d, currently at (%d, %d)%n",
+                    formatters.replayQueryingFormatter,
                     session.sessionId(), replayToSequenceNumber, replayToSequenceIndex);
 
                 replayOperation = inboundMessages.query(
@@ -450,7 +472,10 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final long correlationId,
         final GatewaySession session)
     {
-        DebugLogger.log(CATCHUP, "OK for sessionId=%d%n", session.sessionId());
+        if (DebugLogger.isEnabled(CATCHUP))
+        {
+            DebugLogger.log(CATCHUP, formatters.okFormatter.clear().with(session.sessionId()));
+        }
 
         return replayFor.sendOk(publication, libraryId, correlationId, session);
     }
@@ -459,16 +484,23 @@ public class CatchupReplayer implements ControlledFragmentHandler, Continuation
         final GatewayPublication publication,
         final long correlationId,
         final GatewaySession session,
-        final int libraryId)
+        final int libraryId,
+        final CatchupReplayer.Formatters formatters)
     {
-        DebugLogger.log(CATCHUP, "OK for sessionId=%d%n", session.sessionId());
+        if (DebugLogger.isEnabled(CATCHUP))
+        {
+            DebugLogger.log(CATCHUP, formatters.okFormatter.clear().with(session.sessionId()));
+        }
 
         return ReplayFor.REQUEST_SESSION.sendOk(publication, libraryId, correlationId, session);
     }
 
     private long sendMissingMessages()
     {
-        DebugLogger.log(CATCHUP, "Missing Messages for sessionId=%d%n", session.sessionId());
+        if (DebugLogger.isEnabled(CATCHUP))
+        {
+            DebugLogger.log(CATCHUP, formatters.missingFormatter.clear().with(session.sessionId()));
+        }
 
         final long position = replayFor.sendMissing(inboundPublication, libraryId, correlationId, session);
 

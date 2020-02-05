@@ -211,7 +211,7 @@ class SenderEndPoint
         ByteBufferUtil.position(buffer, offset);
 
         final int written = channel.write(buffer);
-        DebugLogger.log(FIX_MESSAGE_TCP, "Written  %s%n", buffer, written);
+        DebugLogger.log(FIX_MESSAGE_TCP, "Written  ", buffer, written);
         updateSendingTimeoutTimeInMs(timeInMs, written);
 
         return written;

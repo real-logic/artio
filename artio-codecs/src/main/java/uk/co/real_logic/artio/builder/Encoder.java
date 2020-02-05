@@ -18,7 +18,7 @@ package uk.co.real_logic.artio.builder;
 import uk.co.real_logic.artio.EncodingException;
 import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 
-public interface Encoder
+public interface Encoder extends CharAppender
 {
     int BITS_IN_INT = 32;
 
@@ -59,12 +59,4 @@ public interface Encoder
 
     void resetMessage();
 
-    /**
-     * Append a human readable representation to a {@link StringBuilder}. This provides the same representation as
-     * {@link Object#toString()} but in a more garbage-friendly approach.
-     *
-     * @param builder the builder to append to
-     * @return the builder for fluent usage
-     */
-    StringBuilder appendTo(StringBuilder builder);
 }

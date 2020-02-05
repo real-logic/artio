@@ -1,5 +1,5 @@
 /*
- * Copyright 2015-2020 Real Logic Limited.
+ * Copyright 2020 Real Logic Limited., Monotonic Ltd.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +20,13 @@ import org.junit.Test;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static org.junit.Assert.assertEquals;
 
-public class AsciiFormatterTest
+public class CharFormatterTest
 {
     @Test
     public void shouldFormatNoFields()
     {
         final String format = "abc";
-        final AsciiFormatter formatter = new AsciiFormatter(format);
+        final CharFormatter formatter = new CharFormatter(format);
 
         assertFormatsTo(format, formatter);
     }
@@ -35,8 +35,28 @@ public class AsciiFormatterTest
     public void shouldFormatSingleField()
     {
         final String format = "ab%sc";
-        final AsciiFormatter formatter = new AsciiFormatter(format)
-            .with("D".getBytes(US_ASCII));
+        final CharFormatter formatter = new CharFormatter(format)
+            .with("D");
+
+        assertFormatsTo("abDc", formatter);
+    }
+
+    @Test
+    public void shouldFormatNewlines()
+    {
+        final String format = "ab%sc%n";
+        final CharFormatter formatter = new CharFormatter(format)
+            .with("D");
+
+        assertFormatsTo("abDc" + System.lineSeparator(), formatter);
+    }
+
+    @Test
+    public void shouldFormatByteArraysField()
+    {
+        final String format = "ab%sc";
+        final CharFormatter formatter = new CharFormatter(format)
+            .with("D".getBytes(US_ASCII), 1);
 
         assertFormatsTo("abDc", formatter);
     }
@@ -45,9 +65,9 @@ public class AsciiFormatterTest
     public void shouldFormatTwoFields()
     {
         final String format = "ab%sc%s";
-        final AsciiFormatter formatter = new AsciiFormatter(format)
-            .with("D".getBytes(US_ASCII))
-            .with("E".getBytes(US_ASCII));
+        final CharFormatter formatter = new CharFormatter(format)
+            .with("D")
+            .with("E");
 
         assertFormatsTo("abDcE", formatter);
     }
@@ -56,12 +76,12 @@ public class AsciiFormatterTest
     public void shouldClearFormatter()
     {
         final String format = "ab%sc%s";
-        final AsciiFormatter formatter = new AsciiFormatter(format)
-            .with("D".getBytes(US_ASCII))
-            .with("E".getBytes(US_ASCII))
+        final CharFormatter formatter = new CharFormatter(format)
+            .with("D")
+            .with("E")
             .clear()
-            .with("F".getBytes(US_ASCII))
-            .with("G".getBytes(US_ASCII));
+            .with("F")
+            .with("G");
 
         assertFormatsTo("abFcG", formatter);
     }
@@ -71,8 +91,8 @@ public class AsciiFormatterTest
     public void shouldFormatIntegers()
     {
         final String format = "ab%sc%s";
-        final AsciiFormatter formatter = new AsciiFormatter(format)
-            .with("D".getBytes(US_ASCII))
+        final CharFormatter formatter = new CharFormatter(format)
+            .with("D")
             .with(123);
 
         assertFormatsTo("abDc123", formatter);
@@ -82,15 +102,18 @@ public class AsciiFormatterTest
     public void shouldSupportLongFormatString()
     {
         final String format = "MsgSeqNum too low, expecting %s but received %s";
-        final AsciiFormatter formatter = new AsciiFormatter(format)
-            .with("0".getBytes(US_ASCII))
-            .with("1".getBytes(US_ASCII));
+        final CharFormatter formatter = new CharFormatter(format)
+            .with("0")
+            .with("1");
 
         assertFormatsTo("MsgSeqNum too low, expecting 0 but received 1", formatter);
     }
 
-    private void assertFormatsTo(final String format, final AsciiFormatter formatter)
+    private void assertFormatsTo(final String format, final CharFormatter formatter)
     {
-        assertEquals(format, new String(formatter.value(), 0, formatter.length(), US_ASCII));
+        final StringBuilder builder = new StringBuilder();
+        formatter.appendTo(builder);
+
+        assertEquals(format, builder.toString());
     }
 }
