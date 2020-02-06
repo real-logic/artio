@@ -20,7 +20,6 @@ import org.agrona.AsciiSequenceView;
 import org.agrona.DirectBuffer;
 import org.agrona.concurrent.UnsafeBuffer;
 import uk.co.real_logic.artio.AbstractDebugAppender.ThreadLocalAppender;
-import uk.co.real_logic.artio.engine.ByteBufferUtil;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.CharFormatter;
 
@@ -75,7 +74,7 @@ public final class DebugLogger
     {
         if (isEnabled(tag))
         {
-            formatter.with(value);
+            formatter.clear().with(value);
             THREAD_LOCAL.get().log(tag, formatter, buffer, offset, length);
         }
     }
@@ -598,6 +597,8 @@ public final class DebugLogger
         private final SlowStatusNotificationDecoder slowStatusNotification = new SlowStatusNotificationDecoder();
         private final ResetLibrarySequenceNumberDecoder resetLibrarySequenceNumber =
             new ResetLibrarySequenceNumberDecoder();
+        private final ResetSequenceNumberDecoder resetSequenceNumber =
+            new ResetSequenceNumberDecoder();
         private final ManageSessionDecoder manageSession = new ManageSessionDecoder();
         private final FollowerSessionReplyDecoder followerSessionReply = new FollowerSessionReplyDecoder();
         private final EndOfDayDecoder endOfDay = new EndOfDayDecoder();
@@ -608,7 +609,7 @@ public final class DebugLogger
         private final DisconnectDecoder disconnect = new DisconnectDecoder();
 
         private final StringBuilder builder = new StringBuilder();
-        private final String threadName;
+        private final char[] threadName;
 
         private byte[] bytes = new byte[0];
         private final AsciiSequenceView asciiView = new AsciiSequenceView();
@@ -621,7 +622,7 @@ public final class DebugLogger
         {
             final String threadName = threadName();
             isThreadEnabled = DEBUG_PRINT_THREAD == null || DEBUG_PRINT_THREAD.equals(threadName);
-            this.threadName = ":" + threadName;
+            this.threadName = (":" + threadName).toCharArray();
             appender = APPENDER.makeLocalAppender();
         }
 
@@ -634,7 +635,7 @@ public final class DebugLogger
                 ManageSessionEncoder.BLOCK_LENGTH,
                 ManageSessionEncoder.SCHEMA_VERSION);
             manageSession.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -648,7 +649,7 @@ public final class DebugLogger
                 DisconnectEncoder.BLOCK_LENGTH,
                 DisconnectEncoder.SCHEMA_VERSION);
             disconnect.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -662,7 +663,7 @@ public final class DebugLogger
                 ConnectEncoder.BLOCK_LENGTH,
                 ConnectEncoder.SCHEMA_VERSION);
             connect.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -676,7 +677,7 @@ public final class DebugLogger
                 ResetSessionIdsEncoder.BLOCK_LENGTH,
                 ResetSessionIdsEncoder.SCHEMA_VERSION);
             resetSessionIds.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -684,13 +685,13 @@ public final class DebugLogger
             final ResetSequenceNumberEncoder encoder)
         {
             appendStart(tag);
-            resetLibrarySequenceNumber.wrap(
+            resetSequenceNumber.wrap(
                 encoder.buffer(),
                 encoder.initialOffset(),
                 ResetSequenceNumberEncoder.BLOCK_LENGTH,
                 ResetSequenceNumberEncoder.SCHEMA_VERSION);
-            resetLibrarySequenceNumber.appendTo(builder);
-            appender.log(builder);
+            resetSequenceNumber.appendTo(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -704,7 +705,7 @@ public final class DebugLogger
                 ResetLibrarySequenceNumberEncoder.BLOCK_LENGTH,
                 ResetLibrarySequenceNumberEncoder.SCHEMA_VERSION);
             resetLibrarySequenceNumber.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -718,7 +719,7 @@ public final class DebugLogger
                 RequestDisconnectEncoder.BLOCK_LENGTH,
                 RequestDisconnectEncoder.SCHEMA_VERSION);
             requestDisconnect.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -732,7 +733,7 @@ public final class DebugLogger
                 MidConnectionDisconnectEncoder.BLOCK_LENGTH,
                 MidConnectionDisconnectEncoder.SCHEMA_VERSION);
             midConnectionDisconnect.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -746,7 +747,7 @@ public final class DebugLogger
                 InitiateConnectionEncoder.BLOCK_LENGTH,
                 InitiateConnectionEncoder.SCHEMA_VERSION);
             initiateConnection.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -760,7 +761,7 @@ public final class DebugLogger
                 ErrorEncoder.BLOCK_LENGTH,
                 ErrorEncoder.SCHEMA_VERSION);
             error.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -774,7 +775,7 @@ public final class DebugLogger
                 ApplicationHeartbeatEncoder.BLOCK_LENGTH,
                 ApplicationHeartbeatEncoder.SCHEMA_VERSION);
             applicationHeartbeat.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -788,7 +789,7 @@ public final class DebugLogger
                 LibraryConnectEncoder.BLOCK_LENGTH,
                 LibraryConnectEncoder.SCHEMA_VERSION);
             libraryConnect.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -802,7 +803,7 @@ public final class DebugLogger
                 ReleaseSessionEncoder.BLOCK_LENGTH,
                 ReleaseSessionEncoder.SCHEMA_VERSION);
             releaseSession.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -816,7 +817,7 @@ public final class DebugLogger
                 ReleaseSessionReplyEncoder.BLOCK_LENGTH,
                 ReleaseSessionReplyEncoder.SCHEMA_VERSION);
             releaseSessionReply.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -830,7 +831,7 @@ public final class DebugLogger
                 RequestSessionEncoder.BLOCK_LENGTH,
                 RequestSessionEncoder.SCHEMA_VERSION);
             requestSession.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -844,7 +845,7 @@ public final class DebugLogger
                 RequestSessionReplyEncoder.BLOCK_LENGTH,
                 RequestSessionReplyEncoder.SCHEMA_VERSION);
             requestSessionReply.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -858,7 +859,7 @@ public final class DebugLogger
                 NewSentPositionEncoder.BLOCK_LENGTH,
                 NewSentPositionEncoder.SCHEMA_VERSION);
             newSentPosition.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -872,7 +873,7 @@ public final class DebugLogger
                 LibraryTimeoutEncoder.BLOCK_LENGTH,
                 LibraryTimeoutEncoder.SCHEMA_VERSION);
             libraryTimeout.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -886,7 +887,7 @@ public final class DebugLogger
                 ControlNotificationEncoder.BLOCK_LENGTH,
                 ControlNotificationEncoder.SCHEMA_VERSION);
             controlNotification.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -900,7 +901,7 @@ public final class DebugLogger
                 SlowStatusNotificationEncoder.BLOCK_LENGTH,
                 SlowStatusNotificationEncoder.SCHEMA_VERSION);
             slowStatusNotification.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -914,7 +915,7 @@ public final class DebugLogger
                 FollowerSessionRequestEncoder.BLOCK_LENGTH,
                 FollowerSessionRequestEncoder.SCHEMA_VERSION);
             followerSessionRequest.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -928,7 +929,7 @@ public final class DebugLogger
                 FollowerSessionReplyEncoder.BLOCK_LENGTH,
                 FollowerSessionReplyEncoder.SCHEMA_VERSION);
             followerSessionReply.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -942,7 +943,7 @@ public final class DebugLogger
                 EndOfDayEncoder.BLOCK_LENGTH,
                 EndOfDayEncoder.SCHEMA_VERSION);
             endOfDay.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -956,7 +957,7 @@ public final class DebugLogger
                 WriteMetaDataEncoder.BLOCK_LENGTH,
                 WriteMetaDataEncoder.SCHEMA_VERSION);
             writeMetaData.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -970,7 +971,7 @@ public final class DebugLogger
                 WriteMetaDataReplyEncoder.BLOCK_LENGTH,
                 WriteMetaDataReplyEncoder.SCHEMA_VERSION);
             writeMetaDataReply.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -984,7 +985,7 @@ public final class DebugLogger
                 ReadMetaDataEncoder.BLOCK_LENGTH,
                 ReadMetaDataEncoder.SCHEMA_VERSION);
             readMetaData.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -998,7 +999,7 @@ public final class DebugLogger
                 ReadMetaDataReplyEncoder.BLOCK_LENGTH,
                 ReadMetaDataReplyEncoder.SCHEMA_VERSION);
             readMetaDataReply.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -1012,7 +1013,7 @@ public final class DebugLogger
                 ReplayMessagesEncoder.BLOCK_LENGTH,
                 ReplayMessagesEncoder.SCHEMA_VERSION);
             replayMessages.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         public void logSbeMessage(
@@ -1026,7 +1027,7 @@ public final class DebugLogger
                 ReplayMessagesReplyEncoder.BLOCK_LENGTH,
                 ReplayMessagesReplyEncoder.SCHEMA_VERSION);
             replayMessagesReply.appendTo(builder);
-            appender.log(builder);
+            finish();
         }
 
         private void appendStart(final LogTag tag)
@@ -1041,19 +1042,16 @@ public final class DebugLogger
         public void log(final LogTag tag, final String prefixString, final ByteBuffer byteBuffer, final int length)
         {
             final byte[] data = getByteArray(length);
-
-            final int originalPosition = byteBuffer.position();
-            ByteBufferUtil.position(byteBuffer, originalPosition - length);
-            byteBuffer.get(data);
-            ByteBufferUtil.position(byteBuffer, originalPosition);
-
+            byteBuffer.get(data, 0, length);
             substituteSeparator(data);
 
             appendStart(tag);
+            final StringBuilder builder = this.builder;
             builder.append(prefixString);
+            final AsciiSequenceView asciiView = this.asciiView;
             asciiView.wrap(buffer, 0, length);
             builder.append(asciiView);
-            appendNewline();
+            finish();
         }
 
         private byte[] getByteArray(final int length)
@@ -1072,7 +1070,7 @@ public final class DebugLogger
         {
             appendStart(tag);
             builder.append(message);
-            appendNewline();
+            finish();
         }
 
         public void log(
@@ -1090,11 +1088,11 @@ public final class DebugLogger
             }
             else
             {
-                asciiView.wrap(buffer, 0, length);
+                asciiView.wrap(buffer, offset, length);
             }
 
             builder.append(asciiView);
-            appendNewline();
+            finish();
         }
 
         public void log(
@@ -1119,6 +1117,7 @@ public final class DebugLogger
             final String suffixString)
         {
             appendStart(tag);
+            final StringBuilder builder = this.builder;
             builder.append(prefixString);
             builder.append(suffixString);
         }
@@ -1131,9 +1130,12 @@ public final class DebugLogger
             formatter.appendTo(builder);
         }
 
-        private void appendNewline()
+
+        private void finish()
         {
+            final StringBuilder builder = this.builder;
             builder.append(System.lineSeparator());
+            appender.log(builder);
         }
     }
 }

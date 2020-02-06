@@ -546,7 +546,7 @@ public class Session
         {
             lastSentMsgSeqNum(seqNum, position);
 
-            DebugLogger.log(FIX_MESSAGE, "Sent %s %n", messageBuffer, offset, length);
+            DebugLogger.log(FIX_MESSAGE, "Sent ", messageBuffer, offset, length);
         }
 
         return position;

@@ -63,6 +63,7 @@ public class PrintingDebugAppender extends AbstractDebugAppender
             final char[] buffer = acquireBuffer(length);
             stringBuilder.getChars(0, length, buffer, 0);
             output.write(buffer, 0, length);
+            output.flush();
         }
 
         private char[] acquireBuffer(final int length)

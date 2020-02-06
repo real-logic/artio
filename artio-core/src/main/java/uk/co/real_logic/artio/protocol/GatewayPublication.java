@@ -334,7 +334,7 @@ public class GatewayPublication extends ClaimablePublication
             }
         }
 
-        DebugLogger.log(FIX_MESSAGE_FLOW, "Enqueued %s%n", srcBuffer, srcOffset, srcLength);
+        DebugLogger.log(FIX_MESSAGE_FLOW, "Enqueued ", srcBuffer, srcOffset, srcLength);
 
         return position;
     }
@@ -537,7 +537,9 @@ public class GatewayPublication extends ClaimablePublication
         final MutableDirectBuffer buffer = bufferClaim.buffer();
         final int offset = bufferClaim.offset();
 
-        resetSequenceNumber.wrapAndApplyHeader(buffer, offset, header).session(sessionId);
+        resetSequenceNumber
+            .wrapAndApplyHeader(buffer, offset, header)
+            .session(sessionId);
 
         bufferClaim.commit();
 

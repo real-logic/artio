@@ -254,7 +254,7 @@ class ReceiverEndPoint
         {
             if (dataRead > 0)
             {
-                DebugLogger.log(FIX_MESSAGE_TCP, "Read     %s%n", buffer, 0, dataRead);
+                DebugLogger.log(FIX_MESSAGE_TCP, "Read     ", buffer, 0, dataRead);
             }
             usedBufferData += dataRead;
         }
@@ -328,7 +328,7 @@ class ReceiverEndPoint
                 final int length = (endOfMessage + 1) - offset;
                 if (!validateChecksum(endOfMessage, startOfChecksumValue, offset, startOfChecksumTag))
                 {
-                    DebugLogger.log(FIX_MESSAGE, "Invalidated: %s%n", buffer, offset, length);
+                    DebugLogger.log(FIX_MESSAGE, "Invalidated: ", buffer, offset, length);
 
                     if (saveInvalidChecksumMessage(offset, messageType, length, readTimestamp))
                     {
@@ -393,7 +393,7 @@ class ReceiverEndPoint
 
         if (saveInvalidMessage(offset, endOfMessage, readTimestamp))
         {
-            DebugLogger.log(FIX_MESSAGE, "Invalidated: %s%n", buffer, offset, endOfMessage - offset);
+            DebugLogger.log(FIX_MESSAGE, "Invalidated: ", buffer, offset, endOfMessage - offset);
             return offset;
         }
 
@@ -605,7 +605,7 @@ class ReceiverEndPoint
     // returns true if back-pressured
     private boolean invalidateMessage(final int offset, final long readTimestamp)
     {
-        DebugLogger.log(FIX_MESSAGE, "Invalidated: %s%n", buffer, offset, MIN_MESSAGE_SIZE);
+        DebugLogger.log(FIX_MESSAGE, "Invalidated: ", buffer, offset, MIN_MESSAGE_SIZE);
         return saveInvalidMessage(offset, readTimestamp);
     }
 

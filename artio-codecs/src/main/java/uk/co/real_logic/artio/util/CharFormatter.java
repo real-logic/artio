@@ -33,6 +33,7 @@ public class CharFormatter
     private static final Pattern NEWLINE = Pattern.compile("%n");
     private static final char[] MIN_INTEGER_VALUE = String.valueOf(Integer.MIN_VALUE).toCharArray();
 
+    private final String formatString;
     private final char[][] segments;
     private final char[][] values;
     private final int[] lengths;
@@ -41,6 +42,7 @@ public class CharFormatter
 
     public CharFormatter(final String formatString)
     {
+        this.formatString = formatString;
         final String[] splitFormatString = PATTERN.split(formatString);
         final int numberOfSegments = splitFormatString.length;
         final int numberOfValues = formatString.endsWith("%s") ? numberOfSegments : numberOfSegments - 1;
@@ -229,6 +231,14 @@ public class CharFormatter
 
     private char[] ensureLength(final int length)
     {
+        final int encodedSoFar = this.encodedSoFar;
+        final char[][] values = this.values;
+        if (encodedSoFar >= values.length)
+        {
+            throw new IllegalStateException("Attempting to add argument number " +
+                (encodedSoFar + 1) + " to a " + values.length + " argument CharFormatter: " + formatString);
+        }
+
         char[] value = values[encodedSoFar];
         if (value.length < length)
         {

@@ -213,7 +213,7 @@ public class PossDupEnabler
 
             DebugLogger.log(
                 logTag,
-                "Resending: %s%n",
+                "Resending: ",
                 fragmentedMessageBuffer,
                 fragmentOffset + logLengthOffset,
                 fragmentedMessageLength - logLengthOffset);
@@ -259,7 +259,7 @@ public class PossDupEnabler
 
             DebugLogger.log(
                 logTag,
-                "Resending: %s%n",
+                "Resending: ",
                 buffer,
                 offset + logLengthOffset,
                 bufferClaim.length() - logLengthOffset);
