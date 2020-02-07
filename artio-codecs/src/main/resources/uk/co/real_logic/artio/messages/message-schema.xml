@@ -179,8 +179,8 @@
             <validValue name="OK">0</validValue>
             <validValue name="UNKNOWN_SESSION">1</validValue>
             <validValue name="FILE_ERROR">2</validValue>
-            <validValue name="INVALID_CHECKSUM">3</validValue>
             <validValue name="NO_META_DATA">4</validValue>
+            <validValue name="INVALID_OFFSET" sinceVersion="7">5</validValue>
         </enum>
 
         <enum name="ReplayMessagesStatus" encodingType="uint8">
@@ -280,6 +280,7 @@
         <field name="libraryId" id="1" type="LibraryId"/>
         <field name="session" id="2" type="FixSessionId"/>
         <field name="correlationId" id="3" type="CorrelationId"/>
+        <field name="metaDataOffset" id="5" type="int32"/>
         <data name="metaData" id="4" type="Utf8String"/>
     </sbe:message>
 
@@ -443,6 +444,7 @@
         <field name="libraryId" id="6" type="LibraryId"/>
         <field name="bytesSent" id="7" type="int32" />
         <field name="sequenceIndex" id="8" type="SequenceIndex" />
+        <field name="metaDataUpdateOffset" id="13" type="int32" />
         <!-- only visible outbound -->
         <field name="sequenceNumber" id="9" type="int32" />
         <field name="messageType" id="11" type="MessageType" presence="optional" sinceVersion="3"/>

@@ -540,8 +540,14 @@ public class AbstractGatewayToGatewaySystemTest
 
     Reply<MetaDataStatus> writeMetaData(final UnsafeBuffer writeBuffer, final long sessionId)
     {
+        return writeMetaData(writeBuffer, sessionId, 0);
+    }
+
+    Reply<MetaDataStatus> writeMetaData(
+        final UnsafeBuffer writeBuffer, final long sessionId, final int metaDataOffset)
+    {
         final Reply<MetaDataStatus> reply = acceptingLibrary.writeMetaData(
-            sessionId, writeBuffer, 0, writeBuffer.capacity());
+            sessionId, metaDataOffset, writeBuffer, 0, writeBuffer.capacity());
 
         testSystem.awaitCompletedReplies(reply);
 

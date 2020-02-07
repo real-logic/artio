@@ -43,11 +43,6 @@
         <field name="metaDataPosition" id="3" type="int32" sinceVersion="1"/>
     </sbe:message>
 
-    <sbe:message name="MetaDataRecord" id="29" description="" sinceVersion="1">
-        <field name="checksum" id="1" type="int32"/>
-        <data name="metaData" id="2" type="Utf8String"/>
-    </sbe:message>
-
     <sbe:message name="IndexedPosition" id="25" description="">
         <field name="streamId" id="1" type="int32"/>
         <field name="sessionId" id="2" type="int32"/>

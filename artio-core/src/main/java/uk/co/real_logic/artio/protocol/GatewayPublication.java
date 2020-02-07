@@ -183,7 +183,8 @@ public class GatewayPublication extends ClaimablePublication
         final long connectionId,
         final MessageStatus status,
         final int sequenceNumber,
-        final DirectBuffer metaDataBuffer)
+        final DirectBuffer metaDataBuffer,
+        final int metaDataUpdateOffset)
     {
         return saveMessage(
             srcBuffer,
@@ -197,7 +198,8 @@ public class GatewayPublication extends ClaimablePublication
             status,
             sequenceNumber,
             clock.time(),
-            metaDataBuffer);
+            metaDataBuffer,
+            metaDataUpdateOffset);
     }
 
     public long saveMessage(
@@ -225,7 +227,8 @@ public class GatewayPublication extends ClaimablePublication
             status,
             sequenceNumber,
             timestamp,
-            null);
+            null,
+            0);
     }
 
     public long saveMessage(
@@ -240,7 +243,8 @@ public class GatewayPublication extends ClaimablePublication
         final MessageStatus status,
         final int sequenceNumber,
         final long timestamp,
-        final DirectBuffer srcMetaDataBuffer)
+        final DirectBuffer srcMetaDataBuffer,
+        final int metaDataUpdateOffset)
     {
         final DirectBuffer metaDataBuffer = srcMetaDataBuffer == null ? NO_METADATA : srcMetaDataBuffer;
         final int metaDataLength = metaDataBuffer.capacity();
@@ -301,6 +305,7 @@ public class GatewayPublication extends ClaimablePublication
             .timestamp(timestamp)
             .status(status)
             .sequenceNumber(sequenceNumber)
+            .metaDataUpdateOffset(metaDataUpdateOffset)
             .putMetaData(metaDataBuffer, 0, metaDataLength)
             .putBody(srcBuffer, srcFragmentOffset, srcFragmentLength);
 
@@ -1074,6 +1079,7 @@ public class GatewayPublication extends ClaimablePublication
     public long saveWriteMetaData(
         final int libraryId,
         final long sessionId,
+        final int metaDataOffset,
         final long correlationId,
         final DirectBuffer srcBuffer,
         final int srcOffset,
@@ -1093,6 +1099,7 @@ public class GatewayPublication extends ClaimablePublication
             .libraryId(libraryId)
             .session(sessionId)
             .correlationId(correlationId)
+            .metaDataOffset(metaDataOffset)
             .putMetaData(srcBuffer, srcOffset, srcLength);
 
         bufferClaim.commit();

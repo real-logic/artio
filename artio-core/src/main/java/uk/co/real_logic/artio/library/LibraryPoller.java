@@ -282,12 +282,18 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     }
 
     Reply<MetaDataStatus> writeMetaData(
-        final long sessionId, final DirectBuffer buffer, final int offset, final int length)
+        final long sessionId, final int metaDataOffset, final DirectBuffer buffer, final int offset, final int length)
     {
+        if (metaDataOffset < 0)
+        {
+            throw new IllegalArgumentException("metaDataOffset should never be negative and is " + metaDataOffset);
+        }
+
         return new WriteMetaDataReply(
             this,
             timeInMs() + configuration.replyTimeoutInMs(),
             sessionId,
+            metaDataOffset,
             buffer,
             offset,
             length);
@@ -312,13 +318,19 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     }
 
     long saveWriteMetaData(
-        final long sessionId, final DirectBuffer buffer, final int offset, final int length, final long correlationId)
+        final long sessionId,
+        final int metaDataOffset,
+        final DirectBuffer buffer,
+        final int offset,
+        final int length,
+        final long correlationId)
     {
         checkState();
 
         return outboundPublication.saveWriteMetaData(
             libraryId,
             sessionId,
+            metaDataOffset,
             correlationId,
             buffer,
             offset,

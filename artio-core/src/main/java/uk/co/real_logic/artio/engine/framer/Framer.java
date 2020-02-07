@@ -2026,6 +2026,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final int libraryId,
         final long sessionId,
         final long correlationId,
+        final int metaDataOffset,
         final DirectBuffer srcBuffer,
         final int srcOffset,
         final int srcLength)

@@ -325,6 +325,7 @@ public final class EngineProtocolSubscription implements ControlledFragmentHandl
             libraryId,
             writeMetaData.session(),
             writeMetaData.correlationId(),
+            writeMetaData.metaDataOffset(),
             buffer,
             offset + WRITE_META_DATA_DATA_LENGTH,
             metaDataLength);

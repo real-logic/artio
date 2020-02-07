@@ -26,8 +26,10 @@ import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberDecoder;
 import uk.co.real_logic.artio.storage.messages.LastKnownSequenceNumberEncoder;
 
-import java.io.*;
-import java.util.zip.CRC32;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 
 import static uk.co.real_logic.artio.engine.SectorFramer.OUT_OF_SPACE;
 import static uk.co.real_logic.artio.engine.SessionInfo.UNK_SESSION;
@@ -44,7 +46,6 @@ public class SequenceNumberIndexReader implements AutoCloseable
     private final IndexedPositionReader positions;
     private final ErrorHandler errorHandler;
     private final RandomAccessFile metaDataFile;
-    private final CRC32 checksum = new CRC32();
 
     public SequenceNumberIndexReader(
         final AtomicBuffer inMemoryBuffer,
@@ -135,26 +136,10 @@ public class SequenceNumberIndexReader implements AutoCloseable
         try
         {
             metaDataFile.seek(metaDataPosition);
-            final long checksumValue = metaDataFile.readLong();
             final int metaDataLength = metaDataFile.readInt();
 
             final byte[] metaDataValue = new byte[metaDataLength];
             metaDataFile.read(metaDataValue);
-
-            checksum.update(metaDataValue);
-            final long actualChecksumValue = checksum.getValue();
-            checksum.reset();
-
-            if (checksumValue != actualChecksumValue)
-            {
-                errorHandler.onError(new IllegalStateException(String.format(
-                    "Invalid checksum found when reading meta data, sess=%d, pos=%d, expected=%d, actual=%d",
-                    sessionId,
-                    metaDataPosition,
-                    checksumValue,
-                    actualChecksumValue)));
-                return MetaDataStatus.INVALID_CHECKSUM;
-            }
 
             buffer.wrap(metaDataValue);
 

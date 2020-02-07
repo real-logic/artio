@@ -473,7 +473,7 @@ public class Session
      */
     public long send(final Encoder encoder)
     {
-        return send(encoder, null);
+        return send(encoder, null, 0);
     }
 
     /**
@@ -481,12 +481,17 @@ public class Session
      *
      * @param encoder the encoder of the message to be sent
      * @param metaDataBuffer the metadata to associate with this message.
+     * @param metaDataUpdateOffset the offset within the session's metadata buffer.
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
      * @throws IndexOutOfBoundsException if the encoded message is too large, if this happens consider
      *                                   increasing {@link CommonConfiguration#sessionBufferSize(int)}
+     * @see uk.co.real_logic.artio.library.FixLibrary#writeMetaData(long, int, DirectBuffer, int, int)
      */
-    public long send(final Encoder encoder, final DirectBuffer metaDataBuffer)
+    public long send(
+        final Encoder encoder,
+        final DirectBuffer metaDataBuffer,
+        final int metaDataUpdateOffset)
     {
         validateCanSendMessage();
 
@@ -495,8 +500,9 @@ public class Session
         final long result = encoder.encode(asciiBuffer, 0);
         final int length = Encoder.length(result);
         final int offset = Encoder.offset(result);
+        final long type = encoder.messageType();
 
-        return send(asciiBuffer, offset, length, sentSeqNum, encoder.messageType(), metaDataBuffer);
+        return send(asciiBuffer, offset, length, sentSeqNum, type, metaDataBuffer, metaDataUpdateOffset);
     }
 
     /**
@@ -513,7 +519,7 @@ public class Session
     public long send(
         final DirectBuffer messageBuffer, final int offset, final int length, final int seqNum, final long messageType)
     {
-        return send(messageBuffer, offset, length, seqNum, messageType, null);
+        return send(messageBuffer, offset, length, seqNum, messageType, null, 0);
     }
 
     /**
@@ -525,8 +531,10 @@ public class Session
      * @param seqNum the sequence number of the sent message
      * @param messageType the long encoded message type.
      * @param metaDataBuffer the metadata to associate with this message.
+     * @param metaDataUpdateOffset the offset within the session's metadata buffer.
      * @return the position in the stream that corresponds to the end of this message or a negative
      * number indicating an error status.
+     * @see uk.co.real_logic.artio.library.FixLibrary#writeMetaData(long, int, DirectBuffer, int, int)
      */
     public long send(
         final DirectBuffer messageBuffer,
@@ -534,13 +542,14 @@ public class Session
         final int length,
         final int seqNum,
         final long messageType,
-        final DirectBuffer metaDataBuffer)
+        final DirectBuffer metaDataBuffer,
+        final int metaDataUpdateOffset)
     {
         validateCanSendMessage();
 
         final long position = publication.saveMessage(
             messageBuffer, offset, length, libraryId, messageType, id(), sequenceIndex(), connectionId, OK, seqNum,
-            metaDataBuffer);
+            metaDataBuffer, metaDataUpdateOffset);
 
         if (position > 0)
         {

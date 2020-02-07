@@ -94,6 +94,7 @@ public interface EngineEndPointHandler
         int libraryId,
         long sessionId,
         long correlationId,
+        int metaDataOffset,
         DirectBuffer srcBuffer,
         int srcOffset,
         int srcLength);

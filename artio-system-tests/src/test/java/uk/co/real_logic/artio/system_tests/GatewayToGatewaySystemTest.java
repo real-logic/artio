@@ -15,35 +15,29 @@
  */
 package uk.co.real_logic.artio.system_tests;
 
-import org.agrona.DirectBuffer;
-import org.agrona.concurrent.UnsafeBuffer;
 import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
-import uk.co.real_logic.artio.builder.*;
+import uk.co.real_logic.artio.builder.ExampleMessageEncoder;
+import uk.co.real_logic.artio.builder.ExecutionReportEncoder;
+import uk.co.real_logic.artio.builder.ResendRequestEncoder;
+import uk.co.real_logic.artio.builder.UserRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.engine.SessionInfo;
 import uk.co.real_logic.artio.engine.framer.LibraryInfo;
-import uk.co.real_logic.artio.engine.logger.SequenceNumberIndexWriter;
 import uk.co.real_logic.artio.library.FixLibrary;
 import uk.co.real_logic.artio.library.LibraryConfiguration;
-import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.ReplayMessagesStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.messages.SessionState;
 import uk.co.real_logic.artio.session.CompositeKey;
 import uk.co.real_logic.artio.session.Session;
 
-import java.io.IOException;
-import java.io.RandomAccessFile;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.locks.LockSupport;
 import java.util.function.IntSupplier;
 
-import static org.agrona.BitUtil.SIZE_OF_INT;
-import static org.agrona.BitUtil.SIZE_OF_LONG;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.Assert.*;
@@ -938,175 +932,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
         assertArchiveDoesNotContainPassword();
     }
 
-    @Test(timeout = 10_000L)
-    public void shouldReadWrittenSessionMetaData()
-    {
-        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
-        writeBuffer.putInt(0, META_DATA_VALUE);
-
-        writeMetaData(writeBuffer);
-
-        final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
-        assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
-    }
-
-    @Test(timeout = 10_000L)
-    public void shouldReadWrittenSessionSendMetaData()
-    {
-        acquireAcceptingSession();
-
-        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
-        writeBuffer.putInt(0, META_DATA_VALUE);
-
-        final TestRequestEncoder testRequest = new TestRequestEncoder();
-        testRequest.testReqID(testReqId());
-        assertThat(acceptingSession.send(testRequest, writeBuffer), greaterThan(0L));
-
-        assertEventuallyTrue("Failed to read meta data", () ->
-        {
-            final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
-            assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
-
-            LockSupport.parkNanos(10_000L);
-        });
-    }
-
-    @Test(timeout = 10_000L)
-    public void shouldReceiveSessionMetaDataWhenSessionAcquired()
-    {
-        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
-        writeBuffer.putInt(0, META_DATA_VALUE);
-        writeMetaData(writeBuffer);
-
-        acquireAcceptingSession();
-        assertEquals(MetaDataStatus.OK, acceptingHandler.lastSessionMetaDataStatus());
-        final DirectBuffer readBuffer = acceptingHandler.lastSessionMetaData();
-        assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
-        assertEquals(SIZE_OF_INT, readBuffer.capacity());
-    }
-
-    @Test(timeout = 10_000L)
-    public void shouldNotReceiveSessionMetaDataWhenSessionAcquiredWithNoMetaData()
-    {
-        acquireAcceptingSession();
-        assertEquals(MetaDataStatus.NO_META_DATA, acceptingHandler.lastSessionMetaDataStatus());
-        final DirectBuffer readBuffer = acceptingHandler.lastSessionMetaData();
-        assertEquals(0, readBuffer.capacity());
-    }
-
-    @Test(timeout = 10_000L)
-    public void shouldUpdateWrittenSessionMetaDataFittingWithinSlot()
-    {
-        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
-
-        writeBuffer.putInt(0, META_DATA_WRONG_VALUE);
-        writeMetaData(writeBuffer);
-
-        writeBuffer.putInt(0, META_DATA_VALUE);
-        writeMetaData(writeBuffer);
-
-        final UnsafeBuffer readBuffer = readSuccessfulMetaData(writeBuffer);
-        assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
-    }
-
-    @Test(timeout = 10_000L)
-    public void shouldUpdateWrittenSessionMetaDataTooBigForOldSlot()
-    {
-        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
-
-        writeBuffer.putInt(0, META_DATA_WRONG_VALUE);
-        writeMetaData(writeBuffer);
-
-        final UnsafeBuffer bigWriteBuffer = new UnsafeBuffer(new byte[SIZE_OF_LONG]);
-        bigWriteBuffer.putLong(0, META_DATA_VALUE);
-        writeMetaData(bigWriteBuffer);
-
-        final UnsafeBuffer readBuffer = readSuccessfulMetaData(bigWriteBuffer);
-        assertEquals(META_DATA_VALUE, readBuffer.getInt(0));
-    }
-
-    @Test(timeout = 10_000L)
-    public void shouldReceiveReadErrorForUnwrittenSessionMetaData()
-    {
-        assertNoMetaData();
-    }
-
-    @Test(timeout = 10_000L)
-    public void shouldReceiveReadErrorForMetaDataWithUnknownSession()
-    {
-        assertUnknownSessionMetaData(META_DATA_WRONG_SESSION_ID);
-    }
-
-    @Test(timeout = 10_000L)
-    public void shouldReceiveWriteErrorForMetaDataWithUnknownSession()
-    {
-        final UnsafeBuffer writeBuffer = new UnsafeBuffer(new byte[SIZE_OF_INT]);
-        final Reply<?> reply = writeMetaData(writeBuffer, META_DATA_WRONG_SESSION_ID);
-        assertEquals(MetaDataStatus.UNKNOWN_SESSION, reply.resultIfPresent());
-    }
-
-    @Test(timeout = 10_000L)
-    public void shouldReceiveReadErrorForInvalidChecksum() throws IOException
-    {
-        // File locking makes this test impossible
-        if (!SequenceNumberIndexWriter.RUNNING_ON_WINDOWS)
-        {
-            writeMetaData();
-
-            try (RandomAccessFile metaDataFile = new RandomAccessFile(
-                acceptingEngine.configuration().logFileDir() + "/metadata", "rw"))
-            {
-                metaDataFile.seek(SIZE_OF_LONG + SIZE_OF_INT);
-                final int invalidChecksum = 5;
-                metaDataFile.writeLong(invalidChecksum);
-            }
-
-            final FakeMetadataHandler handler = readMetaData(META_DATA_SESSION_ID);
-            assertEquals(MetaDataStatus.INVALID_CHECKSUM, handler.status());
-        }
-    }
-
-    @Test(timeout = 10_000L)
-    public void shouldResetMetaDataWhenSequenceNumberResetsWithLogon()
-    {
-        writeMetaDataThenDisconnect();
-
-        // Support reading meta data after logout, but before sequence number reset
-        final FakeMetadataHandler handler = readMetaData(META_DATA_SESSION_ID);
-        assertEquals(MetaDataStatus.OK, handler.status());
-
-        connectSessions();
-
-        assertNoMetaData();
-    }
-
-    @Test(timeout = 10_000L)
-    public void shouldResetMetaDataWhenSequenceNumberResetsWhenSessionIdExplicitlyReset()
-    {
-        writeMetaDataThenDisconnect();
-
-        final Reply<?> reply = acceptingEngine.resetSequenceNumber(META_DATA_SESSION_ID);
-        testSystem.awaitCompletedReplies(reply);
-
-        assertNoMetaData();
-    }
-
-    @Test(timeout = 10_000L)
-    public void shouldResetMetaDataWhenSequenceNumberResetsWithExplicitResetSessionIds()
-    {
-        writeMetaDataThenDisconnect();
-
-        final Reply<?> reply = acceptingEngine.resetSessionIds(null);
-        testSystem.awaitCompletedReplies(reply);
-
-        assertUnknownSessionMetaData(META_DATA_SESSION_ID);
-
-        connectSessions();
-        acquireAcceptingSession();
-
-        assertNoMetaData();
-    }
-
     @Test
     public void shouldReplayReceivedMessagesForSession()
     {
@@ -1224,26 +1049,6 @@ public class GatewayToGatewaySystemTest extends AbstractGatewayToGatewaySystemTe
             .findFirst()
             .get();
         assertEquals(CATCHUP_REPLAY, testRequest.status());
-    }
-
-    private void assertUnknownSessionMetaData(final long sessionId)
-    {
-        final FakeMetadataHandler handler = readMetaData(sessionId);
-        assertEquals(MetaDataStatus.UNKNOWN_SESSION, handler.status());
-    }
-
-    private void assertNoMetaData()
-    {
-        final FakeMetadataHandler handler = readMetaData(META_DATA_SESSION_ID);
-        assertEquals(MetaDataStatus.NO_META_DATA, handler.status());
-    }
-
-    private void writeMetaDataThenDisconnect()
-    {
-        writeMetaData();
-
-        acquireAcceptingSession();
-        disconnectSessions();
     }
 
     private void assertArchiveDoesNotContainPassword()

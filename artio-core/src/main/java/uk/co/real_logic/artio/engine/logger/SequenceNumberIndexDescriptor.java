@@ -44,11 +44,11 @@ final class SequenceNumberIndexDescriptor
     static final int RECORD_SIZE = LastKnownSequenceNumberDecoder.BLOCK_LENGTH;
 
     static final int NO_META_DATA = -1;
-    static final int SIZE_OF_META_DATA_CHECKSUM = SIZE_OF_LONG;
     static final long META_DATA_MAGIC_NUMBER = 0xBEEF;
     static final int META_DATA_FILE_VERSION = 1;
     static final int READABLE_META_DATA_FILE_VERSION = META_DATA_FILE_VERSION;
     static final int META_DATA_FILE_HEADER_LENGTH = SIZE_OF_LONG + SIZE_OF_INT;
+    static final int SIZE_OF_META_DATA_LENGTH = SIZE_OF_INT;
 
     static final double SEQUENCE_NUMBER_RATIO = 0.9;
 
