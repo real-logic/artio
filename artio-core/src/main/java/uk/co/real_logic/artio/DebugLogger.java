@@ -24,6 +24,8 @@ import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.util.CharFormatter;
 
 import java.nio.ByteBuffer;
+import java.util.Iterator;
+import java.util.ServiceLoader;
 
 import static uk.co.real_logic.artio.CommonConfiguration.*;
 import static uk.co.real_logic.artio.engine.EngineConfiguration.DEBUG_PRINT_MESSAGES;
@@ -39,21 +41,15 @@ public final class DebugLogger
 
     static
     {
-        if (APPENDER_CLASS == null)
+        final ServiceLoader<AbstractDebugAppender> loader = ServiceLoader.load(AbstractDebugAppender.class);
+        final Iterator<AbstractDebugAppender> it = loader.iterator();
+        if (it.hasNext())
         {
-            APPENDER = new PrintingDebugAppender();
+            APPENDER = it.next();
         }
         else
         {
-            try
-            {
-                APPENDER = (AbstractDebugAppender)Class.forName(APPENDER_CLASS).newInstance();
-            }
-            catch (final InstantiationException | IllegalAccessException | ClassNotFoundException e)
-            {
-                throw new IllegalStateException(
-                    "Unable to configure DebugLogger, please check " + APPENDER_CLASS_PROPERTY, e);
-            }
+            APPENDER = new PrintingDebugAppender();
         }
     }
 
