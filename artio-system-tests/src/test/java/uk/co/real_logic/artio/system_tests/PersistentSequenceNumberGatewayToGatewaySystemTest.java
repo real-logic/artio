@@ -20,6 +20,7 @@ import org.junit.Before;
 import org.junit.Test;
 import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.ResendRequestEncoder;
+import uk.co.real_logic.artio.builder.TestRequestEncoder;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
 import uk.co.real_logic.artio.library.DynamicLibraryScheduler;
@@ -35,6 +36,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.Assert.*;
 import static uk.co.real_logic.artio.Constants.*;
+import static uk.co.real_logic.artio.Reply.State.ERRORED;
 import static uk.co.real_logic.artio.TestFixtures.launchMediaDriver;
 import static uk.co.real_logic.artio.TestFixtures.mediaDriverContext;
 import static uk.co.real_logic.artio.library.FixLibrary.NO_MESSAGE_REPLAY;
@@ -297,6 +299,60 @@ public class PersistentSequenceNumberGatewayToGatewaySystemTest extends Abstract
         // 5: logon, test-req/heartbeat, logout. logon 2, test-req/heartbeat 2
         assertSequenceFromInitToAcceptAt(5, 5);
         assertLastLogonEquals(4, 0);
+    }
+
+    @Test
+    public void shouldRejectIncorrectInitiatorSequenceNumber()
+    {
+        launch(this::nothing);
+        connectPersistingSessions();
+
+        assertTestRequestSentAndReceived(initiatingSession, testSystem, acceptingOtfAcceptor);
+        assertSequenceFromInitToAcceptAt(2, 2);
+
+        logoutInitiatingSession();
+        assertSessionsDisconnected();
+
+        final int initiatorSequenceNumber = initiatingSession.lastSentMsgSeqNum() + 1;
+        int acceptorSequenceNumber = acceptingSession.lastSentMsgSeqNum() + 1;
+
+        clearMessages();
+        initiatingSession = null;
+        acceptingSession = null;
+
+        // Replication of bug #295
+        cannotConnectWithSequence(acceptorSequenceNumber, 1);
+        cannotConnectWithSequence(acceptorSequenceNumber, 2);
+        acceptorSequenceNumber += 2;
+
+        final Reply<Session> okReply = connectPersistentSessions(
+            initiatorSequenceNumber, acceptorSequenceNumber, false);
+        assertEquals(Reply.State.COMPLETED, okReply.state());
+        initiatingSession = okReply.resultIfPresent();
+        acceptorSequenceNumber++;
+
+        // An old message with a possDupFlag=Y set shouldn't break sequence number indices
+        final int oldSequenceNumber = initiatingSession.lastSentMsgSeqNum() - 2;
+        initiatingSession.lastSentMsgSeqNum(oldSequenceNumber);
+        final TestRequestEncoder testRequest = new TestRequestEncoder().testReqID(testReqId());
+        testRequest.header().possDupFlag(true);
+        testSystem.send(initiatingSession, testRequest);
+
+        initiatingSession.requestDisconnect();
+        assertSessionDisconnected(initiatingSession);
+        sessionNoLongerManaged(initiatingHandler, initiatingSession);
+
+        cannotConnectWithSequence(acceptorSequenceNumber, oldSequenceNumber + 1);
+
+        connectPersistingSessions();
+    }
+
+    private void cannotConnectWithSequence(
+        final int acceptorSequenceNumber, final int initiatorInitialSentSequenceNumber)
+    {
+        final Reply<Session> reply = connectPersistentSessions(
+            initiatorInitialSentSequenceNumber, acceptorSequenceNumber, false);
+        assertEquals(ERRORED, reply.state());
     }
 
     @Test

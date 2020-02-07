@@ -65,6 +65,7 @@ class GatewaySessions
     private final Map<FixDictionary, UserRequestExtractor> dictionaryToUserRequestExtractor = new HashMap<>();
 
     private final EpochClock epochClock;
+    private final GatewayPublication inboundPublication;
     private final GatewayPublication outboundPublication;
     private final SessionIdStrategy sessionIdStrategy;
     private final SessionCustomisationStrategy customisationStrategy;
@@ -91,6 +92,7 @@ class GatewaySessions
 
     GatewaySessions(
         final EpochClock epochClock,
+        final GatewayPublication inboundPublication,
         final GatewayPublication outboundPublication,
         final SessionIdStrategy sessionIdStrategy,
         final SessionCustomisationStrategy customisationStrategy,
@@ -103,6 +105,7 @@ class GatewaySessions
         final SequenceNumberIndexReader receivedSequenceNumberIndex)
     {
         this.epochClock = epochClock;
+        this.inboundPublication = inboundPublication;
         this.outboundPublication = outboundPublication;
         this.sessionIdStrategy = sessionIdStrategy;
         this.customisationStrategy = customisationStrategy;
@@ -170,6 +173,7 @@ class GatewaySessions
             clock,
             state,
             proxy,
+            inboundPublication,
             outboundPublication,
             sessionIdStrategy,
             sendingTimeWindowInMs,

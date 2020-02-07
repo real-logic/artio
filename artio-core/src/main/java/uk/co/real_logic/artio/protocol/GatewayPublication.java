@@ -96,6 +96,8 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + ReplayMessagesEncoder.BLOCK_LENGTH;
     private static final int REPLAY_MESSAGES_REPLY_LENGTH =
         HEADER_LENGTH + ReplayMessagesReplyEncoder.BLOCK_LENGTH;
+    private static final int REDACT_SEQUENCE_NUMBER_LENGTH =
+        HEADER_LENGTH + RedactSequenceUpdateEncoder.BLOCK_LENGTH;
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -128,6 +130,7 @@ public class GatewayPublication extends ClaimablePublication
     private final ReadMetaDataReplyEncoder readMetaDataReply = new ReadMetaDataReplyEncoder();
     private final ReplayMessagesEncoder replayMessages = new ReplayMessagesEncoder();
     private final ReplayMessagesReplyEncoder replayMessagesReply = new ReplayMessagesReplyEncoder();
+    private final RedactSequenceUpdateEncoder redactSequenceUpdate = new RedactSequenceUpdateEncoder();
 
     private final Clock clock;
     private final int maxPayloadLength;
@@ -1252,6 +1255,31 @@ public class GatewayPublication extends ClaimablePublication
         bufferClaim.commit();
 
         logSbeMessage(GATEWAY_MESSAGE, replayMessagesReply);
+
+        return position;
+    }
+
+    public long saveRedactSequenceUpdate(
+        final long sessionId, final int correctSequenceNumber, final long messagePosition)
+    {
+        final long position = claim(REDACT_SEQUENCE_NUMBER_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        redactSequenceUpdate
+            .wrapAndApplyHeader(buffer, offset, header)
+            .session(sessionId)
+            .correctSequenceNumber(correctSequenceNumber)
+            .position(messagePosition);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, redactSequenceUpdate);
 
         return position;
     }

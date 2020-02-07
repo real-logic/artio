@@ -161,6 +161,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     // State changed upon connect/reconnect
     private LivenessDetector livenessDetector;
     private Subscription inboundSubscription;
+    private GatewayPublication inboundPublication;
     private GatewayPublication outboundPublication;
     private String currentAeronChannel;
     private long nextSendLibraryConnectTime;
@@ -628,6 +629,7 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         {
             transport.initStreams(currentAeronChannel);
             inboundSubscription = transport.inboundSubscription();
+            inboundPublication = transport.inboundPublication();
             outboundPublication = transport.outboundPublication();
         }
     }
@@ -1495,7 +1497,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final boolean resetSeqNum)
     {
         final int defaultInterval = configuration.defaultHeartbeatIntervalInS();
-        final GatewayPublication publication = transport.outboundPublication();
 
         final MutableAsciiBuffer asciiBuffer = sessionBuffer();
         final SessionProxy sessionProxy = sessionProxy(connectionId);
@@ -1506,7 +1507,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             epochClock,
             configuration.clock(),
             sessionProxy,
-            publication,
+            inboundPublication,
+            outboundPublication,
             sessionIdStrategy,
             configuration.sendingTimeWindowInMs(),
             fixCounters.receivedMsgSeqNo(connectionId),
@@ -1565,7 +1567,6 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         final boolean enableLastMsgSeqNumProcessed,
         final FixDictionary fixDictionary)
     {
-        final GatewayPublication publication = transport.outboundPublication();
         final long sendingTimeWindow = configuration.sendingTimeWindowInMs();
         final AtomicCounter receivedMsgSeqNo = fixCounters.receivedMsgSeqNo(connectionId);
         final AtomicCounter sentMsgSeqNo = fixCounters.sentMsgSeqNo(connectionId);
@@ -1577,7 +1578,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             epochClock,
             configuration.clock(),
             sessionProxy(connectionId),
-            publication,
+            inboundPublication,
+            outboundPublication,
             sessionIdStrategy,
             sendingTimeWindow,
             receivedMsgSeqNo,

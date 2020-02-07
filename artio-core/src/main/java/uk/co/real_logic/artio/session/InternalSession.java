@@ -43,7 +43,8 @@ public class InternalSession extends Session implements AutoCloseable
         final Clock clock,
         final SessionState state,
         final SessionProxy proxy,
-        final GatewayPublication publication,
+        final GatewayPublication inboundPublication,
+        final GatewayPublication outboundPublication,
         final SessionIdStrategy sessionIdStrategy,
         final long sendingTimeWindowInMs,
         final AtomicCounter receivedMsgSeqNo,
@@ -63,7 +64,8 @@ public class InternalSession extends Session implements AutoCloseable
             clock,
             state,
             proxy,
-            publication,
+            inboundPublication,
+            outboundPublication,
             sessionIdStrategy,
             sendingTimeWindowInMs,
             receivedMsgSeqNo,
@@ -161,9 +163,9 @@ public class InternalSession extends Session implements AutoCloseable
         final int refTagId,
         final char[] refMsgType,
         final int refMsgTypeLength,
-        final int rejectReason)
+        final int rejectReason, final long position)
     {
-        return super.onInvalidMessage(refSeqNum, refTagId, refMsgType, refMsgTypeLength, rejectReason);
+        return super.onInvalidMessage(refSeqNum, refTagId, refMsgType, refMsgTypeLength, rejectReason, position);
     }
 
     public void lastResentMsgSeqNo(final int lastResentMsgSeqNo)

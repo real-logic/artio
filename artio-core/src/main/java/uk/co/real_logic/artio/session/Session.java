@@ -84,7 +84,7 @@ public class Session
     private final UtcTimestampEncoder timestampEncoder = new UtcTimestampEncoder();
 
     protected final SessionIdStrategy sessionIdStrategy;
-    protected final GatewayPublication publication;
+    protected final GatewayPublication outboundPublication;
     protected final MutableAsciiBuffer asciiBuffer;
     protected final int libraryId;
     protected final SessionProxy proxy;
@@ -95,6 +95,7 @@ public class Session
     private final AtomicCounter receivedMsgSeqNo;
     private final AtomicCounter sentMsgSeqNo;
     private final long reasonableTransmissionTimeInMs;
+    private final GatewayPublication inboundPublication;
     private final SessionCustomisationStrategy customisationStrategy;
 
     private CompositeKey sessionKey;
@@ -149,7 +150,8 @@ public class Session
         final Clock clock,
         final SessionState state,
         final SessionProxy proxy,
-        final GatewayPublication publication,
+        final GatewayPublication inboundPublication,
+        final GatewayPublication outboundPublication,
         final SessionIdStrategy sessionIdStrategy,
         final long sendingTimeWindowInMs,
         final AtomicCounter receivedMsgSeqNo,
@@ -162,19 +164,17 @@ public class Session
         final boolean enableLastMsgSeqNumProcessed,
         final SessionCustomisationStrategy customisationStrategy)
     {
-        this.clock = clock;
-        this.customisationStrategy = customisationStrategy;
         Verify.notNull(epochClock, "clock");
         Verify.notNull(state, "session state");
         Verify.notNull(proxy, "session proxy");
-        Verify.notNull(publication, "publication");
+        Verify.notNull(outboundPublication, "outboundPublication");
         Verify.notNull(receivedMsgSeqNo, "received MsgSeqNo counter");
         Verify.notNull(sentMsgSeqNo, "sent MsgSeqNo counter");
 
         this.epochClock = epochClock;
         this.proxy = proxy;
         this.connectionId = connectionId;
-        this.publication = publication;
+        this.outboundPublication = outboundPublication;
         this.sessionIdStrategy = sessionIdStrategy;
         this.sendingTimeWindowInMs = sendingTimeWindowInMs;
         this.receivedMsgSeqNo = receivedMsgSeqNo;
@@ -185,6 +185,9 @@ public class Session
         this.reasonableTransmissionTimeInMs = reasonableTransmissionTimeInMs;
         this.enableLastMsgSeqNumProcessed = enableLastMsgSeqNumProcessed;
         this.asciiBuffer = asciiBuffer;
+        this.clock = clock;
+        this.inboundPublication = inboundPublication;
+        this.customisationStrategy = customisationStrategy;
 
         state(state);
         heartbeatIntervalInS(heartbeatIntervalInS);
@@ -547,7 +550,7 @@ public class Session
     {
         validateCanSendMessage();
 
-        final long position = publication.saveMessage(
+        final long position = outboundPublication.saveMessage(
             messageBuffer, offset, length, libraryId, messageType, id(), sequenceIndex(), connectionId, OK, seqNum,
             metaDataBuffer, metaDataUpdateOffset);
 
@@ -787,9 +790,11 @@ public class Session
         final long sendingTime,
         final long origSendingTime,
         final boolean isPossDupOrResend,
-        final boolean possDup)
+        final boolean possDup,
+        final long position)
     {
-        return onMessage(msgSeqNo, msgType, msgType.length, sendingTime, origSendingTime, isPossDupOrResend, possDup);
+        return onMessage(
+            msgSeqNo, msgType, msgType.length, sendingTime, origSendingTime, isPossDupOrResend, possDup, position);
     }
 
     Action onMessage(
@@ -799,7 +804,8 @@ public class Session
         final long sendingTime,
         final long origSendingTime,
         final boolean isPossDupOrResend,
-        final boolean possDup)
+        final boolean possDup,
+        final long position)
     {
         if (state() == SessionState.CONNECTED)
         {
@@ -810,13 +816,13 @@ public class Session
         {
             final long time = time();
             final Action action = validateRequiredFieldsAndCodec(
-                msgSeqNo, time, msgType, msgTypeLength, sendingTime, origSendingTime, possDup);
+                msgSeqNo, time, msgType, msgTypeLength, sendingTime, origSendingTime, possDup, position);
             if (action != null)
             {
                 return action;
             }
 
-            return checkSeqNoChange(msgSeqNo, time, isPossDupOrResend);
+            return checkSeqNoChange(msgSeqNo, time, isPossDupOrResend, position);
         }
     }
 
@@ -827,7 +833,8 @@ public class Session
         final int msgTypeLength,
         final long sendingTime,
         final long origSendingTime,
-        final boolean possDup)
+        final boolean possDup,
+        final long position)
     {
         if (msgSeqNo == MISSING_INT)
         {
@@ -840,7 +847,7 @@ public class Session
         if (CODEC_VALIDATION_ENABLED)
         {
             final Action validationResult = validateCodec(time, msgSeqNo, msgType, msgTypeLength, sendingTime,
-                origSendingTime, possDup);
+                origSendingTime, possDup, position);
             if (validationResult != null)
             {
                 return validationResult;
@@ -858,12 +865,18 @@ public class Session
         final int msgTypeLength,
         final long sendingTime,
         final long origSendingTime,
-        final boolean possDup)
+        final boolean possDup,
+        final long position)
     {
         if (possDup)
         {
             if (origSendingTime == UNKNOWN)
             {
+                if (redact(position))
+                {
+                    return ABORT;
+                }
+
                 return checkPosition(proxy.sendReject(
                     newSentSeqNum(),
                     msgSeqNum,
@@ -876,13 +889,13 @@ public class Session
             }
             else if (origSendingTime > sendingTime)
             {
-                return rejectDueToSendingTime(msgSeqNum, msgType, msgTypeLength);
+                return rejectDueToSendingTime(msgSeqNum, msgType, msgTypeLength, position);
             }
         }
 
         if ((sendingTime < time - sendingTimeWindowInMs) || (sendingTime > time + sendingTimeWindowInMs))
         {
-            final Action action = rejectDueToSendingTime(msgSeqNum, msgType, msgTypeLength);
+            final Action action = rejectDueToSendingTime(msgSeqNum, msgType, msgTypeLength, position);
             if (action != ABORT)
             {
                 logoutRejectReason(RejectReason.SENDINGTIME_ACCURACY_PROBLEM.representation());
@@ -895,7 +908,8 @@ public class Session
         return null;
     }
 
-    private Action checkSeqNoChange(final int msgSeqNum, final long time, final boolean isPossDupOrResend)
+    private Action checkSeqNoChange(
+        final int msgSeqNum, final long time, final boolean isPossDupOrResend, final long position)
     {
         if (awaitingResend)
         {
@@ -928,7 +942,7 @@ public class Session
                 }
                 else
                 {
-                    return checkNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend);
+                    return checkNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend, position);
                 }
             }
             else
@@ -938,13 +952,14 @@ public class Session
         }
         else
         {
-            return checkNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend);
+            return checkNormalSeqNoChange(msgSeqNum, time, isPossDupOrResend, position);
         }
 
         return CONTINUE;
     }
 
-    private Action checkNormalSeqNoChange(final int msgSeqNum, final long time, final boolean isPossDupOrResend)
+    private Action checkNormalSeqNoChange(
+        final int msgSeqNum, final long time, final boolean isPossDupOrResend, final long position)
     {
         final int expectedSeqNo = expectedReceivedSeqNum();
         if (expectedSeqNo == msgSeqNum)
@@ -958,7 +973,7 @@ public class Session
         }
         else if (/* expectedSeqNo > msgSeqNo && */ !isPossDupOrResend)
         {
-            return msgSeqNumTooLow(msgSeqNum, expectedSeqNo);
+            return msgSeqNumTooLow(msgSeqNum, expectedSeqNo, position);
         }
         return CONTINUE;
     }
@@ -1012,12 +1027,22 @@ public class Session
         return position;
     }
 
-    private Action msgSeqNumTooLow(final int msgSeqNo, final int expectedSeqNo)
+    private Action msgSeqNumTooLow(final int msgSeqNo, final int expectedSeqNo, final long position)
     {
+        if (redact(position))
+        {
+            return ABORT;
+        }
+
         return checkPositionAndDisconnect(
             proxy.sendLowSequenceNumberLogout(
                 newSentSeqNum(), expectedSeqNo, msgSeqNo, sequenceIndex(), lastMsgSeqNumProcessed),
             MSG_SEQ_NO_TOO_LOW);
+    }
+
+    private boolean redact(final long position)
+    {
+        return inboundPublication.saveRedactSequenceUpdate(id, lastReceivedMsgSeqNum, position) < 0;
     }
 
     private Action checkPosition(final long position)
@@ -1033,8 +1058,14 @@ public class Session
         }
     }
 
-    private Action rejectDueToSendingTime(final int msgSeqNo, final char[] msgType, final int msgTypeLength)
+    private Action rejectDueToSendingTime(
+        final int msgSeqNo, final char[] msgType, final int msgTypeLength, final long position)
     {
+        if (redact(position))
+        {
+            return ABORT;
+        }
+
         return checkPosition(proxy.sendReject(
             newSentSeqNum(),
             msgSeqNo,
@@ -1060,7 +1091,8 @@ public class Session
         final String password,
         final boolean isPossDupOrResend,
         final boolean resetSeqNumFlag,
-        final boolean possDup)
+        final boolean possDup,
+        final long position)
     {
         // We aren't checking CODEC_VALIDATION_ENABLED here because these are required values in order to
         // have a stable FIX connection.
@@ -1070,7 +1102,7 @@ public class Session
             return action;
         }
 
-        action = validateOrRejectSendingTime(sendingTime);
+        action = validateOrRejectSendingTime(sendingTime, position);
         if (action != null)
         {
             return action;
@@ -1136,14 +1168,15 @@ public class Session
             }
             else // (msgSeqNo < expectedMsgSeqNo)
             {
-                return msgSeqNumTooLow(msgSeqNum, expectedMsgSeqNo);
+                return msgSeqNumTooLow(msgSeqNum, expectedMsgSeqNo, position);
             }
         }
         else
         {
             // You've received a logon and you weren't expecting one and it hasn't got the resetSeqNumFlag set
             return onMessage(
-                msgSeqNum, LOGON_MESSAGE_TYPE_CHARS, sendingTime, origSendingTime, isPossDupOrResend, possDup);
+                msgSeqNum, LOGON_MESSAGE_TYPE_CHARS, sendingTime, origSendingTime, isPossDupOrResend, possDup,
+                position);
         }
     }
 
@@ -1245,7 +1278,7 @@ public class Session
             newSentSeqNum(), heartbeatInterval, null, null, false, sequenceIndex(), lastMsgSeqNumProcessed));
     }
 
-    private Action validateOrRejectSendingTime(final long sendingTime)
+    private Action validateOrRejectSendingTime(final long sendingTime, final long position)
     {
         if (CODEC_VALIDATION_DISABLED && sendingTime == MISSING_LONG)
         {
@@ -1256,6 +1289,11 @@ public class Session
         if ((sendingTime < (time + sendingTimeWindowInMs) && sendingTime > (time - sendingTimeWindowInMs)))
         {
             return null;
+        }
+
+        if (redact(position))
+        {
+            return ABORT;
         }
 
         return checkPositionAndDisconnect(
@@ -1298,7 +1336,8 @@ public class Session
         final int msgSeqNo,
         final long sendingTime,
         final long origSendingTime,
-        final boolean possDup)
+        final boolean possDup,
+        final long position)
     {
         final long time = time();
         final Action action = validateRequiredFieldsAndCodec(
@@ -1307,7 +1346,8 @@ public class Session
             LOGON_MESSAGE_TYPE_CHARS.length,
             sendingTime,
             origSendingTime,
-            possDup);
+            possDup,
+            position);
         if (action == ABORT)
         {
             return ABORT;
@@ -1333,14 +1373,15 @@ public class Session
         final long sendingTime,
         final long origSendingTime,
         final boolean isPossDupOrResend,
-        final boolean possDup)
+        final boolean possDup,
+        final long position)
     {
         if (msgSeqNo == expectedReceivedSeqNum())
         {
             final int sentSeqNum = newSentSeqNum();
-            final long position = proxy.sendHeartbeat(
+            final long sentPosition = proxy.sendHeartbeat(
                 sentSeqNum, testReqId, testReqIdLength, sequenceIndex(), lastMsgSeqNumProcessed);
-            if (position < 0)
+            if (sentPosition < 0)
             {
                 return ABORT;
             }
@@ -1351,30 +1392,32 @@ public class Session
         }
 
         return onMessage(
-            msgSeqNo, TEST_REQUEST_MESSAGE_TYPE_CHARS, sendingTime, origSendingTime, isPossDupOrResend, possDup);
+            msgSeqNo, TEST_REQUEST_MESSAGE_TYPE_CHARS, sendingTime, origSendingTime, isPossDupOrResend, possDup,
+            position);
     }
 
     Action onSequenceReset(
         final int msgSeqNo,
         final int newSeqNo,
         final boolean gapFillFlag,
-        final boolean possDupFlag)
+        final boolean possDupFlag,
+        final long position)
     {
         if (!gapFillFlag)
         {
-            return applySequenceReset(msgSeqNo, newSeqNo);
+            return applySequenceReset(msgSeqNo, newSeqNo, position);
         }
         else if (newSeqNo > msgSeqNo)
         {
-            return onGapFill(msgSeqNo, newSeqNo, possDupFlag);
+            return onGapFill(msgSeqNo, newSeqNo, possDupFlag, position);
         }
         else
         {
-            return applySequenceReset(msgSeqNo, newSeqNo);
+            return applySequenceReset(msgSeqNo, newSeqNo, position);
         }
     }
 
-    private Action applySequenceReset(final int receivedMsgSeqNo, final int newSeqNo)
+    private Action applySequenceReset(final int receivedMsgSeqNo, final int newSeqNo, final long position)
     {
         final int expectedMsgSeqNo = expectedReceivedSeqNum();
 
@@ -1384,6 +1427,11 @@ public class Session
         }
         else if (newSeqNo < expectedMsgSeqNo)
         {
+            if (redact(position))
+            {
+                return ABORT;
+            }
+
             return checkPosition(proxy.sendReject(
                 newSentSeqNum(),
                 receivedMsgSeqNo,
@@ -1398,7 +1446,8 @@ public class Session
         return CONTINUE;
     }
 
-    private Action onGapFill(final int receivedMsgSeqNo, final int newSeqNo, final boolean possDupFlag)
+    private Action onGapFill(
+        final int receivedMsgSeqNo, final int newSeqNo, final boolean possDupFlag, final long position)
     {
         final int expectedMsgSeqNo = awaitingResend ? lastResentMsgSeqNo + 1 : expectedReceivedSeqNum();
         // The gapfill has the wrong sequence number.
@@ -1423,7 +1472,7 @@ public class Session
             // Ignore the gapfill if it's a possibly a duplicate
             if (!possDupFlag)
             {
-                return msgSeqNumTooLow(receivedMsgSeqNo, expectedMsgSeqNo);
+                return msgSeqNumTooLow(receivedMsgSeqNo, expectedMsgSeqNo, position);
             }
         }
         else // receivedMsgSeqNo == expectedMsgSeqNo
@@ -1471,10 +1520,11 @@ public class Session
         final long sendingTime,
         final long origSendingTime,
         final boolean isPossDupOrResend,
-        final boolean possDup)
+        final boolean possDup,
+        final long position)
     {
         return onMessage(msgSeqNo, REJECT_MESSAGE_TYPE_CHARS, sendingTime, origSendingTime, isPossDupOrResend,
-            possDup);
+            possDup, position);
     }
 
     boolean onBeginString(final char[] value, final int length, final boolean isLogon)
@@ -1585,8 +1635,14 @@ public class Session
         final int refTagId,
         final char[] refMsgType,
         final int refMsgTypeLength,
-        final int rejectReason)
+        final int rejectReason,
+        final long position)
     {
+        if (redact(position))
+        {
+            return ABORT;
+        }
+
         final Action action = checkPosition(proxy.sendReject(
             newSentSeqNum(),
             refSeqNum,
@@ -1611,7 +1667,9 @@ public class Session
         final int testReqIDLength,
         final long sendingTime,
         final long origSendingTime,
-        final boolean isPossDupOrResend, final boolean possDup)
+        final boolean isPossDupOrResend,
+        final boolean possDup,
+        final long position)
     {
         if (awaitingHeartbeat && CodecUtil.equals(testReqID, TEST_REQ_ID_CHARS, testReqIDLength))
         {
@@ -1619,11 +1677,18 @@ public class Session
         }
 
         return onMessage(
-            msgSeqNum, HEARTBEAT_MESSAGE_TYPE_CHARS, sendingTime, origSendingTime, isPossDupOrResend, possDup);
+            msgSeqNum, HEARTBEAT_MESSAGE_TYPE_CHARS, sendingTime, origSendingTime, isPossDupOrResend, possDup,
+            position);
     }
 
-    Action onInvalidMessageType(final int msgSeqNum, final char[] msgType, final int msgTypeLength)
+    Action onInvalidMessageType(
+        final int msgSeqNum, final char[] msgType, final int msgTypeLength, final long position)
     {
+        if (redact(position))
+        {
+            return ABORT;
+        }
+
         return checkPosition(proxy.sendReject(
             newSentSeqNum(),
             msgSeqNum,

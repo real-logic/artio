@@ -238,13 +238,14 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
         final int offset,
         final int length,
         final long messageType,
-        final long sessionId)
+        final long sessionId,
+        final long position)
     {
         if (sessionParser != null)
         {
             DebugLogger.log(FIX_MESSAGE, "Gateway Received ", buffer, offset, length);
 
-            sessionParser.onMessage(buffer, offset, length, messageType, sessionId);
+            sessionParser.onMessage(buffer, offset, length, messageType, sessionId, position);
         }
     }
 

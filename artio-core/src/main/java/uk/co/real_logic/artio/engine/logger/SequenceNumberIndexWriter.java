@@ -62,14 +62,17 @@ public class SequenceNumberIndexWriter implements Index
 
     private static final long MISSING_RECORD = -1L;
     private static final long UNINITIALISED = -1;
+    private static final long NO_REQUIRED_POSITION = -1000;
 
     static final int SEQUENCE_NUMBER_OFFSET = LastKnownSequenceNumberEncoder.sequenceNumberEncodingOffset();
+    static final int MESSAGE_POSITION_OFFSET = LastKnownSequenceNumberEncoder.messagePositionEncodingOffset();
     static final int META_DATA_OFFSET = LastKnownSequenceNumberEncoder.metaDataPositionEncodingOffset();
 
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
     private final ResetSequenceNumberDecoder resetSequenceNumber = new ResetSequenceNumberDecoder();
     private final WriteMetaDataDecoder writeMetaData = new WriteMetaDataDecoder();
+    private final RedactSequenceUpdateDecoder redactSequenceUpdate = new RedactSequenceUpdateDecoder();
 
     private final MessageHeaderDecoder fileHeaderDecoder = new MessageHeaderDecoder();
     private final MessageHeaderEncoder fileHeaderEncoder = new MessageHeaderEncoder();
@@ -240,7 +243,7 @@ public class SequenceNumberIndexWriter implements Index
             {
                 case FixMessageEncoder.TEMPLATE_ID:
                 {
-                    if (!onFixMessage(buffer, offset, actingBlockLength, version))
+                    if (!onFixMessage(buffer, offset, actingBlockLength, version, endPosition))
                     {
                         return;
                     }
@@ -256,7 +259,7 @@ public class SequenceNumberIndexWriter implements Index
                 case ResetSequenceNumberDecoder.TEMPLATE_ID:
                 {
                     resetSequenceNumber.wrap(buffer, offset, actingBlockLength, version);
-                    saveRecord(0, resetSequenceNumber.session());
+                    saveRecord(0, resetSequenceNumber.session(), endPosition, NO_REQUIRED_POSITION);
                     break;
                 }
 
@@ -272,6 +275,16 @@ public class SequenceNumberIndexWriter implements Index
                     onWriteMetaData(libraryId, sessionId, correlationId, metaDataOffset);
                     break;
                 }
+
+                case RedactSequenceUpdateDecoder.TEMPLATE_ID:
+                {
+                    redactSequenceUpdate.wrap(buffer, offset, actingBlockLength, version);
+                    saveRecord(
+                        redactSequenceUpdate.correctSequenceNumber(),
+                        redactSequenceUpdate.session(),
+                        redactSequenceUpdate.position(),
+                        redactSequenceUpdate.position());
+                }
             }
         }
 
@@ -282,7 +295,11 @@ public class SequenceNumberIndexWriter implements Index
     }
 
     private boolean onFixMessage(
-        final DirectBuffer buffer, final int start, final int actingBlockLength, final int version)
+        final DirectBuffer buffer,
+        final int start,
+        final int actingBlockLength,
+        final int version,
+        final long messagePosition)
     {
         int offset = start;
 
@@ -315,11 +332,10 @@ public class SequenceNumberIndexWriter implements Index
         offset += FixMessageDecoder.bodyHeaderLength();
         final long sessionId = messageFrame.session();
 
-        final int msgSeqNum = sequenceNumberExtractor.extract(
-            buffer, offset, messageFrame.bodyLength());
+        final int msgSeqNum = sequenceNumberExtractor.extract(buffer, offset, messageFrame.bodyLength());
         if (msgSeqNum != NO_SEQUENCE_NUMBER)
         {
-            final int position = saveRecord(msgSeqNum, sessionId);
+            final int position = saveRecord(msgSeqNum, sessionId, messagePosition, NO_REQUIRED_POSITION);
             if (metaDataLength > 0 && position > 0)
             {
                 writeMetaDataToFile(position, metaDataWriteBuffer, metaDataOffset, metaDataLength);
@@ -443,7 +459,6 @@ public class SequenceNumberIndexWriter implements Index
         }
     }
 
-    @Override
     public int doWork()
     {
         if (hasSavedRecordSinceFileUpdate)
@@ -620,7 +635,11 @@ public class SequenceNumberIndexWriter implements Index
         new IndexedPositionReader(positions.buffer()).readLastPosition(consumer);
     }
 
-    private int saveRecord(final int newSequenceNumber, final long sessionId)
+    private int saveRecord(
+        final int newSequenceNumber,
+        final long sessionId,
+        final long messagePosition,
+        final long requiredPosition)
     {
         int position = (int)recordOffsets.get(sessionId);
         if (position == MISSING_RECORD)
@@ -639,13 +658,17 @@ public class SequenceNumberIndexWriter implements Index
                 lastKnownDecoder.wrap(inMemoryBuffer, position, RECORD_SIZE, SCHEMA_VERSION);
                 if (lastKnownDecoder.sequenceNumber() == 0)
                 {
-                    createNewRecord(newSequenceNumber, sessionId, position);
-                    hasSavedRecordSinceFileUpdate = true;
+                    // Don't redact if there's nothing to redact
+                    if (requiredPosition == NO_REQUIRED_POSITION)
+                    {
+                        createNewRecord(newSequenceNumber, sessionId, position, messagePosition);
+                        hasSavedRecordSinceFileUpdate = true;
+                    }
                     return position;
                 }
                 else if (lastKnownDecoder.sessionId() == sessionId)
                 {
-                    updateSequenceNumber(newSequenceNumber, position);
+                    updateSequenceNumber(newSequenceNumber, position, messagePosition, requiredPosition);
                     return position;
                 }
 
@@ -654,22 +677,29 @@ public class SequenceNumberIndexWriter implements Index
         }
         else
         {
-            updateSequenceNumber(newSequenceNumber, position);
+            updateSequenceNumber(newSequenceNumber, position, messagePosition, requiredPosition);
             return position;
         }
     }
 
-    private void updateSequenceNumber(final int newSequenceNumber, final int position)
+    private void updateSequenceNumber(
+        final int newSequenceNumber, final int recordOffset, final long messagePosition, final long requiredPosition)
     {
-        final int oldSequenceNumber = getSequenceNumber(position);
-        putSequenceNumber(position, newSequenceNumber);
+        if (requiredPosition != NO_REQUIRED_POSITION && getMessagePosition(recordOffset) != requiredPosition)
+        {
+            return;
+        }
+        final int oldSequenceNumber = getSequenceNumber(recordOffset);
+
+        putMessagePosition(recordOffset, messagePosition);
+        putSequenceNumber(recordOffset, newSequenceNumber);
         // When sequence number resets then old metadata has expired
         if (oldSequenceNumber > newSequenceNumber)
         {
-            final int oldMetaDataPosition = getMetaData(position);
+            final int oldMetaDataPosition = getMetaData(recordOffset);
             if (oldMetaDataPosition != NO_META_DATA)
             {
-                putMetaDataField(position, NO_META_DATA);
+                putMetaDataField(recordOffset, NO_META_DATA);
                 try
                 {
                     metaDataFile.seek(oldMetaDataPosition);
@@ -688,12 +718,13 @@ public class SequenceNumberIndexWriter implements Index
     private void createNewRecord(
         final int sequenceNumber,
         final long sessionId,
-        final int position)
+        final int position, final long messagePosition)
     {
         recordOffsets.put(sessionId, position);
         lastKnownEncoder
             .wrap(inMemoryBuffer, position)
-            .sessionId(sessionId);
+            .sessionId(sessionId)
+            .messagePosition(messagePosition);
         putSequenceNumber(position, sequenceNumber);
         putMetaDataField(position, NO_META_DATA);
     }
@@ -778,6 +809,13 @@ public class SequenceNumberIndexWriter implements Index
         inMemoryBuffer.putBytes(0, fileBuffer, 0, fileCapacity);
     }
 
+    private void putMessagePosition(
+        final int recordOffset,
+        final long value)
+    {
+        inMemoryBuffer.putLongOrdered(recordOffset + MESSAGE_POSITION_OFFSET, value);
+    }
+
     private void putSequenceNumber(
         final int recordOffset,
         final int value)
@@ -788,6 +826,11 @@ public class SequenceNumberIndexWriter implements Index
     private int getSequenceNumber(final int recordOffset)
     {
         return inMemoryBuffer.getIntVolatile(recordOffset + SEQUENCE_NUMBER_OFFSET);
+    }
+
+    private long getMessagePosition(final int recordOffset)
+    {
+        return inMemoryBuffer.getLongVolatile(recordOffset + MESSAGE_POSITION_OFFSET);
     }
 
     private void putMetaDataField(

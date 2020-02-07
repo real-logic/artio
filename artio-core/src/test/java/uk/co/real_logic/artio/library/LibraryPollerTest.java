@@ -277,11 +277,6 @@ public class LibraryPollerTest
         return library.libraryId();
     }
 
-    private long connectCorrelationId()
-    {
-        return library.connectCorrelationId();
-    }
-
     private void attemptToConnectTo(final String... channels)
     {
         final InOrder inOrder = inOrder(transport, outboundPublication);
@@ -289,6 +284,7 @@ public class LibraryPollerTest
         {
             inOrder.verify(transport).initStreams(channel);
             inOrder.verify(transport).inboundSubscription();
+            inOrder.verify(transport).inboundPublication();
             inOrder.verify(transport).outboundPublication();
             inOrder.verify(outboundPublication)
                    .saveLibraryConnect(eq(libraryId()), anyString(), anyLong());

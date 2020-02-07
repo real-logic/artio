@@ -89,6 +89,7 @@ public class FramerContext
 
         gatewaySessions = new GatewaySessions(
             epochClock,
+            inboundPublication,
             outboundPublication,
             sessionIdStrategy,
             configuration.sessionCustomisationStrategy(),

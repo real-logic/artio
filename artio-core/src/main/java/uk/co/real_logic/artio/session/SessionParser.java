@@ -109,7 +109,8 @@ public class SessionParser
         final int offset,
         final int length,
         final long messageType,
-        final long sessionId)
+        final long sessionId,
+        final long position)
     {
         asciiBuffer.wrap(buffer);
 
@@ -119,31 +120,31 @@ public class SessionParser
         {
             if (messageType == LOGON_MESSAGE_TYPE)
             {
-                action = onLogon(offset, length);
+                action = onLogon(offset, length, position);
             }
             else if (messageType == LOGOUT_MESSAGE_TYPE)
             {
-                action = onLogout(offset, length);
+                action = onLogout(offset, length, position);
             }
             else if (messageType == HEARTBEAT_MESSAGE_TYPE)
             {
-                action = onHeartbeat(offset, length);
+                action = onHeartbeat(offset, length, position);
             }
             else if (messageType == REJECT_MESSAGE_TYPE)
             {
-                action = onReject(offset, length);
+                action = onReject(offset, length, position);
             }
             else if (messageType == TEST_REQUEST_MESSAGE_TYPE)
             {
-                action = onTestRequest(offset, length);
+                action = onTestRequest(offset, length, position);
             }
             else if (messageType == SEQUENCE_RESET_MESSAGE_TYPE)
             {
-                action = onSequenceReset(offset, length);
+                action = onSequenceReset(offset, length, position);
             }
             else
             {
-                action = onAnyOtherMessage(offset, length);
+                action = onAnyOtherMessage(offset, length, position);
             }
 
             // Consider admin messages processed when they've been received by the session logic
@@ -160,18 +161,18 @@ public class SessionParser
             }
             else
             {
-                return rejectAndHandleExceptionalMessage(e, messageType);
+                return rejectAndHandleExceptionalMessage(e, messageType, position);
             }
         }
         catch (final Exception e)
         {
-            return rejectAndHandleExceptionalMessage(e, messageType);
+            return rejectAndHandleExceptionalMessage(e, messageType, position);
         }
     }
 
-    private Action rejectAndHandleExceptionalMessage(final Exception e, final long messageType)
+    private Action rejectAndHandleExceptionalMessage(final Exception e, final long messageType, final long position)
     {
-        final Action action = rejectExceptionalMessage(messageType);
+        final Action action = rejectExceptionalMessage(messageType, position);
 
         if (action == CONTINUE)
         {
@@ -181,36 +182,36 @@ public class SessionParser
         return action;
     }
 
-    private Action rejectExceptionalMessage(final long messageType)
+    private Action rejectExceptionalMessage(final long messageType, final long position)
     {
         if (messageType == LOGON_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(logon.header());
+            return onExceptionalMessage(logon.header(), position);
         }
         else if (messageType == LOGOUT_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(logout.header());
+            return onExceptionalMessage(logout.header(), position);
         }
         else if (messageType == HEARTBEAT_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(heartbeat.header());
+            return onExceptionalMessage(heartbeat.header(), position);
         }
         else if (messageType == REJECT_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(reject.header());
+            return onExceptionalMessage(reject.header(), position);
         }
         else if (messageType == TEST_REQUEST_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(testRequest.header());
+            return onExceptionalMessage(testRequest.header(), position);
         }
         else if (messageType == SEQUENCE_RESET_MESSAGE_TYPE)
         {
-            return onExceptionalMessage(sequenceReset.header());
+            return onExceptionalMessage(sequenceReset.header(), position);
         }
-        return onExceptionalMessage(header);
+        return onExceptionalMessage(header, position);
     }
 
-    private Action onExceptionalMessage(final SessionHeaderDecoder header)
+    private Action onExceptionalMessage(final SessionHeaderDecoder header, final long position)
     {
         final int msgSeqNum = header.msgSeqNum();
 
@@ -219,19 +220,20 @@ public class SessionParser
             MISSING_INT,
             header.msgType(),
             header.msgTypeLength(),
-            SessionConstants.INCORRECT_DATA_FORMAT_FOR_VALUE);
+            SessionConstants.INCORRECT_DATA_FORMAT_FOR_VALUE,
+            position);
     }
 
-    private Action onHeartbeat(final int offset, final int length)
+    private Action onHeartbeat(final int offset, final int length, final long position)
     {
         final AbstractHeartbeatDecoder heartbeat = this.heartbeat;
 
         heartbeat.reset();
         heartbeat.decode(asciiBuffer, offset, length);
         final SessionHeaderDecoder header = heartbeat.header();
-        if (CODEC_VALIDATION_ENABLED && (!heartbeat.validate() || !validateHeader(header)))
+        if (CODEC_VALIDATION_ENABLED && (!heartbeat.validate() || !validateHeader(header, position)))
         {
-            return onCodecInvalidMessage(heartbeat, header, false);
+            return onCodecInvalidMessage(heartbeat, header, false, position);
         }
         else if (heartbeat.hasTestReqID())
         {
@@ -249,11 +251,12 @@ public class SessionParser
                 sendingTime,
                 origSendingTime,
                 isPossDupOrResend(possDup, header),
-                possDup);
+                possDup,
+                position);
         }
         else
         {
-            return onMessage(header);
+            return onMessage(header, position);
         }
     }
 
@@ -270,7 +273,7 @@ public class SessionParser
             MISSING_LONG;
     }
 
-    private Action onAnyOtherMessage(final int offset, final int length)
+    private Action onAnyOtherMessage(final int offset, final int length, final long position)
     {
         final SessionHeaderDecoder header = this.header;
         header.reset();
@@ -278,23 +281,23 @@ public class SessionParser
 
         final char[] msgType = header.msgType();
         final int msgTypeLength = header.msgTypeLength();
-        if (CODEC_VALIDATION_ENABLED && (!isValidMsgType(msgType, msgTypeLength) || !validateHeader(header)))
+        if (CODEC_VALIDATION_ENABLED && (!isValidMsgType(msgType, msgTypeLength) || !validateHeader(header, position)))
         {
             final int msgSeqNum = header.msgSeqNum();
             if (!isDisconnectedOrAwaitingLogout())
             {
-                return session.onInvalidMessageType(msgSeqNum, msgType, msgTypeLength);
+                return session.onInvalidMessageType(msgSeqNum, msgType, msgTypeLength, position);
             }
         }
         else
         {
-            return onMessage(header);
+            return onMessage(header, position);
         }
 
         return CONTINUE;
     }
 
-    private Action onMessage(final SessionHeaderDecoder header)
+    private Action onMessage(final SessionHeaderDecoder header, final long position)
     {
         final long origSendingTime = origSendingTime(header);
         final long sendingTime = sendingTime(header);
@@ -306,7 +309,8 @@ public class SessionParser
             sendingTime,
             origSendingTime,
             isPossDupOrResend(possDup, header),
-            possDup);
+            possDup,
+            position);
     }
 
     private long origSendingTime(final SessionHeaderDecoder header)
@@ -314,16 +318,16 @@ public class SessionParser
         return header.hasOrigSendingTime() ? decodeTimestamp(header.origSendingTime()) : UNKNOWN;
     }
 
-    private Action onSequenceReset(final int offset, final int length)
+    private Action onSequenceReset(final int offset, final int length, final long position)
     {
         final AbstractSequenceResetDecoder sequenceReset = this.sequenceReset;
 
         sequenceReset.reset();
         sequenceReset.decode(asciiBuffer, offset, length);
         final SessionHeaderDecoder header = sequenceReset.header();
-        if (CODEC_VALIDATION_ENABLED && (!sequenceReset.validate() || !validateHeader(header)))
+        if (CODEC_VALIDATION_ENABLED && (!sequenceReset.validate() || !validateHeader(header, position)))
         {
-            return onCodecInvalidMessage(sequenceReset, header, false);
+            return onCodecInvalidMessage(sequenceReset, header, false, position);
         }
         else
         {
@@ -333,21 +337,21 @@ public class SessionParser
                 header.msgSeqNum(),
                 sequenceReset.newSeqNo(),
                 gapFillFlag,
-                isPossDupOrResend(possDup, header)
-            );
+                isPossDupOrResend(possDup, header),
+                position);
         }
     }
 
-    private Action onTestRequest(final int offset, final int length)
+    private Action onTestRequest(final int offset, final int length, final long position)
     {
         final AbstractTestRequestDecoder testRequest = this.testRequest;
 
         testRequest.reset();
         testRequest.decode(asciiBuffer, offset, length);
         final SessionHeaderDecoder header = testRequest.header();
-        if (CODEC_VALIDATION_ENABLED && (!testRequest.validate() || !validateHeader(header)))
+        if (CODEC_VALIDATION_ENABLED && (!testRequest.validate() || !validateHeader(header, position)))
         {
-            return onCodecInvalidMessage(testRequest, header, false);
+            return onCodecInvalidMessage(testRequest, header, false, position);
         }
         else
         {
@@ -362,20 +366,20 @@ public class SessionParser
                 sendingTime,
                 origSendingTime,
                 isPossDupOrResend(possDup, header),
-                possDup);
+                possDup, position);
         }
     }
 
-    private Action onReject(final int offset, final int length)
+    private Action onReject(final int offset, final int length, final long position)
     {
         final AbstractRejectDecoder reject = this.reject;
 
         reject.reset();
         reject.decode(asciiBuffer, offset, length);
         final SessionHeaderDecoder header = reject.header();
-        if (CODEC_VALIDATION_ENABLED && (!reject.validate() || !validateHeader(header)))
+        if (CODEC_VALIDATION_ENABLED && (!reject.validate() || !validateHeader(header, position)))
         {
-            return onCodecInvalidMessage(reject, header, false);
+            return onCodecInvalidMessage(reject, header, false, position);
         }
         else
         {
@@ -387,20 +391,21 @@ public class SessionParser
                 sendingTime,
                 origSendingTime,
                 isPossDupOrResend(possDup, header),
-                possDup);
+                possDup,
+                position);
         }
     }
 
-    private Action onLogout(final int offset, final int length)
+    private Action onLogout(final int offset, final int length, final long position)
     {
         final AbstractLogoutDecoder logout = this.logout;
 
         logout.reset();
         logout.decode(asciiBuffer, offset, length);
         final SessionHeaderDecoder header = logout.header();
-        if (CODEC_VALIDATION_ENABLED && (!logout.validate() || !validateHeader(header)))
+        if (CODEC_VALIDATION_ENABLED && (!logout.validate() || !validateHeader(header, position)))
         {
-            return onCodecInvalidMessage(logout, header, false);
+            return onCodecInvalidMessage(logout, header, false, position);
         }
         else
         {
@@ -411,11 +416,12 @@ public class SessionParser
                 header.msgSeqNum(),
                 sendingTime,
                 origSendingTime,
-                possDup);
+                possDup,
+                position);
         }
     }
 
-    private Action onLogon(final int offset, final int length)
+    private Action onLogon(final int offset, final int length, final long position)
     {
         final AbstractLogonDecoder logon = this.logon;
         final Session session = this.session;
@@ -428,7 +434,7 @@ public class SessionParser
         if (CODEC_VALIDATION_ENABLED &&
             (!logon.validate() || !session.onBeginString(beginString, beginStringLength, true)))
         {
-            return onCodecInvalidMessage(logon, header, true);
+            return onCodecInvalidMessage(logon, header, true, position);
         }
         else
         {
@@ -451,7 +457,8 @@ public class SessionParser
                 password,
                 isPossDupOrResend(possDup, header),
                 resetSeqNumFlag(logon),
-                possDup);
+                possDup,
+                position);
         }
     }
 
@@ -507,7 +514,7 @@ public class SessionParser
         return logon.hasResetSeqNumFlag() && logon.resetSeqNumFlag();
     }
 
-    private boolean validateHeader(final SessionHeaderDecoder header)
+    private boolean validateHeader(final SessionHeaderDecoder header, final long position)
     {
         // Validate begin string
         if (!session.onBeginString(header.beginString(), header.beginStringLength(), false))
@@ -551,7 +558,8 @@ public class SessionParser
                 invalidTagId,
                 header.msgType(),
                 header.msgTypeLength(),
-                rejectReason);
+                rejectReason,
+                position);
             session.logoutRejectReason(rejectReason);
             session.startLogout();
             return false;
@@ -620,7 +628,8 @@ public class SessionParser
     private Action onCodecInvalidMessage(
         final Decoder decoder,
         final SessionHeaderDecoder header,
-        final boolean requestDisconnect)
+        final boolean requestDisconnect,
+        final long position)
     {
         if (!isDisconnectedOrAwaitingLogout())
         {
@@ -632,7 +641,7 @@ public class SessionParser
                 final long sendingTime = sendingTime(header);
                 final char[] msgType = header.msgType();
                 return session.onMessage(MISSING_INT, msgType, msgTypeLength, sendingTime, origSendingTime, false,
-                    false);
+                    false, position);
             }
 
             final Action action = session.onInvalidMessage(
@@ -640,7 +649,8 @@ public class SessionParser
                 decoder.invalidTagId(),
                 header.msgType(),
                 msgTypeLength,
-                decoder.rejectReason());
+                decoder.rejectReason(),
+                position);
 
             if (action == CONTINUE && requestDisconnect)
             {

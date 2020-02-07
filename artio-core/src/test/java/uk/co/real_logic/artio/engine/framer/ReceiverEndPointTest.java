@@ -721,19 +721,19 @@ public class ReceiverEndPointTest
     private void sessionReceivedCountIs(final int numberOfMessages)
     {
         verify(gatewaySession, times(numberOfMessages))
-            .onMessage(any(), anyInt(), anyInt(), anyLong(), anyLong());
+            .onMessage(any(), anyInt(), anyInt(), anyLong(), anyLong(), anyLong());
     }
 
     private void sessionReceivesMessageAt(final int offset, final int length, final VerificationMode mode)
     {
         verify(gatewaySession, mode)
-            .onMessage(any(), eq(offset), eq(length), eq(MESSAGE_TYPE), eq(SESSION_ID));
+            .onMessage(any(), eq(offset), eq(length), eq(MESSAGE_TYPE), eq(SESSION_ID), anyLong());
     }
 
     private void sessionReceivesNoMessages()
     {
         verify(gatewaySession, never())
-            .onMessage(any(), anyInt(), anyInt(), anyLong(), anyLong());
+            .onMessage(any(), anyInt(), anyInt(), anyLong(), anyLong(), anyLong());
     }
 
     private void pollWithNoData(final int expected)

@@ -548,7 +548,7 @@ class ReceiverEndPoint
         }
         else
         {
-            gatewaySession.onMessage(buffer, offset, length, messageType, sessionId);
+            gatewaySession.onMessage(buffer, offset, length, messageType, sessionId, position);
             return true;
         }
     }

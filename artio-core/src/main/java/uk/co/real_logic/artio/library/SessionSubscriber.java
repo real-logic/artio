@@ -103,7 +103,8 @@ class SessionSubscriber implements AutoCloseable, SessionProcessHandler
                     }
                     else
                     {
-                        final Action action = parser.onMessage(buffer, offset, length, messageType, sessionId);
+                        final Action action = parser.onMessage(
+                            buffer, offset, length, messageType, sessionId, position);
                         if (action == ABORT)
                         {
                             return ABORT;

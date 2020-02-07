@@ -90,6 +90,16 @@ public final class DebugLogger
 
     public static void logSbeMessage(
         final LogTag tag,
+        final RedactSequenceUpdateEncoder encoder)
+    {
+        if (isEnabled(tag))
+        {
+            THREAD_LOCAL.get().logSbeMessage(tag, encoder);
+        }
+    }
+
+    public static void logSbeMessage(
+        final LogTag tag,
         final ManageSessionEncoder encoder)
     {
         if (isEnabled(tag))
@@ -603,6 +613,7 @@ public final class DebugLogger
         // Common
         private final ApplicationHeartbeatDecoder applicationHeartbeat = new ApplicationHeartbeatDecoder();
         private final DisconnectDecoder disconnect = new DisconnectDecoder();
+        private final RedactSequenceUpdateDecoder redactSequenceUpdate = new RedactSequenceUpdateDecoder();
 
         private final StringBuilder builder = new StringBuilder();
         private final char[] threadName;
@@ -620,6 +631,18 @@ public final class DebugLogger
             isThreadEnabled = DEBUG_PRINT_THREAD == null || DEBUG_PRINT_THREAD.equals(threadName);
             this.threadName = (":" + threadName).toCharArray();
             appender = APPENDER.makeLocalAppender();
+        }
+
+        public void logSbeMessage(final LogTag tag, final RedactSequenceUpdateEncoder encoder)
+        {
+            appendStart(tag);
+            redactSequenceUpdate.wrap(
+                encoder.buffer(),
+                encoder.initialOffset(),
+                RedactSequenceUpdateEncoder.BLOCK_LENGTH,
+                RedactSequenceUpdateEncoder.SCHEMA_VERSION);
+            redactSequenceUpdate.appendTo(builder);
+            finish();
         }
 
         public void logSbeMessage(final LogTag tag, final ManageSessionEncoder encoder)

@@ -167,6 +167,16 @@ public class AbstractGatewayToGatewaySystemTest
             });
     }
 
+    void sessionNoLongerManaged(final FakeHandler handler, final Session session)
+    {
+        assertEventuallyTrue("libraries receive disconnect messages",
+            () ->
+            {
+                testSystem.poll();
+                assertNotSession(handler, session);
+            });
+    }
+
     protected void assertSessionDisconnected(final Session session)
     {
         assertEventuallyTrue("Session is still connected",
