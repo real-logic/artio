@@ -576,7 +576,7 @@ public abstract class AbstractDecoderGeneratorTest
         assertThat(allFieldsField, instanceOf(IntHashSet.class));
 
         @SuppressWarnings("unchecked") final Set<Integer> allFields = (Set<Integer>)allFieldsField;
-        assertThat(allFields, hasItem(116));
+        assertThat(allFields, hasItem(INT_FIELD_TAG));
         assertThat(allFields, not(hasItem(112)));
         assertThat(allFields, not(hasItem(999)));
     }
@@ -587,7 +587,7 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(MISSING_REQUIRED_FIELDS_MESSAGE);
 
         assertFalse("Passed validation with missing fields", decoder.validate());
-        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong tag id", INT_FIELD_TAG, decoder.invalidTagId());
         assertEquals("Wrong reject reason", REQUIRED_TAG_MISSING, decoder.rejectReason());
     }
 
@@ -774,7 +774,7 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_WITHOUT_A_VALUE_MESSAGE);
 
         assertFalse("Passed validation with missing value", decoder.validate());
-        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong tag id", INT_FIELD_TAG, decoder.invalidTagId());
         assertEquals("Wrong reject reason", TAG_SPECIFIED_WITHOUT_A_VALUE, decoder.rejectReason());
     }
 
@@ -784,8 +784,17 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_WHERE_INT_VALUE_IS_INCORRECT_MESSAGE);
 
         assertFalse("Passed validation with incorrect value", decoder.validate());
-        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong tag id", INT_FIELD_TAG, decoder.invalidTagId());
         assertEquals("Wrong reject reason", VALUE_IS_INCORRECT, decoder.rejectReason());
+    }
+
+    @Test
+    public void shouldSupportLargerIntBasedEnum() throws Exception
+    {
+        final Decoder decoder = decodeHeartbeat(TAG_SPECIFIED_WHERE_INT_VALUE_IS_LARGE);
+
+        assertTrue(decoder.validate());
+        assertEquals(99, getIntField(decoder));
     }
 
     @Test
@@ -804,7 +813,7 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeatWithoutEnumValue(TAG_SPECIFIED_WITHOUT_A_VALUE_MESSAGE);
 
         assertFalse("Passed validation with missing value", decoder.validate());
-        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong tag id", INT_FIELD_TAG, decoder.invalidTagId());
         assertEquals("Wrong reject reason", TAG_SPECIFIED_WITHOUT_A_VALUE, decoder.rejectReason());
     }
 
@@ -834,7 +843,7 @@ public abstract class AbstractDecoderGeneratorTest
         final Decoder decoder = decodeHeartbeat(TAG_APPEARS_MORE_THAN_ONCE_MESSAGE);
 
         assertFalse("Passed validation with incorrect value", decoder.validate());
-        assertEquals("Wrong tag id", 116, decoder.invalidTagId());
+        assertEquals("Wrong tag id", INT_FIELD_TAG, decoder.invalidTagId());
         assertEquals("Wrong reject reason", TAG_APPEARS_MORE_THAN_ONCE, decoder.rejectReason());
     }
 
