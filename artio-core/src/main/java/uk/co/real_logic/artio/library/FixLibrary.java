@@ -27,6 +27,8 @@ import uk.co.real_logic.artio.FixGatewayException;
 import uk.co.real_logic.artio.GatewayProcess;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
+import uk.co.real_logic.artio.ilink.ILink3Session;
+import uk.co.real_logic.artio.ilink.ILink3SessionConfiguration;
 import uk.co.real_logic.artio.messages.MetaDataStatus;
 import uk.co.real_logic.artio.messages.SessionReplyStatus;
 import uk.co.real_logic.artio.session.Session;
@@ -455,4 +457,9 @@ public class FixLibrary extends GatewayProcess
         return poller.currentAeronChannel();
     }
 
+    // NB: This is an experimental API and is subject to change or potentially removal.
+    public Reply<ILink3Session> initiate(final ILink3SessionConfiguration configuration)
+    {
+        return poller.initiate(configuration);
+    }
 }

@@ -113,4 +113,6 @@ public interface EngineEndPointHandler
         int replayToSequenceNumber,
         int replayToSequenceIndex,
         long latestReplyArrivalTimeInMs);
+
+    Action onInitiateILinkConnection(int libraryId, int port, long correlationId, String host);
 }

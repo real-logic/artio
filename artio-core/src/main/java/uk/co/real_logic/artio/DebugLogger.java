@@ -388,6 +388,18 @@ public final class DebugLogger
         }
     }
 
+    public static void logSbeMessage(
+        final LogTag tag, final InitiateILinkConnectionEncoder encoder)
+    {
+        // TODO
+    }
+
+    public static void logSbeMessage(
+        final LogTag tag, final ILinkConnectEncoder encoder)
+    {
+        // TODO
+    }
+
     public static void log(
         final LogTag tag,
         final String prefixString,

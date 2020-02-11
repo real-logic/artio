@@ -15,6 +15,6 @@
  */
 package uk.co.real_logic.artio.ilink;
 
-public abstract class ILink3SessionHandler
+public abstract class ILink3EndpointHandler
 {
 }

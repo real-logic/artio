@@ -98,6 +98,8 @@ public class GatewayPublication extends ClaimablePublication
         HEADER_LENGTH + ReplayMessagesReplyEncoder.BLOCK_LENGTH;
     private static final int REDACT_SEQUENCE_NUMBER_LENGTH =
         HEADER_LENGTH + RedactSequenceUpdateEncoder.BLOCK_LENGTH;
+    public static final int INITIATE_ILINK_LENGTH = MessageHeaderEncoder.ENCODED_LENGTH +
+        InitiateILinkConnectionEncoder.BLOCK_LENGTH + InitiateILinkConnectionEncoder.hostHeaderLength();
 
     private final ManageSessionEncoder manageSessionEncoder = new ManageSessionEncoder();
     private final InitiateConnectionEncoder initiateConnection = new InitiateConnectionEncoder();
@@ -131,6 +133,8 @@ public class GatewayPublication extends ClaimablePublication
     private final ReplayMessagesEncoder replayMessages = new ReplayMessagesEncoder();
     private final ReplayMessagesReplyEncoder replayMessagesReply = new ReplayMessagesReplyEncoder();
     private final RedactSequenceUpdateEncoder redactSequenceUpdate = new RedactSequenceUpdateEncoder();
+    private final InitiateILinkConnectionEncoder initiateILinkConnection = new InitiateILinkConnectionEncoder();
+    private final ILinkConnectEncoder iLinkConnect = new ILinkConnectEncoder();
 
     private final Clock clock;
     private final int maxPayloadLength;
@@ -1284,6 +1288,61 @@ public class GatewayPublication extends ClaimablePublication
         return position;
     }
 
+    public long saveInitiateILinkConnection(
+        final int libraryId, final int port, final long correlationId, final String host)
+    {
+        final byte[] hostBytes = bytes(host);
+        final long position = claim(INITIATE_ILINK_LENGTH + hostBytes.length);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        initiateILinkConnection
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .port(port)
+            .correlationId(correlationId)
+            .putHost(hostBytes, 0, hostBytes.length);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, initiateILinkConnection);
+
+        return position;
+    }
+
+    public long saveILinkConnect(
+        final int libraryId,
+        final long correlationId,
+        final long connectionId)
+    {
+        final long position = claim(
+            MessageHeaderEncoder.ENCODED_LENGTH + ILinkConnectEncoder.BLOCK_LENGTH);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        final MutableDirectBuffer buffer = bufferClaim.buffer();
+        final int offset = bufferClaim.offset();
+
+        iLinkConnect
+            .wrapAndApplyHeader(buffer, offset, header)
+            .libraryId(libraryId)
+            .correlationId(correlationId)
+            .connection(connectionId);
+
+        bufferClaim.commit();
+
+        logSbeMessage(GATEWAY_MESSAGE, iLinkConnect);
+
+        return position;
+    }
+
     public int id()
     {
         return dataPublication.sessionId();
@@ -1308,4 +1367,6 @@ public class GatewayPublication extends ClaimablePublication
     {
         return maxPayloadLength;
     }
+
+
 }

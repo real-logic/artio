@@ -95,4 +95,6 @@ public interface LibraryEndPointHandler
         int srcLength);
 
     Action onReplayMessagesReply(int libraryId, long replyToId, ReplayMessagesStatus status);
+
+    Action onILinkConnect(int libraryId, long correlationId, long connection);
 }

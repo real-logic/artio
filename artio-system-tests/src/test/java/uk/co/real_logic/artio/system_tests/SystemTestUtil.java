@@ -67,7 +67,7 @@ public final class SystemTestUtil
 
     static final IdleStrategy ADMIN_IDLE_STRATEGY = new YieldingIdleStrategy();
     static final String INITIATOR_ID2 = "initiator2";
-    static final String CLIENT_LOGS = "client-logs";
+    public static final String CLIENT_LOGS = "client-logs";
     static final long TIMEOUT_IN_MS = 100;
     static final long AWAIT_TIMEOUT = 50 * TIMEOUT_IN_MS;
     static final int LIBRARY_LIMIT = 2;

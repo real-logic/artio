@@ -593,6 +593,60 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         return connectionId;
     }
 
+    public Action onInitiateILinkConnection(
+        final int libraryId, final int port, final long correlationId, final String host)
+    {
+        final LiveLibraryInfo library = idToLibrary.get(libraryId);
+        if (library == null)
+        {
+            saveUnknownLibrary(libraryId, correlationId);
+
+            return CONTINUE;
+        }
+
+        final InetSocketAddress address = new InetSocketAddress(host, port);
+        // TODO: do we need this?
+        /*final ConnectingSession connectingSession = new ConnectingSession(address, sessionContext.sessionId());
+        library.connectionStartsConnecting(correlationId, connectingSession);*/
+        try
+        {
+            DebugLogger.log(
+                FIX_CONNECTION,
+                connectingFormatter, host, port, libraryId);
+
+            channelSupplier.open(
+                address,
+                (channel, ex) ->
+                {
+                    if (ex != null)
+                    {
+                        /*sessionContexts.onDisconnect(sessionContext.sessionId());
+                        library.connectionFinishesConnecting(correlationId);*/
+                        saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
+                        return;
+                    }
+
+                    // TODO: session id
+                    DebugLogger.log(FIX_CONNECTION,
+                        initiatingSessionFormatter, 0, library.libraryId());
+                    final long connectionId = newConnectionId();
+
+                    schedule(() -> inboundPublication.saveILinkConnect(
+                        libraryId, correlationId, connectionId));
+                });
+        }
+        catch (final IOException ex)
+        {
+            /*sessionContexts.onDisconnect(
+                sessionContext.sessionId());*/
+            saveError(UNABLE_TO_CONNECT, libraryId, correlationId, ex);
+
+            return CONTINUE;
+        }
+
+        return CONTINUE;
+    }
+
     public Action onInitiateConnection(
         final int libraryId,
         final int port,
@@ -621,7 +675,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final LiveLibraryInfo library = idToLibrary.get(libraryId);
         if (library == null)
         {
-            saveError(GatewayError.UNKNOWN_LIBRARY, libraryId, correlationId, "Unknown Library");
+            saveUnknownLibrary(libraryId, correlationId);
 
             return CONTINUE;
         }
@@ -715,6 +769,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         return CONTINUE;
+    }
+
+    private void saveUnknownLibrary(final int libraryId, final long correlationId)
+    {
+        saveError(GatewayError.UNKNOWN_LIBRARY, libraryId, correlationId, "Unknown Library");
     }
 
     public Action onMidConnectionDisconnect(final int libraryId, final long correlationId)

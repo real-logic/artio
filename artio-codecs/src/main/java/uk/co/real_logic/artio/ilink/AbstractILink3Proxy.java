@@ -15,6 +15,13 @@
  */
 package uk.co.real_logic.artio.ilink;
 
-public class ILink3Proxy
+public abstract class AbstractILink3Proxy
 {
+    public abstract long sendNegotiate(
+        final byte[] hMACSignature,
+        final String accessKeyId,
+        final long uuid,
+        final long requestTimestamp,
+        final String sessionId,
+        final String firmId);
 }

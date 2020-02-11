@@ -269,7 +269,7 @@ project(':artio-ilink3-codecs') {
         testCompile sourceSets.generated.output
     }
 
-    if (iLink3Enabled) {
+//    if (iLink3Enabled) {
         compileGeneratedJava {
             dependsOn 'generateMessages'
             sourceCompatibility = artioJavaVersion
@@ -282,12 +282,13 @@ project(':artio-ilink3-codecs') {
             main = 'uk.co.real_logic.sbe.SbeTool'
             classpath = sourceSets.main.runtimeClasspath
             systemProperties(
-                    'sbe.output.dir': generatedDir,
-                    'sbe.target.language': 'Java',
-                    'sbe.validation.stop.on.error': 'true')
+                'sbe.output.dir': generatedDir,
+                'sbe.target.language': 'Java',
+                'sbe.validation.stop.on.error': 'true',
+                'sbe.java.generate.interfaces': 'true')
             args = [ sbePath ]
         }
-    }
+//    }
 
     jar {
         from(sourceSets.generated.output) {
@@ -296,6 +297,27 @@ project(':artio-ilink3-codecs') {
     }
 
     jar.dependsOn compileGeneratedJava
+}
+
+project(':artio-ilink3-impl') {
+    apply plugin: 'com.github.johnrengelman.shadow'
+
+    dependencies {
+        compile project(':artio-ilink3-codecs')
+        compile project(':artio-codecs')
+        compile "io.aeron:aeron-client:${aeronVersion}"
+    }
+
+    idea {
+        dependencies {
+            compile project(':artio-ilink3-codecs').sourceSets.generated.output
+            compile project(':artio-codecs').sourceSets.generated.output
+        }
+    }
+
+    // Only compile if this flag is enabled
+//    if (iLink3Enabled) {
+//    }
 }
 
 project(':artio-session-codecs') {
@@ -373,7 +395,6 @@ project(':artio-core') {
         testCompile project(path: ':artio-codecs', configuration: 'tests')
         testCompile project(':artio-session-codecs')
         compile project(':artio-codecs')
-        compile project(':artio-ilink3-codecs')
 
         compile "io.aeron:aeron-client:${aeronVersion}"
         compile "io.aeron:aeron-driver:${aeronVersion}"
@@ -458,20 +479,17 @@ project(':artio-ilink-system-tests') {
     dependencies {
         testCompile project(path: ':artio-core', configuration: 'tests')
         testCompile project(path: ':artio-codecs', configuration: 'tests')
-
-        /*testCompile project(path: ':artio-session-codecs', configuration: 'tests')
-        testCompile project(path: ':artio-session-fixt-codecs', configuration: 'tests')
+        testCompile project(path: ':artio-system-tests', configuration: 'tests')
+        testCompile project(path: ':artio-session-codecs', configuration: 'tests')
 
         compile project(':artio-session-codecs')
-        compile project(':artio-session-fixt-codecs')*/
-
         compile project(path: ':artio-core')
+        compile project(path: ':artio-ilink3-impl')
 
         idea {
             dependencies {
                 compile project(':artio-ilink3-codecs').sourceSets.generated.output
-                /*compile project(':artio-session-codecs').sourceSets.generated.output
-                compile project(':artio-session-fixt-codecs').sourceSets.generated.output*/
+                compile project(':artio-session-codecs').sourceSets.generated.output
             }
         }
     }

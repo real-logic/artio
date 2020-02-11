@@ -13,8 +13,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package uk.co.real_logic.artio.ilink;
+package uk.co.real_logic.artio.library;
 
-public class ILink3EndPointHandler
+import uk.co.real_logic.artio.ilink.AbstractILink3Parser;
+import uk.co.real_logic.artio.ilink.ILink3Session;
+
+class ILink3Subscription
 {
+    private final AbstractILink3Parser abstractILink3Parser;
+    private final ILink3Session session;
+
+    ILink3Subscription(final AbstractILink3Parser abstractILink3Parser, final ILink3Session session)
+    {
+        this.abstractILink3Parser = abstractILink3Parser;
+        this.session = session;
+    }
 }

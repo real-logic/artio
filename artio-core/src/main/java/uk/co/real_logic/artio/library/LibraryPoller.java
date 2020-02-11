@@ -16,6 +16,7 @@
 package uk.co.real_logic.artio.library;
 
 import io.aeron.ControlledFragmentAssembler;
+import io.aeron.ExclusivePublication;
 import io.aeron.Subscription;
 import io.aeron.logbuffer.ControlledFragmentHandler;
 import io.aeron.logbuffer.ControlledFragmentHandler.Action;
@@ -31,6 +32,7 @@ import uk.co.real_logic.artio.*;
 import uk.co.real_logic.artio.builder.SessionHeaderEncoder;
 import uk.co.real_logic.artio.dictionary.FixDictionary;
 import uk.co.real_logic.artio.engine.SessionInfo;
+import uk.co.real_logic.artio.ilink.*;
 import uk.co.real_logic.artio.messages.*;
 import uk.co.real_logic.artio.messages.ControlNotificationDecoder.SessionsDecoder;
 import uk.co.real_logic.artio.protocol.*;
@@ -42,6 +44,7 @@ import uk.co.real_logic.artio.util.MutableAsciiBuffer;
 import uk.co.real_logic.artio.validation.MessageValidationStrategy;
 
 import java.lang.ref.WeakReference;
+import java.lang.reflect.InvocationTargetException;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -111,6 +114,8 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             return sessions.length;
         }
     };
+
+    private final Long2ObjectHashMap<ILink3Subscription> connectionIdToILink3Subscription = new Long2ObjectHashMap<>();
 
     // Used when checking the consistency of the session ids
     private final LongHashSet sessionIds = new LongHashSet();
@@ -234,6 +239,16 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         validateEndOfDay();
 
         return new InitiateSessionReply(this, timeInMs() + configuration.timeoutInMs(), configuration);
+    }
+
+    public Reply<ILink3Session> initiate(final ILink3SessionConfiguration configuration)
+    {
+        requireNonNull(configuration, "configuration");
+        validateEndOfDay();
+        configuration.validate();
+
+        return new InitiateILink3SessionReply(
+            this, timeInMs() + configuration.timeoutInMs(), configuration);
     }
 
     Reply<SessionReplyStatus> releaseToGateway(final Session session, final long timeoutInMs)
@@ -1280,6 +1295,58 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
+    public Action onILinkConnect(final int libraryId, final long correlationId, final long connectionId)
+    {
+        if (libraryId == this.libraryId)
+        {
+            final InitiateILink3SessionReply reply = (InitiateILink3SessionReply)
+                correlationIdToReply.remove(correlationId);
+
+            if (reply != null)
+            {
+                final ILink3SessionConfiguration configuration = reply.configuration();
+                final AbstractILink3Proxy proxy = makeILink3Proxy(connectionId);
+                final ILink3Session session = new ILink3Session(proxy, configuration, connectionId, reply::onComplete);
+                final ILink3Subscription subscription = new ILink3Subscription(makeILink3Parser(session), session);
+                connectionIdToILink3Subscription.put(connectionId, subscription);
+            }
+        }
+
+        return CONTINUE;
+    }
+
+    private AbstractILink3Parser makeILink3Parser(final ILink3Session session)
+    {
+        try
+        {
+            final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Parser");
+            return (AbstractILink3Parser) cls.getConstructor(ILink3EndpointHandler.class).newInstance(session);
+        } catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
+            IllegalAccessException | InvocationTargetException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+            return null;
+        }
+    }
+
+    private AbstractILink3Proxy makeILink3Proxy(final long connectionId)
+    {
+        final int bufferSize = configuration.sessionBufferSize();
+
+        try
+        {
+            final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Proxy");
+            return (AbstractILink3Proxy) cls
+                .getConstructor(long.class, int.class, ExclusivePublication.class)
+                .newInstance(connectionId, bufferSize, outboundPublication.dataPublication());
+        } catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
+            IllegalAccessException | InvocationTargetException e)
+        {
+            LangUtil.rethrowUnchecked(e);
+            return null;
+        }
+    }
+
     public Action onReadMetaDataReply(
         final int libraryId,
         final long replyToId,
@@ -1648,5 +1715,11 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
                 state = CLOSED;
             }
         }
+    }
+
+    public long saveInitiateILink(final long correlationId, final ILink3SessionConfiguration configuration)
+    {
+        return outboundPublication.saveInitiateILinkConnection(
+            libraryId, configuration.port(), correlationId, configuration.host());
     }
 }
