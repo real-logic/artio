@@ -40,14 +40,12 @@ logs/
 *acceptor-logs*
 acceptor_logs/
 
-
-*.jfr
-
 *.pem
 
-# Honest Profiler
+# Profilers
 liblagent.so
 *.hpl
+*.jfr
 
 *attach_pid*
 file-leak-detector-*
@@ -61,3 +59,7 @@ artio-samples/src/main/java/uk/co/real_logic/artio/reproduction/
 
 client-aeron-archive/
 client-aeron/
+
+#iLink3
+artio-ilink3-codecs/src/main/resources/uk/co/real_logic/artio/ilink/ilinkbinary.xml
+

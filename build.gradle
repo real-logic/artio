@@ -39,12 +39,14 @@ def agronaVersion = '1.3.0'
 def sbeVersion = '1.16.1'
 def artioJavaVersion = JavaVersion.VERSION_1_8
 def artioGroup = 'uk.co.real-logic'
+def iLink3Enabled = false
 
 defaultTasks 'clean', 'build', 'javadoc', 'install'
 
 ext {
     group = artioGroup
     isReleaseVersion = !version.endsWith("SNAPSHOT")
+    iLink3Enabled = Boolean.getBoolean("fix.core.iLink3Enabled")
 
     if (!project.hasProperty('repoUsername')) {
         repoUsername = ''
@@ -252,6 +254,50 @@ project(':artio-codecs') {
     jar.dependsOn compileGeneratedJava
 }
 
+project(':artio-ilink3-codecs') {
+    apply plugin: 'com.github.johnrengelman.shadow'
+
+    def sbePath = 'src/main/resources/uk/co/real_logic/artio/ilink/ilinkbinary.xml'
+    def generatedDir = file("${buildDir}/generated-src")
+    sourceSets {
+        generated.java.srcDir generatedDir
+    }
+
+    dependencies {
+        compile "org.agrona:agrona:${agronaVersion}"
+        compile "uk.co.real-logic:sbe-tool:${sbeVersion}"
+        testCompile sourceSets.generated.output
+    }
+
+    if (iLink3Enabled) {
+        compileGeneratedJava {
+            dependsOn 'generateMessages'
+            sourceCompatibility = artioJavaVersion
+            targetCompatibility = artioJavaVersion
+            options.deprecation = true
+            classpath += sourceSets.main.runtimeClasspath
+        }
+
+        task generateMessages(type: JavaExec) {
+            main = 'uk.co.real_logic.sbe.SbeTool'
+            classpath = sourceSets.main.runtimeClasspath
+            systemProperties(
+                    'sbe.output.dir': generatedDir,
+                    'sbe.target.language': 'Java',
+                    'sbe.validation.stop.on.error': 'true')
+            args = [ sbePath ]
+        }
+    }
+
+    jar {
+        from(sourceSets.generated.output) {
+            include '**/*.class'
+        }
+    }
+
+    jar.dependsOn compileGeneratedJava
+}
+
 project(':artio-session-codecs') {
     dependencies {
         compile project(path: ':artio-codecs')
@@ -327,6 +373,7 @@ project(':artio-core') {
         testCompile project(path: ':artio-codecs', configuration: 'tests')
         testCompile project(':artio-session-codecs')
         compile project(':artio-codecs')
+        compile project(':artio-ilink3-codecs')
 
         compile "io.aeron:aeron-client:${aeronVersion}"
         compile "io.aeron:aeron-driver:${aeronVersion}"
@@ -402,6 +449,39 @@ project(':artio-system-tests') {
         doLast {
             shadowJar
         }
+    }
+}
+
+project(':artio-ilink-system-tests') {
+    apply plugin: 'com.github.johnrengelman.shadow'
+
+    dependencies {
+        testCompile project(path: ':artio-core', configuration: 'tests')
+        testCompile project(path: ':artio-codecs', configuration: 'tests')
+
+        /*testCompile project(path: ':artio-session-codecs', configuration: 'tests')
+        testCompile project(path: ':artio-session-fixt-codecs', configuration: 'tests')
+
+        compile project(':artio-session-codecs')
+        compile project(':artio-session-fixt-codecs')*/
+
+        compile project(path: ':artio-core')
+
+        idea {
+            dependencies {
+                compile project(':artio-ilink3-codecs').sourceSets.generated.output
+                /*compile project(':artio-session-codecs').sourceSets.generated.output
+                compile project(':artio-session-fixt-codecs').sourceSets.generated.output*/
+            }
+        }
+    }
+
+    test {
+        onlyIf { iLink3Enabled }
+        systemProperties(
+                'aeron.dir.warn.if.exists': 'false',
+                'aeron.use.windows.high.res.timer': 'true',
+                'aeron.term.buffer.sparse.file': 'true')
     }
 }
 
