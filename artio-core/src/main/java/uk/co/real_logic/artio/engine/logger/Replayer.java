@@ -204,6 +204,11 @@ public class Replayer implements ProtocolHandler, Agent
         return CONTINUE;
     }
 
+    public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
+    {
+        return CONTINUE;
+    }
+
     public Action onDisconnect(final int libraryId, final long connectionId, final DisconnectReason reason)
     {
         return CONTINUE;

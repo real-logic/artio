@@ -15,14 +15,11 @@
  */
 package uk.co.real_logic.artio.ilink;
 
-import iLinkBinary.Negotiate500Decoder;
 import io.aeron.archive.ArchivingMediaDriver;
 import org.agrona.CloseHelper;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import uk.co.real_logic.artio.DebugLogger;
-import uk.co.real_logic.artio.LogTag;
 import uk.co.real_logic.artio.Reply;
 import uk.co.real_logic.artio.engine.EngineConfiguration;
 import uk.co.real_logic.artio.engine.FixEngine;
@@ -38,6 +35,7 @@ import static java.util.Collections.singletonList;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static uk.co.real_logic.artio.TestFixtures.*;
+import static uk.co.real_logic.artio.ilink.ILink3SessionConfiguration.DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL;
 import static uk.co.real_logic.artio.system_tests.SystemTestUtil.*;
 
 public class Ilink3SystemTest
@@ -99,33 +97,23 @@ public class Ilink3SystemTest
 
         testServer = new ILink3TestServer(port, () -> reply = library.initiate(sessionConfiguration), testSystem);
 
-        testSystem.poll();
+        testServer.readNegotiate(ACCESS_KEY_ID, FIRM_ID);
+        testServer.writeNegotiateResponse();
 
-        final Negotiate500Decoder negotiate = testServer.read(new Negotiate500Decoder());
-        negotiate.hMACSignature();
-        assertEquals(ACCESS_KEY_ID, negotiate.accessKeyID());
-        final long uUID = negotiate.uUID();
-        assertEquals(FIRM_ID, negotiate.firm());
-        assertEquals(0, negotiate.credentialsLength());
-
-        DebugLogger.log(LogTag.FIX_TEST, negotiate.toString());
+        testServer.readEstablish(ACCESS_KEY_ID, FIRM_ID, SESSION_ID, DEFAULT_REQUESTED_KEEP_ALIVE_INTERVAL);
+        testServer.writeEstablishAck();
 
         testSystem.awaitCompletedReplies(reply);
         session = reply.resultIfPresent();
         assertNotNull(session);
 
-        assertEquals(uUID, session.uuid());
+        assertEquals(testServer.uuid(), session.uuid());
 
-        // TODO: SOFH
-        // TODO: abstract over receiver endpoint stuff.
-        // TODO: create negotiate canonical message
-        // TODO: send negotiate message
-        // TODO: reply
-        // TODO: create establish canonical message
-        // TODO: send establish reply
         // TODO: remove dependency on FIX dictionary
     }
 
+    // TODO: better encapsulate the ILink3 session API
+    // TODO: fix credentials header length being ignored
     // TODO: mid connection disconnect
     // TODO: timeout on connection
     // TODO: failure cases of negotiate / establish

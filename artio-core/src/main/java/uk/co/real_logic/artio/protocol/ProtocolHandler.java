@@ -38,4 +38,6 @@ public interface ProtocolHandler
         int metaDataLength);
 
     Action onDisconnect(int libraryId, long connectionId, DisconnectReason reason);
+
+    Action onILinkMessage(long connectionId, DirectBuffer buffer, int offset);
 }

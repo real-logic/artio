@@ -132,6 +132,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
     private final ReceiverEndPoints receiverEndPoints;
     private final ControlledFragmentAssembler senderEndPointAssembler;
     private final SenderEndPoints senderEndPoints;
+    private final ILink3SenderEndPoints iLink3SenderEndPoints;
 
     private final EngineConfiguration configuration;
     private final EndPointFactory endPointFactory;
@@ -222,6 +223,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         this.inboundCompletionPosition = inboundCompletionPosition;
         this.outboundLibraryCompletionPosition = outboundLibraryCompletionPosition;
         this.senderEndPoints = new SenderEndPoints(errorHandler);
+        this.iLink3SenderEndPoints = new ILink3SenderEndPoints();
         this.conductorAgentInvoker = conductorAgentInvoker;
         this.recordingCoordinator = recordingCoordinator;
         this.senderEndPointAssembler = new ControlledFragmentAssembler(senderEndPoints, 0, true);
@@ -284,6 +286,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
                 // Should never be replayed.
                 return Action.CONTINUE;
             }
+
+            public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
+            {
+                return CONTINUE;
+            }
         },
         new ReplayProtocolSubscription(senderEndPoints::onReplayComplete)),
         0,
@@ -314,6 +321,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
             {
                 // Should never be replayed.
                 return Action.CONTINUE;
+            }
+
+            public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
+            {
+                return CONTINUE;
             }
         },
         new ReplayProtocolSubscription(senderEndPoints::onReplayComplete)));
@@ -605,7 +617,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         }
 
         final InetSocketAddress address = new InetSocketAddress(host, port);
-        // TODO: do we need this?
+        // TODO: re-add this
         /*final ConnectingSession connectingSession = new ConnectingSession(address, sessionContext.sessionId());
         library.connectionStartsConnecting(correlationId, connectingSession);*/
         try
@@ -633,6 +645,15 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
                     schedule(() -> inboundPublication.saveILinkConnect(
                         libraryId, correlationId, connectionId));
+
+                    iLink3SenderEndPoints.add(new ILink3SenderEndPoint(connectionId, channel, errorHandler));
+                    receiverEndPoints.add(new ILink3ReceiverEndPoint(
+                        connectionId,
+                        channel,
+                        configuration.receiverBufferSize(),
+                        errorHandler,
+                        this,
+                        inboundPublication.dataPublication()));
                 });
         }
         catch (final IOException ex)
@@ -1000,6 +1021,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
 
         senderEndPoints.onMessage(libraryId, connectionId, buffer, offset, length, sequenceNumber, position);
 
+        final PositionSender nonLoggingPositionSender = this.nonLoggingPositionSender;
         if (nonLoggingPositionSender != null)
         {
             nonLoggingPositionSender.newPosition(libraryId, position);
@@ -1008,6 +1030,11 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         sendTimer.recordSince(now);
 
         return CONTINUE;
+    }
+
+    public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
+    {
+        return iLink3SenderEndPoints.onMessage(connectionId, buffer, offset);
     }
 
     private GatewaySession setupConnection(
@@ -1023,7 +1050,7 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         final boolean enableLastMsgSeqNumProcessed,
         final FixDictionary fixDictionary)
     {
-        final ReceiverEndPoint receiverEndPoint = endPointFactory.receiverEndPoint(
+        final FixReceiverEndPoint receiverEndPoint = endPointFactory.receiverEndPoint(
             channel,
             connectionId,
             context.sessionId(),
@@ -1086,8 +1113,6 @@ class Framer implements Agent, EngineEndPointHandler, ProtocolHandler
         {
             library.removeSession(connectionId);
         }
-
-
 
         return CONTINUE;
     }

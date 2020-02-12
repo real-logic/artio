@@ -80,7 +80,7 @@ public class ReceiverEndPointTest
     private CompositeKey sessionKey = SessionIdStrategy
         .senderAndTarget()
         .onInitiateLogon("ACCEPTOR", "", "", "INIATOR", "", "");
-    private ReceiverEndPoint endPoint;
+    private FixReceiverEndPoint endPoint;
     private Clock mockClock = mock(Clock.class);
 
     private AcceptorLogonResult createSuccessfulPendingAuth()
@@ -143,7 +143,7 @@ public class ReceiverEndPointTest
 
     private void givenReceiverEndPoint(final long sessionId)
     {
-        endPoint = new ReceiverEndPoint(
+        endPoint = new FixReceiverEndPoint(
             mockChannel, BUFFER_SIZE, publication,
             CONNECTION_ID, sessionId, SEQUENCE_INDEX, mockSessionContexts,
             messagesRead, framer, errorHandler, LIBRARY_ID,

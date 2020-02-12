@@ -269,7 +269,7 @@ project(':artio-ilink3-codecs') {
         testCompile sourceSets.generated.output
     }
 
-//    if (iLink3Enabled) {
+    if (iLink3Enabled) {
         compileGeneratedJava {
             dependsOn 'generateMessages'
             sourceCompatibility = artioJavaVersion
@@ -284,11 +284,10 @@ project(':artio-ilink3-codecs') {
             systemProperties(
                 'sbe.output.dir': generatedDir,
                 'sbe.target.language': 'Java',
-                'sbe.validation.stop.on.error': 'true',
                 'sbe.java.generate.interfaces': 'true')
             args = [ sbePath ]
         }
-//    }
+    }
 
     jar {
         from(sourceSets.generated.output) {
@@ -298,6 +297,7 @@ project(':artio-ilink3-codecs') {
 
     jar.dependsOn compileGeneratedJava
 }
+
 
 project(':artio-ilink3-impl') {
     apply plugin: 'com.github.johnrengelman.shadow'
@@ -315,9 +315,8 @@ project(':artio-ilink3-impl') {
         }
     }
 
-    // Only compile if this flag is enabled
-//    if (iLink3Enabled) {
-//    }
+    compileJava.enabled = iLink3Enabled
+    javadoc.enabled = iLink3Enabled
 }
 
 project(':artio-session-codecs') {
@@ -493,6 +492,10 @@ project(':artio-ilink-system-tests') {
             }
         }
     }
+
+    compileJava.enabled = iLink3Enabled
+    compileTestJava.enabled = iLink3Enabled
+    javadoc.enabled = iLink3Enabled
 
     test {
         onlyIf { iLink3Enabled }

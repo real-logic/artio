@@ -61,6 +61,7 @@ import static uk.co.real_logic.artio.LogTag.*;
 import static uk.co.real_logic.artio.engine.FixEngine.ENGINE_LIBRARY_ID;
 import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 import static uk.co.real_logic.artio.messages.ConnectionType.INITIATOR;
+import static uk.co.real_logic.artio.messages.DisconnectReason.ENGINE_SHUTDOWN;
 import static uk.co.real_logic.artio.messages.SessionState.ACTIVE;
 import static uk.co.real_logic.artio.session.Session.UNKNOWN_TIME;
 
@@ -1199,6 +1200,17 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         return CONTINUE;
     }
 
+    public Action onILinkMessage(final long connectionId, final DirectBuffer buffer, final int offset)
+    {
+        final ILink3Subscription subscription = connectionIdToILink3Subscription.get(connectionId);
+        if (subscription != null)
+        {
+            return Pressure.apply(subscription.onMessage(buffer, offset));
+        }
+
+        return CONTINUE;
+    }
+
     public Action onError(
         final int libraryId,
         final GatewayError errorType,
@@ -1299,14 +1311,15 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
     {
         if (libraryId == this.libraryId)
         {
-            final InitiateILink3SessionReply reply = (InitiateILink3SessionReply)
-                correlationIdToReply.remove(correlationId);
+            final InitiateILink3SessionReply reply =
+                (InitiateILink3SessionReply)correlationIdToReply.remove(correlationId);
 
             if (reply != null)
             {
                 final ILink3SessionConfiguration configuration = reply.configuration();
                 final AbstractILink3Proxy proxy = makeILink3Proxy(connectionId);
-                final ILink3Session session = new ILink3Session(proxy, configuration, connectionId, reply::onComplete);
+                final ILink3Session session = new ILink3Session(
+                    proxy, configuration, connectionId, reply::onComplete, outboundPublication, libraryId);
                 final ILink3Subscription subscription = new ILink3Subscription(makeILink3Parser(session), session);
                 connectionIdToILink3Subscription.put(connectionId, subscription);
             }
@@ -1320,8 +1333,9 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
         try
         {
             final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Parser");
-            return (AbstractILink3Parser) cls.getConstructor(ILink3EndpointHandler.class).newInstance(session);
-        } catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
+            return (AbstractILink3Parser)cls.getConstructor(ILink3EndpointHandler.class).newInstance(session);
+        }
+        catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
             IllegalAccessException | InvocationTargetException e)
         {
             LangUtil.rethrowUnchecked(e);
@@ -1331,15 +1345,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
 
     private AbstractILink3Proxy makeILink3Proxy(final long connectionId)
     {
-        final int bufferSize = configuration.sessionBufferSize();
-
         try
         {
             final Class<?> cls = Class.forName("uk.co.real_logic.artio.ilink.ILink3Proxy");
-            return (AbstractILink3Proxy) cls
-                .getConstructor(long.class, int.class, ExclusivePublication.class)
-                .newInstance(connectionId, bufferSize, outboundPublication.dataPublication());
-        } catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
+            return (AbstractILink3Proxy)cls
+                .getConstructor(long.class, ExclusivePublication.class)
+                .newInstance(connectionId, outboundPublication.dataPublication());
+        }
+        catch (final ClassNotFoundException | NoSuchMethodException | InstantiationException |
             IllegalAccessException | InvocationTargetException e)
         {
             LangUtil.rethrowUnchecked(e);
@@ -1401,6 +1414,14 @@ final class LibraryPoller implements LibraryEndPointHandler, ProtocolHandler, Au
             }
 
             sessionLogoutIndex++;
+        }
+
+        final Iterator<ILink3Subscription> iLink3Iterator = connectionIdToILink3Subscription.values().iterator();
+        while (iLink3Iterator.hasNext())
+        {
+            final ILink3Subscription iLink3Subscription = iLink3Iterator.next();
+            // TODO: backpressure
+            iLink3Subscription.requestDisconnect(ENGINE_SHUTDOWN);
         }
 
         // Yes, technically the engine is closing down, so we could flip to ATTEMPT_CONNECT state here.

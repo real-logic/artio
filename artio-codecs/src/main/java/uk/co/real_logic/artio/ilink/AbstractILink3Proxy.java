@@ -17,11 +17,27 @@ package uk.co.real_logic.artio.ilink;
 
 public abstract class AbstractILink3Proxy
 {
+
+    public static final int ARTIO_HEADER_LENGTH = 16;
+
     public abstract long sendNegotiate(
-        final byte[] hMACSignature,
-        final String accessKeyId,
-        final long uuid,
-        final long requestTimestamp,
-        final String sessionId,
-        final String firmId);
+        byte[] hMACSignature,
+        String accessKeyId,
+        long uuid,
+        long requestTimestamp,
+        String sessionId,
+        String firmId);
+
+    public abstract long sendEstablish(
+        byte[] hMACSignature,
+        String accessKeyId,
+        String tradingSystemName,
+        String tradingSystemVendor,
+        String tradingSystemVersion,
+        long uuid,
+        long requestTimestamp,
+        int nextSentSeqNo,
+        String sessionId,
+        String firmId,
+        int keepAliveInterval);
 }

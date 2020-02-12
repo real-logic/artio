@@ -47,7 +47,7 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
     private final long authenticationTimeoutInMs;
 
     private FixDictionary fixDictionary;
-    private ReceiverEndPoint receiverEndPoint;
+    private FixReceiverEndPoint receiverEndPoint;
     private SenderEndPoint senderEndPoint;
 
     private long sessionId;
@@ -77,7 +77,7 @@ class GatewaySession implements SessionInfo, SessionProcessHandler
         final String address,
         final ConnectionType connectionType,
         final CompositeKey sessionKey,
-        final ReceiverEndPoint receiverEndPoint,
+        final FixReceiverEndPoint receiverEndPoint,
         final SenderEndPoint senderEndPoint,
         final Consumer<GatewaySession> onGatewaySessionLogon,
         final boolean closedResendInterval,

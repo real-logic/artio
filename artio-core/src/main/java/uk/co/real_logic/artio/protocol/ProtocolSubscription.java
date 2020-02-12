@@ -22,6 +22,7 @@ import uk.co.real_logic.artio.DebugLogger;
 import uk.co.real_logic.artio.engine.framer.MessageTypeExtractor;
 import uk.co.real_logic.artio.messages.DisconnectDecoder;
 import uk.co.real_logic.artio.messages.FixMessageDecoder;
+import uk.co.real_logic.artio.messages.ILinkMessageDecoder;
 import uk.co.real_logic.artio.messages.MessageHeaderDecoder;
 import uk.co.real_logic.artio.util.CharFormatter;
 
@@ -37,6 +38,7 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
     private final MessageHeaderDecoder messageHeader = new MessageHeaderDecoder();
     private final DisconnectDecoder disconnect = new DisconnectDecoder();
     private final FixMessageDecoder messageFrame = new FixMessageDecoder();
+    private final ILinkMessageDecoder iLinkMessage = new ILinkMessageDecoder();
 
     private final ProtocolHandler protocolHandler;
     private final Action defaultAction;
@@ -95,9 +97,25 @@ public final class ProtocolSubscription implements ControlledFragmentHandler
             {
                 return onDisconnect(buffer, offset, blockLength, version);
             }
+
+            case ILinkMessageDecoder.TEMPLATE_ID:
+            {
+                return onILinkMessage(buffer, offset, blockLength, version);
+            }
         }
 
         return defaultAction;
+    }
+
+    private Action onILinkMessage(
+        final DirectBuffer buffer, final int offset, final int blockLength, final int version)
+    {
+        iLinkMessage.wrap(buffer, offset, blockLength, version);
+        final long connectionId = iLinkMessage.connection();
+        return protocolHandler.onILinkMessage(
+            connectionId,
+            buffer,
+            offset + ILinkMessageDecoder.BLOCK_LENGTH);
     }
 
     private Action onDisconnect(

@@ -16,6 +16,8 @@
 package uk.co.real_logic.artio.ilink;
 
 import org.agrona.LangUtil;
+import uk.co.real_logic.artio.messages.DisconnectReason;
+import uk.co.real_logic.artio.protocol.GatewayPublication;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -27,48 +29,67 @@ import java.util.function.Consumer;
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import static uk.co.real_logic.artio.library.SessionConfiguration.AUTOMATIC_INITIAL_SEQUENCE_NUMBER;
 
 // NB: This is an experimental API and is subject to change or potentially removal.
-public class ILink3Session extends ILink3EndpointHandler
+public class ILink3Session implements ILink3EndpointHandler
 {
     private static final long MICROS_IN_MILLIS = 1000;
 
-    private final AbstractILink3Proxy abstractILink3Proxy;
-    private final ILink3SessionConfiguration configuration;
-    private final long connection;
-    private final Consumer<ILink3Session> onActive;
-
     public enum State
     {
-        CONNECTING,
         CONNECTED,
         SENT_NEGOTIATE,
         NEGOTIATE_REJECTED,
+        NEGOTIATED,
         SENT_ESTABLISH,
         ESTABLISH_REJECTED,
-        ACTIVE,
+        ESTABLISHED,
         UNBINDING,
         DISCONNECTED
     }
 
+    private final AbstractILink3Proxy proxy;
+    private final ILink3SessionConfiguration configuration;
+    private final long connectionId;
+    private final Consumer<ILink3Session> onEstablished;
+    private final GatewayPublication outboundPublication;
+    private final int libraryId;
+
     private final long uuid;
     private State state;
+    private int nextSentSeqNo;
 
     public ILink3Session(
-        final AbstractILink3Proxy abstractILink3Proxy,
+        final AbstractILink3Proxy proxy,
         final ILink3SessionConfiguration configuration,
-        final long connection,
-        final Consumer<ILink3Session> onActive)
+        final long connectionId,
+        final Consumer<ILink3Session> onEstablished,
+        final GatewayPublication outboundPublication,
+        final int libraryId)
     {
-        this.abstractILink3Proxy = abstractILink3Proxy;
+        this.proxy = proxy;
         this.configuration = configuration;
-        this.connection = connection;
-        this.onActive = onActive;
+        this.connectionId = connectionId;
+        this.onEstablished = onEstablished;
+        this.outboundPublication = outboundPublication;
+        this.libraryId = libraryId;
 
         uuid = microSecondTimestamp();
-        state = State.CONNECTING;
+        state = State.CONNECTED;
+        nextSentSeqNo = calculateInitialSentSequenceNumber(configuration);
 
         sendNegotiate();
+    }
+
+    private int calculateInitialSentSequenceNumber(final ILink3SessionConfiguration configuration)
+    {
+        final int initialSentSequenceNumber = configuration.initialSentSequenceNumber();
+        if (initialSentSequenceNumber == AUTOMATIC_INITIAL_SEQUENCE_NUMBER)
+        {
+            return 1; // TODO: persistent sequence numbers
+        }
+        return initialSentSequenceNumber;
     }
 
     private long microSecondTimestamp()
@@ -77,16 +98,47 @@ public class ILink3Session extends ILink3EndpointHandler
         return MILLISECONDS.toMicros(System.currentTimeMillis()) + microseconds;
     }
 
+    public long requestDisconnect(final DisconnectReason reason)
+    {
+        return outboundPublication.saveRequestDisconnect(libraryId, connectionId, reason);
+    }
+
     private void sendNegotiate()
     {
         final long requestTimestamp = microSecondTimestamp();
         final String sessionId = configuration.sessionId();
         final String firmId = configuration.firmId();
         final String canonicalMsg = String.valueOf(requestTimestamp) + '\n' + uuid + '\n' + sessionId + '\n' + firmId;
-        final byte[] hMACSignature = calculateHMAC(canonicalMsg, configuration.userKey());
+        final byte[] hMACSignature = calculateHMAC(canonicalMsg);
 
-        abstractILink3Proxy.sendNegotiate(
+        final long position = proxy.sendNegotiate(
             hMACSignature, configuration.accessKeyId(), uuid, requestTimestamp, sessionId, firmId);
+
+        if (position > 0)
+        {
+            state = State.SENT_NEGOTIATE;
+        }
+    }
+
+    private void sendEstablish()
+    {
+        final long requestTimestamp = microSecondTimestamp();
+        final String sessionId = configuration.sessionId();
+        final String firmId = configuration.firmId();
+        final String tradingSystemName = configuration.tradingSystemName();
+        final String tradingSystemVersion = configuration.tradingSystemVersion();
+        final String tradingSystemVendor = configuration.tradingSystemVendor();
+        final int keepAliveInterval = configuration.requestedKeepAliveInterval();
+        final String accessKeyId = configuration.accessKeyId();
+
+        final String canonicalMsg = String.valueOf(requestTimestamp) + '\n' + uuid + '\n' + sessionId +
+            '\n' + firmId + '\n' + tradingSystemName + '\n' + tradingSystemVersion + '\n' + tradingSystemVendor +
+            '\n' + nextSentSeqNo + '\n' + keepAliveInterval;
+        final byte[] hMACSignature = calculateHMAC(canonicalMsg);
+
+
+        proxy.sendEstablish(hMACSignature, accessKeyId, tradingSystemName, tradingSystemVendor, tradingSystemVersion,
+            uuid, requestTimestamp, nextSentSeqNo, sessionId, firmId, keepAliveInterval);
     }
 
     public long uuid()
@@ -94,15 +146,17 @@ public class ILink3Session extends ILink3EndpointHandler
         return uuid;
     }
 
-    private byte[] calculateHMAC(final String canonicalRequest, final String userKey)
+    private byte[] calculateHMAC(final String canonicalRequest)
     {
+        final String userKey = configuration.userKey();
+
         try
         {
             final Mac sha256HMAC = getHmac();
 
             // Decode the key first, since it is base64url encoded
-            byte[] decodedUserKey = Base64.getUrlDecoder().decode(userKey);
-            SecretKeySpec secretKey = new SecretKeySpec(decodedUserKey, "HmacSHA256");
+            final byte[] decodedUserKey = Base64.getUrlDecoder().decode(userKey);
+            final SecretKeySpec secretKey = new SecretKeySpec(decodedUserKey, "HmacSHA256");
             sha256HMAC.init(secretKey);
 
             // Calculate HMAC
@@ -127,4 +181,55 @@ public class ILink3Session extends ILink3EndpointHandler
             return null;
         }
     }
+
+    // EVENT HANDLERS
+
+    public long onNegotiationResponse(
+        final long uUID,
+        final long requestTimestamp,
+        final int secretKeySecureIDExpiration,
+        final long previousSeqNo,
+        final long previousUUID)
+    {
+        if (uUID != this.uuid)
+        {
+            // TODO: error
+        }
+
+        // TODO: validate request timestamp
+        // TODO: calculate session expiration
+        // TODO: check gap with previous sequence number and uuid
+
+        state = State.NEGOTIATED;
+        sendEstablish();
+
+        return 1; // TODO: move to action
+    }
+
+    public long onEstablishmentAck(
+        final long uUID,
+        final long requestTimestamp,
+        final long nextSeqNo,
+        final long previousSeqNo,
+        final long previousUUID,
+        final int keepAliveInterval,
+        final int secretKeySecureIDExpiration)
+    {
+        if (uUID != this.uuid)
+        {
+            // TODO: error
+        }
+
+        // TODO: validate request timestamp
+        // TODO: calculate session expiration
+        // TODO: check gap with previous sequence number and uuid
+
+        state = State.ESTABLISHED;
+        onEstablished.accept(this);
+
+        return 1;
+    }
+
+    // TODO: poll() with sending retries for backpressure scenarios
+
 }

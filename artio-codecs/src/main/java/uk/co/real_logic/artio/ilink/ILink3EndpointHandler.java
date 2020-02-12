@@ -15,6 +15,22 @@
  */
 package uk.co.real_logic.artio.ilink;
 
-public abstract class ILink3EndpointHandler
+public interface ILink3EndpointHandler
 {
+    long onNegotiationResponse(
+        long uUID,
+        long requestTimestamp,
+        int secretKeySecureIDExpiration,
+        long previousSeqNo,
+        long previousUUID);
+
+    long onEstablishmentAck(
+        long uUID,
+        long requestTimestamp,
+        long nextSeqNo,
+        long previousSeqNo,
+        long previousUUID,
+        int keepAliveInterval,
+        int secretKeySecureIDExpiration);
+
 }

@@ -15,6 +15,7 @@
  */
 package uk.co.real_logic.artio.ilink;
 
+import iLinkBinary.Establish503Encoder;
 import iLinkBinary.Negotiate500Encoder;
 import io.aeron.ExclusivePublication;
 import io.aeron.logbuffer.BufferClaim;
@@ -23,10 +24,14 @@ import org.agrona.sbe.MessageEncoderFlyweight;
 import uk.co.real_logic.artio.messages.ILinkMessageEncoder;
 import uk.co.real_logic.artio.messages.MessageHeaderEncoder;
 
+import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.SOFH_LENGTH;
+import static uk.co.real_logic.artio.ilink.SimpleOpenFramingHeader.writeSofh;
+
 public class ILink3Proxy extends AbstractILink3Proxy
 {
-    public static final int ILINK_MESSAGE_HEADER = MessageHeaderEncoder.ENCODED_LENGTH +
-        ILinkMessageEncoder.BLOCK_LENGTH;
+    public static final int ILINK_HEADER_LENGTH = SOFH_LENGTH + iLinkBinary.MessageHeaderEncoder.ENCODED_LENGTH;
+
+    private static final int ILINK_MESSAGE_HEADER = ARTIO_HEADER_LENGTH + ILINK_HEADER_LENGTH;
 
     private final ILinkMessageEncoder iLinkMessage = new ILinkMessageEncoder();
     private final BufferClaim bufferClaim = new BufferClaim();
@@ -37,8 +42,9 @@ public class ILink3Proxy extends AbstractILink3Proxy
     private final iLinkBinary.MessageHeaderEncoder iLinkMessageHeader = new iLinkBinary.MessageHeaderEncoder();
 
     private final Negotiate500Encoder negotiate = new Negotiate500Encoder();
+    private final Establish503Encoder establish = new Establish503Encoder();
 
-    public ILink3Proxy(final long connectionId, final int encodeBufferSize, final ExclusivePublication publication)
+    public ILink3Proxy(final long connectionId, final ExclusivePublication publication)
     {
         this.connectionId = connectionId;
 
@@ -69,15 +75,56 @@ public class ILink3Proxy extends AbstractILink3Proxy
             .session(sessionId)
             .firm(firmId);
 
+        bufferClaim.commit();
+
+        return position;
+    }
+
+    public long sendEstablish(
+        final byte[] hMACSignature,
+        final String accessKeyId,
+        final String tradingSystemName,
+        final String tradingSystemVendor,
+        final String tradingSystemVersion,
+        final long uuid,
+        final long requestTimestamp,
+        final int nextSentSeqNo,
+        final String sessionId,
+        final String firmId,
+        final int keepAliveInterval)
+    {
+        final Establish503Encoder establish = this.establish;
+
+        final long position = claimILinkMessage(Establish503Encoder.BLOCK_LENGTH, establish);
+        if (position < 0)
+        {
+            return position;
+        }
+
+        establish
+            .putHMACSignature(hMACSignature, 0)
+            .accessKeyID(accessKeyId)
+            .tradingSystemName(tradingSystemName)
+            .tradingSystemVendor(tradingSystemVendor)
+            .tradingSystemVersion(tradingSystemVersion)
+            .uUID(uuid)
+            .requestTimestamp(requestTimestamp)
+            .nextSeqNo(nextSentSeqNo)
+            .session(sessionId)
+            .firm(firmId)
+            .keepAliveInterval(keepAliveInterval);
+
+        bufferClaim.commit();
+
         return position;
     }
 
     public long claimILinkMessage(
-        final int length,
+        final int messageLength,
         final MessageEncoderFlyweight message)
     {
         final BufferClaim bufferClaim = this.bufferClaim;
-        final long position = publication.tryClaim(ILINK_MESSAGE_HEADER + length, bufferClaim);
+        final long position = publication.tryClaim(ILINK_MESSAGE_HEADER + messageLength, bufferClaim);
         if (position < 0)
         {
             return position;
@@ -90,9 +137,10 @@ public class ILink3Proxy extends AbstractILink3Proxy
             .wrapAndApplyHeader(buffer, offset, messageHeader)
             .connection(connectionId);
 
-        offset += ILINK_MESSAGE_HEADER;
+        offset += ARTIO_HEADER_LENGTH;
 
-        // TODO: SOFH
+        writeSofh(buffer, offset, ILINK_HEADER_LENGTH + messageLength);
+        offset += SOFH_LENGTH;
 
         iLinkMessageHeader
             .wrap(buffer, offset)
@@ -107,4 +155,5 @@ public class ILink3Proxy extends AbstractILink3Proxy
 
         return position;
     }
+
 }

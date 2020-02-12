@@ -100,7 +100,7 @@ public class FramerTest
     private final ByteBuffer clientBuffer = ByteBuffer.allocate(1024);
 
     private final SenderEndPoint mockSenderEndPoint = mock(SenderEndPoint.class);
-    private final ReceiverEndPoint mockReceiverEndPoint = mock(ReceiverEndPoint.class);
+    private final FixReceiverEndPoint mockReceiverEndPoint = mock(FixReceiverEndPoint.class);
     private final EndPointFactory mockEndPointFactory = mock(EndPointFactory.class);
     private final GatewayPublication inboundPublication = mock(GatewayPublication.class);
     private final SessionIdStrategy mockSessionIdStrategy = mock(SessionIdStrategy.class);

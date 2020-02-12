@@ -15,6 +15,9 @@
  */
 package uk.co.real_logic.artio.ilink;
 
+import org.agrona.DirectBuffer;
+
 public abstract class AbstractILink3Parser
 {
+    public abstract long onMessage(DirectBuffer buffer, int offset);
 }
