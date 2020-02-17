@@ -102,7 +102,7 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
         return 0;
     }
 
-    void unbind() throws IOException
+    public void unbind() throws IOException
     {
         if (listeningChannel != null)
         {
@@ -112,7 +112,7 @@ public class DefaultTcpChannelSupplier extends TcpChannelSupplier
         }
     }
 
-    void bind() throws IOException
+    public void bind() throws IOException
     {
         if (hasBindAddress && listeningChannel == null)
         {
